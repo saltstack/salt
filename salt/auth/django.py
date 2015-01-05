@@ -54,10 +54,8 @@ try:
     import django.contrib.auth
     HAS_DJANGO = True
 except Exception as exc:
-    '''
-    If Django is installed and is not detected, uncommend
-    the following line to display additional information
-    '''
+    # If Django is installed and is not detected, uncomment
+    # the following line to display additional information
     #log.warning('Could not load Django auth module. Found exception: {0}'.format(exc))
     HAS_DJANGO = False
 
