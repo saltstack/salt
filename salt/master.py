@@ -1639,11 +1639,20 @@ class ClearFuncs(object):
 
         log.info('Authentication accepted from {id}'.format(**load))
         # only write to disk if you are adding the file, and in open mode,
-        # which implies we accept any key from a minion (key needs to be
-        # written every time because what's on disk is used for encrypting)
-        if not os.path.isfile(pubfn) or self.opts['open_mode']:
+        # which implies we accept any key from a minion.
+        if not os.path.isfile(pubfn) and not self.opts['open_mode']:
             with salt.utils.fopen(pubfn, 'w+') as fp_:
                 fp_.write(load['pub'])
+        elif self.opts['open_mode']:
+            disk_key = ''
+            if os.path.isfile(pubfn):
+                with salt.utils.fopen(pubfn, 'r') as fp_:
+                    disk_key = fp_.read()
+            if load['pub'] and load['pub'] != disk_key:
+                log.debug('Host key change detected in open mode.')
+                with salt.utils.fopen(pubfn, 'w+') as fp_:
+                    fp_.write(load['pub'])
+
         pub = None
 
         # The key payload may sometimes be corrupt when using auto-accept
