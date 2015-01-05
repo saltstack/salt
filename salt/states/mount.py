@@ -174,10 +174,15 @@ def mounted(name,
                     'reconnect',
                     'soft'
                 ]
+                # options which are provided as key=value (e.g. password=Zohp5ohb)
+                mount_invisible_keys = [
+                    'comment',
+                    'password'
+                ]
                 for opt in opts:
-                    comment_option = opt.split('=')[0]
-                    if comment_option == 'comment':
-                        opt = comment_option
+                    keyval_option = opt.split('=')[0]
+                    if keyval_option in mount_invisible_keys:
+                        opt = keyval_option
                     if opt not in active[real_name]['opts'] and opt not in active[real_name]['superopts'] and opt not in mount_invisible_options:
                         if __opts__['test']:
                             ret['result'] = None
