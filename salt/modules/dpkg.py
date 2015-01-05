@@ -67,7 +67,7 @@ def list_pkgs(*packages):
     '''
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -99,7 +99,7 @@ def file_list(*packages):
     ret = set([])
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -116,7 +116,7 @@ def file_list(*packages):
     for pkg in pkgs:
         files = []
         cmd = 'dpkg -L {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
             files.append(line)
         fileset = set(files)
         ret = ret.union(fileset)
@@ -141,7 +141,7 @@ def file_dict(*packages):
     ret = {}
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -158,7 +158,7 @@ def file_dict(*packages):
     for pkg in pkgs:
         files = []
         cmd = 'dpkg -L {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
