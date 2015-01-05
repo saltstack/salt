@@ -155,7 +155,7 @@ class SaltColorLogRecord(logging.LogRecord):
                 process=self.process,
                 end=TextFormat('reset')
             )
-        self.colormsg = '{tf}{msg}{end}'.format(
+        self.colormsg = u'{tf}{msg}{end}'.format(
                 tf=LOG_COLORS['msgs'][self.levelname],
                 msg=self.msg,
                 end=TextFormat('reset')
