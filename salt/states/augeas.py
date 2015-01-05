@@ -170,7 +170,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         ret['result'] = None
         ret['comment'] = 'Executing commands'
         if context:
-            ret['comment'] += ' in file "{1}"'.format(context)
+            ret['comment'] += ' in file "{0}":\n'.format(context)
         ret['comment'] += "\n".join(changes)
         return ret
 
