@@ -3,6 +3,11 @@
 Manage Windows features via the ServerManager powershell module
 '''
 
+# Import python libs
+try:
+ from shlex import quote as _cmd_quote # pylint: disable=E0611
+except ImportError:
+ from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -21,7 +26,10 @@ def _srvmgr(func):
     '''
     Execute a function from the ServerManager PS module and return the STDOUT
     '''
-    return __salt__['cmd.run']('Import-Module ServerManager ; {0}'.format(func), shell='powershell')
+    return __salt__['cmd.run'](
+            'Import-Module ServerManager ; {0}'.format(func),
+            shell='powershell',
+            python_shell=True)
 
 
 def _parse_powershell_list(lst):
@@ -93,7 +101,8 @@ def install(feature, recurse=False):
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
-    out = _srvmgr('Add-WindowsFeature -Name {0} {1} -erroraction silentlycontinue | format-list'.format(feature, sub))
+    out = _srvmgr('Add-WindowsFeature -Name {0} {1} -erroraction silentlycontinue | format-list'.format(
+                  _cmd_quote(feature), sub))
     return _parse_powershell_list(out)
 
 
@@ -114,5 +123,6 @@ def remove(feature):
 
         salt -t 600 '*' win_servermanager.remove Telnet-Client
     '''
-    out = _srvmgr('Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list'.format(feature))
+    out = _srvmgr('Remove-WindowsFeature -Name {0} -erroraction silentlycontinue | format-list'.format(
+                  _cmd_quote(feature)))
     return _parse_powershell_list(out)
