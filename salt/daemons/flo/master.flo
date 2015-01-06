@@ -27,7 +27,8 @@ framer masterudpstack be active first setup
     frame zmqstart
         # Start the zmq ret port if configured
         let me if value in .salt.etc.zmq_behavior
-        bid start zmq_ret
+        bid start zmqret
+        bid start zmqpub
         go start
 
     frame start
@@ -98,3 +99,7 @@ framer zmqret be inactive first start
     frame start
         enter
             do salt zmq ret fork
+
+framer zmqpub be inactive first start
+    frame start
+        do salt zmq publisher
