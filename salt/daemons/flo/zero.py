@@ -32,7 +32,6 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'mkey': '.salt.var.zmq.master_key',
-               'key': '.salt.var.zmq.key',
                'crypticle': '.salt.var.zmq.crypticle'}
 
     def action(self):
@@ -41,7 +40,6 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
         '''
         self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
         self.crypticle.value = salt.crypt.Crypticle(self.opts.value, self.opts.value['aes'])
-        self.key.value = salt.daemons.masterapi.access_keys(self.opts.value)
         proc = multiprocessing.Process(target=self._ret_port)
         proc.start()
         log.info('Started ZeroMQ RET port process')
@@ -147,7 +145,7 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'mkey': '.salt.var.zmq.master_key',
-               'key': '.salt.var.zmq.key',
+               'key': '.salt.access_keys',
                'crypticle': '.salt.var.zmq.crypticle'}
 
     def postinitio(self):
