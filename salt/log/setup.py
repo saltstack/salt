@@ -162,29 +162,29 @@ class SaltColorLogRecord(logging.LogRecord):
             )
 
 
-_logRecordFactory = SaltLogRecord
+_log_record_factory = SaltLogRecord
 
 
-def setLogRecordFactory(factory):
+def set_log_record_factory(factory):
     '''
     Set the factory to be used when instantiating a log record.
 
     :param factory: A callable which will be called to instantiate
     a log record.
     '''
-    global _logRecordFactory
-    _logRecordFactory = factory
+    global _log_record_factory
+    _log_record_factory = factory
 
 
-def getLogRecordFactory():
+def get_log_record_factory():
     '''
     Return the factory to be used when instantiating a log record.
     '''
 
-    return _logRecordFactory
+    return _log_record_factory
 
 
-setLogRecordFactory(SaltLogRecord)
+set_log_record_factory(SaltLogRecord)
 
 
 class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):  # pylint: disable=W0232
@@ -297,10 +297,10 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
             _msg = msg
 
         if PY3:
-            logrecord = _logRecordFactory(name, level, fn, lno, _msg, args,
+            logrecord = _log_record_factory(name, level, fn, lno, _msg, args,
                                           exc_info, func, sinfo)
         else:
-            logrecord = _logRecordFactory(name, level, fn, lno, _msg, args,
+            logrecord = _log_record_factory(name, level, fn, lno, _msg, args,
                                           exc_info, func)
 
         if extra is not None:
@@ -431,7 +431,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    setLogRecordFactory(SaltColorLogRecord)
+    set_log_record_factory(SaltColorLogRecord)
 
     handler = None
     for handler in logging.root.handlers:
