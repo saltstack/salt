@@ -439,7 +439,6 @@ class CpTestCase(TestCase):
         mock_buf_size = len(file_data)
         mock_id = 'You don\'t need to see his identification.'
         ret = None
-        from time import sleep
 
         class MockChannel(object):
             @staticmethod
@@ -474,7 +473,6 @@ class CpTestCase(TestCase):
         mock_buf_size = len(file_data)
         mock_id = 'You don\'t need to see his identification.'
         ret = True
-        from time import sleep
 
         class MockChannel(object):
             @staticmethod
