@@ -15,7 +15,7 @@ from salttesting.mock import (
 
 # Import Salt Libs
 from salt.modules import apache
-from salt.ext.six.moves.urllib.error import URLError
+from salt.ext.six.moves.urllib.error import URLError  # pylint: disable=E0611
 
 # Globals
 apache.__grains__ = {}
