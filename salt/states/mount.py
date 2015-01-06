@@ -162,11 +162,32 @@ def mounted(name,
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
             if opts:
-                mount_invisible_options = ['defaults', 'comment', 'nobootwait', 'reconnect', 'delay_connect', 'nofail', 'password']
+                mount_invisible_options = [
+                    '_netdev',
+                    'actimeo',
+                    'bg',
+                    'comment',
+                    'defaults',
+                    'delay_connect',
+                    'intr',
+                    'nobootwait',
+                    'nofail',
+                    'password',
+                    'reconnect',
+                    'retry',
+                    'soft',
+                ]
+                # options which are provided as key=value (e.g. password=Zohp5ohb)
+                mount_invisible_keys = [
+                    'actimeo',
+                    'comment',
+                    'password',
+                    'retry',
+                ]
                 for opt in opts:
-                    comment_option = opt.split('=')[0]
-                    if comment_option == 'comment':
-                        opt = comment_option
+                    keyval_option = opt.split('=')[0]
+                    if keyval_option in mount_invisible_keys:
+                        opt = keyval_option
                     if opt not in active[real_name]['opts'] and opt not in active[real_name]['superopts'] and opt not in mount_invisible_options:
                         if __opts__['test']:
                             ret['result'] = None
