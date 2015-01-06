@@ -221,7 +221,7 @@ class FloMWorker(salt.master.MWorker):
         except Exception as exc:
             # Properly handle EINTR from SIGUSR1
             if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
-                continue
+                return
             log.critical('Unexpected Error in Mworker',
                     exc_info=True)
             del self.socket
