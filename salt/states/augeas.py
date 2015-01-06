@@ -203,7 +203,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
     elif old_file:
         with salt.utils.fopen(filename, 'r') as file_:
             diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
-            
+
         if diff:
             ret['comment'] = 'Changes have been saved'
             ret['changes']['diff'] = diff

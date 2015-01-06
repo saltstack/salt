@@ -113,7 +113,8 @@ def execute(context=None, lens=None, commands=(), test=False):
     }
 
     flags = _Augeas.NO_MODL_AUTOLOAD if lens else _Augeas.NONE
-    flags += _Augeas.SAVE_NEWFILE if test
+    if test:
+        flags += _Augeas.SAVE_NEWFILE
     aug = _Augeas(flags=flags)
 
     if lens:
