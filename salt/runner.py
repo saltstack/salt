@@ -143,7 +143,7 @@ class Runner(RunnerClient):
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured. '
                              'This execution is running under tag {tag}'.format(**async_pub))
-                    exit(0)  # TODO: return or something? Don't like exiting...
+                    return async_pub['jid']  # return the jid
 
                 # output rets if you have some
                 for suffix, event in self.get_async_returns(async_pub['tag']):
