@@ -60,7 +60,7 @@ def add(name,
 
         salt '*' user.add name password
     '''
-    ret = __salt__['cmd.run_all'](['net', 'user', name '/add'], python_shell=False)
+    ret = __salt__['cmd.run_all'](['net', 'user', name, '/add'], python_shell=False)
     if groups:
         chgroups(name, groups)
     if fullname:
