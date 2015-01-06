@@ -451,7 +451,7 @@ class Compiler(object):
                     chunk['order'] = cap
             if 'name_order' in chunk:
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
-            if  chunk['order'] < 0:
+            if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
@@ -1046,7 +1046,7 @@ class State(object):
                     chunk['order'] = cap
             if 'name_order' in chunk:
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
-            if  chunk['order'] < 0:
+            if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
