@@ -136,7 +136,7 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
                     pub_sock.send(payload)
         except zmq.ZMQError as exc:
             if exc.errno == errno.EINTR:
-                continue
+                return
             raise exc
 
 
