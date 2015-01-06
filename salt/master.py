@@ -17,6 +17,7 @@ import hashlib
 import resource
 import multiprocessing
 import sys
+import tempfile
 
 # Import third party libs
 import zmq
@@ -1220,12 +1221,15 @@ class AESFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+b') as fp_:
+            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+            os.close(tmpfh)
+            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                 fp_.write(
                     self.serial.dumps(
                         {'grains': load['grains'],
                          'pillar': data})
                     )
+            os.rename(tmpfname, datap)
         for mod in mods:
             sys.modules[mod].__grains__ = self.opts['grains']
         return data
@@ -1788,11 +1792,20 @@ class ClearFuncs(object):
 
         log.info('Authentication accepted from {id}'.format(**load))
         # only write to disk if you are adding the file, and in open mode,
-        # which implies we accept any key from a minion (key needs to be
-        # written every time because what's on disk is used for encrypting)
-        if not os.path.isfile(pubfn) or self.opts['open_mode']:
+        # which implies we accept any key from a minion.
+        if not os.path.isfile(pubfn) and not self.opts['open_mode']:
             with salt.utils.fopen(pubfn, 'w+') as fp_:
                 fp_.write(load['pub'])
+        elif self.opts['open_mode']:
+            disk_key = ''
+            if os.path.isfile(pubfn):
+                with salt.utils.fopen(pubfn, 'r') as fp_:
+                    disk_key = fp_.read()
+            if load['pub'] and load['pub'] != disk_key:
+                log.debug('Host key change detected in open mode.')
+                with salt.utils.fopen(pubfn, 'w+') as fp_:
+                    fp_.write(load['pub'])
+
         pub = None
 
         # the con_cache is enabled, send the minion id to the cache

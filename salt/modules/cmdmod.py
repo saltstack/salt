@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import traceback
+import shlex
 from salt.utils import vt
 
 # Import salt libs
@@ -360,6 +361,8 @@ def _run(cmd,
             .format(cwd)
         )
 
+    if python_shell is not True and not isinstance(cmd, list):
+        cmd = shlex.split(cmd)
     if not use_vt:
         # This is where the magic happens
         try:

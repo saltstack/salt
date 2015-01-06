@@ -138,14 +138,14 @@ InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
-; Check and install Visual C++ 2008 SP1 redist packages
+; Check and install Visual C++ 2008 SP1 MFC Security Update redist packages
 ; See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
 Section -Prerequisites
 
-  !define VC_REDIST_X64_GUID "{8220EEFE-38CD-377E-8595-13398D740ACE}"
-  !define VC_REDIST_X86_GUID "{9A25302D-30C0-39D9-BD6F-21E6EC160475}"
-  !define VC_REDIST_X64_URI "http://download.microsoft.com/download/2/d/6/2d61c766-107b-409d-8fba-c39e61ca08e8/vcredist_x64.exe"
-  !define VC_REDIST_X86_URI "http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe"
+  !define VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
+  !define VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
+  !define VC_REDIST_X64_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe"
+  !define VC_REDIST_X86_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe"
 
   Var /GLOBAL VcRedistGuid
   Var /GLOBAL VcRedistUri

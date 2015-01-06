@@ -444,24 +444,22 @@ class Compiler(object):
                     continue
 
                 chunk_order = chunk['order']
-                if 'name_order' in chunk:
-                    chunk_order = chunk_order + chunk['name_order']
-
                 if chunk_order > cap - 1 and chunk_order > 0:
                     cap = chunk_order + 100
         for chunk in chunks:
             if 'order' not in chunk:
                 chunk['order'] = cap
-            else:
-                if isinstance(chunk['order'], int) and 'name_order' in chunk:
-                    chunk['order'] = chunk['order'] + chunk.pop('name_order')
-                if not isinstance(chunk['order'], int):
-                    if chunk['order'] == 'last':
-                        chunk['order'] = cap + 1000000
-                    else:
-                        chunk['order'] = cap
-                elif isinstance(chunk['order'], int) and chunk['order'] < 0:
-                    chunk['order'] = cap + 1000000 + chunk['order']
+                continue
+
+            if not isinstance(chunk['order'], (int, float)):
+                if chunk['order'] == 'last':
+                    chunk['order'] = cap + 1000000
+                else:
+                    chunk['order'] = cap
+            if 'name_order' in chunk:
+                chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
+            if chunk['order'] < 0:
+                chunk['order'] = cap + 1000000 + chunk['order']
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -1052,25 +1050,23 @@ class State(object):
                     continue
 
                 chunk_order = chunk['order']
-                if 'name_order' in chunk:
-                    chunk_order = chunk_order + chunk['name_order']
-
                 if chunk_order > cap - 1 and chunk_order > 0:
                     cap = chunk_order + 100
         for chunk in chunks:
             if 'order' not in chunk:
                 chunk['order'] = cap
-            else:
-                if isinstance(chunk['order'], int) and 'name_order' in chunk:
-                    chunk['order'] = chunk['order'] + chunk.pop('name_order')
-                if not isinstance(chunk['order'], int):
-                    if chunk['order'] == 'last':
-                        chunk['order'] = cap + 1000000
-                    else:
-                        chunk['order'] = cap
-                elif isinstance(chunk['order'], int) and chunk['order'] < 0:
-                    chunk['order'] = cap + 1000000 + chunk['order']
-        chunks.sort(key=lambda k: (k['order'], '{0[state]}{0[name]}{0[fun]}'.format(k)))
+                continue
+
+            if not isinstance(chunk['order'], (int, float)):
+                if chunk['order'] == 'last':
+                    chunk['order'] = cap + 1000000
+                else:
+                    chunk['order'] = cap
+            if 'name_order' in chunk:
+                chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
+            if chunk['order'] < 0:
+                chunk['order'] = cap + 1000000 + chunk['order']
+        chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
     def compile_high_data(self, high):
