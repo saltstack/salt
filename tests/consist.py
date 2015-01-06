@@ -23,7 +23,7 @@ def parse():
             dest='runs',
             default=10,
             type=int,
-            help='Specify the number of times to fun the consistency check')
+            help='Specify the number of times to run the consistency check')
     parser.add_option('-c',
             '--command',
             dest='command',
