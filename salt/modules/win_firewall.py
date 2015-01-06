@@ -35,8 +35,8 @@ def get_config():
     profiles = {}
     curr = None
 
-    cmd = 'netsh advfirewall show allprofiles'
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    cmd = ['netsh', 'advfirewall', 'show', 'allprofiles']
+    for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
         if not curr:
             tmp = re.search('(.*) Profile Settings:', line)
             if tmp:
@@ -58,6 +58,5 @@ def disable():
 
         salt '*' firewall.disable
     '''
-    return __salt__['cmd.run'](
-            'netsh advfirewall set allprofiles state off'
-            ) == 'Ok.'
+    cmd = ['netsh', 'advfirewall', 'set', 'allprofiles', 'state', 'off']
+    return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
