@@ -44,7 +44,6 @@ class AugeasCfgTestCase(TestCase):
         ret = {'error': 'Command  is not supported (yet)', 'retval': False}
         self.assertEqual(augeas_cfg.execute(None, None, [" "]), ret)
 
-
     def test_execute_value_error(self):
         '''
         Test if it execute Augeas commands
