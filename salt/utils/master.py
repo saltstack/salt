@@ -15,6 +15,8 @@ import logging
 from threading import Thread, Event
 import multiprocessing
 import signal
+import tempfile
+
 # Import salt libs
 import salt.log
 import salt.client
@@ -376,11 +378,17 @@ class MasterPillarUtil(object):
                     # Not saving pillar or grains, so just delete the cache file
                     os.remove(os.path.join(data_file))
                 elif clear_pillar and minion_grains:
-                    with salt.utils.fopen(data_file, 'w+b') as fp_:
+                    tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+                    os.close(tmpfh)
+                    with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                         fp_.write(self.serial.dumps({'grains': minion_grains}))
+                    os.rename(tmpfname, data_file)
                 elif clear_grains and minion_pillar:
-                    with salt.utils.fopen(data_file, 'w+b') as fp_:
+                    tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+                    os.close(tmpfh)
+                    with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                         fp_.write(self.serial.dumps({'pillar': minion_pillar}))
+                    os.rename(tmpfname, data_file)
                 if clear_mine:
                     # Delete the whole mine file
                     os.remove(os.path.join(mine_file))
@@ -390,8 +398,11 @@ class MasterPillarUtil(object):
                         mine_data = self.serial.loads(fp_.read())
                     if isinstance(mine_data, dict):
                         if mine_data.pop(clear_mine_func, False):
-                            with salt.utils.fopen(mine_file, 'w+b') as fp_:
+                            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+                            os.close(tmpfh)
+                            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
+                            os.rename(tmpfname, mine_file)
         except (OSError, IOError):
             return True
         return True

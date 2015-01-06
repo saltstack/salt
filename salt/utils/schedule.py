@@ -646,7 +646,7 @@ class Schedule(object):
                                 log.error('Invalid date string {0}.'
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
-                        when = int(when__.strftime('%s'))
+                        when = int(time.mktime(when__.timetuple()))
                         if when >= now:
                             _when.append(when)
                     _when.sort()
@@ -711,7 +711,7 @@ class Schedule(object):
                         except ValueError:
                             log.error('Invalid date string. Ignoring')
                             continue
-                    when = int(when__.strftime('%s'))
+                    when = int(time.mktime(when__.timetuple()))
                     now = int(time.time())
                     seconds = when - now
 
@@ -736,7 +736,7 @@ class Schedule(object):
                     log.error('Missing python-croniter. Ignoring job {0}'.format(job))
                     continue
 
-                now = int(datetime.datetime.now().strftime('%s'))
+                now = int(time.mktime(datetime.datetime.now().timetuple()))
                 try:
                     cron = int(croniter.croniter(data['cron'], now).get_next())
                 except (ValueError, KeyError):
@@ -809,12 +809,12 @@ class Schedule(object):
                     else:
                         if isinstance(data['range'], dict):
                             try:
-                                start = int(dateutil_parser.parse(data['range']['start']).strftime('%s'))
+                                start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
                             except ValueError:
                                 log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
                                 continue
                             try:
-                                end = int(dateutil_parser.parse(data['range']['end']).strftime('%s'))
+                                end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
                             except ValueError:
                                 log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
                                 continue
@@ -902,7 +902,9 @@ def clean_proc_dir(opts):
         with salt.utils.fopen(fn_, 'rb') as fp_:
             job = None
             try:
-                job = salt.payload.Serial(opts).load(fp_)
+                job_data = fp_.read()
+                if job_data:
+                    job = salt.payload.Serial(opts).load(fp_)
             except Exception:  # It's corrupted
                 try:
                     os.unlink(fn_)
