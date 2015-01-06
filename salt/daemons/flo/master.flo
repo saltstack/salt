@@ -21,6 +21,13 @@ framer masterudpstack be active first setup
     frame spawnworkers
         enter
             do salt raet worker fork
+        go zmqstart
+        go start
+
+    frame zmqstart
+        # Start the zmq ret port if configured
+        let me if value in .salt.etc.zmq_behavior
+        bid start zmq_ret
         go start
 
     frame start
@@ -41,6 +48,10 @@ framer masterudpstack be active first setup
         exit
             do salt raet road stack closer per inode ".salt.road.manor."
             do salt raet lane stack closer per inode ".salt.lane.manor."
+
+#########################################
+# Main RAET Behaviors                   #
+#########################################
 
 # Inbound framer
 framer inbound be inactive first start
@@ -78,3 +89,12 @@ framer outbound be inactive first start
     frame start
         do salt raet lane stack service tx
         do salt raet road stack service tx
+
+#########################################
+# Main ZMQ Behaviors                    #
+#########################################
+
+framer zmqret be inactive first start
+    frame start
+        enter
+            do salt zmq ret fork
