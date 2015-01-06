@@ -103,7 +103,7 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
-        if self.opts['transport'] == 'zeromq':
+        if self.opts.get('transport', 'zeromq') == 'zeromq':
             self.acc = 'minions'
         else:
             self.acc = 'accepted'
