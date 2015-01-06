@@ -33,4 +33,12 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         self.functions = salt.loader.wheels(opts)
 
 
+    # TODO: remove/deprecate
+    def call_func(self, fun, **kwargs):
+        '''
+        Backwards compatibility
+        '''
+        return self.low(fun, kwargs)
+
+
 Wheel = WheelClient  # for backward-compat
