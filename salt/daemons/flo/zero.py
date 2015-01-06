@@ -9,6 +9,7 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import logging
+import hashlib
 import multiprocessing
 import errno
 # Import ioflo libs
@@ -114,8 +115,29 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
             pub_sock.bind(pub_uri)
             self.created = True
         # Don't pop the publish messages! The raet behavior still needs them
-        for package in self.publish.value:
-            pass
+        try:
+            for package in self.publish.value:
+                unpacked_package = salt.payload.unpackage(package)
+                payload = unpacked_package['payload']
+                if self.opts['zmq_filtering']:
+                    # if you have a specific topic list, use that
+                    if 'topic_lst' in unpacked_package:
+                        for topic in unpacked_package['topic_lst']:
+                            # zmq filters are substring match, hash the topic
+                            # to avoid collisions
+                            htopic = hashlib.sha1(topic).hexdigest()
+                            pub_sock.send(htopic, flags=zmq.SNDMORE)
+                            pub_sock.send(payload)
+                            # otherwise its a broadcast
+                    else:
+                        pub_sock.send('broadcast', flags=zmq.SNDMORE)
+                        pub_sock.send(payload)
+                else:
+                    pub_sock.send(payload)
+        except zmq.ZMQError as exc:
+            if exc.errno == errno.EINTR:
+                continue
+            raise exc
 
 
 class SaltZmqWorker(ioflo.base.deeding.Deed):
