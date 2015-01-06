@@ -27,4 +27,4 @@ framer raetworker be inactive first start
 
 framer zmqworker be inactive first start
     frame start
-        do salt.zmq worker
+        do salt zmq worker
