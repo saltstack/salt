@@ -390,7 +390,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             reqf.write('pep8\n')
 
         try:
-            ret = self.run_function('virtualenv.create', [venv_dir])
+            self.run_function('virtualenv.create', [venv_dir])
 
             # The requirements file should not be found the base environment
             ret = self.run_state(
@@ -421,8 +421,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
+                'Requirements were already installed.',
+                ret
             )
         finally:
             if os.path.isdir(venv_dir):

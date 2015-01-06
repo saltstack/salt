@@ -56,6 +56,17 @@ except ImportError:
     # Older jinja does not need markupsafe
     HAS_MARKUPSAFE = False
 # pylint: enable=import-error,no-name-in-module
+try:
+    # Older python where the backport from pypi is installed
+    from backports import ssl_match_hostname
+    HAS_SSL_MATCH_HOSTNAME = True
+except ImportError:
+    # Other older python we use our bundled copy
+    try:
+        from requests.packages.urllib3.packages import ssl_match_hostname
+        HAS_SSL_MATCH_HOSTNAME = True
+    except ImportError:
+        HAS_SSL_MATCH_HOSTNAME = False
 
 # Import salt libs
 import salt
@@ -126,6 +137,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
 
     if HAS_CERTIFI:
         tops.append(os.path.dirname(certifi.__file__))
+
+    if HAS_SSL_MATCH_HOSTNAME:
+        tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():

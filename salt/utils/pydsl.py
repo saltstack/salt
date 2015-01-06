@@ -95,7 +95,7 @@ from salt.ext.six import string_types
 import salt.ext.six as six
 
 
-REQUISITES = set('require watch prereq use require_in watch_in prereq_in use_in onchanges onfail'.split())
+REQUISITES = set('listen require watch prereq use listen_in require_in watch_in prereq_in use_in onchanges onfail'.split())
 
 
 class PyDslError(Exception):

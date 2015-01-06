@@ -465,7 +465,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
 
     .. code-block:: bash
 
-        salt '*' partition.mkpart /dev/sda primary fat32 0 639
+        salt '*' partition.mkpart /dev/sda primary fs_type=fat32 start=0 end=639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
     _validate_device(device)

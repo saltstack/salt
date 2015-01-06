@@ -2,7 +2,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-import six
+import salt.ext.six as six
 import sys
 import logging
 
