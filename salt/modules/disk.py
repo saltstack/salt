@@ -212,7 +212,7 @@ def blkid(device=None):
         args = " " + device
 
     ret = {}
-    for line in __salt__['cmd.run_stdout']('blkid' + args).split('\n'):
+    for line in __salt__['cmd.run_stdout'](('blkid' + args).split('\n'), python_shell=False):
         comps = line.split()
         device = comps[0][:-1]
         info = {}
