@@ -2611,9 +2611,9 @@ def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=No
         f_result = fun(kwargs, call=fun_call)
         r_set = {}
         for d in f_result:
-            if type(d) is list:
+            if isinstance(d, list):
                 d0 = d[0]
-                if type(d0) is dict:
+                if isinstance(d0, dict):
                     for k, v in d0.items():
                         r_set[k] = v
         status = _unwrap_dict(r_set, argument_being_watched)
