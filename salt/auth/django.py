@@ -66,6 +66,10 @@ def django_auth_setup():
     '''
     Prepare the connection to the Django authentication framework
     '''
+    global django_auth_class
+
+    if django_auth_class is not None:
+        return
 
     # Versions 1.7 and later of Django don't pull models until
     # they are needed.  When using framework facilities outside the
@@ -83,18 +87,13 @@ def django_auth_setup():
     if django.VERSION >= (1, 7):
         django.setup()
 
-    return django_auth_class
-
 
 def auth(username, password):
     '''
     Simple Django auth
     '''
 
-    global django_auth_class
-
-    if not django_auth_class:
-        django_auth_class = django_auth_setup()
+    django_auth_setup()
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:
@@ -114,7 +113,6 @@ def auth(username, password):
 def retrieve_auth_entries(u=None):
     '''
 
-    :param django_auth_class: Reference to the django model class for auth
     :param u: Username to filter for
     :return: Dictionary that can be slotted into the __opts__ structure for eauth that designates the
              user and his or her ACL
@@ -142,9 +140,7 @@ def retrieve_auth_entries(u=None):
         - .*
 
     '''
-    global django_auth_class
-    if not django_auth_class:
-        django_auth_class = django_auth_setup()
+    django_auth_setup()
 
     if u is None:
         db_records = django_auth_class.objects.all()
