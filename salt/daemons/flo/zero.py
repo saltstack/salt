@@ -40,10 +40,11 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
         Create the ZMQ Ret Port process fork
         '''
         self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
-        self.crypticle.value = salt.crypt.Crypticle(self.opts.value, self.opts['aes'])
+        self.crypticle.value = salt.crypt.Crypticle(self.opts.value, self.opts.value['aes'])
         self.key.value = salt.daemons.masterapi.access_keys(self.opts.value)
         proc = multiprocessing.Process(target=self._ret_port)
         proc.start()
+        log.info('Started ZeroMQ RET port process')
 
     def _ret_port(self):
         '''
@@ -52,7 +53,7 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
         self.context = zmq.Context(self.opts.value['worker_threads'])
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts.value)
         self.clients = self.context.socket(zmq.ROUTER)
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+        if self.opts.value['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         try:
@@ -62,7 +63,7 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
             self.clients.setsockopt(zmq.RCVHWM, self.opts.value['rep_hwm'])
         self.workers = self.context.socket(zmq.DEALER)
         self.w_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'workers.ipc')
+            os.path.join(self.opts.value['sock_dir'], 'workers.ipc')
         )
 
         log.info('Setting up the master communication server')
@@ -107,7 +108,7 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
             except AttributeError:
                 pub_sock.setsockopt(zmq.SNDHWM, self.opts.value.get('pub_hwm', 1000))
                 pub_sock.setsockopt(zmq.RCVHWM, self.opts.value.get('pub_hwm', 1000))
-            if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            if self.opts.value['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
                 # IPv6 sockets work for both IPv6 and IPv4 addresses
                 pub_sock.setsockopt(zmq.IPV4ONLY, 0)
             pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts.value)
@@ -119,7 +120,7 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
             for package in self.publish.value:
                 unpacked_package = salt.payload.unpackage(package)
                 payload = unpacked_package['payload']
-                if self.opts['zmq_filtering']:
+                if self.opts.value['zmq_filtering']:
                     # if you have a specific topic list, use that
                     if 'topic_lst' in unpacked_package:
                         for topic in unpacked_package['topic_lst']:
@@ -168,6 +169,7 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
                     self.crypticle.value)
             self.worker.setup()
             self.created = True
+            log.info('Started ZMQ worker')
         self.worker.handle_request()
 
 
@@ -189,15 +191,15 @@ class FloMWorker(salt.master.MWorker):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.clear_funcs = salt.master.ClearFuncs(
-                self.opts,
+                self.opts.value,
                 self.key,
                 self.mkey,
                 self.crypticle)
-        self.aes_funcs = salt.master.AESFuncs(self.opts, self.crypticle)
+        self.aes_funcs = salt.master.AESFuncs(self.opts.value, self.crypticle)
         self.context = zmq.Context(1)
         self.socket = self.context.socket(zmq.REP)
         self.w_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'workers.ipc')
+                os.path.join(self.opts.value['sock_dir'], 'workers.ipc')
                 )
         log.info('ZMQ Worker binding to socket {0}'.format(self.w_uri))
         self.poller = zmq.Poller()

@@ -26,7 +26,8 @@ framer masterudpstack be active first setup
 
     frame zmqstart
         # Start the zmq ret port if configured
-        let me if value in .salt.etc.zmq_behavior
+        let me if .salt.etc.zmq_behavior
+        print ZeroMQING
         bid start zmqret
         bid start zmqpub
         go start
