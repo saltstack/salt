@@ -213,14 +213,14 @@ def export(name,
                     ret,
                     ('{0} doesn\'t exist and is set to be checked out.').format(target))
         svn_cmd = 'svn.list'
-	rev = 'HEAD'
+        rev = 'HEAD'
         out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
         return _neutral_test(
                 ret,
                 ('{0}').format(out))
 
     if not rev:
-	rev = 'HEAD'
+        rev = 'HEAD'
 
     if force:
         opts += ('--force',)
