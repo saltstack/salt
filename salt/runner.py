@@ -146,8 +146,11 @@ class Runner(RunnerClient):
                     exit(0)  # TODO: return or something? Don't like exiting...
 
                 # output rets if you have some
-                if not self.opts.get('quiet', False):
-                    self.print_async_returns(async_pub['tag'])
+                for suffix, event in self.get_async_returns(async_pub['tag']):
+                    if not self.opts.get('quiet', False):
+                        self.print_async_event(suffix, event)
+                    if suffix == 'ret':
+                        ret = event['return']
 
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)

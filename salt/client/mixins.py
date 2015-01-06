@@ -327,23 +327,22 @@ class AsyncClientMixin(object):
         proc.join()  # MUST join, otherwise we leave zombies all over
         return {'tag': tag, 'jid': jid}
 
-    def print_async_returns(self, tag, timeout=None):
+    def print_async_event(self, suffix, event):
         '''
         Print all of the events with the prefix 'tag'
         '''
-        for suffix, event in self.get_async_returns(tag, timeout=timeout):
-            # TODO: clean up this event print out. We probably want something
-            # more general, since this will get *really* messy as
-            # people use more events that don't quite fit into this mold
-            if suffix == 'ret':  # for "ret" just print out return
-                salt.output.display_output(event['return'], '', self.opts)
-            elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
-                print(self.outputters[event['outputter']](event['data']))
-            # otherwise fall back on basic printing
-            else:
-                event.pop('_stamp')  # remove the timestamp before printing
-                print('{tag}: {event}'.format(tag=suffix,
-                                              event=event))
+        # TODO: clean up this event print out. We probably want something
+        # more general, since this will get *really* messy as
+        # people use more events that don't quite fit into this mold
+        if suffix == 'ret':  # for "ret" just print out return
+            salt.output.display_output(event['return'], '', self.opts)
+        elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
+            print(self.outputters[event['outputter']](event['data']))
+        # otherwise fall back on basic printing
+        else:
+            event.pop('_stamp')  # remove the timestamp before printing
+            print('{tag}: {event}'.format(tag=suffix,
+                                          event=event))
 
     def get_async_returns(self, tag, timeout=None):
         '''
