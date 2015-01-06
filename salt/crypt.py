@@ -12,7 +12,6 @@ import os
 import sys
 import time
 import hmac
-import shutil
 import hashlib
 import logging
 import traceback
@@ -40,61 +39,27 @@ from salt.exceptions import (
 log = logging.getLogger(__name__)
 
 
-def dropfile(cachedir, user=None, sock_dir=None):
+def dropfile(cachedir, user=None):
     '''
-    Set an AES dropfile to update the publish session key
-
-    A dropfile is checked periodically by master workers to determine
-    if AES key rotation has occurred.
+    Set an AES dropfile to request the master update the publish session key
     '''
-    dfnt = os.path.join(cachedir, '.dfnt')
     dfn = os.path.join(cachedir, '.dfn')
-
-    def ready():
-        '''
-        Because MWorker._update_aes uses second-precision mtime
-        to detect changes to the file, we must avoid writing two
-        versions with the same mtime.
-
-        Note that this only makes rapid updates in serial safe: concurrent
-        updates could still both pass this check and then write two different
-        keys with the same mtime.
-        '''
-        try:
-            stats = os.stat(dfn)
-        except os.error:
-            # Not there, go ahead and write it
-            return True
-        else:
-            if stats.st_mtime == time.time():
-                # The mtime is the current time, we must
-                # wait until time has moved on.
-                return False
-            else:
-                return True
-
-    while not ready():
-        log.warning('Waiting before writing {0}'.format(dfn))
-        time.sleep(1)
-
-    log.info('Rotating AES key')
-    aes = Crypticle.generate_key_string()
+    # set a mask (to avoid a race condition on file creation) and store original.
     mask = os.umask(191)
-    with salt.utils.fopen(dfnt, 'w+') as fp_:
-        fp_.write(aes)
-    if user:
-        try:
-            import pwd
-            uid = pwd.getpwnam(user).pw_uid
-            os.chown(dfnt, uid, -1)
-        except (KeyError, ImportError, OSError, IOError):
-            pass
+    try:
+        log.info('Rotating AES key')
 
-    shutil.move(dfnt, dfn)
-    os.umask(mask)
-    if sock_dir:
-        event = salt.utils.event.SaltEvent('master', sock_dir)
-        event.fire_event({'rotate_aes_key': True}, tag='key')
+        with salt.utils.fopen(dfn, 'w+') as fp_:
+            fp_.write('')
+        if user:
+            try:
+                import pwd
+                uid = pwd.getpwnam(user).pw_uid
+                os.chown(dfn, uid, -1)
+            except (KeyError, ImportError, OSError, IOError):
+                pass
+    finally:
+        os.umask(mask)  # restore original umask
 
 
 def gen_keys(keydir, keyname, keysize, user=None):
@@ -745,7 +710,8 @@ class Crypticle(object):
     SIG_SIZE = hashlib.sha256().digest_size
 
     def __init__(self, opts, key_string, key_size=192):
-        self.keys = self.extract_keys(key_string, key_size)
+        self.key_string = key_string
+        self.keys = self.extract_keys(self.key_string, key_size)
         self.key_size = key_size
         self.serial = salt.payload.Serial(opts)
 
