@@ -361,4 +361,4 @@ def __get_quoted_string(token):
 
 
 def __is_assignment(token):
-    return '=>'
+    return token == '=>'
