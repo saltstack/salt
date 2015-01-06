@@ -16,14 +16,14 @@ The following grains/pillar should be set:
 
     tomcat-manager:
       user: <username>
-      password: <passwd>
+      passwd: <password>
 
 or the old format:
 
 .. code-block:: yaml
 
     tomcat-manager.user: <username>
-    tomcat-manager.password: <passwd>
+    tomcat-manager.passwd: <password>
 
 Also configure a user in the conf/tomcat-users.xml file:
 
