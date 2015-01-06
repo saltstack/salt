@@ -275,6 +275,7 @@ class AsyncClientMixin(object):
         multiprocess and fire the return data on the event bus
         '''
         salt.utils.daemonize()
+
         # pack a few things into low
         low['__jid__'] = jid
         low['__user__'] = user

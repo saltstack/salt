@@ -32,7 +32,6 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         super(WheelClient, self).__init__(opts)
         self.functions = salt.loader.wheels(opts)
 
-
     # TODO: remove/deprecate
     def call_func(self, fun, **kwargs):
         '''
