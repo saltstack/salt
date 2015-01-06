@@ -50,6 +50,7 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
         '''
         self.context = zmq.Context(self.opts.value['worker_threads'])
         self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts.value)
+        log.info('ZMQ Ret port binding to {0}'.format(self.uri))
         self.clients = self.context.socket(zmq.ROUTER)
         if self.opts.value['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
