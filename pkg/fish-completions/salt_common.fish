@@ -156,35 +156,40 @@ set -g __fish_salt_default_program 'salt'
 # salt --out raw server test.ping
 # Consider rewriting using __fish_complete_subcommand
 function __fish_salt_program
-	set result (commandline -pco)
-	if test -n "$result"
-		if [ $result[1] = 'salt-call' ]; and contains -- '--local' $result
-			set options '--local'
+	if status --is-interactive
+		set result (commandline -pco)
+		if test -n "$result"
+			if [ $result[1] = 'salt-call' ]; and contains -- '--local' $result
+				set options '--local'
+			end
+			set result $result[1] $options
 		end
-		set result $result[1] $options
-	else
-		set result $__fish_salt_default_program
 	end
+	set result $__fish_salt_default_program
 	echo $result
 end
 
 function __fish_salt_save_first_commandline_token_not_matching_args_to
-	set -l cli (commandline -pco) 
-	for i in $cli
-		if echo "$i" | grep -Ev (__fish_salt_join '|' $argv)
-			set -g $argv[1] $i
-			return 0
+	if status --is-interactive
+		set -l cli (commandline -pco) 
+		for i in $cli
+			if echo "$i" | grep -Ev (__fish_salt_join '|' $argv)
+				set -g $argv[1] $i
+				return 0
+			end
 		end
 	end
 	return 1
 end
 
 function __fish_salt_commandline_tokens_not_matching_args
-	set tokens (commandline -pco)
-	set result 1
-	for token in $tokens
-		if echo "$token" | grep -Ev (__fish_salt_join '|' $argv)
-			set result 0
+	if status --is-interactive
+		set tokens (commandline -pco)
+		set result 1
+		for token in $tokens
+			if echo "$token" | grep -Ev (__fish_salt_join '|' $argv)
+				set result 0
+			end
 		end
 	end
 	return $result
