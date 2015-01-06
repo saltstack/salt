@@ -77,6 +77,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
     token = None
+    data = None
     if not key or not keyid:
         iam_creds = iam.get_iam_metadata()
         key = iam_creds['secret_key']
