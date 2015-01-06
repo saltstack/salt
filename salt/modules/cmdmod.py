@@ -16,6 +16,7 @@ import subprocess
 import sys
 import traceback
 import yaml
+import shlex
 
 # Import salt libs
 import salt.utils
@@ -410,6 +411,8 @@ def _run(cmd,
             .format(cwd)
         )
 
+    if python_shell is not True and not isinstance(cmd, list):
+        cmd = shlex.split(cmd)
     # This is where the magic happens
     try:
         proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
