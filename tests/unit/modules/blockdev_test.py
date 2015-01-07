@@ -21,7 +21,11 @@ class TestBlockdevModule(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
             blockdev.dump('/dev/sda')
-            mock.assert_called_once_with('blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff  --getmaxsect --getsize --getsize64 --getra --getfra /dev/sda', python_shell=False)
+            mock.assert_called_once_with(
+                'blockdev --getro --getsz --getss --getpbsz --getiomin '
+                '--getioopt --getalignoff  --getmaxsect --getsize '
+                '--getsize64 --getra --getfra /dev/sda'
+            )
 
     def test_wipe(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
