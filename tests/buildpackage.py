@@ -8,6 +8,8 @@
 # run tests. It *will* install the build deps on the machine running the script.
 #
 
+# pylint: disable=file-perms
+
 import errno
 import glob
 import logging
