@@ -552,7 +552,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         os.environ.update(env_vars)
 
     try:
-        cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+        cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
         return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -677,7 +677,7 @@ def uninstall(pkgs=None,
                             pass
         cmd.extend(pkgs)
 
-    cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -717,7 +717,7 @@ def freeze(bin_env=None,
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
     cmd = [_get_pip_bin(bin_env), 'freeze']
-    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -748,7 +748,7 @@ def list_(prefix=None,
     pip_version_cmd = [pip_bin, '--version']
     cmd = [pip_bin, 'freeze']
 
-    cmd_kwargs = dict(runas=user, cwd=cwd)
+    cmd_kwargs = dict(cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -827,7 +827,7 @@ def list_upgrades(bin_env=None,
     pip_bin = _get_pip_bin(bin_env)
     cmd = [pip_bin, "list", "--outdated"]
 
-    cmd_kwargs = dict(runas=user, cwd=cwd)
+    cmd_kwargs = dict(cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -896,7 +896,7 @@ def upgrade(bin_env=None,
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
     cmd = [pip_bin, "install", "-U"]
-    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     errors = False
