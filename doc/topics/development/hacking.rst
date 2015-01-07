@@ -34,8 +34,9 @@ Create a new `virtualenv`_:
 
 .. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
 
-On Arch Linux, where Python 3 is the default installation of Python, use the
-``virtualenv2`` command instead of ``virtualenv``.
+Avoid making your :ref:`virtualenv path too long <too_long_socket_path>`.
+On Arch Linux, where Python 3 is the default installation of Python, use
+the ``virtualenv2`` command instead of ``virtualenv``.
 
 .. note:: Using system Python modules in the virtualenv
 
@@ -175,6 +176,7 @@ do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.
 If you would like to log to the console instead of to the log file, remove the
 ``-d``.
 
+.. _too_long_socket_path:
 .. note:: Too long socket path?
 
     Once the minion starts, you may see an error like the following:
