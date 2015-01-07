@@ -14,6 +14,7 @@ import logging
 from salt.ext.six.moves import range
 
 # Import salt libs
+import salt.daemons.flo
 import salt.daemons.masterapi
 from raet import raeting
 from raet.lane.stacking import LaneStack
@@ -65,6 +66,7 @@ class SaltRaetWorkerFork(ioflo.base.deeding.Deed):
         preloads.append(('.salt.var.fork.worker.windex', dict(value=windex)))
         preloads.append(
                 ('.salt.access_keys', dict(value=self.access_keys.value)))
+        preloads.extend(salt.daemons.flo.explode_opts(self.opts.value))
 
         console_logdir = self.opts.value.get('ioflo_console_logdir', '')
         if console_logdir:

@@ -9,6 +9,14 @@ framer masterudpstack be active first setup
             do salt raet cleanup
             do salt raet road stack setup per inode ".salt.road.manor"
             do salt raet manor lane setup per inode ".salt.lane.manor"
+        go zmqstart
+        go spawnmaint
+
+    frame zmqstart
+        # Start the zmq ret port if configured
+        let me if .salt.etc.zmq_behavior
+        bid start zmqret
+        bid start zmqpub
         go spawnmaint
 
     # Create the maintanence frame
@@ -21,15 +29,6 @@ framer masterudpstack be active first setup
     frame spawnworkers
         enter
             do salt raet worker fork
-        go zmqstart
-        go start
-
-    frame zmqstart
-        # Start the zmq ret port if configured
-        let me if .salt.etc.zmq_behavior
-        print ZeroMQING
-        bid start zmqret
-        bid start zmqpub
         go start
 
     frame start

@@ -34,12 +34,17 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
                'mkey': '.salt.var.zmq.master_key',
                'crypticle': '.salt.var.zmq.crypticle'}
 
+    def postinitio(self):
+        '''
+        Init the cryptographic keys
+        '''
+        self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
+        self.crypticle.value = salt.crypt.Crypticle(self.opts.value, self.opts.value['aes'])
+
     def action(self):
         '''
         Create the ZMQ Ret Port process fork
         '''
-        self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
-        self.crypticle.value = salt.crypt.Crypticle(self.opts.value, self.opts.value['aes'])
         proc = multiprocessing.Process(target=self._ret_port)
         proc.start()
         log.info('Started ZeroMQ RET port process')
@@ -182,7 +187,7 @@ class FloMWorker(salt.master.MWorker):
                  mkey,
                  key,
                  crypticle):
-        salt.master.MWorker.__init__(opts, mkey, key, crypticle)
+        salt.master.MWorker.__init__(self, opts, mkey, key, crypticle)
 
     def setup(self):
         '''
@@ -190,15 +195,15 @@ class FloMWorker(salt.master.MWorker):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
         self.clear_funcs = salt.master.ClearFuncs(
-                self.opts.value,
+                self.opts,
                 self.key,
                 self.mkey,
                 self.crypticle)
-        self.aes_funcs = salt.master.AESFuncs(self.opts.value, self.crypticle)
+        self.aes_funcs = salt.master.AESFuncs(self.opts, self.crypticle)
         self.context = zmq.Context(1)
         self.socket = self.context.socket(zmq.REP)
         self.w_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts.value['sock_dir'], 'workers.ipc')
+                os.path.join(self.opts['sock_dir'], 'workers.ipc')
                 )
         log.info('ZMQ Worker binding to socket {0}'.format(self.w_uri))
         self.poller = zmq.Poller()
