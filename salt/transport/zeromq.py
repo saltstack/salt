@@ -4,6 +4,7 @@ Zeromq transport classes
 
 import os
 import threading
+import errno
 
 from random import randint, shuffle
 
@@ -219,41 +220,10 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
             if not salt.crypt.verify_signature(master_pubkey_path, load, payload.get('sig')):
                 raise salt.crypt.AuthenticationError('Message signature failed to validate.')
 
-    # TODO: fix, we need a matcher apparently...
-    def _target_load(self, load):
-        return True  # TODO: for now alway match
-        # Verify that the publication is valid
-        if 'tgt' not in load or 'jid' not in load or 'fun' not in load \
-           or 'arg' not in load:
-            return
-        # Verify that the publication applies to this minion
-
-        # It's important to note that the master does some pre-processing
-        # to determine which minions to send a request to. So for example,
-        # a "salt -G 'grain_key:grain_val' test.ping" will invoke some
-        # pre-processing on the master and this minion should not see the
-        # publication if the master does not determine that it should.
-
-        if 'tgt_type' in load:
-            match_func = getattr(self.matcher,
-                                 '{0}_match'.format(load['tgt_type']), None)
-            if match_func is None:
-                return
-            if load['tgt_type'] in ('grain', 'grain_pcre', 'pillar'):
-                delimiter = load.get('delimiter', DEFAULT_TARGET_DELIM)
-                if not match_func(load['tgt'], delimiter=delimiter):
-                    return
-            elif not match_func(load['tgt']):
-                return
-        else:
-            if not self.matcher.glob_match(load['tgt']):
-                return
-
-    def recv(self, timeout=0):
+    def _decode_messages(self, messages):
         '''
-        Get a pub job, with an optional timeout (0==forever)
+        Take the zmq messages, decrypt/decode them into a payload
         '''
-        messages = self.socket.recv_multipart()
         messages_len = len(messages)
         # if it was one message, then its old style
         if messages_len == 1:
@@ -265,22 +235,34 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
             raise Exception(('Invalid number of messages ({0}) in zeromq pub'
                              'message from master').format(len(messages_len)))
 
-        # TODO: sig verification etc.
         # we need to decrypt it
         if payload['enc'] == 'aes':
             self._verify_master_signature(payload)
-            print ('to decrypt')
-            payload['load'] = self.auth.crypticle.loads(payload['load'])
-            print ('decrypted?')
-
-        if not self._target_load(payload['load']):
-            print ('not a matching load')
+            try:
+                payload['load'] = self.auth.crypticle.loads(payload['load'])
+            except salt.crypt.AuthenticationError:
+                self.auth = salt.crypt.SAuth(self.opts)
+                payload['load'] = self.auth.crypticle.loads(payload['load'])
 
         return payload
+
+    def recv(self, timeout=0):
+        '''
+        Get a pub job, with an optional timeout (0==forever)
+        '''
+        messages = self.socket.recv_multipart()
+        return self._decode_messages(messages)
 
     def recv_noblock(self):
         '''
         Get a pub job in a non-blocking manner.
         Return pub or None
         '''
-        raise NotImplementedError()
+        try:
+            messages = self.socket.recv_multipart(zmq.NOBLOCK)
+            return self._decode_messages(messages)
+        except zmq.ZMQError as e:
+            # Swallow errors for bad wakeups or signals needing processing
+            if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
+                raise
+            return None

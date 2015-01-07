@@ -1812,6 +1812,7 @@ class Minion(MinionBase):
                         self._fire_master('ping', 'minion_ping')
                         ping_at = time.time() + ping_interval
 
+                # TODO: rename?? Maybe do_pub_recv and take a list of them?
                 self._do_socket_recv(socks)
                 self._do_event_poll(socks)
                 self._process_beacons()
@@ -1892,8 +1893,40 @@ class Minion(MinionBase):
             multiprocessing.active_children()
 
     def _do_socket_recv(self, socks):
-        payload = self.sub_channel.recv()
-        self._handle_decoded_payload(payload['load'])
+        payload = self.sub_channel.recv_noblock()
+
+        if payload is not None and self._target_load(payload['load']):
+            self._handle_decoded_payload(payload['load'])
+
+    def _target_load(self, load):
+        # Verify that the publication is valid
+        if 'tgt' not in load or 'jid' not in load or 'fun' not in load \
+           or 'arg' not in load:
+            return False
+        # Verify that the publication applies to this minion
+
+        # It's important to note that the master does some pre-processing
+        # to determine which minions to send a request to. So for example,
+        # a "salt -G 'grain_key:grain_val' test.ping" will invoke some
+        # pre-processing on the master and this minion should not see the
+        # publication if the master does not determine that it should.
+
+        if 'tgt_type' in load:
+            match_func = getattr(self.matcher,
+                                 '{0}_match'.format(load['tgt_type']), None)
+            if match_func is None:
+                return False
+            if load['tgt_type'] in ('grain', 'grain_pcre', 'pillar'):
+                delimiter = load.get('delimiter', DEFAULT_TARGET_DELIM)
+                if not match_func(load['tgt'], delimiter=delimiter):
+                    return False
+            elif not match_func(load['tgt']):
+                return False
+        else:
+            if not self.matcher.glob_match(load['tgt']):
+                return False
+
+        return True
 
     def destroy(self):
         '''
