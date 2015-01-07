@@ -218,6 +218,7 @@ except ImportError:
 
 # Import Salt libs
 import salt.utils
+import salt.utils.jid
 import salt.utils.process
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running
@@ -405,7 +406,7 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'schedule': data['name'],
-               'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+               'jid': salt.utils.jid.gen_jid()}
 
         if 'metadata' in data:
             if isinstance(data['metadata'], dict):

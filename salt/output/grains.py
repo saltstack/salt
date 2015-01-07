@@ -31,7 +31,7 @@ def output(grains):
     '''
     Output the grains in a clean way
     '''
-    colors = salt.utils.get_colors(__opts__.get('color'))
+    colors = salt.utils.get_colors(__opts__.get('color'), __opts__.get('color_theme'))
     encoding = grains['locale_info']['defaultencoding']
     if encoding == 'unknown':
         encoding = 'utf-8'  # let's hope for the best

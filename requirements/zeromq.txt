@@ -1,4 +1,4 @@
--r _requirements.txt
+-r base.txt
 
 M2Crypto
 pycrypto

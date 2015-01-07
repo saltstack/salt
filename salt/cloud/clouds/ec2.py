@@ -2313,9 +2313,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
             created = True
-            for item in created_volume:
-                if 'volumeId' in item:
-                    volume_dict['volume_id'] = item['volumeId']
+            if 'volumeId' in created_volume:
+                volume_dict['volume_id'] = created_volume['volumeId']
 
         attach = attach_volume(
             name,

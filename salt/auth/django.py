@@ -53,13 +53,23 @@ try:
     import django.conf
     import django.contrib.auth
     HAS_DJANGO = True
-except ImportError:
+except Exception as exc:
+    # If Django is installed and is not detected, uncomment
+    # the following line to display additional information
+    #log.warning('Could not load Django auth module. Found exception: {0}'.format(exc))
     HAS_DJANGO = False
 
 django_auth_class = None
 
 
 def django_auth_setup():
+    '''
+    Prepare the connection to the Django authentication framework
+    '''
+    global django_auth_class
+
+    if django_auth_class is not None:
+        return
 
     # Versions 1.7 and later of Django don't pull models until
     # they are needed.  When using framework facilities outside the
@@ -70,14 +80,12 @@ def django_auth_setup():
         django_model_name = django_model_fullname.split('.')[-1]
         django_module_name = '.'.join(django_model_fullname.split('.')[0:-1])
 
-        django_auth_module = __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
+        __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
         django_auth_class_str = 'django_auth_module.{0}'.format(django_model_name)
         django_auth_class = eval(django_auth_class_str)  # pylint: disable=W0123
 
     if django.VERSION >= (1, 7):
         django.setup()
-
-    return django_auth_class
 
 
 def auth(username, password):
@@ -85,10 +93,7 @@ def auth(username, password):
     Simple Django auth
     '''
 
-    global django_auth_class
-
-    if not django_auth_class:
-        django_auth_class = django_auth_setup()
+    django_auth_setup()
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:
@@ -108,7 +113,6 @@ def auth(username, password):
 def retrieve_auth_entries(u=None):
     '''
 
-    :param django_auth_class: Reference to the django model class for auth
     :param u: Username to filter for
     :return: Dictionary that can be slotted into the __opts__ structure for eauth that designates the
              user and his or her ACL
@@ -136,9 +140,7 @@ def retrieve_auth_entries(u=None):
         - .*
 
     '''
-    global django_auth_class
-    if not django_auth_class:
-        django_auth_class = django_auth_setup()
+    django_auth_setup()
 
     if u is None:
         db_records = django_auth_class.objects.all()

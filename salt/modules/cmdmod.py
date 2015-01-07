@@ -160,7 +160,6 @@ def _run(cmd,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
          output_loglevel='debug',
-         quiet=False,
          runas=None,
          shell=DEFAULT_SHELL,
          python_shell=True,
@@ -177,14 +176,6 @@ def _run(cmd,
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
-    if salt.utils.is_true(quiet):
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'quiet\' option is deprecated and will be removed in the '
-            '\'Lithium\' Salt release. Please use output_loglevel=quiet '
-            'instead.'
-        )
-
     if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
@@ -291,7 +282,7 @@ def _run(cmd,
                 )
             )
 
-    if _check_loglevel(output_loglevel, quiet) is not None:
+    if _check_loglevel(output_loglevel) is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
@@ -545,7 +536,6 @@ def run(cmd,
         rstrip=True,
         umask=None,
         output_loglevel='debug',
-        quiet=False,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
@@ -608,7 +598,6 @@ def run(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv,
@@ -631,7 +620,7 @@ def run(cmd,
             with salt.utils.fopen(jid_file, 'w+b') as fn_:
                 fn_.write(serial.dumps(jid_dict))
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -656,7 +645,6 @@ def run_stdout(cmd,
                rstrip=True,
                umask=None,
                output_loglevel='debug',
-               quiet=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -703,13 +691,12 @@ def run_stdout(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv,
                use_vt=use_vt)
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -739,7 +726,6 @@ def run_stderr(cmd,
                rstrip=True,
                umask=None,
                output_loglevel='debug',
-               quiet=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -786,13 +772,12 @@ def run_stderr(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                use_vt=use_vt,
                saltenv=saltenv)
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -822,7 +807,6 @@ def run_all(cmd,
             rstrip=True,
             umask=None,
             output_loglevel='debug',
-            quiet=False,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
@@ -869,13 +853,12 @@ def run_all(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv,
                use_vt=use_vt)
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -904,7 +887,6 @@ def retcode(cmd,
             template=None,
             umask=None,
             output_loglevel='debug',
-            quiet=False,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
@@ -955,13 +937,12 @@ def retcode(cmd,
               template=template,
               umask=umask,
               output_loglevel=output_loglevel,
-              quiet=quiet,
               timeout=timeout,
               reset_system_locale=reset_system_locale,
               saltenv=saltenv,
               use_vt=use_vt)
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -985,7 +966,6 @@ def _retcode_quiet(cmd,
                    template=None,
                    umask=None,
                    output_loglevel='quiet',
-                   quiet=True,
                    timeout=None,
                    reset_system_locale=True,
                    ignore_retcode=False,
@@ -1108,7 +1088,6 @@ def script(source,
                cwd=cwd,
                stdin=stdin,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                runas=runas,
                shell=shell,
                python_shell=python_shell,

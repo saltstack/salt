@@ -103,7 +103,7 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
-        if self.opts['transport'] == 'zeromq':
+        if self.opts.get('transport', 'zeromq') == 'zeromq':
             self.acc = 'minions'
         else:
             self.acc = 'accepted'
@@ -395,11 +395,8 @@ class CkMinions(object):
                     # subexpression
                     if results:
                         if match == 'not':
-                            if results[-1] == '&':
-                                pass
-                            elif results[-1] == '|':
-                                pass
-                            else:
+                            result_suffix = results[-1]
+                            if not (result_suffix == '&' or result_suffix == '|'):
                                 results.append('&')
                             results.append('(')
                             results.append(str(set(minions)))
