@@ -21,12 +21,18 @@
 from __future__ import absolute_import
 import sys
 import os.path
-
+import logging
+log = logging.getLogger(__name__)
 if 'SETUP_DIRNAME' in globals():
     # This is from the exec() call in Salt's setup.py
     THIS_FILE = os.path.join(SETUP_DIRNAME, 'salt', 'syspaths.py')  # pylint: disable=E0602
 else:
     THIS_FILE = __file__
+
+# These defaults won't changes and are not to be overridden
+INSTALL_DIR = os.path.dirname(os.path.realpath(THIS_FILE))
+CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
+BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')
 
 try:
     # Let's try loading the system paths from the generated module at
@@ -42,11 +48,9 @@ try:
         BASE_MASTER_ROOTS_DIR,
         LOGS_DIR,
         PIDFILE_DIR,
-        CLOUD_DIR,
-        INSTALL_DIR,
-        BOOTSTRAP,
     )
-except ImportError:
+except ImportError as error:
+    log.error('Error importing salt._syspaths with exception {0}'.format(error))
     # The installation time was not generated, let's define the default values
     __platform = sys.platform.lower()
     if __platform.startswith('win'):
@@ -68,6 +72,3 @@ except ImportError:
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
     LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'log', 'salt')
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
-    INSTALL_DIR = os.path.dirname(os.path.realpath(THIS_FILE))
-    CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
-    BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')
