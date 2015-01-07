@@ -505,7 +505,7 @@ class SaltEvent(object):
     def destroy(self, linger=5000):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
-            # socket or the context.term() bellow will hang indefinitely.
+            # socket or the context.term() below will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
             self.sub.setsockopt(zmq.LINGER, linger)
             self.sub.close()
