@@ -41,6 +41,11 @@ from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'list_': 'list'
+}
+
 __virtualname__ = 'splunk_search'
 
 
@@ -180,7 +185,7 @@ def delete(name, profile="splunk"):
         return None
 
 
-def list(profile="splunk"):
+def list_(profile="splunk"):
     '''
     List splunk searches (names only)
 
