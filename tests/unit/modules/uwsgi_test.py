@@ -22,7 +22,8 @@ class UwsgiTestCase(TestCase):
         with patch.dict(uwsgi.__salt__, {'cmd.run': mock}):
             result = uwsgi.stats(socket)
             mock.assert_called_once_with(
-                'uwsgi --connect-and-read {0}'.format(socket))
+                ['uwsgi', '--connect-and-read', '{0}'.format(socket)],
+                python_shell=False)
             self.assertEqual(result, {'a': 1, 'b': 2})
 
 
