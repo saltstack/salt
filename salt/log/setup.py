@@ -287,7 +287,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
             extra = None
 
         # Let's try to make every logging message unicode
-        if isinstance(msg, string_types) and not isinstance(msg, text_type):
+        if isinstance(msg, six.string_types) and not isinstance(msg, six.text_type):
             try:
                 _msg = msg.decode('utf-8', 'replace')
             except UnicodeDecodeError:
@@ -295,7 +295,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
         else:
             _msg = msg
 
-        if PY3:
+        if six.PY3:
             logrecord = _log_record_factory(name, level, fn, lno, _msg, args,
                                           exc_info, func, sinfo)
         else:
