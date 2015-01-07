@@ -21,7 +21,8 @@
 from __future__ import absolute_import
 import sys
 import os.path
-
+import logging
+log = logging.getLogger(__name__)
 if 'SETUP_DIRNAME' in globals():
     # This is from the exec() call in Salt's setup.py
     THIS_FILE = os.path.join(SETUP_DIRNAME, 'salt', 'syspaths.py')  # pylint: disable=E0602
@@ -46,7 +47,8 @@ try:
         INSTALL_DIR,
         BOOTSTRAP,
     )
-except ImportError:
+except ImportError as error:
+    log.error('Error importing salt._syspaths with exception {0}'.format(error))
     # The installation time was not generated, let's define the default values
     __platform = sys.platform.lower()
     if __platform.startswith('win'):

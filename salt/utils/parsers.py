@@ -410,6 +410,7 @@ class ConfigDirMixIn(object):
         config_dir = os.environ.get('SALT_CONFIG_DIR', None)
         if not config_dir:
             config_dir = syspaths.CONFIG_DIR
+            logging.getLogger(__name__).debug("SYSPATHS setup as : %s", syspaths.CONFIG_DIR)
         self.add_option(
             '-c', '--config-dir', default=config_dir,
             help=('Pass in an alternative configuration directory. Default: '
@@ -420,7 +421,7 @@ class ConfigDirMixIn(object):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                'WARNING: {0!r} directory does not exist.\n'.format(
+                'WARNING: CONFIG {0!r} directory does not exist.\n'.format(
                     self.options.config_dir
                 )
             )
