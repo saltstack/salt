@@ -121,8 +121,7 @@ Copy the master and minion config files into your virtualenv:
 .. code-block:: bash
 
     mkdir -p /path/to/your/virtualenv/etc/salt
-    cp ./salt/conf/master /path/to/your/virtualenv/etc/salt/master
-    cp ./salt/conf/minion /path/to/your/virtualenv/etc/salt/minion
+    cp ./salt/conf/master ./salt/conf/minion /path/to/your/virtualenv/etc/salt/
 
 Edit the master config file:
 
