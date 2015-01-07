@@ -28,7 +28,8 @@ class PipTestCase(TestCase):
                 expected_cmd,
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_editable_withough_egg_fails(self):
@@ -57,7 +58,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing editables as a comma separated list
@@ -70,7 +72,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_multiple_pkgs_and_editables(self):
@@ -94,7 +97,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing editables as a comma separated list
@@ -107,7 +111,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # As a single string
@@ -119,7 +124,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_issue5940_install_multiple_pip_mirrors(self):
@@ -140,7 +146,8 @@ class PipTestCase(TestCase):
                 '--mirrors=http://pypi.crate.io',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing mirrors as a comma separated list
@@ -154,7 +161,8 @@ class PipTestCase(TestCase):
                 '--mirrors=http://pypi.crate.io',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # As a single string
@@ -166,7 +174,8 @@ class PipTestCase(TestCase):
                 '--mirrors=http://g.pypi.python.org',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_with_multiple_find_links(self):
@@ -187,7 +196,8 @@ class PipTestCase(TestCase):
                 '--find-links=http://pypi.crate.io \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing mirrors as a comma separated list
@@ -201,7 +211,8 @@ class PipTestCase(TestCase):
                 '--find-links=http://pypi.crate.io \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing mirrors as a single string entry
@@ -212,7 +223,8 @@ class PipTestCase(TestCase):
                 'pip install --find-links=http://g.pypi.python.org \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Invalid proto raises exception
@@ -242,7 +254,8 @@ class PipTestCase(TestCase):
                 '--find-links=https://pypi.crate.io \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_no_index_with_index_url_or_extra_index_url_raises(self):
@@ -280,7 +293,8 @@ class PipTestCase(TestCase):
                 expected_cmd,
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     @patch('os.path')
@@ -300,7 +314,9 @@ class PipTestCase(TestCase):
                 env={'VIRTUAL_ENV': '/test_env'},
                 saltenv='base',
                 runas=None,
-                cwd=None)
+                cwd=None,
+                python_shell=False,
+                )
 
     @patch('os.path')
     def test_install_log_argument_in_resulting_command(self, mock_path):
@@ -311,7 +327,8 @@ class PipTestCase(TestCase):
                 'pip install --log=/tmp/pip-install.log \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Let's fake a non-writable log file
@@ -334,7 +351,8 @@ class PipTestCase(TestCase):
                 'pip install --timeout=10 \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing an int as a string
@@ -345,7 +363,8 @@ class PipTestCase(TestCase):
                 'pip install --timeout=10 \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing a non-int to timeout
@@ -366,7 +385,8 @@ class PipTestCase(TestCase):
                 'pip install --index-url=\'http://foo.tld\' \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_extra_index_url_argument_in_resulting_command(self):
@@ -377,7 +397,8 @@ class PipTestCase(TestCase):
                 'pip install --extra-index-url=\'http://foo.tld\' \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_no_index_argument_in_resulting_command(self):
@@ -388,7 +409,8 @@ class PipTestCase(TestCase):
                 'pip install --no-index \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_build_argument_in_resulting_command(self):
@@ -399,7 +421,8 @@ class PipTestCase(TestCase):
                 'pip install --build=/tmp/foo \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_target_argument_in_resulting_command(self):
@@ -410,7 +433,8 @@ class PipTestCase(TestCase):
                 'pip install --target=/tmp/foo \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_download_argument_in_resulting_command(self):
@@ -421,7 +445,8 @@ class PipTestCase(TestCase):
                 'pip install --download=/tmp/foo \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_no_download_argument_in_resulting_command(self):
@@ -432,7 +457,8 @@ class PipTestCase(TestCase):
                 'pip install --no-download \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_download_cache_argument_in_resulting_command(self):
@@ -443,7 +469,8 @@ class PipTestCase(TestCase):
                 'pip install --download-cache=/tmp/foo \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_source_argument_in_resulting_command(self):
@@ -454,7 +481,8 @@ class PipTestCase(TestCase):
                 'pip install --source=/tmp/foo \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_exists_action_argument_in_resulting_command(self):
@@ -466,7 +494,8 @@ class PipTestCase(TestCase):
                     'pip install --exists-action={0} \'pep8\''.format(action),
                     saltenv='base',
                     runas=None,
-                    cwd=None
+                    cwd=None,
+                    python_shell=False,
                 )
 
         # Test for invalid action
@@ -495,7 +524,8 @@ class PipTestCase(TestCase):
                 '--install-option=\'--install-scripts=/foo/bar/bin\' \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing mirrors as a comma separated list
@@ -508,7 +538,8 @@ class PipTestCase(TestCase):
                 '--install-option=\'--install-scripts=/foo/bar/bin\' \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing mirrors as a single string entry
@@ -520,7 +551,8 @@ class PipTestCase(TestCase):
                 '\'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_global_options_argument_in_resulting_command(self):
@@ -539,7 +571,8 @@ class PipTestCase(TestCase):
                 '--global-option=\'--no-user-cfg\' \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing mirrors as a comma separated list
@@ -552,7 +585,8 @@ class PipTestCase(TestCase):
                 '--global-option=\'--no-user-cfg\' \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing mirrors as a single string entry
@@ -563,7 +597,8 @@ class PipTestCase(TestCase):
                 'pip install --global-option=\'--quiet\' \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_upgrade_argument_in_resulting_command(self):
@@ -574,7 +609,8 @@ class PipTestCase(TestCase):
                 'pip install --upgrade \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_force_reinstall_argument_in_resulting_command(self):
@@ -585,7 +621,8 @@ class PipTestCase(TestCase):
                 'pip install --force-reinstall \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_ignore_installed_argument_in_resulting_command(self):
@@ -596,7 +633,8 @@ class PipTestCase(TestCase):
                 'pip install --ignore-installed \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_no_deps_argument_in_resulting_command(self):
@@ -607,7 +645,8 @@ class PipTestCase(TestCase):
                 'pip install --no-deps \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_no_install_argument_in_resulting_command(self):
@@ -618,7 +657,8 @@ class PipTestCase(TestCase):
                 'pip install --no-install \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_proxy_argument_in_resulting_command(self):
@@ -630,7 +670,8 @@ class PipTestCase(TestCase):
                 '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     @patch('salt.modules.pip._get_cached_requirements')
@@ -652,7 +693,8 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing option as a comma separated list
@@ -668,7 +710,8 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing option as a single string entry
@@ -680,7 +723,8 @@ class PipTestCase(TestCase):
                 'pip install --requirement=\'my_cached_reqs-1\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     @patch('salt.modules.pip._get_cached_requirements')
@@ -702,7 +746,8 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing option as a comma separated list
@@ -718,7 +763,8 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing option as a single string entry
@@ -730,7 +776,8 @@ class PipTestCase(TestCase):
                 'pip uninstall -y --requirement=\'my_cached_reqs-1\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_uninstall_proxy_argument_in_resulting_command(self):
@@ -744,7 +791,8 @@ class PipTestCase(TestCase):
                 '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' pep8',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     @patch('os.path')
@@ -756,7 +804,8 @@ class PipTestCase(TestCase):
                 'pip uninstall -y --log=/tmp/pip-install.log pep8',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Let's fake a non-writable log file
@@ -779,7 +828,8 @@ class PipTestCase(TestCase):
                 'pip uninstall -y --timeout=10 pep8',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing an int as a string
@@ -790,7 +840,8 @@ class PipTestCase(TestCase):
                 'pip uninstall -y --timeout=10 pep8',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         # Passing a non-int to timeout
@@ -822,7 +873,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip freeze',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
             self.assertEqual(ret, eggs)
 
@@ -853,7 +905,8 @@ class PipTestCase(TestCase):
             mock.assert_called_with(
                 'pip freeze',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
             self.assertEqual(
                 ret, {
@@ -893,7 +946,8 @@ class PipTestCase(TestCase):
             mock.assert_called_with(
                 'pip freeze',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
             self.assertEqual(
                 ret, {
@@ -917,7 +971,8 @@ class PipTestCase(TestCase):
                 'pip install \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
         mock = MagicMock(side_effect=[
@@ -932,7 +987,8 @@ class PipTestCase(TestCase):
                 'pip install --pre \'pep8\'',
                 saltenv='base',
                 runas=None,
-                cwd=None
+                cwd=None,
+                python_shell=False,
             )
 
     def test_install_deprecated_runas_triggers_warning(self):
@@ -1003,7 +1059,8 @@ class PipTestCase(TestCase):
                 pip.install,
                 'pep8',
                 user='Me!',
-                runas='Not Me!'
+                runas='Not Me!',
+                python_shell=False,
             )
 
     def test_uninstall_user_and_runas_raises_exception(self):
@@ -1014,7 +1071,8 @@ class PipTestCase(TestCase):
                 pip.uninstall,
                 'pep8',
                 user='Me!',
-                runas='Not Me!'
+                runas='Not Me!',
+                python_shell=False,
             )
 
     def test_freeze_user_and_runas_raises_exception(self):
@@ -1025,7 +1083,8 @@ class PipTestCase(TestCase):
                 pip.freeze,
                 '/tmp/pip-env',
                 user='Me!',
-                runas='Not Me!'
+                runas='Not Me!',
+                python_shell=False,
             )
 
     def test_list_user_and_runas_raises_exception(self):
@@ -1036,7 +1095,8 @@ class PipTestCase(TestCase):
                 pip.list_,
                 'pep8',
                 user='Me!',
-                runas='Not Me!'
+                runas='Not Me!',
+                python_shell=False,
             )
 
 
