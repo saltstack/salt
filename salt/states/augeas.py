@@ -93,7 +93,9 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
         Use the ``context`` parameter to specify the file you want to
         manipulate. This way you don't have to include this in the changes
-        every time:
+        every time. Using the ``context`` parameter also allows you to see what
+        has been changed (or would be changed when using the test option) in the
+        state output:
 
         .. code-block:: yaml
 
@@ -181,7 +183,10 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
                 old_file = file_.readlines()
 
     test = True if __opts__['test'] else False
-    result = __salt__['augeas.execute'](context=context, lens=lens, commands=changes, test=test)
+    result = __salt__['augeas.execute'](context=context,
+                                        lens=lens,
+                                        commands=changes,
+                                        test=test)
     ret['result'] = result['retval']
 
     if ret['result'] is False:
@@ -192,7 +197,10 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         tmp_filename = filename + ".augnew"
         if os.path.isfile(tmp_filename):
             with salt.utils.fopen(tmp_filename, 'r') as file_:
-                diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
+                diff = ''.join(difflib.unified_diff(old_file,
+                                                    file_.readlines(),
+                                                    n=0)
+                              )
             os.remove(tmp_filename)
             ret['result'] = None
             ret['comment'] = 'Following changes will be saved:\n'
@@ -202,7 +210,10 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
             ret['comment'] = "No changes will be made"
     elif old_file:
         with salt.utils.fopen(filename, 'r') as file_:
-            diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
+            diff = ''.join(difflib.unified_diff(old_file,
+                                                file_.readlines(),
+                                                n=0)
+                          )
 
         if diff:
             ret['comment'] = 'Changes have been saved'
