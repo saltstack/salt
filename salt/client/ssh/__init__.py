@@ -447,7 +447,7 @@ class SSH(object):
         self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
         for ret in self.handle_ssh(mine=mine):
-            host = next(ret.iterkeys())
+            host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host])
             if self.event:
                 self.event.fire_event(
