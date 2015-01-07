@@ -73,8 +73,9 @@ def buildmod(*modules):
     if missing:
         return 'Error: The file ({0}) does not exist.'.format(', '.join(missing))
 
-    cmd = 'znc-buildmod {0}'.format(' '.join(modules))
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['znc-buildmod']
+    cmd.extend(modules)
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out[-1]
 
 
@@ -114,7 +115,7 @@ def version():
 
         salt '*' znc.version
     '''
-    cmd = 'znc --version'
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['znc', '--version']
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     ret = out[0].split(' - ')
     return ret[0]
