@@ -70,7 +70,7 @@ def pvdisplay(pvname=''):
     '''
     ret = {}
     cmd = 'pvdisplay -c {0}'.format(pvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -108,7 +108,7 @@ def vgdisplay(vgname=''):
     '''
     ret = {}
     cmd = 'vgdisplay -c {0}'.format(vgname)
-    cmd_ret = __salt__['cmd.run_all'](cmd)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -151,7 +151,7 @@ def lvdisplay(lvname=''):
     '''
     ret = {}
     cmd = 'lvdisplay -c {0}'.format(lvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -203,7 +203,7 @@ def pvcreate(devices, **kwargs):
     for var in kwargs:
         if kwargs[var] and var in valid:
             cmd += ' --{0} {1}'.format(var, kwargs[var])
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out[0]
 
 
@@ -222,7 +222,7 @@ def pvremove(devices):
         if not __salt__['lvm.pvdisplay'](device):
             return '{0} is not a physical volume'.format(device)
         cmd += ' {0}'.format(device)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out[0]
 
 
@@ -248,7 +248,7 @@ def vgcreate(vgname, devices, **kwargs):
     for var in kwargs:
         if kwargs[var] and var in valid:
             cmd += ' --{0} {1}'.format(var, kwargs[var])
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     vgdata = vgdisplay(vgname)
     vgdata['Output from vgcreate'] = out[0].strip()
     return vgdata
@@ -304,7 +304,7 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **
     else:
         return 'Error: Either size or extents must be specified'
 
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
     lvdata = lvdisplay(lvdev)
     lvdata['Output from lvcreate'] = out[0].strip()
@@ -323,7 +323,7 @@ def vgremove(vgname):
         salt mymachine lvm.vgremove vgname force=True
     '''
     cmd = 'vgremove -f {0}'.format(vgname)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     return out.strip()
 
 
@@ -338,5 +338,5 @@ def lvremove(lvname, vgname):
         salt '*' lvm.lvremove lvname vgname force=True
     '''
     cmd = 'lvremove -f {0}/{1}'.format(vgname, lvname)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     return out.strip()
