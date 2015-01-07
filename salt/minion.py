@@ -658,7 +658,7 @@ class Minion(MinionBase):
                     'seconds': opts['master_alive_interval'],
                     'jid_include': True,
                     'maxrunning': 1,
-                    'kwargs': {'master_ip': self.opts['master'],
+                    'kwargs': {'master': self.opts['master'],
                                'connected': True}
                 }
             })
@@ -1598,7 +1598,7 @@ class Minion(MinionBase):
                    'seconds': self.opts['master_alive_interval'],
                    'jid_include': True,
                    'maxrunning': 2,
-                   'kwargs': {'master_ip': self.opts['master'],
+                   'kwargs': {'master': self.opts['master'],
                               'connected': False}
                 }
                 self.schedule.modify_job(name='__master_alive',
@@ -1636,7 +1636,7 @@ class Minion(MinionBase):
                            'seconds': self.opts['master_alive_interval'],
                            'jid_include': True,
                            'maxrunning': 2,
-                           'kwargs': {'master_ip': self.opts['master'],
+                           'kwargs': {'master': self.opts['master'],
                                       'connected': True}
                         }
                         self.schedule.modify_job(name='__master_alive',
@@ -1654,7 +1654,7 @@ class Minion(MinionBase):
                    'seconds': self.opts['master_alive_interval'],
                    'jid_include': True,
                    'maxrunning': 2,
-                   'kwargs': {'master_ip': self.opts['master'],
+                   'kwargs': {'master': self.opts['master'],
                               'connected': True}
                 }
 
