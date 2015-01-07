@@ -731,7 +731,7 @@ def sed(path,
         )
     )
 
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__['cmd.run_all'](cmd, python_shell=False)
 
 
 def sed_contains(path,
@@ -771,7 +771,7 @@ def sed_contains(path,
         flags='p{0}'.format(flags),
         path=path)
 
-    result = __salt__['cmd.run'](cmd)
+    result = __salt__['cmd.run'](cmd, python_shell=False)
 
     return bool(result)
 
@@ -1479,7 +1479,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
         dry_run_opt = ''
     cmd = 'patch {0}{1} "{2}" "{3}"'.format(
         options, dry_run_opt, originalfile, patchfile)
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__['cmd.run_all'](cmd, python_shell=False)
 
 
 def contains(path, text):
@@ -2325,7 +2325,7 @@ def restorecon(path, recursive=False):
         cmd = 'restorecon -FR {0}'.format(path)
     else:
         cmd = 'restorecon -F {0}'.format(path)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def get_selinux_context(path):
@@ -2338,7 +2338,7 @@ def get_selinux_context(path):
 
         salt '*' file.get_selinux_context /etc/hosts
     '''
-    out = __salt__['cmd.run']('ls -Z {0}'.format(path))
+    out = __salt__['cmd.run']('ls -Z {0}'.format(path), python_shell=False)
 
     try:
         ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
@@ -2376,7 +2376,7 @@ def set_selinux_context(path,
         cmd += '-l {0} '.format(range)
 
     cmd += path
-    ret = not __salt__['cmd.retcode'](cmd)
+    ret = not __salt__['cmd.retcode'](cmd, python_shell=False)
     if ret:
         return get_selinux_context(path)
     else:
@@ -3957,7 +3957,7 @@ def grep(path,
     )
 
     try:
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
 
