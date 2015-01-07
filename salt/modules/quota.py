@@ -49,7 +49,7 @@ def _parse_quota(mount, opts):
     Parse the output from repquota. Requires that -u -g are passed in
     '''
     cmd = 'repquota -vp {0} {1}'.format(opts, mount)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     mode = 'header'
 
     if '-u' in opts:
@@ -141,7 +141,7 @@ def set_(device, **kwargs):
                                         current['file-hard-limit'],
                                         device)
 
-    result = __salt__['cmd.run_all'](cmd)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:
         raise CommandExecutionError(
             'Unable to set desired quota. Error follows: \n{0}'
@@ -196,7 +196,7 @@ def on(device):
         salt '*' quota.on
     '''
     cmd = 'quotaon {0}'.format(device)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return True
 
 
@@ -211,7 +211,7 @@ def off(device):
         salt '*' quota.off
     '''
     cmd = 'quotaoff {0}'.format(device)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return True
 
 
@@ -227,7 +227,7 @@ def get_mode(device):
     '''
     ret = {}
     cmd = 'quotaon -p {0}'.format(device)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     for line in out.splitlines():
         comps = line.strip().split()
         if comps[3] not in ret:
