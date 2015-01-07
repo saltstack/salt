@@ -282,10 +282,14 @@ def user_roles_exists(name, roles, database, user=None, password=None, host=None
     '''
     Checks if a user of a Mongodb database has specified roles
 
-    CLI Example:
+    CLI Examples:
+
     .. code-block:: bash
 
         salt '*' mongodb.user_roles_exists johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
         salt '*' mongodb.user_roles_exists johndoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
     '''
     try:
@@ -316,10 +320,14 @@ def user_grant_roles(name, roles, database, user=None, password=None, host=None,
     '''
     Grant one or many roles to a Mongodb user
 
-    CLI Example:
+    CLI Examples:
+
     .. code-block:: bash
 
         salt '*' mongodb.user_grant_roles johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
         salt '*' mongodb.user_grant_roles janedoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
     '''
     conn = _connect(user, password, host, port)
@@ -351,10 +359,14 @@ def user_revoke_roles(name, roles, database, user=None, password=None, host=None
     '''
     Revoke one or many roles to a Mongodb user
 
-    CLI Example:
+    CLI Examples:
+
     .. code-block:: bash
 
         salt '*' mongodb.user_revoke_roles johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
         salt '*' mongodb.user_revoke_roles janedoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
     '''
     conn = _connect(user, password, host, port)
