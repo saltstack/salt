@@ -3,8 +3,11 @@
     :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
 
+# Import Python libs
+import os
+
 # Import Salt Testing Libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.mock import MagicMock, patch
 
 # Import Salt Libs
@@ -51,6 +54,7 @@ class KmodTestCase(TestCase):
 
     # 'mod_list' function tests: 1
 
+    @skipIf(not os.path.isfile('/etc/modules'), '/etc/modules not present')
     def test_mod_list(self):
         '''
         Tests return a list of the loaded module names
