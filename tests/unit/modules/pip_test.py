@@ -27,6 +27,7 @@ class PipTestCase(TestCase):
                 expected_cmd,
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -57,6 +58,7 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -71,6 +73,7 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -96,6 +99,7 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -110,6 +114,7 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -123,6 +128,7 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -145,6 +151,7 @@ class PipTestCase(TestCase):
                 '--mirrors=http://pypi.crate.io',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -160,6 +167,7 @@ class PipTestCase(TestCase):
                 '--mirrors=http://pypi.crate.io',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -173,6 +181,7 @@ class PipTestCase(TestCase):
                 '--mirrors=http://g.pypi.python.org',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -195,6 +204,7 @@ class PipTestCase(TestCase):
                 '--find-links=http://pypi.crate.io \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -210,6 +220,7 @@ class PipTestCase(TestCase):
                 '--find-links=http://pypi.crate.io \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -222,6 +233,7 @@ class PipTestCase(TestCase):
                 'pip install --find-links=http://g.pypi.python.org \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -253,6 +265,7 @@ class PipTestCase(TestCase):
                 '--find-links=https://pypi.crate.io \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -292,6 +305,7 @@ class PipTestCase(TestCase):
                 expected_cmd,
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -313,6 +327,7 @@ class PipTestCase(TestCase):
                 env={'VIRTUAL_ENV': '/test_env'},
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -326,6 +341,7 @@ class PipTestCase(TestCase):
                 'pip install --log=/tmp/pip-install.log \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -350,6 +366,7 @@ class PipTestCase(TestCase):
                 'pip install --timeout=10 \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -362,6 +379,7 @@ class PipTestCase(TestCase):
                 'pip install --timeout=10 \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -384,6 +402,7 @@ class PipTestCase(TestCase):
                 'pip install --index-url=\'http://foo.tld\' \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -396,6 +415,7 @@ class PipTestCase(TestCase):
                 'pip install --extra-index-url=\'http://foo.tld\' \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -408,6 +428,7 @@ class PipTestCase(TestCase):
                 'pip install --no-index \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -420,6 +441,7 @@ class PipTestCase(TestCase):
                 'pip install --build=/tmp/foo \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -432,6 +454,7 @@ class PipTestCase(TestCase):
                 'pip install --target=/tmp/foo \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -444,6 +467,7 @@ class PipTestCase(TestCase):
                 'pip install --download=/tmp/foo \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -456,6 +480,7 @@ class PipTestCase(TestCase):
                 'pip install --no-download \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -468,6 +493,7 @@ class PipTestCase(TestCase):
                 'pip install --download-cache=/tmp/foo \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -480,6 +506,7 @@ class PipTestCase(TestCase):
                 'pip install --source=/tmp/foo \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -492,6 +519,7 @@ class PipTestCase(TestCase):
                 mock.assert_called_once_with(
                     'pip install --exists-action={0} \'pep8\''.format(action),
                     saltenv='base',
+                    user=None,
                     cwd=None,
                     use_vt=False,
                     python_shell=False,
@@ -523,6 +551,7 @@ class PipTestCase(TestCase):
                 '--install-option=\'--install-scripts=/foo/bar/bin\' \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -537,6 +566,7 @@ class PipTestCase(TestCase):
                 '--install-option=\'--install-scripts=/foo/bar/bin\' \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -550,6 +580,7 @@ class PipTestCase(TestCase):
                 '\'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -570,6 +601,7 @@ class PipTestCase(TestCase):
                 '--global-option=\'--no-user-cfg\' \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -584,6 +616,7 @@ class PipTestCase(TestCase):
                 '--global-option=\'--no-user-cfg\' \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -596,6 +629,7 @@ class PipTestCase(TestCase):
                 'pip install --global-option=\'--quiet\' \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -608,6 +642,7 @@ class PipTestCase(TestCase):
                 'pip install --upgrade \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -620,6 +655,7 @@ class PipTestCase(TestCase):
                 'pip install --force-reinstall \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -632,6 +668,7 @@ class PipTestCase(TestCase):
                 'pip install --ignore-installed \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -644,6 +681,7 @@ class PipTestCase(TestCase):
                 'pip install --no-deps \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -656,6 +694,7 @@ class PipTestCase(TestCase):
                 'pip install --no-install \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -669,6 +708,7 @@ class PipTestCase(TestCase):
                 '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -692,6 +732,7 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -709,6 +750,7 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -722,6 +764,7 @@ class PipTestCase(TestCase):
                 'pip install --requirement=\'my_cached_reqs-1\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -970,6 +1013,7 @@ class PipTestCase(TestCase):
                 'pip install \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -986,6 +1030,7 @@ class PipTestCase(TestCase):
                 'pip install --pre \'pep8\'',
                 saltenv='base',
                 cwd=None,
+                user=None,
                 use_vt=False,
                 python_shell=False,
             )
