@@ -5,6 +5,7 @@ Zeromq transport classes
 import os
 import threading
 import errno
+import hashlib
 
 from random import randint, shuffle
 
@@ -135,6 +136,8 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
         self.opts = opts
         self.ttype = 'zeromq'
 
+        self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
+
         if 'auth' in kwargs:
             self.auth = kwargs['auth']
         else:
@@ -148,6 +151,13 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
+
+        if self.opts['zmq_filtering']:
+            # TODO: constants file for "broadcast"
+            self.socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
+            self.socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
+        else:
+            self.socket.setsockopt(zmq.SUBSCRIBE, '')
 
         self.socket.setsockopt(zmq.SUBSCRIBE, '')
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])

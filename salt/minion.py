@@ -356,6 +356,7 @@ class MinionBase(object):
         self.poller = zmq.Poller()
 
     def _prepare_minion_event_system(self):
+
         # Prepare the minion event system
         #
         # Start with the publish socket
@@ -734,10 +735,6 @@ class Minion(MinionBase):
 
         self.grains_cache = self.opts['grains']
 
-        # store your hexid to subscribe to zmq, hash since zmq filters are prefix
-        # matches this way we can avoid collisions
-        self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
-
         if 'proxy' in self.opts['pillar']:
             log.debug('I am {0} and I need to start some proxies for {1}'.format(self.opts['id'],
                                                                                  self.opts['pillar']['proxy']))
@@ -866,6 +863,7 @@ class Minion(MinionBase):
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
+            self.sub_channel = salt.transport.channel.PubChannel.factory(self.opts)
             if self.authenticate(timeout, safe) == 'full':
                 self.connected = False
                 msg = ('master {0} rejected the minions connection because too '
@@ -1365,75 +1363,6 @@ class Minion(MinionBase):
                     }
             })
 
-    def _set_tcp_keepalive(self):
-        if hasattr(zmq, 'TCP_KEEPALIVE'):
-            self.socket.setsockopt(
-                zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
-            )
-            self.socket.setsockopt(
-                zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
-            )
-            self.socket.setsockopt(
-                zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
-            )
-            self.socket.setsockopt(
-                zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
-            )
-
-    def _set_monitor_socket(self):
-        if not HAS_ZMQ_MONITOR or not self.opts['zmq_monitor']:
-            return
-        self.monitor_socket = self.socket.get_monitor_socket()
-        t = threading.Thread(target=self._socket_monitor, args=(self.monitor_socket,))
-        t.start()
-
-    def _socket_monitor(self, monitor):
-        event_map = {}
-        for name in dir(zmq):
-            if name.startswith('EVENT_'):
-                value = getattr(zmq, name)
-                event_map[value] = name
-        while monitor.poll():
-            evt = zmq.utils.monitor.recv_monitor_message(monitor)
-            evt.update({'description': event_map[evt['event']]})
-            log.debug("ZeroMQ event: {0}".format(evt))
-            if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
-                break
-        monitor.close()
-        log.trace("event monitor thread done!")
-
-    def _set_reconnect_ivl(self):
-        recon_delay = self.opts['recon_default']
-
-        if self.opts['recon_randomize']:
-            recon_delay = randint(self.opts['recon_default'],
-                                  self.opts['recon_default'] + self.opts['recon_max']
-                          )
-
-            log.debug("Generated random reconnect delay between '{0}ms' and '{1}ms' ({2})".format(
-                self.opts['recon_default'],
-                self.opts['recon_default'] + self.opts['recon_max'],
-                recon_delay)
-            )
-
-        log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
-        self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
-
-    def _set_reconnect_ivl_max(self):
-        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
-            log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format(
-                self.opts['recon_default'] + self.opts['recon_max'])
-            )
-
-            self.socket.setsockopt(
-                zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
-            )
-
-    def _set_ipv4only(self):
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.socket.setsockopt(zmq.IPV4ONLY, 0)
-
     def _fire_master_minion_start(self):
         # Send an event to the master that the minion is live
         self._fire_master(
@@ -1452,19 +1381,6 @@ class Minion(MinionBase):
             tagify([self.opts['id'], 'start'], 'minion'),
         )
 
-    def _setsockopts(self):
-        if self.opts['zmq_filtering']:
-            # TODO: constants file for "broadcast"
-            self.socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
-            self.socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
-        else:
-            self.socket.setsockopt(zmq.SUBSCRIBE, '')
-
-        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-        self._set_ipv4only()
-        self._set_reconnect_ivl_max()
-        self._set_tcp_keepalive()
-
     @property
     def master_pub(self):
         '''
@@ -1473,6 +1389,7 @@ class Minion(MinionBase):
         return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
                                           port=self.publish_port)
 
+    # TODO: remove
     def authenticate(self, timeout=60, safe=True):
         '''
         Authenticate with the master, this method breaks the functional
@@ -1812,10 +1729,21 @@ class Minion(MinionBase):
                         self._fire_master('ping', 'minion_ping')
                         ping_at = time.time() + ping_interval
 
-                # TODO: rename?? Maybe do_pub_recv and take a list of them?
-                self._do_socket_recv(socks)
-                self._do_event_poll(socks)
                 self._process_beacons()
+                # TODO: rename?? Maybe do_pub_recv and take a list of them?
+                self._do_socket_recv()
+
+                # TODO: refactor minion event system into a non-blocking EventPublisher (or just use the daemon)
+                # Check the event system
+                if socks.get(self.epull_sock) == zmq.POLLIN:
+                    package = self.epull_sock.recv(zmq.NOBLOCK)
+                    try:
+                        self.handle_event(package)
+                        self.epub_sock.send(package)
+                    except Exception:
+                        log.debug('Exception while handling events', exc_info=True)
+                    # Add an extra fallback in case a forked process leeks through
+                    multiprocessing.active_children()
 
             except zmq.ZMQError as exc:
                 # The interrupt caused by python handling the
@@ -1843,14 +1771,8 @@ class Minion(MinionBase):
         '''
 
         self._pre_tune()
-        self._init_context_and_poller()
 
-        self.socket = self.context.socket(zmq.SUB)
-
-        self._setsockopts()
-
-        self.socket.connect(self.master_pub)
-        self.poller.register(self.socket, zmq.POLLIN)
+        self.sub_channel = salt.transport.channel.PubChannel.factory(self.opts)
 
         self._fire_master_minion_start()
 
@@ -1861,12 +1783,7 @@ class Minion(MinionBase):
 
         while self._running is True:
             try:
-                socks = self._do_poll(loop_interval)
-                self._do_socket_recv(socks)
-                # Check the event system
-            except zmq.ZMQError:
-                # If a zeromq error happens recover
-                yield True
+                self._do_socket_recv()
             except Exception:
                 log.critical(
                     'An exception occurred while polling the minion',
@@ -1880,19 +1797,7 @@ class Minion(MinionBase):
             loop_interval * 1000)
         )
 
-    def _do_event_poll(self, socks):
-        # Check the event system
-        if socks.get(self.epull_sock) == zmq.POLLIN:
-            package = self.epull_sock.recv(zmq.NOBLOCK)
-            try:
-                self.handle_event(package)
-                self.epub_sock.send(package)
-            except Exception:
-                log.debug('Exception while handling events', exc_info=True)
-            # Add an extra fallback in case a forked process leaks through
-            multiprocessing.active_children()
-
-    def _do_socket_recv(self, socks):
+    def _do_socket_recv(self):
         payload = self.sub_channel.recv_noblock()
 
         if payload is not None and self._target_load(payload['load']):
