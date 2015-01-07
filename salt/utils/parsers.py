@@ -9,10 +9,8 @@
     This is where all the black magic happens on all of salt's CLI tools.
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
 import getpass
@@ -410,7 +408,7 @@ class ConfigDirMixIn(object):
         config_dir = os.environ.get('SALT_CONFIG_DIR', None)
         if not config_dir:
             config_dir = syspaths.CONFIG_DIR
-            logging.getLogger(__name__).debug("SYSPATHS setup as : %s", syspaths.CONFIG_DIR)
+            logging.getLogger(__name__).debug('SYSPATHS setup as: {0}'.format(syspaths.CONFIG_DIR))
         self.add_option(
             '-c', '--config-dir', default=config_dir,
             help=('Pass in an alternative configuration directory. Default: '

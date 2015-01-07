@@ -10,23 +10,27 @@ Running Salt functions as non root user
 If you dont want to run salt cloud as root or even install it you can
 configure it to have a virtual root in your working directory.
 
-The salt system uses the salt.syspath module to find the variables
+The salt system uses the ``salt.syspath`` module to find the variables
 
-if you run the salt-build, it will be installed like this:
-./build/lib.linux-x86_64-2.7/salt/_syspaths.py
-and produced by the command
+If you run the salt-build, it will generated in:
+
+.. code-block:: bash
+
+   ./build/lib.linux-x86_64-2.7/salt/_syspaths.py
+
+To generate it, run the command:
 
 .. code-block:: bash
 
     python setup.py build
 
-copy that into your salt dir
+Copy the generated module into your salt directory
 
 .. code-block:: bash
 
     cp ./build/lib.linux-x86_64-2.7/salt/_syspaths.py salt/_syspaths.py
 
-edit it to include needed variables and your new paths
+Edit it to include needed variables and your new paths
 
 .. code-block:: python
 
@@ -57,17 +61,19 @@ Create the directory structure
     root/srv/salt root/srv/pillar root/srv/salt-master root/var/log/salt root/var/run
 
 
-Populate the config
+Populate the configuration files:
 
 .. code-block:: bash
 
     cp -r conf/* root/etc/salt/
 
-edit your root/etc/salt/master config that is used by salt-cloud
+Edit your ``root/etc/salt/master`` configuration that is used by salt-cloud:
+
+.. code-block:: yaml
 
     user: *your user name*
 
-Run like this :
+Run like this:
 
 .. code-block:: bash
 

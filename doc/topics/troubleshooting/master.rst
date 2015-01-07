@@ -262,10 +262,10 @@ To debug the states, you can use call locally.
 
 The top.sls file is used to map what SLS modules get loaded onto what minions via the state system.
 
-It is located in the file defined in the file_roots variable of the salt master
-configuration file which is defined by found in CONFIG_DIR/master, normally /etc/salt/master
+It is located in the file defined in the ``file_roots`` variable of the salt master
+configuration file which is defined by found in ``CONFIG_DIR/master``, normally ``/etc/salt/master``
 
-The file roots is defined like this by default.
+The default configuration for the ``file_roots`` is:
 
 .. code-block:: yaml
 
@@ -273,4 +273,4 @@ The file roots is defined like this by default.
      base:
        - /srv/salt
 
-So the top file is defaulted to the location /srv/salt/top.sls
+So the top file is defaulted to the location ``/srv/salt/top.sls``
