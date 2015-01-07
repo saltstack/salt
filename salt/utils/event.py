@@ -53,10 +53,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import glob
 import time
 import errno
-import fnmatch
 import hashlib
 import logging
 import datetime
