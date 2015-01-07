@@ -12,7 +12,6 @@ Support for Varnish
 
 # Import python libs
 import logging
-import pipes
 import re
 
 # Import salt libs
