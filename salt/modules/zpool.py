@@ -47,7 +47,7 @@ def status(name=''):
 
     .. code-block:: bash
 
-        salt '*' zpool.status
+        salt '*' zpool.status myzpool
     '''
     zpool = _check_zpool()
     cmd = [zpool, 'status', name]
@@ -64,7 +64,7 @@ def iostat(name=''):
 
     .. code-block:: bash
 
-        salt '*' zpool.iostat
+        salt '*' zpool.iostat myzpool
     '''
     zpool = _check_zpool()
     cmd = [zpool, 'iostat', '-v', name]
@@ -265,7 +265,7 @@ def replace(pool_name, old, new):
         if new in line:
             ret['replaced'] = '{0} with {1}'.format(old, new)
             return ret
-    ret['Error'] = 'Does not look like devices where swapped check status'
+    ret['Error'] = 'Does not look like devices were swapped; check status'
     return ret
 
 
