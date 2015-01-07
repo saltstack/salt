@@ -244,6 +244,7 @@ def create(pool_name, *vdevs, **kwargs):
                 return ret
         dlist.append(vdev)
 
+    devs = ' '.join(dlist)
     zpool = _check_zpool()
     force = kwargs.get('force', False)
     properties = kwargs.get('properties', None)
