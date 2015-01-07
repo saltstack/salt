@@ -50,7 +50,8 @@ def status(name=''):
         salt '*' zpool.status
     '''
     zpool = _check_zpool()
-    res = __salt__['cmd.run']('{0} status {1}'.format(zpool, name))
+    cmd = [zpool, 'status', name]
+    res = __salt__['cmd.run'](cmd, python_shell=False)
     ret = res.splitlines()
     return ret
 
@@ -66,7 +67,8 @@ def iostat(name=''):
         salt '*' zpool.iostat
     '''
     zpool = _check_zpool()
-    res = __salt__['cmd.run']('{0} iostat -v {1}'.format(zpool, name))
+    cmd = [zpool, 'iostat', '-v', name]
+    res = __salt__['cmd.run'](cmd, python_shell=False)
     ret = res.splitlines()
     return ret
 
@@ -82,7 +84,8 @@ def zpool_list():
         salt '*' zpool.zpool_list
     '''
     zpool = _check_zpool()
-    res = __salt__['cmd.run']('{0} list'.format(zpool))
+    cmd = [zpool, 'list']
+    res = __salt__['cmd.run'](cmd, python_shell=False)
     pool_list = [l for l in res.splitlines()]
     return {'pools': pool_list}
 
@@ -117,8 +120,8 @@ def destroy(pool_name):
     ret = {}
     if exists(pool_name):
         zpool = _check_zpool()
-        cmd = '{0} destroy {1}'.format(zpool, pool_name)
-        __salt__['cmd.run'](cmd)
+        cmd = [zpool, 'destroy', pool_name]
+        __salt__['cmd.run'](cmd, python_shell=False)
         if not exists(pool_name):
             ret[pool_name] = "Deleted"
             return ret
@@ -142,8 +145,8 @@ def scrub(pool_name=None):
         return ret
     if exists(pool_name):
         zpool = _check_zpool()
-        cmd = '{0} scrub {1}'.format(zpool, pool_name)
-        res = __salt__['cmd.run'](cmd)
+        cmd = [zpool, 'scrub', pool_name]
+        res = __salt__['cmd.run'](cmd, python_shell=False)
         ret[pool_name] = res.splitlines()
         return ret
     else:
@@ -177,12 +180,12 @@ def create(pool_name, *vdevs):
         else:
             dlist.append(vdev)
 
-    devs = ' '.join(dlist)
     zpool = _check_zpool()
-    cmd = '{0} create {1} {2}'.format(zpool, pool_name, devs)
+    cmd = [zpool, 'create', pool_name]
+    cmd.extend(dlist)
 
     # Create storage pool
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
 
     # Check and see if the pools is available
     if exists(pool_name):
@@ -219,8 +222,8 @@ def add(pool_name, vdev):
 
     # try and add watch out for mismatched replication levels
     zpool = _check_zpool()
-    cmd = '{0} add {1} {2}'.format(zpool, pool_name, vdev)
-    res = __salt__['cmd.run'](cmd)
+    cmd = [zpool, 'add', pool_name, vdev]
+    res = __salt__['cmd.run'](cmd, python_shell=False)
     if 'errors' not in res.splitlines():
         ret['Added'] = '{0} to {1}'.format(vdev, pool_name)
         return ret
@@ -253,8 +256,8 @@ def replace(pool_name, old, new):
 
     # Replace vdevs
     zpool = _check_zpool()
-    cmd = '{0} replace {1} {2} {3}'.format(zpool, pool_name, old, new)
-    __salt__['cmd.run'](cmd)
+    cmd = [zpool, 'replace', pool_name, old, new]
+    __salt__['cmd.run'](cmd, python_shell=False)
 
     # check for new vdev in pool
     res = status(name=pool_name)
@@ -292,10 +295,10 @@ def create_file_vdev(size, *vdevs):
         else:
             dlist.append(vdev)
 
-    devs = ' '.join(dlist)
     mkfile = _check_mkfile()
-    cmd = '{0} {1} {2}'.format(mkfile, size, devs)
-    __salt__['cmd.run'](cmd)
+    cmd = [mkfile, '{0}'.format(size)]
+    cmd.extend(dlist)
+    __salt__['cmd.run'](cmd, python_shell=False)
 
     # Makesure the files are there
     for vdev in vdevs:
