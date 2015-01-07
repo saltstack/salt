@@ -59,7 +59,7 @@ def getfacl(*args, **kwargs):
     _raise_on_no_files(*args)
 
     ret = {}
-    cmd = 'getfacl -p'
+    cmd = 'getfacl --absolute-names'
     if recursive:
         cmd += ' -R'
     for dentry in args:
