@@ -1329,7 +1329,7 @@ def _param_from_config(key, data):
 
     else:
         if isinstance(data, bool):
-            # convert boolean Trur/False to 'true'/'false'
+            # convert boolean True/False to 'true'/'false'
             param.update({key: str(data).lower()})
         else:
             param.update({key: data})
