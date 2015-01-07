@@ -188,7 +188,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         # ----- Using runas ------------------------------------------------->
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
