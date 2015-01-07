@@ -5,7 +5,6 @@ Execute chef in server or solo mode
 
 # Import Python libs
 import logging
-import tempfile
 import os
 
 # Import Salt libs
@@ -21,13 +20,30 @@ def __virtual__():
     '''
     if not salt.utils.which('chef-client'):
         return False
-    if not salt.utils.which('script'):
-        return False
     return True
 
 
+def _default_logfile(exe_name):
+
+    if salt.utils.is_windows():
+        logfile = salt.utils.path_join(
+            os.environ['TMP'],
+            '{0}.log'.format(exe_name)
+        )
+    else:
+        logfile = salt.utils.path_join(
+            '/var/log',
+            '{0}.log'.format(exe_name)
+        )
+
+    return logfile
+
+
 @decorators.which('chef-client')
-def client(whyrun=False, localmode=False, logfile='/var/log/chef-client.log', **kwargs):
+def client(whyrun=False,
+           localmode=False,
+           logfile=_default_logfile('chef-client'),
+           **kwargs):
     '''
     Execute a chef client run and return a dict with the stderr, stdout,
     return code, and pid.
@@ -95,7 +111,11 @@ def client(whyrun=False, localmode=False, logfile='/var/log/chef-client.log', **
         Enable whyrun mode when set to True
 
     '''
-    args = ['chef-client', '--no-color', '--once', '--logfile {0}'.format(logfile)]
+    args = ['chef-client',
+            '--no-color',
+            '--once',
+            '--logfile "{0}"'.format(logfile),
+            '--format doc']
 
     if whyrun:
         args.append('--why-run')
@@ -107,7 +127,9 @@ def client(whyrun=False, localmode=False, logfile='/var/log/chef-client.log', **
 
 
 @decorators.which('chef-solo')
-def solo(whyrun=False, logfile='/var/log/chef-solo.log', **kwargs):
+def solo(whyrun=False,
+         logfile=_default_logfile('chef-solo'),
+         **kwargs):
     '''
     Execute a chef solo run and return a dict with the stderr, stdout,
     return code, and pid.
@@ -156,6 +178,10 @@ def solo(whyrun=False, logfile='/var/log/chef-solo.log', **kwargs):
     whyrun
         Enable whyrun mode when set to True
     '''
+    args = ['chef-solo',
+            '--no-color',
+            '--logfile "{0}"'.format(logfile),
+            '--format doc']
 
     args = ['chef-solo', '--no-color', '--logfile {0}'.format(logfile)]
 
@@ -170,20 +196,10 @@ def _exec_cmd(*args, **kwargs):
     # Compile the command arguments
     cmd_args = ' '.join(args)
     cmd_kwargs = ''.join([
-         ' --{0} {1}'.format(k, v) for k, v in kwargs.items() if not k.startswith('__')]
+         ' --{0} {1}'.format(k, v)
+         for k, v in kwargs.items() if not k.startswith('__')]
     )
     cmd_exec = '{0}{1}'.format(cmd_args, cmd_kwargs)
     log.debug('Chef command: {0}'.format(cmd_exec))
 
-    # The only way to capture all the command output, including the
-    # summary line, is to use the script command to write out to a file
-    (filedesc, filename) = tempfile.mkstemp()
-    result = __salt__['cmd.run_all']('script -q -c "{0}" {1}'.format(cmd_exec, filename))
-
-    # Read the output from the script command, stripping the first line
-    with salt.utils.fopen(filename, 'r') as outfile:
-        stdout = outfile.readlines()
-    result['stdout'] = ''.join(stdout[1:])
-    os.remove(filename)
-
-    return result
+    return __salt__['cmd.run_all'](cmd_exec)
