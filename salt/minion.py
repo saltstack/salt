@@ -759,15 +759,16 @@ class Minion(MinionBase):
                     safe=True,
                     failed=False):
         '''
-        Evaluates and returns the current master address. In standard mode, just calls
-        authenticate() with the given master address.
+        Evaluates and returns the current master address.
+
+        In standard mode, just creates a pub_channel with the given master address.
 
         With master_type=func evaluates the current master address from the given
-        module and then calls authenticate().
+        module and then creates a pub_channel.
 
         With master_type=failover takes the list of masters and loops through them.
-        The first one that allows the minion to connect is used to authenticate() and
-        then returned. If this function is called outside the minions initialization
+        The first one that allows the minion to create a pub_channel is then
+        returned. If this function is called outside the minions initialization
         phase (for example from the minions main event-loop when a master connection
         loss was detected), 'failed' should be set to True. The current
         (possibly failed) master will then be removed from the list of masters.
@@ -841,9 +842,9 @@ class Minion(MinionBase):
                     self.opts['master_list'] = local_masters
 
                 try:
-                    if self.authenticate(timeout, safe) != 'full':
-                        conn = True
-                        break
+                    self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
+                    conn = True
+                    break
                 except SaltClientError:
                     msg = ('Master {0} could not be reached, trying '
                            'next master (if any)'.format(opts['master']))
@@ -863,16 +864,11 @@ class Minion(MinionBase):
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
-            self.sub_channel = salt.transport.channel.PubChannel.factory(self.opts)
-            if self.authenticate(timeout, safe) == 'full':
-                self.connected = False
-                msg = ('master {0} rejected the minions connection because too '
-                       'many minions are already connected.'.format(opts['master']))
-                log.error(msg)
-                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-            else:
-                self.connected = True
-                return opts['master']
+            self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
+            # TODO: remove? What is this used for...
+            self.tok = self.pub_channel.auth.gen_token('salt')
+            self.connected = True
+            return opts['master']
 
     def _prep_mod_opts(self):
         '''
@@ -1389,29 +1385,6 @@ class Minion(MinionBase):
         return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
                                           port=self.publish_port)
 
-    # TODO: remove
-    def authenticate(self, timeout=60, safe=True):
-        '''
-        Authenticate with the master, this method breaks the functional
-        paradigm, it will update the master information from a fresh sign
-        in, signing in can occur as often as needed to keep up with the
-        revolving master AES key.
-        '''
-        log.debug(
-            'Attempting to authenticate with the Salt Master at {0}'.format(
-                self.opts['master_ip']
-            )
-        )
-        auth = salt.crypt.SAuth(self.opts)
-        auth.authenticate(timeout=timeout, safe=safe)
-        # TODO: remove these and just use a local reference to auth??
-        self.tok = auth.gen_token('salt')
-        self.crypticle = auth.crypticle
-        if self.opts.get('syndic_master_publish_port'):
-            self.publish_port = self.opts.get('syndic_master_publish_port')
-        else:
-            self.publish_port = auth.creds['publish_port']
-
     def module_refresh(self, force_refresh=False, notify=False):
         '''
         Refresh the functions and returners.
@@ -1673,8 +1646,6 @@ class Minion(MinionBase):
 
         self._prepare_minion_event_system()
 
-        self.sub_channel = salt.transport.channel.PubChannel.factory(self.opts)
-
         self.poller.register(self.epull_sock, zmq.POLLIN)
 
         self._fire_master_minion_start()
@@ -1772,8 +1743,6 @@ class Minion(MinionBase):
 
         self._pre_tune()
 
-        self.sub_channel = salt.transport.channel.PubChannel.factory(self.opts)
-
         self._fire_master_minion_start()
 
         loop_interval = int(self.opts['loop_interval'])
@@ -1798,7 +1767,7 @@ class Minion(MinionBase):
         )
 
     def _do_socket_recv(self):
-        payload = self.sub_channel.recv_noblock()
+        payload = self.pub_channel.recv_noblock()
 
         if payload is not None and self._target_load(payload['load']):
             self._handle_decoded_payload(payload['load'])
@@ -1878,43 +1847,13 @@ class Syndic(Minion):
         self.mminion = salt.minion.MasterMinion(opts)
         self.jid_forward_cache = set()
 
-    def _handle_aes(self, load, sig=None):
-        '''
-        Takes the AES encrypted load, decrypts it, and runs the encapsulated
-        instructions
-        '''
-        # If the AES authentication has changed, re-authenticate
-        try:
-            data = self.crypticle.loads(load)
-        except AuthenticationError:
-            self.authenticate()
-            data = self.crypticle.loads(load)
-        # Verify that the publication is valid
-        if 'tgt' not in data or 'jid' not in data or 'fun' not in data \
-           or 'arg' not in data:
-            return
-        data['to'] = int(data.get('to', self.opts['timeout'])) - 1
-        if 'user' in data:
-            log.debug(
-                'User {0[user]} Executing syndic command {0[fun]} with '  # pylint: disable=W1307
-                'jid {0[jid]}'.format(
-                    data
-                )
-            )
-        else:
-            log.debug(
-                'Executing syndic command {0[fun]} with jid {0[jid]}'.format(  # pylint: disable=W1307
-                    data
-                )
-            )
-        log.debug('Command details: {0}'.format(data))
-        self._handle_decoded_payload(data)
-
     def _handle_decoded_payload(self, data):
         '''
         Override this method if you wish to handle the decoded data
         differently.
         '''
+        # TODO: even do this??
+        data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         # Only forward the command if it didn't originate from ourselves
         if data.get('master_id', 0) != self.opts.get('master_id', 1):
             self.syndic_cmd(data)
@@ -1948,16 +1887,6 @@ class Syndic(Minion):
         except Exception as exc:
             log.warning('Unable to forward pub data: {0}'.format(exc))
 
-    def _setsockopts(self):
-        # no filters for syndication masters, unless we want to maintain a
-        # list of all connected minions and update the filter
-        self.socket.setsockopt(zmq.SUBSCRIBE, '')
-        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
-
-        self._set_reconnect_ivl_max()
-        self._set_tcp_keepalive()
-        self._set_ipv4only()
-
     def _fire_master_syndic_start(self):
         # Send an event to the master that the minion is live
         self._fire_master(
@@ -1987,11 +1916,6 @@ class Syndic(Minion):
 
         self._init_context_and_poller()
 
-        self.socket = self.context.socket(zmq.SUB)
-
-        self._setsockopts()
-
-        self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
 
         loop_interval = int(self.opts['loop_interval'])
@@ -2000,11 +1924,7 @@ class Syndic(Minion):
 
         while True:
             try:
-                socks = dict(self.poller.poll(loop_interval * 1000))
-                if socks.get(self.socket) == zmq.POLLIN:
-                    self._process_cmd_socket()
-            except zmq.ZMQError:
-                yield True
+                self._process_cmd_socket()
             except Exception:
                 log.critical(
                     'An exception occurred while polling the minion',
@@ -2029,14 +1949,6 @@ class Syndic(Minion):
         # register the event sub to the poller
         self.poller.register(self.local.event.sub)
 
-        # Start with the publish socket
-        # Share the poller with the event object
-        self.socket = self.context.socket(zmq.SUB)
-
-        self._setsockopts()
-
-        self.socket.connect(self.master_pub)
-        self.poller.register(self.socket, zmq.POLLIN)
         # Send an event to the master that the minion is live
         self._fire_master_syndic_start()
 
@@ -2060,8 +1972,7 @@ class Syndic(Minion):
                     # But there's no harm being defensive
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
-                if socks.get(self.socket) == zmq.POLLIN:
-                    self._process_cmd_socket()
+                self._process_cmd_socket()
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
                     self._process_event_socket()
                 if self.event_forward_timeout is not None and \
@@ -2079,24 +1990,11 @@ class Syndic(Minion):
                 )
 
     def _process_cmd_socket(self):
-        try:
-            messages = self.socket.recv_multipart(zmq.NOBLOCK)
-            messages_len = len(messages)
-            idx = None
-            if messages_len == 1:
-                idx = 0
-            elif messages_len == 2:
-                idx = 1
-            else:
-                raise SaltSyndicMasterError('Syndication master received message of invalid len ({0}/2)'.format(messages_len))
+        payload = self.pub_channel.recv_noblock()
 
-            payload = self.serial.loads(messages[idx])
-        except zmq.ZMQError as e:
-            # Swallow errors for bad wakeups or signals needing processing
-            if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
-                raise
-        log.trace('Handling payload')
-        self._handle_payload(payload)
+        if payload is not None:
+            log.trace('Handling payload')
+            self._handle_decoded_payload(payload['load'])
 
     def _reset_event_aggregation(self):
         self.jids = {}
@@ -2115,6 +2013,7 @@ class Syndic(Minion):
                 if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
                     break
                 raise
+
             log.trace('Got event {0}'.format(event['tag']))
             if self.event_forward_timeout is None:
                 self.event_forward_timeout = (
@@ -2769,7 +2668,6 @@ class ProxyMinion(Minion):
         opts['id'] = opts['proxyobject'].id(opts)
         opts.update(resolve_dns(opts))
         self.opts = opts
-        self.authenticate(timeout, safe)
         self.opts['pillar'] = salt.pillar.get_pillar(
             opts,
             opts['grains'],

@@ -132,16 +132,24 @@ class ZeroMQReqChannel(salt.transport.channel.ReqChannel):
 
 
 class ZeroMQPubChannel(salt.transport.channel.PubChannel):
-    def __init__(self, opts, **kwargs):
+    def __init__(self,
+                 opts,
+                 safe=True,
+                 timeout=60,
+                 **kwargs):
         self.opts = opts
         self.ttype = 'zeromq'
+
+        # TODO: remove??
+        self.safe = safe
+        self.timeout = timeout
 
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
 
         if 'auth' in kwargs:
             self.auth = kwargs['auth']
         else:
-            self.auth = salt.crypt.SAuth(opts)
+            self.auth = salt.crypt.SAuth(self.opts, safe=self.safe, timeout=self.timeout)
         if 'master_uri' in kwargs:
             self.master_uri = kwargs['master_uri']
         else:
@@ -251,7 +259,7 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
             try:
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
             except salt.crypt.AuthenticationError:
-                self.auth = salt.crypt.SAuth(self.opts)
+                self.auth = salt.crypt.SAuth(self.opts, safe=self.safe, timeout=self.timeout)
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
 
         return payload
