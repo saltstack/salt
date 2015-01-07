@@ -25,7 +25,7 @@ class TestBlockdevModule(TestCase):
                 'blockdev --getro --getsz --getss --getpbsz --getiomin '
                 '--getioopt --getalignoff  --getmaxsect --getsize '
                 '--getsize64 --getra --getfra /dev/sda',
-		python_shell=False
+                python_shell=False
             )
 
     def test_wipe(self):
@@ -34,7 +34,7 @@ class TestBlockdevModule(TestCase):
             blockdev.wipe('/dev/sda')
             mock.assert_called_once_with(
                 'wipefs /dev/sda',
-		python_shell=False
+                python_shell=False
             )
 
     def test_tune(self):
@@ -46,7 +46,7 @@ class TestBlockdevModule(TestCase):
                 blockdev.tune('/dev/sda', **kwargs)
                 mock.assert_called_once_with(
                     'blockdev --setra 512 --setfra 512 /dev/sda',
-		    python_shell=False
+                    python_shell=False
                 )
 
 
