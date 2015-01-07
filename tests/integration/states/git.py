@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -188,15 +188,11 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+    @skip_if_binaries_missing('git')
     def test_config_set_value_with_space_character(self):
         '''
         git.config
         '''
-        from salt.utils import which
-        git = which('git')
-        if not git:
-            self.skipTest('The git binary is not available')
-
         name = tempfile.mkdtemp(dir=integration.TMP)
         self.addCleanup(shutil.rmtree, name, ignore_errors=True)
         subprocess.check_call(['git', 'init', '--quiet', name])
