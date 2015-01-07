@@ -155,6 +155,7 @@ def add_user(name, password=None, runas=None):
     res = __salt__['cmd.run'](
         'rabbitmqctl add_user {0} {1!r}'.format(name, password),
         output_loglevel='quiet',
+        python_shell=False,
         runas=runas)
 
     if clear_pw:
@@ -185,6 +186,7 @@ def delete_user(name, runas=None):
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name),
+                              python_shell=False,
                               runas=runas)
     msg = 'Deleted'
 
@@ -206,6 +208,7 @@ def change_password(name, password, runas=None):
     res = __salt__['cmd.run'](
         'rabbitmqctl change_password {0} {1!r}'.format(name, password),
         output_loglevel='quiet',
+        python_shell=False,
         runas=runas)
     msg = 'Password Changed'
 
@@ -225,6 +228,7 @@ def clear_password(name, runas=None):
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run']('rabbitmqctl clear_password {0}'.format(name),
+                              python_shell=False,
                               runas=runas)
     msg = 'Password Cleared'
 
@@ -244,6 +248,7 @@ def add_vhost(vhost, runas=None):
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run']('rabbitmqctl add_vhost {0}'.format(vhost),
+                              python_shell=False,
                               runas=runas)
 
     msg = 'Added'
@@ -263,6 +268,7 @@ def delete_vhost(vhost, runas=None):
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run']('rabbitmqctl delete_vhost {0}'.format(vhost),
+                              python_shell=False,
                               runas=runas)
     msg = 'Deleted'
     return _format_response(res, msg)
@@ -283,6 +289,7 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*', runas=None):
     res = __salt__['cmd.run'](
         'rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(
             vhost, user, conf, write, read),
+        python_shell=False,
         runas=runas)
     msg = 'Permissions Set'
     return _format_response(res, msg)
@@ -302,6 +309,7 @@ def list_permissions(vhost, runas=None):
         runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
         'rabbitmqctl list_permissions -p {0}'.format(vhost),
+        python_shell=False,
         runas=runas)
     return [r.split('\t') for r in res.splitlines()]
 
@@ -320,6 +328,7 @@ def list_user_permissions(name, runas=None):
         runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
         'rabbitmqctl list_user_permissions {0}'.format(name),
+        python_shell=False,
         runas=runas)
     return [r.split('\t') for r in res.splitlines()]
 
@@ -337,6 +346,7 @@ def set_user_tags(name, tags, runas=None):
         runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
         'rabbitmqctl set_user_tags {0} {1}'.format(name, tags),
+        python_shell=False,
         runas=runas)
     msg = "Tag(s) set"
     return _format_response(res, msg)
@@ -395,6 +405,7 @@ def join_cluster(host, user='rabbit', runas=None):
     stop_app(runas)
     res = __salt__['cmd.run'](
         'rabbitmqctl join_cluster {0}@{1}'.format(user, host),
+        python_shell=False,
         runas=runas)
     start_app(runas)
 
@@ -491,6 +502,7 @@ def list_queues(runas=None, *kwargs):
         runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
         'rabbitmqctl list_queues {0}'.format(' '.join(list(kwargs))),
+        python_shell=False,
         runas=runas,
         )
     return res
@@ -516,6 +528,7 @@ def list_queues_vhost(vhost, runas=None, *kwargs):
             vhost,
             ' '.join(list(kwargs))
             ),
+        python_shell=False,
         runas=runas,
         )
     return res
@@ -579,6 +592,7 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
             name,
             pattern,
             definition.replace("'", '"')),
+        python_shell=False,
         runas=runas)
     log.debug('Set policy: {0}'.format(res))
     return _format_response(res, 'Set')
@@ -601,6 +615,7 @@ def delete_policy(vhost, name, runas=None):
     res = __salt__['cmd.run'](
         'rabbitmqctl clear_policy -p {0} {1}'.format(
             vhost, name),
+        python_shell=False,
         runas=runas)
     log.debug('Delete policy: {0}'.format(res))
     return _format_response(res, 'Deleted')
@@ -638,7 +653,7 @@ def plugin_is_enabled(name, runas=None):
     cmd = '{0} list -m -e'.format(rabbitmq)
     if runas is None:
         runas = salt.utils.get_user()
-    ret = __salt__['cmd.run'](cmd, runas=runas)
+    ret = __salt__['cmd.run'](cmd, python_shell=False, runas=runas)
     return bool(name in ret)
 
 
@@ -657,7 +672,7 @@ def enable_plugin(name, runas=None):
 
     if runas is None:
         runas = salt.utils.get_user()
-    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
 
     return _format_response(ret, 'Enabled')
 
@@ -678,6 +693,6 @@ def disable_plugin(name, runas=None):
 
     if runas is None:
         runas = salt.utils.get_user()
-    ret = __salt__['cmd.run_all'](cmd, runas=runas)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
 
     return _format_response(ret, 'Disabled')
