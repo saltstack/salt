@@ -94,7 +94,7 @@ def A(host, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
@@ -126,7 +126,7 @@ def AAAA(host, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
@@ -158,7 +158,7 @@ def NS(domain, resolve=True, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
@@ -199,7 +199,7 @@ def SPF(domain, record='SPF', nameserver=None):
     if nameserver is not None:
         cmd.append('@{0}'.format(nameserver))
 
-    result = __salt__['cmd.run_all'](' '.join(cmd))
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
         log.warn(
@@ -256,7 +256,7 @@ def MX(domain, resolve=False, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
@@ -294,7 +294,7 @@ def TXT(host, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
 
     if cmd['retcode'] != 0:
         log.warn(
