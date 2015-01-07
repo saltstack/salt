@@ -21,7 +21,7 @@ class TestWhich(integration.TestCase):
     expected.
     '''
 
-    # The mock patch bellow will make sure that ALL calls to the which function
+    # The mock patch below will make sure that ALL calls to the which function
     # returns None
     @patch('salt.utils.which', lambda exe: None)
     def test_missing_binary_in_linux(self):
@@ -29,13 +29,13 @@ class TestWhich(integration.TestCase):
             salt.utils.which('this-binary-does-not-exist') is None
         )
 
-    # The mock patch bellow will make sure that ALL calls to the which function
+    # The mock patch below will make sure that ALL calls to the which function
     # return whatever is sent to it
     @patch('salt.utils.which', lambda exe: exe)
     def test_existing_binary_in_linux(self):
         self.assertTrue(salt.utils.which('this-binary-exists-under-linux'))
 
-    # The mock patch bellow, since we're not providing the return value, we
+    # The mock patch below, since we're not providing the return value, we
     # will be able to tweak it within the test case. The testcase MUST accept
     # an argument which is the MagicMock'ed object
     @patch('os.access')
@@ -84,7 +84,7 @@ class TestWhich(integration.TestCase):
                     None
                 )
 
-    # The mock patch bellow, since we're not providing the return value, we
+    # The mock patch below, since we're not providing the return value, we
     # will be able to tweak it within the test case. The testcase MUST accept
     # an argument which is the MagicMock'ed object
     @patch('os.access')

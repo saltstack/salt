@@ -702,7 +702,7 @@ class Cloud(object):
                         continue
 
                 for vm_name, details in vms.items():
-                    # XXX: The logic bellow can be removed once the aws driver
+                    # XXX: The logic below can be removed once the aws driver
                     # is removed
                     if vm_name not in names:
                         continue

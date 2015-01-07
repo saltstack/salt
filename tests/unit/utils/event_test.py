@@ -251,7 +251,7 @@ class TestSaltEvent(TestCase):
             # Fire events again
             me.fire_event({'data': 'foo3'}, 'evt3')
             me.fire_event({'data': 'foo4'}, 'evt4')
-            # We not force unrelated pending events not to be dropped, so both of the event bellow work and are not
+            # We not force unrelated pending events not to be dropped, so both of the event below work and are not
             # None
             evt2 = me.get_event(tag='evt4', use_pending=True)
             evt1 = me.get_event(tag='evt3', use_pending=True)
