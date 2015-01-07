@@ -91,7 +91,7 @@ def rsync(src,
     )
 
     try:
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
 
@@ -142,7 +142,7 @@ def config(confile='/etc/rsyncd.conf'):
           )
 
     try:
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
 
