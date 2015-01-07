@@ -208,11 +208,6 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             is_global=False)
         self.assertSaltTrueReturn(ret)
 
-        output = subprocess.check_output(
-            ['git', 'config', '--local', config_key],
-            cwd=name)
-        self.assertEqual(config_value + "\n", output)
-
 
 if __name__ == '__main__':
     from integration import run_tests
