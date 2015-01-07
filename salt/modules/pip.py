@@ -554,7 +554,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         os.environ.update(env_vars)
 
     try:
-        cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+        cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
         return __salt__['cmd.run_all'](' '.join(cmd), python_shell=False, **cmd_kwargs)
