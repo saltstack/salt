@@ -8,23 +8,17 @@ from salttesting import TestCase, skipIf
 from salttesting.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
-# Make sure augeas python interface is installed
-HAS_AUGEAS = False
-try:
-    from augeas import Augeas as _Augeas
-    HAS_AUGEAS = True
-except ImportError:
-    pass
-
 # Import Salt Libs
 from salt.modules import augeas_cfg
 from salt.exceptions import SaltInvocationError
+# Make sure augeas python interface is installed
+HAS_AUGEAS = augeas_cfg.__virtual__()
+if HAS_AUGEAS:
+    from augeas import Augeas as _Augeas
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_AUGEAS, "augeas python is required for this test case")
 class AugeasCfgTestCase(TestCase):
     '''
     Test cases for salt.modules.augeas_cfg
