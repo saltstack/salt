@@ -39,7 +39,7 @@ def add(name, gid=None, system=False):
         cmd += '-r '
     cmd += name
 
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret['retcode']
 
@@ -54,7 +54,7 @@ def delete(name):
 
         salt '*' group.delete foo
     '''
-    ret = __salt__['cmd.run_all']('groupdel {0}'.format(name))
+    ret = __salt__['cmd.run_all']('groupdel {0}'.format(name), python_shell=False)
 
     return not ret['retcode']
 
@@ -121,7 +121,7 @@ def chgid(name, gid):
     if gid == pre_gid:
         return True
     cmd = 'groupmod -g {0} {1}'.format(gid, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_gid = __salt__['file.group_to_gid'](name)
     if post_gid != pre_gid:
         return post_gid == gid
@@ -141,8 +141,9 @@ def adduser(name, username):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     '''
-    retcode = __salt__['cmd.retcode']('gpasswd --add {0} {1}'.format(username,
-                                                                     name))
+    retcode = __salt__['cmd.retcode'](
+            'gpasswd --add {0} {1}'.format(username, name),
+            python_shell=False)
     return not retcode
 
 
@@ -163,8 +164,9 @@ def deluser(name, username):
     try:
         if username in grp_info['members']:
             print username
-            retcode = __salt__['cmd.retcode']('gpasswd --del {0} {1}'.format(
-                username, name))
+            retcode = __salt__['cmd.retcode'](
+                    'gpasswd --del {0} {1}'.format(username, name),
+                    python_shell=False)
             return not retcode
         else:
             return True
@@ -183,6 +185,7 @@ def members(name, members_list):
     Replaces a membership list for a local group 'foo'.
         foo:x:1234:user1,user2,user3,...
     '''
-    retcode = __salt__['cmd.retcode']('gpasswd --members {0} {1}'.format(
-        members_list, name))
+    retcode = __salt__['cmd.retcode'](
+            'gpasswd --members {0} {1}'.format(members_list, name),
+            python_shell=False)
     return not retcode
