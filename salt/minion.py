@@ -2091,7 +2091,10 @@ class Syndic(Minion):
                 self.event_forward_timeout = (
                         time.time() + self.opts['syndic_event_forward_timeout']
                         )
-            if salt.utils.jid.is_jid(event['tag']) and 'return' in event['data']:
+            tag_parts = event['tag'].split('/')
+            if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
+                salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
+                'return' in event['data']:
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
@@ -2105,7 +2108,8 @@ class Syndic(Minion):
                         self.mminion.returners[fstr](event['data']['jid'])
                         )
                 if 'master_id' in event['data']:
-                    jdict['master_id'] = event['data']['master_id']
+                    # __'s to make sure it doesn't print out on the master cli
+                    jdict['__master_id__'] = event['data']['master_id']
                 jdict[event['data']['id']] = event['data']['return']
             else:
                 # Add generic event aggregation here
@@ -2323,12 +2327,16 @@ class MultiSyndic(MinionBase):
                 if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
                     break
                 raise
+
             log.trace('Got event {0}'.format(event['tag']))
             if self.event_forward_timeout is None:
                 self.event_forward_timeout = (
                         time.time() + self.opts['syndic_event_forward_timeout']
                         )
-            if salt.utils.jid.is_jid(event['tag']) and 'return' in event['data']:
+            tag_parts = event['tag'].split('/')
+            if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
+                salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
+                'return' in event['data']:
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
