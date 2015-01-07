@@ -14,7 +14,6 @@ from salttesting.mock import (
 
 # Import Salt Libs
 from salt.modules import environ
-from salt.exceptions import CommandExecutionError
 import os
 
 
