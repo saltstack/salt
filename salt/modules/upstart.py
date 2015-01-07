@@ -133,7 +133,7 @@ def _runlevel():
     '''
     if 'upstart._runlevel' in __context__:
         return __context__['upstart._runlevel']
-    out = __salt__['cmd.run']('runlevel {0}'.format(_find_utmp()))
+    out = __salt__['cmd.run'](['runlevel', '{0}'.format(_find_utmp())], python_shell=False)
     try:
         ret = out.split()[1]
     except IndexError:
@@ -317,8 +317,8 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'service {0} start'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['service', name, 'start']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -331,8 +331,8 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'service {0} stop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['service', name, 'stop']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -345,8 +345,8 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    cmd = 'service {0} restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['service', name, 'restart']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def full_restart(name):
@@ -359,8 +359,8 @@ def full_restart(name):
 
         salt '*' service.full_restart <service name>
     '''
-    cmd = 'service {0} --full-restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['service', name, '--full-restart']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def reload_(name):
@@ -373,8 +373,8 @@ def reload_(name):
 
         salt '*' service.reload <service name>
     '''
-    cmd = 'service {0} reload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['service', name, 'reload']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def force_reload(name):
@@ -387,8 +387,8 @@ def force_reload(name):
 
         salt '*' service.force_reload <service name>
     '''
-    cmd = 'service {0} force-reload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['service', name, 'force-reload']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -404,10 +404,10 @@ def status(name, sig=None):
     '''
     if sig:
         return bool(__salt__['status.pid'](sig))
-    cmd = 'service {0} status'.format(name)
+    cmd = ['service', name, 'status']
     if _service_is_upstart(name):
-        return 'start/running' in __salt__['cmd.run'](cmd)
-    return not bool(__salt__['cmd.retcode'](cmd))
+        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
+    return not bool(__salt__['cmd.retcode'](cmd, python_shell=False))
 
 
 def _get_service_exec():
@@ -453,8 +453,8 @@ def enable(name, **kwargs):
     if _service_is_upstart(name):
         return _upstart_enable(name)
     executable = _get_service_exec()
-    cmd = '{0} -f {1} defaults'.format(executable, name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = [executable, '-f', name, 'defaults']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def disable(name, **kwargs):
@@ -470,8 +470,8 @@ def disable(name, **kwargs):
     if _service_is_upstart(name):
         return _upstart_disable(name)
     executable = _get_service_exec()
-    cmd = '{0} -f {1} remove'.format(executable, name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = [executable, '-f', name, 'remove']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def enabled(name):
