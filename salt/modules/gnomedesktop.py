@@ -56,7 +56,7 @@ class _GSettings(object):
         cmd = 'dbus-launch --exit-with-session gsettings get {0} {1}'.format(self.SCHEMA, self.KEY)
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
-        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
+        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)
 
         if 'stdout' in result:
             if 'uint32' in result['stdout']:
@@ -84,7 +84,7 @@ class _GSettings(object):
         cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"'.format(self.SCHEMA, self.KEY, str(value))
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
-        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
+        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)
         return result
 
 
