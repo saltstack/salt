@@ -178,7 +178,8 @@ def _exec_cmd(*args, **kwargs):
     # The only way to capture all the command output, including the
     # summary line, is to use the script command to write out to a file
     (filedesc, filename) = tempfile.mkstemp()
-    result = __salt__['cmd.run_all']('script -q -c "{0}" {1}'.format(cmd_exec, filename))
+    result = __salt__['cmd.run_all']('script -q -c "{0}" {1}'.format(cmd_exec, filename),
+                                     python_shell=False)
 
     # Read the output from the script command, stripping the first line
     with salt.utils.fopen(filename, 'r') as outfile:
