@@ -6,16 +6,20 @@
     Salt's api cli parser.
 
 '''
-from __future__ import print_function
-from __future__ import absolute_import
 
-import salt.ext.six as six
+# Import Python libs
+from __future__ import absolute_import,  print_function
 import sys
 import os.path
 import logging
+
+# Import Salt libs
 import salt.utils.parsers as parsers
 import salt.version
 import salt.syspaths as syspaths
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
