@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TargetPlatform Condition="'$(TargetPlatform)'=='' AND '$(Platform)'=='x86'">win32</TargetPlatform>
+    <TargetPlatform Condition="'$(TargetPlatform)'=='' AND '$(Platform)'=='x64'">amd64</TargetPlatform>
+    <TargetPlatform Condition="'$(TargetPlatform)'==''">win32</TargetPlatform>
+    <PackagesDir Condition="'$(PackagesDir)'==''">$(MSBuildProjectDirectory)\..\..\packages</PackagesDir>
+    <DistDir Condition="'$(DistDir)'==''">$(MSBuildProjectDirectory)\..\..\..\..\dist</DistDir>
+    <BuildEnv Condition="'$(BuildEnv)'==''">$(MSBuildProjectDirectory)\..\..\buildenv</BuildEnv>
+    <ExtractDir Condition="'$(ExtractDir)'==''">$(MSBuildProjectDirectory)\..\..\dist.$(TargetPlatform)</ExtractDir>
+    <DisplayVersion Condition="'$(DisplayVersion)'==''">2014.7.0</DisplayVersion>
+    <BUILD_NUMBER Condition="'$(BUILD_NUMBER)'==''">0</BUILD_NUMBER>
+    <InternalVersion Condition="'$(InternalVersion)'==''">14.7.0.$(BUILD_NUMBER)</InternalVersion>
+    <BuildEnvDefine>;buildenv=$(BuildEnv)</BuildEnvDefine>
+    <ExtractDirDefine>;dist=$(ExtractDir)</ExtractDirDefine>
+    <DisplayVersionDefine>;DisplayVersion=$(DisplayVersion)</DisplayVersionDefine>
+    <TargetPlatformDefine>;TargetPlatform=$(TargetPlatform)</TargetPlatformDefine>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>3.9</ProductVersion>
+    <ProjectGuid>a48b4b19-4787-4c37-984b-64e5f557f687</ProjectGuid>
+    <SchemaVersion>2.0</SchemaVersion>
+    <OutputName>Salt-Minion-$(DisplayVersion).$(TargetPlatform)</OutputName>
+    <OutputType>Package</OutputType>
+    <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' AND '$(MSBuildExtensionsPath32)' != '' ">$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets</WixTargetsPath>
+    <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' ">$(MSBuildExtensionsPath)\Microsoft\WiX\v3.x\Wix.targets</WixTargetsPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+    <DefineConstants>Debug;InternalVersion=$(InternalVersion)$(BuildEnvDefine)$(ExtractDirDefine)$(DisplayVersionDefine)$(TargetPlatformDefine)</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
+    <DefineConstants>InternalVersion=$(InternalVersion)$(BuildEnvDefine)$(ExtractDirDefine)$(DisplayVersionDefine)$(TargetPlatformDefine)</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="buildenv.wxs" />
+    <Compile Include="service.wxs" />
+    <Compile Include="dist.wxs" />
+    <Compile Include="HostnameCustomizationDlg.wxs" />
+    <Compile Include="MinionConfigurationExtensionCA.wxs" />
+    <Compile Include="Product.wxs" />
+    <Compile Include="WixUI_Minion.wxs" />
+  </ItemGroup>
+  <ItemGroup>
+    <WixExtension Include="WixUtilExtension">
+      <HintPath>$(WixExtDir)\WixUtilExtension.dll</HintPath>
+      <Name>WixUtilExtension</Name>
+    </WixExtension>
+    <WixExtension Include="WixUIExtension">
+      <HintPath>$(WixExtDir)\WixUIExtension.dll</HintPath>
+      <Name>WixUIExtension</Name>
+    </WixExtension>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MinionConfigurationExtension\MinionConfigurationExtension.csproj">
+      <Name>MinionConfigurationExtension</Name>
+      <Project>{ba2a4d99-7701-4ac5-a43c-4dd456d158b9}</Project>
+      <Private>True</Private>
+      <DoNotHarvest>True</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(WixTargetsPath)" />
+  <Import Project="..\..\targets\Minion.Common.targets" />
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <!--
+	To modify your build process, add your task inside one of the targets below and uncomment it.
+	Other similar extension points exist, see Wix.targets.
+	<Target Name="BeforeBuild">
+	</Target>
+	<Target Name="AfterBuild">
+	</Target>
+	-->
+</Project>

@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Directory Id="dirA7CC33A34163812EEAF3B20CD074A564" Name="conf" />
+      <Directory Id="dirB637681DD9AD7CA414F076464B637F34" Name="var" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <ComponentGroup Id="buildenv">
+      <Component Id="cmpADDA9D34569B3A16F293256024A824AA" Directory="INSTALLFOLDER" Guid="{B4393920-A157-4864-A9AB-9CA9FCEAF0BD}">
+        <File Id="fil1822B345F6D0370F82F45412F127358B" KeyPath="yes" Source="$(var.buildenv)\salt.ico" />
+      </Component>
+      <Component Id="cmpF3CE08C037F32A1C76DF93B02A6ACB79" Directory="dirA7CC33A34163812EEAF3B20CD074A564" Guid="{398E0EEA-F54A-4D10-9559-5DF3582C4627}">
+        <File Id="filF7B75C18646D054B4C42FBFF0826EBA7" KeyPath="yes" Source="$(var.buildenv)\conf\minion" />
+      </Component>
+      <Component Id="cmp307525E488BCE43668389144EA20AA89" Directory="dirEE8C5502070ED2977C18A24D3961E961" Guid="{3AC63B9D-D672-4F17-8BB3-18EE3F739DCD}">
+        <File Id="fil14B63AD812FE59B6BC5F9B7B5FE3A5E4" KeyPath="yes" Source="$(var.buildenv)\conf\pki\minion\empty.txt" />
+      </Component>
+      <Component Id="cmpE3FB33DFF8907BC036ADCCFD0CE03760" Directory="dir2049B8A87D49E3F1EE06F83EDB591D39" Guid="{036ED3D4-6B87-4BE4-9B7A-BE3752174BDC}">
+        <File Id="fil07717CAC3B6083427FAC781123ECAB70" KeyPath="yes" Source="$(var.buildenv)\var\cache\salt\minion\extmods\grains\empty.txt" />
+      </Component>
+      <Component Id="cmp1F374D0F2487F9835E6540EC0FB7733B" Directory="dir2AEFCB6CEF5434303EC2BF9A8D9FF76D" Guid="{20E2D623-3244-4F89-87DF-27D45B1F5FCC}">
+        <File Id="filCC5983C48EA5DA10789EFF559C1EA933" KeyPath="yes" Source="$(var.buildenv)\var\cache\salt\minion\proc\empty.txt" />
+      </Component>
+      <Component Id="cmp391DD7865C79B0AF8B63EA3E4792AA0F" Directory="dir9E43925E876F0283B15F8D17048790C5" Guid="{5DFEE5D5-1455-4DE0-97C5-003287147F89}">
+        <File Id="filF7B35852E185496D6B8F78FEA98BDB60" KeyPath="yes" Source="$(var.buildenv)\var\log\salt\minion" />
+      </Component>
+      <Component Id="cmp0216FBD40501C0B929DA8B30401422BA" Directory="dirC58C039CF657CD436505DDE4B379C07E" Guid="{0A38B763-E0FD-487A-A557-54C304A1D35B}">
+        <File Id="fil98274B165CB876FB1CF6FCFD85D64B99" KeyPath="yes" Source="$(var.buildenv)\var\run\empty.txt" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dirE142D9F7BDF44B6097F5F534D58A740B">
+      <Directory Id="dir2049B8A87D49E3F1EE06F83EDB591D39" Name="grains" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dir7E4EF1E712A8FBA350A5B8F84FCD601C">
+      <Directory Id="dir25076B0AC765D9310FC7973AB4CC12F0" Name="minion" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dir25076B0AC765D9310FC7973AB4CC12F0">
+      <Directory Id="dir2AEFCB6CEF5434303EC2BF9A8D9FF76D" Name="proc" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dirB637681DD9AD7CA414F076464B637F34">
+      <Directory Id="dir7B60EC9C5CF1CAB490896DE725E16F2B" Name="cache" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dir7B60EC9C5CF1CAB490896DE725E16F2B">
+      <Directory Id="dir7E4EF1E712A8FBA350A5B8F84FCD601C" Name="salt" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dirC754A6AF3C57CDBD705FA8D086C8173F">
+      <Directory Id="dir9E43925E876F0283B15F8D17048790C5" Name="salt" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dirB637681DD9AD7CA414F076464B637F34">
+      <Directory Id="dirC58C039CF657CD436505DDE4B379C07E" Name="run" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dirB637681DD9AD7CA414F076464B637F34">
+      <Directory Id="dirC754A6AF3C57CDBD705FA8D086C8173F" Name="log" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dirA7CC33A34163812EEAF3B20CD074A564">
+      <Directory Id="dirD3AA52DCC9A44D3B9FDA083145378183" Name="pki" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dir25076B0AC765D9310FC7973AB4CC12F0">
+      <Directory Id="dirE142D9F7BDF44B6097F5F534D58A740B" Name="extmods" />
+    </DirectoryRef>
+  </Fragment>
+  <Fragment>
+    <DirectoryRef Id="dirD3AA52DCC9A44D3B9FDA083145378183">
+      <Directory Id="dirEE8C5502070ED2977C18A24D3961E961" Name="minion" />
+    </DirectoryRef>
+  </Fragment>
+</Wix>

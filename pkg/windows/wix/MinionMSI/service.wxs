@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <ComponentGroup Id="service">
+      <Component Id="cmp906378FA53882935FD2EC0CC58D32FAC" Directory="INSTALLFOLDER" Guid="{E27F3682-194D-4CC2-9F9B-F3E1D53ADCDB}">
+        <File Id="fil055DB09E328331BF0202C29D7483905C" KeyPath="yes" Source="$(var.buildenv)\nssm.exe" />
+        <ServiceInstall Account="LocalSystem" ErrorControl="normal" Name="salt-minion" Start="auto" Type="ownProcess" Vital="yes"
+          Description="Salt Minion Service" DisplayName="Salt Minion" Id="SaltMinionServiceInstall">
+          <ServiceConfig OnInstall="yes" OnReinstall="yes" DelayedAutoStart="no" />
+          <ServiceDependency Id="nsi" />
+        </ServiceInstall>
+        <ServiceControl Id="SaltMinionServiceControl" Name="salt-minion" Remove="uninstall" Stop="uninstall">
+          <ServiceArgument />
+        </ServiceControl>
+        <RegistryKey Root="HKLM" Key="System\CurrentControlSet\Services\salt-minion\Parameters">
+          <RegistryValue Type="expandable" Name="AppDirectory" Value="[INSTALLFOLDER]" />
+          <RegistryValue Type="expandable" Name="Application" Value="[INSTALLFOLDER]salt-minion.exe" />
+          <RegistryValue Type="expandable" Name="AppParameters" Value="-c [INSTALLFOLDER]conf" />
+        </RegistryKey>
+        <RegistryKey Root="HKLM" Key="System\CurrentControlSet\Services\salt-minion\Parameters\AppExit">
+          <RegistryValue Type="string" Value="Restart" />
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

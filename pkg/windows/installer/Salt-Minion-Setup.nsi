@@ -1,5 +1,10 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "{{ salt_version }}"
+!ifndef PRODUCT_VERSION
+  !define PRODUCT_VERSION "{{ salt_version }}"
+!endif
+!ifndef TARGET_PLATFORM
+  !define TARGET_PLATFORM "$%PROCESSOR_ARCHITEW6432%"
+!endif
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -132,7 +137,7 @@ FunctionEnd
 
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-$%PROCESSOR_ARCHITEW6432%-Setup.exe"
+OutFile "Salt-Minion-${PRODUCT_VERSION}-${TARGET_PLATFORM}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
@@ -176,7 +181,14 @@ Section "MainSection" SEC01
   SetOutPath "$INSTDIR\"
   SetOverwrite try
   CreateDirectory $INSTDIR\conf\pki\minion
+!ifdef BUILDENV
+  File /r "${BUILDENV}\"
+!else
   File /r "..\buildenv\"
+!endif
+!ifdef DISTFILES
+  File /r "${DISTFILES}\"
+!endif
   Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F' 
   
 
