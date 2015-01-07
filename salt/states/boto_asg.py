@@ -230,7 +230,7 @@ def present(
         suspended_processes=None,
         scaling_policies=None,
         alarms=None,
-        alarms_from_pillar="boto_asg_alarms",
+        alarms_from_pillar='boto_asg_alarms',
         region=None,
         key=None,
         keyid=None,
@@ -345,7 +345,7 @@ def present(
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
     if launch_config:
-        launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
+        launch_config_name = launch_config_name + '-' + hashlib.md5(str(launch_config)).hexdigest()
         args = {
             'name': launch_config_name,
             'region': region,
@@ -375,12 +375,12 @@ def present(
         for cfg in launch_config:
             args.update(cfg)
         if not __opts__['test']:
-            lc_ret = __salt__["state.single"]('boto_lc.present', **args)
+            lc_ret = __salt__['state.single']('boto_lc.present', **args)
             lc_ret = next(six.itervalues(lc_ret))
-            if lc_ret["result"] is True and lc_ret["changes"]:
-                if "launch_config" not in ret["changes"]:
-                    ret["changes"]["launch_config"] = {}
-                ret["changes"]["launch_config"] = lc_ret["changes"]
+            if lc_ret['result'] is True and lc_ret['changes']:
+                if 'launch_config' not in ret['changes']:
+                    ret['changes']['launch_config'] = {}
+                ret['changes']['launch_config'] = lc_ret['changes']
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
@@ -418,8 +418,8 @@ def present(
         # time, we should remove them from the dict.
         if scaling_policies:
             for policy in scaling_policies:
-                if "min_adjustment_step" not in policy:
-                    policy["min_adjustment_step"] = None
+                if 'min_adjustment_step' not in policy:
+                    policy['min_adjustment_step'] = None
         config = {
             'launch_config_name': launch_config_name,
             'availability_zones': availability_zones,
@@ -433,14 +433,14 @@ def present(
             'tags': tags,
             'termination_policies': termination_policies,
             'suspended_processes': suspended_processes,
-            "scaling_policies": scaling_policies,
+            'scaling_policies': scaling_policies,
         }
         if suspended_processes is None:
-            config["suspended_processes"] = []
+            config['suspended_processes'] = []
         # ensure that we delete scaling_policies if none are specified
         if scaling_policies is None:
-            config["scaling_policies"] = []
-        # note: do not loop using "key, value" - this can modify the value of
+            config['scaling_policies'] = []
+        # note: do not loop using 'key, value' - this can modify the value of
         # the aws access key
         for asg_property, value in six.iteritems(config):
             # Only modify values being specified; introspection is difficult
@@ -474,13 +474,13 @@ def present(
                                                        suspended_processes,
                                                        scaling_policies, region,
                                                        key, keyid, profile)
-            if asg["launch_config_name"] != launch_config_name:
+            if asg['launch_config_name'] != launch_config_name:
                 # delete the old launch_config_name
-                deleted = __salt__['boto_asg.delete_launch_configuration'](asg["launch_config_name"], region, key, keyid, profile)
+                deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'], region, key, keyid, profile)
                 if deleted:
-                    if "launch_config" not in ret["changes"]:
-                        ret["changes"]["launch_config"] = {}
-                    ret["changes"]["launch_config"]["deleted"] = asg["launch_config_name"]
+                    if 'launch_config' not in ret['changes']:
+                        ret['changes']['launch_config'] = {}
+                    ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
             if updated:
                 ret['changes']['old'] = asg
                 asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
@@ -508,34 +508,36 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
         tmp = dictupdate.update(tmp, alarms)
     # set alarms, using boto_cloudwatch_alarm.present
     merged_return_value = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    for _, info in tmp.items():
+    for _, info in six.iteritems(tmp):
         # add asg to name and description
-        info["name"] = name + " " + info["name"]
-        info["attributes"]["description"] = name + " " + info["attributes"]["description"]
+        info['name'] = name + ' ' + info['name']
+        info['attributes']['description'] = name + ' ' + info['attributes']['description']
         # add dimension attribute
-        info["attributes"]["dimensions"] = {"AutoScalingGroupName": [name]}
+        info['attributes']['dimensions'] = {'AutoScalingGroupName': [name]}
         # set alarm
         kwargs = {
-            "name": info["name"],
-            "attributes": info["attributes"],
-            "region": region,
-            "key": key,
-            "keyid": keyid,
-            "profile": profile,
+            'name': info['name'],
+            'attributes': info['attributes'],
+            'region': region,
+            'key': key,
+            'keyid': keyid,
+            'profile': profile,
         }
-        ret = __salt__["state.single"]('boto_cloudwatch_alarm.present', **kwargs)
-        results = ret.values()[0]
-        if not results["result"]:
-            merged_return_value["result"] = False
-        if results.get("changes", {}) != {}:
-            merged_return_value["changes"][info["name"]] = results["changes"]
-        if "comment" in results:
-            merged_return_value["comment"] += results["comment"]
+        ret = __salt__['state.single']('boto_cloudwatch_alarm.present', **kwargs)
+        results = next(six.itervalues(ret))
+        if not results['result']:
+            merged_return_value['result'] = False
+        if results.get('changes', {}) != {}:
+            merged_return_value['changes'][info['name']] = results['changes']
+        if 'comment' in results:
+            merged_return_value['comment'] += results['comment']
     return merged_return_value
 
 
 def _recursive_compare(v1, v2):
-    "return v1 == v2.  compares list, dict, OrderedDict, recursively"
+    '''
+    return v1 == v2.  compares list, dict, OrderedDict, recursively
+    '''
     if isinstance(v1, list):
         if len(v1) != len(v2):
             return False
