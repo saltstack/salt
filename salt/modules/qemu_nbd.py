@@ -57,7 +57,8 @@ def connect(image):
             while True:
                 # Sometimes nbd does not "take hold", loop until we can verify
                 __salt__['cmd.run'](
-                        'qemu-nbd -c {0} {1}'.format(nbd, image)
+                        'qemu-nbd -c {0} {1}'.format(nbd, image),
+                        python_shell=False,
                         )
                 if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
                     break
@@ -79,7 +80,8 @@ def mount(nbd):
         salt '*' qemu_nbd.mount /dev/nbd0
     '''
     __salt__['cmd.run'](
-            'partprobe {0}'.format(nbd)
+            'partprobe {0}'.format(nbd),
+            python_shell=False,
             )
     ret = {}
     for part in glob.glob('{0}p*'.format(nbd)):
@@ -135,5 +137,5 @@ def clear(mnt):
     if ret:
         return ret
     for nbd in nbds:
-        __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd))
+        __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd), python_shell=False)
     return ret
