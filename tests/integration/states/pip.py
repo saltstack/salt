@@ -64,6 +64,16 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 shutil.rmtree(venv_dir)
 
     def test_pip_installed_weird_install(self):
+        # First, check to see if this is running on CentOS 5
+        os_grain = self.run_function('grains.item', ['os'])
+        os_version = self.run_function('grains.item', ['osmajorrelease'])
+
+        # Skip this test if running on CentOS 5
+        if os_grain['os'] == 'CentOS' and os_version['osmajorrelease'] == 5:
+            self.skipTest(
+                'This test does not run reliably on CentOS 5'
+            )
+
         ographite = '/opt/graphite'
         if os.path.isdir(ographite):
             self.skipTest(
