@@ -73,19 +73,22 @@ class MountTestCase(TestCase):
         '''
         List the content of the fstab
         '''
-        data = 'A B C D,E,F G H'
-
         mock = MagicMock(return_value=False)
         with patch.object(os.path, 'isfile', mock):
             self.assertEqual(mount.fstab(), {})
 
         mock = MagicMock(return_value=True)
         with patch.object(os.path, 'isfile', mock):
-            with patch('salt.utils.fopen', mock_open(read_data=data)):
+            file_data = '\n'.join(['#',
+                                   'A B C D,E,F G H'])
+            with patch('salt.utils.fopen',
+                       mock_open(read_data=file_data),
+                       create=True) as m:
+                m.return_value.__iter__.return_value = file_data.splitlines()
                 self.assertEqual(mount.fstab(), {'B': {'device': 'A',
-                                                       'opts': ['D', 'E', 'F'],
-                                                       'fstype': 'C',
                                                        'dump': 'G',
+                                                       'fstype': 'C',
+                                                       'opts': ['D', 'E', 'F'],
                                                        'pass': 'H'}})
 
     def test_rm_fstab(self):
@@ -224,30 +227,36 @@ class MountTestCase(TestCase):
         with patch.object(salt.utils, 'which', mock):
             self.assertFalse(mount.is_fuse_exec('cmd'))
 
-    def test_swaps(self):
+    @patch('salt.modules.mount.__grains__')
+    def test_swaps(self, salt_modules_mount_grains):
         '''
         Return a dict containing information on active swap
         '''
-        with patch.dict(mount.__grains__, {'os': ''}):
+
+        file_data = '\n'.join(['Filename Type Size Used Priority',
+                               '/dev/sda1 partition 31249404 4100 -1'])
+        with patch('salt.utils.fopen',
+                   mock_open(read_data=file_data),
+                   create=True) as m:
+            m.return_value.__iter__.return_value = file_data.splitlines()
+
+            salt_modules_mount_grains.return_value = {'os': ''}
             self.assertDictEqual(mount.swaps(), {'/dev/sda1':
                                                  {'priority': '-1',
                                                   'size': '31249404',
                                                   'type': 'partition',
-                                                  'used': '4'}})
+                                                  'used': '4100'}})
 
-        with patch.dict(mount.__grains__, {'os': 'OpenBSD'}):
-            mock = MagicMock(return_value='')
-            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
-                self.assertDictEqual(mount.swaps(), {})
-
-        with patch.dict(mount.__grains__, {'os': 'OpenBSD'}):
-            mock = MagicMock(return_value='Device\n/dev/sda1 31249404 4 * * -1')
-            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
-                self.assertDictEqual(mount.swaps(), {'/dev/sda1':
-                                                     {'priority': '-1',
-                                                      'size': '31249404',
-                                                      'type': 'partition',
-                                                      'used': '4'}})
+        file_data = '\n'.join(['Device Type Size Used Priority',
+                               '/dev/sda1 partition 31249404 4100 -1'])
+        salt_modules_mount_grains.return_value = {'os': 'OpenBSD'}
+        mock = MagicMock(return_value=file_data)
+        with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+            self.assertDictEqual(mount.swaps(), {'/dev/sda1':
+                                                 {'priority': '-1',
+                                                  'size': '31249404',
+                                                  'type': 'partition',
+                                                  'used': '4100'}})
 
     def test_swapon(self):
         '''
