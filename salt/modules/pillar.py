@@ -127,7 +127,7 @@ def obfuscate_inner(var):
 
 def obfuscate(*args):
     '''
-    .. versionadded:: develop
+    .. versionadded:: Beryllium
 
     Same as :py:func:`items`, but replace pillar values with a simple type indication.
 
@@ -159,7 +159,7 @@ def obfuscate(*args):
 # identifier rule.
 def ls(*args):
     '''
-    .. versionadded:: develop
+    .. versionadded:: Beryllium
 
     Calls the master for a fresh pillar, generates the pillar data on the
     fly (same as :py:func:`items`), but only shows the available main keys.
