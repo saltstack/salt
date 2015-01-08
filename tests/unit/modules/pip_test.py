@@ -1060,7 +1060,6 @@ class PipTestCase(TestCase):
                 'pep8',
                 user='Me!',
                 runas='Not Me!',
-                python_shell=False,
             )
 
     def test_uninstall_user_and_runas_raises_exception(self):
@@ -1072,7 +1071,6 @@ class PipTestCase(TestCase):
                 'pep8',
                 user='Me!',
                 runas='Not Me!',
-                python_shell=False,
             )
 
     def test_freeze_user_and_runas_raises_exception(self):
@@ -1084,7 +1082,6 @@ class PipTestCase(TestCase):
                 '/tmp/pip-env',
                 user='Me!',
                 runas='Not Me!',
-                python_shell=False,
             )
 
     def test_list_user_and_runas_raises_exception(self):
@@ -1096,7 +1093,6 @@ class PipTestCase(TestCase):
                 'pep8',
                 user='Me!',
                 runas='Not Me!',
-                python_shell=False,
             )
 
 
