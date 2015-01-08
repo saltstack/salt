@@ -397,7 +397,7 @@ class PostgresTestCase(TestCase):
                 '-c [\'"]{0,1}ALTER ROLE (\\\\)?"test_username(\\\\)?" WITH  INHERIT NOCREATEDB '
                 'NOCREATEROLE NOREPLICATION LOGIN '
                 'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
-                ' GRANT (\\\\)?"test_groups(\\\\)?" TO (\\\\)?"test_username"[\'"]{0,1}',
+                ' GRANT (\\\\)?"test_groups(\\\\)?" TO (\\\\)?"test_username(\\\\)?"[\'"]{0,1}',
                 call_output)
         )
 
