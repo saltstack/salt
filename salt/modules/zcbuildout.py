@@ -300,7 +300,7 @@ def _Popen(command,
         loglevel = 'debug'
     ret = __salt__['cmd.run_all'](
         command, cwd=directory, output_loglevel=loglevel,
-        runas=runas, env=env, use_vt=use_vt)
+        runas=runas, env=env, use_vt=use_vt, python_shell=False)
     out = ret['stdout'] + '\n\n' + ret['stderr']
     if (exitcode is not None) and (ret['retcode'] != exitcode):
         raise _BuildoutError(out)
@@ -1039,7 +1039,7 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
                 if unless:
                     _valid(status, 'unless execution succeeded')
             elif isinstance(unless, string_types):
-                if retcode(unless, cwd=directory, runas=runas, env=env) == 0:
+                if retcode(unless, cwd=directory, runas=runas, env=env, python_shell=False) == 0:
                     _valid(status, 'unless execution succeeded')
     if status['status']:
         ret = status
