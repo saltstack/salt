@@ -28,6 +28,7 @@ except ImportError:
 import salt.defaults.exitcodes
 import salt.utils
 import salt.payload
+import salt.transport.channel
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
@@ -685,14 +686,11 @@ class SAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        sreq = salt.payload.SREQ(
-            self.opts['master_uri'],
-            opts=self.opts
-        )
+        channel = salt.transport.channel.ReqChannel.factory(self.opts, crypt='clear')
 
         try:
-            payload = sreq.send_auto(
-                self.minion_sign_in_payload(),
+            payload = channel.send(
+                self.minion_sign_in_payload()['load'],  # TODO: change func to retur load instead of payload
                 tries=tries,
                 timeout=timeout
             )
