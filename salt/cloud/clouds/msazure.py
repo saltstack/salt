@@ -42,6 +42,7 @@ HAS_LIBS = False
 try:
     import azure
     import azure.servicemanagement
+    from azure import WindowsAzureConflictError
     HAS_LIBS = True
 except ImportError:
     pass
@@ -492,6 +493,33 @@ def create(vm_):
 
     try:
         conn.create_hosted_service(**service_kwargs)
+    except WindowsAzureConflictError:
+        log.debug("Cloud service already exists")
+    except Exception as exc:
+        error = 'The hosted service name is invalid.'
+        if error in str(exc):
+            log.error(
+                'Error creating {0} on Azure.\n\n'
+                'The hosted service name is invalid. The name can contain '
+                'only letters, numbers, and hyphens. The name must start with '
+                'a letter and must end with a letter or a number.'.format(
+                    vm_['name']
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+        else:
+            log.error(
+                'Error creating {0} on Azure\n\n'
+                'The following exception was thrown when trying to '
+                'run the initial deployment: \n{1}'.format(
+                    vm_['name'], str(exc)
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+        return False
+    try:
         conn.create_virtual_machine_deployment(**vm_kwargs)
     except Exception as exc:
         error = 'The hosted service name is invalid.'
@@ -699,6 +727,9 @@ def destroy(name, conn=None, call=None, kwargs=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     service_name = kwargs.get('service_name', name)
 
