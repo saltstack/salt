@@ -155,7 +155,7 @@ def add(name,
 
     cmd.append(name)
 
-    ret = __salt__['cmd.run_all'](' '.join(cmd))
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if ret['retcode'] != 0:
         return False
@@ -201,7 +201,7 @@ def delete(name, remove=False, force=False):
 
     cmd.append(name)
 
-    ret = __salt__['cmd.run_all'](' '.join(cmd))
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if ret['retcode'] == 0:
         # Command executed with no errors
@@ -258,8 +258,8 @@ def chuid(name, uid):
     pre_info = info(name)
     if uid == pre_info['uid']:
         return True
-    cmd = 'usermod -u {0} {1}'.format(uid, name)
-    __salt__['cmd.run'](cmd)
+    cmd = ['usermod', '-u', '{0}'.format(uid), name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['uid'] != pre_info['uid']:
         return post_info['uid'] == uid
@@ -279,8 +279,8 @@ def chgid(name, gid):
     pre_info = info(name)
     if gid == pre_info['gid']:
         return True
-    cmd = 'usermod -g {0} {1}'.format(gid, name)
-    __salt__['cmd.run'](cmd)
+    cmd = ['usermod', '-g', '{0}'.format(gid), name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['gid'] != pre_info['gid']:
         return post_info['gid'] == gid
@@ -300,8 +300,8 @@ def chshell(name, shell):
     pre_info = info(name)
     if shell == pre_info['shell']:
         return True
-    cmd = 'usermod -s {0} {1}'.format(shell, name)
-    __salt__['cmd.run'](cmd)
+    cmd = ['usermod', '-s', shell, name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['shell'] != pre_info['shell']:
         return post_info['shell'] == shell
@@ -310,7 +310,7 @@ def chshell(name, shell):
 
 def chhome(name, home, persist=False):
     '''
-    Change the home directory of the user, pass true for persist to copy files
+    Change the home directory of the user, pass True for persist to copy files
     to the new home dir
 
     CLI Example:
@@ -326,7 +326,7 @@ def chhome(name, home, persist=False):
     if persist and __grains__['kernel'] != 'OpenBSD':
         cmd += ' -m '
     cmd += name
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
         return post_info['home'] == home
@@ -361,7 +361,7 @@ def chgroups(name, groups, append=False):
     if __grains__['kernel'] != 'OpenBSD':
         cmd += '-G '
     cmd += '"{0}" {1}'.format(','.join(groups), name)
-    cmdret = __salt__['cmd.run_all'](cmd)
+    cmdret = __salt__['cmd.run_all'](cmd, python_shell=False)
     ret = not cmdret['retcode']
     # try to fallback on gpasswd to add user to localgroups
     # for old lib-pamldap support
@@ -370,7 +370,7 @@ def chgroups(name, groups, append=False):
             ret = True
             for group in groups:
                 cmd = 'gpasswd -a {0} {1}'.format(name, group)
-                cmdret = __salt__['cmd.run_all'](cmd)
+                cmdret = __salt__['cmd.run_all'](cmd, python_shell=False)
                 if cmdret['retcode']:
                     ret = False
     return ret
@@ -394,8 +394,8 @@ def chfullname(name, fullname):
         return True
     gecos_field = copy.deepcopy(pre_info)
     gecos_field['fullname'] = fullname
-    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
-    __salt__['cmd.run'](cmd)
+    cmd = ['usermod', '-c', _build_gecos(gecos_field), name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['fullname'] != pre_info['fullname']:
         return post_info['fullname'] == fullname
@@ -420,8 +420,8 @@ def chroomnumber(name, roomnumber):
         return True
     gecos_field = copy.deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
-    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
-    __salt__['cmd.run'](cmd)
+    cmd = ['usermod', '-c', _build_gecos(gecos_field), name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['roomnumber'] != pre_info['roomnumber']:
         return post_info['roomnumber'] == roomnumber
@@ -446,8 +446,8 @@ def chworkphone(name, workphone):
         return True
     gecos_field = copy.deepcopy(pre_info)
     gecos_field['workphone'] = workphone
-    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
-    __salt__['cmd.run'](cmd)
+    cmd = ['usermod', '-c', _build_gecos(gecos_field), name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['workphone'] != pre_info['workphone']:
         return post_info['workphone'] == workphone
@@ -472,8 +472,8 @@ def chhomephone(name, homephone):
         return True
     gecos_field = copy.deepcopy(pre_info)
     gecos_field['homephone'] = homephone
-    cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
-    __salt__['cmd.run'](cmd)
+    cmd = ['usermod', '-c', _build_gecos(gecos_field), name]
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['homephone'] != pre_info['homephone']:
         return post_info['homephone'] == homephone

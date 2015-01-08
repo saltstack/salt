@@ -110,7 +110,7 @@ def add(name,
     if not unique:
         cmd += '-o '
     cmd += name
-    ret = __salt__['cmd.retcode'](cmd)
+    ret = __salt__['cmd.retcode'](cmd, python_shell=False)
     if ret != 0:
         return False
     else:
@@ -151,7 +151,7 @@ def delete(name, remove=False, force=False):
         cmd += '-r '
     cmd += name
 
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret['retcode']
 
@@ -190,7 +190,7 @@ def chuid(name, uid):
     if uid == pre_info['uid']:
         return True
     cmd = 'usermod -u {0} {1}'.format(uid, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['uid'] != pre_info['uid']:
         return post_info['uid'] == uid
@@ -211,7 +211,7 @@ def chgid(name, gid):
     if gid == pre_info['gid']:
         return True
     cmd = 'usermod -g {0} {1}'.format(gid, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['gid'] != pre_info['gid']:
         return post_info['gid'] == gid
@@ -232,7 +232,7 @@ def chshell(name, shell):
     if shell == pre_info['shell']:
         return True
     cmd = 'usermod -s {0} {1}'.format(shell, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['shell'] != pre_info['shell']:
         return post_info['shell'] == shell
@@ -257,7 +257,7 @@ def chhome(name, home, persist=False):
     if persist:
         cmd += ' -m '
     cmd += name
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
         return post_info['home'] == home
@@ -283,7 +283,7 @@ def chgroups(name, groups, append=False):
     if append:
         groups += ugrps
     cmd = 'usermod -G {0} {1} '.format(','.join(groups), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def chfullname(name, fullname):
@@ -305,7 +305,7 @@ def chfullname(name, fullname):
     gecos_field = deepcopy(pre_info)
     gecos_field['fullname'] = fullname
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['fullname'] != pre_info['fullname']:
         return post_info['fullname'] == fullname
@@ -331,7 +331,7 @@ def chroomnumber(name, roomnumber):
     gecos_field = deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['roomnumber'] != pre_info['roomnumber']:
         return post_info['roomnumber'] == roomnumber
@@ -357,7 +357,7 @@ def chworkphone(name, workphone):
     gecos_field = deepcopy(pre_info)
     gecos_field['workphone'] = workphone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['workphone'] != pre_info['workphone']:
         return post_info['workphone'] == workphone
@@ -383,7 +383,7 @@ def chhomephone(name, homephone):
     gecos_field = deepcopy(pre_info)
     gecos_field['homephone'] = homephone
     cmd = 'usermod -c "{0}" {1}'.format(_build_gecos(gecos_field), name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['homephone'] != pre_info['homephone']:
         return post_info['homephone'] == homephone

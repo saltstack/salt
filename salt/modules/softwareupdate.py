@@ -30,7 +30,7 @@ def _get_upgradable(rec=False, restart=False):
     { 'updatename': '1.2.3-45', ... }
     '''
     cmd = 'softwareupdate --list'
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
     # rexp parses lines that look like the following:
     #    * Safari6.1.2MountainLion-6.1.2
     #         Safari (6.1.2), 51679K [recommended]
@@ -139,7 +139,7 @@ def list_ignored():
        salt '*' softwareupdate.list_ignored
     '''
     cmd = 'softwareupdate --list --ignore'
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     # rep parses lines that look like the following:
     #     "Safari6.1.2MountainLion-6.1.2",
@@ -172,7 +172,7 @@ def reset_ignored():
     ignored_updates = list_ignored()
 
     if ignored_updates:
-        __salt__['cmd.run_stdout'](cmd)
+        __salt__['cmd.run_stdout'](cmd, python_shell=False)
         ret = ignored_updates
     else:
         ret = None
@@ -207,7 +207,7 @@ def schedule(*status):
     else:
         return None
 
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     current_status = out.split()[-1]
     if current_status == 'off':
