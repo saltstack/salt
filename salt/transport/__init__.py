@@ -227,6 +227,12 @@ class ZeroMQChannel(Channel):
 
     # TODO: change SAuth to return a singleton, so we don't have to do this
     @property
+    def auth_key(self):
+        return (self.master_uri,  # which master you want to talk to
+                self.opts['id'],  # which minion you are
+                )
+
+    @property
     def auth(self):
         '''
         Return the appropriate "auth" for this channel
@@ -234,9 +240,9 @@ class ZeroMQChannel(Channel):
         Note: auth is only cached keyed by master_uri, this means we assume that
               a given master_uri has ONE auth mechanism (which seems reasonable enough)
         '''
-        if self.master_uri not in ZeroMQChannel.auth_cache:
-            ZeroMQChannel.auth_cache[self.master_uri] = salt.crypt.SAuth(self.opts)
-        return ZeroMQChannel.auth_cache[self.master_uri]
+        if self.auth_key not in ZeroMQChannel.auth_cache:
+            ZeroMQChannel.auth_cache[self.auth_key] = salt.crypt.SAuth(self.opts)
+        return ZeroMQChannel.auth_cache[self.auth_key]
 
     @property
     def sreq(self):
@@ -311,7 +317,7 @@ class ZeroMQChannel(Channel):
         try:
             return _do_transfer()
         except salt.crypt.AuthenticationError:
-            del ZeroMQChannel.auth_cache[self.master_uri]
+            del ZeroMQChannel.auth_cache[self.auth_key]
             return _do_transfer()
 
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
