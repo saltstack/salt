@@ -58,5 +58,5 @@ def mount(location, access='rw'):
         else:
             break
     cmd = 'guestmount -i -a {0} --{1} {2}'.format(location, access, root)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return root

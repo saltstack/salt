@@ -65,7 +65,7 @@ def _available_services():
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(true_path)
-                    plist_xml = __salt__['cmd.run_all'](cmd)['stdout']
+                    plist_xml = __salt__['cmd.run_all'](cmd, python_shell=False)['stdout']
                     plist = plistlib.readPlistFromString(plist_xml)
 
                 available_services[plist.Label.lower()] = {
@@ -128,7 +128,7 @@ def get_all():
 def _get_launchctl_data(job_label, runas=None):
     cmd = 'launchctl list -x {0}'.format(job_label)
 
-    launchctl_xml = __salt__['cmd.run_all'](cmd, runas=runas)
+    launchctl_xml = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
 
     if launchctl_xml['stderr'] == 'launchctl list returned unknown response':
         # The service is not loaded, further, it might not even exist
@@ -200,7 +200,7 @@ def stop(job_label, runas=None):
     service = _service_by_name(job_label)
     if service:
         cmd = 'launchctl unload -w {0}'.format(service['file_path'], runas=runas)
-        return not __salt__['cmd.retcode'](cmd, runas=runas)
+        return not __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False)
 
     return False
 
@@ -220,7 +220,7 @@ def start(job_label, runas=None):
     service = _service_by_name(job_label)
     if service:
         cmd = 'launchctl load -w {0}'.format(service['file_path'], runas=runas)
-        return not __salt__['cmd.retcode'](cmd, runas=runas)
+        return not __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False)
 
     return False
 
