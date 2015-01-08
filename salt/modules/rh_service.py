@@ -98,7 +98,7 @@ def _chkconfig_add(name):
     run-levels.
     '''
     cmd = '/sbin/chkconfig --add {0}'.format(name)
-    if __salt__['cmd.retcode'](cmd) == 0:
+    if __salt__['cmd.retcode'](cmd, python_shell=False) == 0:
         log.info('Added initscript "{0}" to chkconfig'.format(name))
         return True
     else:
@@ -131,7 +131,7 @@ def _service_is_chkconfig(name):
     Return True if the service is managed by chkconfig.
     '''
     cmdline = '/sbin/chkconfig --list {0}'.format(name)
-    return __salt__['cmd.retcode'](cmdline, ignore_retcode=True) == 0
+    return __salt__['cmd.retcode'](cmdline, python_shell=False, ignore_retcode=True) == 0
 
 
 def _sysv_is_enabled(name, runlevel=None):
@@ -157,7 +157,7 @@ def _chkconfig_is_enabled(name, runlevel=None):
     return False.  If `runlevel` is None, then use the current runlevel.
     '''
     cmdline = '/sbin/chkconfig --list {0}'.format(name)
-    result = __salt__['cmd.run_all'](cmdline)
+    result = __salt__['cmd.run_all'](cmdline, python_shell=False)
     if result['retcode'] == 0:
         cols = result['stdout'].splitlines()[0].split()
         try:
@@ -182,7 +182,7 @@ def _sysv_enable(name):
     if not _service_is_chkconfig(name) and not _chkconfig_add(name):
         return False
     cmd = '/sbin/chkconfig {0} on'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def _sysv_disable(name):
@@ -195,7 +195,7 @@ def _sysv_disable(name):
     if not _service_is_chkconfig(name) and not _chkconfig_add(name):
         return False
     cmd = '/sbin/chkconfig {0} off'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def _upstart_services():
@@ -360,7 +360,7 @@ def start(name):
         cmd = 'start {0}'.format(name)
     else:
         cmd = '/sbin/service {0} start'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -377,7 +377,7 @@ def stop(name):
         cmd = 'stop {0}'.format(name)
     else:
         cmd = '/sbin/service {0} stop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -394,7 +394,7 @@ def restart(name):
         cmd = 'restart {0}'.format(name)
     else:
         cmd = '/sbin/service {0} restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def reload_(name):
@@ -411,7 +411,7 @@ def reload_(name):
         cmd = 'reload {0}'.format(name)
     else:
         cmd = '/sbin/service {0} reload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -427,11 +427,11 @@ def status(name, sig=None):
     '''
     if _service_is_upstart(name):
         cmd = 'status {0}'.format(name)
-        return 'start/running' in __salt__['cmd.run'](cmd)
+        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/sbin/service {0} status'.format(name)
-    return __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
 
 
 def enable(name, **kwargs):

@@ -60,8 +60,8 @@ def exec_action(module, action, module_parameter=None, action_parameter=None, pa
         action_parameter = parameter
     out = __salt__['cmd.run'](
         'eselect --brief --colour=no {0} {1} {2} {3}'.format(
-            module, module_parameter or '', action, action_parameter or ''
-        )
+            module, module_parameter or '', action, action_parameter or ''),
+        python_shell=False
     )
     out = out.strip().split('\n')
 

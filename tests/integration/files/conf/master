@@ -23,6 +23,7 @@ file_buffer_size: 8192
 ext_pillar:
   - git: master https://github.com/saltstack/pillar1.git
   - git: master https://github.com/saltstack/pillar2.git
+  - git: dev:testing https://github.com/saltstack/pillar1.git
   - test_ext_pillar_opts:
     - test_issue_5951_actual_file_roots_in_opts
 
