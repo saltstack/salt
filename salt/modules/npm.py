@@ -111,7 +111,7 @@ def install(pkg=None,
     elif pkgs:
         cmd += ' "{0}"'.format('" "'.join(pkgs))
 
-    result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas, env=env)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=dir, runas=runas, env=env)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
@@ -175,7 +175,7 @@ def uninstall(pkg,
 
     cmd += ' "{0}"'.format(pkg)
 
-    result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=dir, runas=runas)
 
     if result['retcode'] != 0:
         log.error(result['stderr'])
@@ -229,7 +229,12 @@ def list_(pkg=None,
     if pkg:
         cmd += ' "{0}"'.format(pkg)
 
-    result = __salt__['cmd.run_all'](cmd, cwd=dir, runas=runas, env=env,
+    result = __salt__['cmd.run_all'](
+            cmd,
+            cwd=dir,
+            runas=runas,
+            env=env,
+            python_shell=False,
             ignore_retcode=True)
 
     # npm will return error code 1 for both no packages found and an actual
