@@ -10,7 +10,6 @@ import salt.config
 import salt.payload
 
 # Import third party libs
-import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import zmq
