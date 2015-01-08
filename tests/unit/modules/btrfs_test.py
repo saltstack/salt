@@ -225,16 +225,13 @@ class BtrfsTestCase(TestCase):
         '''
         Test if it convert ext2/3/4 to BTRFS
         '''
-        ret = {'after': {'ext4_image': 'None/ext2_saved',
-                   'ext4_image_info': "None/ext2_saved/image: ERROR:" \
-                   " cannot open `None/ext2_saved/image'" \
-                   " (No such file or directory)",
-                   'fsck_status': 'N/A',
-                   'mount_point': None,
-                   'type': 'ext4'},
-         'before': {'fsck_status': 'Filesystem errors corrected',
-                    'mount_point': None,
-                    'type': 'ext4'}}
+        ret = {'after':
+               {'ext4_image_info': "None/ext2_saved/image: ERROR: \
+cannot open `None/ext2_saved/image' (No such file or directory)",
+'mount_point': None, 'type': 'ext4', 'ext4_image': 'None/ext2_saved',
+'fsck_status': 'N/A'},
+               'before': {'mount_point': None, 'type': 'ext4',
+                          'fsck_status': 'Filesystem errors corrected'}}
         mock = MagicMock(return_value={'retcode': 1,
                                        'stderr': '',
                                        'stdout': 'Salt'})
@@ -242,6 +239,7 @@ class BtrfsTestCase(TestCase):
             mock = MagicMock(return_value={'/dev/sda1': {'type': 'ext4'}})
             with patch.object(salt.modules.fsutils, '_blkid_output', mock):
                 self.assertEqual(btrfs.convert('/dev/sda1'), ret)
+                print btrfs.convert('/dev/sda1')
 
     def test_convert_device_error(self):
         '''
