@@ -48,9 +48,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertSaltFalseReturn(ret)
             self.assertSaltCommentRegexpMatches(
                 ret,
-                'Error installing \'supervisor\':(?:.*)'
-                '/tmp/pip-installed-errors(?:.*)'
-                '([nN]o such file or directory|not found)'
+                'Error installing \'supervisor\':'
             )
 
             # We now create the missing virtualenv
