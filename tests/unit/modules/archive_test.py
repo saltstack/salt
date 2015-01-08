@@ -119,13 +119,13 @@ class ArchiveTestCase(TestCase):
             ret = archive.zip_(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
-                template='jinja', cwd=None
+                template='jinja',
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 ['zip', '/tmp/salt.{{grains.id}}.zip',
                  '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                 python_shell=False, template='jinja', cwd=None
+                 python_shell=False, template='jinja'
             )
 
         mock = MagicMock(return_value='salt')
@@ -133,13 +133,13 @@ class ArchiveTestCase(TestCase):
             ret = archive.zip_(
                 '/tmp/salt.{{grains.id}}.zip',
                 ['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                template='jinja', cwd=None
+                template='jinja',
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 ['zip', '/tmp/salt.{{grains.id}}.zip',
                  '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                python_shell=False, template='jinja', cwd=None
+                python_shell=False, template='jinja'
             )
 
     @patch('salt.utils.which', lambda exe: None)
@@ -245,7 +245,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['rar', 'a', '-idp', '/tmp/rarfile.rar',
                  '/tmp/sourcefile1', '/tmp/sourcefile2'],
-                python_shell=False, template=None, cwd=None
+                python_shell=False, template=None
             )
 
         mock = MagicMock(return_value='salt')
@@ -258,7 +258,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['rar', 'a', '-idp', '/tmp/rarfile.rar',
                  '/tmp/sourcefile1', '/tmp/sourcefile2'],
-                python_shell=False, template=None, cwd=None
+                python_shell=False, template=None
             )
 
     @patch('salt.utils.which', lambda exe: None)
