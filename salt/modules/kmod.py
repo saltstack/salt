@@ -220,7 +220,7 @@ def load(mod, persist=False):
         salt '*' kmod.load kvm
     '''
     pre_mods = lsmod()
-    response = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
+    response = __salt__['cmd.run_all']('modprobe {0}'.format(mod), python_shell=False)
     if response['retcode'] == 0:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
@@ -266,7 +266,7 @@ def remove(mod, persist=False, comment=True):
         salt '*' kmod.remove kvm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('modprobe -r {0}'.format(mod))
+    __salt__['cmd.run_all']('modprobe -r {0}'.format(mod), python_shell=False)
     post_mods = lsmod()
     mods = _rm_mods(pre_mods, post_mods)
     persist_mods = set()

@@ -29,7 +29,8 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
 
     ret = __salt__['cmd.run_all'](
         cmdline,
-        runas=runas
+        runas=runas,
+        python_shell=False
         )
 
     if ret['retcode'] == 0:

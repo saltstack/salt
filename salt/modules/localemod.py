@@ -66,7 +66,7 @@ def _localectl_set(locale=''):
     args = ' '.join(['{0}="{1}"'.format(k, v)
                      for k, v in six.iteritems(locale_params)])
     cmd = 'localectl set-locale {0}'.format(args)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def list_avail():
@@ -127,21 +127,19 @@ def set_locale(locale):
         __salt__['file.sed'](
             '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
         )
-        __salt__['cmd.run'](
-            'grep "^LANG=" /etc/sysconfig/i18n || echo "\nLANG={0}" '
-            '>> /etc/sysconfig/i18n'.format(locale)
-        )
+        if __salt__['cmd.retcode']('grep "^LANG=" /etc/sysconfig/i18n') != 0:
+            __salt__['file.append']('/etc/sysconfig/i18n',
+                                    '"\nLANG={0}"'.format(locale))
     elif 'Debian' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale)
         )
-        __salt__['cmd.run'](
-            'grep "^LANG=" /etc/default/locale || '
-            'echo "\nLANG={0}" >> /etc/default/locale'.format(locale)
-        )
+        if __salt__['cmd.retcode']('grep "^LANG=" /etc/default/locale') != 0:
+            __salt__['file.append']('/etc/default/locale',
+                                    '"\nLANG={0}"'.format(locale))
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale set {0}'.format(locale)
-        return __salt__['cmd.retcode'](cmd) == 0
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
     return True
 
@@ -222,9 +220,11 @@ def gen_locale(locale):
 
     if __grains__.get('os_family') == 'Gentoo':
         return __salt__['cmd.retcode'](
-            'locale-gen --generate "{0}"'.format(locale)
+            'locale-gen --generate "{0}"'.format(locale),
+            python_shell=False
         )
     else:
         return __salt__['cmd.retcode'](
-            'locale-gen "{0}"'.format(locale)
+            'locale-gen "{0}"'.format(locale),
+            python_shell=False
         )

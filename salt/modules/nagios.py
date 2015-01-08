@@ -34,7 +34,9 @@ def _execute_cmd(plugin, args='', run_type='cmd.retcode'):
 
     all_plugins = list_plugins()
     if plugin in all_plugins:
-        data = __salt__[run_type]('{0}{1} {2}'.format(PLUGINDIR, plugin, args))
+        data = __salt__[run_type](
+                '{0}{1} {2}'.format(PLUGINDIR, plugin, args),
+                python_shell=False)
 
     return data
 
