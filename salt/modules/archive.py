@@ -5,7 +5,7 @@ A module to wrap archive calls
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
-from salt.ext.six import string_types
+from salt._compat import string_types
 from salt.utils import \
     which as _which, which_bin as _which_bin, is_windows as _is_windows
 import salt.utils.decorators as decorators
