@@ -49,10 +49,10 @@ config:
 .. code-block:: yaml
 
     renderer: jinja | yaml | gpg
-    
-Setting a gpg renderer in the master currently requires minions to be 
+
+Setting a gpg renderer in the master currently requires minions to be
 configured for gpg.  The workaround for this is to add a line to the top of
-any pillar with gpg data in it 
+any pillar with gpg data in it.
 
 .. code-block:: yaml
 
