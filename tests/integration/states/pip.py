@@ -111,7 +111,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     continue
                 self.assertEqual(
                     ret[key]['comment'],
-                    'There was no error installing package \'carbonite\' '
+                    'There was no error installing package \'carbon\' '
                     'although it does not show when calling \'pip.freeze\'.'
                 )
         finally:
