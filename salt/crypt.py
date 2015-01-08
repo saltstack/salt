@@ -610,8 +610,6 @@ class Auth(object):
 
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
-        auth['master_uri'] = self.opts['master_uri']
-
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
         )
@@ -820,5 +818,4 @@ class SAuth(Auth):
                     log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
                 continue
             break
-        self.creds = creds
         return Crypticle(self.opts, creds['aes'])
