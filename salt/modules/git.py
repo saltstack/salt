@@ -869,14 +869,14 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
         raise SaltInvocationError('Either `is_global` must be set to True or '
                                   'you must provide `cwd`')
 
-    scope = '--local'
     if is_global:
-        scope = '--global'
+        cmd = 'git config --global {0} "{1}"'.format(setting_name, setting_value)
+    else:
+        cmd = 'git config {0} "{1}"'.format(setting_name, setting_value)
 
     _check_git()
 
-    return _git_run('git config {0} {1} "{2}"'.format(scope, setting_name, setting_value),
-                    cwd=cwd, runas=user)
+    return _git_run(cmd, cwd=cwd, runas=user)
 
 
 def config_get(cwd=None, setting_name=None, user=None):
