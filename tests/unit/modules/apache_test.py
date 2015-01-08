@@ -3,6 +3,9 @@
     :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
@@ -15,7 +18,7 @@ from salttesting.mock import (
 
 # Import Salt Libs
 from salt.modules import apache
-from salt.ext.six.moves.urllib.error import URLError  # pylint: disable=E0611
+from salt.ext.six.moves.urllib.error import URLError  # pylint: disable=import-error,no-name-in-module
 
 # Globals
 apache.__grains__ = {}
