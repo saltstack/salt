@@ -165,6 +165,7 @@ class Pillar(object):
             saltenv = env
         opts = dict(opts_in)
         opts['file_roots'] = opts['pillar_roots']
+        opts['__pillar'] = True
         opts['file_client'] = 'local'
         if not grains:
             opts['grains'] = {}
