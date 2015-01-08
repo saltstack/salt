@@ -24,7 +24,7 @@ _SPF_VALUES = {
         'pid': 27282,
         'retcode': 0,
         'stderr': '',
-        'stdout': 'v=spf1 a mx ip4:198.60.22.0/24 ip4:166.70.13.0/24 ~all'
+        'stdout': '"v=spf1 a mx ip4:198.60.22.0/24 ip4:166.70.13.0/24 ~all"'
     },
     'dig +short xmission-redirect.com TXT': {
         'pid': 27282,
