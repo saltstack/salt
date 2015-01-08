@@ -22,7 +22,7 @@ class TestGemModule(TestCase):
                          'rbenv.is_installed': MagicMock(return_value=False),
                          'cmd.run_all': mock}):
             gem._gem('install rails')
-            mock.assert_called_once_with('gem install rails', runas=None)
+            mock.assert_called_once_with('gem install rails', runas=None, python_shell=False)
 
         mock = MagicMock(return_value=None)
         with patch.dict(gem.__salt__,
