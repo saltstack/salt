@@ -285,17 +285,16 @@ def ext_pillar(minion_id,
         else:
             log.warning('Unrecognized extra parameter: {0}'.format(key))
 
-    gitpil = GitPillar(branch, repo_location, __opts__)
-
-    branch = gitpil.branch
-
     # environment is "different" from the branch
-    _, _, environment = branch_env.partition(':')
+    branch, _, environment = branch_env.partition(':')
     if environment == '':
         if branch == 'master':
             environment = 'base'
         else:
             environment = branch
+
+    gitpil = GitPillar(branch, repo_location, __opts__)
+    branch = gitpil.branch
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
