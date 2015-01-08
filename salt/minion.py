@@ -1447,6 +1447,7 @@ class Minion(MinionBase):
         '''
         Refresh the functions and returners.
         '''
+        log.debug('Refreshing modules')
         self.functions, self.returners, _ = self._load_modules(force_refresh)
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
@@ -1455,6 +1456,7 @@ class Minion(MinionBase):
         '''
         Refresh the pillar
         '''
+        log.debug('Refreshing pillar')
         self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
