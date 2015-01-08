@@ -39,15 +39,15 @@ class LinuxAclTestCase(TestCase):
 
     def test_getfacl_w_single_arg(self):
         linux_acl.getfacl(self.file)
-        self.cmdrun.assert_called_once_with('getfacl -p ' + self.file)
+        self.cmdrun.assert_called_once_with('getfacl --absolute-names ' + self.file)
 
     def test_getfacl_w_multiple_args(self):
         linux_acl.getfacl(*self.files)
-        self.cmdrun.assert_called_once_with('getfacl -p ' + ' '.join(self.files))
+        self.cmdrun.assert_called_once_with('getfacl --absolute-names ' + ' '.join(self.files))
 
     def test_getfacl__recursive_w_multiple_args(self):
         linux_acl.getfacl(*self.files, recursive=True)
-        self.cmdrun.assert_called_once_with('getfacl -p -R ' + ' '.join(self.files))
+        self.cmdrun.assert_called_once_with('getfacl --absolute-names -R ' + ' '.join(self.files))
 
     def test_wipefacls_wo_args(self):
         self.assertRaises(CommandExecutionError, linux_acl.wipefacls)
