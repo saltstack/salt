@@ -18,14 +18,16 @@
 # Generated from the help of salt programs on commit ad89a752f807d5ea00d3a9b3257d283ef6b69c10
 #
 # ISSUES:
-# TODO: #1 add: salt-api salt-cloud salt-ssh salt-syndic
+# TODO: #1 add: salt-api salt-cloud salt-ssh
 # TODO: #2 write tests (use https://github.com/terlar/fish-tank)
 # TODO: #3 add completion for builtin states
 # TODO: #4 use caching (see https://github.com/saltstack/salt/issues/15321)
 # TODO: #5 add help to the positional arguments (like '(Minion)', '(Grain)')
+# using __fish_salt_list function everythere)
 # TODO: #6 add minion selection by grains (call "salt '*' grains.ls", use #4)
 #  BUG: #7 salt-call autocompletion and salt packages not works; it hangs. Ask
 #       fish devs?
+# TODO: #8 sort with `sort` or leave as is?
 
 # common general options (from --help)
 set -l salt_programs \
