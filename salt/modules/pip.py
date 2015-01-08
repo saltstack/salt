@@ -900,7 +900,7 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
+    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:
