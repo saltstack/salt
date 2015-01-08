@@ -14,6 +14,7 @@ from __future__ import print_function, with_statement
 import os
 import sys
 import glob
+import pprint
 try:
     from urllib2 import urlopen
 except ImportError:
@@ -85,7 +86,8 @@ if WITH_SETUPTOOLS is False:
     # pylint: enable=E0611
     warnings.filterwarnings(
         'ignore',
-        'Unknown distribution option: \'(extras_require|tests_require|install_requires|zip_safe)\'',
+        'Unknown distribution option:'
+        '\'(extras_require|tests_require|install_requires|zip_safe)\'',
         UserWarning,
         'distutils.dist'
     )
@@ -115,8 +117,9 @@ PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 # pylint: disable=W0122
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
-exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
-# pylint: enable=W0122
+
+
+import salt.syspaths
 
 
 # ----- Helper Functions -------------------------------------------------------------------------------------------->
@@ -435,6 +438,23 @@ class Install(install):
 
     def initialize_options(self):
         install.initialize_options(self)
+
+        # determine of there was a root specified on the install
+        inst = self.distribution.command_options.get('install')
+        if 'root' in inst :
+            root = inst['root'][1]
+        else:
+            root = salt.syspaths.default_root()
+
+        # generate the default settings for this root
+        salt.syspaths.generate_settings(root)
+
+        # now import the updated variables
+        from salt.syspaths import ROOT_DIR, CONFIG_DIR, CACHE_DIR, SOCK_DIR
+        from salt.syspaths import SRV_ROOT_DIR, BASE_FILE_ROOTS_DIR
+        from salt.syspaths import BASE_PILLAR_ROOTS_DIR, BASE_MASTER_ROOTS_DIR
+        from salt.syspaths import LOGS_DIR, PIDFILE_DIR
+
         # pylint: disable=undefined-variable
         self.salt_root_dir = ROOT_DIR
         self.salt_config_dir = CONFIG_DIR

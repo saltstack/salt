@@ -34,6 +34,57 @@ INSTALL_DIR = os.path.dirname(os.path.realpath(THIS_FILE))
 CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
 BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')
 
+def default_root():
+    """
+    Determine the default salt root (/) for the OS
+    """
+    __platform = sys.platform.lower()
+    if __platform.startswith('win'):
+        ROOT_DIR = r'c:\salt' or '/'
+        CONFIG_DIR = os.path.join(ROOT_DIR, 'conf')
+    else:
+        ROOT_DIR = '/'
+    return ROOT_DIR
+
+def generate_settings(root_dir):
+    """
+    Generate a default set of paths based on the given root
+    used to create a new installation
+    """
+    global ROOT_DIR, CONFIG_DIR, CACHE_DIR, SOCK_DIR, SRV_ROOT_DIR
+    global BASE_FILE_ROOTS_DIR, BASE_PILLAR_ROOTS_DIR, BASE_MASTER_ROOTS_DIR
+    global LOGS_DIR, PIDFILE_DIR
+
+    ROOT_DIR = root_dir
+    __platform = sys.platform.lower()
+    if 'freebsd' in __platform:
+        CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'etc', 'salt')
+    elif 'netbsd' in __platform:
+        CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'pkg', 'etc', 'salt')
+    else:
+        CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
+
+    CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')
+    SOCK_DIR = os.path.join(ROOT_DIR, 'var', 'run', 'salt')
+    SRV_ROOT_DIR = os.path.join(ROOT_DIR, 'srv')
+    BASE_FILE_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt')
+    BASE_PILLAR_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'pillar')
+    BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
+    LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'log', 'salt')
+    PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
+
+    print ("Generated settings:",
+           ROOT_DIR,
+           CONFIG_DIR,
+           CACHE_DIR,
+           SOCK_DIR,
+           SRV_ROOT_DIR,
+           BASE_FILE_ROOTS_DIR,
+           BASE_PILLAR_ROOTS_DIR,
+           BASE_MASTER_ROOTS_DIR,
+           LOGS_DIR,
+           PIDFILE_DIR)
+
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
@@ -50,25 +101,7 @@ try:
         PIDFILE_DIR,
     )
 except ImportError as error:
+    print (error)
     log.error('Error importing salt._syspaths with exception {0}'.format(error))
     # The installation time was not generated, let's define the default values
-    __platform = sys.platform.lower()
-    if __platform.startswith('win'):
-        ROOT_DIR = r'c:\salt' or '/'
-        CONFIG_DIR = os.path.join(ROOT_DIR, 'conf')
-    else:
-        ROOT_DIR = '/'
-        if 'freebsd' in __platform:
-            CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'etc', 'salt')
-        elif 'netbsd' in __platform:
-            CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'pkg', 'etc', 'salt')
-        else:
-            CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
-    CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')
-    SOCK_DIR = os.path.join(ROOT_DIR, 'var', 'run', 'salt')
-    SRV_ROOT_DIR = os.path.join(ROOT_DIR, 'srv')
-    BASE_FILE_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt')
-    BASE_PILLAR_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'pillar')
-    BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
-    LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'log', 'salt')
-    PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
+    generate_settings(default_root())
