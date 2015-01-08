@@ -66,26 +66,17 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None):
         Can be set to 'jinja' or another supported template engine to render
         the command arguments before execution:
 
-    CLI Example:
+        .. code-block:: bash
+
+            salt '*' archive.tar cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
+
+    CLI Examples:
 
     .. code-block:: bash
 
+        # Create a tarfile
         salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
-
-
-    The ``template`` argument can be set to ``jinja`` or another supported
-    template engine to render the command arguments before execution. For
-    example:
-
-    .. code-block:: bash
-
-        salt '*' archive.tar cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
-
-
-    To unpack a tarfile, for example:
-
-    .. code-block:: bash
-
+        # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
     '''
     if not options:
@@ -115,21 +106,20 @@ def gzip(sourcefile, template=None):
     '''
     Uses the gzip command to create gzip files
 
-    CLI Example to create ``/tmp/sourcefile.txt.gz``:
+    template : None
+        Can be set to 'jinja' or another supported template engine to render
+        the command arguments before execution:
 
-    .. code-block:: bash
+        .. code-block:: bash
 
-        salt '*' archive.gzip /tmp/sourcefile.txt
-
-    The ``template`` argument can be set to 'jinja' or another supported
-    template engine to render the command arguments before execution.
+            salt '*' archive.gzip template=jinja /tmp/{{grains.id}}.txt
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' archive.gzip template=jinja /tmp/{{grains.id}}.txt
-
+        # Create /tmp/sourcefile.txt.gz
+        salt '*' archive.gzip /tmp/sourcefile.txt
     '''
     cmd = ['gzip', '{0}'.format(sourcefile)]
     return __salt__['cmd.run'](cmd,
@@ -142,21 +132,20 @@ def gunzip(gzipfile, template=None):
     '''
     Uses the gunzip command to unpack gzip files
 
-    CLI Example to create ``/tmp/sourcefile.txt``:
+    template : None
+        Can be set to 'jinja' or another supported template engine to render
+        the command arguments before execution:
 
-    .. code-block:: bash
+        .. code-block:: bash
 
-        salt '*' archive.gunzip /tmp/sourcefile.txt.gz
-
-    The ``template`` argument can be set to 'jinja' or another supported
-    template engine to render the command arguments before execution.
+            salt '*' archive.gunzip template=jinja /tmp/{{grains.id}}.txt.gz
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' archive.gunzip template=jinja /tmp/{{grains.id}}.txt.gz
-
+        # Create /tmp/sourcefile.txt
+        salt '*' archive.gunzip /tmp/sourcefile.txt.gz
     '''
     cmd = ['gunzip', '{0}'.format(gzipfile)]
     return __salt__['cmd.run'](cmd,
