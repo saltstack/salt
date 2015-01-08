@@ -233,7 +233,7 @@ to a virtualenv using pip:
 
 .. code-block:: bash
 
-    pip install Sphinx
+    pip install Sphinx==1.3b2
 
 Change to salt documentation directory, then:
 
