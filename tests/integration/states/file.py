@@ -15,6 +15,9 @@ import stat
 import tempfile
 import filecmp
 
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import (
