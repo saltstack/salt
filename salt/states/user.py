@@ -195,7 +195,7 @@ def present(name,
         will be assigned
 
     gid
-        The default group id
+        The default group id. Also accepts group name.
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
