@@ -24,20 +24,20 @@ class PillarModuleTestCase(TestCase):
 
     def test_obfuscate_inner_recursion(self):
         self.assertEqual(
-                pillarmod.obfuscate_inner(dict(a=[1, 2],
-                                               b=dict(pwd='secret', deeper=('a', 1)))),
+                pillarmod._obfuscate_inner(dict(a=[1, 2],
+                                                b=dict(pwd='secret', deeper=('a', 1)))),
                 dict(a=['<int>', '<int>'],
                      b=dict(pwd='<str>', deeper=('<str>', '<int>')))
         )
 
     def test_obfuscate_inner_more_types(self):
-        self.assertEqual(pillarmod.obfuscate_inner(OrderedDict([('key', 'value')])),
+        self.assertEqual(pillarmod._obfuscate_inner(OrderedDict([('key', 'value')])),
                          OrderedDict([('key', '<str>')]))
 
-        self.assertEqual(pillarmod.obfuscate_inner(set((1, 2))),
+        self.assertEqual(pillarmod._obfuscate_inner(set((1, 2))),
                          set(['<int>']))
 
-        self.assertEqual(pillarmod.obfuscate_inner((1, 2)),
+        self.assertEqual(pillarmod._obfuscate_inner((1, 2)),
                          ('<int>', '<int>'))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)

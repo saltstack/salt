@@ -108,7 +108,7 @@ def items(*args):
 data = items
 
 
-def obfuscate_inner(var):
+def _obfuscate_inner(var):
     '''
     Recursive obfuscation of collection types.
 
@@ -117,10 +117,10 @@ def obfuscate_inner(var):
     In the special case of mapping types, keys are not obfuscated
     '''
     if isinstance(var, (dict, salt.utils.odict.OrderedDict)):
-        return var.__class__((k, obfuscate_inner(v))
+        return var.__class__((k, _obfuscate_inner(v))
                              for k, v in var.iteritems())
     elif isinstance(var, (list, set, tuple)):
-        return type(var)(obfuscate_inner(v) for v in var)
+        return type(var)(_obfuscate_inner(v) for v in var)
     else:
         return '<{0}>'.format(var.__class__.__name__)
 
@@ -152,7 +152,7 @@ def obfuscate(*args):
         salt '*' pillar.obfuscate
 
     '''
-    return obfuscate_inner(items(*args))
+    return _obfuscate_inner(items(*args))
 
 
 # naming chosen for consistency with grains.ls, although it breaks the short
