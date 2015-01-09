@@ -15,7 +15,7 @@ from salt.ext.six.moves import range
 # Import salt libs
 import salt.utils
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
-from  salt.utils.network import host_to_ip as _host_to_ip
+from salt.utils.network import host_to_ip as _host_to_ip
 import salt.utils.event
 import salt.config
 
