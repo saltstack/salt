@@ -107,7 +107,6 @@ SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), '_requirements.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'zeromq-requirements.txt')
 SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'cloud-requirements.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'raet-requirements.txt')
-SALT_SYSPATHS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.py')
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')
@@ -116,7 +115,6 @@ PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 # pylint: disable=W0122
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
-exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 # pylint: enable=W0122
 
 
