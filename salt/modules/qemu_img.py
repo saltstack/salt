@@ -44,6 +44,7 @@ def make_image(location, size, fmt):
             'qemu-img create -f {0} {1} {2}M'.format(
                 fmt,
                 location,
-                size)):
+                size),
+                python_shell=False):
         return location
     return ''
