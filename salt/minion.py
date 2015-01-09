@@ -658,7 +658,7 @@ class Minion(MinionBase):
                     'seconds': opts['master_alive_interval'],
                     'jid_include': True,
                     'maxrunning': 1,
-                    'kwargs': {'master_ip': self.opts['master'],
+                    'kwargs': {'master': self.opts['master'],
                                'connected': True}
                 }
             })
@@ -678,7 +678,7 @@ class Minion(MinionBase):
                 if pid > 0:
                     continue
                 else:
-                    proxyminion = salt.ProxyMinion()
+                    proxyminion = ProxyMinion(self.opts)
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)
         else:
@@ -1447,6 +1447,7 @@ class Minion(MinionBase):
         '''
         Refresh the functions and returners.
         '''
+        log.debug('Refreshing modules')
         self.functions, self.returners, _ = self._load_modules(force_refresh)
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
@@ -1455,6 +1456,7 @@ class Minion(MinionBase):
         '''
         Refresh the pillar
         '''
+        log.debug('Refreshing pillar')
         self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
@@ -1598,7 +1600,7 @@ class Minion(MinionBase):
                    'seconds': self.opts['master_alive_interval'],
                    'jid_include': True,
                    'maxrunning': 2,
-                   'kwargs': {'master_ip': self.opts['master'],
+                   'kwargs': {'master': self.opts['master'],
                               'connected': False}
                 }
                 self.schedule.modify_job(name='__master_alive',
@@ -1636,7 +1638,7 @@ class Minion(MinionBase):
                            'seconds': self.opts['master_alive_interval'],
                            'jid_include': True,
                            'maxrunning': 2,
-                           'kwargs': {'master_ip': self.opts['master'],
+                           'kwargs': {'master': self.opts['master'],
                                       'connected': True}
                         }
                         self.schedule.modify_job(name='__master_alive',
@@ -1654,7 +1656,7 @@ class Minion(MinionBase):
                    'seconds': self.opts['master_alive_interval'],
                    'jid_include': True,
                    'maxrunning': 2,
-                   'kwargs': {'master_ip': self.opts['master'],
+                   'kwargs': {'master': self.opts['master'],
                               'connected': True}
                 }
 

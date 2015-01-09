@@ -9,10 +9,8 @@
     This is where all the black magic happens on all of salt's CLI tools.
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
 import getpass
@@ -410,6 +408,7 @@ class ConfigDirMixIn(object):
         config_dir = os.environ.get('SALT_CONFIG_DIR', None)
         if not config_dir:
             config_dir = syspaths.CONFIG_DIR
+            logging.getLogger(__name__).debug('SYSPATHS setup as: {0}'.format(syspaths.CONFIG_DIR))
         self.add_option(
             '-c', '--config-dir', default=config_dir,
             help=('Pass in an alternative configuration directory. Default: '
@@ -420,7 +419,7 @@ class ConfigDirMixIn(object):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                'WARNING: {0!r} directory does not exist.\n'.format(
+                'WARNING: CONFIG {0!r} directory does not exist.\n'.format(
                     self.options.config_dir
                 )
             )
@@ -1459,6 +1458,10 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_level_ = 'warning'
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
     _loglevel_config_setting_name_ = 'cli_salt_log_file'
+    try:
+        os.getcwd()
+    except OSError:
+        sys.exit("Cannot access current working directory. Exiting!")
 
     def _mixin_setup(self):
         self.add_option(
