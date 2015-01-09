@@ -266,8 +266,11 @@ class SAuth(object):
         '''
         key = cls.__key(opts)
         if key not in SAuth.instances:
+            log.debug('Initializing new SAuth for {0}'.format(key))
             SAuth.instances[key] = object.__new__(cls)
             SAuth.instances[key].__singleton_init__(opts)
+        else:
+            log.debug('Re-using SAuth for {0}'.format(key))
         return SAuth.instances[key]
 
     @classmethod
@@ -310,9 +313,9 @@ class SAuth(object):
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        self.crypticle = self.__authenticate()
+        self.authenticate()
 
-    def __authenticate(self):
+    def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -343,7 +346,7 @@ class SAuth(object):
                 continue
             break
         self.creds = creds
-        return Crypticle(self.opts, creds['aes'])
+        self.crypticle = Crypticle(self.opts, creds['aes'])
 
     def get_keys(self):
         '''

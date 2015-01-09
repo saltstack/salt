@@ -907,19 +907,7 @@ class Minion(MinionBase):
         try:
             data = self.crypticle.loads(load)
         except AuthenticationError:
-            # decryption of the payload failed, try to re-auth but wait
-            # random seconds if set in config with random_reauth_delay
-            if 'random_reauth_delay' in self.opts:
-                reauth_delay = randint(0, float(self.opts['random_reauth_delay']))
-                # This mitigates the issue wherein a long-running job might not return
-                # on a master key rotation. However, new commands issued during the re-auth
-                # splay period will still fail to return.
-                if not salt.utils.minion.running(self.opts):
-                    log.debug('Waiting {0} seconds to re-authenticate'.format(reauth_delay))
-                    time.sleep(reauth_delay)
-                else:
-                    log.warning('Ignoring re-auth delay because jobs are running')
-
+            # decryption of the payload failed, try to re-auth
             self.authenticate()
             data = self.crypticle.loads(load)
 
@@ -1414,6 +1402,8 @@ class Minion(MinionBase):
             )
         )
         auth = salt.crypt.SAuth(self.opts)
+        auth.authenticate()
+        # TODO: remove these and just use a local reference to auth??
         self.tok = auth.gen_token('salt')
         self.crypticle = auth.crypticle
         if self.opts.get('syndic_master_publish_port'):
