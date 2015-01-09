@@ -280,12 +280,6 @@ class SAuth(object):
                 opts['master_uri'],  # master ID
                 )
 
-    def clear(self):
-        '''
-        Clear an instance from the instance cache, to use when auth rotates
-        '''
-        del self.instances[self.__key(opts)]
-
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts):
         pass
