@@ -135,7 +135,10 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             chunks = self.reactions(data['tag'], data['data'], reactors)
             if chunks:
-                self.call_reactions(chunks)
+                try:
+                    self.call_reactions(chunks)
+                except SystemExit:
+                    log.warning('Exit ignored by reactor')
 
 
 class ReactWrap(object):
@@ -176,7 +179,10 @@ class ReactWrap(object):
         '''
         if 'local' not in self.client_cache:
             self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
-        self.client_cache['local'].cmd_async(*args, **kwargs)
+        try:
+            self.client_cache['local'].cmd_async(*args, **kwargs)
+        except SystemExit:
+            log.warning('Attempt to exit reactor. Ignored.')
 
     cmd = local
 
@@ -186,7 +192,10 @@ class ReactWrap(object):
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        try:
+            self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        except SystemExit:
+            log.warning('Attempt to exit in reactor by runner. Ignored')
 
     def wheel(self, fun, **kwargs):
         '''
@@ -194,4 +203,7 @@ class ReactWrap(object):
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
-        self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        try:
+            self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        except SystemExit:
+            log.warning('Attempt to in reactor by whell. Ignored.')
