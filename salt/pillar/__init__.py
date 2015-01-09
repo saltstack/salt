@@ -74,9 +74,7 @@ class RemotePillar(object):
         self.ext = ext
         self.grains = grains
         self.id_ = id_
-        self.serial = salt.payload.Serial(self.opts)
         self.channel = salt.transport.Channel.factory(opts)
-        # self.auth = salt.crypt.SAuth(opts)
 
     def compile_pillar(self):
         '''
@@ -89,12 +87,11 @@ class RemotePillar(object):
                 'cmd': '_pillar'}
         if self.ext:
             load['ext'] = self.ext
-        ret_pillar = self.channel.crypted_transfer_decode_dictentry(load, dictkey='pillar', tries=3, timeout=7200)
-
-        # key = self.auth.get_keys()
-        # aes = key.private_decrypt(ret['key'], 4)
-        # pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        # ret_pillar = pcrypt.loads(ret['pillar'])
+        ret_pillar = self.channel.crypted_transfer_decode_dictentry(load,
+                                                                    dictkey='pillar',
+                                                                    tries=3,
+                                                                    timeout=7200,
+                                                                    )
 
         if not isinstance(ret_pillar, dict):
             log.error(

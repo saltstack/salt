@@ -247,6 +247,7 @@ class Maintenance(multiprocessing.Process):
                 to_rotate = True
 
         if to_rotate:
+            log.info('Rotating master AES key')
             # should be unecessary-- since no one else should be modifying
             with self.opts['aes'].get_lock():
                 self.opts['aes'].value = salt.crypt.Crypticle.generate_key_string()
@@ -812,7 +813,9 @@ class MWorker(multiprocessing.Process):
         try:
             data = self.crypticle.loads(load)
         except Exception:
-            return ''
+            # return something not encrypted so the minions know that they aren't
+            # encrypting correctly.
+            return 'bad load'
         if 'cmd' not in data:
             log.error('Received malformed command {0}'.format(data))
             return {}

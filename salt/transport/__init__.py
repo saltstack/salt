@@ -258,15 +258,14 @@ class ZeroMQChannel(Channel):
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
-        if self.crypt != 'clear':
-            if 'auth' in kwargs:
-                self.auth = kwargs['auth']
-            else:
-                self.auth = salt.crypt.SAuth(opts)
         if 'master_uri' in kwargs:
             self.master_uri = kwargs['master_uri']
         else:
             self.master_uri = opts['master_uri']
+
+        if self.crypt != 'clear':
+            # we don't need to worry about auth as a kwarg, since its a singleton
+            self.auth = salt.crypt.SAuth(self.opts)
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), tries, timeout)
@@ -298,7 +297,7 @@ class ZeroMQChannel(Channel):
         try:
             return _do_transfer()
         except salt.crypt.AuthenticationError:
-            self.auth = salt.crypt.SAuth(self.opts)
+            self.auth.authenticate()
             return _do_transfer()
 
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
