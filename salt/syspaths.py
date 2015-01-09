@@ -50,7 +50,7 @@ try:
         PIDFILE_DIR,
     )
 except ImportError as error:
-    log.error('Error importing salt._syspaths with exception {0}'.format(error))
+    log.debug('Error importing salt._syspaths with exception {0}'.format(error))
     # The installation time was not generated, let's define the default values
     __platform = sys.platform.lower()
     if __platform.startswith('win'):
