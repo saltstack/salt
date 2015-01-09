@@ -28,7 +28,7 @@ from salt.utils import dictdiffer
 log = logging.getLogger(__name__)
 
 
-def status(jboss_config, timeout=5):
+def status(jboss_config):
     '''
     Get status of running jboss instance.
 
@@ -71,7 +71,7 @@ def stop_server(jboss_config):
         raise Exception('''Cannot handle error, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**shutdown_result))
 
 
-def reload(jboss_config):
+def reload_jboss(jboss_config):
     '''
     Reload running jboss instance
 
@@ -146,8 +146,8 @@ def __get_single_assignment_string(key, val, ds_attributes):
 
 
 def __format_value(key, value, ds_attributes):
-    type = ds_attributes[key]['type']
-    if type == 'BOOLEAN':
+    type_ = ds_attributes[key]['type']
+    if type_ == 'BOOLEAN':
         if value in ('true', 'false'):
             return value
         elif isinstance(value, bool):
@@ -158,12 +158,12 @@ def __format_value(key, value, ds_attributes):
         else:
             raise Exception("Don't know how to convert {0} to BOOLEAN type".format(value))
 
-    elif type == 'INT':
+    elif type_ == 'INT':
         return str(value)
-    elif type == 'STRING':
+    elif type_ == 'STRING':
         return '"{0}"'.format(value)
     else:
-        raise Exception("Don't know how to format value {0} of type {1}".format(value, type))
+        raise Exception("Don't know how to format value {0} of type {1}".format(value, type_))
 
 
 def update_datasource(jboss_config, name, new_properties):
