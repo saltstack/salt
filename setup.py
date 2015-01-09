@@ -435,7 +435,7 @@ class Install(install):
     def initialize_options(self):
         install.initialize_options(self)
         # pylint: disable=undefined-variable
-        if __saltstack_version__.info >= (2015, 3):
+        if __saltstack_version__.info >= SaltStackVersion.from_name('Boron'):
             # XXX: Remove the Salt Specific Options In Salt Boron. They are now global options
             raise DistutilsArgError(
                 'Developers, please remove the salt paths configuration '
