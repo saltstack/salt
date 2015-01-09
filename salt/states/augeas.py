@@ -32,6 +32,7 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import os.path
+import os
 import difflib
 
 # Import Salt libs
@@ -92,7 +93,9 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
         Use the ``context`` parameter to specify the file you want to
         manipulate. This way you don't have to include this in the changes
-        every time:
+        every time. Using the ``context`` parameter also allows you to see what
+        has been changed (or would be changed when using the test option) in the
+        state output:
 
         .. code-block:: yaml
 
@@ -166,11 +169,9 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         ret['comment'] = '\'changes\' must be specified as a list'
         return ret
 
-    if __opts__['test']:
+    if __opts__['test'] and context is None:
         ret['result'] = None
         ret['comment'] = 'Executing commands'
-        if context:
-            ret['comment'] += ' in file "{0}":\n'.format(context)
         ret['comment'] += "\n".join(changes)
         return ret
 
@@ -181,25 +182,47 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
             with salt.utils.fopen(filename, 'r') as file_:
                 old_file = file_.readlines()
 
-    result = __salt__['augeas.execute'](context=context, lens=lens, commands=changes)
+    test = True if __opts__['test'] else False
+    result = __salt__['augeas.execute'](context=context,
+                                        lens=lens,
+                                        commands=changes,
+                                        test=test)
     ret['result'] = result['retval']
 
     if ret['result'] is False:
         ret['comment'] = 'Error: {0}'.format(result['error'])
         return ret
 
-    if old_file:
+    if __opts__['test']:
+        tmp_filename = filename + ".augnew"
+        if os.path.isfile(tmp_filename):
+            with salt.utils.fopen(tmp_filename, 'r') as file_:
+                diff = ''.join(difflib.unified_diff(old_file,
+                                                    file_.readlines(),
+                                                    n=0)
+                              )
+            os.remove(tmp_filename)
+            ret['result'] = None
+            ret['comment'] = 'Following changes will be saved:\n'
+            ret['comment'] += diff
+        else:
+            ret['result'] = True
+            ret['comment'] = "No changes will be made"
+    elif old_file:
         with salt.utils.fopen(filename, 'r') as file_:
-            diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
+            diff = ''.join(difflib.unified_diff(old_file,
+                                                file_.readlines(),
+                                                n=0)
+                          )
 
         if diff:
             ret['comment'] = 'Changes have been saved'
-            ret['changes'] = diff
+            ret['changes']['diff'] = diff
         else:
-            ret['comment'] = 'No changes made'
-
+            ret['result'] = True
+            ret['comment'] = "No changes have been made"
     else:
         ret['comment'] = 'Changes have been saved'
-        ret['changes'] = changes
+        ret['changes']['actions'] = '\n'.join(changes)
 
     return ret

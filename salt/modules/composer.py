@@ -147,10 +147,7 @@ def install(dir,
     if optimize is True:
         cmd += ' --optimize-autoloader'
 
-    result = __salt__['cmd.run_all'](cmd,
-                                     runas=runas,
-                                     env={'COMPOSER_HOME': composer_home},
-                                     python_shell=False)
+    result = __salt__['cmd.run_all'](cmd, runas=runas, env={'COMPOSER_HOME': composer_home})
 
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])

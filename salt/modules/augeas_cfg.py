@@ -88,7 +88,7 @@ def _lstrip_word(word, prefix):
     return word
 
 
-def execute(context=None, lens=None, commands=()):
+def execute(context=None, lens=None, commands=(), test=False):
     '''
     Execute Augeas commands
 
@@ -113,6 +113,8 @@ def execute(context=None, lens=None, commands=()):
     }
 
     flags = _Augeas.NO_MODL_AUTOLOAD if lens else _Augeas.NONE
+    if test:
+        flags += _Augeas.SAVE_NEWFILE
     aug = _Augeas(flags=flags)
 
     if lens:
