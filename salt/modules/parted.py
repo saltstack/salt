@@ -16,6 +16,7 @@ reference the man page for ``sfdisk(8)``.
 
 # Import python libs
 import os
+import stat
 import string
 import logging
 
