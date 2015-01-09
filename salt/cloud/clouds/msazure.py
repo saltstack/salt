@@ -25,22 +25,27 @@ http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-managemen
 # pylint: disable=E0102
 
 # Import python libs
-import time
+from __future__ import absolute_import
+
 import copy
-import pprint
 import logging
+import pprint
+import time
 
-# Import salt cloud libs
 import salt.config as config
-import salt.utils.cloud
 from salt.exceptions import SaltCloudSystemExit
+import salt.utils.cloud
 
+
+# Import python libs
+# Import salt cloud libs
 # Import azure libs
 HAS_LIBS = False
 try:
     import azure
     import azure.servicemanagement
-    from azure import WindowsAzureConflictError
+    from azure import (WindowsAzureConflictError,
+                       WindowsAzureMissingResourceError)
     HAS_LIBS = True
 except ImportError:
     pass
@@ -435,10 +440,13 @@ def create(vm_):
         'location': vm_['location'],
     }
 
+    ssh_port = config.get_cloud_config_value('port', vm_, __opts__,
+                                             default='22', search_global=True)
+
     ssh_endpoint = azure.servicemanagement.ConfigurationSetInputEndpoint(
         name='SSH',
         protocol='TCP',
-        port='22',
+        port=ssh_port,
         local_port='22',
     )
 
@@ -461,7 +469,7 @@ def create(vm_):
 
     vm_kwargs = {
         'service_name': service_name,
-        'deployment_name': vm_['name'],
+        'deployment_name': service_name,
         'deployment_slot': vm_['slot'],
         'label': label,
         'role_name': vm_['name'],
@@ -519,12 +527,18 @@ def create(vm_):
         return False
     try:
         conn.create_virtual_machine_deployment(**vm_kwargs)
+    except WindowsAzureConflictError:
+        log.debug("Conflict error. The deployment may already exist, trying add_role")
+        # Deleting two useless keywords 
+        del vm_kwargs["deployment_slot"] 
+        del vm_kwargs["label"]
+        conn.add_role(**vm_kwargs)
     except Exception as exc:
         error = 'The hosted service name is invalid.'
         if error in str(exc):
             log.error(
                 'Error creating {0} on Azure.\n\n'
-                'The hosted service name is invalid. The name can contain '
+                'The VM name is invalid. The name can contain '
                 'only letters, numbers, and hyphens. The name must start with '
                 'a letter and must end with a letter or a number.'.format(
                     vm_['name']
@@ -534,8 +548,12 @@ def create(vm_):
             )
         else:
             log.error(
-                'Error creating {0} on Azure\n\n'
-                'The following exception was thrown when trying to '
+                'Error creating {0} on Azure.\n\n'
+                'The Virtual Machine could not be created. If you '
+                'are using an already existing Cloud Service, '
+                'make sure you set up the `port` variable corresponding '
+                'to the SSH port exists and that the port number is not '
+                'already in use.\nThe following exception was thrown when trying to '
                 'run the initial deployment: \n{1}'.format(
                     vm_['name'], str(exc)
                 ),
@@ -549,11 +567,12 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         try:
-            data = show_instance(vm_['name'], call='action')
-        except Exception:
+            conn.get_role(service_name, service_name, vm_["name"])
+            data = show_instance(service_name, call='action')
+            if 'url' in data and data['url'] != str(''):
+                return data['url']
+        except WindowsAzureMissingResourceError:
             pass
-        if 'url' in data and data['url'] != str(''):
-            return data['url']
         time.sleep(1)
         return False
 
@@ -582,6 +601,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': hostname,
+            'port': ssh_port,
             'username': ssh_username,
             'password': ssh_password,
             'script': deploy_script,
