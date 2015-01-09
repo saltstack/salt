@@ -44,7 +44,7 @@ def _tap(tap, runas=None):
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if __salt__['cmd.retcode'](cmd, runas=runas):
+    if __salt__['cmd.retcode'](cmd, pythone_shell=False, runas=runas):
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -193,7 +193,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -316,6 +316,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     __salt__['cmd.run'](
         cmd,
         runas=user if user != __opts__['user'] else None,
+        python_shell=False,
         output_loglevel='trace'
     )
     __context__.pop('pkg.list_pkgs', None)
