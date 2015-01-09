@@ -1161,9 +1161,9 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0}{async_flag}{1}'.format(self.get_config_dir(),
-                                                 arg_str,
-                                                 async_flag=' --async ' if async else '')
+        arg_str = '-c {0}{async_flag} {1}'.format(self.get_config_dir(),
+                                                  arg_str,
+                                                  async_flag=' --async' if async else '')
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_run_plus(self, fun, options='', *arg, **kwargs):
