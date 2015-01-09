@@ -65,7 +65,7 @@ def _get_rcvar(name):
 
     cmd = '{0} {1} rcvar'.format(_cmd(), name)
 
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd, python_path=False).splitlines():
         if '_enable="' not in line:
             continue
         rcvar, _ = line.split('=', 1)
@@ -229,7 +229,7 @@ def enabled(name, **kwargs):
 
     cmd = '{0} {1} rcvar'.format(_cmd(), name)
 
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if '_enable="' not in line:
             continue
         _, state, _ = line.split('"', 2)
@@ -309,7 +309,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '{0} {1} onestart'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -323,7 +323,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '{0} {1} onestop'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -337,7 +337,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '{0} {1} onerestart'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def reload_(name):
@@ -351,7 +351,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '{0} {1} onereload'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -370,4 +370,4 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '{0} {1} onestatus'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
