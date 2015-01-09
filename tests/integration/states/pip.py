@@ -18,6 +18,7 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
+    requires_system_grains,
     with_system_user
 )
 ensure_in_syspath('../../')
@@ -63,16 +64,11 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
-    def test_pip_installed_weird_install(self):
-        # First, check to see if this is running on CentOS 5
-        os_grain = self.run_function('grains.item', ['os'])
-        os_version = self.run_function('grains.item', ['osmajorrelease'])
-
-        # Skip this test if running on CentOS 5
-        if os_grain['os'] == 'CentOS' and os_version['osmajorrelease'] == 5:
-            self.skipTest(
-                'This test does not run reliably on CentOS 5'
-            )
+    @requires_system_grains
+    def test_pip_installed_weird_install(self, grains=None):
+        # First, check to see if this is running on CentOS 5. If so, skip this test.
+        if grains['os'] in ('CentOS',) and grains['osrelease_info'][0] in (5,):
+            self.skipTest('This test does not run reliably on CentOS 5')
 
         ographite = '/opt/graphite'
         if os.path.isdir(ographite):
