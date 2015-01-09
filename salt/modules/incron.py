@@ -58,15 +58,11 @@ def _render_tab(lst):
     return ret
 
 
-def _get_incron_cmdstr(user, path):
+def _get_incron_cmdstr(path):
     '''
-    Returns a platform-specific format string, to be used to build a incrontab
-    command.
+    Returns a format string, to be used to build an incrontab command.
     '''
-    if __grains__['os_family'] == 'Solaris':
-        return 'su - {0} -c "incrontab {1}"'.format(user, path)
-    else:
-        return 'incrontab -u {0} {1}'.format(user, path)
+    return 'incrontab {0}'.format(path)
 
 
 def write_incron_file(user, path):
@@ -79,7 +75,7 @@ def write_incron_file(user, path):
 
         salt '*' incron.write_cron_file root /tmp/new_cron
     '''
-    return __salt__['cmd.retcode'](_get_incron_cmdstr(user, path), python_shell=False) == 0
+    return __salt__['cmd.retcode'](_get_incron_cmdstr(path), runas=user, python_shell=False) == 0
 
 
 def write_cron_file_verbose(user, path):
@@ -92,7 +88,7 @@ def write_cron_file_verbose(user, path):
 
         salt '*' incron.write_incron_file_verbose root /tmp/new_cron
     '''
-    return __salt__['cmd.run_all'](_get_incron_cmdstr(user, path), python_shell=False)
+    return __salt__['cmd.run_all'](_get_incron_cmdstr(path), runas=user, python_shell=False)
 
 
 def _write_incron_lines(user, lines):
@@ -109,7 +105,7 @@ def _write_incron_lines(user, lines):
             fp_.writelines(lines)
         if __grains__['os_family'] == 'Solaris' and user != "root":
             __salt__['cmd.run']('chown {0} {1}'.format(user, path), python_shell=False)
-        ret = __salt__['cmd.run_all'](_get_incron_cmdstr(user, path), python_shell=False)
+        ret = __salt__['cmd.run_all'](_get_incron_cmdstr(path), runas=user, python_shell=False)
         os.remove(path)
         return ret
 
@@ -171,7 +167,7 @@ def raw_incron(user):
         cmd = 'incrontab -l {0}'.format(user)
     else:
         cmd = 'incrontab -l -u {0}'.format(user)
-    return __salt__['cmd.run_stdout'](cmd, rstrip=False, python_shell=False)
+    return __salt__['cmd.run_stdout'](cmd, rstrip=False, runas=user, python_shell=False)
 
 
 def list_tab(user):
