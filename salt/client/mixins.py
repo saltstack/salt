@@ -322,6 +322,10 @@ class AsyncClientMixin(object):
         '''
         Print all of the events with the prefix 'tag'
         '''
+        # some suffixes we don't want to print
+        if suffix in ('new', ):
+            return
+
         # TODO: clean up this event print out. We probably want something
         # more general, since this will get *really* messy as
         # people use more events that don't quite fit into this mold
