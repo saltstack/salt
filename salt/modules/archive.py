@@ -169,8 +169,8 @@ def gunzip(gzipfile, template=None, runas=None):
 
 
 @decorators.which('zip')
-def cmd_zip_(zip_file, sources, template=None,
-             cwd=None, recurse=False, runas=None):
+def cmd_zip(zip_file, sources, template=None,
+            cwd=None, recurse=False, runas=None):
     '''
     Uses the zip command to create zip files
 
@@ -225,8 +225,8 @@ def cmd_zip_(zip_file, sources, template=None,
                                python_shell=False).splitlines()
 
 
-@decorators.depends('zipfile', fallback_function=cmd_zip_)
-def zip_(archive, sources, template=None, runas=None):
+@decorators.depends('zipfile', fallback_function=cmd_zip)
+def zip_(archive, sources, template=None):
     '''
     Uses the zipfile module to create zip files
 
@@ -271,7 +271,8 @@ def zip_(archive, sources, template=None, runas=None):
 
 
 @decorators.which('unzip')
-def cmd_unzip_(zip_file, dest, excludes=None, template=None, options=None, runas=None):
+def cmd_unzip(zip_file, dest, excludes=None,
+              template=None, options=None, runas=None):
     '''
     Uses the unzip command to unpack zip files
 
@@ -321,8 +322,8 @@ def cmd_unzip_(zip_file, dest, excludes=None, template=None, options=None, runas
                                python_shell=False).splitlines()
 
 
-@decorators.depends('zipfile', fallback_function=cmd_unzip_)
-def unzip(archive, dest, excludes=None, template=None, options=None, runas=None):
+@decorators.depends('zipfile', fallback_function=cmd_unzip)
+def unzip(archive, dest, excludes=None, template=None, options=None):
     '''
     Uses the zipfile module to unpack zip files
 
