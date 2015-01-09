@@ -24,6 +24,9 @@ import re
 import logging
 from salt.utils import dictdiffer
 
+__func_alias__ = {
+    'reload_': 'reload
+}
 
 log = logging.getLogger(__name__)
 
@@ -71,7 +74,7 @@ def stop_server(jboss_config):
         raise Exception('''Cannot handle error, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**shutdown_result))
 
 
-def reload_jboss(jboss_config):
+def reload_(jboss_config):
     '''
     Reload running jboss instance
 
