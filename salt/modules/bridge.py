@@ -49,7 +49,7 @@ def _linux_brshow(br=None):
 
     brs = {}
 
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
         # get rid of first line
         if line.startswith('bridge name'):
             continue
@@ -88,7 +88,8 @@ def _linux_bradd(br):
     Internal, creates the bridge
     '''
     brctl = _tool_path('brctl')
-    return __salt__['cmd.run']('{0} addbr {1}'.format(brctl, br))
+    return __salt__['cmd.run']('{0} addbr {1}'.format(brctl, br),
+                               python_shell=False)
 
 
 def _linux_brdel(br):
@@ -96,7 +97,8 @@ def _linux_brdel(br):
     Internal, deletes the bridge
     '''
     brctl = _tool_path('brctl')
-    return __salt__['cmd.run']('{0} delbr {1}'.format(brctl, br))
+    return __salt__['cmd.run']('{0} delbr {1}'.format(brctl, br),
+                               python_shell=False)
 
 
 def _linux_addif(br, iface):
@@ -104,7 +106,8 @@ def _linux_addif(br, iface):
     Internal, adds an interface to a bridge
     '''
     brctl = _tool_path('brctl')
-    return __salt__['cmd.run']('{0} addif {1} {2}'.format(brctl, br, iface))
+    return __salt__['cmd.run']('{0} addif {1} {2}'.format(brctl, br, iface),
+                               python_shell=False)
 
 
 def _linux_delif(br, iface):
@@ -112,7 +115,8 @@ def _linux_delif(br, iface):
     Internal, removes an interface from a bridge
     '''
     brctl = _tool_path('brctl')
-    return __salt__['cmd.run']('{0} delif {1} {2}'.format(brctl, br, iface))
+    return __salt__['cmd.run']('{0} delif {1} {2}'.format(brctl, br, iface),
+                               python_shell=False)
 
 
 def _linux_stp(br, state):
@@ -120,7 +124,8 @@ def _linux_stp(br, state):
     Internal, sets STP state
     '''
     brctl = _tool_path('brctl')
-    return __salt__['cmd.run']('{0} stp {1} {2}'.format(brctl, br, state))
+    return __salt__['cmd.run']('{0} stp {1} {2}'.format(brctl, br, state),
+                               python_shell=False)
 
 
 def _netbsd_brshow(br=None):
@@ -137,7 +142,7 @@ def _netbsd_brshow(br=None):
     brs = {}
     start_int = False
 
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
         if line.startswith('bridge'):
             start_int = False
             brname = line.split(':')[0]  # on NetBSD, always ^bridge[0-9]:
@@ -171,9 +176,11 @@ def _netbsd_bradd(br):
     ifconfig = _tool_path('ifconfig')
     if not br or not ifconfig:
         return False
-    if __salt__['cmd.retcode']('{0} {1} create'.format(ifconfig, br)) != 0:
+    if __salt__['cmd.retcode']('{0} {1} create'.format(ifconfig, br),
+                               python_shell=False) != 0:
         return False
-    if __salt__['cmd.retcode']('{0} {1} up'.format(brconfig, br)) != 0:
+    if __salt__['cmd.retcode']('{0} {1} up'.format(brconfig, br),
+                               python_shell=False) != 0:
         return False
     return True
 
@@ -185,7 +192,8 @@ def _netbsd_brdel(br):
     ifconfig = _tool_path('ifconfig')
     if not br or not ifconfig:
         return False
-    return __salt__['cmd.run']('{0} {1} destroy'.format(ifconfig, br))
+    return __salt__['cmd.run']('{0} {1} destroy'.format(ifconfig, br),
+                               python_shell=False)
 
 
 def _netbsd_addif(br, iface):
@@ -193,7 +201,8 @@ def _netbsd_addif(br, iface):
     Internal, adds an interface to a bridge
     '''
     brconfig = _tool_path('brconfig')
-    return __salt__['cmd.run']('{0} {1} add {2}'.format(brconfig, br, iface))
+    return __salt__['cmd.run']('{0} {1} add {2}'.format(brconfig, br, iface),
+                               python_shell=False)
 
 
 def _netbsd_delif(br, iface):
@@ -201,7 +210,10 @@ def _netbsd_delif(br, iface):
     Internal, removes an interface from a bridge
     '''
     brconfig = _tool_path('brconfig')
-    return __salt__['cmd.run']('{0} {1} delete {2}'.format(brconfig, br, iface))
+    return __salt__['cmd.run'](
+        '{0} {1} delete {2}'.format(brconfig, br, iface),
+        python_shell=False
+    )
 
 
 def _netbsd_stp(br, state, iface):
@@ -212,8 +224,10 @@ def _netbsd_stp(br, state, iface):
     brconfig = _tool_path('brconfig')
     if not br or not iface:
         return False
-    return __salt__['cmd.run']('{0} {1} {2} {3}'.
-                                format(brconfig, br, state, iface))
+    return __salt__['cmd.run'](
+        '{0} {1} {2} {3}'.format(brconfig, br, state, iface),
+        python_shell=False
+    )
 
 
 def _os_dispatch(func, *args, **kwargs):
