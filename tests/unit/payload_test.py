@@ -124,8 +124,13 @@ class SREQTestCase(TestCase):
         sreq = self.get_sreq()
         # client-side timeout
         start = time.time()
-        with self.assertRaises(salt.exceptions.SaltReqTimeoutError):
+        # This is a try/except instead of an assertRaises because of a possible
+        # subtle bug in zmq wherein a timeout=0 actually exceutes a single poll
+        # before the timeout is reached.
+        try:
             sreq.send('clear', 'foo', tries=0, timeout=0)
+        except salt.exceptions.SaltReqTimeoutError:
+            pass
         assert time.time() - start < 1  # ensure we didn't wait
 
         # server-side timeout
