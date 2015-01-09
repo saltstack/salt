@@ -166,7 +166,7 @@ def new_set(set=None, set_type=None, family='ipv4', comment=False, **kwargs):
     if comment:
         cmd = '{0} comment'.format(cmd)
 
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
 
     if not out:
         out = True
@@ -193,7 +193,7 @@ def delete_set(set=None, family='ipv4'):
         return 'Error: Set needs to be specified'
 
     cmd = '{0} destroy {1}'.format(_ipset_cmd(), set)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
 
     if not out:
         out = True
@@ -231,7 +231,7 @@ def rename_set(set=None, new_set=None, family='ipv4'):
         return 'Error: New Set already exists'
 
     cmd = '{0} rename {1} {2}'.format(_ipset_cmd(), set, new_set)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
 
     if not out:
         out = True
@@ -252,7 +252,7 @@ def list_sets(family='ipv4'):
 
     '''
     cmd = '{0} list -t'.format(_ipset_cmd())
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
 
     _tmp = out.split('\n')
 
@@ -340,7 +340,7 @@ def add(set=None, entry=None, family='ipv4', **kwargs):
 
     # Using -exist to ensure entries are updated if the comment changes
     cmd = '{0} add -exist {1} {2}'.format(_ipset_cmd(), set, cmd)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
 
     if len(out) == 0:
         return 'Success'
@@ -369,7 +369,7 @@ def delete(set=None, entry=None, family='ipv4', **kwargs):
         return 'Error: Set {0} does not exist'.format(set)
 
     cmd = '{0} del {1} {2}'.format(_ipset_cmd(), set, entry)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
 
     if len(out) == 0:
         return 'Success'
@@ -425,7 +425,7 @@ def test(set=None, entry=None, family='ipv4', **kwargs):
         return 'Error: Set {0} does not exist'.format(set)
 
     cmd = '{0} test {1} {2}'.format(_ipset_cmd(), set, entry)
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if out['retcode'] > 0:
         # Entry doesn't exist in set return false
@@ -464,7 +464,7 @@ def flush(set=None, family='ipv4'):
     else:
         #cmd = '{0} flush family {1}'.format(_ipset_cmd(), ipset_family)
         cmd = '{0} flush'.format(_ipset_cmd())
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
 
     if len(out) == 0:
         return True
@@ -478,7 +478,7 @@ def _find_set_members(set):
     '''
 
     cmd = '{0} list {1}'.format(_ipset_cmd(), set)
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if out['retcode'] > 0:
         # Set doesn't exist return false
@@ -501,7 +501,7 @@ def _find_set_info(set):
     '''
 
     cmd = '{0} list -t {1}'.format(_ipset_cmd(), set)
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if out['retcode'] > 0:
         # Set doesn't exist return false
