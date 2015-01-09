@@ -114,7 +114,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '/etc/init.d/{0} start'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -128,7 +128,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '/etc/init.d/{0} stop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -142,7 +142,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/etc/init.d/{0} restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -171,7 +171,7 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
     '''
     cmd = 'rc-update add {0} default'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def disable(name, **kwargs):
@@ -185,7 +185,7 @@ def disable(name, **kwargs):
         salt '*' service.disable <service name>
     '''
     cmd = 'rc-update delete {0} default'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def enabled(name, **kwargs):
