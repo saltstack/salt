@@ -1458,6 +1458,10 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_level_ = 'warning'
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
     _loglevel_config_setting_name_ = 'cli_salt_log_file'
+    try:
+        os.getcwd()
+    except OSError:
+        sys.exit("Cannot access current working directory. Exiting!")
 
     def _mixin_setup(self):
         self.add_option(
