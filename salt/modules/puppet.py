@@ -168,7 +168,7 @@ def run(*args, **kwargs):
 
     puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
 
-    return __salt__['cmd.run_all'](repr(puppet))
+    return __salt__['cmd.run_all'](repr(puppet), python_shell=False)
 
 
 def noop(*args, **kwargs):
@@ -379,7 +379,9 @@ def fact(name, puppet=False):
     _check_facter()
 
     opt_puppet = '--puppet' if puppet else ''
-    ret = __salt__['cmd.run']('facter {0} {1}'.format(opt_puppet, name))
+    ret = __salt__['cmd.run'](
+            'facter {0} {1}'.format(opt_puppet, name),
+            python_shell=False)
     if not ret:
         return ''
     return ret
