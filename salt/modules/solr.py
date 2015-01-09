@@ -1021,7 +1021,7 @@ def signal(signal=None):
             signal, ', '.join(msg))
 
     cmd = "{0} {1}".format(__opts__['solr.init_script'], signal)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def reload_core(host=None, core_name=None):

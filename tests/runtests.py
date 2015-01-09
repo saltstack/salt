@@ -3,6 +3,8 @@
 '''
 Discover all instances of unittest.TestCase in this directory.
 '''
+# pylint: disable=file-perms
+
 # Import python libs
 from __future__ import print_function
 import os
@@ -367,7 +369,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
-            # bellow
+            # below
             return status
 
         for name in named_unit_test:
