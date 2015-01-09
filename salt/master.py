@@ -247,6 +247,7 @@ class Maintenance(multiprocessing.Process):
                 to_rotate = True
 
         if to_rotate:
+            log.info('Rotating master AES key')
             # should be unecessary-- since no one else should be modifying
             with self.opts['aes'].get_lock():
                 self.opts['aes'].value = salt.crypt.Crypticle.generate_key_string()
