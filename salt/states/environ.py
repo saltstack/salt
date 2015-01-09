@@ -3,12 +3,13 @@
 Support for getting and setting the environment variables
 of the current salt process.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():
@@ -55,18 +56,18 @@ def setenv(name,
         current salt subprocess.
         Default: False
 
-    CLI Example:
+    Example:
 
     .. code-block:: yaml
 
         a_string_env:
-           environ.set:
+           environ.setenv:
              - name: foo
              - value: bar
              - update_minion: True
 
         a_dict_env:
-           environ.set:
+           environ.setenv:
              - name: does_not_matter
              - value:
                  foo: bar
@@ -126,22 +127,24 @@ def setenv(name,
             ret['changes'].update({key: val})
 
     if __opts__['test']:
-        ret['result'] = None
         if ret['changes']:
             ret['comment'] = 'Environ values will be changed'
         else:
             ret['comment'] = 'Environ values are already set with the correct values'
         return ret
 
-    environ_ret = __salt__['environ.setenv'](environ,
-                                             false_unsets,
-                                             clear_all,
-                                             update_minion)
-    if not environ_ret:
-        ret['result'] = False
-        ret['comment'] = 'Failed to set environ variables'
-        return ret
-    ret['result'] = True
-    ret['changes'] = environ_ret
-    ret['comment'] = 'Environ values were set'
+    if ret['changes']:
+        environ_ret = __salt__['environ.setenv'](environ,
+                                                 false_unsets,
+                                                 clear_all,
+                                                 update_minion)
+        if not environ_ret:
+            ret['result'] = False
+            ret['comment'] = 'Failed to set environ variables'
+            return ret
+        ret['result'] = True
+        ret['changes'] = environ_ret
+        ret['comment'] = 'Environ values were set'
+    else:
+        ret['comment'] = 'Environ values were already set with the correct values'
     return ret

@@ -259,10 +259,13 @@ TODO
 * Interface for working with reactor files
 '''
 
+from __future__ import absolute_import
+
 import logging
 import re
-import sys
+from salt.ext.six import exec_
 
+import salt.utils
 from salt.loader import _create_loader
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
@@ -270,6 +273,7 @@ from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
 # our import regexes
 FROM_RE = r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$'
 IMPORT_RE = r'^\s*import\s+(salt:\/\/.*)$'
+FROM_AS_RE = r'^(.*) as (.*)$'
 
 log = logging.getLogger(__name__)
 
@@ -334,12 +338,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             mod,
             valid_funcs
         )
-        if sys.version_info[0] > 2:
-            # in py3+ exec is a function
-            exec(mod_cmd, mod_globals, mod_locals)
-        else:
-            # prior to that it is a statement
-            exec mod_cmd in mod_globals, mod_locals
+        exec_(mod_cmd, mod_globals, mod_locals)
 
         _globals[mod_camel] = mod_locals[mod_camel]
 
@@ -406,28 +405,29 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             if not state_file:
                 raise ImportError("Could not find the file {0!r}".format(import_file))
 
-            with open(state_file) as f:
+            with salt.utils.fopen(state_file) as f:
                 state_contents = f.read()
 
             state_locals = {}
-            if sys.version_info[0] > 2:
-                # in py3+ exec is a function
-                exec(state_contents, _globals, state_locals)
-            else:
-                # prior to that it is a statement
-                exec state_contents in _globals, state_locals
+            exec_(state_contents, _globals, state_locals)
 
             if imports is None:
-                imports = state_locals.keys()
+                imports = list(state_locals.keys())
 
             for name in imports:
-                name = name.strip()
+                name = alias = name.strip()
+
+                matches = re.match(FROM_AS_RE, name)
+                if matches is not None:
+                    name = matches.group(1).strip()
+                    alias = matches.group(2).strip()
+
                 if name not in state_locals:
                     raise ImportError("{0!r} was not found in {1!r}".format(
                         name,
                         import_file
                     ))
-                _globals[name] = state_locals[name]
+                _globals[alias] = state_locals[name]
 
             matched = True
             break
@@ -441,11 +441,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     Registry.enabled = True
 
     # now exec our template using our created scopes
-    if sys.version_info[0] > 2:
-        # in py3+ exec is a function
-        exec(final_template, _globals, _locals)
-    else:
-        # prior to that it is a statement
-        exec final_template in _globals, _locals
+    exec_(final_template, _globals, _locals)
 
     return Registry.salt_data()

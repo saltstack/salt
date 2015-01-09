@@ -57,4 +57,3 @@ responding to Salt calls could look like this:
         minions = client.cmd('*', 'test.ping', timeout=1)
         for minion in sorted(minions):
             print minion
-

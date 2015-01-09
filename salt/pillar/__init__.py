@@ -2,6 +2,7 @@
 '''
 Render the pillar data
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -15,12 +16,13 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 import salt.transport
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
 from salt.utils.serializers.yamlex import merge_recursive
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
+import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
@@ -43,7 +45,7 @@ def merge_overwrite(obj_a, obj_b):
     return merge_recurse(obj_a, obj_b)
 
 
-def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
+def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -59,21 +61,21 @@ def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None):
     return {
             'remote': RemotePillar,
             'local': Pillar
-            }.get(opts['file_client'], Pillar)(opts, grains, id_, saltenv, ext)
+            }.get(opts['file_client'], Pillar)(opts, grains, id_, saltenv, ext, functions=funcs)
 
 
 class RemotePillar(object):
     '''
     Get the pillar from the master
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None):
+    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
         self.grains = grains
         self.id_ = id_
         self.serial = salt.payload.Serial(self.opts)
-        self.sreq = salt.transport.Channel.factory(opts)
+        self.channel = salt.transport.Channel.factory(opts)
         # self.auth = salt.crypt.SAuth(opts)
 
     def compile_pillar(self):
@@ -87,8 +89,7 @@ class RemotePillar(object):
                 'cmd': '_pillar'}
         if self.ext:
             load['ext'] = self.ext
-        # ret = self.sreq.send(load, tries=3, timeout=7200)
-        ret_pillar = self.sreq.crypted_transfer_decode_dictentry(load, dictkey='pillar', tries=3, timeout=7200)
+        ret_pillar = self.channel.crypted_transfer_decode_dictentry(load, dictkey='pillar', tries=3, timeout=7200)
 
         # key = self.auth.get_keys()
         # aes = key.private_decrypt(ret['key'], 4)
@@ -133,6 +134,9 @@ class Pillar(object):
         # location of file_roots. Issue 5951
         ext_pillar_opts = dict(self.opts)
         ext_pillar_opts['file_roots'] = self.actual_file_roots
+        # TODO: consolidate into "sanitize opts"
+        if 'aes' in ext_pillar_opts:
+            ext_pillar_opts.pop('aes')
         self.merge_strategy = 'smart'
         if opts.get('pillar_source_merging_strategy'):
             self.merge_strategy = opts['pillar_source_merging_strategy']
@@ -282,7 +286,7 @@ class Pillar(object):
         '''
         top = collections.defaultdict(OrderedDict)
         orders = collections.defaultdict(OrderedDict)
-        for ctops in tops.itervalues():
+        for ctops in six.itervalues(tops):
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
@@ -410,7 +414,7 @@ class Pillar(object):
                     else:
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
-                                sub_sls, v = sub_sls.iteritems().next()
+                                sub_sls, v = next(sub_sls.iteritems())
                                 defaults = v.get('defaults', {})
                                 key = v.get('key', None)
                             else:
@@ -590,6 +594,7 @@ class Pillar(object):
         errors.extend(terrors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)
+            # TODO: consolidate into sanitize function
             if 'grains' in mopts:
                 mopts.pop('grains')
             if 'aes' in mopts:

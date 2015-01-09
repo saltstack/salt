@@ -170,6 +170,16 @@ class TestSaltEvent(TestCase):
             evt2 = me.get_event(tag='evt1')
             self.assertIsNone(evt2)
 
+    def test_event_no_timeout(self):
+        '''Test no wait timeout, we should block forever, until we get one '''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            me.subscribe()
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt = me.get_event(tag='evt2', wait=0)
+            self.assertGotEvent(evt, {'data': 'foo2'})
+
     def test_event_subscription_matching(self):
         '''Test a subscription startswith matching'''
         with eventpublisher_process():
@@ -241,7 +251,7 @@ class TestSaltEvent(TestCase):
             # Fire events again
             me.fire_event({'data': 'foo3'}, 'evt3')
             me.fire_event({'data': 'foo4'}, 'evt4')
-            # We not force unrelated pending events not to be dropped, so both of the event bellow work and are not
+            # We not force unrelated pending events not to be dropped, so both of the event below work and are not
             # None
             evt2 = me.get_event(tag='evt4', use_pending=True)
             evt1 = me.get_event(tag='evt3', use_pending=True)

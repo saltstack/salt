@@ -57,8 +57,10 @@ def options_present(name, sections=None):
             current_value = __salt__['ini.get_option'](name,
                                                        section,
                                                        key)
-            if current_value == sections[section][key]:
+            # Test if the change is necessary
+            if current_value == str(sections[section][key]):
                 continue
+
             ret['changes'] = __salt__['ini.set_option'](name,
                                                         sections)
             if 'error' in ret['changes']:

@@ -8,6 +8,8 @@ lxc >= 1.0 (even beta alpha) is required
 
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import traceback
@@ -21,6 +23,8 @@ import time
 import shutil
 import re
 import random
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 # Import salt libs
 import salt
@@ -30,7 +34,6 @@ import salt.utils.dictupdate
 from salt.utils import vt
 import salt.utils.cloud
 import salt.config
-import salt._compat
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -466,7 +469,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for v in new.itervalues():
+    for v in new.values():
         for row in v:
             ret.append({row: v[row]})
     return ret
@@ -536,12 +539,12 @@ def _get_veths(net_data):
     '''Parse the nic setup inside lxc conf tuples back
     to a dictionary indexed by network interface'''
     if isinstance(net_data, dict):
-        net_data = net_data.items()
+        net_data = list(net_data.items())
     nics = salt.utils.odict.OrderedDict()
     current_nic = salt.utils.odict.OrderedDict()
     for item in net_data:
         if item and isinstance(item, dict):
-            item = item.items()[0]
+            item = list(item.items())[0]
         if item[0] == 'lxc.network.type':
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
@@ -564,7 +567,7 @@ class _LXCConfig(object):
         if self.name:
             self.path = '/var/lib/lxc/{0}/config'.format(self.name)
             if os.path.isfile(self.path):
-                with open(self.path) as f:
+                with salt.utils.fopen(self.path) as f:
                     for l in f.readlines():
                         match = self.pattern.findall((l.strip()))
                         if match:
@@ -588,7 +591,7 @@ class _LXCConfig(object):
         net_datas = _get_network_conf(conf_tuples=old_net, **kwargs)
         if net_datas:
             for row in net_datas:
-                self.data.extend(row.items())
+                self.data.extend(list(row.items()))
 
         # be sure to reset harmful settings
         for i in ['lxc.cgroup.memory.limit_in_bytes']:
@@ -604,7 +607,7 @@ class _LXCConfig(object):
             content = self.as_string()
             # 2 step rendering to be sure not to open/wipe the config
             # before as_string succeeds.
-            with open(self.path, 'w') as fic:
+            with salt.utils.fopen(self.path, 'w') as fic:
                 fic.write(content)
                 fic.flush()
 
@@ -647,7 +650,7 @@ def get_base(**kwargs):
     cntrs = ls_()
     if kwargs.get('image'):
         image = kwargs.get('image')
-        proto = salt._compat.urlparse(image).scheme
+        proto = _urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
         hash_ = salt.utils.get_hash(
@@ -1433,7 +1436,7 @@ def start(name, restart=False):
         ret['result'] = infos['state'] == 'running'
         if ret['change']:
             ret['changes']['started'] = 'started'
-    except Exception, ex:
+    except Exception as ex:
         trace = traceback.format_exc()
         ret['result'] = False
         ret['comment'] = 'Error in starting container'
@@ -1470,7 +1473,7 @@ def stop(name, kill=True):
         ret['result'] = infos['state'] == 'stopped'
         if ret['change']:
             ret['changes']['stopped'] = 'stopped'
-    except Exception, ex:
+    except Exception as ex:
         trace = traceback.format_exc()
         ret['result'] = False
         ret['comment'] = 'Error in stopping container'
@@ -1640,9 +1643,10 @@ def info(name):
 
     ret = {}
 
-    config = [(v[0].strip(), v[1].strip()) for v in
-              [l.split('#', 1)[0].strip().split('=', 1) for l in
-               open(f).readlines()] if len(v) == 2]
+    with salt.utils.fopen(f) as fhr:
+        config = [(v[0].strip(), v[1].strip()) for v in
+                  [l.split('#', 1)[0].strip().split('=', 1) for l in
+                   fhr.readlines()] if len(v) == 2]
 
     ifaces = []
     current = None
@@ -1754,7 +1758,7 @@ def set_pass(name, users, password):
             if cret['retcode'] != 0:
                 raise ValueError('Can\'t change passwords')
             ret['comment'] = 'Password updated for {0}'.format(users)
-        except ValueError, ex:
+        except ValueError as ex:
             trace = traceback.format_exc()
             ret['result'] = False
             ret['comment'] = 'Error in setting base password\n'
@@ -1788,14 +1792,18 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
         ret['comment'] = (
             'Configuration does not exist: {0}'.format(lxc_conf_p))
     else:
-        with open(lxc_conf_p, 'r') as fic:
+        with salt.utils.fopen(lxc_conf_p, 'r') as fic:
             filtered_lxc_conf = []
             for row in lxc_conf:
                 if not row:
                     continue
                 for conf in row:
-                    filtered_lxc_conf.append((conf.strip(),
-                                              row[conf].strip()))
+                    try:
+                        filtered_lxc_conf.append((conf.strip(),
+                                                  row[conf].strip()))
+                    except AttributeError:
+                        filtered_lxc_conf.append((conf.strip(),
+                                                  str(row[conf]).strip()))
             ret['comment'] = 'lxc.conf is up to date'
             lines = []
             orig_config = fic.read()
@@ -1845,12 +1853,10 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
             conf_changed = conf != orig_config
             chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             if conf_changed:
-                wfic = open('{0}.{1}'.format(lxc_conf_p, chrono), 'w')
-                wfic.write(conf)
-                wfic.close()
-                wfic = open(lxc_conf_p, 'w')
-                wfic.write(conf)
-                wfic.close()
+                with salt.utils.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
+                    wfic.write(conf)
+                with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
+                    wfic.write(conf)
                 ret['comment'] = 'Updated'
                 ret['result'] = True
     if (
@@ -2122,7 +2128,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
     if not prior_state:
         return prior_state
     if attachable(name):
-        if isinstance(keep_env, basestring):
+        if isinstance(keep_env, six.string_types):
             keep_env = keep_env.split(',')
         env = ' '.join('--set-var {0}={1}'.format(
                        x, pipes.quote(os.environ[x]))
@@ -2332,7 +2338,7 @@ def write_conf(conf_file, conf):
             if isinstance(line, str):
                 fp_.write(line)
             elif isinstance(line, dict):
-                key = line.iterkeys().next()
+                key = next(iter(list(line.keys())))
                 out_line = None
                 if isinstance(line[key], str):
                     out_line = ' = '.join((key, line[key]))
@@ -2378,7 +2384,7 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             data.append(line)
             continue
         else:
-            key = line.iterkeys().next()
+            key = next(iter(list(line.keys())))
             if key not in kwargs:
                 data.append(line)
                 continue

@@ -39,6 +39,7 @@ Salt interface to LDAP commands
     to the same LDAP server. It's easy enough to override this behavior, but
     badness may ensue - you have been warned.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time

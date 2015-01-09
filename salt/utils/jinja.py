@@ -2,6 +2,7 @@
 '''
 Jinja loading utils to enable a more powerful backend for jinja templates
 '''
+from __future__ import absolute_import
 
 # Import python libs
 from os import path
@@ -22,7 +23,7 @@ import yaml
 import salt
 import salt.fileclient
 from salt.utils.odict import OrderedDict
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -64,10 +65,7 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
-        if opts.get('file_client', 'remote') == 'local':
-            self.searchpath = opts['file_roots'][saltenv]
-        else:
-            self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
+        self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: {0!r}'.format(self.searchpath))
         self._file_client = None
         self.cached = []
@@ -364,8 +362,8 @@ class SerializerExtension(Extension, object):
             return data
         return explore(data)
 
-    def format_json(self, value):
-        return Markup(json.dumps(value, sort_keys=True).strip())
+    def format_json(self, value, sort_keys=True):
+        return Markup(json.dumps(value, sort_keys=sort_keys).strip())
 
     def format_yaml(self, value, flow_style=True):
         return Markup(yaml.dump(value, default_flow_style=flow_style,

@@ -3,13 +3,14 @@
 Utils for making various web calls. Primarily designed for REST, SOAP, webhooks
 and the like, but also useful for basic HTTP testing.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import pprint
 import os.path
 import json
 import logging
-import cookielib
+import salt.ext.six.moves.http_cookiejar  # pylint: disable=E0611
 from salt._compat import ElementTree as ET
 
 # Import salt libs
@@ -128,9 +129,9 @@ def query(url,
 
     if cookies is not None:
         if cookie_format == 'mozilla':
-            sess.cookies = cookielib.MozillaCookieJar(cookie_jar)
+            sess.cookies = salt.ext.six.moves.http_cookiejar.MozillaCookieJar(cookie_jar)
         else:
-            sess.cookies = cookielib.LWPCookieJar(cookie_jar)
+            sess.cookies = salt.ext.six.moves.http_cookiejar.LWPCookieJar(cookie_jar)
         if not os.path.isfile(cookie_jar):
             sess.cookies.save()
         else:

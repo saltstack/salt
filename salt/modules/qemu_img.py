@@ -7,6 +7,7 @@ The qemu img command is wrapped for specific functions
 
 :depends: qemu-img
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage IAM roles.
-=================
+Manage IAM roles
 
 .. versionadded:: 2014.7.0
 
@@ -74,7 +73,9 @@ with the role. This is the default behavior of the AWS console.
                 key: GKTADJGHEIQSXMKKRBJ08H
                 keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -272,7 +273,7 @@ def _policies_present(
     ret = {'result': True, 'comment': '', 'changes': {}}
     policies_to_create = {}
     policies_to_delete = []
-    for policy_name, policy in policies.iteritems():
+    for policy_name, policy in six.iteritems(policies):
         _policy = __salt__['boto_iam.get_role_policy'](name, policy_name,
                                                        region, key, keyid,
                                                        profile)
@@ -292,7 +293,7 @@ def _policies_present(
             ret['result'] = None
             return ret
         ret['changes']['old'] = {'policies': _list}
-        for policy_name, policy in policies_to_create.iteritems():
+        for policy_name, policy in six.iteritems(policies_to_create):
             policy_set = __salt__['boto_iam.create_role_policy'](name,
                                                                  policy_name,
                                                                  policy,

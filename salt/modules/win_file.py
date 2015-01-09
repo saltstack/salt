@@ -7,6 +7,7 @@ data
             - win32file
             - win32security
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -27,8 +28,10 @@ import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
+from salt.ext.six import string_types  # do not remove, used in imported file.py functions
+# do not remove, used in imported file.py functions
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
-import salt._compat  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
@@ -54,7 +57,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
-        lstat, path_exists_glob, HASHES)
+        lstat, path_exists_glob, write, pardir, join, HASHES)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -81,6 +84,7 @@ def __virtual__():
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global path_exists_glob
+            global write, pardir, join
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -129,6 +133,9 @@ def __virtual__():
             rename = _namespaced_function(rename, globals())
             lstat = _namespaced_function(lstat, globals())
             path_exists_glob = _namespaced_function(path_exists_glob, globals())
+            write = _namespaced_function(write, globals())
+            pardir = _namespaced_function(pardir, globals())
+            join = _namespaced_function(join, globals())
 
             return __virtualname__
     return False
@@ -926,7 +933,7 @@ def get_attributes(path):
     attributes['mountedVolume'] = False
     if attributes['reparsePoint'] is True and attributes['directory'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA0000003:
             attributes['mountedVolume'] = True
     # check if it's a soft (symbolic) link
@@ -938,7 +945,7 @@ def get_attributes(path):
     attributes['symbolicLink'] = False
     if attributes['reparsePoint'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA000000C:
             attributes['symbolicLink'] = True
 

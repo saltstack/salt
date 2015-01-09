@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Configuration management using Augeas
-=====================================
 
 .. versionadded:: 0.17.0
 
@@ -28,11 +27,15 @@ Augeas_ can be used to manage configuration files.
     known to resolve the issue.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import os.path
 import difflib
+
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -167,7 +170,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         ret['result'] = None
         ret['comment'] = 'Executing commands'
         if context:
-            ret['comment'] += ' in file "{1}"'.format(context)
+            ret['comment'] += ' in file "{0}":\n'.format(context)
         ret['comment'] += "\n".join(changes)
         return ret
 
@@ -175,9 +178,8 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
     if context:
         filename = re.sub('^/files|/$', '', context)
         if os.path.isfile(filename):
-            file_ = open(filename, 'r')
-            old_file = file_.readlines()
-            file_.close()
+            with salt.utils.fopen(filename, 'r') as file_:
+                old_file = file_.readlines()
 
     result = __salt__['augeas.execute'](context=context, lens=lens, commands=changes)
     ret['result'] = result['retval']
@@ -187,9 +189,8 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         return ret
 
     if old_file:
-        file_ = open(filename, 'r')
-        diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
-        file_.close()
+        with salt.utils.fopen(filename, 'r') as file_:
+            diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
 
         if diff:
             ret['comment'] = 'Changes have been saved'

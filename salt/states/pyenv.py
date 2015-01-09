@@ -44,6 +44,7 @@ This is how a state configuration could look like:
         - require:
           - pkg: pyenv-deps
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re

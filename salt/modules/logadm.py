@@ -2,6 +2,7 @@
 '''
 Module for managing Solaris logadm based log rotations.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

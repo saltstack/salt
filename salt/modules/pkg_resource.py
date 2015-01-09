@@ -2,6 +2,7 @@
 '''
 Resources needed by pkg providers
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -13,7 +14,8 @@ import yaml
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
@@ -28,7 +30,7 @@ def _repack_pkgs(pkgs):
     return dict(
         [
             (_normalize_name(str(x)), str(y) if y is not None else y)
-            for x, y in salt.utils.repack_dictlist(pkgs).iteritems()
+            for x, y in six.iteritems(salt.utils.repack_dictlist(pkgs))
         ]
     )
 
@@ -113,7 +115,7 @@ def parse_targets(name=None,
             return None, None
 
         srcinfo = []
-        for pkg_name, pkg_src in sources.iteritems():
+        for pkg_name, pkg_src in six.iteritems(sources):
             if __salt__['config.valid_fileproto'](pkg_src):
                 # Cache package from remote source (salt master, HTTP, FTP)
                 srcinfo.append((pkg_name,
@@ -173,7 +175,7 @@ def version(*names, **kwargs):
     # return dict
     if len(ret) == 1 and not pkg_glob:
         try:
-            return ret.itervalues().next()
+            return next(ret.itervalues())
         except StopIteration:
             return ''
     return ret

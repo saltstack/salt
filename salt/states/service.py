@@ -9,16 +9,14 @@ rc scripts, services can be defined as running or dead.
 .. code-block:: yaml
 
     httpd:
-      service:
-        - running
+      service.running: []
 
 The service can also be set to be started at runtime via the enable option:
 
 .. code-block:: yaml
 
     openvpn:
-      service:
-        - running
+      service.running:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
@@ -28,8 +26,7 @@ service, then set the reload value to True:
 .. code-block:: yaml
 
     redis:
-      service:
-        - running
+      service.running:
         - enable: True
         - reload: True
         - watch:
@@ -96,7 +93,6 @@ def _enable(name, started, result=True, **kwargs):
     if __salt__['service.enabled'](name, **kwargs):
         # Service is enabled
         if started is True:
-            ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already enabled,'
                               ' and is running').format(name)
             return ret
@@ -416,7 +412,12 @@ def disabled(name, **kwargs):
     return _disable(name, None, **kwargs)
 
 
-def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
+def mod_watch(name,
+              sfun=None,
+              sig=None,
+              reload=False,
+              full_restart=False,
+              **kwargs):
     '''
     The service watcher, called to invoke the watch command.
 

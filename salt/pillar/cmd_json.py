@@ -2,6 +2,7 @@
 '''
 Execute a command and read the output as JSON. The JSON data is then directly overlaid onto the minion's Pillar data.
 '''
+from __future__ import absolute_import
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx
 # autosummary pulls only the first line for its description.

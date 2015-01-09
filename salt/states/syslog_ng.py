@@ -46,6 +46,7 @@ http://www.balabit.com/sites/default/files/documents/syslog-ng-ose-3.5-guides/en
 '''
 
 from __future__ import generators, print_function, with_statement
+from __future__ import absolute_import
 import logging
 
 

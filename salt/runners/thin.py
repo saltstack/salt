@@ -9,6 +9,7 @@ system for easy consumption.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 
 # Import Salt libs
 import salt.utils.thin
@@ -29,4 +30,4 @@ def generate(extra_mods='', overwrite=False, so_mods=''):
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     '''
-    print(salt.utils.thin.gen_thin(__opts__['cachedir'], extra_mods, overwrite, so_mods))
+    __progress__(salt.utils.thin.gen_thin(__opts__['cachedir'], extra_mods, overwrite, so_mods))

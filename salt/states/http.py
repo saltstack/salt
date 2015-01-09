@@ -4,6 +4,7 @@ HTTP monitoring states
 
 Perform an HTTP query and statefully return the result
 '''
+from __future__ import absolute_import
 
 # Import python libs
 
@@ -39,31 +40,31 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
     if __opts__['test']:
         kwargs['test'] = True
 
-    data = __salt__['http.query'](**kwargs)
+    data = __salt__['http.query'](name, **kwargs)
 
     if match is not None:
         if match_type == 'string':
-            if match in data['text']:
+            if match in data.get('text', ''):
                 ret['result'] = True
-                ret['comment'] += ' Match text "{0}" was found'.format(match)
+                ret['comment'] += ' Match text "{0}" was found.'.format(match)
             else:
                 ret['result'] = False
-                ret['comment'] += ' Match text "{0}" was not found'.format(match)
+                ret['comment'] += ' Match text "{0}" was not found.'.format(match)
         elif match_type == 'pcre':
             if re.search(match, data['text']):
                 ret['result'] = True
-                ret['comment'] += ' Match pattern "{0}" was found'.format(match)
+                ret['comment'] += ' Match pattern "{0}" was found.'.format(match)
             else:
                 ret['result'] = False
-                ret['comment'] += ' Match pattern "{0}" was not found'.format(match)
+                ret['comment'] += ' Match pattern "{0}" was not found.'.format(match)
 
     if status is not None:
-        if data['status'] == status:
-            ret['comment'] += 'Status {0} was found, as specified'.format(status)
+        if data.get('status', '') == status:
+            ret['comment'] += 'Status {0} was found, as specified.'.format(status)
             if ret['result'] is None:
                 ret['result'] = True
         else:
-            ret['comment'] += 'Status {0} was not found, as specified'.format(status)
+            ret['comment'] += 'Status {0} was not found, as specified.'.format(status)
             ret['result'] = False
 
     if __opts__['test'] and ret['result'] is True:

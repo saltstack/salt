@@ -2,6 +2,7 @@
 '''
 This module contains routines shared by the virt system.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

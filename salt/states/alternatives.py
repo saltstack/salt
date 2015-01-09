@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Configuration of the alternatives system
-========================================
 
 Control the alternatives system
 

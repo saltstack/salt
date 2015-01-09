@@ -29,6 +29,7 @@ single-line output format and to parse each line individually. Example output
     {"phill": {"en0": {"hwaddr": "02:1d:cc:a2:33:55", ...}}}
     {"stuart": {"en0": {"hwaddr": "02:9a:e0:ea:9e:3c", ...}}}
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json

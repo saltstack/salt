@@ -2,6 +2,7 @@
 '''
 Wrap the cp module allowing for managed ssh file transfers
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.client.ssh

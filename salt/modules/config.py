@@ -2,14 +2,15 @@
 '''
 Return config information
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import os
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
-import salt._compat
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
 
@@ -86,7 +87,7 @@ def manage_mode(mode):
     '''
     if mode is None:
         return None
-    if not isinstance(mode, salt._compat.string_types):
+    if not isinstance(mode, string_types):
         # Make it a string in case it's not
         mode = str(mode)
     # Strip any quotes and initial 0, though zero-pad it up to 4

@@ -3,7 +3,7 @@ Salt Cloud 0.8.9 Release Notes
 ==============================
 
 Welcome to 0.8.9! It has been a long time since the last release, and we're
-excited to get this one out the door! 
+excited to get this one out the door!
 
 
 Documentation
@@ -67,17 +67,17 @@ can accomplish this might look like:
 
 .. code-block:: yaml
 
-    Ubuntu-12.04-64bit:                                                             
-      TT_Master:                                                                    
-        minion:                                                                     
-          retry_dns: 5                                                              
-        make_master: True                                                           
-      TT2:                                                                          
-        minion:                                                                     
-          retry_dns: 5                                                              
-      TT3:                                                                          
-        minion:                                                                     
-          retry_dns: 5                                                              
+    Ubuntu-12.04-64bit:
+      TT_Master:
+        minion:
+          retry_dns: 5
+        make_master: True
+      TT2:
+        minion:
+          retry_dns: 5
+      TT3:
+        minion:
+          retry_dns: 5
 
 This functionality was added by Pedro Algarvio, to spin up hierarchies for
 testing purposes, and then remove them when finished. This can be instrumental
@@ -97,25 +97,25 @@ allowing users to store parallel execution logs. Finally, keyboard interrupts
 
 Internal Data Structure
 =======================
-On 0.8.7 we unleashed the power of multiple cloud provider profiles, it even 
-allows multiple profiles for the same cloud provider.  That was a much asked 
-feature and was adopted by users right away.  Unfortunately, all that power had 
-a small point of failure when multiple profiles existed for the same cloud 
+On 0.8.7 we unleashed the power of multiple cloud provider profiles, it even
+allows multiple profiles for the same cloud provider.  That was a much asked
+feature and was adopted by users right away.  Unfortunately, all that power had
+a small point of failure when multiple profiles existed for the same cloud
 provider. Only the first was used in most operations.
-To fix this small issue, salt-cloud's internal data structure changed quite a 
-bit. Every action, function, virtual machine creation, etc, is now, **always** 
+To fix this small issue, salt-cloud's internal data structure changed quite a
+bit. Every action, function, virtual machine creation, etc, is now, **always**
 "attached" to a provider alias and the(one of the) cloud drivers defined.
-Internally, when loading the configuration, all the defined profiles are 
-matched to the available providers. If the provider does not exits, the profile 
-gets removed. The same happens for the defined providers, they all know which 
+Internally, when loading the configuration, all the defined profiles are
+matched to the available providers. If the provider does not exits, the profile
+gets removed. The same happens for the defined providers, they all know which
 profiles they can manage. This closes that small point of failure.
 
 Data Presentation
 =================
-With the internal data structure change also came a data presentation change.  
-Most, unless not applicable, output is now done in an ``<provider-alias>`` 
-|srarr| ``<provider-driver>`` |srarr| ``<detailed-output>``. An example is 
-always better. For an ``ec2-config`` provider alias with an ``ec2`` driver 
+With the internal data structure change also came a data presentation change.
+Most, unless not applicable, output is now done in an ``<provider-alias>``
+|srarr| ``<provider-driver>`` |srarr| ``<detailed-output>``. An example is
+always better. For an ``ec2-config`` provider alias with an ``ec2`` driver
 configured:
 
 .. code-block:: bash

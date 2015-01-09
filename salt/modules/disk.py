@@ -2,6 +2,7 @@
 '''
 Module for gathering disk information
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -12,6 +13,7 @@ import re
 import salt.utils
 
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -117,7 +119,7 @@ def inodeusage(args=None):
         salt '*' disk.inodeusage
     '''
     flags = _clean_flags(args, 'disk.inodeusage')
-    cmd = 'df -i'
+    cmd = 'df -iP'
     if flags:
         cmd += ' -{0}'.format(flags)
     ret = {}
@@ -210,7 +212,7 @@ def blkid(device=None):
         args = " " + device
 
     ret = {}
-    for line in __salt__['cmd.run_stdout']('blkid' + args).split('\n'):
+    for line in __salt__['cmd.run_stdout'](('blkid' + args).split('\n'), python_shell=False):
         comps = line.split()
         device = comps[0][:-1]
         info = {}

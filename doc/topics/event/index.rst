@@ -74,7 +74,7 @@ To retrieve the tag as well as the event data, pass ``full=True``:
     tag, data = evdata['tag'], evdata['data']
 
     # tag == 'salt/job/JOBID/ret/MINIONNAME
-    
+
 
 Instead of looking for a single event, the ``iter_events`` method can be used to
 make a generator which will continually yield salt events.
@@ -113,6 +113,7 @@ If a process is listening on the minion, it may be useful for a user on the
 master to fire an event to it:
 
 .. code-block:: python
+
     # Job on minion
     import salt.utils.event
 

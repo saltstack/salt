@@ -15,27 +15,23 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
 .. code-block:: yaml
 
     AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-dss
 
     ? AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==...
     :
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-dss
 
     thatch:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - source: salt://ssh_keys/thatch.id_rsa.pub
 
     sshkeys:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-rsa
         - options:
@@ -48,6 +44,7 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re

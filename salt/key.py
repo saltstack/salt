@@ -5,6 +5,7 @@ used to manage salt keys directly without interfacing with the CLI.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 from __future__ import print_function
 import os
 import stat
@@ -13,6 +14,7 @@ import fnmatch
 import hashlib
 import json
 import logging
+from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.crypt
@@ -31,6 +33,13 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+def get_key(opts):
+    if opts['transport'] == 'zeromq':
+        return Key(opts)
+    else:
+        return RaetKey(opts)
+
+
 class KeyCLI(object):
     '''
     Manage key CLI operations
@@ -39,15 +48,8 @@ class KeyCLI(object):
         self.opts = opts
         if self.opts['transport'] == 'zeromq':
             self.key = Key(opts)
-            self.acc = 'minions'
-            self.pend = 'minions_pre'
-            self.rej = 'minions_rejected'
-            self.den = 'minions_denied'
         else:
             self.key = RaetKey(opts)
-            self.acc = 'accepted'
-            self.pend = 'pending'
-            self.rej = 'rejected'
 
     def list_status(self, status):
         '''
@@ -58,28 +60,29 @@ class KeyCLI(object):
         keys = self.key.list_keys()
         if status.startswith('acc'):
             salt.output.display_output(
-                {'minions': keys[self.acc]},
+                {self.key.ACC: keys[self.key.ACC]},
                 'key',
                 self.opts
             )
         elif status.startswith(('pre', 'un')):
             salt.output.display_output(
-                {'minions_pre': keys[self.pend]},
+                {self.key.PEND: keys[self.key.PEND]},
                 'key',
                 self.opts
             )
         elif status.startswith('rej'):
             salt.output.display_output(
-                {'minions_rejected': keys[self.rej]},
+                {self.key.REJ: keys[self.key.REJ]},
                 'key',
                 self.opts
             )
         elif status.startswith('den'):
-            salt.output.display_output(
-                {'minions_denied': keys[self.den]},
-                'key',
-                self.opts
-            )
+            if self.key.DEN:
+                salt.output.display_output(
+                    {self.key.DEN: keys[self.key.DEN]},
+                    'key',
+                    self.opts
+                )
         elif status.startswith('all'):
             self.list_all()
 
@@ -100,10 +103,10 @@ class KeyCLI(object):
         :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
         '''
         def _print_accepted(matches, after_match):
-            if 'minions' in after_match:
+            if self.key.ACC in after_match:
                 accepted = sorted(
-                    set(after_match['minions']).difference(
-                        set(matches.get('minions', []))
+                    set(after_match[self.key.ACC]).difference(
+                        set(matches.get(self.key.ACC, []))
                     )
                 )
                 for key in accepted:
@@ -111,10 +114,10 @@ class KeyCLI(object):
 
         matches = self.key.name_match(match)
         keys = {}
-        if self.pend in matches:
-            keys[self.pend] = matches[self.pend]
-        if include_rejected and bool(matches.get(self.rej)):
-            keys[self.rej] = matches[self.rej]
+        if self.key.PEND in matches:
+            keys[self.key.PEND] = matches[self.key.PEND]
+        if include_rejected and bool(matches.get(self.key.REJ)):
+            keys[self.key.REJ] = matches[self.key.REJ]
         if not keys:
             msg = (
                 'The key glob {0!r} does not match any unaccepted {1}keys.'
@@ -129,7 +132,7 @@ class KeyCLI(object):
                     'key',
                     self.opts)
             try:
-                veri = raw_input('Proceed? [n/Y] ')
+                veri = input('Proceed? [n/Y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if not veri or veri.lower().startswith('y'):
@@ -170,7 +173,7 @@ class KeyCLI(object):
         '''
         def _print_deleted(matches, after_match):
             deleted = []
-            for keydir in (self.acc, self.pend, self.rej):
+            for keydir in (self.key.ACC, self.key.PEND, self.key.REJ):
                 deleted.extend(list(
                     set(matches.get(keydir, [])).difference(
                         set(after_match.get(keydir, []))
@@ -193,7 +196,7 @@ class KeyCLI(object):
                     'key',
                     self.opts)
             try:
-                veri = raw_input('Proceed? [N/y] ')
+                veri = input('Proceed? [N/y] ')
             except KeyboardInterrupt:
                 raise SystemExit("\nExiting on CTRL-c")
             if veri.lower().startswith('y'):
@@ -226,10 +229,10 @@ class KeyCLI(object):
         :param bool include_accepted: Whether or not to accept a matched key that was formerly accepted
         '''
         def _print_rejected(matches, after_match):
-            if self.rej in after_match:
+            if self.key.REJ in after_match:
                 rejected = sorted(
-                    set(after_match[self.rej]).difference(
-                        set(matches.get(self.rej, []))
+                    set(after_match[self.key.REJ]).difference(
+                        set(matches.get(self.key.REJ, []))
                     )
                 )
                 for key in rejected:
@@ -237,10 +240,10 @@ class KeyCLI(object):
 
         matches = self.key.name_match(match)
         keys = {}
-        if self.pend in matches:
-            keys[self.pend] = matches[self.pend]
-        if include_accepted and bool(matches.get(self.acc)):
-            keys[self.acc] = matches[self.acc]
+        if self.key.PEND in matches:
+            keys[self.key.PEND] = matches[self.key.PEND]
+        if include_accepted and bool(matches.get(self.key.ACC)):
+            keys[self.key.ACC] = matches[self.key.ACC]
         if not keys:
             msg = 'The key glob {0!r} does not match any {1} keys.'.format(
                 match,
@@ -254,7 +257,7 @@ class KeyCLI(object):
                     keys,
                     'key',
                     self.opts)
-            veri = raw_input('Proceed? [n/Y] ')
+            veri = input('Proceed? [n/Y] ')
             if veri.lower().startswith('n'):
                 return
         _print_rejected(
@@ -430,6 +433,11 @@ class Key(object):
     '''
     The object that encapsulates saltkey actions
     '''
+    ACC = 'minions'
+    PEND = 'minions_pre'
+    REJ = 'minions_rejected'
+    DEN = 'minions_denied'
+
     def __init__(self, opts):
         self.opts = opts
         kind = self.opts.get('__role', '')  # application kind
@@ -448,13 +456,13 @@ class Key(object):
         '''
         Return the minion keys directory paths
         '''
-        minions_accepted = os.path.join(self.opts['pki_dir'], 'minions')
-        minions_pre = os.path.join(self.opts['pki_dir'], 'minions_pre')
+        minions_accepted = os.path.join(self.opts['pki_dir'], self.ACC)
+        minions_pre = os.path.join(self.opts['pki_dir'], self.PEND)
         minions_rejected = os.path.join(self.opts['pki_dir'],
-                                        'minions_rejected')
+                                        self.REJ)
 
         minions_denied = os.path.join(self.opts['pki_dir'],
-                                        'minions_denied')
+                                        self.DEN)
         return minions_accepted, minions_pre, minions_rejected, minions_denied
 
     def gen_keys(self):
@@ -475,20 +483,25 @@ class Key(object):
                                         pubkey,
                                         sig_path)
 
-    def check_minion_cache(self):
+    def check_minion_cache(self, preserve_minions=None):
         '''
         Check the minion cache to make sure that old minion data is cleared
+
+        Optionally, pass in a list of minions which should have their caches
+        preserved. To preserve all caches, set __opts__['preserve_minion_cache']
         '''
-        m_cache = os.path.join(self.opts['cachedir'], 'minions')
+        if preserve_minions is None:
+            preserve_minions = []
+        m_cache = os.path.join(self.opts['cachedir'], self.ACC)
         if not os.path.isdir(m_cache):
             return
         keys = self.list_keys()
         minions = []
         for key, val in keys.items():
             minions.extend(val)
-        if self.opts.get('preserve_minion_cache', False):
+        if not self.opts.get('preserve_minion_cache', False) or not preserve_minions:
             for minion in os.listdir(m_cache):
-                if minion not in minions:
+                if minion not in minions and minion not in preserve_minions:
                     shutil.rmtree(os.path.join(m_cache, minion))
 
     def check_master(self):
@@ -542,8 +555,8 @@ class Key(object):
         cur_keys = self.list_keys()
         for status, keys in match_dict.items():
             for key in salt.utils.isorted(keys):
-                for keydir in ('minions', 'minions_pre', 'minions_rejected', 'minions_denied'):
-                    if fnmatch.filter(cur_keys.get(keydir, []), key):
+                for keydir in (self.ACC, self.PEND, self.REJ, self.DEN):
+                    if keydir and fnmatch.filter(cur_keys.get(keydir, []), key):
                         ret.setdefault(keydir, []).append(key)
         return ret
 
@@ -662,9 +675,9 @@ class Key(object):
             matches = match_dict
         else:
             matches = {}
-        keydirs = ['minions_pre']
+        keydirs = [self.PEND]
         if include_rejected:
-            keydirs.append('minions_rejected')
+            keydirs.append(self.REJ)
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -675,7 +688,7 @@ class Key(object):
                                 key),
                             os.path.join(
                                 self.opts['pki_dir'],
-                                'minions',
+                                self.ACC,
                                 key)
                             )
                     eload = {'result': True,
@@ -694,16 +707,16 @@ class Key(object):
         Accept all keys in pre
         '''
         keys = self.list_keys()
-        for key in keys['minions_pre']:
+        for key in keys[self.PEND]:
             try:
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
-                            'minions_pre',
+                            self.PEND,
                             key),
                         os.path.join(
                             self.opts['pki_dir'],
-                            'minions',
+                            self.ACC,
                             key)
                         )
                 eload = {'result': True,
@@ -714,10 +727,12 @@ class Key(object):
                 pass
         return self.list_keys()
 
-    def delete_key(self, match=None, match_dict=None):
+    def delete_key(self, match=None, match_dict=None, preserve_minions=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
+
+        To preserve the master caches of minions who are matched, set preserve_minions
         '''
         if match is not None:
             matches = self.name_match(match)
@@ -735,9 +750,9 @@ class Key(object):
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
-        self.check_minion_cache()
+        self.check_minion_cache(preserve_minions=matches.get('minions', []))
         if self.opts.get('rotate_aes_key'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -759,7 +774,7 @@ class Key(object):
                     pass
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def reject(self, match=None, match_dict=None, include_accepted=False):
@@ -773,9 +788,9 @@ class Key(object):
             matches = match_dict
         else:
             matches = {}
-        keydirs = ['minions_pre']
+        keydirs = [self.PEND]
         if include_accepted:
-            keydirs.append('minions')
+            keydirs.append(self.ACC)
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -786,7 +801,7 @@ class Key(object):
                                 key),
                             os.path.join(
                                 self.opts['pki_dir'],
-                                'minions_rejected',
+                                self.REJ,
                                 key)
                             )
                     eload = {'result': True,
@@ -797,7 +812,7 @@ class Key(object):
                     pass
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -808,16 +823,16 @@ class Key(object):
         Reject all keys in pre
         '''
         keys = self.list_keys()
-        for key in keys['minions_pre']:
+        for key in keys[self.PEND]:
             try:
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
-                            'minions_pre',
+                            self.PEND,
                             key),
                         os.path.join(
                             self.opts['pki_dir'],
-                            'minions_rejected',
+                            self.REJ,
                             key)
                         )
                 eload = {'result': True,
@@ -828,7 +843,7 @@ class Key(object):
                 pass
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def finger(self, match):
@@ -867,6 +882,11 @@ class RaetKey(Key):
     '''
     Manage keys from the raet backend
     '''
+    ACC = 'accepted'
+    PEND = 'pending'
+    REJ = 'rejected'
+    DEN = None
+
     def __init__(self, opts):
         Key.__init__(self, opts)
         self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
@@ -876,12 +896,12 @@ class RaetKey(Key):
         '''
         Return the minion keys directory paths
         '''
-        accepted = os.path.join(self.opts['pki_dir'], 'accepted')
-        pre = os.path.join(self.opts['pki_dir'], 'pending')
-        rejected = os.path.join(self.opts['pki_dir'], 'rejected')
+        accepted = os.path.join(self.opts['pki_dir'], self.ACC)
+        pre = os.path.join(self.opts['pki_dir'], self.PEND)
+        rejected = os.path.join(self.opts['pki_dir'], self.REJ)
         return accepted, pre, rejected
 
-    def check_minion_cache(self):
+    def check_minion_cache(self, preserve_minions=False):
         '''
         Check the minion cache to make sure that old minion data is cleared
         '''
@@ -976,17 +996,19 @@ class RaetKey(Key):
         if self.opts['open_mode']:  # always accept and overwrite
             with salt.utils.fopen(acc_path, 'w+b') as fp_:
                 fp_.write(self.serial.dumps(keydata))
-                return 'accepted'
+                return self.ACC
         if os.path.isfile(rej_path):
-            return 'rejected'
+            log.debug("Rejection Reason: Keys already rejected.\n")
+            return self.REJ
         elif os.path.isfile(acc_path):
             # The minion id has been accepted, verify the key strings
             with salt.utils.fopen(acc_path, 'rb') as fp_:
                 keydata = self.serial.loads(fp_.read())
             if keydata['pub'] == pub and keydata['verify'] == verify:
-                return 'accepted'
+                return self.ACC
             else:
-                return 'rejected'
+                log.debug("Rejection Reason: Keys not match prior accepted.\n")
+                return self.REJ
         elif os.path.isfile(pre_path):
             auto_reject = self.auto_key.check_autoreject(minion_id)
             auto_sign = self.auto_key.check_autosign(minion_id)
@@ -995,29 +1017,32 @@ class RaetKey(Key):
             if keydata['pub'] == pub and keydata['verify'] == verify:
                 if auto_reject:
                     self.reject(minion_id)
-                    return 'rejected'
+                    log.debug("Rejection Reason: Auto reject pended.\n")
+                    return self.REJ
                 elif auto_sign:
                     self.accept(minion_id)
-                    return 'accepted'
-                return 'pending'
+                    return self.ACC
+                return self.PEND
             else:
-                return 'rejected'
+                log.debug("Rejection Reason: Keys not match prior pended.\n")
+                return self.REJ
         # This is a new key, evaluate auto accept/reject files and place
         # accordingly
         auto_reject = self.auto_key.check_autoreject(minion_id)
         auto_sign = self.auto_key.check_autosign(minion_id)
         if self.opts['auto_accept']:
             w_path = acc_path
-            ret = 'accepted'
+            ret = self.ACC
         elif auto_sign:
             w_path = acc_path
-            ret = 'accepted'
+            ret = self.ACC
         elif auto_reject:
             w_path = rej_path
-            ret = 'rejected'
+            log.debug("Rejection Reason: Auto reject new.\n")
+            ret = self.REJ
         else:
             w_path = pre_path
-            ret = 'pending'
+            ret = self.PEND
         with salt.utils.fopen(w_path, 'w+b') as fp_:
             fp_.write(self.serial.dumps(keydata))
             return ret
@@ -1080,9 +1105,9 @@ class RaetKey(Key):
             matches = match_dict
         else:
             matches = {}
-        keydirs = ['pending']
+        keydirs = [self.PEND]
         if include_rejected:
-            keydirs.append('rejected')
+            keydirs.append(self.REJ)
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -1093,7 +1118,7 @@ class RaetKey(Key):
                                 key),
                             os.path.join(
                                 self.opts['pki_dir'],
-                                'accepted',
+                                self.ACC,
                                 key)
                             )
                 except (IOError, OSError):
@@ -1108,23 +1133,23 @@ class RaetKey(Key):
         Accept all keys in pre
         '''
         keys = self.list_keys()
-        for key in keys['pending']:
+        for key in keys[self.PEND]:
             try:
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
-                            'pending',
+                            self.PEND,
                             key),
                         os.path.join(
                             self.opts['pki_dir'],
-                            'accepted',
+                            self.ACC,
                             key)
                         )
             except (IOError, OSError):
                 pass
         return self.list_keys()
 
-    def delete_key(self, match=None, match_dict=None):
+    def delete_key(self, match=None, match_dict=None, preserve_minions=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -1141,7 +1166,7 @@ class RaetKey(Key):
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError):
                     pass
-        self.check_minion_cache()
+        self.check_minion_cache(preserve_minions=matches.get('minions', []))
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -1171,9 +1196,9 @@ class RaetKey(Key):
             matches = match_dict
         else:
             matches = {}
-        keydirs = ['pending']
+        keydirs = [self.PEND]
         if include_accepted:
-            keydirs.append('accepted')
+            keydirs.append(self.ACC)
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -1184,7 +1209,7 @@ class RaetKey(Key):
                                 key),
                             os.path.join(
                                 self.opts['pki_dir'],
-                                'rejected',
+                                self.REJ,
                                 key)
                             )
                 except (IOError, OSError):
@@ -1200,16 +1225,16 @@ class RaetKey(Key):
         Reject all keys in pre
         '''
         keys = self.list_keys()
-        for key in keys['pending']:
+        for key in keys[self.PEND]:
             try:
                 shutil.move(
                         os.path.join(
                             self.opts['pki_dir'],
-                            'pending',
+                            self.PEND,
                             key),
                         os.path.join(
                             self.opts['pki_dir'],
-                            'rejected',
+                            self.REJ,
                             key)
                         )
             except (IOError, OSError):
@@ -1262,7 +1287,7 @@ class RaetKey(Key):
 
         return data
 
-    def read_remote(self, minion_id, status='accepted'):
+    def read_remote(self, minion_id, status=ACC):
         '''
         Read in a remote key of status
         '''

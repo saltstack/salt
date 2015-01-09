@@ -6,12 +6,13 @@ in here
 '''
 
 # Import python libs
-#import sys  # Use of sys is commented out below
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 import salt.log
-import salt.crypt
+import salt.ext.six as six
+
 from salt.exceptions import SaltReqTimeoutError
 
 # Import third party libs
@@ -42,7 +43,7 @@ except ImportError:
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
-        #sys.exit(salt.exitcodes.EX_GENERIC)
+        #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def package(payload):
@@ -126,7 +127,7 @@ class Serial(object):
             # list/tuple
             def odict_encoder(obj):
                 if isinstance(obj, dict):
-                    for key, value in obj.copy().iteritems():
+                    for key, value in six.iteritems(obj.copy()):
                         obj[key] = odict_encoder(value)
                     return dict(obj)
                 elif isinstance(obj, (list, tuple)):
@@ -192,7 +193,7 @@ class SREQ(object):
         '''
         if hasattr(self, '_socket'):
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets:
+                for socket in self.poller.sockets.keys():
                     self.poller.unregister(socket)
             else:
                 for socket in self.poller.sockets:
@@ -234,7 +235,7 @@ class SREQ(object):
 
     def destroy(self):
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets:
+            for socket in self.poller.sockets.keys():
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()

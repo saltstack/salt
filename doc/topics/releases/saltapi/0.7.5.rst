@@ -32,4 +32,3 @@ Freenode.
 
 .. __: https://github.com/saltstack/salt-api/issues
 .. __: https://groups.google.com/forum/#!forum/salt-users
-

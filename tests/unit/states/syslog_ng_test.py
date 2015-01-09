@@ -14,6 +14,7 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 ensure_in_syspath('../../')
 
+import salt.utils
 from salt.states import syslog_ng
 from salt.modules import syslog_ng as syslog_ng_module
 
@@ -360,7 +361,7 @@ class SyslogNGTestCase(TestCase):
                 got = syslog_ng.config(id, config=parsed_yaml_config, write=True)
 
             written_config = ""
-            with open(config_file_name, "r") as f:
+            with salt.utils.fopen(config_file_name, "r") as f:
                 written_config = f.read()
 
             config_without_whitespaces = remove_whitespaces(written_config)

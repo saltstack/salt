@@ -26,6 +26,7 @@ will set the desired branch method. Possible values are: ``branches``,
 :depends:   - mercurial
             - python bindings for mercurial (``python-hglib``)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -35,7 +36,7 @@ import logging
 import os
 import shutil
 from datetime import datetime
-from salt._compat import text_type as _text_type
+from salt.ext.six import text_type as _text_type
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
 PER_REMOTE_PARAMS = ('base', 'branch_method', 'mountpoint', 'root')
@@ -50,7 +51,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)

@@ -3,6 +3,8 @@
 Utility functions for salt.cloud
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -22,6 +24,7 @@ import traceback
 import copy
 import re
 import uuid
+import salt.ext.six as six
 
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -33,6 +36,12 @@ except ImportError:
         # We can't use salt.utils.is_windows() from the import a little down
         # because that will cause issues under windows at install time.
         raise
+
+try:
+    import salt.utils.smb
+    HAS_SMB = True
+except ImportError:
+    HAS_SMB = False
 
 # Import salt libs
 import salt.crypt
@@ -99,6 +108,9 @@ def os_script(os_, vm_=None, opts=None, minion=''):
     '''
     Return the script as a string for the specific os
     '''
+    if minion:
+        minion = salt_config_to_yaml(minion)
+
     if os.path.isabs(os_):
         # The user provided an absolute path to the deploy script, let's use it
         return __render_script(os_, vm_, opts, minion)
@@ -307,11 +319,12 @@ def bootstrap(vm_, opts):
 
     ret = {}
 
+    minion_conf = salt.utils.cloud.minion_config(opts, vm_)
     deploy_script_code = os_script(
         salt.config.get_cloud_config_value(
             'os', vm_, opts, default='bootstrap-salt'
         ),
-        vm_, opts
+        vm_, opts, minion_conf
     )
 
     ssh_username = salt.config.get_cloud_config_value(
@@ -359,7 +372,7 @@ def bootstrap(vm_, opts):
         'script_env': salt.config.get_cloud_config_value(
             'script_env', vm_, opts
         ),
-        'minion_conf': salt.utils.cloud.minion_config(opts, vm_),
+        'minion_conf': minion_conf,
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': salt.config.get_cloud_config_value(
             'display_ssh_output', vm_, opts, default=True
@@ -463,7 +476,7 @@ def ssh_usernames(vm_, opts, default_users=None):
         usernames = [usernames]
 
     # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
+    usernames = [x for x in usernames if x]
     # Keep a copy of the usernames the user might have provided
     initial = usernames[:]
 
@@ -626,7 +639,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         trycount += 1
         # test gateway usage
         if not usable_gateway:
-            pstatus = _exec_ssh_cmd(pcmd, **kwargs)
+            pstatus = _exec_ssh_cmd(pcmd, allow_failure=True, **kwargs)
             if pstatus == 0:
                 usable_gateway = True
             else:
@@ -639,7 +652,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
                     'SSH gateway is reachable but we can not login')
         # then try to reach out the target
         if usable_gateway:
-            status = _exec_ssh_cmd(cmd, **kwargs)
+            status = _exec_ssh_cmd(cmd, allow_failure=True, **kwargs)
             # Get the exit code of the SSH command.
             # If 0 then the port is open.
             if status == 0:
@@ -657,7 +670,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         )
 
 
-def wait_for_winexesvc(host, port, username, password, timeout=900, gateway=None):
+def wait_for_winexesvc(host, port, username, password, timeout=900):
     '''
     Wait until winexe connection can be established.
     '''
@@ -694,13 +707,17 @@ def wait_for_winexesvc(host, port, username, password, timeout=900, gateway=None
             )
 
 
-def validate_windows_cred(host, username='Administrator', password=None):
+def validate_windows_cred(host, username='Administrator', password=None, retries=10):
     '''
     Check if the windows credentials are valid
     '''
-    retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
-        username, password, host
-    ))
+    for i in xrange(retries):
+        retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
+            username, password, host
+        ))
+        if retcode == 0:
+            break
+        time.sleep(1)
     return retcode == 0
 
 
@@ -813,41 +830,41 @@ def deploy_windows(host,
             )
         )
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+
+        smb_conn = salt.utils.smb.get_conn(host, username, password)
+
         creds = '-U {0}%{1} //{2}'.format(
             username, password, host)
-        # Shell out to smbclient to create C:\salttmp\
-        win_cmd('smbclient {0}/c$ -c "mkdir salttemp; exit;"'.format(creds))
-        # Shell out to smbclient to create C:\salt\conf\pki\minion
-        win_cmd('smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; exit;"'.format(creds))
-        # Shell out to smbclient to copy over minion keys
+
+        salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
+        salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
         ## minion_pub, minion_pem
         kwargs = {'hostname': host,
                   'creds': creds}
 
         if minion_pub:
-            smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
+            salt.utils.smb.put_str(minion_pub, 'salt\\conf\\pki\\minion\\minion.pub', conn=smb_conn)
 
         if minion_pem:
-            smb_file('salt\\conf\\pki\\minion\\minion.pem', minion_pem, kwargs)
+            salt.utils.smb.put_str(minion_pem, 'salt\\conf\\pki\\minion\\minion.pem', conn=smb_conn)
 
-        # Shell out to smbclient to copy over win_installer
+        # Copy over win_installer
         ## win_installer refers to a file such as:
         ## /root/Salt-Minion-0.17.0-win32-Setup.exe
         ## ..which exists on the same machine as salt-cloud
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        win_cmd('smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; mput {2}; exit;"'.format(
-            creds, local_path, installer
-        ))
+        with salt.utils.fopen(win_installer, 'rb') as inst_fh:
+            smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
         # Shell out to winexe to execute win_installer
         ## We don't actually need to set the master and the minion here since
-        ## the minion config file will be set next via smb_file
+        ## the minion config file will be set next via impacket
         win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
             creds, installer, master, name
         ))
 
-        # Shell out to smbclient to copy over minion_conf
+        # Copy over minion_conf
         if minion_conf:
             if not isinstance(minion_conf, dict):
                 # Let's not just fail regarding this change, specially
@@ -859,10 +876,10 @@ def deploy_windows(host,
                 )
             minion_grains = minion_conf.pop('grains', {})
             if minion_grains:
-                smb_file(
-                    'salt\\conf\\grains',
+                salt.utils.smb.put_str(
                     salt_config_to_yaml(minion_grains, line_break='\r\n'),
-                    kwargs
+                    'salt\\conf\\grains',
+                    conn=smb_conn
                 )
             # Add special windows minion configuration
             # that must be in the minion config file
@@ -873,21 +890,16 @@ def deploy_windows(host,
                 'multiprocessing': False,
             }
             minion_conf = dict(minion_conf, **windows_minion_conf)
-            smb_file(
-                'salt\\conf\\minion',
+            salt.utils.smb.put_str(
                 salt_config_to_yaml(minion_conf, line_break='\r\n'),
-                kwargs
+                'salt\\conf\\minion',
+                conn=smb_conn
             )
-        # Shell out to smbclient to delete C:\salttmp\ and installer file
-        ## Unless keep_tmp is True
+        # Delete C:\salttmp\ and installer file
+        # Unless keep_tmp is True
         if not keep_tmp:
-            win_cmd('smbclient {0}/c$ -c "del salttemp\\{1}; prompt; exit;"'.format(
-                creds,
-                installer,
-            ))
-            win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
-                creds,
-            ))
+            smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
+            smb_conn.deleteDirectory('C$', 'salttemp')
         # Shell out to winexe to ensure salt-minion service started
         win_cmd('winexe {0} "sc stop salt-minion"'.format(
             creds,
@@ -1145,7 +1157,7 @@ def deploy_script(host,
                     )
 
                 # Copy pre-seed minion keys
-                for minion_id, minion_key in preseed_minion_keys.iteritems():
+                for minion_id, minion_key in preseed_minion_keys.items():
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
@@ -1221,7 +1233,7 @@ def deploy_script(host,
                             )
                         )
                     environ_script_contents = ['#!/bin/sh']
-                    for key, value in script_env.iteritems():
+                    for key, value in script_env.items():
                         environ_script_contents.append(
                             'setenv {0} \'{1}\' >/dev/null 2>&1 || '
                             'export {0}=\'{1}\''.format(key, value)
@@ -1371,7 +1383,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     try:
         event.fire_event(msg, tag)
     except ValueError:
-        # We're using develop or a 0.17.x version of salt
+        # We're using at least a 0.17.x version of salt
         if isinstance(args, dict):
             args[key] = msg
         else:
@@ -1511,32 +1523,6 @@ def scp_file(dest_path, contents, kwargs):
                             password_retries=3,
                             **kwargs)
     return retcode
-
-
-def smb_file(dest_path, contents, kwargs):
-    '''
-    Use smbclient to copy a file to a server
-    '''
-    tmpfh, tmppath = tempfile.mkstemp()
-    with salt.utils.fopen(tmppath, 'w') as tmpfile:
-        tmpfile.write(contents)
-
-    log.debug('Uploading {0} to {1} (smbclient)'.format(
-        dest_path, kwargs['hostname'])
-    )
-
-    # Shell out to smbclient
-    comps = tmppath.split('/')
-    src_dir = '/'.join(comps[:-1])
-    src_file = comps[-1]
-    comps = dest_path.split('\\')
-    dest_dir = '\\'.join(comps[:-1])
-    dest_file = comps[-1]
-    cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; rename {2} {4}; exit;"'.format(
-        kwargs['creds'], src_dir, src_file, dest_dir, dest_file
-    )
-    log.debug('SMB command: {0!r}'.format(cmd))
-    win_cmd(cmd)
 
 
 def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
@@ -1926,7 +1912,7 @@ def simple_types_filter(data):
     if data is None:
         return data
 
-    simpletypes_keys = (str, unicode, int, long, float, bool)
+    simpletypes_keys = (str, six.text_type, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
 
     if isinstance(data, list):
@@ -1942,7 +1928,7 @@ def simple_types_filter(data):
 
     if isinstance(data, dict):
         simpledict = {}
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key is not None and not isinstance(key, simpletypes_keys):
                 key = repr(key)
             if value is not None and isinstance(value, (dict, list)):
@@ -1985,6 +1971,66 @@ def list_nodes_select(nodes, selection, call=None):
     return ret
 
 
+def cachedir_index_add(minion_id, profile, driver, provider, base=None):
+    '''
+    Add an entry to the cachedir index. This generally only needs to happen when
+    a new instance is created. This entry should contain:
+
+    .. code-block:: yaml
+
+        - minion_id
+        - profile used to create the instance
+        - provider and driver name
+
+    The intent of this function is to speed up lookups for the cloud roster for
+    salt-ssh. However, other code that makes use of profile information can also
+    make use of this function.
+    '''
+    base = init_cachedir(base)
+    index_file = os.path.join(base, 'index.p')
+
+    if os.path.exists(index_file):
+        with salt.utils.fopen(index_file, 'r') as fh_:
+            index = msgpack.load(fh_)
+    else:
+        index = {}
+
+    prov_comps = provider.split(':')
+
+    index.update({
+        minion_id: {
+            'id': minion_id,
+            'profile': profile,
+            'driver': driver,
+            'provider': prov_comps[0],
+        }
+    })
+
+    with salt.utils.fopen(index_file, 'w') as fh_:
+        msgpack.dump(index, fh_)
+
+
+def cachedir_index_del(minion_id, base=None):
+    '''
+    Delete an entry from the cachedir index. This generally only needs to happen
+    when an instance is deleted.
+    '''
+    base = init_cachedir(base)
+    index_file = os.path.join(base, 'index.p')
+
+    if os.path.exists(index_file):
+        with salt.utils.fopen(index_file, 'r') as fh_:
+            index = msgpack.load(fh_)
+    else:
+        return
+
+    if minion_id in index:
+        del index[minion_id]
+
+    with salt.utils.fopen(index_file, 'w') as fh_:
+        msgpack.dump(index, fh_)
+
+
 def init_cachedir(base=None):
     '''
     Initialize the cachedir needed for Salt Cloud to keep track of minions
@@ -1997,7 +2043,7 @@ def init_cachedir(base=None):
     for dir_ in needed_dirs:
         if not os.path.exists(dir_):
             os.makedirs(dir_)
-        os.chmod(base, 0755)
+        os.chmod(base, 0o755)
 
     return base
 
@@ -2103,13 +2149,58 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    driver = opts['providers'][provider].iterkeys().next()
+    driver = next(iter(opts['providers'][provider].keys()))
     fname = '{0}.p'.format(minion_id)
     for cachedir in ('requested', 'active'):
         path = os.path.join(base, cachedir, driver, provider, fname)
         log.debug('path: {0}'.format(path))
         if os.path.exists(path):
             os.remove(path)
+
+
+def list_cache_nodes_full(opts, provider=None, base=None):
+    '''
+    Return a list of minion data from the cloud cache, rather from the cloud
+    providers themselves. This is the cloud cache version of list_nodes_full().
+    '''
+    if opts.get('update_cachedir', False) is False:
+        return
+
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+
+    minions = {}
+    # First, get a list of all drivers in use
+    for driver in os.listdir(base):
+        minions[driver] = {}
+        prov_dir = os.path.join(base, driver)
+        # Then, get a list of all providers per driver
+        for prov in os.listdir(prov_dir):
+            # If a specific provider is requested, filter out everyone else
+            if provider and provider != prov:
+                continue
+            minions[driver][prov] = {}
+            min_dir = os.path.join(prov_dir, prov)
+            # Get a list of all nodes per provider
+            for minion_id in os.listdir(min_dir):
+                # Finally, get a list of full minion data
+                fname = '{0}.p'.format(minion_id)
+                fpath = os.path.join(min_dir, fname)
+                with salt.utils.fopen(fpath, 'r') as fh_:
+                    minions[driver][prov][minion_id] = msgpack.load(fh_)
+
+    return minions
+
+
+def cache_nodes_ip(opts, base=None):
+    '''
+    Retrieve a list of all nodes from Salt Cloud cache, and any associated IP
+    addresses. Returns a dict.
+    '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    minions = list_cache_nodes_full(opts, base=base)
 
 
 def update_bootstrap(config, url=None):
@@ -2155,7 +2246,7 @@ def update_bootstrap(config, url=None):
         else:
             script_name = os.path.basename(url)
     elif os.path.exists(url):
-        with open(url) as fic:
+        with salt.utils.fopen(url) as fic:
             script_content = fic.read()
         script_name = os.path.basename(url)
     # in last case, assuming we got a script content
@@ -2266,7 +2357,7 @@ def cache_node_list(nodes, provider, opts):
         return
 
     base = os.path.join(init_cachedir(), 'active')
-    driver = opts['providers'][provider].iterkeys().next()
+    driver = next(iter(opts['providers'][provider].keys()))
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
@@ -2353,6 +2444,8 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     if 'diff_cache_events' not in opts or not opts['diff_cache_events']:
         return
 
+    if node is None:
+        return
     path = os.path.join(prov_dir, node)
     path = '{0}.p'.format(path)
 
@@ -2518,10 +2611,12 @@ def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=No
         f_result = fun(kwargs, call=fun_call)
         r_set = {}
         for d in f_result:
-            for k, v in d.items():
-                r_set[k] = v
-        result = r_set.get('item')
-        status = _unwrap_dict(result, argument_being_watched)
+            if isinstance(d, list):
+                d0 = d[0]
+                if isinstance(d0, dict):
+                    for k, v in d0.items():
+                        r_set[k] = v
+        status = _unwrap_dict(r_set, argument_being_watched)
         log.debug('Function: {0}, Watched arg: {1}, Response: {2}'.format(str(fun).split(' ')[1],
                                                                           argument_being_watched,
                                                                           status))

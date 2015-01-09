@@ -22,6 +22,7 @@ To use the sms returner, append '--return sms' to the salt command. ex:
     salt '*' test.ping --return sms
 
 '''
+from __future__ import absolute_import
 
 
 import logging

@@ -19,9 +19,14 @@ Its output may be stored in a file or in a grain.
         - query:    "SELECT * FROM table;"
         - output:   "/tmp/query_id.txt"
 '''
+from __future__ import absolute_import
 
+# Import python libs
 import sys
 import os.path
+
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -168,7 +173,7 @@ def run(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with open(output, 'w') as output_file:
+        with salt.utils.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
                     for col, val in res:

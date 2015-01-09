@@ -2,6 +2,7 @@
 '''
 Compendium of generic DNS utilities
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -339,7 +340,7 @@ def serial(zone='', update=False):
     for greater than the current date is already stored, the function will
     increment it.
 
-    This module stores the serial in a grain, you can explicitely set the
+    This module stores the serial in a grain, you can explicitly set the
     stored value as a grain named ``dnsserial_<zone_name>``.
 
     CLI Example:

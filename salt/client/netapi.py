@@ -2,6 +2,7 @@
 '''
 The main entry point for salt-api
 '''
+from __future__ import absolute_import
 # Import python libs
 import logging
 

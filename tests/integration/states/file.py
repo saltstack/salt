@@ -12,6 +12,7 @@ import pwd
 import shutil
 import stat
 import tempfile
+import filecmp
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -517,6 +518,343 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertSaltTrueReturn(ret)
         finally:
             os.remove(name)
+
+    def test_replace_issue_18612(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested file contains one commented line
+        The commented line should be uncommented in the end, nothing else should change
+        '''
+        test_name = 'test_replace_issue_18612'
+        path_test = os.path.join(integration.TMP, test_name)
+
+        with salt.utils.fopen(path_test, 'w+') as fp_test_:
+            fp_test_.write('# en_US.UTF-8')
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(self.run_state('file.replace',
+                name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', append_if_not_found=True))
+
+        try:
+            # ensure, the number of lines didn't change, even after invoking 'file.replace' 3 times
+            with salt.utils.fopen(path_test, 'r') as fp_test_:
+                self.assertTrue((sum(1 for _ in fp_test_) == 1))
+
+            # ensure, the replacement succeeded
+            with salt.utils.fopen(path_test, 'r') as fp_test_:
+                self.assertTrue(fp_test_.read().startswith('en_US.UTF-8'))
+
+            # ensure, all runs of 'file.replace' reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18612_prepend(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The replacement pattern should be prepended to the file
+        '''
+        test_name = 'test_replace_issue_18612_prepend'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_out = os.path.join(
+            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(self.run_state('file.replace',
+                name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', prepend_if_not_found=True))
+
+        try:
+            # ensure, the resulting file contains the expected lines
+            self.assertTrue(filecmp.cmp(path_test, path_out))
+
+            # ensure the initial file was properly backed up
+            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+
+            # ensure, all runs of 'file.replace' reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18612_append(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The replacement pattern should be appended to the file
+        '''
+        test_name = 'test_replace_issue_18612_append'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_out = os.path.join(
+            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(self.run_state('file.replace',
+                name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', append_if_not_found=True))
+
+        try:
+            # ensure, the resulting file contains the expected lines
+            self.assertTrue(filecmp.cmp(path_test, path_out))
+
+            # ensure the initial file was properly backed up
+            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+
+            # ensure, all runs of 'file.replace' reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18612_append_not_found_content(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The 'not_found_content' value should be appended to the file
+        '''
+        test_name = 'test_replace_issue_18612_append_not_found_content'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_out = os.path.join(
+            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(
+                self.run_state('file.replace',
+                    name=path_test,
+                    pattern='^# en_US.UTF-8$',
+                    repl='en_US.UTF-8',
+                    append_if_not_found=True,
+                    not_found_content='THIS LINE WASN\'T FOUND! SO WE\'RE APPENDING IT HERE!'
+            ))
+
+        try:
+            # ensure, the resulting file contains the expected lines
+            self.assertTrue(filecmp.cmp(path_test, path_out))
+
+            # ensure the initial file was properly backed up
+            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+
+            # ensure, all runs of 'file.replace' reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18612_change_mid_line_with_comment(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested file contains 5 key=value pairs
+        The commented key=value pair #foo=bar should be changed to foo=salt
+        The comment char (#) in front of foo=bar should be removed
+        '''
+        test_name = 'test_replace_issue_18612_change_mid_line_with_comment'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_out = os.path.join(
+            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(self.run_state('file.replace',
+                name=path_test, pattern='^#foo=bar$', repl='foo=salt', append_if_not_found=True))
+
+        try:
+            # ensure, the resulting file contains the expected lines
+            self.assertTrue(filecmp.cmp(path_test, path_out))
+
+            # ensure the initial file was properly backed up
+            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+
+            # ensure, all 'file.replace' runs reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18841_no_changes(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18841:
+
+        Using file.replace in a way which shouldn't modify the file at all
+        results in changed mtime of the original file and a backup file being created.
+
+        # Case description
+
+        The tested file contains multiple lines
+        The tested file contains a line already matching the replacement (no change needed)
+        The tested file's content shouldn't change at all
+        The tested file's mtime shouldn't change at all
+        No backup file should be created
+        '''
+        test_name = 'test_replace_issue_18841_no_changes'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        # get (m|a)time of file
+        fstats_orig = os.stat(path_test)
+
+        # define how far we predate the file
+        age = 5*24*60*60
+
+        # set (m|a)time of file 5 days into the past
+        os.utime(path_test, (fstats_orig.st_mtime-age, fstats_orig.st_atime-age))
+
+        ret = self.run_state('file.replace',
+            name=path_test,
+            pattern='^hello world$',
+            repl='goodbye world',
+            show_changes=True,
+            flags=['IGNORECASE'],
+            backup=False
+        )
+
+        # get (m|a)time of file
+        fstats_post = os.stat(path_test)
+
+        try:
+            # ensure, the file content didn't change
+            self.assertTrue(filecmp.cmp(path_in, path_test))
+
+            # ensure no backup file was created
+            self.assertFalse(os.path.exists(path_test + '.bak'))
+
+            # ensure the file's mtime didn't change
+            self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+
+            # ensure, all 'file.replace' runs reported success
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18841_omit_backup(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18841:
+
+        Using file.replace in a way which shouldn't modify the file at all
+        results in changed mtime of the original file and a backup file being created.
+
+        # Case description
+
+        The tested file contains multiple lines
+        The tested file contains a line already matching the replacement (no change needed)
+        The tested file's content shouldn't change at all
+        The tested file's mtime shouldn't change at all
+        No backup file should be created, although backup=False isn't explicitely defined
+        '''
+        test_name = 'test_replace_issue_18841_omit_backup'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        # get (m|a)time of file
+        fstats_orig = os.stat(path_test)
+
+        # define how far we predate the file
+        age = 5*24*60*60
+
+        # set (m|a)time of file 5 days into the past
+        os.utime(path_test, (fstats_orig.st_mtime-age, fstats_orig.st_atime-age))
+
+        ret = self.run_state('file.replace',
+            name=path_test,
+            pattern='^hello world$',
+            repl='goodbye world',
+            show_changes=True,
+            flags=['IGNORECASE']
+        )
+
+        # get (m|a)time of file
+        fstats_post = os.stat(path_test)
+
+        try:
+            # ensure, the file content didn't change
+            self.assertTrue(filecmp.cmp(path_in, path_test))
+
+            # ensure no backup file was created
+            self.assertFalse(os.path.exists(path_test + '.bak'))
+
+            # ensure the file's mtime didn't change
+            self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+
+            # ensure, all 'file.replace' runs reported success
+            self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(path_test)
 
     def test_comment(self):
         '''

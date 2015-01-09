@@ -61,7 +61,10 @@ class LinuxAclModuleTest(integration.ModuleCase,
         ret = self.run_function('acl.getfacl', arg=[self.myfile])
         self.assertEqual(
             ret,
-            {self.myfile: {'other': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}, 'users': [{'root': {'octal': 6, 'permissions': {'read': True, 'write': True, 'execute': False}}}], 'groups': [{'root': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}], 'comments': {'owner': 'root', 'group': 'root', 'file': self.myfile}}}
+            {self.myfile: {'other': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}},
+                           'user': [{'root': {'octal': 6, 'permissions': {'read': True, 'write': True, 'execute': False}}}],
+                           'group': [{'root': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
+                           'comment': {'owner': 'root', 'group': 'root', 'file': self.myfile}}}
         )
 
 

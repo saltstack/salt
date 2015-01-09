@@ -17,6 +17,7 @@ Example:
             - pattern: '.*'
             - definition: '{"ha-mode": "all"}'
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -37,7 +38,7 @@ def present(name,
             definition,
             priority=0,
             vhost='/',
-            runas='root'):
+            runas=None):
     '''
     Ensure the RabbitMQ policy exists.
 
@@ -107,7 +108,7 @@ def present(name,
 
 def absent(name,
            vhost='/',
-           runas='root'):
+           runas=None):
     '''
     Ensure the named policy is absent
 

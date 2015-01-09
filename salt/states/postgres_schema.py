@@ -10,6 +10,7 @@ The postgres_schemas module is used to create and manage Postgres schemas.
     public:
       postgres_schema.present 'dbname' 'name'
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging

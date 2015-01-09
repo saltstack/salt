@@ -45,6 +45,7 @@ The above essentially is the same as a top.sls containing the following:
         - basepackages
         - database
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

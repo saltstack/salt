@@ -2,6 +2,7 @@
 '''
 Directly manage the Salt fileserver plugins
 '''
+from __future__ import absolute_import
 
 # Import Salt libs
 import salt.fileserver
@@ -23,8 +24,9 @@ def dir_list(saltenv='base', outputter='nested'):
     output = fileserver.dir_list(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
 
 
 def envs(backend=None, sources=False, outputter='nested'):
@@ -43,8 +45,9 @@ def envs(backend=None, sources=False, outputter='nested'):
     output = fileserver.envs(back=backend, sources=sources)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
 
 
 def file_list(saltenv='base', outputter='nested'):
@@ -63,8 +66,9 @@ def file_list(saltenv='base', outputter='nested'):
     output = fileserver.file_list(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
 
 
 def symlink_list(saltenv='base', outputter='nested'):
@@ -83,8 +87,9 @@ def symlink_list(saltenv='base', outputter='nested'):
     output = fileserver.symlink_list(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
 
 
 def update(backend=None):

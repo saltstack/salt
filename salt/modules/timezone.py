@@ -2,6 +2,7 @@
 '''
 Module for managing timezone on POSIX-like systems.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -59,7 +60,7 @@ def get_zone():
         return os.readlink('/etc/localtime').lstrip('/usr/share/zoneinfo/')
     elif 'Solaris' in __grains__['os_family']:
         cmd = 'grep "TZ=" /etc/TIMEZONE'
-    out = __salt__['cmd.run'](cmd).split('=')
+    out = __salt__['cmd.run'](cmd, python_shell=True).split('=')
     ret = out[1].replace('"', '')
     return ret
 
@@ -216,7 +217,8 @@ def get_hwclock():
     elif 'Debian' in __grains__['os_family']:
         #Original way to look up hwclock on Debian-based systems
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd, ignore_retcode=True).split('=')
+        out = __salt__['cmd.run'](
+                cmd, ignore_retcode=True, python_shell=True).split('=')
         if len(out) > 1:
             if out[1] == 'yes':
                 return 'UTC'
@@ -228,7 +230,7 @@ def get_hwclock():
             return __salt__['cmd.run'](cmd)
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'grep "^clock=" /etc/conf.d/hwclock | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd).split('=')
+        out = __salt__['cmd.run'](cmd, python_shell=True).split('=')
         return out[1].replace('"', '')
     elif 'Solaris' in __grains__['os_family']:
         if os.path.isfile('/etc/rtc_config'):

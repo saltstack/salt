@@ -11,6 +11,7 @@ Databases can be set as either absent or present
     frank:
       postgres_database.present
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

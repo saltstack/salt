@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+import os
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import os
+import salt.utils
 
 
 class StdTest(integration.ModuleCase):
@@ -41,7 +44,7 @@ class StdTest(integration.ModuleCase):
         # create fake mininion
         key_file = os.path.join(self.master_opts['pki_dir'], 'minions', 'footest')
         # touch the file
-        open(key_file, 'a').close()
+        salt.utils.fopen(key_file, 'a').close()
         # ping that minion and ensure it times out
         try:
             cmd_iter = self.client.cmd_cli(

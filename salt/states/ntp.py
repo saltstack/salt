@@ -15,12 +15,13 @@ This state is used to manage NTP servers. Currently only Windows is supported.
           - pool.ntp.org
           - us.pool.ntp.org
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils
 
 

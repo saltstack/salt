@@ -37,19 +37,19 @@ Example Process Class
     import time
     import logging
     from multiprocessing import Process
-    
+
     # Import Salt libs
     from salt.utils.event import SaltEvent
-    
-    
+
+
     log = logging.getLogger(__name__)
-    
-    
+
+
     class TestProcess(Process):
         def __init__(self, opts):
             Process.__init__(self)
             self.opts = opts
-    
+
         def run(self):
             self.event = SaltEvent('master', self.opts['sock_dir'])
             i = 0

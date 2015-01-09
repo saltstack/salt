@@ -34,25 +34,27 @@ Connection module for Amazon VPC
 :depends: boto
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from distutils.version import LooseVersion as _LooseVersion
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=import-error
     import boto
     import boto.vpc
-
+    # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():

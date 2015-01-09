@@ -1,7 +1,10 @@
 # coding: utf-8
-import salt.loader
 
-from tests.integration import ModuleCase
+# Import salt testing libs
+from salttesting.case import ModuleCase
+
+# Import Salt libs
+import salt.loader
 
 
 class HashutilTestCase(ModuleCase):

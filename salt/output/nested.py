@@ -23,6 +23,7 @@ Example output::
                 - Hello
                 - World
 '''
+from __future__ import absolute_import
 # Import python libs
 from numbers import Number
 import re
@@ -30,7 +31,7 @@ import re
 # Import salt libs
 import salt.utils
 import salt.output
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 class NestDisplay(object):
@@ -38,7 +39,9 @@ class NestDisplay(object):
     Manage the nested display contents
     '''
     def __init__(self):
-        self.colors = salt.utils.get_colors(__opts__.get('color'))
+        self.colors = salt.utils.get_colors(
+                __opts__.get('color'),
+                __opts__.get('color_theme'))
 
     def ustring(self,
                 indent,
@@ -46,8 +49,7 @@ class NestDisplay(object):
                 msg,
                 prefix='',
                 suffix='',
-                endc=None,
-                encoding='utf-8'):
+                endc=None):
         if endc is None:
             endc = self.colors['ENDC']
         try:
@@ -55,7 +57,7 @@ class NestDisplay(object):
                 indent, color, prefix, msg, endc, suffix)
         except UnicodeDecodeError:
             return u'{0}{1}{2}{3}{4}{5}\n'.format(
-                indent, color, prefix, msg.decode(encoding), endc, suffix)
+                indent, color, prefix, salt.utils.sdecode(msg), endc, suffix)
 
     def display(self, ret, indent, prefix, out):
         '''
@@ -66,7 +68,7 @@ class NestDisplay(object):
         if ret is None or ret is True or ret is False:
             out += self.ustring(
                 ' ' * indent,
-                self.colors['YELLOW'],
+                self.colors['LIGHT_YELLOW'],
                 ret,
                 prefix=prefix)
         # Number includes all python numbers types
@@ -74,7 +76,7 @@ class NestDisplay(object):
         elif isinstance(ret, Number):
             out += self.ustring(
                 ' ' * indent,
-                self.colors['YELLOW'],
+                self.colors['LIGHT_YELLOW'],
                 ret,
                 prefix=prefix)
         elif isinstance(ret, string_types):

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Route53 records
-======================
 
 .. versionadded:: 2014.7.0
 
@@ -32,7 +31,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 

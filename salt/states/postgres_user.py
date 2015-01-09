@@ -10,6 +10,7 @@ The postgres_users module is used to create and manage Postgres users.
     frank:
       postgres_user.present
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 

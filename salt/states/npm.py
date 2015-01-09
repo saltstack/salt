@@ -18,6 +18,7 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
         - require:
           - pkg: npm
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -44,13 +45,11 @@ def installed(name,
     .. code-block:: yaml
 
         coffee-script:
-          npm:
-            - installed
+          npm.installed:
             - user: someuser
 
         coffee-script@1.0.1:
-          npm:
-            - installed
+          npm.installed: []
 
     name
         The package to install

@@ -31,6 +31,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # The Rackspace user's apikey
       apikey: 901d3f579h23c8v73q9
 '''
+from __future__ import absolute_import
 
 # The import section is mostly libcloud boilerplate
 

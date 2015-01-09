@@ -139,7 +139,9 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
-        master_config = yaml.load(open(self.get_config_file_path('master')).read())
+        with salt.utils.fopen(self.get_config_file_path('master')) as fhr:
+            master_config = yaml.load(fhr.read())
+
         master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
             master_root_dir, 'pki', 'minions', 'minion_test_issue_2731'
@@ -165,9 +167,10 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         start = datetime.now()
         # Let's first test with a master running
-        open(minion_config_file, 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            fh_.write(
+                yaml.dump(minion_config, default_flow_style=False)
+            )
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
@@ -194,9 +197,10 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         # Now let's remove the master configuration
         minion_config.pop('master')
         minion_config.pop('master_port')
-        open(minion_config_file, 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            fh_.write(
+                yaml.dump(minion_config, default_flow_style=False)
+            )
 
         out = self.run_script(
             'salt-call',
@@ -241,9 +245,10 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         # Should work with local file client
         minion_config['file_client'] = 'local'
-        open(minion_config_file, 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            fh_.write(
+                yaml.dump(minion_config, default_flow_style=False)
+            )
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
@@ -268,13 +273,13 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         os.chdir(config_dir)
 
-        minion_config = yaml.load(
-            open(self.get_config_file_path('minion'), 'r').read()
-        )
-        minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        open(os.path.join(config_dir, 'minion'), 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+            minion_config = yaml.load(fh_.read())
+            minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(

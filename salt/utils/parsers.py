@@ -10,7 +10,7 @@
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
 import getpass
@@ -19,9 +19,12 @@ import optparse
 import traceback
 from functools import partial
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.config as config
-import salt.exitcodes
+import salt.defaults.exitcodes
 import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
@@ -29,6 +32,7 @@ import salt.utils as utils
 import salt.version as version
 import salt.utils.args
 import salt.utils.xdg
+from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 
@@ -192,7 +196,7 @@ class OptionParser(optparse.OptionParser):
 
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report()), file=file)
-        self.exit(os.EX_OK)
+        self.exit(salt.defaults.exitcodes.EX_OK)
 
 
 class MergeConfigMixIn(object):
@@ -203,7 +207,7 @@ class MergeConfigMixIn(object):
     This mix-in should run last.
     '''
     __metaclass__ = MixInMeta
-    _mixin_prio_ = sys.maxint
+    _mixin_prio_ = six.MAXSIZE
 
     def _mixin_setup(self):
         if not hasattr(self, 'setup_config') and not hasattr(self, 'config'):
@@ -295,6 +299,8 @@ class SaltfileMixIn(object):
             saltfile = os.path.join(os.getcwd(), 'Saltfile')
             if os.path.isfile(saltfile):
                 self.options.saltfile = saltfile
+        else:
+            saltfile = self.options.saltfile
 
         if not self.options.saltfile:
             # There's still no valid Saltfile? No need to continue...
@@ -374,6 +380,10 @@ class SaltfileMixIn(object):
                             option.dest,
                             cli_config[option.dest])
 
+        # Any left over value in the saltfile can now be safely added
+        for key in cli_config:
+            setattr(self.options, key, cli_config[key])
+
 
 class HardCrashMixin(object):
     __metaclass__ = MixInMeta
@@ -398,6 +408,7 @@ class ConfigDirMixIn(object):
         config_dir = os.environ.get('SALT_CONFIG_DIR', None)
         if not config_dir:
             config_dir = syspaths.CONFIG_DIR
+            logging.getLogger(__name__).debug('SYSPATHS setup as: {0}'.format(syspaths.CONFIG_DIR))
         self.add_option(
             '-c', '--config-dir', default=config_dir,
             help=('Pass in an alternative configuration directory. Default: '
@@ -408,7 +419,7 @@ class ConfigDirMixIn(object):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                'WARNING: {0!r} directory does not exist.\n'.format(
+                'WARNING: CONFIG {0!r} directory does not exist.\n'.format(
                     self.options.config_dir
                 )
             )
@@ -668,7 +679,7 @@ class LogLevelMixIn(object):
                                      os.path.expanduser('~/.salt'))
 
                     if not os.path.isdir(user_salt_dir):
-                        os.makedirs(user_salt_dir, 0750)
+                        os.makedirs(user_salt_dir, 0o750)
                     logfile_basename = os.path.basename(
                         self._default_logging_logfile_
                     )
@@ -1018,6 +1029,12 @@ class OutputOptionsMixIn(object):
             action='store_true',
             help='Force colored output'
         )
+        group.add_option(
+            '--state-output', '--state_output',
+            default='full',
+            help=('Override the configured state_output value for minion output'
+                  '. Default: full')
+        )
 
         for option in self.output_options_group.option_list:
             def process(opt):
@@ -1109,6 +1126,7 @@ class ExecutionOptionsMixIn(object):
             default=None,
             help='Specify a cloud map file to use for deployment. This option '
                  'may be used alone, or in conjunction with -Q, -F, -S or -d.'
+                 'The map can also be filtered by a list of VM names.'
         )
         group.add_option(
             '-H', '--hard',
@@ -1440,6 +1458,10 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _default_logging_level_ = 'warning'
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
     _loglevel_config_setting_name_ = 'cli_salt_log_file'
+    try:
+        os.getcwd()
+    except OSError:
+        sys.exit("Cannot access current working directory. Exiting!")
 
     def _mixin_setup(self):
         self.add_option(
@@ -1450,17 +1472,17 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'all return.')
         )
         self.add_option(
+            '-p', '--progress',
+            default=False,
+            action='store_true',
+            help=('Display a progress graph')
+        )
+        self.add_option(
             '--async',
             default=False,
             dest='async',
             action='store_true',
             help=('Run the salt command but don\'t wait for a reply')
-        )
-        self.add_option(
-            '--state-output', '--state_output',
-            default='full',
-            help=('Override the configured state_output value for minion output'
-                  '. Default: full')
         )
         self.add_option(
             '--subset',
@@ -1585,7 +1607,7 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 # passed in. Regardless, we're in an unknown state here.
                 sys.stdout.write('Invalid options passed. Please try -h for '
                                  'help.')  # Try to warn if we can.
-                sys.exit(salt.exitcodes.EX_GENERIC)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         if self.options.doc:
             # Include the target
@@ -1685,7 +1707,7 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         # salt-cp needs arguments
         if len(self.args) <= 1:
             self.print_help()
-            self.exit(os.EX_USAGE)
+            self.exit(salt.defaults.exitcodes.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2086,7 +2108,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
-            self.exit(os.EX_USAGE)
+            self.exit(salt.defaults.exitcodes.EX_USAGE)
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
@@ -2101,8 +2123,47 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     def setup_config(self):
         opts = config.minion_config(self.get_config_file_path(),
                                     minion_id=True)
-        #opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
+
+        if opts.get('transport') == 'raet':
+            if not self._find_raet_minion(opts):  # must create caller minion
+                opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
         return opts
+
+    def _find_raet_minion(self, opts):
+        '''
+        Returns true if local RAET Minion is available
+        '''
+        yardname = 'manor'
+        dirpath = opts['sock_dir']
+
+        role = opts.get('id')
+        if not role:
+            emsg = ("Missing role required to setup RAET SaltCaller.")
+            logging.getLogger(__name__).error(emsg + "\n")
+            raise ValueError(emsg)
+
+        kind = opts.get('__role')  # application kind 'master', 'minion', etc
+        if kind not in kinds.APPL_KINDS:
+            emsg = ("Invalid application kind = '{0}' for RAET SaltCaller.".format(kind))
+            logging.getLogger(__name__).error(emsg + "\n")
+            raise ValueError(emsg)
+
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
+            lanename = "{0}_{1}".format(role, kind)
+        else:
+            emsg = ("Unsupported application kind '{0}' for RAET SaltCaller.".format(kind))
+            logging.getLogger(__name__).error(emsg + '\n')
+            raise ValueError(emsg)
+
+        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
+            from raet.lane.yarding import Yard
+            ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)
+            if (os.path.exists(ha) and
+                    not os.path.isfile(ha) and
+                    not os.path.isdir(ha)):  # minion manor yard
+                return True
+        return False
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
@@ -2143,6 +2204,12 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                   'runner.function to see documentation on only that runner '
                   'or function.')
         )
+        self.add_option(
+            '--async',
+            default=False,
+            action='store_true',
+            help=('Start the runner operation and immediately return control.')
+        )
         group = self.output_options_group = optparse.OptionGroup(
             self, 'Output Options', 'Configure your preferred output format'
         )
@@ -2159,6 +2226,12 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             default=False,
             action='store_true',
             help='Force colored output'
+        )
+        group.add_option(
+            '--quiet',
+            default=False,
+            action='store_true',
+            help='Do not display the results of the run'
         )
 
     def _mixin_after_parsed(self):
@@ -2240,6 +2313,12 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                  'faster communication should be, default is %default'
         )
         self.add_option(
+            '--extra-filerefs',
+            dest='extra_filerefs',
+            default=None,
+            help='Pass in extra files to include in the state tarball'
+        )
+        self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
@@ -2310,10 +2389,28 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         )
         self.add_option_group(auth_group)
 
+        scan_group = optparse.OptionGroup(
+            self, 'Scan Roster Options',
+            'Parameters affecting scan roster'
+        )
+        scan_group.add_option(
+            '--scan-ports',
+            default='22',
+            dest='ssh_scan_ports',
+            help='Comma-separated list of ports to scan in the scan roster.',
+        )
+        scan_group.add_option(
+            '--scan-timeout',
+            default=0.01,
+            dest='ssh_scan_timeout',
+            help='Scanning socket timeout for the scan roster.',
+        )
+        self.add_option_group(scan_group)
+
     def _mixin_after_parsed(self):
         if not self.args:
             self.print_help()
-            self.exit(os.EX_USAGE)
+            self.exit(salt.defaults.exitcodes.EX_USAGE)
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2326,7 +2423,7 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         self.config['argv'] = self.args[1:]
         if not self.config['argv'] or not self.config['tgt']:
             self.print_help()
-            self.exit(os.EX_USAGE)
+            self.exit(salt.defaults.exitcodes.EX_USAGE)
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
@@ -2361,7 +2458,7 @@ class SaltCloudParser(OptionParser,
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
               file=file)
-        self.exit(os.EX_OK)
+        self.exit(salt.defaults.exitcodes.EX_OK)
 
     def parse_args(self, args=None, values=None):
         try:
@@ -2378,7 +2475,7 @@ class SaltCloudParser(OptionParser,
 
             print('Salt cloud configuration dump(INCLUDES SENSIBLE DATA):')
             pprint.pprint(self.config)
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.args:
             self.config['names'] = self.args

@@ -2,6 +2,7 @@
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -11,7 +12,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # It would be cool if we could use __virtual__() in this module, though, since
@@ -821,6 +822,9 @@ def list_(prefix=None,
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
             continue
+        elif line.startswith('-e hg+not trust'):
+            # ignore hg + not trust problem
+            continue
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
             version_, name = line.split('#egg=')
@@ -907,6 +911,8 @@ def upgrade_available(pkg,
                       runas=None,
                       cwd=None):
     '''
+    .. versionadded:: Lithium
+
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -924,6 +930,8 @@ def upgrade(bin_env=None,
             cwd=None,
             use_vt=False):
     '''
+    .. versionadded:: Lithium
+
     Upgrades outdated pip packages
 
     Returns a dict containing the changes.

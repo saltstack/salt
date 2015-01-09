@@ -41,6 +41,7 @@ specification as defined in the MySQL documentation:
        - database: somedb.sometable
        - user: joe
 '''
+from __future__ import absolute_import
 
 import sys
 

@@ -33,12 +33,14 @@ Connection module for Amazon Autoscale Groups
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import json
 import yaml
 import email.mime.multipart
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +56,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -79,8 +81,13 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return False
     try:
-        conn.get_all_groups(names=[name])
-        return True
+        _conn = conn.get_all_groups(names=[name])
+        if _conn:
+            return True
+        else:
+            msg = 'The autoscale group does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
@@ -363,7 +370,7 @@ def get_cloud_init_mime(cloud_init):
         cloud_init = json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if 'scripts' in cloud_init:
-        for script_name, script in cloud_init['scripts'].iteritems():
+        for script_name, script in six.iteritems(cloud_init['scripts']):
             _script = email.mime.text.MIMEText(script, 'x-shellscript')
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
@@ -386,10 +393,16 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    lc = conn.get_all_launch_configurations(names=[name])
-    if lc:
-        return True
-    else:
+    try:
+        lc = conn.get_all_launch_configurations(names=[name])
+        if lc:
+            return True
+        else:
+            msg = 'The launch configuration does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return False
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
         return False
 
 
@@ -424,9 +437,9 @@ def create_launch_configuration(name, image_id, key_name=None,
         # Boto requires objects for the mappings and the devices.
         _block_device_map = blockdevicemapping.BlockDeviceMapping()
         for block_device_dict in block_device_mappings:
-            for block_device, attributes in block_device_dict.iteritems():
+            for block_device, attributes in six.iteritems(block_device_dict):
                 _block_device = blockdevicemapping.EBSBlockDeviceType()
-                for attribute, value in attributes.iteritems():
+                for attribute, value in six.iteritems(attributes):
                     setattr(_block_device, attribute, value)
                 _block_device_map[block_device] = _block_device
         _bdms = [_block_device_map]

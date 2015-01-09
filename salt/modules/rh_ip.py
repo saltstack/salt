@@ -2,6 +2,7 @@
 '''
 The networking module for RHEL/Fedora based distros
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -17,6 +18,7 @@ import jinja2.exceptions
 import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -149,13 +151,6 @@ def _parse_ethtool_opts(opts, iface):
             config.update({'duplex': opts['duplex']})
         else:
             _raise_error_iface(iface, 'duplex', valid)
-
-    if 'mtu' in opts:
-        try:
-            int(opts['mtu'])
-            config.update({'mtu': opts['mtu']})
-        except Exception:
-            _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'speed' in opts:
         valid = ['10', '100', '1000', '10000']
@@ -629,6 +624,13 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if opt in opts:
             result[opt] = opts[opt]
 
+    if 'mtu' in opts:
+        try:
+            int(opts['mtu'])
+            result['mtu'] = opts['mtu']
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
+
     if 'ipv6_autoconf' in opts:
         result['ipv6_autoconf'] = opts['ipv6_autoconf']
 
@@ -678,7 +680,7 @@ def _parse_routes(iface, opts):
     the route settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
     result = {}
     if 'routes' not in opts:
         _raise_error_routes(iface, 'routes', 'List of routes')
@@ -695,8 +697,8 @@ def _parse_network_settings(opts, current):
     the global network settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
-    current = dict((k.lower(), v) for (k, v) in current.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
+    current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
@@ -845,7 +847,7 @@ def build_bond(iface, **settings):
         __salt__['cmd.run'](
             'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
         )
-        __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
+        __salt__['file.append']('/etc/modprobe.conf', path)
     __salt__['kmod.load']('bonding')
 
     if settings['test']:

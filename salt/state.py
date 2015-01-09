@@ -12,6 +12,8 @@ The data sent to the state calls is as follows:
       }
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import sys
@@ -31,10 +33,13 @@ import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
 from salt.utils import context, immutabletypes
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
+
+# Import third party libs
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +57,8 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'prereq',
     'prereq_in',
     'reload_modules',
+    'reload_grains',
+    'reload_pillar',
     'require',
     'require_in',
     'saltenv',
@@ -178,9 +185,9 @@ def format_log(ret):
                 if 'diff' in chg:
                     if isinstance(chg['diff'], string_types):
                         msg = 'File changed:\n{0}'.format(chg['diff'])
-                if all([isinstance(x, dict) for x in chg.itervalues()]):
+                if all([isinstance(x, dict) for x in chg.values()]):
                     if all([('old' in x and 'new' in x)
-                            for x in chg.itervalues()]):
+                            for x in chg.values()]):
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
@@ -437,24 +444,22 @@ class Compiler(object):
                     continue
 
                 chunk_order = chunk['order']
-                if 'name_order' in chunk:
-                    chunk_order = chunk_order + chunk['name_order']
-
                 if chunk_order > cap - 1 and chunk_order > 0:
                     cap = chunk_order + 100
         for chunk in chunks:
             if 'order' not in chunk:
                 chunk['order'] = cap
-            else:
-                if isinstance(chunk['order'], int) and 'name_order' in chunk:
-                    chunk['order'] = chunk['order'] + chunk.pop('name_order')
-                if not isinstance(chunk['order'], int):
-                    if chunk['order'] == 'last':
-                        chunk['order'] = cap + 1000000
-                    else:
-                        chunk['order'] = cap
-                elif isinstance(chunk['order'], int) and chunk['order'] < 0:
-                    chunk['order'] = cap + 1000000 + chunk['order']
+                continue
+
+            if not isinstance(chunk['order'], (int, float)):
+                if chunk['order'] == 'last':
+                    chunk['order'] = cap + 1000000
+                else:
+                    chunk['order'] = cap
+            if 'name_order' in chunk:
+                chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
+            if chunk['order'] < 0:
+                chunk['order'] = cap + 1000000 + chunk['order']
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -495,7 +500,7 @@ class Compiler(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.iterkeys().next()
+                            low_name = next(iter(entry.keys()))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -531,7 +536,7 @@ class Compiler(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.iterkeys().next()
+                key = next(iter(exc.keys()))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -734,7 +739,18 @@ class State(object):
         possible module type, e.g. a python, pyx, or .so. Always refresh if the
         function is recurse, since that can lay down anything.
         '''
-        if data.get('reload_modules', False) is True:
+        _reload_modules = False
+        if data.get('reload_grains', False):
+            log.debug('Refreshing grains...')
+            self.opts['grains'] = salt.loader.grains(self.opts)
+            _reload_modules = True
+
+        if data.get('reload_pillar', False):
+            log.debug('Refreshing pillar...')
+            self.opts['pillar'] = self._gather_pillar()
+            _reload_modules = True
+
+        if data.get('reload_modules', False) or _reload_modules:
             # User explicitly requests a reload
             self.module_refresh()
             return
@@ -809,7 +825,7 @@ class State(object):
                         )
         else:
             # First verify that the parameters are met
-            aspec = salt.utils.get_function_argspec(self.states[full])
+            aspec = salt.utils.args.get_function_argspec(self.states[full])
             arglen = 0
             deflen = 0
             if isinstance(aspec.args, list):
@@ -1034,25 +1050,23 @@ class State(object):
                     continue
 
                 chunk_order = chunk['order']
-                if 'name_order' in chunk:
-                    chunk_order = chunk_order + chunk['name_order']
-
                 if chunk_order > cap - 1 and chunk_order > 0:
                     cap = chunk_order + 100
         for chunk in chunks:
             if 'order' not in chunk:
                 chunk['order'] = cap
-            else:
-                if isinstance(chunk['order'], int) and 'name_order' in chunk:
-                    chunk['order'] = chunk['order'] + chunk.pop('name_order')
-                if not isinstance(chunk['order'], int):
-                    if chunk['order'] == 'last':
-                        chunk['order'] = cap + 1000000
-                    else:
-                        chunk['order'] = cap
-                elif isinstance(chunk['order'], int) and chunk['order'] < 0:
-                    chunk['order'] = cap + 1000000 + chunk['order']
-        chunks.sort(key=lambda k: (k['order'], '{0[state]}{0[name]}{0[fun]}'.format(k)))
+                continue
+
+            if not isinstance(chunk['order'], (int, float)):
+                if chunk['order'] == 'last':
+                    chunk['order'] = cap + 1000000
+                else:
+                    chunk['order'] = cap
+            if 'name_order' in chunk:
+                chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
+            if chunk['order'] < 0:
+                chunk['order'] = cap + 1000000 + chunk['order']
+        chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
     def compile_high_data(self, high):
@@ -1098,7 +1112,7 @@ class State(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = entry.iterkeys().next()
+                            low_name = next(iter(entry.keys()))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -1209,7 +1223,7 @@ class State(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = exc.iterkeys().next()
+                key = next(iter(exc.keys()))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1381,9 +1395,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.iterkeys().next() == 'name':
+                                        if next(iter(arg.keys())) == 'name':
                                             continue
-                                        if arg.iterkeys().next() == 'names':
+                                        if next(iter(arg.keys())) == 'names':
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -1407,9 +1421,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if arg.iterkeys().next() == 'name':
+                                        if next(iter(arg.keys())) == 'name':
                                             continue
-                                        if arg.iterkeys().next() == 'names':
+                                        if next(iter(arg.keys())) == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -1855,9 +1869,28 @@ class State(object):
                 running[tag]['__sls__'] = low['__sls__']
             # otherwise the failure was due to a requisite down the chain
             else:
+                # determine what the requisite failures where, and return
+                # a nice error message
+                comment_dict = {}
+                # look at all requisite types for a failure
+                for req_type, req_lows in reqs.iteritems():
+                    for req_low in req_lows:
+                        req_tag = _gen_tag(req_low)
+                        req_ret = self.pre.get(req_tag, running.get(req_tag))
+                        # if there is no run output for the requisite it
+                        # can't be the failure
+                        if req_ret is None:
+                            continue
+                        # If the result was False (not None) it was a failure
+                        if req_ret['result'] is False:
+                            # use SLS.ID for the key-- so its easier to find
+                            key = '{sls}.{_id}'.format(sls=req_low['__sls__'],
+                                                       _id=req_low['__id__'])
+                            comment_dict[key] = req_ret['comment']
+
                 running[tag] = {'changes': {},
                                 'result': False,
-                                'comment': 'One or more requisite failed',
+                                'comment': 'One or more requisite failed: {0}'.format(comment_dict),
                                 '__run_num__': self.__run_num,
                                 '__sls__': low['__sls__']}
             self.__run_num += 1
@@ -1922,6 +1955,8 @@ class State(object):
         for l_dict in listeners:
             for key, val in l_dict.items():
                 for listen_to in val:
+                    if not isinstance(listen_to, dict):
+                        continue
                     for lkey, lval in listen_to.items():
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
@@ -2006,7 +2041,7 @@ class State(object):
         # the low data chunks
         if errors:
             return errors
-        ret = dict(disabled.items() + self.call_chunks(chunks).items())
+        ret = dict(list(disabled.items()) + list(self.call_chunks(chunks).items()))
         ret = self.call_listen(chunks, ret)
         return ret
 
@@ -2264,7 +2299,7 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = DefaultOrderedDict(OrderedDict)
-        for ctops in tops.itervalues():
+        for ctops in tops.values():
             for ctop in ctops:
                 for saltenv, targets in ctop.items():
                     if saltenv == 'include':
@@ -2311,7 +2346,7 @@ class BaseHighState(object):
                     'The top file matches for saltenv {0} are not '
                     'formatted as a dict'.format(saltenv)
                 )
-            for slsmods in matches.itervalues():
+            for slsmods in matches.values():
                 if not isinstance(slsmods, list):
                     errors.append('Malformed topfile (state declarations not '
                                   'formed as a list)')
@@ -2319,7 +2354,7 @@ class BaseHighState(object):
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
-                        for val in slsmod.itervalues():
+                        for val in slsmod.values():
                             if not val:
                                 errors.append(
                                     'Improperly formatted top file matcher '
@@ -2589,7 +2624,7 @@ class BaseHighState(object):
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:
-                                if arg.iterkeys().next() == 'order':
+                                if next(iter(arg.keys())) == 'order':
                                     found = True
                     if not found:
                         if not isinstance(state[name][s_dec], list):
@@ -2873,7 +2908,7 @@ class BaseHighState(object):
             return err
         if not high:
             return ret
-        cumask = os.umask(077)
+        cumask = os.umask(0o77)
         try:
             if salt.utils.is_windows():
                 # Make sure cache file isn't read-only
@@ -3032,7 +3067,7 @@ class RemoteHighState(object):
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         # self.auth = salt.crypt.SAuth(opts)
-        self.sreq = salt.transport.Channel.factory(self.opts['master_uri'])
+        self.channel = salt.transport.Channel.factory(self.opts['master_uri'])
 
     def compile_master(self):
         '''
@@ -3042,11 +3077,6 @@ class RemoteHighState(object):
                 'opts': self.opts,
                 'cmd': '_master_state'}
         try:
-            return self.sreq.send(load, tries=3, timeout=72000)
-            # return self.auth.crypticle.loads(self.sreq.send(
-            #         'aes',
-            #         self.auth.crypticle.dumps(load),
-            #         3,
-            #         72000))
+            return self.channel.send(load, tries=3, timeout=72000)
         except SaltReqTimeoutError:
             return {}

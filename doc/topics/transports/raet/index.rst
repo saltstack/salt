@@ -29,8 +29,8 @@ Using RAET in Salt
 ==================
 
 Using RAET in Salt is easy, the main difference is that the core dependencies
-change, instead of needing pycrypto, M2Crypto, ZeroMQ and PYZMQ, the packages
-libsodium, libnacl, ioflo and raet are required. Encryption is handled very cleanly
+change, instead of needing pycrypto, M2Crypto, ZeroMQ, and PYZMQ, the packages
+libsodium, libnacl, ioflo, and raet are required. Encryption is handled very cleanly
 by libnacl, while the queueing and flow control is handled by
 ioflo. Distribution packages are forthcoming, but libsodium can be easily
 installed from source, or many distributions do ship packages for it.
@@ -69,7 +69,7 @@ The 2014.7 release of RAET is not complete! The Syndic and Multi Master have
 not been completed yet and these are slated for completion in the Lithium
 release.
 
-Also, Salt-Raet allows for more control over the client but these hooks have 
+Also, Salt-Raet allows for more control over the client but these hooks have
 not been implemented yet, thereforre the client still uses the same system
 as the ZeroMQ client. This means that the extra reliability that RAET exposes
 has not yet been implemented in the CLI client.
@@ -94,7 +94,7 @@ capabilities. It has been designed to allow for development into features
 which out ZeroMQ topologies can't match.
 
 Many of the proposed features are still under development and will be
-announced as they enter proff of concept phases, but these features include
+announced as they enter proof of concept phases, but these features include
 `salt-fuse` - a filesystem over salt, `salt-vt` - a parallel api driven shell
 over the salt transport and many others.
 

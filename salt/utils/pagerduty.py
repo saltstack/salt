@@ -16,6 +16,7 @@ Library for interacting with PagerDuty API
             pagerduty.subdomain: mysubdomain
             pagerduty.api_key: F3Rbyjbve43rfFWf2214
 '''
+from __future__ import absolute_import
 
 import json
 import requests

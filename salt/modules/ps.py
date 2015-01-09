@@ -6,6 +6,7 @@ See http://code.google.com/p/psutil.
 :depends:   - psutil Python module, version 0.3.0 or later
             - python-utmp package (optional)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time

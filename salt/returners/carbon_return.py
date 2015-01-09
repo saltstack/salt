@@ -43,20 +43,22 @@ the default location::
 
     salt '*' test.ping --return carbon --return_config alternative
 '''
+from __future__ import absolute_import
 
 
 # Import python libs
 from contextlib import contextmanager
 import collections
 import logging
-import cPickle as pickle
+import salt.ext.six.moves.cPickle as pickle  # pylint: disable=E0611
 import socket
 import struct
 import time
 
 # Import salt libs
-import salt.utils
+import salt.utils.jid
 import salt.returners
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -236,4 +238,4 @@ def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

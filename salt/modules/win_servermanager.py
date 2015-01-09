@@ -2,6 +2,7 @@
 '''
 Manage Windows features via the ServerManager powershell module
 '''
+from __future__ import absolute_import
 
 
 # Import salt libs
@@ -21,7 +22,10 @@ def _srvmgr(func):
     '''
     Execute a function from the ServerManager PS module and return the STDOUT
     '''
-    return __salt__['cmd.run']('Import-Module ServerManager ; {0}'.format(func), shell='powershell')
+    return __salt__['cmd.run'](
+            'Import-Module ServerManager ; {0}'.format(func),
+            shell='powershell',
+            python_shell=True)
 
 
 def _parse_powershell_list(lst):
@@ -88,7 +92,7 @@ def install(feature, recurse=False):
     .. code-block:: bash
 
         salt '*' win_servermanager.install Telnet-Client
-        salt '*' win_servermanager.install SNMP-Services True
+        salt '*' win_servermanager.install SNMP-Service True
     '''
     sub = ''
     if recurse:

@@ -2,6 +2,7 @@
 '''
 Homebrew for Mac OS X
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -65,7 +66,7 @@ def _call_brew(cmd):
     Calls the brew command with the user user account of brew
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
-    return __salt__['cmd.run_all'](cmd, runas=user, output_loglevel='trace')
+    return __salt__['cmd.run_all'](cmd, runas=user, output_loglevel='trace', python_shell=False)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):

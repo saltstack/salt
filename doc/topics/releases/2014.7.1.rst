@@ -1,0 +1,19 @@
+===========================
+Salt 2014.7.1 Release Notes
+===========================
+
+:release: TBA
+
+Version 2014.7.1 is a bugfix release for :doc:`2014.7.0
+</topics/releases/2014.7.0>`.  The changes include:
+
+- Fixed gitfs serving symlinks in :mod:`file.recurse
+  <salt.states.file.recurse>` states (:issue:`17700`)
+- Fixed holding of multiple packages (YUM) when combined with version pinning
+  (:issue:`18468`)
+- Fixed use of Jinja templates in masterless mode with non-roots fileserver
+  backend (:issue:`17963`)
+- Re-enabled pillar and compound matching for mine and publish calls. Note that
+  pillar globbing is still disabled for those modes, for security reasons.
+  (:issue:`17194`)
+- Fix for ``tty: True`` in salt-ssh (:issue:`16847`)

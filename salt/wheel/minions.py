@@ -2,6 +2,7 @@
 '''
 Wheel system wrapper for connected minions
 '''
+from __future__ import absolute_import
 
 from salt.utils.cache import CacheCli
 import salt.config

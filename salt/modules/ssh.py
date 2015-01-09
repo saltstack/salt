@@ -7,6 +7,8 @@ Manage client ssh components
     this module should be disabled or removed.
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import re
@@ -22,6 +24,7 @@ from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -506,7 +509,7 @@ def set_auth_key_from_file(user,
                 s_keys[key]['comment'],
                 s_keys[key]['options'],
                 config,
-                s_keys.keys()
+                list(s_keys.keys())
             )
         # Due to the ability for a single file to have multiple keys, it's
         # possible for a single call to this function to have both "replace"
@@ -644,7 +647,7 @@ def get_known_host(user, hostname, config=None):
         return full
 
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
 
@@ -675,7 +678,7 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
         chunks.append('-H')
     chunks.append(str(hostname))
     cmd = ' '.join(chunks)
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
 
@@ -745,7 +748,7 @@ def rm_known_host(user=None, hostname=None, config=None):
                 'error': 'Known hosts file {0} does not exist'.format(full)}
 
     cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(hostname, full)
-    cmd_result = __salt__['cmd.run'](cmd)
+    cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
         uinfo = __salt__['user.info'](user)
@@ -837,7 +840,7 @@ def set_known_host(user=None,
         # set proper ownership/permissions
         if user:
             os.chown(ssh_dir, uinfo['uid'], uinfo['gid'])
-            os.chmod(ssh_dir, 0700)
+            os.chmod(ssh_dir, 0o700)
 
     if key:
         cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
@@ -853,7 +856,7 @@ def set_known_host(user=None,
 
     if os.geteuid() == 0 and user:
         os.chown(full, uinfo['uid'], uinfo['gid'])
-    os.chmod(full, 0644)
+    os.chmod(full, 0o644)
 
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
 
@@ -872,7 +875,12 @@ def user_keys(user=None, pubfile=None, prvfile=None):
         salt '*' ssh.user_keys
         salt '*' ssh.user_keys user=user1
         salt '*' ssh.user_keys user=user1 pubfile=/home/user1/.ssh/id_rsa.pub prvfile=/home/user1/.ssh/id_rsa
+        salt '*' ssh.user_keys user=user1 prvfile=False
         salt '*' ssh.user_keys user="['user1','user2'] pubfile=id_rsa.pub prvfile=id_rsa
+
+    As you can see you can tell Salt not to read from the user's private (or public) key file by setting the
+    file path to ``False``. This can be useful to prevent Salt from publishing private data via Salt Mine or
+    others.
     '''
     if not user:
         user = __salt__['user.list_users']()
@@ -894,13 +902,13 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
         if pubfile:
             userKeys.append(pubfile)
-        else:
+        elif pubfile is not False:
             # Add the default public keys
             userKeys += ['id_rsa.pub', 'id_dsa.pub', 'id_ecdsa.pub', 'id_ed25519.pub']
 
         if prvfile:
             userKeys.append(prvfile)
-        else:
+        elif prvfile is not False:
             # Add the default private keys
             userKeys += ['id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519']
 
@@ -953,7 +961,7 @@ def hash_known_hosts(user=None, config=None):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
     cmd = 'ssh-keygen -H -f "{0}"'.format(full)
-    cmd_result = __salt__['cmd.run'](cmd)
+    cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
         uinfo = __salt__['user.info'](user)

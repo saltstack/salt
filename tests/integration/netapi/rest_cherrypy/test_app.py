@@ -1,24 +1,23 @@
 # coding: utf-8
 
-# Import python libs
-import urllib
-
 # Import salttesting libs
 from salttesting import mock
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../../')
 
-
 from salt.exceptions import EauthAuthenticationError
 from tests.utils import BaseRestCherryPyTest
 
 # Import 3rd-party libs
+# pylint: disable=import-error,unused-import
+from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
 try:
-    import cherrypy  # pylint: disable=W0611
+    import cherrypy
     HAS_CHERRYPY = True
 except ImportError:
     HAS_CHERRYPY = False
+# pylint: enable=import-error,unused-import
 
 
 @skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
@@ -78,7 +77,7 @@ class TestLogin(BaseRestCherryPyTest):
             'eauth': 'auto',
         }
 
-        body = urllib.urlencode(self.auth_creds)
+        body = urlencode(self.auth_creds)
         request, response = self.request('/login', method='POST', body=body,
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
@@ -93,7 +92,7 @@ class TestLogin(BaseRestCherryPyTest):
         # Mock mk_token for a negative return
         self.Resolver.return_value.mk_token.return_value = {}
 
-        body = urllib.urlencode({'totally': 'invalid_creds'})
+        body = urlencode({'totally': 'invalid_creds'})
         request, response = self.request('/login', method='POST', body=body,
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
@@ -104,7 +103,7 @@ class TestLogin(BaseRestCherryPyTest):
         ret = self.test_good_login()
         token = ret.headers['X-Auth-Token']
 
-        body = urllib.urlencode({})
+        body = urlencode({})
         request, response = self.request('/logout', method='POST', body=body,
             headers={
                 'content-type': 'application/x-www-form-urlencoded',
@@ -130,7 +129,7 @@ class TestRun(BaseRestCherryPyTest):
         Test the run URL with good auth credentials
         '''
         cmd = dict(self.low, **dict(self.auth_creds))
-        body = urllib.urlencode(cmd)
+        body = urlencode(cmd)
 
         # Mock the interaction with Salt so we can focus on the API.
         with mock.patch.object(self.app.salt.netapi.NetapiClient, 'run',
@@ -147,7 +146,7 @@ class TestRun(BaseRestCherryPyTest):
         Test the run URL with bad auth credentials
         '''
         cmd = dict(self.low, **{'totally': 'invalid_creds'})
-        body = urllib.urlencode(cmd)
+        body = urlencode(cmd)
 
         # Mock the interaction with Salt so we can focus on the API.
         with mock.patch.object(self.app.salt.netapi.NetapiClient, 'run',
@@ -183,7 +182,7 @@ class TestWebhookDisableAuth(BaseRestCherryPyTest):
         # Mock fire_event() since we're only testing auth here.
         self.get_event.return_value.fire_event.return_value = True
 
-        body = urllib.urlencode({'foo': 'Foo!'})
+        body = urlencode({'foo': 'Foo!'})
         request, response = self.request('/hook', method='POST', body=body,
             headers={
                 'content-type': 'application/x-www-form-urlencoded'

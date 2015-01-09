@@ -38,6 +38,7 @@ Further information can be found on `Github <https://github.com/theforeman/forem
 Module Documentation
 ====================
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

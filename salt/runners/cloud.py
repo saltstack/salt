@@ -6,6 +6,7 @@ The Salt Cloud Runner
 This runner wraps the functionality of salt cloud making salt cloud routines
 available to all internal apis via the runner system
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

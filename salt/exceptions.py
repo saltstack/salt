@@ -2,16 +2,24 @@
 '''
 This module is a central location for all salt exceptions
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
-import salt.exitcodes
+import salt.defaults.exitcodes
 
 
 class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this
     '''
+
+    def pack(self):
+        '''
+        Pack this exception into a serializable dictionary that is safe for
+        transport via msgpack
+        '''
+        return dict(message=self.__unicode__(), args=self.args)
 
 
 class SaltClientError(SaltException):
@@ -192,7 +200,7 @@ class SaltCloudSystemExit(SaltCloudException):
     '''
     This exception is raised when the execution should be stopped.
     '''
-    def __init__(self, message, exit_code=salt.exitcodes.EX_GENERIC):
+    def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
         self.message = message
         self.exit_code = exit_code

@@ -2,6 +2,7 @@
 '''
 VirtualBox Guest Additions installer state
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -9,7 +10,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def additions_installed(name, reboot=False, upgrade_os=True):
+def additions_installed(name, reboot=False, upgrade_os=False):
     '''
     Ensure that the VirtualBox Guest Additions are installed. Uses the CD,
     connected by VirtualBox.
@@ -19,7 +20,7 @@ def additions_installed(name, reboot=False, upgrade_os=True):
         reference.
     reboot : False
         Restart OS to complete installation.
-    upgrade_os : True
+    upgrade_os : False
         Upgrade OS (to ensure the latests version of kernel and developer tools
         installed).
     '''

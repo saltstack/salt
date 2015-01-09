@@ -8,6 +8,7 @@ Work with virtual machines managed by libvirt
 # of his in the virt func module have been used
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -20,8 +21,10 @@ import logging
 import yaml
 import jinja2
 import jinja2.exceptions
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 try:
-    import libvirt
+    import libvirt  # pylint: disable=import-error
     from xml.dom import minidom
     HAS_ALL_IMPORTS = True
 except ImportError:
@@ -32,7 +35,6 @@ import salt.utils
 import salt.utils.files
 import salt.utils.templates
 import salt.utils.validate.net
-from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -551,7 +553,7 @@ def init(name,
 
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
-        disk_name = diskp[0].iterkeys().next()
+        disk_name = next(diskp[0].iterkeys())
         disk_type = diskp[0][disk_name]['format']
         disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
@@ -1587,7 +1589,7 @@ def is_hyper():
         salt '*' virt.is_hyper
     '''
     try:
-        import libvirt
+        import libvirt  # pylint: disable=import-error
     except ImportError:
         # not a usable hypervisor without libvirt module
         return False
@@ -1685,7 +1687,7 @@ def vm_netstats(vm_=None):
                 'tx_errs': 0,
                 'tx_drop': 0
                }
-        for attrs in nics.itervalues():
+        for attrs in six.itervalues(nics):
             if 'target' in attrs:
                 dev = attrs['target']
                 stats = dom.interfaceStats(dev)

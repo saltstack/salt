@@ -4,6 +4,7 @@ Module for gathering and managing network information
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
 import hashlib
 import logging
@@ -16,6 +17,7 @@ import salt.utils
 import salt.utils.network
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
+from salt.ext.six.moves import range
 
 
 log = logging.getLogger(__name__)
@@ -29,6 +31,37 @@ def __virtual__():
     if salt.utils.is_windows():
         return False
 
+    return True
+
+
+def wol(mac, bcast='255.255.255.255', destport=9):
+    '''
+    Send Wake On Lan packet to a host
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.wol 08-00-27-13-69-77
+        salt '*' network.wol 080027136977 255.255.255.255 7
+        salt '*' network.wol 08:00:27:13:69:77 255.255.255.255 7
+    '''
+    if len(mac) == 12:
+        pass
+    elif len(mac) == 17:
+        sep = mac[2]
+        mac = mac.replace(sep, '')
+    else:
+        raise ValueError('Invalid MAC address')
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    dest = ('\\x' + mac[0:2]).decode('string_escape') + \
+           ('\\x' + mac[2:4]).decode('string_escape') + \
+           ('\\x' + mac[4:6]).decode('string_escape') + \
+           ('\\x' + mac[6:8]).decode('string_escape') + \
+           ('\\x' + mac[8:10]).decode('string_escape') + \
+           ('\\x' + mac[10:12]).decode('string_escape')
+    sock.sendto('\xff' * 6 + dest * 16, (bcast, int(destport)))
     return True
 
 
@@ -157,7 +190,7 @@ def _netinfo_freebsd_netbsd():
     out = __salt__['cmd.run'](
         'sockstat -46 {0} | tail -n+2'.format(
             '-n' if __grains__['kernel'] == 'NetBSD' else ''
-        )
+        ), python_shell=True
     )
     for line in out.splitlines():
         user, cmd, pid, _, proto, local_addr, remote_addr = line.split()
@@ -178,7 +211,7 @@ def _ppid():
     '''
     ret = {}
     cmd = 'ps -ax -o pid,ppid | tail -n+2'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         pid, ppid = line.split()
         ret[pid] = ppid
@@ -193,7 +226,7 @@ def _netstat_bsd():
     if __grains__['kernel'] == 'NetBSD':
         for addr_family in ('inet', 'inet6'):
             cmd = 'netstat -f {0} -an | tail -n+3'.format(addr_family)
-            out = __salt__['cmd.run'](cmd)
+            out = __salt__['cmd.run'](cmd, python_shell=True)
             for line in out.splitlines():
                 comps = line.split()
                 entry = {
@@ -209,7 +242,7 @@ def _netstat_bsd():
     else:
         # Lookup TCP connections
         cmd = 'netstat -p tcp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -221,7 +254,7 @@ def _netstat_bsd():
                 'state': comps[5]})
         # Lookup UDP connections
         cmd = 'netstat -p udp -an | tail -n+3'
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
             ret.append({
@@ -248,12 +281,12 @@ def _netstat_bsd():
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
-        conn_ppid = dict((x, y) for x, y in ppid.iteritems() if x in ptr)
+        conn_ppid = dict((x, y) for x, y in ppid.items() if x in ptr)
         try:
             # Master pid for this connection will be the pid whose ppid isn't
             # in the subset dict we created above
             master_pid = next(iter(
-                x for x, y in conn_ppid.iteritems() if y not in ptr
+                x for x, y in conn_ppid.items() if y not in ptr
             ))
         except StopIteration:
             continue
@@ -663,6 +696,19 @@ def in_subnet(cidr):
     return salt.utils.network.in_subnet(cidr)
 
 
+def ip_in_subnet(ip_addr, cidr):
+    '''
+    Returns True if given IP is within specified subnet, otherwise False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_in_subnet 172.17.0.4 172.16.0.0/12
+    '''
+    return salt.utils.network.ip_in_subnet(ip_addr, cidr)
+
+
 def ip_addrs(interface=None, include_loopback=False, cidr=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
@@ -716,8 +762,6 @@ def get_hostname():
         salt '*' network.get_hostname
     '''
 
-    #cmd='hostname  -f'
-    #return __salt__['cmd.run'](cmd)
     from socket import gethostname
     return gethostname()
 
@@ -858,7 +902,7 @@ def connect(host, port=None, **kwargs):
         else:
             s.connect(_address)
             s.shutdown(2)
-    except Exception, e:
+    except Exception as e:
         ret['result'] = False
         try:
             errno, errtxt = e
@@ -897,6 +941,19 @@ def is_loopback(ip_addr):
         salt '*' network.is_loopback 127.0.0.1
     '''
     return salt.utils.network.IPv4Address(ip_addr).is_loopback
+
+
+def reverse_ip(ip_addr):
+    '''
+    Returns the reversed IP address
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.reverse_ip 172.17.0.4
+    '''
+    return salt.utils.network.IPv4Address(ip_addr).reverse_pointer
 
 
 def _get_bufsize_linux(iface):
@@ -962,7 +1019,6 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
     if not eargs:
         return ret
     cmd += eargs
-    print cmd
     out = __salt__['cmd.run'](cmd)
     if out:
         ret['comment'] = out
@@ -999,23 +1055,20 @@ def routes(family=None):
         raise CommandExecutionError('Invalid address family {0}'.format(family))
 
     if __grains__['kernel'] == 'Linux':
-        routes = _netstat_route_linux()
+        routes_ = _netstat_route_linux()
     elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
-        routes = _netstat_route_freebsd()
+        routes_ = _netstat_route_freebsd()
     elif __grains__['os'] in ['NetBSD']:
-        routes = _netstat_route_netbsd()
+        routes_ = _netstat_route_netbsd()
     elif __grains__['os'] in ['OpenBSD']:
-        routes = _netstat_route_openbsd()
+        routes_ = _netstat_route_openbsd()
     else:
         raise CommandExecutionError('Not yet supported on this platform')
 
     if not family:
-        return routes
+        return routes_
     else:
-        ret = []
-        for route in routes:
-            if route['addr_family'] == family:
-                ret.append(route)
+        ret = [route for route in routes_ if route['addr_family'] == family]
         return ret
 
 

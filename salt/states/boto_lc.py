@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Launch Configurations
-============================
 
 .. versionadded:: 2014.7.0
 
@@ -92,6 +91,7 @@ and autoscale groups are completely dependent on each other.
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 '''
+from __future__ import absolute_import
 from salt.exceptions import SaltInvocationError
 
 

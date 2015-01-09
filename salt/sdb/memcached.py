@@ -30,6 +30,7 @@ and ``mymemcached`` refers to the name that will appear in the URI:
     password: sdb://mymemcached/mykey
 
 '''
+from __future__ import absolute_import
 
 # import python libs
 import logging

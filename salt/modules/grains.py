@@ -5,6 +5,7 @@ Return/control aspects of the grains data
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import collections
 import copy
 import math
@@ -19,6 +20,8 @@ import salt.utils
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
+from functools import reduce
+from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 
@@ -239,8 +242,9 @@ def setvals(grains, destructive=False):
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
-    # Sync the grains
-    __salt__['saltutil.sync_grains']()
+    if not __opts__.get('local', False):
+        # Sync the grains
+        __salt__['saltutil.sync_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -367,11 +371,9 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         }, default='Debian') %}
 
         myapache:
-          pkg:
-            - installed
+          pkg.installed:
             - name: {{ apache.pkg }}
-          service:
-            - running
+          service.running:
             - name: {{ apache.srv }}
 
     Values in the lookup table may be overridden by values in Pillar. An
@@ -411,13 +413,16 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
     :param default: default lookup_dict's key used if the grain does not exists
         or if the grain value has no match on lookup_dict.  If unspecified
         the value is "default".
+
+        .. versionadded:: 2014.1.0
+
     :param base: A lookup_dict key to use for a base dictionary.  The
         grain-selected ``lookup_dict`` is merged over this and then finally
         the ``merge`` dictionary is merged.  This allows common values for
         each case to be collected in the base and overridden by the grain
         selection dictionary and the merge dictionary.  Default is unset.
 
-         .. versionadded:: 2014.1.0
+        .. versionadded:: Lithium
 
     CLI Example:
 

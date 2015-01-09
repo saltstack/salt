@@ -2,6 +2,7 @@
 '''
 Support for rpm
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -53,7 +54,7 @@ def list_pkgs(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     for line in out.splitlines():
         if 'is not installed' in line:
             continue
@@ -90,7 +91,11 @@ def verify(*package, **kwargs):
         cmd = 'rpm -V {0}'.format(packages)
     else:
         cmd = 'rpm -Va'
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace', ignore_retcode=True)
+    out = __salt__['cmd.run'](
+            cmd,
+            python_shell=False,
+            output_loglevel='trace',
+            ignore_retcode=True)
     for line in out.splitlines():
         fdict = {'mismatch': []}
         if 'missing' in line:
@@ -141,7 +146,10 @@ def file_list(*packages):
         cmd = 'rpm -qla'
     else:
         cmd = 'rpm -ql {0}'.format(' '.join(packages))
-    ret = __salt__['cmd.run'](cmd, output_loglevel='trace').splitlines()
+    ret = __salt__['cmd.run'](
+            cmd,
+            python_shell=False,
+            output_loglevel='trace').splitlines()
     return {'errors': [], 'files': ret}
 
 
@@ -168,7 +176,7 @@ def file_dict(*packages):
         cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
             ' '.join(packages)
         )
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     for line in out.splitlines():
         if 'is not installed' in line:
             errors.append(line)
@@ -178,7 +186,7 @@ def file_dict(*packages):
     for pkg in pkgs:
         files = []
         cmd = 'rpm -ql {0}'.format(pkg)
-        out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+        out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
         for line in out.splitlines():
             files.append(line)
         ret[pkg] = files
@@ -212,5 +220,5 @@ def owner(*paths):
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return ret.values()[0]
+        return list(ret.values())[0]
     return ret

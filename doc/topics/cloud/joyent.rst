@@ -2,7 +2,7 @@
 Getting Started With Joyent
 ===========================
 
-Joyent is a public cloud provider supporting SmartOS, Linux, FreeBSD and
+Joyent is a public cloud provider supporting SmartOS, Linux, FreeBSD, and
 Windows.
 
 
@@ -13,9 +13,9 @@ This driver requires the Python ``requests`` library to be installed.
 
 Configuration
 =============
-The Joyent cloud requires three configuration parameters. The user name and 
-password that are used to log into the Joyent system, and the location of the 
-private ssh key associated with the Joyent account. The ssh key is needed to 
+The Joyent cloud requires three configuration parameters. The user name and
+password that are used to log into the Joyent system, and the location of the
+private ssh key associated with the Joyent account. The ssh key is needed to
 send the provisioning commands up to the freshly created virtual machine.
 
 .. code-block:: yaml

@@ -39,6 +39,7 @@ framer minionudpstack be active first setup
 framer inbound be inactive first start
     frame start
         do salt raet road stack service rx
+        do salt raet lane stack service rx
 
 framer bootstrap be inactive first join
     frame join
@@ -55,7 +56,7 @@ framer bootstrap be inactive first join
 
     frame joined
         print Joined
-        go next if elapsed >= 2
+        go next if elapsed >= 0.5
 
     frame allow
         print Allowing...
@@ -69,7 +70,7 @@ framer bootstrap be inactive first join
 
     frame allowed
         print Allowed
-        go next if elapsed >= 2
+        go next if elapsed >= 0.5
 
     frame pillar
         print Pillaring
@@ -108,7 +109,9 @@ framer manager be inactive first start at 10.0
 # Framer for handling outbound traffic
 framer outbound be inactive first start
     frame start
+        do salt raet lane stack service tx
         do salt raet road stack service tx
+
 
 framer scheduler be inactive first start
     frame start

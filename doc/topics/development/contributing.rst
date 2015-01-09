@@ -70,7 +70,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     #.  Click "Create pull request".
 
 #.  The Salt repo managers will be notified of your pull request.
-   
+
     If a reviewer asks for changes:
 
     #.  Make the changes in your local clone on the same local branch.
@@ -187,7 +187,7 @@ the name of the main `saltstack/salt`_ repository.
 
     If Git complains that a fast-forward merge is not possible, you have local
     commits.
-    
+
     * Run ``git pull --rebase origin develop`` to rebase your changes on top of
       the upstream changes.
     * Or, run ``git branch <branch-name>`` to create a new branch with your

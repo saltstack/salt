@@ -2,6 +2,7 @@
 '''
 A collection of hashing and encoding functions
 '''
+from __future__ import absolute_import
 import base64
 import hashlib
 import hmac

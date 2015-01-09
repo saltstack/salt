@@ -3,6 +3,8 @@
 Routines to set up a minion
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import imp
@@ -112,7 +114,7 @@ def _create_loader(
     )
 
 
-def minion_mods(opts, context=None, whitelist=None, include_errors=False):
+def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False):
     '''
     Load execution modules
 
@@ -139,14 +141,15 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False):
         pack,
         whitelist=whitelist,
         provider_overrides=True,
-        include_errors=include_errors
+        include_errors=include_errors,
+        initial_load=initial_load
     )
     # Enforce dependencies of module functions from "functions"
     Depends.enforce_dependencies(functions)
     return functions
 
 
-def raw_mod(opts, name, functions):
+def raw_mod(opts, name, functions, mod='modules'):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
 
@@ -159,7 +162,7 @@ def raw_mod(opts, name, functions):
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
-    load = _create_loader(opts, 'modules', 'rawmodule')
+    load = _create_loader(opts, mod, 'rawmodule')
     return load.gen_module(name, functions)
 
 
@@ -212,7 +215,7 @@ def tops(opts):
     '''
     if 'master_tops' not in opts:
         return {}
-    whitelist = opts['master_tops'].keys()
+    whitelist = list(opts['master_tops'].keys())
     load = _create_loader(opts, 'tops', 'top')
     topmodules = load.filter_func('top', whitelist=whitelist)
     return topmodules
@@ -483,7 +486,7 @@ def _generate_module(name):
 
     code = "'''Salt loaded {0} parent module'''".format(name.split('.')[-1])
     module = imp.new_module(name)
-    exec code in module.__dict__
+    exec(code, module.__dict__)
     sys.modules[name] = module
 
 
@@ -592,6 +595,9 @@ class Loader(object):
         '''
         Load a single module and pack it with the functions passed
         '''
+        if not name:
+            return {}
+
         full = ''
         mod = None
         for mod_dir in self.module_dirs:
@@ -725,7 +731,7 @@ class Loader(object):
             mod.__salt__ = functions
         try:
             context = sys.modules[
-                functions[functions.iterkeys().next()].__module__
+                functions[next(iter(functions.keys()))].__module__
             ].__context__
         except (AttributeError, StopIteration):
             context = {}
@@ -733,13 +739,14 @@ class Loader(object):
         return funcs
 
     def gen_functions(self, pack=None, virtual_enable=True, whitelist=None,
-                      provider_overrides=False, include_errors=False):
+                      provider_overrides=False, include_errors=False, initial_load=False):
         '''
         Return a dict of functions found in the defined module_dirs
         '''
         funcs = {}
         error_funcs = {}
-        self.load_modules()
+        if not hasattr(self, 'modules'):
+            self.load_modules()
         for mod in self.modules:
             # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
             # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
@@ -749,8 +756,8 @@ class Loader(object):
                     # This is a proxy minion but this module doesn't support proxy
                     # minions at all
                     continue
-                if not self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
-                        '*' in mod.__proxyenabled__:
+                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or
+                        '*' in mod.__proxyenabled__):
                     # This is a proxy minion, this module supports proxy
                     # minions, but not this particular minion
                     log.debug(mod)
@@ -848,10 +855,11 @@ class Loader(object):
             funcs['_errors'] = error_funcs
         return funcs
 
-    def load_modules(self):
+    def load_modules(self, initial_load=False):
         '''
         Loads all of the modules from module_dirs and returns a list of them
         '''
+
         self.modules = []
 
         log.trace('loading {0} in {1}'.format(self.tag, self.module_dirs))
@@ -934,7 +942,7 @@ class Loader(object):
                     )
         failed_loads = {}
 
-        def load_names(names, failhard=False):
+        def load_names(names, failhard=False, initial_load=False):
             for name in names:
                 try:
                     if names[name].endswith('.pyx'):
@@ -958,55 +966,56 @@ class Loader(object):
                                 name
                             ), fn_, path, desc
                         )
-                        # reload all submodules if necessary
-                        submodules = [
-                            getattr(mod, sname) for sname in dir(mod) if
-                            isinstance(getattr(mod, sname), mod.__class__)
-                        ]
+                        if not initial_load:
+                            # reload all submodules if necessary
+                            submodules = [
+                                getattr(mod, sname) for sname in dir(mod) if
+                                isinstance(getattr(mod, sname), mod.__class__)
+                            ]
 
-                        # reload only custom "sub"modules i.e. is a submodule in
-                        # parent module that are still available on disk (i.e. not
-                        # removed during sync_modules)
-                        for submodule in submodules:
-                            try:
-                                smname = '{0}.{1}.{2}'.format(
-                                    self.loaded_base_name,
-                                    self.tag,
-                                    name
-                                )
-                                smfile = '{0}.py'.format(
-                                    os.path.splitext(submodule.__file__)[0]
-                                )
-                                if submodule.__name__.startswith(smname) and \
-                                        os.path.isfile(smfile):
-                                    reload(submodule)
-                            except AttributeError:
-                                continue
-                except ImportError:
+                            # reload only custom "sub"modules i.e. is a submodule in
+                            # parent module that are still available on disk (i.e. not
+                            # removed during sync_modules)
+                            for submodule in submodules:
+                                try:
+                                    smname = '{0}.{1}.{2}'.format(
+                                        self.loaded_base_name,
+                                        self.tag,
+                                        name
+                                    )
+                                    smfile = '{0}.py'.format(
+                                        os.path.splitext(submodule.__file__)[0]
+                                    )
+                                    if submodule.__name__.startswith(smname) and \
+                                            os.path.isfile(smfile):
+                                        reload(submodule)
+                                except AttributeError:
+                                    continue
+                except ImportError as error:
                     if failhard:
                         log.debug(
                             'Failed to import {0} {1}, this is most likely NOT a '
-                            'problem:\n'.format(
-                                self.tag, name
+                            'problem, but the exception was {2}\n'.format(
+                                self.tag, name, error
                             ),
                             exc_info=True
                         )
                     if not failhard:
-                        log.debug('Failed to import {0} {1}. Another attempt will be made to try to resolve dependencies.'.format(
-                            self.tag, name))
+                        log.debug('Failed to import {0} {1}. The exeception was {2}. Another attempt will be made to try to resolve dependencies.'.format(
+                            self.tag, name, error))
                         failed_loads[name] = path
                     continue
-                except Exception:
+                except Exception as error:
                     log.warning(
                         'Failed to import {0} {1}, this is due most likely to a '
-                        'syntax error. Traceback raised:\n'.format(
-                            self.tag, name
+                        'syntax error. The exception is {2}. Traceback raised:\n'.format(
+                            self.tag, name, error
                         ),
                         exc_info=True
                     )
                     continue
                 self.modules.append(mod)
-        load_names(names, failhard=False)
+        load_names(names, failhard=False, initial_load=initial_load)
         if failed_loads:
             load_names(failed_loads, failhard=True)
 
@@ -1310,7 +1319,7 @@ class Loader(object):
             grains_data.update(ret)
         # Write cache if enabled
         if self.opts.get('grains_cache', False):
-            cumask = os.umask(077)
+            cumask = os.umask(0o77)
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
@@ -1462,7 +1471,7 @@ class LazyFilterLoader(LazyLoader):
             return self._dict[key]
 
         # if we got one, now lets check if we have the function name we want
-        for mod_key, mod_fun in mod_funcs.iteritems():
+        for mod_key, mod_fun in mod_funcs.items():
             # if the name (after '.') is "name", then rename to mod_name: fun
             if mod_key[mod_key.index('.') + 1:] == self.name:
                 self._dict[mod_key[:mod_key.index('.')]] = mod_fun

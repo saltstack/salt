@@ -2,6 +2,7 @@
 '''
 Set up the correct search system
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -10,6 +11,7 @@ import os
 import salt.minion
 import salt.loader
 import salt.utils
+import salt.ext.six as six
 
 
 def iter_ret(opts, ret):
@@ -54,14 +56,14 @@ def _iter_dir(dir_, saltenv):
             with salt.utils.fopen(path) as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append(
-                        {'path': unicode(path),
-                         'saltenv': unicode(saltenv),
-                         'content': unicode(fp_.read())}
+                        {'path': six.text_type(path),
+                         'saltenv': six.text_type(saltenv),
+                         'content': six.text_type(fp_.read())}
                         )
                 else:
                     ret.append(
-                        {'path': unicode(path),
-                         'saltenv': unicode(saltenv),
+                        {'path': six.text_type(path),
+                         'saltenv': six.text_type(saltenv),
                          'content': u'bin'}
                         )
     yield ret

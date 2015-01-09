@@ -105,7 +105,7 @@ To fire an event from a minion call ``event.fire_master``
 
     salt-call event.fire_master '{"overstate": "refresh"}' 'foo'
 
-After this is called, any reactor sls files matching event tag ``foo`` will 
+After this is called, any reactor sls files matching event tag ``foo`` will
 execute with ``{{ data['data']['overstate'] }}`` equal to ``'refresh'``.
 
 See :py:mod:`salt.modules.event` for more information.
@@ -113,7 +113,7 @@ See :py:mod:`salt.modules.event` for more information.
 Knowing what event is being fired
 =================================
 
-Knowing exactly which event is being fired and what data is has for use in the
+Knowing exactly which event is being fired and what data it has for use in the
 sls files can be challenging. The easiest way to see exactly what's going on is
 to use the :strong:`eventlisten.py` script. This script is not part of packages
 but is part of the source.
@@ -218,7 +218,7 @@ used by the :strong:`salt` command. This interface more specifically maps to
 the :strong:`cmd_async` method inside of the :strong:`LocalClient` class. This
 means that the arguments passed are being passed to the :strong:`cmd_async`
 method, not the remote method. A field starts with :strong:`local` to use the
-:strong:`LocalClient` subsystem. The result is, to execute a remote command, 
+:strong:`LocalClient` subsystem. The result is, to execute a remote command,
 a reactor formula would look like this:
 
 .. code-block:: yaml
@@ -390,7 +390,7 @@ Ink servers in the master configuration.
         - ret: smtp_return
 
 The above will also return the highstate result data using the `smtp_return`
-returner. The returner needs to be configured on the minion for this to 
+returner. The returner needs to be configured on the minion for this to
 work. See :mod:`salt.returners.smtp_return <salt.returners.smtp_return>` documentation for
 that.
 

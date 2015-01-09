@@ -83,6 +83,8 @@ the following:
     user:  user name
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import print_function
 import logging
@@ -102,9 +104,12 @@ try:
 except ImportError:
     pass
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.utils
-from salt._compat import MAX_SIZE
+import salt.defaults.exitcodes
 from salt.utils.filebuffer import BufferedReader
 
 # Set up logger
@@ -207,7 +212,7 @@ def _parse_size(value):
         max_size = num
     elif style == '+':
         min_size = num
-        max_size = MAX_SIZE
+        max_size = six.MAXSIZE
     else:
         min_size = num
         max_size = num + multiplier - 1
@@ -568,7 +573,7 @@ class ExecOption(Option):
                     err))
             return "{0}:\n{1}\n".format(command, out)
 
-        except Exception, e:
+        except Exception as e:
             log.error(
                 'Exception while executing command "{0}":\n\n{1}'.format(
                     command,
@@ -669,7 +674,7 @@ def find(path, options):
 def _main():
     if len(sys.argv) < 2:
         sys.stderr.write('usage: {0} path [options]\n'.format(sys.argv[0]))
-        sys.exit(os.EX_USAGE)
+        sys.exit(salt.defaults.exitcodes.EX_USAGE)
 
     path = sys.argv[1]
     criteria = {}
@@ -681,7 +686,7 @@ def _main():
         finder = Finder(criteria)
     except ValueError as ex:
         sys.stderr.write('error: {0}\n'.format(ex))
-        sys.exit(salt.exitcodes.EX_GENERIC)
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     for result in finder.find(path):
         print(result)

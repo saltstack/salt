@@ -107,6 +107,11 @@ If this repo is added *before* Salt is installed, then installing either
 ``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
 additional states to upgrade ZeroMQ and pyzmq are unnecessary.
 
+.. warning:: RHEL/CentOS 5 Users
+    Using COPR repos on RHEL/CentOS 5 requires that the ``python-hashlib``
+    package be installed. Not having it present will result in checksum errors
+    because YUM will not be able to process the SHA256 checksums used by COPR.
+
 
 Package Management
 ==================

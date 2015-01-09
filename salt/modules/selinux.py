@@ -10,6 +10,7 @@ Execute calls on selinux
     documentation for your distro to ensure that the proper packages are
     installed.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -17,7 +18,7 @@ import os
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 
 
@@ -143,7 +144,7 @@ def setsebool(boolean, value, persist=False):
         cmd = 'setsebool -P {0} {1}'.format(boolean, value)
     else:
         cmd = 'setsebool {0} {1}'.format(boolean, value)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def setsebools(pairs, persist=False):
@@ -164,7 +165,7 @@ def setsebools(pairs, persist=False):
         cmd = 'setsebool '
     for boolean, value in pairs.items():
         cmd = '{0} {1}={2}'.format(cmd, boolean, value)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def list_sebool():

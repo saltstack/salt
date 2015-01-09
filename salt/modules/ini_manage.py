@@ -12,7 +12,12 @@ Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 '''
 
 # Import Python libs
+from __future__ import print_function
+from __future__ import absolute_import
 import re
+
+# Import Salt libs
+import salt.utils
 
 __virtualname__ = 'ini'
 
@@ -277,7 +282,7 @@ class _Ini(object):
         self.sections = []
         current_section = _Section('DEFAULT_IMPLICIT')
         self.sections.append(current_section)
-        with open(self.file_name, 'r') as inifile:
+        with salt.utils.fopen(self.file_name, 'r') as inifile:
             previous_line = None
             for line in inifile.readlines():
                 # Make sure the empty lines between options are preserved
@@ -293,11 +298,11 @@ class _Ini(object):
                 previous_line = line
 
     def flush(self):
-        with open(self.file_name, 'w') as outfile:
+        with salt.utils.fopen(self.file_name, 'w') as outfile:
             outfile.write(self.current_contents())
 
     def dump(self):
-        print self.current_contents()
+        print(self.current_contents())
 
     def current_contents(self):
         file_contents = ''

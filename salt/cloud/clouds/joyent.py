@@ -33,6 +33,7 @@ associated with that vm. An example profile might look like:
 
 :depends: requests
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate
@@ -40,7 +41,7 @@ associated with that vm. An example profile might look like:
 # Import python libs
 import os
 import copy
-import httplib
+import salt.ext.six.moves.http_client  # pylint: disable=E0611
 import requests
 import json
 import logging
@@ -86,10 +87,10 @@ DEFAULT_LOCATION = 'us-east-1'
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    httplib.OK,
-    httplib.ACCEPTED,
-    httplib.CREATED,
-    httplib.NO_CONTENT
+    salt.ext.six.moves.http_client.OK,
+    salt.ext.six.moves.http_client.ACCEPTED,
+    salt.ext.six.moves.http_client.CREATED,
+    salt.ext.six.moves.http_client.NO_CONTENT
 ]
 
 
@@ -669,10 +670,9 @@ def has_method(obj, method_name):
     return False
 
 
-def key_list(key='name', items=None):
+def key_list(items=None):
     '''
     convert list to dictionary using the key as the identifier
-    :param key: identifier - must exist in the arrays elements own dictionary
     :param items: array to iterate over
     :return: dictionary
     '''
@@ -752,7 +752,7 @@ def reformat_node(item=None, full=False):
 
     # remove all the extra key value pairs to provide a brief listing
     if not full:
-        for key in item:
+        for key in item.keys():  # iterate over a copy of the keys
             if key not in desired_keys:
                 del item[key]
 

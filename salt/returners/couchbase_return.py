@@ -26,6 +26,7 @@ JID/MINION_ID
 return: return_data
 out: out_data
 '''
+from __future__ import absolute_import
 
 import logging
 
@@ -37,6 +38,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.jid
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +128,7 @@ def prep_jid(nocache=False, passed_jid=None):
     So do what you have to do to make sure that stays the case
     '''
     if passed_jid is None:
-        jid = salt.utils.gen_jid()
+        jid = salt.utils.jid.gen_jid()
     else:
         jid = passed_jid
 
@@ -286,5 +288,5 @@ def _format_jid_instance(jid, job):
     Return a properly formatted jid dict
     '''
     ret = _format_job_instance(job)
-    ret.update({'StartTime': salt.utils.jid_to_time(jid)})
+    ret.update({'StartTime': salt.utils.jid.jid_to_time(jid)})
     return ret

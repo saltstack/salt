@@ -35,12 +35,13 @@ Available Functions
           - onlyif: /bin/test_else_installed
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
@@ -198,7 +199,6 @@ def installed(name,
 
     loglevel
         loglevel for buildout commands
-
     '''
     ret = {}
 
@@ -225,7 +225,8 @@ def installed(name,
         verbose=verbose,
         onlyif=onlyif,
         unless=unless,
-        use_vt=use_vt
+        use_vt=use_vt,
+        loglevel=loglevel
     )
     ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
     return ret

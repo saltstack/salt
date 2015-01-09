@@ -24,6 +24,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       provider: gogrid
 
 '''
+from __future__ import absolute_import
 
 # The import section is mostly libcloud boilerplate
 

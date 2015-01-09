@@ -40,6 +40,7 @@ Walkthrough <tutorial-gitfs>`.
 .. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -52,7 +53,7 @@ import re
 import shutil
 import subprocess
 from datetime import datetime
-from salt._compat import text_type as _text_type
+from salt.ext.six import text_type as _text_type
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
@@ -89,7 +90,7 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import SaltException
 from salt.utils.event import tagify
 
@@ -128,10 +129,11 @@ def _verify_gitpython(quiet=False):
     Check if GitPython is available and at a compatible version (>= 0.3.0)
     '''
     if not HAS_GITPYTHON:
-        log.error(
-            'Git fileserver backend is enabled in master config file, but '
-            'could not be loaded, is GitPython installed?'
-        )
+        if not quiet:
+            log.error(
+                'Git fileserver backend is enabled in master config file, but '
+                'could not be loaded, is GitPython installed?'
+            )
         if HAS_PYGIT2 and not quiet:
             log.error(_RECOMMEND_PYGIT2)
         if HAS_DULWICH and not quiet:
@@ -171,10 +173,11 @@ def _verify_pygit2(quiet=False):
     must be at least 0.21.0.
     '''
     if not HAS_PYGIT2:
-        log.error(
-            'Git fileserver backend is enabled in master config file, but '
-            'could not be loaded, are pygit2 and libgit2 installed?'
-        )
+        if not quiet:
+            log.error(
+                'Git fileserver backend is enabled in master config file, but '
+                'could not be loaded, are pygit2 and libgit2 installed?'
+            )
         if HAS_GITPYTHON and not quiet:
             log.error(_RECOMMEND_GITPYTHON)
         if HAS_DULWICH and not quiet:
@@ -225,10 +228,11 @@ def _verify_dulwich(quiet=False):
     Check if dulwich is available.
     '''
     if not HAS_DULWICH:
-        log.error(
-            'Git fileserver backend is enabled in master config file, but '
-            'could not be loaded, is Dulwich installed?'
-        )
+        if not quiet:
+            log.error(
+                'Git fileserver backend is enabled in master config file, but '
+                'could not be loaded, is Dulwich installed?'
+            )
         if HAS_GITPYTHON and not quiet:
             log.error(_RECOMMEND_GITPYTHON)
         if HAS_PYGIT2 and not quiet:

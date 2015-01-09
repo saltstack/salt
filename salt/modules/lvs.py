@@ -2,6 +2,7 @@
 '''
 Support for LVS (Linux Virtual Server)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 

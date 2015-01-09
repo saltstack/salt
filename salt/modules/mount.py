@@ -2,6 +2,7 @@
 '''
 Salt module to manage unix mounts and the fstab file
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -10,7 +11,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
@@ -57,7 +58,13 @@ def _active_mountinfo(ret):
         for line in ifile:
             comps = line.split()
             device = comps[2].split(':')
-            device_name = comps[8]
+            # each line can have any number of
+            # optional parameters, we use the
+            # location of the seperator field to
+            # determine the location of the elements
+            # after it.
+            _sep = comps.index('-')
+            device_name = comps[_sep + 2]
             device_uuid = None
             if device_name:
                 device_uuid = blkid_info.get(device_name, {}).get('UUID')
@@ -68,10 +75,10 @@ def _active_mountinfo(ret):
                              'minor': device[1],
                              'root': comps[3],
                              'opts': comps[5].split(','),
-                             'fstype': comps[7],
+                             'fstype': comps[_sep + 1],
                              'device': device_name,
                              'alt_device': _list.get(comps[4], None),
-                             'superopts': comps[9].split(','),
+                             'superopts': comps[_sep + 3].split(','),
                              'device_uuid': device_uuid}
     return ret
 
@@ -312,16 +319,10 @@ def set_fstab(
                     # Invalid entry
                     lines.append(line)
                     continue
-                if comps[1] == name or comps[0] == device:
+                if comps[1] == name and comps[0] == device:
                     # check to see if there are changes
                     # and fix them if there are any
                     present = True
-                    if comps[0] != device:
-                        change = True
-                        comps[0] = device
-                    if comps[1] != name:
-                        change = True
-                        comps[1] = name
                     if comps[2] != fstype:
                         change = True
                         comps[2] = fstype

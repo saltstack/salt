@@ -24,6 +24,8 @@ http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-managemen
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import python libs
 import time
 import copy
@@ -40,6 +42,7 @@ HAS_LIBS = False
 try:
     import azure
     import azure.servicemanagement
+    from azure import WindowsAzureConflictError
     HAS_LIBS = True
 except ImportError:
     pass
@@ -426,8 +429,9 @@ def create(vm_):
     conn = get_conn()
 
     label = vm_.get('label', vm_['name'])
+    service_name = vm_.get('service_name', vm_['name'])
     service_kwargs = {
-        'service_name': vm_['name'],
+        'service_name': service_name,
         'label': label,
         'description': vm_.get('desc', vm_['name']),
         'location': vm_['location'],
@@ -458,7 +462,7 @@ def create(vm_):
     os_hd = azure.servicemanagement.OSVirtualHardDisk(vm_['image'], media_link)
 
     vm_kwargs = {
-        'service_name': vm_['name'],
+        'service_name': service_name,
         'deployment_name': vm_['name'],
         'deployment_slot': vm_['slot'],
         'label': label,
@@ -489,6 +493,33 @@ def create(vm_):
 
     try:
         conn.create_hosted_service(**service_kwargs)
+    except WindowsAzureConflictError:
+        log.debug("Cloud service already exists")
+    except Exception as exc:
+        error = 'The hosted service name is invalid.'
+        if error in str(exc):
+            log.error(
+                'Error creating {0} on Azure.\n\n'
+                'The hosted service name is invalid. The name can contain '
+                'only letters, numbers, and hyphens. The name must start with '
+                'a letter and must end with a letter or a number.'.format(
+                    vm_['name']
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+        else:
+            log.error(
+                'Error creating {0} on Azure\n\n'
+                'The following exception was thrown when trying to '
+                'run the initial deployment: \n{1}'.format(
+                    vm_['name'], str(exc)
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+        return False
+    try:
         conn.create_virtual_machine_deployment(**vm_kwargs)
     except Exception as exc:
         error = 'The hosted service name is invalid.'
@@ -679,9 +710,14 @@ def create(vm_):
     return ret
 
 
-def destroy(name, conn=None, call=None):
+def destroy(name, conn=None, call=None, kwargs=None):
     '''
     Destroy a VM
+
+    CLI Examples::
+
+        salt-cloud -d myminion
+        salt-cloud -a destroy myminion service_name=myservice
     '''
     if call == 'function':
         raise SaltCloudSystemExit(
@@ -692,10 +728,15 @@ def destroy(name, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
+    service_name = kwargs.get('service_name', name)
+
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    del_vm = conn.delete_deployment(service_name=name, deployment_name=name)
+    del_vm = conn.delete_deployment(service_name=service_name, deployment_name=name)
     del_service = conn.delete_hosted_service
     ret[name] = {
         'request_id': del_vm.request_id,

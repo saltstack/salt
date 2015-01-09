@@ -64,6 +64,16 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 shutil.rmtree(venv_dir)
 
     def test_pip_installed_weird_install(self):
+        # First, check to see if this is running on CentOS 5
+        os_grain = self.run_function('grains.item', ['os'])
+        os_version = self.run_function('grains.item', ['osmajorrelease'])
+
+        # Skip this test if running on CentOS 5
+        if os_grain['os'] == 'CentOS' and os_version['osmajorrelease'] == 5:
+            self.skipTest(
+                'This test does not run reliably on CentOS 5'
+            )
+
         ographite = '/opt/graphite'
         if os.path.isdir(ographite):
             self.skipTest(
@@ -390,7 +400,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             reqf.write('pep8\n')
 
         try:
-            ret = self.run_function('virtualenv.create', [venv_dir])
+            self.run_function('virtualenv.create', [venv_dir])
 
             # The requirements file should not be found the base environment
             ret = self.run_state(
@@ -421,8 +431,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
+                'Requirements were already installed.',
+                ret
             )
         finally:
             if os.path.isdir(venv_dir):

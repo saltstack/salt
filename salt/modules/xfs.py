@@ -25,10 +25,12 @@
 Module for managing XFS file systems.
 '''
 
+from __future__ import absolute_import
 import os
 import re
 import time
 import logging
+from salt.ext.six.moves import range
 
 import salt.utils
 from salt.exceptions import CommandExecutionError
@@ -421,8 +423,7 @@ def mkfs(device, label=None, ssize=None, noforce=None,
     '''
 
     getopts = lambda args: dict(((args and ("=" in args)
-                                  and args or None)) and map(
-                                      lambda kw: kw.split("="), args.split(",")) or [])
+                                  and args or None)) and [kw.split("=") for kw in args.split(",")] or [])
     cmd = ["mkfs.xfs"]
     if label:
         cmd.append("-L")
@@ -501,14 +502,15 @@ def _get_mounts():
     List mounted filesystems.
     '''
     mounts = {}
-    for line in open("/proc/mounts").readlines():
-        device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
-        if fstype != 'xfs':
-            continue
-        mounts[device] = {
-            'mount_point': mntpnt,
-            'options': options.split(","),
-        }
+    with salt.utils.fopen("/proc/mounts") as fhr:
+        for line in fhr.readlines():
+            device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
+            if fstype != 'xfs':
+                continue
+            mounts[device] = {
+                'mount_point': mntpnt,
+                'options': options.split(","),
+            }
 
     return mounts
 

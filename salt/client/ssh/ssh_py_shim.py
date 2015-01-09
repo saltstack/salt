@@ -8,6 +8,8 @@ helper script used by salt.client.ssh.Single.  It is here, in a
 separate file, for convenience of development.
 '''
 
+from __future__ import absolute_import
+
 import hashlib
 import tarfile
 import shutil
@@ -18,8 +20,7 @@ import stat
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
-# FIXME - it would be ideal if these could be obtained directly from
-#         salt.exitcodes rather than duplicated.
+# Keep these in sync with salt/exitcodes.py
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
@@ -36,7 +37,7 @@ ARGS = None
 def need_deployment():
     if os.path.exists(OPTIONS.saltdir):
         shutil.rmtree(OPTIONS.saltdir)
-    old_umask = os.umask(0077)
+    old_umask = os.umask(0o077)
     os.makedirs(OPTIONS.saltdir)
     os.umask(old_umask)
     # Verify perms on saltdir
@@ -55,7 +56,7 @@ def need_deployment():
         st = os.stat(OPTIONS.saltdir)
         os.chmod(OPTIONS.saltdir, st.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
 
-    # Delimeter emitted on stdout *only* to indicate shim message to master.
+    # Delimiter emitted on stdout *only* to indicate shim message to master.
     sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
     sys.exit(EX_THIN_DEPLOY)
 
@@ -104,7 +105,7 @@ def unpack_ext(ext_path):
     shutil.move(ver_path, ver_dst)
 
 
-def main(argv):
+def main(argv):  # pylint: disable=W0613
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
     if os.path.isfile(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
@@ -178,7 +179,14 @@ def main(argv):
     sys.stdout.flush()
     sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
-    if OPTIONS.wipe:
+    if OPTIONS.tty:
+        import subprocess
+        stdout, stderr = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+        sys.stdout.write(stdout)
+        sys.stdout.flush()
+        if OPTIONS.wipe:
+            shutil.rmtree(OPTIONS.saltdir)
+    elif OPTIONS.wipe:
         import subprocess
         subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)

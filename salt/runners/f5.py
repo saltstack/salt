@@ -17,6 +17,7 @@ Runner to provide F5 Load Balancer functionality
             username: admin
             password: secret
 '''
+from __future__ import absolute_import
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 
@@ -126,7 +127,7 @@ class F5Mgmt(object):
                       wildmasks=['255.255.255.255'],
                       resources=resource_seq,
                       profiles=[vs_profile_seq])
-        except Exception, e:
+        except Exception as e:
             raise Exception(
                 'Unable to create `{0}` virtual server\n\n{1}'.format(name, e)
             )
@@ -149,7 +150,7 @@ class F5Mgmt(object):
                 self.bigIP.LocalLB.Pool.create(pool_names=[name],
                                                lb_methods=[supported_method],
                                                members=[[]])
-            except Exception, e:
+            except Exception as e:
                 raise Exception(
                     'Unable to create `{0}` pool\n\n{1}'.format(name, e)
                 )
@@ -183,7 +184,7 @@ class F5Mgmt(object):
         try:
             self.bigIP.LocalLB.Pool.add_member(pool_names=[pool_name],
                                                members=[members_seq])
-        except Exception, e:
+        except Exception as e:
             raise Exception(
                 'Unable to add `{0}` to `{1}`\n\n{2}'.format(name,
                                                              pool_name,
@@ -242,7 +243,7 @@ def create_vs(lb, name, ip, port, protocol, profile, pool_name):
         salt-run f5.create_vs lbalancer vs_name 10.0.0.1 80 tcp http poolname
     '''
     if __opts__['load_balancers'].get(lb, None):
-        (username, password) = __opts__['load_balancers'][lb].values()
+        (username, password) = list(__opts__['load_balancers'][lb].values())
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
 
@@ -263,7 +264,7 @@ def create_pool(lb, name, method='ROUND_ROBIN'):
         salt-run f5.create_pool load_balancer my_pool ROUND_ROBIN
     '''
     if __opts__['load_balancers'].get(lb, None):
-        (username, password) = __opts__['load_balancers'][lb].values()
+        (username, password) = list(__opts__['load_balancers'][lb].values())
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
     F5 = F5Mgmt(lb, username, password)
@@ -282,7 +283,7 @@ def add_pool_member(lb, name, port, pool_name):
         salt-run f5.add_pool_member load_balancer 10.0.0.1 80 my_pool
     '''
     if __opts__['load_balancers'].get(lb, None):
-        (username, password) = __opts__['load_balancers'][lb].values()
+        (username, password) = list(__opts__['load_balancers'][lb].values())
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
     F5 = F5Mgmt(lb, username, password)
@@ -301,7 +302,7 @@ def check_pool(lb, name):
         salt-run f5.check_pool load_balancer pool_name
     '''
     if __opts__['load_balancers'].get(lb, None):
-        (username, password) = __opts__['load_balancers'][lb].values()
+        (username, password) = list(__opts__['load_balancers'][lb].values())
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
     F5 = F5Mgmt(lb, username, password)
@@ -319,7 +320,7 @@ def check_virtualserver(lb, name):
         salt-run f5.check_virtualserver load_balancer virtual_server
     '''
     if __opts__['load_balancers'].get(lb, None):
-        (username, password) = __opts__['load_balancers'][lb].values()
+        (username, password) = list(__opts__['load_balancers'][lb].values())
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
     F5 = F5Mgmt(lb, username, password)
@@ -337,7 +338,7 @@ def check_member_pool(lb, member, pool_name):
         salt-run f5.check_member_pool load_balancer 10.0.0.1 my_pool
     '''
     if __opts__['load_balancers'].get(lb, None):
-        (username, password) = __opts__['load_balancers'][lb].values()
+        (username, password) = list(__opts__['load_balancers'][lb].values())
     else:
         raise Exception('Unable to find `{0}` load balancer'.format(lb))
     F5 = F5Mgmt(lb, username, password)

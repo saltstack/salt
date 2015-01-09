@@ -2,6 +2,7 @@
 '''
 Module for managing quotas on POSIX-like systems.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -63,9 +64,7 @@ def _parse_quota(mount, opts):
             continue
         comps = line.split()
         if mode == 'header':
-            if 'Report for' in line:
-                pass
-            elif 'Block grace time' in line:
+            if 'Block grace time' in line:
                 blockg, inodeg = line.split(';')
                 blockgc = blockg.split(': ')
                 inodegc = inodeg.split(': ')
