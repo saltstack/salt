@@ -409,7 +409,6 @@ class Build(build):
 
 
 class Install(install):
-    # XXX: Remove the Salt Specific Options In Salt Boron. They are now global options
     user_options = install.user_options + [
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
@@ -435,6 +434,14 @@ class Install(install):
 
     def initialize_options(self):
         install.initialize_options(self)
+        # pylint: disable=undefined-variable
+        if __saltstack_version__.info >= (2015, 3):
+            # XXX: Remove the Salt Specific Options In Salt Boron. They are now global options
+            raise DistutilsArgError(
+                'Developers, please remove the salt paths configuration '
+                'setting from the setup\'s install command'
+            )
+        # pylint: enable=undefined-variable
         self.salt_root_dir = None
         self.salt_config_dir = None
         self.salt_cache_dir = None
