@@ -46,7 +46,7 @@ def upgrade_available(name):
     version_num = None
     cmd = '/opt/csw/bin/pkgutil -c --parse --single {0}'.format(
         name)
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
     if out:
         version_num = out.split()[2].strip()
     if version_num:
@@ -202,7 +202,7 @@ def latest_version(*names, **kwargs):
 
     pkgs = list_pkgs()
     cmd = '/opt/csw/bin/pkgutil -a --parse {0}'.format(' '.join(names))
-    output = __salt__['cmd.run_all'](cmd).get('stdout', '').splitlines()
+    output = __salt__['cmd.run_all'](cmd, python_shell=False).get('stdout', '').splitlines()
     for line in output:
         try:
             name, version_rev = line.split()[1:3]
@@ -283,7 +283,7 @@ def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):
 
     cmd = '/opt/csw/bin/pkgutil -yu {0}'.format(' '.join(targets))
     old = list_pkgs()
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -327,7 +327,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = '/opt/csw/bin/pkgutil -yr {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run_all'](cmd, python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
