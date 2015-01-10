@@ -127,7 +127,7 @@ def add(name,
 
     cmd.append(name)
 
-    ret = __salt__['cmd.run_all'](' '.join(cmd))
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if ret['retcode'] != 0:
         return False
