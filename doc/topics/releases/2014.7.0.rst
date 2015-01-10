@@ -548,6 +548,12 @@ New Salt-Cloud Providers
 - :mod:`LXC Containers <salt.cloud.clouds.lxc>`
 - :mod:`Proxmox (OpenVZ containers & KVM) <salt.cloud.clouds.proxmox>`
 
+Salt Call Change
+================
+
+When used with a returner, salt-call now contacts a master if ``--local`` 
+is not specicified.
+
 
 Deprecations
 ============
