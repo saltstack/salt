@@ -265,19 +265,15 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         job = self.master_call(**reformatted_low)
         ret_tag = tagify('ret', base=job['tag'])
 
-        timelimit = time.time() + (timeout or 300)
-        while True:
-            ret = self.event.get_event(full=True)
-            if ret is None:
-                if time.time() > timelimit:
-                    raise salt.exceptions.SaltClientTimeout(
-                        "RunnerClient job '{0}' timed out".format(job['jid']),
-                        jid=job['jid'])
-                else:
-                    continue
+        if timeout is None:
+            timeout = 300
+        ret = self.event.get_event(tag=ret_tag, full=True, wait=timeout)
+        if ret is None:
+            raise salt.exceptions.SaltClientTimeout(
+                "RunnerClient job '{0}' timed out".format(job['jid']),
+                jid=job['jid'])
 
-            if ret['tag'] == ret_tag:
-                return ret['data']['return']
+        return ret['data']['return']
 
 
 class Runner(RunnerClient):
