@@ -111,7 +111,7 @@ def _unit_file_changed(name):
     returns False.
     '''
     return 'warning: unit file changed on disk' in \
-        __salt__['cmd.run'](_systemctl_cmd('status', name)).lower()
+        __salt__['cmd.run'](_systemctl_cmd('status', name), python_shell=False).lower()
 
 
 def systemctl_reload():
@@ -218,7 +218,7 @@ def start(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('start', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('start', name), python_shell=False)
 
 
 def stop(name):
@@ -233,7 +233,7 @@ def stop(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('stop', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('stop', name), python_shell=False)
 
 
 def restart(name):
@@ -248,7 +248,7 @@ def restart(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('restart', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('restart', name), python_shell=False)
 
 
 def reload_(name):
@@ -263,7 +263,7 @@ def reload_(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('reload', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('reload', name), python_shell=False)
 
 
 def force_reload(name):
@@ -278,7 +278,7 @@ def force_reload(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('force-reload', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('force-reload', name), python_shell=False)
 
 
 # The unused sig argument is required to maintain consistency in the state
@@ -296,7 +296,7 @@ def status(name, sig=None):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('is-active', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('is-active', name), python_shell=False)
 
 
 def enable(name, **kwargs):
@@ -311,7 +311,7 @@ def enable(name, **kwargs):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('enable', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('enable', name), python_shell=False)
 
 
 def disable(name, **kwargs):
@@ -326,7 +326,7 @@ def disable(name, **kwargs):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('disable', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('disable', name), python_shell=False)
 
 
 def _templated_instance_enabled(name):
@@ -339,14 +339,14 @@ def _templated_instance_enabled(name):
         return False
     find_unit_by_name = 'find {0} -name {1} -type l -print -quit'
     return len(__salt__['cmd.run'](
-        find_unit_by_name.format(LOCAL_CONFIG_PATH,
-                                 _canonical_unit_name(name))
+        find_unit_by_name.format(LOCAL_CONFIG_PATH, _canonical_unit_name(name)),
+        python_shell=False
     ))
 
 
 def _enabled(name):
     is_enabled = \
-        not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name))
+        not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name), python_shell=False)
     return is_enabled or _templated_instance_enabled(name)
 
 
