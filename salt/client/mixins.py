@@ -87,15 +87,15 @@ class SyncClientMixin(object):
         job = self.master_call(**low)
         ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
 
-        timelimit = time.time() + (timeout or 300)
-        while True:
-            ret = self.event.get_event(tag=ret_tag, full=True, wait=timelimit)
-            if ret is None:
-                raise salt.exceptions.SaltClientTimeout(
-                    "RunnerClient job '{0}' timed out".format(job['jid']),
-                    jid=job['jid'])
+        if timeout is None:
+            timeout = 300
+        ret = self.event.get_event(tag=ret_tag, full=True, wait=timeout)
+        if ret is None:
+            raise salt.exceptions.SaltClientTimeout(
+                "RunnerClient job '{0}' timed out".format(job['jid']),
+                jid=job['jid'])
 
-            return ret['data']['return']
+        return ret['data']['return']
 
     def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
         '''
