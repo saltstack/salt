@@ -441,7 +441,7 @@ def install(pkgs=None,
     if pre_releases:
         # Check the locally installed pip version
         pip_version_cmd = '{0} --version'.format(_get_pip_bin(bin_env))
-        output = __salt__['cmd.run_all'](pip_version_cmd).get('stdout', '')
+        output = __salt__['cmd.run_all'](pip_version_cmd, python_shell=False).get('stdout', '')
         pip_version = output.split()[1]
 
         # From pip v1.4 the --pre flag is available
@@ -495,7 +495,7 @@ def install(pkgs=None,
         cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-        return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+        return __salt__['cmd.run_all'](cmd, python_shell=False, **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
             try:
@@ -663,7 +663,7 @@ def uninstall(pkgs=None,
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
     try:
-        return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+        return __salt__['cmd.run_all'](cmd, python_shell=False, **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
             try:
@@ -725,7 +725,7 @@ def freeze(bin_env=None,
     cmd_kwargs = dict(runas=user, cwd=cwd)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False, **cmd_kwargs)
 
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
@@ -778,13 +778,14 @@ def list_(prefix=None,
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
     if not prefix or prefix in ('p', 'pi', 'pip'):
-        pip_version_result = __salt__['cmd.run_all'](' '.join(pip_version_cmd),
+        pip_version_result = __salt__['cmd.run_all'](pip_version_cmd,
+                                                     python_shell=False,
                                                      **cmd_kwargs)
         if pip_version_result['retcode'] > 0:
             raise CommandExecutionError(pip_version_result['stderr'])
         packages['pip'] = pip_version_result['stdout'].split()[1]
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False, **cmd_kwargs)
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
 
@@ -826,7 +827,7 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
+    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:
