@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import copy
 import logging
+import time
 
 # Import salt libs
 import salt.crypt
@@ -41,7 +42,11 @@ def _mine_send(load, opts):
         load['tok'] = _auth().gen_token('salt')
 
     eventer = salt.utils.event.MinionEvent(opts)
-    return eventer.fire_event(load, '_minion_mine')
+    event_ret = eventer.fire_event(load, '_minion_mine')
+    # We need to pause here to allow for the decoupled nature of
+    # events time to allow the mine to propagate
+    time.sleep(2.0)
+    return event_ret
 
 
 def _mine_get(load, opts):
