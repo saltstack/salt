@@ -621,4 +621,4 @@ def signal(signal=None):
     cmd = '{0}/bin/catalina.sh {1}'.format(
         __catalina_home(), valid_signals[signal]
     )
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
