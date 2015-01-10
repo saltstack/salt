@@ -80,6 +80,27 @@ def _present_test(user, name, enc, comment, options, source, config):
                 True,
                 'All host keys in file {0} are already present'.format(source)
             )
+    else:
+        # check if this is of form {options} {enc} {key} {comment}
+        sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
+        fullkey = sshre.search(name)
+        # if it is {key} [comment]
+        if not fullkey:
+            key_and_comment = name.split()
+            name = key_and_comment[0]
+            if len(key_and_comment) == 2:
+                comment = key_and_comment[1]
+        else:
+            # if there are options, set them
+            if fullkey.group(1):
+                options = fullkey.group(1).split(',')
+            # key is of format: {enc} {key} [comment]
+            comps = fullkey.group(2).split()
+            enc = comps[0]
+            name = comps[1]
+            if len(comps) == 3:
+                comment = comps[2]
+
     check = __salt__['ssh.check_key'](
             user,
             name,
