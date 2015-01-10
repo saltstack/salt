@@ -742,6 +742,7 @@ def create(vm_):
 
     return ret
 
+
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     '''
     Create and attach volumes to created node
@@ -831,6 +832,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         else:
             log.error('Error attaching {0} on Azure'.format(volume_dict))
     return ret
+
 
 def destroy(name, conn=None, call=None, kwargs=None):
     '''
