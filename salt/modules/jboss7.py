@@ -25,7 +25,7 @@ import logging
 from salt.utils import dictdiffer
 
 __func_alias__ = {
-    'reload_': 'reload
+    'reload_': 'reload'
 }
 
 log = logging.getLogger(__name__)
