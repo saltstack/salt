@@ -104,7 +104,12 @@ class NetapiClientTest(TestCase):
         self.assertIn('tag', ret)
 
     def test_runner(self):
-        low = {'client': 'runner', 'fun': 'cache.grains'}
+        # TODO: fix race condition in init of event-- right now the event class
+        # will finish init even if the underlying zmq socket hasn't connected yet
+        # this is problematic for the runnerclient's master_call method if the
+        # runner is quick
+        #low = {'client': 'runner', 'fun': 'cache.grains'}
+        low = {'client': 'runner', 'fun': 'test.sleep', 'arg': [2]}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
