@@ -306,7 +306,7 @@ def _qemu_image_info(path):
     Detect information for the image at path
     '''
     ret = {}
-    out = __salt__['cmd.run']('qemu-img info {0}'.format(path))
+    out = __salt__['cmd.run']('qemu-img info {0}'.format(path), python_shell=False)
 
     match_map = {'size': r'virtual size: \w+ \((\d+) byte[s]?\)',
                  'format': r'file format: (\w+)'}
@@ -325,7 +325,7 @@ def _image_type(vda):
     '''
     Detect what driver needs to be used for the given image
     '''
-    out = __salt__['cmd.run']('qemu-img info {0}'.format(vda))
+    out = __salt__['cmd.run']('qemu-img info {0}'.format(vda), python_shell=False)
     if 'file format: qcow2' in out:
         return 'qcow2'
     else:
