@@ -80,7 +80,7 @@ def set_inactdays(name, inactdays):
     if inactdays == pre_info['inact']:
         return True
     cmd = 'chage -I {0} {1}'.format(inactdays, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['inact'] != pre_info['inact']:
         return post_info['inact'] == inactdays
@@ -101,7 +101,7 @@ def set_maxdays(name, maxdays):
     if maxdays == pre_info['max']:
         return True
     cmd = 'chage -M {0} {1}'.format(maxdays, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['max'] != pre_info['max']:
         return post_info['max'] == maxdays
@@ -121,7 +121,7 @@ def set_mindays(name, mindays):
     if mindays == pre_info['min']:
         return True
     cmd = 'chage -m {0} {1}'.format(mindays, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['min'] != pre_info['min']:
         return post_info['min'] == mindays
@@ -176,7 +176,7 @@ def set_password(name, password, use_usermod=False):
     else:
         # Use usermod -p (less secure, but more feature-complete)
         cmd = 'usermod -p {0} {1}'.format(name, password)
-        __salt__['cmd.run'](cmd, output_loglevel='quiet')
+        __salt__['cmd.run'](cmd, output_loglevel='quiet', python_shell=False)
         uinfo = info(name)
         return uinfo['passwd'] == password
 
@@ -196,7 +196,7 @@ def set_warndays(name, warndays):
     if warndays == pre_info['warn']:
         return True
     cmd = 'chage -W {0} {1}'.format(warndays, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['warn'] != pre_info['warn']:
         return post_info['warn'] == warndays
@@ -215,4 +215,4 @@ def set_date(name, date):
         salt '*' shadow.set_date username 0
     '''
     cmd = 'chage -d {0} {1}'.format(date, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
