@@ -41,7 +41,7 @@ def init(runlevel):
         salt '*' system.init 3
     '''
     cmd = 'init {0}'.format(runlevel)
-    ret = __salt__['cmd.run'](cmd)
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -90,5 +90,5 @@ def shutdown(at_time=None):
         cmd = 'shutdown -h {0}'.format(at_time)
     else:
         cmd = 'shutdown -h now'
-    ret = __salt__['cmd.run'](cmd)
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
