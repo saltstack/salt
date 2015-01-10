@@ -108,7 +108,9 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     cmd = 'repoquery --plugins --queryformat="{0}" {1}'.format(
         query_format, repoquery_args
     )
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd,
+                                     output_loglevel='debug',
+                                     python_shell=False)
     return out.splitlines()
 
 
@@ -740,7 +742,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(targets),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False)
 
     if downgrade:
         cmd = 'yum -y {repo} {gpgcheck} downgrade {pkg}'.format(
@@ -748,7 +750,7 @@ def install(name=None,
             gpgcheck='--nogpgcheck' if skip_verify else '',
             pkg=' '.join(downgrade),
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False)
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -823,7 +825,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     if not targets:
         return {}
     cmd = 'yum -q -y remove "{0}"'.format('" "'.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
@@ -946,7 +948,9 @@ def group_info(name):
     cmd_template = 'repoquery --plugins --group --grouppkgs={0} --list {1!r}'
 
     cmd = cmd_template.format('all', name)
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd,
+                                     output_loglevel='debug',
+                                     python_shell=False)
     all_pkgs = set(out.splitlines())
 
     if not all_pkgs:
@@ -956,7 +960,9 @@ def group_info(name):
         cmd = cmd_template.format(pkgtype, name)
         packages = set(
             __salt__['cmd.run_stdout'](
-                cmd, output_loglevel='debug'
+                cmd,
+                output_loglevel='debug',
+                python_shell=False
             ).splitlines()
         )
         ret['{0} packages'.format(pkgtype)].extend(sorted(packages))
@@ -968,7 +974,9 @@ def group_info(name):
     ret['conditional packages'] = sorted(all_pkgs)
 
     cmd = 'repoquery --plugins --group --info {0!r}'.format(name)
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd,
+                                     output_loglevel='debug',
+                                     python_shell=False)
     if out:
         ret['description'] = '\n'.join(out.splitlines()[1:]).strip()
 
