@@ -2138,7 +2138,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
         if not use_vt:
             res = __salt__['cmd.run_all'](cmd)
         else:
-            stdout, stderr = '', ''
+            stdout_buffer, stderr_buffer = '', ''
             try:
                 proc = vt.Terminal(cmd,
                                    shell=True,
@@ -2158,26 +2158,26 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                         except IOError:
                             cstdout, cstderr = '', ''
                         if cstdout:
-                            stdout += cstdout
+                            stdout_buffer += cstdout
                         else:
                             cstdout = ''
                         if cstderr:
-                            stderr += cstderr
+                            stderr_buffer += cstderr
                         else:
                             cstderr = ''
                     except KeyboardInterrupt:
                         break
                 res = {'retcode': proc.exitstatus,
                        'pid': 2,
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_buffer,
+                       'stderr': stderr_buffer}
             except vt.TerminalException:
                 trace = traceback.format_exc()
                 log.error(trace)
                 res = {'retcode': 127,
                        'pid': '2',
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_buffer,
+                       'stderr': stderr_buffer}
             finally:
                 proc.close(terminate=True, kill=True)
     else:
