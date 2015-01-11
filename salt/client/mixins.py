@@ -15,6 +15,14 @@ from salt.utils.doc import strip_rst as _strip_rst
 
 log = logging.getLogger(__name__)
 
+CLIENT_INTERNAL_KEYWORDS = frozenset([
+    'client',
+    'cmd',
+    'eauth',
+    'fun',
+    'match'
+])
+
 
 class SyncClientMixin(object):
     '''
@@ -39,7 +47,7 @@ class SyncClientMixin(object):
         '''
         self._verify_fun(fun)
         l_fun = self.functions[fun]
-        f_call = salt.utils.format_call(l_fun, low)
+        f_call = salt.utils.format_call(l_fun, low, expected_extra_kws=CLIENT_INTERNAL_KEYWORDS)
         ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
 
