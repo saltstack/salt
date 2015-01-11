@@ -120,7 +120,7 @@ def power(dev, mode):
         state = 'down'
         mode = 'off'
     cmd = 'hciconfig {0} {1}'.format(dev, state)
-    __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     info = address_()
     if info[dev]['power'] == mode:
         return True
@@ -143,9 +143,9 @@ def discoverable(dev):
         )
 
     cmd = 'hciconfig {0} iscan'.format(dev)
-    __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     cmd = 'hciconfig {0}'.format(dev)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=Falsed)
     if 'UP RUNNING ISCAN' in out:
         return True
     return False
@@ -165,9 +165,9 @@ def noscan(dev):
         raise CommandExecutionError('Invalid dev passed to bluetooth.noscan')
 
     cmd = 'hciconfig {0} noscan'.format(dev)
-    __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     cmd = 'hciconfig {0}'.format(dev)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     if 'SCAN' in out:
         return False
     return True
@@ -206,7 +206,7 @@ def block(bdaddr):
         )
 
     cmd = 'hciconfig {0} block'.format(bdaddr)
-    __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run'](cmd, python_shell=False).splitlines()
 
 
 def unblock(bdaddr):
@@ -225,7 +225,7 @@ def unblock(bdaddr):
         )
 
     cmd = 'hciconfig {0} unblock'.format(bdaddr)
-    __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run'](cmd, python_shell=False).splitlines()
 
 
 def pair(address, key):
@@ -285,7 +285,7 @@ def unpair(address):
         )
 
     cmd = 'bluez-test-device remove {0}'.format(address)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 
