@@ -39,8 +39,9 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     tag_prefix = 'run'
 
     def __init__(self, opts):
-        super(RunnerClient, self).__init__(opts)
+        self.opts = opts
         self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
     def _reformat_low(self, low):
         '''
