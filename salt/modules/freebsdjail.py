@@ -32,7 +32,7 @@ def start(jail=''):
         salt '*' jail.start [<jail name>]
     '''
     cmd = 'service jail onestart {0}'.format(jail)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(jail=''):
@@ -46,7 +46,7 @@ def stop(jail=''):
         salt '*' jail.stop [<jail name>]
     '''
     cmd = 'service jail onestop {0}'.format(jail)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(jail=''):
@@ -60,7 +60,7 @@ def restart(jail=''):
         salt '*' jail.restart [<jail name>]
     '''
     cmd = 'service jail onerestart {0}'.format(jail)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def is_enabled():
