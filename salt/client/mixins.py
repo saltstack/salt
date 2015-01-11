@@ -20,6 +20,7 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     'cmd',
     'eauth',
     'fun',
+    'kwarg',
     'match'
 ])
 
