@@ -41,7 +41,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     def __init__(self, opts):
         self.opts = opts
         self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
     def _reformat_low(self, low):
         '''
@@ -108,6 +107,7 @@ class Runner(RunnerClient):
         super(Runner, self).__init__(opts)
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
     def print_docs(self):
         '''
@@ -147,7 +147,7 @@ class Runner(RunnerClient):
                     return async_pub['jid']  # return the jid
 
                 # output rets if you have some
-                for suffix, event in self.get_async_returns(async_pub['tag']):
+                for suffix, event in self.get_async_returns(async_pub['tag'], event=self.event):
                     if not self.opts.get('quiet', False):
                         self.print_async_event(suffix, event)
                     if suffix == 'ret':
