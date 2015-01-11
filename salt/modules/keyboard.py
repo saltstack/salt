@@ -56,7 +56,7 @@ def set_sys(layout):
         salt '*' keyboard.set_sys dvorak
     '''
     if 'Arch' in __grains__['os_family']:
-        __salt__['cmd.run']('localectl set-keymap {0}'.format(layout))
+        __salt__['cmd.run']('localectl set-keymap {0}'.format(layout), python_shell=False)
     elif 'RedHat' in __grains__['os_family']:
         __salt__['file.sed']('/etc/sysconfig/keyboard', '^LAYOUT=.*', 'LAYOUT={0}'.format(layout))
     elif 'Debian' in __grains__['os_family']:
@@ -92,5 +92,5 @@ def set_x(layout):
         salt '*' keyboard.set_x dvorak
     '''
     cmd = 'setxkbmap {0}'.format(layout)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return layout
