@@ -12,6 +12,7 @@ from salt import syspaths
 import salt.config
 import salt.loader
 from salt.client import mixins
+from salt.utils.error import raise_error
 
 
 class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
