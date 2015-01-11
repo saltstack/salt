@@ -60,7 +60,7 @@ def start(name):
     '''
     __salt__['file.remove']('{0}/down'.format(_service_path(name)))
     cmd = 'svc -u {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd, pyhton_shell=False)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 #-- states.service compatible args
