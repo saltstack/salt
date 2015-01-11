@@ -48,7 +48,7 @@ def _get_rcscript(name):
     Return full path to service rc script
     '''
     cmd = '{0} -r'.format(_cmd())
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.endswith('{0}{1}'.format(os.path.sep, name)):
             return line
     return None
@@ -85,7 +85,7 @@ def get_enabled():
     '''
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} -e'.format(service)).splitlines():
+    for svc in __salt__['cmd.run']('{0} -e'.format(service), python_shell=False).splitlines():
         ret.append(os.path.basename(svc))
 
     # This is workaround for bin/173454 bug
@@ -288,7 +288,7 @@ def get_all():
     '''
     ret = []
     service = _cmd()
-    for srv in __salt__['cmd.run']('{0} -l'.format(service)).splitlines():
+    for srv in __salt__['cmd.run']('{0} -l'.format(service), python_shell=False).splitlines():
         if not srv.isupper():
             ret.append(srv)
     return sorted(ret)
