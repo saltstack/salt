@@ -28,10 +28,6 @@ class SyncClientMixin(object):
     '''
     functions = ()
 
-    def __init__(self, opts):
-        self.opts = opts
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
-
     def _verify_fun(self, fun):
         '''
         Check that the function passed really exists

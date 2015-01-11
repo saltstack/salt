@@ -30,8 +30,9 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     tag_prefix = 'wheel'
 
     def __init__(self, opts=None):
-        super(WheelClient, self).__init__(opts)
+        self.opts = opts
         self.functions = salt.loader.wheels(opts)
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
     # TODO: remove/deprecate
     def call_func(self, fun, **kwargs):
