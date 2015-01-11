@@ -70,12 +70,13 @@ class SyncClientMixin(object):
                 'eauth': 'pam',
             })
         '''
+        event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         job = self.master_call(**low)
         ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
 
         if timeout is None:
             timeout = 300
-        ret = self.event.get_event(tag=ret_tag, full=True, wait=timeout)
+        ret = event.get_event(tag=ret_tag, full=True, wait=timeout)
         if ret is None:
             raise salt.exceptions.SaltClientTimeout(
                 "RunnerClient job '{0}' timed out".format(job['jid']),
@@ -335,7 +336,7 @@ class AsyncClientMixin(object):
             print('{tag}: {event}'.format(tag=suffix,
                                           event=event))
 
-    def get_async_returns(self, tag, timeout=None):
+    def get_async_returns(self, tag, timeout=None, event=None):
         '''
         Yield all events from a given tag until "ret" is recieved or timeout is
         reached.
@@ -343,13 +344,15 @@ class AsyncClientMixin(object):
         if timeout is None:
             timeout = self.opts['timeout'] * 2
 
+        if event is None:
+            event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         timeout_at = time.time() + timeout
         last_progress_timestamp = time.time()
         basetag_depth = tag.count('/') + 1
 
         # no need to have a sleep, get_event has one inside
         while True:
-            raw = self.event.get_event(timeout, tag=tag, full=True)
+            raw = event.get_event(timeout, tag=tag, full=True)
             # If we saw no events in the event bus timeout
             # OR
             # we have reached the total timeout
