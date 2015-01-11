@@ -135,6 +135,21 @@ def os_script(os_, vm_=None, opts=None, minion=''):
     return ''
 
 
+def inline_script(script_, vm_, opts, minion):
+    '''
+    Run a sequence of commands _after_ the deploy script was run, or if the
+    deploy script was skipped.
+
+    Inline scripts are to be defined as a list of commands which
+    will then be converted into a bash script and run on the minion.
+    '''
+
+    for line in script_:
+        print line
+
+    return ''
+
+
 def gen_keys(keysize=2048):
     '''
     Generate Salt minion keys and return them as PEM file strings
