@@ -32,7 +32,7 @@ def _list_taps():
     List currently
     '''
     cmd = 'brew tap'
-    return __salt__['cmd.run'](cmd, output_loglevel='debug').splitlines()
+    return __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False).splitlines()
 
 
 def _tap(tap, runas=None):
@@ -44,7 +44,7 @@ def _tap(tap, runas=None):
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if __salt__['cmd.retcode'](cmd, runas=runas):
+    if __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False):
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -55,7 +55,7 @@ def _homebrew_bin():
     '''
     Returns the full path to the homebrew binary in the PATH
     '''
-    ret = __salt__['cmd.run']('brew --prefix', output_loglevel='debug')
+    ret = __salt__['cmd.run']('brew --prefix', output_loglevel='debug', python_shell=False)
     ret += '/bin/brew'
     return ret
 
@@ -88,7 +88,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'brew list --versions'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False)
     for line in out.splitlines():
         try:
             name, version_num = line.split(' ')[0:2]
@@ -190,7 +190,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -313,7 +313,8 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     __salt__['cmd.run'](
         cmd,
         runas=user if user != __opts__['user'] else __opts__['user'],
-        output_loglevel='debug'
+        output_loglevel='debug',
+        python_shell=False
     )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
