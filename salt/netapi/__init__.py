@@ -18,7 +18,11 @@ import salt.utils
 import salt.client.ssh.client
 from salt.exceptions import SaltException, EauthAuthenticationError
 
-
+NETAPI_INTERNAL_KEYWORDS = frozenset([
+    'password',
+    'username',
+    'token',
+])
 class NetapiClient(object):
     '''
     Provide a uniform method of accessing the various client interfaces in Salt
@@ -44,7 +48,9 @@ class NetapiClient(object):
                     'No authentication credentials given')
 
         l_fun = getattr(self, low['client'])
-        f_call = salt.utils.format_call(l_fun, low)
+        f_call = salt.utils.format_call(l_fun,
+                                        low,
+                                        expected_extra_kws=NETAPI_INTERNAL_KEYWORDS)
 
         ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
         return ret
