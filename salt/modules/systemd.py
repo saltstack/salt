@@ -377,7 +377,8 @@ def _templated_instance_enabled(name):
 
 def _enabled(name):
     is_enabled = \
-        not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name))
+        not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name),
+                                    ignore_retcode=True)
     return is_enabled or _templated_instance_enabled(name)
 
 
