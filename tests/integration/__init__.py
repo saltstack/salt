@@ -1172,11 +1172,13 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         arg_str = '-c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0} {1} --async'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0}{async_flag} {1}'.format(self.get_config_dir(),
+                                                  arg_str,
+                                                  async_flag=' --async' if async else '')
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_run_plus(self, fun, options='', *arg, **kwargs):
