@@ -408,8 +408,7 @@ def tty(device, echo=None):
     else:
         return {'Error': 'The specified device is not a valid TTY'}
 
-    cmd = 'echo {0} > {1}'.format(echo, teletype)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all']('cat', stdin=echo, stdout=teletype, python_shell=False)
     if ret['retcode'] == 0:
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
