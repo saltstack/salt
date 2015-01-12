@@ -36,7 +36,7 @@ def _list_taps():
     return _call_brew(cmd)['stdout'].splitlines()
 
 
-def _tap(tap):
+def _tap(tap, runas=None):
     '''
     Add unofficial Github repos to the list of formulas that brew tracks,
     updates, and installs from.
