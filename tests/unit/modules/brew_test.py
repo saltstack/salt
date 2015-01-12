@@ -70,13 +70,7 @@ class BrewTestCase(TestCase):
         '''
         Tests adding unofficial Github repos to the list of brew taps
         '''
-        mock_success = MagicMock(return_value={'retcode': 0})
-        mock_user = MagicMock(return_value='foo')
-        mock_cmd = MagicMock(return_value='')
-        with patch.dict(brew.__salt__, {'cmd.run_all': mock_success,
-                                        'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd,
-                                        'cmd.retcode': mock_success}):
+        with patch.dict(brew.__salt__, {'cmd.retcode': MagicMock(return_value=0)}):
             self.assertTrue(brew._tap('homebrew/test'))
 
     # '_homebrew_bin' function tests: 1
