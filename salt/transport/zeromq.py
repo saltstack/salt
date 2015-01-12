@@ -73,20 +73,22 @@ class ZeroMQReqChannel(salt.transport.channel.ReqChannel):
             return ZeroMQReqChannel.sreq_cache[key]
 
     def __init__(self, opts, **kwargs):
-        self.opts = opts
+        self.opts = dict(opts)
         self.ttype = 'zeromq'
 
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
         if 'master_uri' in kwargs:
-            self.master_uri = kwargs['master_uri']
-        else:
-            self.master_uri = opts['master_uri']
+            self.opts['master_uri'] = kwargs['master_uri']
 
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.SAuth(self.opts)
+
+    @property
+    def master_uri(self):
+        return self.opts['master_uri']
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), tries, timeout)
@@ -134,26 +136,13 @@ class ZeroMQReqChannel(salt.transport.channel.ReqChannel):
 class ZeroMQPubChannel(salt.transport.channel.PubChannel):
     def __init__(self,
                  opts,
-                 safe=True,
-                 timeout=60,
                  **kwargs):
         self.opts = opts
         self.ttype = 'zeromq'
 
-        # TODO: remove??
-        self.safe = safe
-        self.timeout = timeout
-
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
 
-        if 'auth' in kwargs:
-            self.auth = kwargs['auth']
-        else:
-            self.auth = salt.crypt.SAuth(self.opts, safe=self.safe, timeout=self.timeout)
-        if 'master_uri' in kwargs:
-            self.master_uri = kwargs['master_uri']
-        else:
-            self.master_uri = opts['master_uri']
+        self.auth = salt.crypt.SAuth(self.opts)
 
         self.serial = salt.payload.Serial(self.opts)
 
@@ -214,12 +203,6 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.socket.setsockopt(zmq.IPV4ONLY, 0)
 
-        '''
-        if self.opts.get('syndic_master_publish_port'):
-            self.publish_port = self.opts.get('syndic_master_publish_port')
-        else:
-            self.publish_port = creds['publish_port']
-        '''
         self.publish_port = self.auth.creds['publish_port']
         self.socket.connect(self.master_pub)
 
@@ -259,7 +242,7 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
             try:
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
             except salt.crypt.AuthenticationError:
-                self.auth = salt.crypt.SAuth(self.opts, safe=self.safe, timeout=self.timeout)
+                self.auth.authenticate()
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
 
         return payload
