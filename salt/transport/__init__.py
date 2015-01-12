@@ -18,7 +18,7 @@ from collections import defaultdict
 from salt.utils import kinds
 
 log = logging.getLogger(__name__)
-import json
+
 # Module globals for default LaneStack. Because RaetChannels are created on demand
 # they do not have access to the master estate that motivated their creation
 # Also in Raet a LaneStack can be shared shared by all channels in a given jobber
@@ -148,7 +148,6 @@ class RAETChannel(Channel):
             log.error(emsg + '\n')
             raise ValueError(emsg)
 
-        assert nacling
         name = 'channel' + nacling.uuid(size=18)
         stack = LaneStack(name=name,
                           lanename=lanename,
