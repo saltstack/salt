@@ -259,22 +259,6 @@ class MasterEvent(RAETEvent):
         super(MasterEvent, self).__init__('master', opts=opts, sock_dir=sock_dir, listen=listen)
 
 
-class RunnerEvent(MasterEvent):
-    '''
-    This is used to send progress and return events from runners.
-    It extends MasterEvent to include information about how to
-    display events to the user as a runner progresses.
-    '''
-    def __init__(self, opts, jid, listen=True):
-        super(RunnerEvent, self).__init__(opts=opts, sock_dir=opts['sock_dir'], listen=listen)
-        self.jid = jid
-
-    def fire_progress(self, data, outputter='pprint'):
-        progress_event = {'data': data,
-                          'outputter': outputter}
-        self.fire_event(progress_event, salt.utils.event.tagify([self.jid, 'progress'], 'runner'))
-
-
 class PresenceEvent(MasterEvent):
 
     def __init__(self, opts, sock_dir, listen=True, state=None):
