@@ -1057,7 +1057,9 @@ class Loader(object):
             try:
                 if salt.utils.is_windows():
                     # Make sure cache file isn't read-only
-                    self.state.functions['cmd.run']('attrib -R "{0}"'.format(cfn), output_loglevel='quiet')
+                    self.state.functions['cmd.run'](['attrib', '-R', cfn],
+                                                    python_shell=False,
+                                                    output_loglevel='quiet')
                 with salt.utils.fopen(cfn, 'w+b') as fp_:
                     try:
                         self.serial.dump(grains_data, fp_)
