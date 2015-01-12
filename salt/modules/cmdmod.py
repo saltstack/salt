@@ -130,7 +130,7 @@ def _check_loglevel(level='info', quiet=False):
         )
         return LOG_LEVELS['info']
 
-    if salt.utils.is_true(quiet) or level.lower() == 'quiet':
+    if salt.utils.is_true(quiet) or str(level).lower() == 'quiet':
         return None
 
     try:
