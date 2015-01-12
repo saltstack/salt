@@ -40,6 +40,8 @@ standard ``salt`` commands.
     copies those files down in the same tarball as the state run. 
     However, needed fileserver wrappers are still under development.
 
+    By default, Salt SSH 
+
 Salt SSH Roster
 ===============
 
@@ -117,6 +119,13 @@ Targeting with Salt SSH
 Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
 systems still need to be implemented.
+
+.. note::
+    By default, Grains are settable through ``salt-ssh``. By
+    default, these grains will *not* be persisted across reboots. 
+
+    See the "thin_dir" setting in :doc:`Roster documentation </topics/ssh/roster>`
+    for more details.
 
 Configuring Salt SSH
 ====================
