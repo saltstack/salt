@@ -53,13 +53,13 @@ def connect(image):
         fdisk = 'fdisk -l'
     __salt__['cmd.run']('modprobe nbd max_part=63')
     for nbd in glob.glob('/dev/nbd?'):
-        if __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
+        if __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd), python_shell=False):
             while True:
                 # Sometimes nbd does not "take hold", loop until we can verify
                 __salt__['cmd.run'](
-                        'qemu-nbd -c {0} {1}'.format(nbd, image)
-                        )
-                if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
+                        'qemu-nbd -c {0} {1}'.format(nbd, image),
+                        python_shell=False)
+                if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd), python_shell=False):
                     break
             return nbd
     log.warning('Could not connect image: '
@@ -79,8 +79,8 @@ def mount(nbd):
         salt '*' qemu_nbd.mount /dev/nbd0
     '''
     __salt__['cmd.run'](
-            'partprobe {0}'.format(nbd)
-            )
+            'partprobe {0}'.format(nbd),
+            python_shell=False)
     ret = {}
     for part in glob.glob('{0}p*'.format(nbd)):
         root = os.path.join(
@@ -135,5 +135,5 @@ def clear(mnt):
     if ret:
         return ret
     for nbd in nbds:
-        __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd))
+        __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd), python_shell=False)
     return ret
