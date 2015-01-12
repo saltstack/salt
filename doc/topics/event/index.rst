@@ -151,11 +151,14 @@ dictionary should be sent instead.
 
     # Import the proper library
     import salt.utils.event
+    # bring in the system configuration
+    import salt.config
+    cfg = salt.config.minion_config("/etc/salt/minion")
     # Fire deploy action
     sock_dir = '/var/run/salt/minion'
     payload = {'sample-msg': 'this is a test',
                'example': 'this is the same test'}
-    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event = salt.utils.event.SaltEvent('master', sock_dir, opts=cfg)
     event.fire_event(payload, 'tag')
 
 It should be noted that this code can be used in 3rd party applications as well.
@@ -177,3 +180,19 @@ programmatically, without having to make other calls to Salt.
 A 3rd party process can listen to the event bus on the master and another 3rd party
 process can fire events to the process on the master, which Salt will happily
 pass along.
+
+To fire an event to be sent to the master, from the minion, from code:
+
+.. code-block:: python
+    
+    import salt.utils.event
+    import salt.config
+    cfg = salt.config.minion_config("/etc/salt/minion")
+    sock_dir = '/var/run/salt/minion'
+    tag = "tag"
+    payload = {'sample-msg": "this is a test'}
+    # The message wrapper
+    # Create an event interface
+    event = salt.utils.event.SaltEvent("minion", sock_dir, opts=cfg)
+    # Fire the event across
+    event.fire_master(payload, tag)
