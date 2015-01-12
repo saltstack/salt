@@ -377,7 +377,8 @@ def install(name=None,
     __salt__['cmd.run'](
         'pkg_add {0}'.format(' '.join(args)),
         env=env,
-        output_loglevel='debug'
+        output_loglevel='debug',
+        python_shell=False
     )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -438,7 +439,7 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'pkg_delete {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -463,7 +464,7 @@ def rehash():
     '''
     shell = __salt__['environ.get']('SHELL', output_loglevel='debug')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
-        __salt__['cmd.run']('rehash', output_loglevel='debug')
+        __salt__['cmd.run']('rehash', output_loglevel='debug', python_shell=False)
 
 
 def file_list(*packages):
@@ -513,7 +514,7 @@ def file_dict(*packages):
     else:
         cmd = 'pkg_info -QLa'
 
-    ret = __salt__['cmd.run_all'](cmd, output_loglevel='debug')
+    ret = __salt__['cmd.run_all'](cmd, output_loglevel='debug', python_shell=False)
 
     for line in ret['stderr'].splitlines():
         errors.append(line)

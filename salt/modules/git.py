@@ -76,6 +76,7 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
                                      cwd=cwd,
                                      runas=runas,
                                      env=env,
+                                     python_shell=False,
                                      **kwargs)
 
     if identity:
@@ -124,7 +125,7 @@ def current_branch(cwd, user=None):
     cmd = r'git branch | grep "^*\ " | cut -d " " -f 2 | ' + \
         'grep -v "(detached"'
 
-    return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
+    return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user, python_shell=True)
 
 
 def revision(cwd, rev='HEAD', short=False, user=None):
@@ -216,7 +217,7 @@ def describe(cwd, rev='HEAD', user=None):
         salt '*' git.describe /path/to/repo develop
     '''
     cmd = 'git describe {0}'.format(rev)
-    return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
+    return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
 def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):

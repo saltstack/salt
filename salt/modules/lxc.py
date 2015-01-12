@@ -261,14 +261,14 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         for k, v in options.items():
             cmd += ' --{0} {1}'.format(k, v)
 
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] == 0 and exists(name):
         return {'created': True}
     else:
         if exists(name):
             # destroy the container if it was partially created
             cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd)
+            __salt__['cmd.retcode'](cmd, python_shell=False)
         log.warn('lxc-create failed to create container')
         return {'created': False, 'error':
                 'container could not be created: {0}'.format(ret['stderr'])}
@@ -282,7 +282,7 @@ def list_():
 
         salt '*' lxc.list
     '''
-    ctnrs = __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
+    ctnrs = __salt__['cmd.run']('lxc-ls | sort -u', python_shell=True).splitlines()
 
     stopped = []
     frozen = []
@@ -322,7 +322,7 @@ def _change_state(cmd, name, expected):
         return {'state': expected, 'change': False}
 
     cmd = '{0} -n {1}'.format(cmd, name)
-    err = __salt__['cmd.run_stderr'](cmd)
+    err = __salt__['cmd.run_stderr'](cmd, python_shell=False)
     if err:
         s2 = state(name)
         r = {'state': s2, 'change': s1 != s2, 'error': err}
@@ -330,7 +330,7 @@ def _change_state(cmd, name, expected):
         if expected is not None:
             # some commands do not wait, so we will
             cmd = 'lxc-wait -n {0} -s {1}'.format(name, expected.upper())
-            __salt__['cmd.run'](cmd, timeout=30)
+            __salt__['cmd.run'](cmd, timeout=30, python_shell=False)
         s2 = state(name)
         r = {'state': s2, 'change': s1 != s2}
     return r
@@ -418,7 +418,7 @@ def state(name):
         return None
 
     cmd = 'lxc-info -n {0}'.format(name)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
@@ -439,7 +439,7 @@ def get_parameter(name, parameter):
         return None
 
     cmd = 'lxc-cgroup -n {0} {1}'.format(name, parameter)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
@@ -458,7 +458,7 @@ def set_parameter(name, parameter, value):
         return None
 
     cmd = 'lxc-cgroup -n {0} {1} {2}'.format(name, parameter, value)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
