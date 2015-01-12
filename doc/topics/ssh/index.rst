@@ -40,8 +40,6 @@ standard ``salt`` commands.
     copies those files down in the same tarball as the state run. 
     However, needed fileserver wrappers are still under development.
 
-    By default, Salt SSH 
-
 Salt SSH Roster
 ===============
 
