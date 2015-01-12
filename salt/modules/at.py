@@ -40,8 +40,9 @@ def _cmd(binary, *args):
     # TODO: Use CommandNotFoundException for this
     binary = salt.utils.which(binary)
     if binary:
-        return __salt__['cmd.run_stdout']('{0} {1}'.format(binary,
-                                                           ' '.join(args)))
+        cmd = [binary]
+        cmd.extend(args)
+        return __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
 
 def atq(tag=None):

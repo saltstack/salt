@@ -138,7 +138,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = 'service {0} start'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -152,7 +152,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = 'service {0} stop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -166,7 +166,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = 'service {0} restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def reload_(name):
@@ -180,7 +180,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = 'service {0} reload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def force_reload(name):
@@ -194,7 +194,7 @@ def force_reload(name):
         salt '*' service.force_reload <service name>
     '''
     cmd = 'service {0} force-reload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -211,7 +211,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = 'service {0} status'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def enable(name, **kwargs):
@@ -249,7 +249,7 @@ def disable(name, **kwargs):
         salt '*' service.disable <service name>
     '''
     cmd = 'update-rc.d {0} disable'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def enabled(name):
