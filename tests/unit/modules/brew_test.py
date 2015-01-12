@@ -61,7 +61,8 @@ class BrewTestCase(TestCase):
         mock_cmd = MagicMock(return_value='')
         with patch.dict(brew.__salt__, {'cmd.run_all': mock_failure,
                                         'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd}):
+                                        'cmd.run': mock_cmd,
+                                        'cmd.retcode': mock_failure}):
             self.assertFalse(brew._tap('homebrew/test'))
 
     @patch('salt.modules.brew._list_taps', MagicMock(return_value=TAPS_LIST))
@@ -74,7 +75,8 @@ class BrewTestCase(TestCase):
         mock_cmd = MagicMock(return_value='')
         with patch.dict(brew.__salt__, {'cmd.run_all': mock_success,
                                         'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd}):
+                                        'cmd.run': mock_cmd,
+                                        'cmd.retcode': mock_success}):
             self.assertTrue(brew._tap('homebrew/test'))
 
     # '_homebrew_bin' function tests: 1
