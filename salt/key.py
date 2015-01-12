@@ -752,7 +752,7 @@ class Key(object):
                     pass
         self.check_minion_cache(preserve_minions=matches.get('minions', []))
         if self.opts.get('rotate_aes_key'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -774,7 +774,7 @@ class Key(object):
                     pass
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def reject(self, match=None, match_dict=None, include_accepted=False):
@@ -812,7 +812,7 @@ class Key(object):
                     pass
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -843,7 +843,7 @@ class Key(object):
                 pass
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
-            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'], self.opts['sock_dir'])
+            salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
     def finger(self, match):

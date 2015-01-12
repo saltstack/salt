@@ -114,4 +114,5 @@ class AsyncClientMixin(object):
                 target=self._proc_function,
                 args=(fun, low, user, tag, jid))
         proc.start()
+        proc.join()  # MUST join, otherwise we leave zombies all over
         return {'tag': tag, 'jid': jid}

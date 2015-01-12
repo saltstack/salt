@@ -74,9 +74,7 @@ class RemotePillar(object):
         self.ext = ext
         self.grains = grains
         self.id_ = id_
-        self.serial = salt.payload.Serial(self.opts)
         self.channel = salt.transport.Channel.factory(opts)
-        # self.auth = salt.crypt.SAuth(opts)
 
     def compile_pillar(self):
         '''
@@ -89,12 +87,11 @@ class RemotePillar(object):
                 'cmd': '_pillar'}
         if self.ext:
             load['ext'] = self.ext
-        ret_pillar = self.channel.crypted_transfer_decode_dictentry(load, dictkey='pillar', tries=3, timeout=7200)
-
-        # key = self.auth.get_keys()
-        # aes = key.private_decrypt(ret['key'], 4)
-        # pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        # ret_pillar = pcrypt.loads(ret['pillar'])
+        ret_pillar = self.channel.crypted_transfer_decode_dictentry(load,
+                                                                    dictkey='pillar',
+                                                                    tries=3,
+                                                                    timeout=7200,
+                                                                    )
 
         if not isinstance(ret_pillar, dict):
             log.error(
@@ -134,6 +131,9 @@ class Pillar(object):
         # location of file_roots. Issue 5951
         ext_pillar_opts = dict(self.opts)
         ext_pillar_opts['file_roots'] = self.actual_file_roots
+        # TODO: consolidate into "sanitize opts"
+        if 'aes' in ext_pillar_opts:
+            ext_pillar_opts.pop('aes')
         self.merge_strategy = 'smart'
         if opts.get('pillar_source_merging_strategy'):
             self.merge_strategy = opts['pillar_source_merging_strategy']
@@ -592,6 +592,7 @@ class Pillar(object):
         errors.extend(terrors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)
+            # TODO: consolidate into sanitize function
             if 'grains' in mopts:
                 mopts.pop('grains')
             if 'aes' in mopts:
