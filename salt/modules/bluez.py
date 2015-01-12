@@ -145,7 +145,7 @@ def discoverable(dev):
     cmd = 'hciconfig {0} iscan'.format(dev)
     __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     cmd = 'hciconfig {0}'.format(dev)
-    out = __salt__['cmd.run'](cmd, python_shell=Falsed)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     if 'UP RUNNING ISCAN' in out:
         return True
     return False

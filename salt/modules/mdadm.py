@@ -223,4 +223,4 @@ def create(*args):
     if test_mode is True:
         return cmd
     elif test_mode is False:
-        return __salt__['cmd.run'](cmd, stdin=yes.stdout(), python_shell=False)
+        return __salt__['cmd.run'](cmd, stdin=yes.stdout, python_shell=False)

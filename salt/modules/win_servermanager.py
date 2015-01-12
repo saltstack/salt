@@ -5,9 +5,9 @@ Manage Windows features via the ServerManager powershell module
 
 # Import python libs
 try:
- from shlex import quote as _cmd_quote # pylint: disable=E0611
+    from shlex import quote as _cmd_quote # pylint: disable=E0611
 except ImportError:
- from pipes import quote as _cmd_quote
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils

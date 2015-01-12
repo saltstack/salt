@@ -847,7 +847,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False):  # pylint: disable=W0221
         '''
         Execute salt-run
         '''
