@@ -225,7 +225,7 @@ def vm_info(uuid=None):
         raise CommandExecutionError('UUID parameter is mandatory')
     vmadm = _check_vmadm()
     cmd = '{0} get {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
@@ -249,7 +249,7 @@ def start(uuid=None):
         raise CommandExecutionError('The specified vm is already running')
     vmadm = _check_vmadm()
     cmd = '{0} start {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
@@ -275,7 +275,7 @@ def shutdown(uuid=None):
         raise CommandExecutionError('The specified vm is already stopped')
     vmadm = _check_vmadm()
     cmd = '{0} stop {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
@@ -301,7 +301,7 @@ def reboot(uuid=None):
         raise CommandExecutionError('The specified vm is stopped')
     vmadm = _check_vmadm()
     cmd = '{0} reboot {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
@@ -325,7 +325,7 @@ def destroy(uuid=None):
         raise CommandExecutionError('UUID parameter is mandatory')
     vmadm = _check_vmadm()
     cmd = '{0} delete {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
@@ -346,7 +346,7 @@ def vm_virt_type(uuid=None):
         raise CommandExecutionError('UUID parameter is mandatory')
     vmadm = _check_vmadm()
     cmd = '{0} list -p -o type uuid={1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
@@ -380,7 +380,7 @@ def setmem(uuid, memory):
     elif vmtype == 'KVM':
         cmd = '{0} update {1} ram={2}'.format(vmadm, uuid, memory)
         warning = 'Done, but please note this will require a restart of the VM'
-    retcode = __salt__['cmd.retcode'](cmd)
+    retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
     if retcode != 0:
         raise CommandExecutionError(_exit_status(retcode))
     if not warning:
@@ -402,7 +402,7 @@ def get_macs(uuid=None):
         raise CommandExecutionError('UUID parameter is mandatory')
     dladm = _check_dladm()
     cmd = '{0} show-vnic -o MACADDRESS -p -z {1}'.format(dladm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     ret = res['stdout']
     if ret != '':
         return ret

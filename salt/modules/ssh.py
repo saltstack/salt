@@ -550,7 +550,7 @@ def get_known_host(user, hostname, config='.ssh/known_hosts'):
     if not uinfo or not os.path.isfile(full):
         return None
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(hostname, full)
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
 
@@ -581,7 +581,7 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
         chunks.append('-H')
     chunks.append(str(hostname))
     cmd = ' '.join(chunks)
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
 
@@ -637,7 +637,7 @@ def rm_known_host(user, hostname, config='.ssh/known_hosts'):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
     cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(hostname, full)
-    cmd_result = __salt__['cmd.run'](cmd)
+    cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0:
         os.chown(full, uinfo['uid'], uinfo['gid'])
