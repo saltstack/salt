@@ -420,6 +420,22 @@ class SaltEvent(object):
             raise
         return True
 
+    def fire_master(self, data, tag, timeout=1000):
+        ''''
+        Send a single event to the master, with the payload "data" and the
+        event identifier "tag".
+
+        Default timeout is 1000ms
+        '''
+        msg = {
+            'tag': tag,
+            'data': data,
+            'events': None,
+            'pretag': None
+        }
+        return self.fire_event(msg, "fire_master", timeout)
+
+
     def destroy(self, linger=5000):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
