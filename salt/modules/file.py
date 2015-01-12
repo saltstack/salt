@@ -2666,7 +2666,7 @@ def get_managed(
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
-                protos = ['salt', 'http', 'https', 'ftp', 'swift']
+                protos = ['salt', 'http', 'https', 'ftp', 'swift', 's3']
                 if _urlparse(source_hash).scheme in protos:
                     # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
