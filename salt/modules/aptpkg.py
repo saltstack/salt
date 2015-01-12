@@ -1970,3 +1970,25 @@ def owner(*paths):
     if len(ret) == 1:
         return next(ret.itervalues())
     return ret
+
+
+def check_extra_requirements(pkgname, pkgver):
+    ops = {'>': [1],
+           '<': [-1],
+           '=': [0],
+           '>=': [0, 1],
+           '<=': [-1, 0]}
+    match = re.match('^([<>])?(=)?([^<>=]*)$', pkgver)
+    if match:
+        _pkgver = version(pkgname)
+        if not _pkgver:
+            return False
+        gt_lt, eq, verstr = match.groups()
+        prefix = gt_lt or ''
+        prefix += eq or ''
+        if not prefix:
+            prefix = '='
+        compare = version_cmp(_pkgver, pkgver)
+        return compare in ops[prefix]
+    else:
+        return True
