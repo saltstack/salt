@@ -270,7 +270,11 @@ def _Popen(command,
     if isinstance(command, list):
         command = ' '.join(command)
     LOG.debug(u'Running {0}'.format(command))
-    ret = __salt__['cmd.run_all'](command, cwd=directory, runas=runas, env=env)
+    ret = __salt__['cmd.run_all'](command,
+                                  cwd=directory,
+                                  runas=runas,
+                                  env=env,
+                                  python_shell=False)
     out = ret['stdout'] + '\n\n' + ret['stderr']
     if (exitcode is not None) and (ret['retcode'] != exitcode):
         raise _BuildoutError(out)
@@ -976,14 +980,14 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
                 if not onlyif:
                     _valid(status, 'onlyif execution failed')
             elif isinstance(onlyif, string_types):
-                if retcode(onlyif, cwd=directory, runas=runas, env=env) != 0:
+                if retcode(onlyif, cwd=directory, runas=runas, env=env, python_shell=False) != 0:
                     _valid(status, 'onlyif execution failed')
         if unless is not None:
             if not isinstance(unless, string_types):
                 if unless:
                     _valid(status, 'unless execution succeeded')
             elif isinstance(unless, string_types):
-                if retcode(unless, cwd=directory, runas=runas, env=env) == 0:
+                if retcode(unless, cwd=directory, runas=runas, env=env, python_shell=False) == 0:
                     _valid(status, 'unless execution succeeded')
     if status['status']:
         ret = status

@@ -102,6 +102,7 @@ def latest_version(*names, **kwargs):
         output = __salt__['cmd.run_stdout'](
             cmd,
             output_loglevel='debug',
+            python_shell=False
         )
         outputs.extend(re.split('Information for package \\S+:\n', output))
         restpackages = restpackages[500:]
@@ -446,7 +447,7 @@ def _uninstall(action='remove', name=None, pkgs=None):
             'zypper --non-interactive remove {0} {1}'
             .format(purge_arg, ' '.join(targets[:500]))
         )
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False)
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()

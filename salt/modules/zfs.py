@@ -98,7 +98,8 @@ def _make_function(cmd_name, doc):
                     _check_zfs(),
                     cmd_name,
                     ' '.join(args)
-                    )
+                    ),
+                python_shell=False
                 )
 
         # Make a note of the error in the return object if retcode
