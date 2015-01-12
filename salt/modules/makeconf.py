@@ -42,7 +42,7 @@ def _add_var(var, value):
         # TODO perhaps make this a function in the file module?
         cmd = ['sed', '-i', '/{0}/'.format(layman.replace('/', '\\/')),
               fullvar, makeconf]
-        __salt__['cmd.run'](cmd)
+        __salt__['cmd.run'](cmd, python_shell=False)
     else:
         __salt__['file.append'](makeconf, fullvar)
 

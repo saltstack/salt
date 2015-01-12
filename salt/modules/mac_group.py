@@ -56,7 +56,7 @@ def add(name, gid=None, **kwargs):
     if gid:
         cmd += '-i {0} '.format(gid)
     cmd += str(name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def delete(name):
@@ -78,7 +78,7 @@ def delete(name):
     if not info(name):
         return True
     cmd = 'dseditgroup -o delete {0}'.format(name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def info(name):
@@ -152,4 +152,4 @@ def chgid(name, gid):
     if gid == pre_info['gid']:
         return True
     cmd = 'dseditgroup -o edit -i {0} {1}'.format(gid, name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0

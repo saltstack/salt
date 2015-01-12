@@ -6,6 +6,7 @@ Salt module to manage RAID arrays with mdadm
 # Import python libs
 import os
 import logging
+import subprocess
 
 # Import salt libs
 import salt.utils
@@ -79,7 +80,7 @@ def detail(device='/dev/md0'):
         raise CommandExecutionError(msg.format(device))
 
     cmd = 'mdadm --detail {0}'.format(device)
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.startswith(device):
             continue
         if ' ' not in line:
@@ -125,9 +126,9 @@ def destroy(device):
     stop_cmd = 'mdadm --stop {0}'.format(device)
     zero_cmd = 'mdadm --zero-superblock {0}'
 
-    if __salt__['cmd.retcode'](stop_cmd):
+    if __salt__['cmd.retcode'](stop_cmd, python_shell=False):
         for number in details['members']:
-            __salt__['cmd.retcode'](zero_cmd.format(number['device']))
+            __salt__['cmd.retcode'](zero_cmd.format(number['device']), python_shell=False)
 
     if __salt__['raid.list']().get(device) is None:
         return True
@@ -208,7 +209,8 @@ def create(*args):
             msg = "Invalid argument - {0} !"
             raise CommandExecutionError(msg.format(arg))
 
-    cmd = "echo y | mdadm --create --verbose {new_array}{opts_raw}{opts_val} {disks_to_array}"
+    yes = subprocess.Popen(['yes'], stdout=subprocess.PIPE)
+    cmd = 'mdadm --create --verbose {new_array}{opts_raw}{opts_val} {disks_to_array}'
     cmd = cmd.format(new_array=arguments['new_array'],
                      opts_raw=(' --' + ' --'.join(arguments['opt_raw'])
                                if len(arguments['opt_raw']) > 0
@@ -221,4 +223,4 @@ def create(*args):
     if test_mode is True:
         return cmd
     elif test_mode is False:
-        return __salt__['cmd.run'](cmd)
+        return __salt__['cmd.run'](cmd, stdin=yes.stdout(), python_shell=False)

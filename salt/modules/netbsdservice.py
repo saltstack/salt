@@ -35,7 +35,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '/etc/rc.d/{0} onestart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -49,7 +49,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '/etc/rc.d/{0} onestop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -63,7 +63,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/etc/rc.d/{0} onerestart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def reload_(name):
@@ -77,7 +77,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '/etc/rc.d/{0} onereload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def force_reload(name):
@@ -91,7 +91,7 @@ def force_reload(name):
         salt '*' service.force_reload <service name>
     '''
     cmd = '/etc/rc.d/{0} forcereload'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -108,7 +108,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} onestatus'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def _get_svc(rcd, service_status):
@@ -116,7 +116,7 @@ def _get_svc(rcd, service_status):
     Returns a unique service status
     '''
     ena = None
-    lines = __salt__['cmd.run']('{0} rcvar'.format(rcd)).splitlines()
+    lines = __salt__['cmd.run']('{0} rcvar'.format(rcd), python_shell=False).splitlines()
     for rcvar in lines:
         if rcvar.startswith('$') and '={0}'.format(service_status) in rcvar:
             ena = 'yes'
@@ -221,7 +221,7 @@ def _rcconf_status(name, service_status):
     rcconf = '/etc/rc.conf'
     rxname = '^{0}=.*'.format(name)
     newstatus = '{0}={1}'.format(name, service_status)
-    ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf))
+    ret = __salt__['cmd.retcode']('grep \'{0}\' {1}'.format(rxname, rcconf), python_shell=False)
     if ret == 0:  # service found in rc.conf, modify its status
         __salt__['file.replace'](rcconf, rxname, newstatus)
     else:

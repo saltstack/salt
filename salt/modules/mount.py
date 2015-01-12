@@ -411,7 +411,7 @@ def is_fuse_exec(cmd):
     elif not _which('ldd'):
         raise CommandNotFoundError('ldd')
 
-    out = __salt__['cmd.run']('ldd {0}'.format(cmd_path))
+    out = __salt__['cmd.run']('ldd {0}'.format(cmd_path), python_shell=False)
     return 'libfuse' in out
 
 

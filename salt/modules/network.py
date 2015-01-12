@@ -37,7 +37,7 @@ def ping(host):
         salt '*' network.ping archlinux.org
     '''
     cmd = 'ping -c 4 {0}'.format(salt.utils.network.sanitize_host(host))
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 # FIXME: Does not work with: netstat 1.42 (2001-04-15) from net-tools
@@ -48,7 +48,7 @@ def _netstat_linux():
     '''
     ret = []
     cmd = 'netstat -tulpnea'
-    out = __salt__['cmd.run'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run'](cmd, output_loglevel='debug', python_shell=False)
     for line in out.splitlines():
         comps = line.split()
         if line.startswith('tcp'):
@@ -292,11 +292,11 @@ def traceroute(host):
 
     cmd = 'traceroute {0}'.format(salt.utils.network.sanitize_host(host))
 
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
 
     # Parse version of traceroute
     cmd2 = 'traceroute --version'
-    out2 = __salt__['cmd.run'](cmd2)
+    out2 = __salt__['cmd.run'](cmd2, python_shell=False)
     try:
         # Linux traceroute version looks like:
         #   Modern traceroute for Linux, version 2.0.19, Dec 10 2012
@@ -395,7 +395,7 @@ def dig(host):
         salt '*' network.dig archlinux.org
     '''
     cmd = 'dig {0}'.format(salt.utils.network.sanitize_host(host))
-    return __salt__['cmd.run'](cmd)
+    return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def arp():
@@ -547,7 +547,7 @@ def mod_hostname(hostname):
     hostname = hostname
     cmd1 = 'hostname {0}'.format(hostname)
 
-    __salt__['cmd.run'](cmd1)
+    __salt__['cmd.run'](cmd1, python_shell=False)
 
     #2.modify /etc/hosts hostname
     f = open('/etc/hosts', 'r')
