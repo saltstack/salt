@@ -127,10 +127,11 @@ def extracted(name,
         log.debug("Untar %s in %s", filename, name)
         results = __salt__['cmd.run_all']('tar -xv{0}f {1}'.format(tar_options,
                                                              filename),
-                                          cwd=name)
+                                          cwd=name,
+                                          python_shell=False)
         if results['retcode'] != 0:
             return results
-        if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
+        if __salt__['cmd.retcode']('tar --version | grep bsdtar', python_shell=True) == 0:
             files = results['stderr']
         else:
             files = results['stdout']
