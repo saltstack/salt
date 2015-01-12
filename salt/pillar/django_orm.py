@@ -98,7 +98,7 @@ import sys
 import salt.exceptions
 import salt.ext.six as six
 
-import django
+from django import setup as django_setup
 from django.core.management.base import BaseCommand
 
 HAS_VIRTUALENV = False
@@ -175,7 +175,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     os.environ['DJANGO_SETTINGS_MODULE'] = settings_module
     commands = BaseCommand()
     if commands.get_version().split('.')[1] > 6:
-        django.setup()
+        django_setup()
 
     if env_file is not None:
         import subprocess
