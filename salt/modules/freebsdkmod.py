@@ -44,6 +44,7 @@ def _rm_mods(pre_mods, post_mods):
         post.add(mod['module'])
     return list(pre - post)
 
+
 def _get_persistent_modules():
     mods = set()
     for mod in __salt__['cmd.run']('sysrc -ni kld_list').split():
@@ -55,7 +56,8 @@ def _set_persistent_module(mod):
     '''
     Add a module to sysrc to make it persistent.
     '''
-    if not mod_name or mod_name in mod_list(True) or mod_name not in available():
+    if not mod_name or mod_name in mod_list(True) or mod_name not in \
+            available():
         return set()
     mods = _get_persistent_modules().add(mod)
     __salt__['cmd.run']('sysrc kld_list="{0}"'.format(mods))
@@ -131,6 +133,7 @@ def lsmod():
         mdat['depcount'] = comps[1]
         ret.append(mdat)
     return ret
+
 
 def mod_list(only_persist=False):
     '''
