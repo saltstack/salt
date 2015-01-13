@@ -7,7 +7,7 @@ import threading
 import errno
 import hashlib
 
-from random import randint, shuffle
+from random import randint
 
 # Import Salt Libs
 import salt.payload
@@ -18,7 +18,6 @@ import salt.payload
 import logging
 from collections import defaultdict
 
-from salt.utils import kinds
 import salt.transport.channel
 
 import zmq
