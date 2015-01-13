@@ -291,11 +291,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         template.globals.update(unicode_context)
         output = template.render(**unicode_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
-        print exc
-        print out
-        print line
-        print tmplstr
-
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=unicode_context)
         if not line:
