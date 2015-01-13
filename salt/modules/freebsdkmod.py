@@ -5,9 +5,19 @@ Module to manage FreeBSD kernel modules
 
 # Import python libs
 import os
+import re
+
+# Import salt libs
+import salt.utils
 
 # Define the module's virtual name
 __virtualname__ = 'kmod'
+
+
+_LOAD_MODULE = '{0}_load="YES"'
+_LOADER_CONF = '/boot/loader.conf'
+_MODULE_RE = '^{0}_load="YES"'
+_MODULES_RE = '^(\w+)_load="YES"'
 
 
 def __virtual__():
@@ -45,39 +55,45 @@ def _rm_mods(pre_mods, post_mods):
     return pre - post
 
 
+def _get_module_name(line):
+    match = re.search(_MODULES_RE, line)
+    if match:
+        return match.group(1)
+    return None
+
+
 def _get_persistent_modules():
+    '''
+    Returns a list of modules in loader.conf that load on boot.
+    '''
     mods = set()
-    response = __salt__['cmd.run_all']('sysrc -niq kld_list')
-    if response['retcode'] == 0:
-        for mod in response['stdout'].split():
-            mods.add(mod)
+    with salt.utils.fopen(_LOADER_CONF, 'r') as loader_conf:
+        for line in loader_conf:
+            line = line.strip()
+            mod_name = _get_module_name(line)
+            if mod_name:
+                mods.add(mod_name)
     return mods
 
 
 def _set_persistent_module(mod):
     '''
-    Add a module to sysrc to make it persistent.
+    Add a module to loader.conf to make it persistent.
     '''
     if not mod or mod in mod_list(True) or mod not in \
             available():
         return set()
-    mods = _get_persistent_modules()
-    mods.add(mod)
-    __salt__['cmd.run_all']("sysrc kld_list='{0}'".format(' '.join(mods)),
-                            python_shell=False)
+    __salt__['file.append'](_LOADER_CONF, _LOAD_MODULE.format(mod))
     return set([mod])
 
 
 def _remove_persistent_module(mod):
     '''
-    Remove module from sysrc.
+    Remove module from loader.conf.
     '''
     if not mod or mod not in mod_list(True):
         return set()
-    mods = _get_persistent_modules()
-    mods.remove(mod)
-    __salt__['cmd.run_all']("sysrc kld_list='{0}'".format(' '.join(mods)),
-                            python_shell=False)
+    __salt__['file.sed'](_LOADER_CONF, _MODULE_RE.format(mod), '')
     return set([mod])
 
 
