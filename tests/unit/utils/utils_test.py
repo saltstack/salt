@@ -647,13 +647,14 @@ class UtilsTestCase(TestCase):
 
     def test_get_colors(self):
         ret = utils.get_colors()
-        self.assertDictContainsSubset({'LIGHT_GRAY': '\x1b[0;37m'}, ret)
+        self.assertEqual('\x1b[0;37m', str(ret['LIGHT_GRAY']))
 
         ret = utils.get_colors(use=False)
         self.assertDictContainsSubset({'LIGHT_GRAY': ''}, ret)
 
         ret = utils.get_colors(use='LIGHT_GRAY')
-        self.assertDictContainsSubset({'YELLOW': '\x1b[0;37m'}, ret)  # YELLOW now == LIGHT_GRAY
+        # LIGHT_YELLOW now == LIGHT_GRAY
+        self.assertEqual(str(ret['LIGHT_YELLOW']), str(ret['LIGHT_GRAY']))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_daemonize_if(self):

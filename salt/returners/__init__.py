@@ -198,13 +198,15 @@ def _fetch_profile_opts(
 
     # Using a profile and it is in _options
 
+    creds = {}
     profile = _options[profile_attr]
-    log.info('Using profile %s', profile)
+    if profile:
+        log.info('Using profile %s', profile)
 
-    if 'config.option' in __salt__:
-        creds = cfg(profile)
-    else:
-        creds = cfg.get(profile)
+        if 'config.option' in __salt__:
+            creds = cfg(profile)
+        else:
+            creds = cfg.get(profile)
 
     if not creds:
         return {}

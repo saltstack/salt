@@ -3,6 +3,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 import os
+import re
 import time
 
 # Import salt libs
@@ -69,7 +70,8 @@ class CacheCli(object):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts.get('serial', ''))
         self.cache_sock = os.path.join(self.opts['sock_dir'], 'con_cache.ipc')
-        self.cache_upd_sock = os.path.join(self.opts['sock_dir'], 'con_upd.ipc')
+        self.cache_upd_sock = os.path.join(
+            self.opts['sock_dir'], 'con_upd.ipc')
 
         context = zmq.Context()
 
@@ -97,6 +99,65 @@ class CacheCli(object):
         self.creq_out.send(msg)
         min_list = self.serial.loads(self.creq_out.recv())
         return min_list
+
+
+class CacheRegex(object):
+    '''
+    Create a regular expression object cache for the most frequently
+    used patterns to minimize compilation of the same patterns over
+    and over again
+    '''
+    def __init__(self, prepend='', append='', size=1000,
+                 keep_fraction=0.8, max_age=3600):
+        self.prepend = prepend
+        self.append = append
+        self.size = size
+        self.clear_size = int(size - size * (keep_fraction))
+        if self.clear_size >= size:
+            self.clear_size = int(size/2) + 1
+            if self.clear_size > size:
+                self.clear_size = size
+        self.max_age = max_age
+        self.cache = {}
+        self.timestamp = time.time()
+
+    def clear(self):
+        '''
+        Clear the cache
+        '''
+        self.cache.clear()
+
+    def sweep(self):
+        '''
+        Sweep the cache and remove the outdated or least frequently
+        used entries
+        '''
+        if self.max_age < time.time() - self.timestamp:
+            self.clear()
+            self.timestamp = time.time()
+        else:
+            paterns = self.cache.values()
+            paterns.sort()
+            for i in xrange(self.clear_size):
+                del self.cache[paterns[i][2]]
+
+    def get(self, pattern):
+        '''
+        Get a compiled regular expression object based on pattern and
+        cache it when it is not in the cache already
+        '''
+        try:
+            self.cache[pattern][0] += 1
+            return self.cache[pattern][1]
+        except KeyError:
+            pass
+        if len(self.cache) > self.size:
+            self.sweep()
+        regex = re.compile('{0}{1}{2}'.format(
+            self.prepend, pattern, self.append))
+        self.cache[pattern] = [1, regex, pattern, time.time()]
+        return regex
+
 
 # test code for the CacheCli
 if __name__ == '__main__':

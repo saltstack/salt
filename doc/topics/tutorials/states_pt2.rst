@@ -57,25 +57,25 @@ installed and running. Include the following at the bottom of your
         - require:                              # requisite declaration
           - pkg: apache                         # requisite reference
 
-**line 9** is the :ref:`id-declaration`. In this example it is the location we
+**line 7** is the :ref:`id-declaration`. In this example it is the location we
 want to install our custom HTML file. (**Note:** the default location that
 Apache serves may differ from the above on your OS or distro. ``/srv/www``
 could also be a likely place to look.)
 
-**Line 10** the :ref:`state-declaration`. This example uses the Salt :mod:`file
+**Line 8** the :ref:`state-declaration`. This example uses the Salt :mod:`file
 state <salt.states.file>`.
 
-**Line 11** is the :ref:`function-declaration`. The :func:`managed function
+**Line 9** is the :ref:`function-declaration`. The :func:`managed function
 <salt.states.file.managed>` will download a file from the master and install it
 in the location specified.
 
-**Line 12** is a :ref:`function-arg-declaration` which, in this example, passes
+**Line 10** is a :ref:`function-arg-declaration` which, in this example, passes
 the ``source`` argument to the :func:`managed function
 <salt.states.file.managed>`.
 
-**Line 13** is a :ref:`requisite-declaration`.
+**Line 11** is a :ref:`requisite-declaration`.
 
-**Line 14** is a :ref:`requisite-reference` which refers to a state and an ID.
+**Line 12** is a :ref:`requisite-reference` which refers to a state and an ID.
 In this example, it is referring to the ``ID declaration`` from our example in
 :doc:`part 1 <states_pt1>`. This declaration tells Salt not to install the HTML
 file until Apache is installed.
@@ -85,6 +85,7 @@ directory:
 
 .. code-block:: html
 
+    <!DOCTYPE html>
     <html>
         <head><title>Salt rocks</title></head>
         <body>

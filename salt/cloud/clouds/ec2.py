@@ -314,8 +314,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
             )
 
             requesturl = 'https://{0}/'.format(endpoint)
+            endpoint = _urlparse(requesturl).netloc
+            endpoint_path = _urlparse(requesturl).path
         else:
             endpoint = _urlparse(requesturl).netloc
+            endpoint_path = _urlparse(requesturl).path
             if endpoint == '':
                 endpoint_err = (
                         'Could not find a valid endpoint in the '
@@ -347,9 +350,10 @@ def query(params=None, setname=None, requesturl=None, location=None,
         # %20, however urlencode uses '+'. So replace pluses with %20.
         querystring = querystring.replace('+', '%20')
 
-        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                        endpoint.encode('utf-8'),
-                                        querystring.encode('utf-8'))
+        uri = '{0}\n{1}\n{2}\n{3}'.format(method.encode('utf-8'),
+                                          endpoint.encode('utf-8'),
+                                          endpoint_path.encode('utf-8'),
+                                          querystring.encode('utf-8'))
 
         hashed = hmac.new(provider['key'], uri, hashlib.sha256)
         sig = binascii.b2a_base64(hashed.digest())
@@ -1325,7 +1329,7 @@ def _param_from_config(key, data):
 
     else:
         if isinstance(data, bool):
-            # convert boolean Trur/False to 'true'/'false'
+            # convert boolean True/False to 'true'/'false'
             param.update({key: str(data).lower()})
         else:
             param.update({key: data})
@@ -2309,9 +2313,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
             created = True
-            for item in created_volume:
-                if 'volumeId' in item:
-                    volume_dict['volume_id'] = item['volumeId']
+            if 'volumeId' in created_volume:
+                volume_dict['volume_id'] = created_volume['volumeId']
 
         attach = attach_volume(
             name,
@@ -2876,7 +2879,7 @@ def _vm_provider_driver(vm_):
 
 
 def _extract_name_tag(item):
-    if 'tagSet' in item:
+    if 'tagSet' in item and item['tagSet'] is not None:
         tagset = item['tagSet']
         if isinstance(tagset['item'], list):
             for tag in tagset['item']:

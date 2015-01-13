@@ -200,6 +200,9 @@ class Shell(object):
         # need to deliver the SHIM to the remote host and execute it there
 
         opts = ''
+        tty = self.tty
+        if ssh != 'ssh':
+            tty = False
         if self.passwd:
             opts = self._passwd_opts()
         if self.priv:
@@ -207,7 +210,7 @@ class Shell(object):
         return "{0} {1} {2} {3} {4}".format(
                 ssh,
                 '' if ssh == 'scp' else self.host,
-                '-t -t' if self.tty else '',
+                '-t -t' if tty else '',
                 opts,
                 cmd)
 

@@ -253,6 +253,10 @@ def get_url(path, dest, saltenv='base', env=None):
     '''
     Used to get a single file from a URL.
 
+    The default behaviuor is to write the fetched file to the given
+    destination path. To simply return the text contents instead, set destination to
+    None.
+
     CLI Example:
 
     .. code-block:: bash
@@ -270,7 +274,10 @@ def get_url(path, dest, saltenv='base', env=None):
         saltenv = env
 
     _mk_client()
-    return __context__['cp.fileclient'].get_url(path, dest, False, saltenv)
+    if dest:
+        return __context__['cp.fileclient'].get_url(path, dest, False, saltenv)
+    else:
+        return __context__['cp.fileclient'].get_url(path, None, False, saltenv, no_cache=True)
 
 
 def get_file_str(path, saltenv='base', env=None):

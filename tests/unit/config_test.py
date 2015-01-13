@@ -284,7 +284,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             )
 
             # Now, let's populate an extra configuration file under minion.d
-            # Notice that above we've set blah as False and bellow as True.
+            # Notice that above we've set blah as False and below as True.
             # Since the minion.d files are loaded after the main configuration
             # file so overrides can happen, the final value of blah should be
             # True.
@@ -319,7 +319,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             )
 
             # Now, let's populate an extra configuration file under master.d
-            # Notice that above we've set blah as False and bellow as True.
+            # Notice that above we've set blah as False and below as True.
             # Since the master.d files are loaded after the main configuration
             # file so overrides can happen, the final value of blah should be
             # True.

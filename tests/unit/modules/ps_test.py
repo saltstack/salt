@@ -17,25 +17,25 @@ HAS_PSUTIL_VERSION = False
 
 if HAS_PSUTIL:
     import psutil
+    from collections import namedtuple
 
     PSUTIL2 = psutil.version_info >= (2, 0)
 
-    STUB_CPU_TIMES = psutil._compat.namedtuple('cputimes', 'user nice system idle')(1, 2, 3, 4)
-    STUB_VIRT_MEM = psutil._compat.namedtuple('vmem', 'total available percent used free')(1000, 500, 50, 500, 500)
-    STUB_SWAP_MEM = psutil._compat.namedtuple('swap', 'total used free percent sin sout')(1000, 500, 500, 50, 0, 0)
-    STUB_PHY_MEM_USAGE = psutil._compat.namedtuple('usage', 'total used free percent')(1000, 500, 500, 50)
-    STUB_DISK_PARTITION = psutil._compat.namedtuple('partition', 'device mountpoint fstype, opts')('/dev/disk0s2', '/',
-                                                                                                   'hfs',
-                                                                                                   'rw,local,rootfs,dovolfs,journaled,multilabel')
-    STUB_DISK_USAGE = psutil._compat.namedtuple('usage', 'total used free percent')(1000, 500, 500, 50)
-    STUB_NETWORK_IO = psutil._compat.namedtuple('iostat',
-                                                'bytes_sent, bytes_recv, packets_sent, packets_recv, errin errout dropin dropout')(
+    STUB_CPU_TIMES = namedtuple('cputimes', 'user nice system idle')(1, 2, 3, 4)
+    STUB_VIRT_MEM = namedtuple('vmem', 'total available percent used free')(1000, 500, 50, 500, 500)
+    STUB_SWAP_MEM = namedtuple('swap', 'total used free percent sin sout')(1000, 500, 500, 50, 0, 0)
+    STUB_PHY_MEM_USAGE = namedtuple('usage', 'total used free percent')(1000, 500, 500, 50)
+    STUB_DISK_PARTITION = namedtuple('partition', 'device mountpoint fstype, opts')('/dev/disk0s2', '/',
+                                                                                    'hfs',
+                                                                                    'rw,local,rootfs,dovolfs,journaled,multilabel')
+    STUB_DISK_USAGE = namedtuple('usage', 'total used free percent')(1000, 500, 500, 50)
+    STUB_NETWORK_IO = namedtuple('iostat',
+                                 'bytes_sent, bytes_recv, packets_sent, packets_recv, errin errout dropin dropout')(
         1000, 2000, 500, 600, 1, 2, 3, 4)
-    STUB_DISK_IO = psutil._compat.namedtuple('iostat',
-                                             'read_count, write_count, read_bytes, write_bytes, read_time, write_time')(
+    STUB_DISK_IO = namedtuple('iostat',
+                              'read_count, write_count, read_bytes, write_bytes, read_time, write_time')(
         1000, 2000, 500, 600, 2000, 3000)
-    STUB_USER = psutil._compat.namedtuple('user', 'name, terminal, host, started')('bdobbs', 'ttys000', 'localhost',
-                                                                                   0.0)
+    STUB_USER = namedtuple('user', 'name, terminal, host, started')('bdobbs', 'ttys000', 'localhost', 0.0)
     if psutil.version_info >= (0, 6, 0):
         HAS_PSUTIL_VERSION = True
 

@@ -670,16 +670,16 @@ def installed(name,
         if requirements or editable:
             comments = []
             if requirements:
-                for eachline in pip_install_call.get('stdout', '').split('\n'):
-                    if not eachline.startswith('Requirement already satisfied') and eachline != 'Cleaning up...':
+                for line in pip_install_call.get('stdout', '').split('\n'):
+                    if not line.startswith('Requirement already satisfied') \
+                            and line != 'Cleaning up...':
                         ret['changes']['requirements'] = True
                 if ret['changes'].get('requirements'):
                     comments.append('Successfully processed requirements file '
                                     '{0}.'.format(requirements))
                 else:
-                    comments.append('Requirements was successfully installed')
-                comments.append('Successfully processed requirements file '
-                                '{0}.'.format(requirements))
+                    comments.append('Requirements were already installed.')
+
             if editable:
                 comments.append('Package successfully installed from VCS '
                                 'checkout {0}.'.format(editable))
@@ -719,7 +719,7 @@ def installed(name,
             # Set comments
             aicomms = '\n'.join(already_installed_comments)
             succ_comm = 'All packages were successfully installed'\
-                        if not pkg_404_comms else ''
+                        if not pkg_404_comms else '\n'.join(pkg_404_comms)
             ret['comment'] = aicomms + ('\n' if aicomms else '') + succ_comm
 
             return ret

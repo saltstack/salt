@@ -39,30 +39,30 @@ class LinuxAclTestCase(TestCase):
 
     def test_getfacl_w_single_arg(self):
         linux_acl.getfacl(self.file)
-        self.cmdrun.assert_called_once_with('getfacl -p ' + self.file)
+        self.cmdrun.assert_called_once_with('getfacl --absolute-names ' + self.file, python_shell=False)
 
     def test_getfacl_w_multiple_args(self):
         linux_acl.getfacl(*self.files)
-        self.cmdrun.assert_called_once_with('getfacl -p ' + ' '.join(self.files))
+        self.cmdrun.assert_called_once_with('getfacl --absolute-names ' + ' '.join(self.files), python_shell=False)
 
     def test_getfacl__recursive_w_multiple_args(self):
         linux_acl.getfacl(*self.files, recursive=True)
-        self.cmdrun.assert_called_once_with('getfacl -p -R ' + ' '.join(self.files))
+        self.cmdrun.assert_called_once_with('getfacl --absolute-names -R ' + ' '.join(self.files), python_shell=False)
 
     def test_wipefacls_wo_args(self):
         self.assertRaises(CommandExecutionError, linux_acl.wipefacls)
 
     def test_wipefacls_w_single_arg(self):
         linux_acl.wipefacls(self.file)
-        self.cmdrun.assert_called_once_with('setfacl -b ' + self.file)
+        self.cmdrun.assert_called_once_with('setfacl -b ' + self.file, python_shell=False)
 
     def test_wipefacls_w_multiple_args(self):
         linux_acl.wipefacls(*self.files)
-        self.cmdrun.assert_called_once_with('setfacl -b ' + ' '.join(self.files))
+        self.cmdrun.assert_called_once_with('setfacl -b ' + ' '.join(self.files), python_shell=False)
 
     def test_wipefacls__recursive_w_multiple_args(self):
         linux_acl.wipefacls(*self.files, recursive=True)
-        self.cmdrun.assert_called_once_with('setfacl -b -R ' + ' '.join(self.files))
+        self.cmdrun.assert_called_once_with('setfacl -b -R ' + ' '.join(self.files), python_shell=False)
 
     def test_modfacl_wo_args(self):
         for acl in [self.u_acl, self.user_acl, self.g_acl, self.group_acl]:
@@ -70,63 +70,63 @@ class LinuxAclTestCase(TestCase):
 
     def test_modfacl__u_w_single_arg(self):
         linux_acl.modfacl(*(self.u_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd, self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd, self.file]), python_shell=False)
 
     def test_modfacl__u_w_multiple_args(self):
         linux_acl.modfacl(*(self.u_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd] + self.files), python_shell=False)
 
     def test_modfacl__user_w_single_arg(self):
         linux_acl.modfacl(*(self.user_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd, self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd, self.file]), python_shell=False)
 
     def test_modfacl__user_w_multiple_args(self):
         linux_acl.modfacl(*(self.user_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.user_acl_cmd] + self.files), python_shell=False)
 
     def test_modfacl__g_w_single_arg(self):
         linux_acl.modfacl(*(self.g_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd, self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd, self.file]), python_shell=False)
 
     def test_modfacl__g_w_multiple_args(self):
         linux_acl.modfacl(*(self.g_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd] + self.files), python_shell=False)
 
     def test_modfacl__group_w_single_arg(self):
         linux_acl.modfacl(*(self.group_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd, self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd, self.file]), python_shell=False)
 
     def test_modfacl__group_w_multiple_args(self):
         linux_acl.modfacl(*(self.group_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.group_acl_cmd] + self.files), python_shell=False)
 
     def test_modfacl__d_u_w_single_arg(self):
         linux_acl.modfacl(*(self.d_u_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.file]), python_shell=False)
 
     def test_modfacl__d_u_w_multiple_args(self):
         linux_acl.modfacl(*(self.d_u_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.files), python_shell=False)
 
     def test_modfacl__d_user_w_single_arg(self):
         linux_acl.modfacl(*(self.d_user_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.file]), python_shell=False)
 
     def test_modfacl__d_user_w_multiple_args(self):
         linux_acl.modfacl(*(self.d_user_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.files), python_shell=False)
 
     def test_modfacl__default_user_w_single_arg(self):
         linux_acl.modfacl(*(self.default_user_acl + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd, self.file]), python_shell=False)
 
     def test_modfacl__default_user_w_multiple_args(self):
         linux_acl.modfacl(*(self.default_user_acl + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.files), python_shell=False)
 
     def test_modfacl__recursive_w_multiple_args(self):
         linux_acl.modfacl(*(self.user_acl + self.files), recursive=True)
-        self.cmdrun.assert_called_once_with('setfacl -m -R ' + ' '.join([self.user_acl_cmd] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -m -R ' + ' '.join([self.user_acl_cmd] + self.files), python_shell=False)
 
     def test_delfacl_wo_args(self):
         for acl in [self.u_acl, self.user_acl, self.g_acl, self.group_acl]:
@@ -134,60 +134,60 @@ class LinuxAclTestCase(TestCase):
 
     def test_delfacl__u_w_single_arg(self):
         linux_acl.delfacl(*(self.u_acl[:-1] + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.user_acl_cmd.rpartition(':')[0], self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.user_acl_cmd.rpartition(':')[0], self.file]), python_shell=False)
 
     def test_delfacl__u_w_multiple_args(self):
         linux_acl.delfacl(*(self.u_acl[:-1] + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.user_acl_cmd.rpartition(':')[0]] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.user_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)
 
     def test_delfacl__user_w_single_arg(self):
         linux_acl.delfacl(*(self.user_acl[:-1] + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.user_acl_cmd.rpartition(':')[0], self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.user_acl_cmd.rpartition(':')[0], self.file]), python_shell=False)
 
     def test_delfacl__user_w_multiple_args(self):
         linux_acl.delfacl(*(self.user_acl[:-1] + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.user_acl_cmd.rpartition(':')[0]] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.user_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)
 
     def test_delfacl__g_w_single_arg(self):
         linux_acl.delfacl(*(self.g_acl[:-1] + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.group_acl_cmd.rpartition(':')[0], self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.group_acl_cmd.rpartition(':')[0], self.file]), python_shell=False)
 
     def test_delfacl__g_w_multiple_args(self):
         linux_acl.delfacl(*(self.g_acl[:-1] + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.group_acl_cmd.rpartition(':')[0]] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.group_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)
 
     def test_delfacl__group_w_single_arg(self):
         linux_acl.delfacl(*(self.group_acl[:-1] + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.group_acl_cmd.rpartition(':')[0], self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.group_acl_cmd.rpartition(':')[0], self.file]), python_shell=False)
 
     def test_delfacl__group_w_multiple_args(self):
         linux_acl.delfacl(*(self.group_acl[:-1] + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.group_acl_cmd.rpartition(':')[0]] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.group_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)
 
     def test_delfacl__d_u_w_single_arg(self):
         linux_acl.delfacl(*(self.d_u_acl[:-1] + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0], self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0], self.file]), python_shell=False)
 
     def test_delfacl__d_u_w_multiple_args(self):
         linux_acl.delfacl(*(self.d_u_acl[:-1] + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)
 
     def test_delfacl__d_user_w_single_arg(self):
         linux_acl.delfacl(*(self.d_user_acl[:-1] + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0], self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0], self.file]), python_shell=False)
 
     def test_delfacl__d_user_w_multiple_args(self):
         linux_acl.delfacl(*(self.d_user_acl[:-1] + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)
 
     def test_delfacl__default_user_w_single_arg(self):
         linux_acl.delfacl(*(self.default_user_acl[:-1] + [self.file]))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0], self.file]))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0], self.file]), python_shell=False)
 
     def test_delfacl__default_user_w_multiple_args(self):
         linux_acl.delfacl(*(self.default_user_acl[:-1] + self.files))
-        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)
 
     def test_delfacl__recursive_w_multiple_args(self):
         linux_acl.delfacl(*(self.default_user_acl[:-1] + self.files), recursive=True)
-        self.cmdrun.assert_called_once_with('setfacl -x -R ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files))
+        self.cmdrun.assert_called_once_with('setfacl -x -R ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.files), python_shell=False)

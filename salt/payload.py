@@ -8,6 +8,7 @@ in here
 # Import python libs
 from __future__ import absolute_import
 import logging
+import gc
 
 # Import salt libs
 import salt.log
@@ -43,7 +44,7 @@ except ImportError:
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
-        #sys.exit(salt.exitcodes.EX_GENERIC)
+        #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def package(payload):
@@ -92,12 +93,15 @@ class Serial(object):
         Run the correct loads serialization format
         '''
         try:
+            gc.disable()  # performance optimization for msgpack
             return msgpack.loads(msg, use_list=True)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
                          'This often happens when trying to read a file not in binary mode.'
                          'Please open an issue and include the following error: {1}'.format(msg, exc))
             raise
+        finally:
+            gc.enable()
 
     def load(self, fn_):
         '''

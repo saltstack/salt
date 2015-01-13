@@ -7,7 +7,9 @@
 # This script is designed for speed, therefore it does not use mock and does not
 # run tests. It *will* install the build deps on the machine running the script.
 #
-# pylint: disable=E0599
+
+# pylint: disable=file-perms
+
 import errno
 import glob
 import logging

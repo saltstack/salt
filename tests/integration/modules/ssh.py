@@ -221,7 +221,7 @@ class SSHModuleTest(integration.ModuleCase):
         ret = self.run_function('ssh.set_known_host', ['root', 'github.com'],
                                 config=KNOWN_HOSTS)
         try:
-            self.assertEqual(ret['status'], 'exists')
+            self.assertEqual(ret['status'], 'updated')
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(

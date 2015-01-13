@@ -30,6 +30,7 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.config
+import salt.minion
 import salt.payload
 import salt.transport
 import salt.loader
@@ -804,11 +805,13 @@ class LocalClient(object):
             event = self.event
         jid_tag = 'salt/job/{0}'.format(jid)
         while True:
-            if HAS_ZMQ:
+            if self.opts.get('transport') == 'zeromq':
                 try:
                     raw = event.get_event_noblock()
                     if gather_errors:
-                        if raw and raw.get('tag', '').startswith('_salt_error') or raw.get('tag', '').startswith(jid_tag):
+                        if (raw and
+                               (raw.get('tag', '').startswith('_salt_error') or
+                                raw.get('tag', '').startswith(jid_tag))):
                             yield raw
                     else:
                         if raw and raw.get('tag', '').startswith(jid_tag):
@@ -1448,7 +1451,7 @@ class LocalClient(object):
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
         if hasattr(self, 'event'):
-            # The call bellow will take care of calling 'self.event.destroy()'
+            # The call below will take care of calling 'self.event.destroy()'
             del self.event
 
 

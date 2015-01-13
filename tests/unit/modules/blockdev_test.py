@@ -24,7 +24,8 @@ class TestBlockdevModule(TestCase):
             mock.assert_called_once_with(
                 'blockdev --getro --getsz --getss --getpbsz --getiomin '
                 '--getioopt --getalignoff  --getmaxsect --getsize '
-                '--getsize64 --getra --getfra /dev/sda'
+                '--getsize64 --getra --getfra /dev/sda',
+                python_shell=False
             )
 
     def test_wipe(self):
@@ -32,7 +33,8 @@ class TestBlockdevModule(TestCase):
         with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
             blockdev.wipe('/dev/sda')
             mock.assert_called_once_with(
-                'wipefs /dev/sda'
+                'wipefs /dev/sda',
+                python_shell=False
             )
 
     def test_tune(self):
@@ -43,7 +45,8 @@ class TestBlockdevModule(TestCase):
                 kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 512}
                 blockdev.tune('/dev/sda', **kwargs)
                 mock.assert_called_once_with(
-                    'blockdev --setra 512 --setfra 512 /dev/sda'
+                    'blockdev --setra 512 --setfra 512 /dev/sda',
+                    python_shell=False
                 )
 
 

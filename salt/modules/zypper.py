@@ -16,7 +16,7 @@ import os
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
 import salt.ext.six as six
 from salt.ext.six.moves import configparser
-from salt.ext.six.moves.urllib.parse import urlparse
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 from xml.dom import minidom as dom
@@ -366,7 +366,7 @@ def mod_repo(repo, **kwargs):
             raise CommandExecutionError(
                 'Repository \'{0}\' not found and no URL passed to create one.'.format(repo))
 
-        if not urlparse(url).scheme:
+        if not _urlparse(url).scheme:
             raise CommandExecutionError(
                 'Repository \'{0}\' not found and passed URL looks wrong.'.format(repo))
 
@@ -375,15 +375,15 @@ def mod_repo(repo, **kwargs):
             repo_meta = _get_repo_info(alias, repos_cfg=repos_cfg)
 
             # Complete user URL, in case it is not
-            new_url = urlparse(url)
+            new_url = _urlparse(url)
             if not new_url.path:
-                new_url = urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
+                new_url = _urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
                                                netloc=new_url.netloc,
                                                path='/',
                                                params=new_url.params,
                                                query=new_url.query,
                                                fragment=new_url.fragment)
-            base_url = urlparse(repo_meta['baseurl'])
+            base_url = _urlparse(repo_meta['baseurl'])
 
             if new_url == base_url:
                 raise CommandExecutionError(
