@@ -29,6 +29,7 @@ import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
+
 def get_progress(opts, out, progress):
     '''
     Get the progress bar from the given outputter
