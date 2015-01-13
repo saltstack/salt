@@ -46,13 +46,6 @@ def _rm_mods(pre_mods, post_mods):
     return pre - post
 
 
-def _union_module(a, b):
-    '''
-    Return union of two list where duplicated items are only once
-    '''
-    return list(set(a) | set(b))
-
-
 def _get_modules_conf():
     '''
     Return location of modules config file.
