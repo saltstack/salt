@@ -242,7 +242,7 @@ class BtrfsTestCase(TestCase):
         with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
             mock = MagicMock(return_value={'/dev/sda1': {'type': 'ext4'}})
             with patch.object(salt.modules.fsutils, '_blkid_output', mock):
-                self.assertEqual(btrfs.convert('/dev/sda1'), ret)
+                self.assertDictEqual(btrfs.convert('/dev/sda1'), ret)
 
     def test_convert_device_error(self):
         '''
