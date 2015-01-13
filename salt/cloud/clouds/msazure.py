@@ -529,8 +529,8 @@ def create(vm_):
         conn.create_virtual_machine_deployment(**vm_kwargs)
     except WindowsAzureConflictError:
         log.debug("Conflict error. The deployment may already exist, trying add_role")
-        # Deleting two useless keywords 
-        del vm_kwargs["deployment_slot"] 
+        # Deleting two useless keywords
+        del vm_kwargs["deployment_slot"]
         del vm_kwargs["label"]
         conn.add_role(**vm_kwargs)
     except Exception as exc:
