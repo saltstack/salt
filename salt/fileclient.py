@@ -995,7 +995,9 @@ class RemoteClient(Client):
             else:
                 load['loc'] = fn_.tell()
             data = self.channel.send(load)
-            assert data
+            if not data:
+                log.error('No Data returned!')
+                raise Exception("Malformed Protocol, expecting Data back")
             if 'data' not in data:
                 log.error('Data is {0}'.format(data))
                 raise Exception("Malformed Data is {0}".format(data))
