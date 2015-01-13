@@ -282,9 +282,9 @@ class TestDaemon(object):
         # Wait for the daemons to all spin up
         time.sleep(5)
 
-        #smaster = salt.daemons.flo.IofloMaster(self.syndic_master_opts)
-        #self.smaster_process = multiprocessing.Process(target=smaster.start)
-        #self.smaster_process.start()
+        #self.smaster_process = self.start_daemon(salt.daemons.flo.IofloMaster,
+        #                                            self.syndic_master_opts,
+        #                                            'start')
 
         # no raet syndic daemon yet
 
