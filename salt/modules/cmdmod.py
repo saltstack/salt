@@ -323,7 +323,7 @@ def _run(cmd,
                            ).format(shell, runas, sys.executable)
             env_json = subprocess.Popen(
                 env_cmd,
-                shell=python_shell,
+                shell=True,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
