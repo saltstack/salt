@@ -50,7 +50,8 @@ class Batch(object):
                 if not self.quiet:
                     print_cli('{0} Detected for this batch run'.format(minion))
                 fret.append(minion)
-        return sorted(fret)
+        # Returns <type 'list'>
+        return sorted(frozenset(fret))
 
     def get_bnum(self):
         '''
