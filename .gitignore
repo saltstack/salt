@@ -24,6 +24,8 @@ lib64
 pip/
 share/
 tests/integration/tmp/
+tests/cachedir/
+tests/unit/templates/roots/
 
 # tox - ignore any tox-created virtualenv dirs
 .tox
