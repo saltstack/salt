@@ -64,7 +64,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/etc/rc.d/{0} -f restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd), python_shell=False
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
