@@ -234,25 +234,43 @@ class TestDaemon(object):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        master = salt.master.Master(self.master_opts)
-        self.master_process = multiprocessing.Process(target=master.start)
+        def start_daemon(cls, opts, start_fun):
+            daemon = cls(opts)
+            getattr(daemon, start_fun)()
+
+        self.master_process = multiprocessing.Process(target=start_daemon,
+                                                      args=(salt.master.Master,
+                                                            self.master_opts,
+                                                            'start',)
+                                                      )
         self.master_process.start()
-        minion = salt.minion.Minion(self.minion_opts)
-        self.minion_process = multiprocessing.Process(target=minion.tune_in)
+
+        self.minion_process = multiprocessing.Process(target=start_daemon,
+                                                      args=(salt.minion.Minion,
+                                                            self.minion_opts,
+                                                            'tune_in',)
+                                                      )
         self.minion_process.start()
 
-        sub_minion = salt.minion.Minion(self.sub_minion_opts)
-        self.sub_minion_process = multiprocessing.Process(
-            target=sub_minion.tune_in
-        )
+        self.sub_minion_process = multiprocessing.Process(target=start_daemon,
+                                                      args=(salt.minion.Minion,
+                                                            self.sub_minion_opts,
+                                                            'tune_in',)
+                                                      )
         self.sub_minion_process.start()
 
-        smaster = salt.master.Master(self.syndic_master_opts)
-        self.smaster_process = multiprocessing.Process(target=smaster.start)
+        self.smaster_process = multiprocessing.Process(target=start_daemon,
+                                                      args=(salt.master.Master,
+                                                            self.syndic_master_opts,
+                                                            'start',)
+                                                      )
         self.smaster_process.start()
 
-        syndic = salt.minion.Syndic(self.syndic_opts)
-        self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
+        self.syndic_process = multiprocessing.Process(target=start_daemon,
+                                                      args=(salt.minion.Syndic,
+                                                            self.syndic_opts,
+                                                            'tune_in',)
+                                                      )
         self.syndic_process.start()
 
     def start_raet_daemons(self):
