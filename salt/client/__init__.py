@@ -30,6 +30,7 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.config
+import salt.minion
 import salt.payload
 import salt.transport
 import salt.loader
