@@ -93,7 +93,7 @@ class Serial(object):
         Run the correct loads serialization format
         '''
         try:
-            gc.disable()  #  performance optimization for msgpack
+            gc.disable()  # performance optimization for msgpack
             return msgpack.loads(msg, use_list=True)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
