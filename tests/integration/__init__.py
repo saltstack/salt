@@ -230,67 +230,55 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
+    def start_daemon(self, cls, opts, start_fun):
+        def start(cls, opts, start_fun):
+            daemon = cls(opts)
+            getattr(daemon, start_fun)()
+        process = multiprocessing.Process(target=start,
+                                          args=(cls, opts, start_fun))
+        process.start()
+        return process
+
     def start_zeromq_daemons(self):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        def start_daemon(cls, opts, start_fun):
-            daemon = cls(opts)
-            getattr(daemon, start_fun)()
+        self.master_process = self.start_daemon(salt.master.Master,
+                                                self.master_opts,
+                                                'start')
 
-        self.master_process = multiprocessing.Process(target=start_daemon,
-                                                      args=(salt.master.Master,
-                                                            self.master_opts,
-                                                            'start',)
-                                                      )
-        self.master_process.start()
+        self.minion_process = self.start_daemon(salt.minion.Minion,
+                                                self.minion_opts,
+                                                'tune_in')
 
-        self.minion_process = multiprocessing.Process(target=start_daemon,
-                                                      args=(salt.minion.Minion,
-                                                            self.minion_opts,
-                                                            'tune_in',)
-                                                      )
-        self.minion_process.start()
+        self.sub_minion_process = self.start_daemon(salt.minion.Minion,
+                                                    self.sub_minion_opts,
+                                                    'tune_in')
 
-        self.sub_minion_process = multiprocessing.Process(target=start_daemon,
-                                                      args=(salt.minion.Minion,
-                                                            self.sub_minion_opts,
-                                                            'tune_in',)
-                                                      )
-        self.sub_minion_process.start()
+        self.smaster_process = self.start_daemon(salt.master.Master,
+                                                self.syndic_master_opts,
+                                                'start')
 
-        self.smaster_process = multiprocessing.Process(target=start_daemon,
-                                                      args=(salt.master.Master,
-                                                            self.syndic_master_opts,
-                                                            'start',)
-                                                      )
-        self.smaster_process.start()
-
-        self.syndic_process = multiprocessing.Process(target=start_daemon,
-                                                      args=(salt.minion.Syndic,
-                                                            self.syndic_opts,
-                                                            'tune_in',)
-                                                      )
-        self.syndic_process.start()
+        self.syndic_process = self.start_daemon(salt.minion.Syndic,
+                                                self.syndic_opts,
+                                                'tune_in')
 
     def start_raet_daemons(self):
         '''
         Fire up the raet daemons!
         '''
         import salt.daemons.flo
-        master = salt.daemons.flo.IofloMaster(self.master_opts)
-        self.master_process = multiprocessing.Process(target=master.start)
-        self.master_process.start()
+        self.master_process = self.start_daemon(salt.daemons.flo.IofloMaster,
+                                                self.master_opts,
+                                                'start')
 
-        minion = salt.daemons.flo.IofloMinion(self.minion_opts)
-        self.minion_process = multiprocessing.Process(target=minion.tune_in)
-        self.minion_process.start()
+        self.minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
+                                                self.minion_opts,
+                                                'tune_in')
 
-        sub_minion = salt.daemons.flo.IofloMinion(self.sub_minion_opts)
-        self.sub_minion_process = multiprocessing.Process(
-            target=sub_minion.tune_in
-        )
-        self.sub_minion_process.start()
+        self.sub_minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
+                                                    self.sub_minion_opts,
+                                                    'tune_in')
         # Wait for the daemons to all spin up
         time.sleep(5)
 
