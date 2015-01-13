@@ -33,7 +33,7 @@ class CpanTestCase(TestCase):
         mock = MagicMock(return_value='')
         with patch.dict(cpan.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'installed version': None},
-                                          {'installed version':'3.1'}])
+                                          {'installed version': '3.1'}])
             with patch.object(cpan, 'show', mock):
                 self.assertDictEqual(cpan.install('Alloy'),
                                      {'new': '3.1', 'old': None})
@@ -87,11 +87,10 @@ class CpanTestCase(TestCase):
         '''
         Test if it gives no cpan error while removing
         '''
+        ret = {'error': 'No CPAN data available to use for uninstalling'}
         mock = MagicMock(return_value={'installed version': '2.1'})
         with patch.object(cpan, 'show', mock):
-            self.assertDictEqual(cpan.remove('Alloy'),
-                                 {'error':'No CPAN data available to' \
-                                  ' use for uninstalling'})
+            self.assertDictEqual(cpan.remove('Alloy'), ret)
 
     # 'list' function tests: 1
 
