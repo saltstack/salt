@@ -71,6 +71,7 @@ class BtrfsTestCase(TestCase):
     # 'defragment' function tests: 2
 
     @patch('salt.modules.fsutils._is_device', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
     def test_defragment(self):
         '''
         Test if it defragment mounted BTRFS filesystem.
@@ -225,10 +226,10 @@ class BtrfsTestCase(TestCase):
         '''
         Test if it convert ext2/3/4 to BTRFS
         '''
-        err_info = "None/ext2_saved/image: ERROR: cannot open "
-        err_info1 = "`None/ext2_saved/image' (No such file or directory)"
+        str1 = "None/ext2_saved/image: ERROR: cannot open "
+        str2 = "`None/ext2_saved/image' (No such file or directory)"
         ret = {'after': {'ext4_image': 'None/ext2_saved',
-                   'ext4_image_info': err_info+err_info1,
+                   'ext4_image_info': '{0}{1}'.format(str1, str2),
                    'fsck_status': 'N/A',
                    'mount_point': None,
                    'type': 'ext4'},
