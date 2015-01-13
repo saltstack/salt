@@ -74,7 +74,9 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         if retcode == 0:
             return result['stdout']
         else:
-            raise CommandExecutionError(result['stderr'])
+            raise CommandExecutionError(
+                'Command {0!r} failed. Stderr: {1!r}'.format(cmd,
+                                                             result['stderr']))
 
 
 def _git_getdir(cwd, user=None):
