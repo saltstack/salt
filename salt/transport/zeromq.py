@@ -262,7 +262,6 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
         Return pub or None
         '''
         try:
-            print (('socket poll', self.socket.poll()))
             messages = self.socket.recv_multipart(zmq.NOBLOCK)
             return self._decode_messages(messages)
         except zmq.ZMQError as e:
