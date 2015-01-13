@@ -18,14 +18,11 @@ from salt.modules import ddns
 
 try:
     import dns.query
-    import dns.update
     import dns.tsigkeyring
     dns_support = True
 except ImportError as e:
     dns_support = False
 
-# Import salt libs
-import salt.utils
 import json
 # Globals
 ddns.__grains__ = {}
@@ -76,11 +73,13 @@ class DDNSTestCase(TestCase):
                     mock = MagicMock(return_value=True)
                     with patch.dict(ddns.__salt__, {'config.option': mock}):
                         mock = MagicMock(return_value=True)
-                        with patch.dict(ddns.__salt__, {'file.file_exists': mock}):
+                        with patch.dict(ddns.__salt__,
+                                        {'file.file_exists': mock}):
                             with patch('salt.utils.fopen',
                                        mock_open(read_data=file_data),
                                        create=True):
-                                with patch.object(dns.tsigkeyring, 'from_text', return_value=True):
+                                with patch.object(dns.tsigkeyring, 'from_text',
+                                                  return_value=True):
                                     with patch.object(dns.query, 'udp') as mock:
                                         mock.answer = [{'address': 'localhost'}]
                                         self.assertFalse(ddns.update(zone='A',
@@ -103,7 +102,8 @@ class DDNSTestCase(TestCase):
                     with patch('salt.utils.fopen',
                                mock_open(read_data=file_data),
                                create=True):
-                        with patch.object(dns.tsigkeyring, 'from_text', return_value=True):
+                        with patch.object(dns.tsigkeyring, 'from_text',
+                                          return_value=True):
                             self.assertFalse(ddns.delete(zone='A', name='B'))
 
 if __name__ == '__main__':
