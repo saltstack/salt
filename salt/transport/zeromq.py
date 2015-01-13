@@ -250,8 +250,11 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
         '''
         Get a pub job, with an optional timeout (0==forever)
         '''
-        messages = self.socket.recv_multipart()
-        return self._decode_messages(messages)
+        if self.socket.poll(timeout):
+            messages = self.socket.recv_multipart()
+            return self._decode_messages(messages)
+        else:
+            return None
 
     def recv_noblock(self):
         '''
@@ -259,6 +262,7 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
         Return pub or None
         '''
         try:
+            print (('socket poll', self.socket.poll()))
             messages = self.socket.recv_multipart(zmq.NOBLOCK)
             return self._decode_messages(messages)
         except zmq.ZMQError as e:
