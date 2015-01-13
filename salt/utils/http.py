@@ -15,6 +15,15 @@ from salt._compat import ElementTree as ET
 
 import ssl
 from ssl import CertificateError
+try:
+    from ssl import match_hostname
+    HAS_MATCHHOSTNAME = True
+except ImportError:
+    try:
+        from backports.ssl_match_hostname import match_hostname
+        HAS_MATCHHOSTNAME = True
+    except ImportError:
+        HAS_MATCHHOSTNAME = False
 import socket
 import urllib
 import urllib2
@@ -180,20 +189,28 @@ def query(url,
         request = urllib2.Request(url)
 
         if url.startswith('https') or port == 443:
-            hostname = request.get_host()
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((hostname, 443))
-            sockwrap = ssl.wrap_socket(sock, ca_certs='/etc/ssl/certs/ca-certificates.crt', cert_reqs=ssl.CERT_REQUIRED)
-            try:
-                ssl.match_hostname(sockwrap.getpeercert(), 'github.com')
-            except CertificateError as exc:
-                ret['error'] = (
-                    'The certificate was invalid. '
-                    'Error returned was: {0}'.format(
-                        pprint.pformat(exc)
-                    )
+            if not HAS_MATCHHOSTNAME:
+                log.warn(('match_hostname() not available, SSL hostname '
+                         'checking not available. THIS CONNECTION MAY NOT BE SECURE!'))
+            else:
+                hostname = request.get_host()
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect((hostname, 443))
+                sockwrap = ssl.wrap_socket(
+                    sock,
+                    ca_certs='/etc/ssl/certs/ca-certificates.crt',
+                    cert_reqs=ssl.CERT_REQUIRED
                 )
-                return ret
+                try:
+                    match_hostname(sockwrap.getpeercert(), 'github.com')
+                except CertificateError as exc:
+                    ret['error'] = (
+                        'The certificate was invalid. '
+                        'Error returned was: {0}'.format(
+                            pprint.pformat(exc)
+                        )
+                    )
+                    return ret
 
         opener = urllib2.build_opener(
             urllib2.HTTPHandler,
