@@ -63,7 +63,8 @@ def _set_persistent_module(mod):
         return set()
     mods = _get_persistent_modules()
     mods.add(mod)
-    __salt__['cmd.run_all']("sysrc kld_list='{0}'".format(' '.join(mods)))
+    __salt__['cmd.run_all']("sysrc kld_list='{0}'".format(' '.join(mods)),
+                            python_shell=False)
     return set([mod])
 
 
@@ -75,7 +76,8 @@ def _remove_persistent_module(mod):
         return set()
     mods = _get_persistent_modules()
     mods.remove(mod)
-    __salt__['cmd.run_all']("sysrc kld_list='{0}'".format(' '.join(mods)))
+    __salt__['cmd.run_all']("sysrc kld_list='{0}'".format(' '.join(mods)),
+                            python_shell=False)
     return set([mod])
 
 
@@ -178,7 +180,8 @@ def load(mod, persist=False):
         salt '*' kmod.load bhyve
     '''
     pre_mods = lsmod()
-    response = __salt__['cmd.run_all']('kldload {0}'.format(mod))
+    response = __salt__['cmd.run_all']('kldload {0}'.format(mod),
+                                       python_shell=False)
     if response['retcode'] == 0:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
@@ -221,7 +224,8 @@ def remove(mod, persist=False):
         salt '*' kmod.remove vmm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('kldunload {0}'.format(mod))
+    __salt__['cmd.run_all']('kldunload {0}'.format(mod),
+                            python_shell=False)
     post_mods = lsmod()
     mods = _rm_mods(pre_mods, post_mods)
     persist_mods = set()
