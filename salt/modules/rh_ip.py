@@ -842,10 +842,12 @@ def build_bond(iface, **settings):
     path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
         __salt__['cmd.run'](
-            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            python_shell=False
         )
         __salt__['cmd.run'](
-            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            python_shell=False
         )
         __salt__['file.append']('/etc/modprobe.conf', path)
     __salt__['kmod.load']('bonding')
