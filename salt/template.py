@@ -93,10 +93,16 @@ def compile_template(template,
         input_data = ret
         if log.isEnabledFor(logging.GARBAGE):  # pylint: disable=no-member
             try:
+                # makina hotfix
+                odata = ret
+                if ret and not isinstance(ret, salt.utils.odict.OrderedDict):
+                    odata = ret.read()
+                    ret.seek(0)
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
-                    ret.read()))
-                ret.seek(0)
+                    odata))
+                #ret.read()))
+                # makina hotfix
             except Exception as exp:
                 log.error('error: {0}'.format(exp))
     return ret
