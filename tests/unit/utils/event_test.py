@@ -306,8 +306,6 @@ class TestSaltEvent(TestCase):
             evt = me.get_event(tag="fire_master")
             self.assertGotEvent(evt, {"data": data, "tag": "test_master", "events": None, "pretag": None})
 
-
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TestSaltEvent, needs_daemon=False)

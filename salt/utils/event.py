@@ -510,7 +510,6 @@ class SaltEvent(object):
         }
         return self.fire_event(msg, "fire_master", timeout)
 
-
     def destroy(self, linger=5000):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
