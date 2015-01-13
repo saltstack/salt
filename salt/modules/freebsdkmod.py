@@ -28,7 +28,7 @@ def _new_mods(pre_mods, post_mods):
         pre.add(mod['module'])
     for mod in post_mods:
         post.add(mod['module'])
-    return list(post - pre)
+    return post - pre
 
 
 def _rm_mods(pre_mods, post_mods):
@@ -42,13 +42,15 @@ def _rm_mods(pre_mods, post_mods):
         pre.add(mod['module'])
     for mod in post_mods:
         post.add(mod['module'])
-    return list(pre - post)
+    return pre - post
 
 
 def _get_persistent_modules():
     mods = set()
-    for mod in __salt__['cmd.run']('sysrc -ni kld_list').split():
-        mods.add(mod)
+    response = __salt__['cmd.run_all']('sysrc -niq kld_list')
+    if response['retcode'] == 0:
+        for mod in response['stdout'].split():
+            mods.add(mod)
     return mods
 
 
@@ -56,11 +58,12 @@ def _set_persistent_module(mod):
     '''
     Add a module to sysrc to make it persistent.
     '''
-    if not mod_name or mod_name in mod_list(True) or mod_name not in \
+    if not mod or mod in mod_list(True) or mod not in \
             available():
         return set()
-    mods = _get_persistent_modules().add(mod)
-    __salt__['cmd.run']('sysrc kld_list="{0}"'.format(mods))
+    mods = _get_persistent_modules()
+    mods.add(mod)
+    __salt__['cmd.run_all']("sysrc kld_list='{0}'".format(' '.join(mods)))
     return set([mod])
 
 
@@ -68,10 +71,11 @@ def _remove_persistent_module(mod):
     '''
     Remove module from sysrc.
     '''
-    if not mod_name or mod_name not in mod_list(True):
+    if not mod or mod not in mod_list(True):
         return set()
-    mods = _get_persistent_modules().remove(mod)
-    __salt__['cmd.run']('sysrc kld_list="{0}"'.format(mods))
+    mods = _get_persistent_modules()
+    mods.remove(mod)
+    __salt__['cmd.run_all']("sysrc kld_list='{0}'".format(' '.join(mods)))
     return set([mod])
 
 
@@ -127,11 +131,11 @@ def lsmod():
             continue
         if comps[4] == 'kernel':
             continue
-        mdat = {}
-        mdat['module'] = comps[4][:-3]
-        mdat['size'] = comps[3]
-        mdat['depcount'] = comps[1]
-        ret.append(mdat)
+        ret.append({
+            'module': comps[4][:-3],
+            'size': comps[3],
+            'depcount': comps[1]
+        })
     return ret
 
 
@@ -147,10 +151,13 @@ def mod_list(only_persist=False):
     '''
     mods = set()
     if only_persist:
+        if not _get_persistent_modules():
+            return mods
         for mod in _get_persistent_modules():
             mods.add(mod)
-    else for mod in lsmod():
-        mods.add(mod['module'])
+    else:
+        for mod in lsmod():
+            mods.add(mod['module'])
     return sorted(list(mods))
 
 
@@ -171,13 +178,23 @@ def load(mod, persist=False):
         salt '*' kmod.load bhyve
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('kldload {0}'.format(mod))
-    post_mods = lsmod()
-    mods = _new_mods(pre_mods, post_mods)
-    persist_mods = set()
-    if persist:
-        persist_mods = _set_persistent_module(mod)
-    return sorted(list(mods | persist_mods))
+    response = __salt__['cmd.run_all']('kldload {0}'.format(mod))
+    if response['retcode'] == 0:
+        post_mods = lsmod()
+        mods = _new_mods(pre_mods, post_mods)
+        persist_mods = set()
+        if persist:
+            persist_mods = _set_persistent_module(mod)
+        return sorted(list(mods | persist_mods))
+    elif 'module already loaded or in kernel' in response['stderr']:
+        if persist and mod not in _get_persistent_modules():
+            persist_mods = _set_persistent_module(mod)
+            return sorted(list(persist_mods))
+        else:
+            # It's compiled into the kernel
+            return [None]
+    else:
+        return 'Module {0} not found'.format(mod)
 
 
 def is_loaded(mod):
