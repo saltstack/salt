@@ -169,9 +169,10 @@ def gunzip(gzipfile, template=None, runas=None):
 
 
 @decorators.which('zip')
-def cmd_zip(zip_file, sources, template=None,
-            cwd=None, recurse=False, runas=None):
+def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
     '''
+    .. versionadded:: 2015.2.0
+
     Uses the zip command to create zip files
 
     zip_file
@@ -213,9 +214,7 @@ def cmd_zip(zip_file, sources, template=None,
     '''
     if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
-    cmd = ['zip']
-    if recurse:
-        cmd.append('-r')
+    cmd = ['zip', '-r']
     cmd.append('{0}'.format(zip_file))
     cmd.extend(sources)
     return __salt__['cmd.run'](cmd,
@@ -226,9 +225,20 @@ def cmd_zip(zip_file, sources, template=None,
 
 
 @decorators.depends('zipfile', fallback_function=cmd_zip)
-def zip_(archive, sources, template=None):
+def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     '''
-    Uses the zipfile module to create zip files
+    Uses the ``zipfile`` python module to create zip files
+
+    .. versionchanged:: 2015.2.0
+        This function was rewritten to use Python's native zip file support.
+        The old functionality has been preserved in the new function
+        :mod:`archive.zip <salt.modules.archive.cmd_zip`.
+
+    .. note::
+
+        If creating a zip file using the ``runas`` parameter,
+        :mod:`archive.cmd_zip <salt.modules.archive.cmd_zip>` will be used
+        instead.
 
     CLI Example:
 
@@ -244,28 +254,62 @@ def zip_(archive, sources, template=None):
     .. code-block:: bash
 
         salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
-
     '''
-    (archive, sources) = _render_filenames(archive, sources, None, template)
+    if runas:
+        return cmd_zip(zip_file, sources, template, cwd, runas)
+    zip_file, sources = _render_filenames(zip_file, sources, None, template)
 
     if isinstance(sources, string_types):
-        sources = [s.strip() for s in sources.split(',')]
+        sources = [x.strip() for x in sources.split(',')]
+    elif isinstance(sources, (float, integer_types)):
+        sources = [str(sources)]
+
+    if not cwd:
+        for src in sources:
+            if not os.path.isabs(src):
+                raise SaltInvocationError(
+                    'Relative paths require the \'cwd\' parameter'
+                )
+    else:
+        def _bad_cwd():
+            raise SaltInvocationError('cwd must be absolute')
+        try:
+            if not os.path.isabs(cwd):
+                _bad_cwd()
+        except AttributeError:
+            _bad_cwd()
 
     archived_files = []
-    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zfile:
         for src in sources:
+            if cwd:
+                src = os.path.join(cwd, src)
             if os.path.exists(src):
-                if os.path.isdir(src):
-                    rel_root = os.path.abspath(os.path.join(src, os.pardir))
-                    for dir_name, sub_dirs, files in os.walk(src):
-                        for filename in files:
-                            abs_name = os.path.abspath(os.path.join(dir_name, filename))
-                            arc_name = os.path.join(os.path.relpath(dir_name, rel_root), filename)
-                            archived_files.append(arc_name)
-                            zf.write(abs_name, arc_name)
+                if os.path.isabs(src):
+                    rel_root = '/'
                 else:
-                    archived_files.append(src)
-                    zf.write(src)
+                    rel_root = cwd if cwd is not None else '/'
+                if os.path.isdir(src):
+                    for dir_name, sub_dirs, files in os.walk(src):
+                        if cwd and dir_name.startswith(cwd):
+                            arc_dir = os.path.relpath(dir_name, cwd)
+                        else:
+                            arc_dir = os.path.relpath(dir_name, rel_root)
+                        if arc_dir:
+                            archived_files.append(arc_dir + '/')
+                            zfile.write(dir_name, arc_dir)
+                        for filename in files:
+                            abs_name = os.path.join(dir_name, filename)
+                            arc_name = os.path.join(arc_dir, filename)
+                            archived_files.append(arc_name)
+                            zfile.write(abs_name, arc_name)
+                else:
+                    if cwd and src.startswith(cwd):
+                        arc_name = os.path.relpath(src, cwd)
+                    else:
+                        arc_name = os.path.relpath(src, rel_root)
+                    archived_files.append(arc_name)
+                    zfile.write(src, arc_name)
 
     return archived_files
 
