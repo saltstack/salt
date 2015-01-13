@@ -44,6 +44,34 @@ def _rm_mods(pre_mods, post_mods):
         post.add(mod['module'])
     return list(pre - post)
 
+def _get_persistent_modules():
+    mods = set()
+    for mod in __salt__['cmd.run']('sysrc -ni kld_list').split():
+        mods.add(mod)
+    return mods
+
+
+def _set_persistent_module(mod):
+    '''
+    Add a module to sysrc to make it persistent.
+    '''
+    if not mod_name or mod_name in mod_list(True) or mod_name not in available():
+        return set()
+    mods = _get_persistent_modules().add(mod)
+    __salt__['cmd.run']('sysrc kld_list="{0}"'.format(mods))
+    return set([mod])
+
+
+def _remove_persistent_module(mod):
+    '''
+    Remove module from sysrc.
+    '''
+    if not mod_name or mod_name not in mod_list(True):
+        return set()
+    mods = _get_persistent_modules().remove(mod)
+    __salt__['cmd.run']('sysrc kld_list="{0}"'.format(mods))
+    return set([mod])
+
 
 def available():
     '''
@@ -73,7 +101,7 @@ def check_available(mod):
 
     .. code-block:: bash
 
-        salt '*' kmod.check_available kvm
+        salt '*' kmod.check_available vmm
     '''
     return mod in available()
 
@@ -106,24 +134,65 @@ def lsmod():
         ret.append(mdat)
     return ret
 
-
-def load(mod):
+def mod_list(only_persist=False):
     '''
-    Load the specified kernel module
+    Return a list of the loaded module names
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' kmod.load kvm
+        salt '*' kmod.mod_list
+    '''
+    mods = set()
+    if only_persist:
+        for mod in _get_persistent_modules():
+            mods.add(mod)
+    else for mod in lsmod():
+        mods.add(mod['module'])
+    return sorted(list(mods))
+
+
+def load(mod, persist=False):
+    '''
+    Load the specified kernel module
+
+    mod
+        Name of the module to add
+
+    persist
+        Write the module to sysrc kld_modules to make it load on system reboot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' kmod.load bhyve
     '''
     pre_mods = lsmod()
     __salt__['cmd.run_all']('kldload {0}'.format(mod))
     post_mods = lsmod()
-    return _new_mods(pre_mods, post_mods)
+    mods = _new_mods(pre_mods, post_mods)
+    persist_mods = set()
+    if persist:
+        persist_mods = _set_persistent_module(mod)
+    return sorted(list(mods | persist_mods))
 
 
-def remove(mod):
+def is_loaded(mod):
+    '''
+    Check to see if the specified kernel module is loaded
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' kmod.is_loaded vmm
+    '''
+    return mod in mod_list()
+
+
+def remove(mod, persist=False):
     '''
     Remove the specified kernel module
 
@@ -131,9 +200,13 @@ def remove(mod):
 
     .. code-block:: bash
 
-        salt '*' kmod.remove kvm
+        salt '*' kmod.remove vmm
     '''
     pre_mods = lsmod()
     __salt__['cmd.run_all']('kldunload {0}'.format(mod))
     post_mods = lsmod()
-    return _rm_mods(pre_mods, post_mods)
+    mods = _rm_mods(pre_mods, post_mods)
+    persist_mods = set()
+    if persist:
+        persist_mods = _remove_persistent_module(mod)
+    return sorted(list(mods | persist_mods))
