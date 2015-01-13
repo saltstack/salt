@@ -176,7 +176,7 @@ def run(name,
         with salt.utils.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
-                    for col, val in res:
+                    for col, val in res.iteritems():
                         output_file.write(col + ':' + val + '\n')
             else:
                 output_file.write(str(query_result))
