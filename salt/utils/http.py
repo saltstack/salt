@@ -80,12 +80,15 @@ def query(url,
           node='minion',
           port=80,
           opts=None,
-          requests_lib=False,
+          requests_lib=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
     '''
     ret = {}
+
+    if requests_lib is None:
+        requests_lib = opts.get('requests_lib', False)
 
     if requests_lib is True:
         if  HAS_REQUESTS is False:
