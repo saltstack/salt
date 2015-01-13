@@ -192,8 +192,9 @@ class SyncClientMixin(object):
         func_globals['print'] = over_print
 
         # Inject some useful globals to the funciton's global namespace
-        for global_key, value in func_globals.iteritems():
-            self.functions[fun].func_globals[global_key] = value
+        for _fun in self.functions:
+            for global_key, value in func_globals.iteritems():
+                self.functions[_fun].func_globals[global_key] = value
         try:
             self._verify_fun(fun)
 
