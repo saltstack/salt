@@ -52,6 +52,8 @@ def present(name):
     '''
     Generate a locale if it is not present
 
+    .. versionadded:: 2014.7.0
+
     name
         The name of the locale to be present
     '''
