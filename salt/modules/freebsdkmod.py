@@ -121,16 +121,14 @@ def lsmod():
         comps = line.split()
         if not len(comps) > 2:
             continue
-        if comps[0] == 'Module':
+        if comps[0] == 'Id':
+            continue
+        if comps[4] == 'kernel':
             continue
         mdat = {}
-        mdat['module'] = comps[0]
-        mdat['size'] = comps[1]
-        mdat['depcount'] = comps[2]
-        if len(comps) > 3:
-            mdat['deps'] = comps[3].split(',')
-        else:
-            mdat['deps'] = []
+        mdat['module'] = comps[4][:-3]
+        mdat['size'] = comps[3]
+        mdat['depcount'] = comps[1]
         ret.append(mdat)
     return ret
 
