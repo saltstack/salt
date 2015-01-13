@@ -1203,7 +1203,7 @@ def managed(name,
         run.
     '''
     # contents must be a string
-    if contents:
+    if contents is not None:
         contents = str(contents)
 
     # Make sure that leading zeros stripped by YAML loader are added back
