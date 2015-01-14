@@ -154,7 +154,7 @@ def gunzip(gzipfile, template=None):
 
 
 @decorators.which('zip')
-def zip_(zipfile, sources, template=None, cwd=None, recurse=False):
+def zip_(zipfile, sources, template=None, cwd=None):
     '''
     Uses the zip command to create zip files
 
@@ -182,13 +182,6 @@ def zip_(zipfile, sources, template=None, cwd=None, recurse=False):
 
         .. versionadded:: 2014.7.1
 
-    recurse : False
-        Recursively include contents of sources which are directories. Combine
-        this with the ``cwd`` argument and use relative paths for the sources
-        to create a zip file which does not contain the leading directories.
-
-        .. versionadded:: 2014.7.1
-
     CLI Example:
 
     .. code-block:: bash
@@ -197,9 +190,7 @@ def zip_(zipfile, sources, template=None, cwd=None, recurse=False):
     '''
     if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
-    cmd = ['zip']
-    if recurse:
-        cmd.append('-r')
+    cmd = ['zip', '-r']
     cmd.append('{0}'.format(zipfile))
     cmd.extend(sources)
     return __salt__['cmd.run'](cmd,
