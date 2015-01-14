@@ -79,7 +79,7 @@ def compile_template(template,
         try:
             input_data.seek(0)
         except Exception as exp:
-            log.error('error: {0}:\n{1}'.format(exp))
+            log.error('error: {0}'.format(exp))
 
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
