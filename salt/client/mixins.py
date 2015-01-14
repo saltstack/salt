@@ -204,9 +204,16 @@ class SyncClientMixin(object):
             __builtin__.print(output)  # and do the old style printout
         func_globals['print'] = over_print
 
-        # Inject some useful globals to the funciton's global namespace
-        for global_key, value in func_globals.iteritems():
-            self.functions[fun].func_globals[global_key] = value
+        # Inject some useful globals to *all* the funciton's global namespace
+        # only once per module-- not per func
+        completed_funcs = []
+        for mod_name, mod_func in self.functions.iteritems():
+            mod, _ = mod_name.split('.', 1)
+            if mod in completed_funcs:
+                continue
+            completed_funcs.append(mod)
+            for global_key, value in func_globals.iteritems():
+                self.functions[mod_name].func_globals[global_key] = value
         try:
             self._verify_fun(fun)
 
