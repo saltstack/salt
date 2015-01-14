@@ -2,14 +2,34 @@
 '''
 Validate the boto_iam module
 '''
-
-
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 import integration
 
+NO_BOTO_MODULE=True
+BOTO_NOT_CONFIGURED=True
+try:
+    import boto
+    NO_BOTO_MODULE = False
+    try:
+        boto.connect_iam()
+        BOTO_NOT_CONFIGURED = False
+    except boto.exception.NoAuthHandlerFound:
+        pass
+except ImportError:
+    pass
 
+
+@skipIf(
+    NO_BOTO_MODULE,
+    'Please install the boto library before running boto integration tests.'
+)
+@skipIf(
+    BOTO_NOT_CONFIGURED,
+    'Please setup boto AWS credentials before running boto integration tests.'
+)
 class BotoIAMTest(integration.ModuleCase):
 
     def test_get_account_id(self):
