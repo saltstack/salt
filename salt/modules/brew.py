@@ -36,7 +36,7 @@ def _list_taps():
     return _call_brew(cmd)['stdout'].splitlines()
 
 
-def _tap(tap):
+def _tap(tap, runas=None):
     '''
     Add unofficial Github repos to the list of formulas that brew tracks,
     updates, and installs from.
@@ -45,7 +45,7 @@ def _tap(tap):
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if _call_brew(cmd)['retcode']:
+    if __salt__['cmd.retcode'](cmd, python_shell=False, runas=runas):
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -66,7 +66,10 @@ def _call_brew(cmd):
     Calls the brew command with the user user account of brew
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
-    return __salt__['cmd.run_all'](cmd, runas=user, output_loglevel='trace', python_shell=False)
+    return __salt__['cmd.run_all'](cmd,
+                                   runas=user,
+                                   output_loglevel='trace',
+                                   python_shell=False)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):

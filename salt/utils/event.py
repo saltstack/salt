@@ -133,17 +133,6 @@ def get_master_event(opts, sock_dir, listen=True):
             opts=opts, sock_dir=sock_dir, listen=listen)
 
 
-def get_runner_event(opts, jid, listen=True):
-    '''
-    Return an event object suitable for the named transport
-    '''
-    if opts['transport'] == 'zeromq':
-        return RunnerEvent(opts, jid)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RunnerEvent(opts, jid, listen=listen)
-
-
 def tagify(suffix='', prefix='', base=SALT):
     '''
     convenience function to build a namespaced event tag string
@@ -185,6 +174,10 @@ class SaltEvent(object):
         self.subscribe()
         self.pending_events = []
         self.__load_cache_regex()
+
+        # since ZMQ connect()  has no guarantees about the socket actually being
+        # connected this is a hack to attempt to do so.
+        self.get_event(wait=1)
 
     @classmethod
     def __load_cache_regex(cls):
@@ -502,6 +495,21 @@ class SaltEvent(object):
             raise
         return True
 
+    def fire_master(self, data, tag, timeout=1000):
+        ''''
+        Send a single event to the master, with the payload "data" and the
+        event identifier "tag".
+
+        Default timeout is 1000ms
+        '''
+        msg = {
+            'tag': tag,
+            'data': data,
+            'events': None,
+            'pretag': None
+        }
+        return self.fire_event(msg, "fire_master", timeout)
+
     def destroy(self, linger=5000):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
@@ -573,7 +581,12 @@ class SaltEvent(object):
                     pass
 
     def __del__(self):
-        self.destroy()
+        # skip exceptions in destroy-- since destroy() doesn't cover interpreter
+        # shutdown-- where globals start going missing
+        try:
+            self.destroy()
+        except Exception as ex:
+            log.debug(ex)
 
 
 class MasterEvent(SaltEvent):
@@ -595,23 +608,16 @@ class LocalClientEvent(MasterEvent):
     '''
 
 
-class RunnerEvent(MasterEvent):
+class NamespacedEvent(object):
     '''
-    Warning! Use the get_runner_event function or the code will not be
-    RAET compatible
-    This is used to send progress and return events from runners.
-    It extends MasterEvent to include information about how to
-    display events to the user as a runner progresses.
+    A wrapper for sending events within a specific base namespace
     '''
-    def __init__(self, opts, jid):
-        super(RunnerEvent, self).__init__(opts['sock_dir'])
-        self.jid = jid
+    def __init__(self, event, base):
+        self.event = event
+        self.base = base
 
-    def fire_progress(self, data, outputter='pprint'):
-        progress_event = {'data': data,
-                          'outputter': outputter}
-        self.fire_event(
-            progress_event, tagify([self.jid, 'progress'], 'runner'))
+    def fire_event(self, data, tag):
+        self.event.fire_event(data, tagify(tag, base=self.base))
 
 
 class MinionEvent(SaltEvent):

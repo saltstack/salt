@@ -782,6 +782,7 @@ def set_known_host(user=None,
         return {'status': 'error',
                 'error': 'hostname argument required'}
     update_required = False
+    check_required = False
     stored_host = get_known_host(user, hostname, config)
 
     if not stored_host:
@@ -790,8 +791,10 @@ def set_known_host(user=None,
         update_required = True
     elif key and key != stored_host['key']:
         update_required = True
+    elif key != stored_host['key']:
+        check_required = True
 
-    if not update_required:
+    if not update_required and not check_required:
         return {'status': 'exists', 'key': stored_host}
 
     if not key:
@@ -807,6 +810,10 @@ def set_known_host(user=None,
             return {'status': 'error',
                     'error': ('Remote host public key found but its fingerprint '
                               'does not match one you have provided')}
+
+        if check_required:
+            if remote_host == stored_host:
+                return {'status': 'uptodate', 'key': stored_host}
 
     # remove everything we had in the config so far
     rm_known_host(user, hostname, config=config)

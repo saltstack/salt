@@ -3,6 +3,7 @@
 # Import Python libs
 import json
 import yaml
+import os
 
 # Import Salt Testing Libs
 from salttesting.unit import skipIf
@@ -69,6 +70,14 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
     def token(self):
         ''' Mint and return a valid token for auth_creds '''
         return self.auth.mk_token(self.auth_creds_dict)
+
+    def setUp(self):
+        super(SaltnadoTestCase, self).setUp()
+        os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
+
+    def tearDown(self):
+        super(SaltnadoTestCase, self).tearDown()
+        os.environ.pop('ASYNC_TEST_TIMEOUT', None)
 
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
