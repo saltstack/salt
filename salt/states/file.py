@@ -231,6 +231,7 @@ import traceback
 import yaml
 
 # Import salt libs
+import salt.payload
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
@@ -242,6 +243,71 @@ COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
 _ACCUMULATORS = {}
 _ACCUMULATORS_DEPS = {}
+
+
+def _get_accumulator_dir():
+    '''
+    Return the directory that accumulator data is stored in, creating it if it
+    doesn't exist.
+    '''
+    fn_ = os.path.join(__opts__['cachedir'], 'accumulator')
+    if not os.path.isdir(fn_):
+        # accumulator_dir is not present, create it
+        os.makedirs(fn_)
+    return fn_
+
+
+def _get_accumulator_filepath():
+    '''
+    Return accumulator data path, uses PID as filename for identify.
+    #TODO it needs a better thing to use as unique entity that different
+    among salt run.
+    '''
+    return os.path.join(_get_accumulator_dir(), str(os.getpid()))
+
+
+def _cleanup_old_accummulator_data():
+    '''
+    Only keep current accumulator data.
+    '''
+    for fn in os.listdir(_get_accumulator_dir()):
+        path = os.path.join(_get_accumulator_dir(), fn)
+        if path != _get_accumulator_filepath():
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
+
+def _load_accumulators():
+    def _deserialize(path):
+        serial = salt.payload.Serial(__opts__)
+        ret = {'accumulators': {}, 'accumulators_deps': {}}
+        try:
+            with open(path, 'rb') as f:
+                loaded = serial.load(f)
+                return loaded if loaded else ret
+        except IOError:
+            return ret
+
+    global _ACCUMULATORS, _ACCUMULATORS_DEPS
+
+    loaded = _deserialize(_get_accumulator_filepath())
+
+    _ACCUMULATORS = loaded['accumulators']
+    _ACCUMULATORS_DEPS = loaded['accumulators_deps']
+
+
+def _persist_accummulators():
+
+    global _ACCUMULATORS, _ACCUMULATORS_DEPS
+
+    accumm_data = {'accumulators': _ACCUMULATORS,
+                   'accumulators_deps': _ACCUMULATORS_DEPS}
+
+    serial = salt.payload.Serial(__opts__)
+    with open(_get_accumulator_filepath(), 'w+b') as f:
+        serial.dump(accumm_data, f)
 
 
 def _check_user(user, group):
@@ -1140,7 +1206,7 @@ def managed(name,
         ``pillar['userdata']['deployer']['id_rsa']``. An example of this pillar
         setup would be like so:
 
-        .. code-block:: yaml:
+        .. code-block:: yaml
 
             userdata:
               deployer:
@@ -1224,6 +1290,7 @@ def managed(name,
                               'No changes made.'.format(name))
         return ret
 
+    _load_accumulators()
     if name in _ACCUMULATORS:
         if not context:
             context = {}
@@ -2109,6 +2176,7 @@ def blockreplace(
     if not check_res:
         return _error(ret, check_msg)
 
+    _load_accumulators()
     if name in _ACCUMULATORS:
         accumulator = _ACCUMULATORS[name]
         # if we have multiple accumulators for a file, only apply the one
@@ -3004,6 +3072,7 @@ def accumulated(name, filename, text, **kwargs):
         return ret
     if isinstance(text, string_types):
         text = (text,)
+    _load_accumulators()
     if filename not in _ACCUMULATORS:
         _ACCUMULATORS[filename] = {}
     if filename not in _ACCUMULATORS_DEPS:
@@ -3019,6 +3088,8 @@ def accumulated(name, filename, text, **kwargs):
             _ACCUMULATORS[filename][name].append(chunk)
             ret['comment'] = ('Accumulator {0} for file {1} '
                               'was charged by text'.format(name, filename))
+    _cleanup_old_accummulator_data()
+    _persist_accummulators()
     return ret
 
 
