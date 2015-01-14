@@ -154,16 +154,19 @@ def gunzip(gzipfile, template=None):
 
 
 @decorators.which('zip')
-def zip_(zipfile, sources, template=None, cwd=None, recurse=False):
+def zip_(zipfile, sources, template=None, cwd=None):
     '''
-    Uses the zip command to create zip files
+    Uses the ``zip`` command to create zip files. This command is part of the
+    `Info-ZIP`_ suite of tools, and is typically packaged as simply ``zip``.
+
+    .. _`Info-ZIP`: http://www.info-zip.org/
 
     zipfile
         Path of zip file to be created
 
     sources
         Comma-separated list of sources to include in the zip file. Sources can
-        also be passed in a python list.
+        also be passed in a Python list.
 
     template : None
         Can be set to 'jinja' or another supported template engine to render
@@ -174,20 +177,19 @@ def zip_(zipfile, sources, template=None, cwd=None, recurse=False):
             salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
     cwd : None
-        Run the zip command from the specified directory. Use this argument
-        along with relative file paths to create zip files which do not
-        contain the leading directories. If not specified, this will default
-        to the home directory of the user under which the salt minion process
-        is running.
+        Use this argument along with relative paths in ``sources`` to create
+        zip files which do not contain the leading directories. If not
+        specified, the zip file will be created as if the cwd was ``/``, and
+        creating a zip file of ``/foo/bar/baz.txt`` will contain the parent
+        directories ``foo`` and ``bar``. To create a zip file containing just
+        ``baz.txt``, the following command would be used:
+
+        .. code-block:: bash
+
+            salt '*' archive.zip /tmp/baz.zip baz.txt cwd=/foo/bar
 
         .. versionadded:: 2014.7.1
 
-    recurse : False
-        Recursively include contents of sources which are directories. Combine
-        this with the ``cwd`` argument and use relative paths for the sources
-        to create a zip file which does not contain the leading directories.
-
-        .. versionadded:: 2014.7.1
 
     CLI Example:
 
@@ -197,9 +199,7 @@ def zip_(zipfile, sources, template=None, cwd=None, recurse=False):
     '''
     if isinstance(sources, string_types):
         sources = [s.strip() for s in sources.split(',')]
-    cmd = ['zip']
-    if recurse:
-        cmd.append('-r')
+    cmd = ['zip', '-r']
     cmd.append('{0}'.format(zipfile))
     cmd.extend(sources)
     return __salt__['cmd.run'](cmd,
@@ -211,7 +211,10 @@ def zip_(zipfile, sources, template=None, cwd=None, recurse=False):
 @decorators.which('unzip')
 def unzip(zipfile, dest, excludes=None, template=None, options=None):
     '''
-    Uses the unzip command to unpack zip files
+   Uses the ``unzip`` command to unpack zip files. This command is part of the
+    `Info-ZIP`_ suite of tools, and is typically packaged as simply ``unzip``.
+
+    .. _`Info-ZIP`: http://www.info-zip.org/
 
     zipfile
         Path of zip file to be unpacked
@@ -219,8 +222,9 @@ def unzip(zipfile, dest, excludes=None, template=None, options=None):
     dest
         The destination directory into which the file should be unpacked
 
-    options : None
-        Options to pass to the ``unzip`` binary
+    excludes : None
+        Comma-separated list of files not to unpack. Can also be passed in a
+        Python list.
 
     template : None
         Can be set to 'jinja' or another supported template engine to render
@@ -229,6 +233,10 @@ def unzip(zipfile, dest, excludes=None, template=None, options=None):
         .. code-block:: bash
 
             salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
+
+    options : None
+        Additional command-line options to pass to the ``unzip`` binary.
+
 
     CLI Example:
 
