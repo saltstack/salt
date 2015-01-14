@@ -121,7 +121,7 @@ class ArchiveTestCase(TestCase):
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
-                ['zip', '/tmp/salt.{{grains.id}}.zip',
+                ['zip', '-r', '/tmp/salt.{{grains.id}}.zip',
                  '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
                  python_shell=False, template='jinja', cwd=None
             )
@@ -135,7 +135,7 @@ class ArchiveTestCase(TestCase):
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
-                ['zip', '/tmp/salt.{{grains.id}}.zip',
+                ['zip', '-r', '/tmp/salt.{{grains.id}}.zip',
                  '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
                 python_shell=False, template='jinja', cwd=None
             )
