@@ -99,7 +99,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
 
-    ret = __salt__[run_cmd](cmd, **kwargs)
+    ret = __salt__[run_cmd](cmd, python_shell=False, **kwargs)
 
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Remove PGPASSFILE failed')

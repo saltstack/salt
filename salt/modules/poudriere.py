@@ -189,7 +189,7 @@ def create_jail(name, arch, version="9.0-RELEASE"):
         return '{0} already exists'.format(name)
 
     cmd = 'poudriere jails -c -j {0} -v {1} -a {2}'.format(name, version, arch)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
 
     # Make jail pkgng aware
     make_pkgng_aware(name)
@@ -213,7 +213,7 @@ def delete_jail(name):
     '''
     if is_jail(name):
         cmd = 'poudriere jail -d -j {0}'.format(name)
-        __salt__['cmd.run'](cmd)
+        __salt__['cmd.run'](cmd, python_shell=False)
 
         # Make sure jail is gone
         if is_jail(name):
@@ -272,7 +272,7 @@ def bulk_build(jail, pkg_file, keep=False):
         cmd = 'poudriere bulk -f {0} -j {1}'.format(pkg_file, jail)
 
     # Bulk build this can take some time, depending on pkg_file ... hours
-    res = __salt__['cmd.run'](cmd)
+    res = __salt__['cmd.run'](cmd, python_shell=False)
     lines = res.splitlines()
     for line in lines:
         if "packages built" in line:

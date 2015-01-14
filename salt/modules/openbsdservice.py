@@ -36,7 +36,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '/etc/rc.d/{0} -f start'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -50,7 +50,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '/etc/rc.d/{0} -f stop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -64,7 +64,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/etc/rc.d/{0} -f restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -81,4 +81,4 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} -f check'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
