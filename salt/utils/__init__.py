@@ -574,6 +574,18 @@ def required_modules_error(name, docstring):
     return msg.format(filename, ', '.join(modules))
 
 
+def get_accumulator_dir(cachedir):
+    '''
+    Return the directory that accumulator data is stored in, creating it if it
+    doesn't exist.
+    '''
+    fn_ = os.path.join(cachedir, 'accumulator')
+    if not os.path.isdir(fn_):
+        # accumulator_dir is not present, create it
+        os.makedirs(fn_)
+    return fn_
+
+
 def gen_jid():
     '''
     Generate a jid
