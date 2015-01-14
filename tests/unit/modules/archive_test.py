@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 # Import salt libs
 from salt.modules import archive
 from salt.exceptions import CommandNotFoundError
+from salt.utils import which_bin
 
 
 class ZipFileMock(MagicMock):
@@ -129,28 +130,28 @@ class ArchiveTestCase(TestCase):
     def test_cmd_zip(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            ret = archive.cmd_zip_(
+            ret = archive.cmd_zip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
                 template='jinja'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
-                ['zip', '/tmp/salt.{{grains.id}}.zip',
+                ['zip', '-r', '/tmp/salt.{{grains.id}}.zip',
                  '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
                  runas=None, python_shell=False, template='jinja', cwd=None
             )
 
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            ret = archive.cmd_zip_(
+            ret = archive.cmd_zip(
                 '/tmp/salt.{{grains.id}}.zip',
                 ['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
                 template='jinja'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
-                ['zip', '/tmp/salt.{{grains.id}}.zip',
+                ['zip', '-r', '/tmp/salt.{{grains.id}}.zip',
                  '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
                 runas=None, python_shell=False, template='jinja', cwd=None
             )
@@ -164,7 +165,7 @@ class ArchiveTestCase(TestCase):
             '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
             template='jinja'
         )
-        self.assertEqual(['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'], ret)
+        self.assertEqual(['tmp/tmpePe8yO', 'tmp/tmpLeSw1A'], ret)
 
     @patch('salt.utils.which', lambda exe: None)
     def test_zip_raises_exception_if_not_found(self):
@@ -172,7 +173,7 @@ class ArchiveTestCase(TestCase):
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
             self.assertRaises(
                 CommandNotFoundError,
-                archive.cmd_zip_,
+                archive.cmd_zip,
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
                 template='jinja',
@@ -183,22 +184,22 @@ class ArchiveTestCase(TestCase):
     def test_cmd_unzip(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            ret = archive.cmd_unzip_(
+            ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes='/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
-                runas=None, template='jinja'
+                template='jinja'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
                 ['unzip', '/tmp/salt.{{grains.id}}.zip', '-d', '/tmp/dest',
                  '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                python_shell=False, template='jinja'
+                runas=None, python_shell=False, template='jinja'
             )
 
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            ret = archive.cmd_unzip_(
+            ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes=['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
@@ -208,12 +209,12 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '/tmp/salt.{{grains.id}}.zip', '-d', '/tmp/dest',
                  '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                python_shell=False, template='jinja'
+                runas=None, python_shell=False, template='jinja'
             )
 
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            ret = archive.cmd_unzip_(
+            ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes='/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
@@ -224,12 +225,12 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '-fo', '/tmp/salt.{{grains.id}}.zip', '-d',
                  '/tmp/dest', '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                python_shell=False, template='jinja'
+                runas=None, python_shell=False, template='jinja'
             )
 
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
-            ret = archive.cmd_unzip_(
+            ret = archive.cmd_unzip(
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes=['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
@@ -240,7 +241,7 @@ class ArchiveTestCase(TestCase):
             mock.assert_called_once_with(
                 ['unzip', '-fo', '/tmp/salt.{{grains.id}}.zip', '-d',
                  '/tmp/dest', '-x', '/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
-                python_shell=False, template='jinja'
+                runas=None, python_shell=False, template='jinja'
             )
 
     def test_unzip(self):
@@ -260,7 +261,7 @@ class ArchiveTestCase(TestCase):
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
             self.assertRaises(
                 CommandNotFoundError,
-                archive.cmd_unzip_,
+                archive.cmd_unzip,
                 '/tmp/salt.{{grains.id}}.zip',
                 '/tmp/dest',
                 excludes='/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
@@ -308,6 +309,7 @@ class ArchiveTestCase(TestCase):
             )
             self.assertFalse(mock.called)
 
+    @skipIf(which_bin(('unrar', 'rar')) is None, 'unrar not installed')
     @patch('salt.utils.which', lambda exe: exe)
     @patch('salt.utils.which_bin', lambda exe: exe)
     def test_unrar(self):
