@@ -253,6 +253,19 @@ def get_user():
     else:
         return getpass.getuser()
 
+def get_specific_user():
+    '''
+    Get a user name for publishing. If you find the user is "root" attempt to be
+    more specific
+    '''
+    user = get_user()
+    env_vars = ('SUDO_USER',)
+    if user == 'root' or user == self.opts['user']:
+        for evar in env_vars:
+            if evar in os.environ:
+                return 'sudo_{0}'.format(os.environ[evar])
+    return user
+
 
 def daemonize(redirect_out=True):
     '''
