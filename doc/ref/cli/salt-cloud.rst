@@ -118,17 +118,12 @@ Options
     form, this is suitable for re-reading the output into
     an executing python script with eval.
 
-.. option:: --text-out
+.. option:: --out=OUTPUT, --output=OUTPUT
 
-    Print the output from the salt command in the same form the shell would.
-
-.. option:: --yaml-out
-
-    Print the output from the salt command in yaml.
-
-.. option:: --json-out
-
-    Print the output from the salt command in json.
+    Print the output from the salt-cloud command using the specified outputter. The
+    builtins are 'raw', 'compact', 'no_return', 'grains', 'overstatestage', 'pprint',
+    'json', 'nested', 'yaml', 'highstate', 'quiet', 'key', 'txt', 'newline_values_only',
+    'virt_query'.
 
 .. option:: --no-color
 
