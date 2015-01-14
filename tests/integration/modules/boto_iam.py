@@ -8,8 +8,8 @@ ensure_in_syspath('../../')
 
 import integration
 
-NO_BOTO_MODULE=True
-BOTO_NOT_CONFIGURED=True
+NO_BOTO_MODULE = True
+BOTO_NOT_CONFIGURED = True
 try:
     import boto
     NO_BOTO_MODULE = False
