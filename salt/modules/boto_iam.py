@@ -415,6 +415,24 @@ def delete_role_policy(role_name, policy_name, region=None, key=None,
         log.error(msg.format(policy_name, role_name))
         return False
 
+def get_account_id(region=None, key=None, keyid=None, profile=None):
+    '''
+    Get a the AWS account id associated with the used credentials.
+
+    CLI example::
+
+        salt myminion boto_iam.get_account_id
+    '''
+    cache_key = 'boto_iam.account_id'
+    if cache_key not in __context__:
+        conn = _get_conn(region, key, keyid, profile)
+        ret = conn.get_user()
+        # the get_user call returns an user ARN:
+        #    arn:aws:iam::027050522557:user/salt-test
+        __context__[cache_key] = ret['get_user_response']\
+                                    ['get_user_result']\
+                                    ['user']['arn'].split(':')[4]
+    return __context__[cache_key]
 
 def _get_conn(region, key, keyid, profile):
     '''
