@@ -190,7 +190,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
 
         .. code-block:: bash
 
-            salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
+            salt '*' archive.cmd_zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
     cwd : None
         Use this argument along with relative paths in ``sources`` to create
@@ -202,7 +202,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
 
         .. code-block:: bash
 
-            salt '*' archive.zip /tmp/baz.zip baz.txt cwd=/foo/bar
+            salt '*' archive.cmd_zip /tmp/baz.zip baz.txt cwd=/foo/bar
 
         .. versionadded:: 2014.7.1
 
@@ -398,7 +398,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
         .. code-block:: bash
 
-            salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
+            salt '*' archive.cmd_unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
 
     options : None
         Additional command-line options to pass to the ``unzip`` binary.
@@ -413,7 +413,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
     .. code-block:: bash
 
-        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
+        salt '*' archive.cmd_unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     '''
     if isinstance(excludes, string_types):
         excludes = [x.strip() for x in excludes.split(',')]
