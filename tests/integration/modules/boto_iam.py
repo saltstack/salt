@@ -14,4 +14,6 @@ class BotoIAMTest(integration.ModuleCase):
 
     def test_get_account_id(self):
         ret = self.run_function('boto_iam.get_account_id')
+        # The AWS account ID is a 12-digit number.
+        # http://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html
         self.assertRegexpMatches(ret, r'^\d{12}$')
