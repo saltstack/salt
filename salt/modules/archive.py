@@ -7,13 +7,9 @@ A module to wrap (non-Windows) archive calls
 from __future__ import absolute_import
 import os
 
-
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext.six import string_types, integer_types
-from salt.utils import \
-    which as _which, which_bin as _which_bin, is_windows as _is_windows
-import salt.utils.decorators as decorators
 import salt.utils
 
 # TODO: Check that the passed arguments are correct
@@ -33,17 +29,18 @@ except ImportError:
 
 
 def __virtual__():
-    if _is_windows():
+    if salt.utils.is_windows():
         return HAS_ZIPFILE
     commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
     # If none of the above commands are in $PATH this module is a no-go
-    if not any(_which(cmd) for cmd in commands):
+    if not any(salt.utils.which(cmd) for cmd in commands):
         return False
     return True
 
 
-@decorators.which('tar')
-def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runas=None):
+@salt.utils.decorators.which('tar')
+def tar(options, tarfile, sources=None, dest=None,
+        cwd=None, template=None, runas=None):
     '''
     .. note::
 
@@ -114,7 +111,7 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
                                python_shell=False).splitlines()
 
 
-@decorators.which('gzip')
+@salt.utils.decorators.which('gzip')
 def gzip(sourcefile, template=None, runas=None):
     '''
     Uses the gzip command to create gzip files
@@ -141,7 +138,7 @@ def gzip(sourcefile, template=None, runas=None):
                                python_shell=False).splitlines()
 
 
-@decorators.which('gunzip')
+@salt.utils.decorators.which('gunzip')
 def gunzip(gzipfile, template=None, runas=None):
     '''
     Uses the gunzip command to unpack gzip files
@@ -168,7 +165,7 @@ def gunzip(gzipfile, template=None, runas=None):
                                python_shell=False).splitlines()
 
 
-@decorators.which('zip')
+@salt.utils.decorators.which('zip')
 def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
     '''
     .. versionadded:: 2015.2.0
@@ -234,7 +231,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
                                python_shell=False).splitlines()
 
 
-@decorators.depends('zipfile', fallback_function=cmd_zip)
+@salt.utils.decorators.depends('zipfile', fallback_function=cmd_zip)
 def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     '''
     Uses the ``zipfile`` Python module to create zip files
@@ -316,7 +313,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
             _bad_cwd()
 
     if runas and (euid != uinfo['uid'] or guid != uinfo['gid']):
-        # Change the egid first, as changing it after the euid will likely fail
+        # Change the egid first, as changing it after the euid will fail
         # if the runas user is non-privileged.
         os.setegid(uinfo['gid'])
         os.seteuid(uinfo['uid'])
@@ -324,7 +321,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     try:
         exc = None
         archived_files = []
-        with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zfile:
+        with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zfile:
             for src in sources:
                 if cwd:
                     src = os.path.join(cwd, src)
@@ -336,9 +333,10 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
                     if os.path.isdir(src):
                         for dir_name, sub_dirs, files in os.walk(src):
                             if cwd and dir_name.startswith(cwd):
-                                arc_dir = os.path.relpath(dir_name, cwd)
+                                arc_dir = salt.utils.relpath(dir_name, cwd)
                             else:
-                                arc_dir = os.path.relpath(dir_name, rel_root)
+                                arc_dir = salt.utils.relpath(dir_name,
+                                                             rel_root)
                             if arc_dir:
                                 archived_files.append(arc_dir + '/')
                                 zfile.write(dir_name, arc_dir)
@@ -349,9 +347,9 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
                                 zfile.write(abs_name, arc_name)
                     else:
                         if cwd and src.startswith(cwd):
-                            arc_name = os.path.relpath(src, cwd)
+                            arc_name = salt.utils.relpath(src, cwd)
                         else:
-                            arc_name = os.path.relpath(src, rel_root)
+                            arc_name = salt.utils.relpath(src, rel_root)
                         archived_files.append(arc_name)
                         zfile.write(src, arc_name)
     except Exception as exc:
@@ -371,7 +369,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     return archived_files
 
 
-@decorators.which('unzip')
+@salt.utils.decorators.which('unzip')
 def cmd_unzip(zip_file, dest, excludes=None,
               template=None, options=None, runas=None):
     '''
@@ -443,7 +441,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
                                python_shell=False).splitlines()
 
 
-@decorators.depends('zipfile', fallback_function=cmd_unzip)
+@salt.utils.decorators.depends('zipfile', fallback_function=cmd_unzip)
 def unzip(zip_file, dest, excludes=None, template=None, runas=None):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
@@ -494,13 +492,8 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
 
     zip_file, dest = _render_filenames(zip_file, dest, None, template)
 
-    if not os.path.isdir(dest):
-        raise SaltInvocationError(
-            'Destination directory {0} does not exist'.format(dest)
-        )
-
     if runas and (euid != uinfo['uid'] or guid != uinfo['gid']):
-        # Change the egid first, as changing it after the euid will likely fail
+        # Change the egid first, as changing it after the euid will fail
         # if the runas user is non-privileged.
         os.setegid(uinfo['gid'])
         os.seteuid(uinfo['uid'])
@@ -543,7 +536,7 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
     return cleaned_files
 
 
-@decorators.which('rar')
+@salt.utils.decorators.which('rar')
 def rar(rarfile, sources, template=None, cwd=None, runas=None):
     '''
     Uses `rar for Linux`_ to create rar files
@@ -591,7 +584,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
                                python_shell=False).splitlines()
 
 
-@decorators.which_bin(('unrar', 'rar'))
+@salt.utils.decorators.which_bin(('unrar', 'rar'))
 def unrar(rarfile, dest, excludes=None, template=None, runas=None):
     '''
     Uses `rar for Linux`_ to unpack rar files
@@ -622,7 +615,8 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None):
     if isinstance(excludes, string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
-    cmd = [_which_bin(('unrar', 'rar')), 'x', '-idp', '{0}'.format(rarfile)]
+    cmd = [salt.utils.which_bin(('unrar', 'rar')),
+           'x', '-idp', '{0}'.format(rarfile)]
     if excludes is not None:
         for exclude in excludes:
             cmd.extend(['-x', '{0}'.format(exclude)])
