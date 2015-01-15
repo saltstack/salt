@@ -414,6 +414,37 @@ def show_instance(name, call=None):
     return nodes[name]
 
 
+def show_service(kwargs=None, conn=None, call=None):
+    '''
+    Show the details from the provider concerning an instance
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_service function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    services = conn.list_hosted_services()
+    for service in services:
+        if kwargs['service_name'] != service.service_name:
+            continue
+        props = service.hosted_service_properties
+        ret = {
+            'affinity_group': props.affinity_group,
+            'date_created': props.date_created,
+            'date_last_modified': props.date_last_modified,
+            'description': props.description,
+            'extended_properties': props.extended_properties,
+            'label': props.label,
+            'location': props.location,
+            'status': props.status,
+        }
+        return ret
+    return None
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
