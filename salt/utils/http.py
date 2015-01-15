@@ -15,8 +15,8 @@ from salt._compat import ElementTree as ET
 
 import ssl
 try:
-    from ssl import CertificateError
-    from ssl import match_hostname
+    from ssl import CertificateError  # pylint: disable=E0611
+    from ssl import match_hostname  # pylint: disable=E0611
     HAS_MATCHHOSTNAME = True
 except ImportError:
     try:
@@ -208,7 +208,7 @@ def query(url,
                     cert_reqs=ssl.CERT_REQUIRED
                 )
                 try:
-                    match_hostname(sockwrap.getpeercert(), 'github.com')
+                    match_hostname(sockwrap.getpeercert(), hostname)
                 except CertificateError as exc:
                     ret['error'] = (
                         'The certificate was invalid. '
