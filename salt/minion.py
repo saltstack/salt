@@ -1456,7 +1456,6 @@ class Minion(MinionBase):
                                  'master {0}'.format(self.opts['master']))
                         del self.pub_channel
                         del self.poller
-                        self._init_context_and_poller()
                         self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
                         self.poller.register(self.pub_channel.socket, zmq.POLLIN)
                         self.poller.register(self.epull_sock, zmq.POLLIN)
@@ -1780,8 +1779,6 @@ class Syndic(Minion):
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
 
-        self._init_context_and_poller()
-
         self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
         loop_interval = int(self.opts['loop_interval'])
@@ -1805,8 +1802,6 @@ class Syndic(Minion):
         '''
         signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Syndic {0!r} trying to tune in'.format(self.opts['id']))
-
-        self._init_context_and_poller()
 
         # Instantiate the local client
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
