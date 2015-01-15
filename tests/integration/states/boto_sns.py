@@ -107,7 +107,3 @@ class BotoSNSTest(integration.ModuleCase,
         ret = self.run_function('boto_sns.exists', name='my-state-test-topic')
         self.assertTrue(ret)
 
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(BotoSNSTest, needs_daemon=False)
