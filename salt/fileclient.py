@@ -479,7 +479,8 @@ class Client(object):
         try:
             for fn_ in self.file_list_emptydirs(saltenv):
                 if fn_.startswith(path):
-                    # Prevent an empty dir "salt://foobar/" from matching a path of
+                    # Prevent an empty dir "salt://foobar/"
+                    # from matching a path of
                     # "salt://foo"
                     try:
                         if fn_[len(path)] != '/':
@@ -498,7 +499,8 @@ class Client(object):
         ret.sort()
         return ret
 
-    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None, no_cache=False):
+    def get_url(self, url, dest,
+                makedirs=False, saltenv='base', env=None, no_cache=False):
         '''
         Get a single file from a URL.
         '''
@@ -568,9 +570,9 @@ class Client(object):
         if url_data.scheme == 'swift':
             try:
                 swift_conn = SaltSwift(self.opts.get('keystone.user', None),
-                                             self.opts.get('keystone.tenant', None),
-                                             self.opts.get('keystone.auth_url', None),
-                                             self.opts.get('keystone.password', None))
+                                       self.opts.get('keystone.tenant', None),
+                                       self.opts.get('keystone.auth_url', None),
+                                       self.opts.get('keystone.password', None))
                 swift_conn.get_object(url_data.netloc,
                                       url_data.path[1:],
                                       dest)
@@ -590,7 +592,8 @@ class Client(object):
             fixed_url = url
         try:
             if requests.__version__[0] == '0':
-                # 'stream' was called 'prefetch' before 1.0, with flipped meaning
+                # 'stream' was called 'prefetch' before 1.0,
+                # with flipped meaning
                 get_kwargs['prefetch'] = False
             else:
                 get_kwargs['stream'] = True
@@ -980,15 +983,26 @@ class RemoteClient(Client):
                 else:
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
-        while True:
+        # prevent endless loops
+        tries = 1000000
+
+        while tries > 0:
+            tries = tries  -1
+            if tries == 0:
+                raise Exception('failed to fetch file')
             if not fn_:
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
             data = self.channel.send(load)
+            if not data:
+                log.error('No Data returned!')
+                raise Exception("Malformed Protocol, expecting Data back")
             if 'data' not in data:
                 log.error('Data is {0}'.format(data))
+                raise Exception("Malformed Data is {0}".format(data))
             if not data['data']:
+                log.debug('Data False')
                 if not fn_ and data['dest']:
                     # This is a 0 byte file on the master
                     with self._cache_loc(data['dest'], saltenv) as cache_dest:
@@ -999,13 +1013,16 @@ class RemoteClient(Client):
                     # Master has prompted a file verification, if the
                     # verification fails, re-download the file. Try 3 times
                     d_tries += 1
-                    hsum = salt.utils.get_hash(dest, data.get('hash_type', 'md5'))
+                    hsum = salt.utils.get_hash(dest,
+                                               data.get('hash_type', 'md5'))
                     if hsum != data['hsum']:
                         log.warn('Bad download of file {0}, attempt {1} '
                                  'of 3'.format(path, d_tries))
                         continue
                 break
+
             if not fn_:
+                log.debug('No fn')
                 with self._cache_loc(data['dest'], saltenv) as cache_dest:
                     dest = cache_dest
                     # If a directory was formerly cached at this path, then
@@ -1018,6 +1035,9 @@ class RemoteClient(Client):
             else:
                 data = data['data']
             fn_.write(data)
+
+        # end of loop
+
         if fn_:
             fn_.close()
             log.info(
