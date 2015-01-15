@@ -351,101 +351,11 @@ class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
 
-    def _init_context_and_poller(self):
-        self.context = zmq.Context()
-        self.poller = zmq.Poller()
-
-    def _prepare_minion_event_system(self):
-
-        # Prepare the minion event system
-        #
-        # Start with the publish socket
-        self._init_context_and_poller()
-
-        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        # Only use the first 10 chars to keep longer hashes from exceeding the
-        # max socket path length.
-        id_hash = hash_type(self.opts['id']).hexdigest()[:10]
-        epub_sock_path = os.path.join(
-            self.opts['sock_dir'],
-            'minion_event_{0}_pub.ipc'.format(id_hash)
-        )
-        if os.path.exists(epub_sock_path):
-            os.unlink(epub_sock_path)
-        epull_sock_path = os.path.join(
-            self.opts['sock_dir'],
-            'minion_event_{0}_pull.ipc'.format(id_hash)
-        )
-        if os.path.exists(epull_sock_path):
-            os.unlink(epull_sock_path)
-
-        self.epub_sock = self.context.socket(zmq.PUB)
-
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            epub_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts['tcp_pub_port']
-            )
-            epull_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts['tcp_pull_port']
-            )
-        else:
-            epub_uri = 'ipc://{0}'.format(epub_sock_path)
-            salt.utils.zeromq.check_ipc_path_max_len(epub_uri)
-            epull_uri = 'ipc://{0}'.format(epull_sock_path)
-            salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
-
-        log.debug(
-            '{0} PUB socket URI: {1}'.format(
-                self.__class__.__name__, epub_uri
-            )
-        )
-        log.debug(
-            '{0} PULL socket URI: {1}'.format(
-                self.__class__.__name__, epull_uri
-            )
-        )
-
-        # Check to make sure the sock_dir is available, create if not
-        default_minion_sock_dir = os.path.join(
-            salt.syspaths.SOCK_DIR,
-            'minion'
-        )
-        minion_sock_dir = self.opts.get('sock_dir', default_minion_sock_dir)
-
-        if not os.path.isdir(minion_sock_dir):
-            # Let's try to create the directory defined on the configuration
-            # file
-            try:
-                os.makedirs(minion_sock_dir, 0o755)
-            except OSError as exc:
-                log.error('Could not create SOCK_DIR: {0}'.format(exc))
-                # Let's not fail yet and try using the default path
-                if minion_sock_dir == default_minion_sock_dir:
-                    # We're already trying the default system path, stop now!
-                    raise
-
-            if not os.path.isdir(default_minion_sock_dir):
-                try:
-                    os.makedirs(default_minion_sock_dir, 0o755)
-                except OSError as exc:
-                    log.error('Could not create SOCK_DIR: {0}'.format(exc))
-                    # Let's stop at this stage
-                    raise
-
-        # Create the pull socket
-        self.epull_sock = self.context.socket(zmq.PULL)
-
-        # Securely bind the event sockets
-        if self.opts.get('ipc_mode', '') != 'tcp':
-            old_umask = os.umask(0o177)
-        try:
-            log.info('Starting pub socket on {0}'.format(epub_uri))
-            self.epub_sock.bind(epub_uri)
-            log.info('Starting pull socket on {0}'.format(epull_uri))
-            self.epull_sock.bind(epull_uri)
-        finally:
-            if self.opts.get('ipc_mode', '') != 'tcp':
-                os.umask(old_umask)
+    @property
+    def poller(self):
+        if not hasattr(self, '_poller'):
+            self._poller = zmq.Poller()
+        return self._poller
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -579,8 +489,8 @@ class MultiMinion(MinionBase):
         to yet, but once the initial connection is made it is up to ZMQ to do the
         reconnect (don't know of an API to get the state here in salt)
         '''
-        self._prepare_minion_event_system()
-        self.poller.register(self.epull_sock, zmq.POLLIN)
+        self.event_publisher = salt.utils.event.PollingEventPublisher(self.opts)
+        self.poller.register(self.self.event_publisher.socket, zmq.POLLIN)
 
         # Prepare the minion generators
         minions = self.minions()
@@ -600,9 +510,9 @@ class MultiMinion(MinionBase):
                     continue
                 loop_interval = self.process_schedule(minion, loop_interval)
             socks = dict(self.poller.poll(1))
-            if socks.get(self.epull_sock) == zmq.POLLIN:
+            if socks.get(self.event_publisher.socket) == zmq.POLLIN:
                 try:
-                    package = self.epull_sock.recv(zmq.NOBLOCK)
+                    package = self.event_publisher.handle_publish()
                 except Exception:
                     pass
 
@@ -636,13 +546,20 @@ class MultiMinion(MinionBase):
                 # If a minion instance receives event, handle the event on all
                 # instances
                 if package:
-                    try:
-                        for master in masters:
-                            minions[master].handle_event(package)
-                    except Exception:
-                        pass
-                    finally:
-                        package = None
+                    # If we need to expand this, we may want to consider a specific header
+                    # or another approach entirely.
+                    if package.startswith('_minion_mine'):
+                        for multi_minion in minions:
+                            try:
+                                minions[master]['minion'].handle_event(package)
+                            except Exception:
+                                pass
+                    else:
+                        try:
+                            minion['minion'].handle_event(package)
+                            package = None
+                        except Exception:
+                            pass
 
                 # have the Minion class run anything it has to run
                 next(minion['generator'])
@@ -1561,7 +1478,6 @@ class Minion(MinionBase):
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
                         del self.pub_channel
-                        del self.context
                         del self.poller
                         self._init_context_and_poller()
                         self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
@@ -1633,9 +1549,9 @@ class Minion(MinionBase):
 
         log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
 
-        self._prepare_minion_event_system()
+        self.event_publisher = salt.utils.event.PollingEventPublisher(self.opts)
 
-        self.poller.register(self.epull_sock, zmq.POLLIN)
+        self.poller.register(self.event_publisher.socket, zmq.POLLIN)
         self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
         self._fire_master_minion_start()
@@ -1695,28 +1611,16 @@ class Minion(MinionBase):
                 if socks.get(self.pub_channel.socket) == zmq.POLLIN:
                     self._do_socket_recv()
 
-                # TODO: refactor minion event system into a non-blocking EventPublisher (or just use the daemon)
                 # Check the event system
-                if socks.get(self.epull_sock) == zmq.POLLIN:
-                    package = self.epull_sock.recv(zmq.NOBLOCK)
+                if socks.get(self.event_publisher.socket) == zmq.POLLIN:
+                    package = self.event_publisher.handle_publish()
                     try:
-                        self.handle_event(package)
-                        self.epub_sock.send(package)
+                        if package is not None:
+                            self.handle_event(package)
                     except Exception:
                         log.debug('Exception while handling events', exc_info=True)
                     # Add an extra fallback in case a forked process leeks through
                     multiprocessing.active_children()
-
-            except zmq.ZMQError as exc:
-                # The interrupt caused by python handling the
-                # SIGCHLD. Throws this error with errno == EINTR.
-                # Nothing to receive on the zmq socket throws this error
-                # with EAGAIN.
-                # Both are safe to ignore
-                if exc.errno != errno.EAGAIN and exc.errno != errno.EINTR:
-                    log.critical('Unexpected ZMQError while polling minion',
-                                 exc_info=True)
-                continue
             except SaltClientError:
                 raise
             except Exception:
@@ -1810,14 +1714,8 @@ class Minion(MinionBase):
                         socket[0].close()
                     self.poller.unregister(socket[0])
 
-        if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
-            self.epub_sock.close()
-        if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
-            self.epull_sock.close()
         if hasattr(self, 'pub_channel'):
             del self.pub_channel
-        if hasattr(self, 'context') and self.context.closed is False:
-            self.context.term()
 
     def __del__(self):
         self.destroy()
