@@ -42,7 +42,8 @@ class SaltRaetWorkerFork(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'worker_verify': '.salt.var.worker_verify',
                'access_keys': '.salt.access_keys',
-               'mkey': '.salt.var.zmq.master_key'}
+               'mkey': '.salt.var.zmq.master_key',
+               'aes': '.salt.var.zmq.aes'}
 
     def _make_workers(self):
         '''
@@ -66,6 +67,7 @@ class SaltRaetWorkerFork(ioflo.base.deeding.Deed):
                     ('.salt.var.worker_verify', dict(value=self.worker_verify.value))]
         preloads.append(('.salt.var.fork.worker.windex', dict(value=windex)))
         preloads.append(('.salt.var.zmq.master_key', dict(value=self.mkey.value)))
+        preloads.append(('.salt.var.zmq.aes', dict(value=self.aes.value)))
         preloads.append(
                 ('.salt.access_keys', dict(value=self.access_keys.value)))
         preloads.extend(salt.daemons.flo.explode_opts(self.opts.value))

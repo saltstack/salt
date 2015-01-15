@@ -32,14 +32,14 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'mkey': '.salt.var.zmq.master_key',
-               'crypticle': '.salt.var.zmq.crypticle'}
+               'aes': '.salt.var.zmq.aes'}
 
     def postinitio(self):
         '''
         Init the cryptographic keys
         '''
         self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
-        self.crypticle.value = salt.crypt.Crypticle(self.opts.value, self.opts.value['aes'])
+        self.aes.value = self.opts.value['aes']
 
     def action(self):
         '''
@@ -152,7 +152,7 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'mkey': '.salt.var.zmq.master_key',
                'key': '.salt.access_keys',
-               'crypticle': '.salt.var.zmq.crypticle'}
+               'aes': '.salt.var.zmq.aes'}
 
     def postinitio(self):
         '''
@@ -166,11 +166,12 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
         connection with the ioflo sequence
         '''
         if not self.created:
+            crypticle = salt.crypt.Crypticle(self.opts.value, self.aes.value)
             self.worker = FloMWorker(
                     self.opts.value,
                     self.mkey.value,
                     self.key.value,
-                    self.crypticle.value)
+                    crypticle)
             self.worker.setup()
             self.created = True
             log.info('Started ZMQ worker')
