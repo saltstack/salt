@@ -1887,7 +1887,7 @@ def wait_for_instance(
         data = {}
 
     ssh_gateway_config = vm_.get(
-        'ssh_gateway_config', get_ssh_gateway_config(vm_)
+        'gateway', get_ssh_gateway_config(vm_)
     )
 
     salt.utils.cloud.fire_event(
@@ -2059,8 +2059,7 @@ def create(vm_=None, call=None):
     # Get SSH Gateway config early to verify the private_key,
     # if used, exists or not. We don't want to deploy an instance
     # and not be able to access it via the gateway.
-    ssh_gateway_config = get_ssh_gateway_config(vm_)
-    vm_['ssh_gateway_config'] = ssh_gateway_config
+    vm_['gateway'] = get_ssh_gateway_config(vm_)
 
     location = get_location(vm_)
     vm_['location'] = location
