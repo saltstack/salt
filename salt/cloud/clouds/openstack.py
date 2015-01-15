@@ -590,13 +590,6 @@ def create(vm_):
                 )
             )
 
-    if deploy is True and key_filename is None and \
-            ('password' not in vm_ or not vm_['password']):
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
-            'or the \'ssh_password\' setting is not set.'
-        )
-
     vm_['key_filename'] = key_filename
 
     salt.utils.cloud.fire_event(
