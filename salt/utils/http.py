@@ -14,20 +14,19 @@ import salt.ext.six.moves.http_cookiejar  # pylint: disable=E0611
 from salt._compat import ElementTree as ET
 
 import ssl
-from ssl import CertificateError
 try:
+    from ssl import CertificateError
     from ssl import match_hostname
     HAS_MATCHHOSTNAME = True
 except ImportError:
     try:
+        from backports.ssl_match_hostname import CertificateError
         from backports.ssl_match_hostname import match_hostname
         HAS_MATCHHOSTNAME = True
     except ImportError:
         HAS_MATCHHOSTNAME = False
 import socket
-import urllib
 import urllib2
-import httplib
 
 # Import salt libs
 import salt.utils
@@ -48,6 +47,7 @@ import msgpack
 log = logging.getLogger(__name__)
 JARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.txt')
 SESSIONJARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.session.p')
+
 
 def query(url,
           method='GET',
@@ -91,7 +91,7 @@ def query(url,
         requests_lib = opts.get('requests_lib', False)
 
     if requests_lib is True:
-        if  HAS_REQUESTS is False:
+        if HAS_REQUESTS is False:
             ret['error'] = ('http.query has been set to use requests, but the '
                             'requests library does not seem to be installed')
             log.error(ret['error'])
@@ -223,7 +223,7 @@ def query(url,
             urllib2.HTTPCookieProcessor(sess_cookies)
         )
         for header in header_dict:
-            reques.add_header(header, header_dict[header])
+            request.add_header(header, header_dict[header])
         request.get_method = lambda: method
         result = opener.open(request)
 
