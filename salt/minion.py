@@ -1497,10 +1497,14 @@ class Minion(MinionBase):
             log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
             self._fire_master(data, tag)
 
-    def _windows_thread_cleanup(self):
+    def _fallback_cleanups(self):
         '''
-        Cleanup Windows threads
+        Fallback cleanup routines, attempting to fix leaked processes, threads, etc.
         '''
+        # Add an extra fallback in case a forked process leaks through
+        multiprocessing.active_children()
+
+        # Cleanup Windows threads
         if not salt.utils.is_windows():
             return
         for thread in self.win_proc:
@@ -1571,7 +1575,7 @@ class Minion(MinionBase):
 
         while self._running is True:
             loop_interval = self.process_schedule(self, loop_interval)
-            self._windows_thread_cleanup()
+            self._fallback_cleanups()
             try:
                 socks = self._do_poll(loop_interval)
                 if ping_interval > 0:
@@ -1595,8 +1599,6 @@ class Minion(MinionBase):
                             self.handle_event(package)
                     except Exception:
                         log.debug('Exception while handling events', exc_info=True)
-                    # Add an extra fallback in case a forked process leeks through
-                    multiprocessing.active_children()
             except SaltClientError:
                 raise
             except Exception:
