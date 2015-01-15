@@ -291,8 +291,8 @@ def bootstrap(version="develop",
         script = 'https://bootstrap.saltstack.com'
     for host in hosts.split(","):
         # Could potentially lean on salt-ssh utils to make
-        # deployment easier on existing hosts (i.e. use sshpass,
-        # or expect, pass better options to ssh etc)
+        # deployment easier on existing hosts such as passing
+        # better options to ssh
         subprocess.call(["ssh",
                         "root@" if root_user else "" + host,
                         "python -c 'import urllib; "
