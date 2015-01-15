@@ -201,10 +201,10 @@ def _rows_differ(row, _row):
     # Strip id from all panels in both rows, since they are always generated.
     for panel in row_copy['panels']:
         if 'id' in panel:
-            del(panel['id'])
+            del panel['id']
     for _panel in _row_copy['panels']:
         if 'id' in _panel:
-            del(_panel['id'])
+            del _panel['id']
     diff = DictDiffer(row_copy, _row_copy)
     return diff.changed() or diff.added() or diff.removed()
 
