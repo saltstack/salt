@@ -89,8 +89,6 @@ class RemotePillar(object):
             load['ext'] = self.ext
         ret_pillar = self.channel.crypted_transfer_decode_dictentry(load,
                                                                     dictkey='pillar',
-                                                                    tries=3,
-                                                                    timeout=7200,
                                                                     )
 
         if not isinstance(ret_pillar, dict):
