@@ -106,4 +106,3 @@ class BotoSNSTest(integration.ModuleCase,
         self.assertSaltStateChangesEqual(ret, {})
         ret = self.run_function('boto_sns.exists', name='my-state-test-topic')
         self.assertTrue(ret)
-
