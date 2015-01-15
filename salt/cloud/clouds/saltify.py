@@ -79,11 +79,10 @@ def create(vm_):
             )
         )
 
-    if key_filename is None and salt.utils.which('sshpass') is None:
+    if key_filename is None and ('password' not in vm_ or not vm_['password']):
         raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
+            'Cannot deploy salt in a VM if either the \'ssh_keyfile\' or the '
+            '\'ssh_password\' is not set.'
         )
 
     ret = {}
@@ -185,7 +184,6 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    deployed = False
     if win_installer:
         deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
     else:
