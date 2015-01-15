@@ -409,6 +409,10 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
         .. versionadded:: 2015.2.0
 
+    options : None
+        Additional command-line options to pass to the ``unzip`` binary.
+
+
     CLI Example:
 
     .. code-block:: bash
