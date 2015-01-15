@@ -300,22 +300,29 @@ def query(url,
 
 def get_ca_bundle(opts):
     '''
-    Return the location of the ca bundle file
-
-    Possible locations of this file (alphabetical order):
-
-        /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-        /etc/pki/tls/certs/ca-bundle.crt
-        /etc/pki/tls/certs/ca-bundle.trust.crt
-        /etc/ssl/certs/ca-bundle.crt
-        /etc/ssl/certs/ca-certificates.crt
-        /var/lib/ca-certificates/ca-bundle.pem
-
-    The following article discusses this file:
+    Return the location of the ca bundle file. See the following article:
 
         http://tinyurl.com/k7rx42a
     '''
-    return opts.get('ca_bundle', '/etc/ssl/certs/ca-certificates.crt')
+    if hasattr(get_ca_bundle, '__return_value__'):
+        return get_ca_bundle.__return_value__
+
+    opts_bundle = opts.get('ca_bundle', None)
+    if opts_bundle is not None and os.path.exists(opts_bundle):
+        return opts_bundle
+
+    for path in (
+        '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem',
+        '/etc/pki/tls/certs/ca-bundle.crt',
+        '/etc/pki/tls/certs/ca-bundle.trust.crt',
+        '/etc/ssl/certs/ca-bundle.crt',
+        '/etc/ssl/certs/ca-certificates.crt',
+        '/var/lib/ca-certificates/ca-bundle.pem',
+    ):
+        if os.path.exists(path):
+            return path
+
+    return None
 
 
 def _render(template, render, renderer, template_dict, opts):
