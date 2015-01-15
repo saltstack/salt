@@ -147,7 +147,7 @@ scheduler to skip this first run and wait until the next scheduled run.
 The scheduler also supports scheduling jobs using a cron like format.
 This requires the python-croniter library.
 
-    ... versionadded:: 2014.7.0
+    ... versionadded:: Beryllium
 
     schedule:
       job1:
