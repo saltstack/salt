@@ -97,8 +97,12 @@ def compile_template(template,
                     template,
                     ret.read()))
                 ret.seek(0)
-            except Exception as exp:
-                log.error('error: {0}'.format(exp))
+            except Exception:
+                # ret is not a StringIO, which means it was rendered using
+                # yaml, mako, or another engine which renders to a data
+                # structure. We don't want to log this, so ignore this
+                # exception.
+                pass
     return ret
 
 
