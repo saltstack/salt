@@ -1636,6 +1636,7 @@ class Minion(MinionBase):
         self._prepare_minion_event_system()
 
         self.poller.register(self.epull_sock, zmq.POLLIN)
+        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
@@ -1691,7 +1692,8 @@ class Minion(MinionBase):
 
                 self._process_beacons()
                 # TODO: rename?? Maybe do_pub_recv and take a list of them?
-                self._do_socket_recv()
+                if socks.get(self.pub_channel.socket) == zmq.POLLIN:
+                    self._do_socket_recv()
 
                 # TODO: refactor minion event system into a non-blocking EventPublisher (or just use the daemon)
                 # Check the event system
@@ -1937,6 +1939,7 @@ class Syndic(Minion):
         self.local.opts['interface'] = self._syndic_interface
         # register the event sub to the poller
         self.poller.register(self.local.event.sub)
+        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
         # Send an event to the master that the minion is live
         self._fire_master_syndic_start()
@@ -1961,7 +1964,8 @@ class Syndic(Minion):
                     # But there's no harm being defensive
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
-                self._process_cmd_socket()
+                if socks.get(self.pub_channel.socket) == zmq.POLLIN:
+                    self._process_cmd_socket()
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
                     self._process_event_socket()
                 if self.event_forward_timeout is not None and \

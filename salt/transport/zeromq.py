@@ -146,30 +146,30 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
         self.serial = salt.payload.Serial(self.opts)
 
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.SUB)
+        self._socket = self.context.socket(zmq.SUB)
 
         if self.opts['zmq_filtering']:
             # TODO: constants file for "broadcast"
-            self.socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
-            self.socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
+            self._socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
+            self._socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
         else:
-            self.socket.setsockopt(zmq.SUBSCRIBE, '')
+            self._socket.setsockopt(zmq.SUBSCRIBE, '')
 
-        self.socket.setsockopt(zmq.SUBSCRIBE, '')
-        self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        self._socket.setsockopt(zmq.SUBSCRIBE, '')
+        self._socket.setsockopt(zmq.IDENTITY, self.opts['id'])
 
         # TODO: cleanup all the socket opts stuff
         if hasattr(zmq, 'TCP_KEEPALIVE'):
-            self.socket.setsockopt(
+            self._socket.setsockopt(
                 zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
             )
-            self.socket.setsockopt(
+            self._socket.setsockopt(
                 zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
             )
-            self.socket.setsockopt(
+            self._socket.setsockopt(
                 zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
             )
-            self.socket.setsockopt(
+            self._socket.setsockopt(
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
 
@@ -187,23 +187,23 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
             )
 
         log.debug("Setting zmq_reconnect_ivl to '{0}ms'".format(recon_delay))
-        self.socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
+        self._socket.setsockopt(zmq.RECONNECT_IVL, recon_delay)
 
         if hasattr(zmq, 'RECONNECT_IVL_MAX'):
             log.debug("Setting zmq_reconnect_ivl_max to '{0}ms'".format(
                 self.opts['recon_default'] + self.opts['recon_max'])
             )
 
-            self.socket.setsockopt(
+            self._socket.setsockopt(
                 zmq.RECONNECT_IVL_MAX, self.opts['recon_max']
             )
 
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.socket.setsockopt(zmq.IPV4ONLY, 0)
+            self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
         self.publish_port = self.auth.creds['publish_port']
-        self.socket.connect(self.master_pub)
+        self._socket.connect(self.master_pub)
 
     @property
     def master_pub(self):
@@ -250,8 +250,8 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
         '''
         Get a pub job, with an optional timeout (0==forever)
         '''
-        if self.socket.poll(timeout):
-            messages = self.socket.recv_multipart()
+        if timeout == 0 or self._socket.poll(timeout):
+            messages = self._socket.recv_multipart()
             return self._decode_messages(messages)
         else:
             return None
@@ -262,10 +262,14 @@ class ZeroMQPubChannel(salt.transport.channel.PubChannel):
         Return pub or None
         '''
         try:
-            messages = self.socket.recv_multipart(zmq.NOBLOCK)
+            messages = self._socket.recv_multipart(zmq.NOBLOCK)
             return self._decode_messages(messages)
         except zmq.ZMQError as e:
             # Swallow errors for bad wakeups or signals needing processing
             if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
                 raise
             return None
+
+    @property
+    def socket(self):
+        return self._socket

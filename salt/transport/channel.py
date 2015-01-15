@@ -88,4 +88,11 @@ class PubChannel(object):
         '''
         raise NotImplementedError()
 
+    @property
+    def socket(self):
+        '''
+        Return a socket (or fd) which can be used for poll mechanisms
+        '''
+        raise NotImplementedError()
+
 # EOF
