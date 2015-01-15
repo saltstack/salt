@@ -607,7 +607,8 @@ class Schedule(object):
                     until = int(time.mktime(until__.timetuple()))
 
                     if until <= now:
-                        log.debug('Until time has passed skipping job.')
+                        log.debug('Until time has passed '
+                                  'skipping job: {0}.'.format(data['name']))
                         continue
 
             for item in ['seconds', 'minutes', 'hours', 'days']:
