@@ -895,29 +895,6 @@ class Minion(MinionBase):
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
             return False
 
-    # TODO: kill this off
-    def _handle_payload(self, payload):
-        '''
-        Takes a payload from the master publisher and does whatever the
-        master wants done.
-        '''
-        {'aes': self._handle_aes,
-         'pub': self._handle_pub,
-         'clear': self._handle_clear}[payload['enc']](payload['load'],
-                                                      payload.get('sig'))
-
-    def _handle_pub(self, load):
-        '''
-        Handle public key payloads
-        '''
-        pass
-
-    def _handle_clear(self, load, sig=None):
-        '''
-        Handle un-encrypted transmissions
-        '''
-        pass
-
     def _handle_decoded_payload(self, data):
         '''
         Override this method if you wish to handle the decoded data
