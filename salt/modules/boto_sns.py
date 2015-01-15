@@ -24,6 +24,7 @@ def __virtual__():
         return False
     return True
 
+
 def get_all_topics(region=None, key=None, keyid=None, profile=None):
     cache_key = 'boto_sns.topics_cache'
     try:
@@ -34,11 +35,12 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     __context__[cache_key] = {}
     # TODO: support >100 SNS topics (via NextToken)
-    for t in conn.get_all_topics()['ListTopicsResponse']\
-                                  ['ListTopicsResult']['Topics']:
+    topics = conn.get_all_topics()
+    for t in topics['ListTopicsResponse']['ListTopicsResult']['Topics']:
         short_name = t['TopicArn'].split(':')[-1]
         __context__[cache_key][short_name] = t['TopicArn']
     return __context__[cache_key]
+
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
@@ -68,6 +70,7 @@ def create(name, region=None, key=None, keyid=None, profile=None):
     log.info('Created SNS topic {0}'.format(name))
     return True
 
+
 def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete an SNS topic.
@@ -81,11 +84,13 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     log.info('Deleted SNS topic {0}'.format(name))
     return True
 
+
 def get_arn(name, region=None, key=None, keyid=None, profile=None):
     if name.startswith('arn:aws:sns:'):
         return name
     account_id = __salt__['boto_iam.get_account_id']()
-    return 'arn:aws:sns:{}:{}:{}'.format(_get_region(region), account_id, name)
+    return 'arn:aws:sns:{0}:{1}:{2}'.format(_get_region(region), account_id, name)
+
 
 def _get_region(region=None):
     if not region and __salt__['config.option']('sns.region'):
@@ -93,6 +98,7 @@ def _get_region(region=None):
     if not region:
         region = 'us-east-1'
     return region
+
 
 def _get_conn(region, key, keyid, profile):
     '''

@@ -55,7 +55,6 @@ class BotoSNSTest(integration.ModuleCase):
         self.assertIn('my-second-test-topic', ret.keys())
         self.assertIn(self._get_arn('my-second-test-topic'), ret.values())
 
-
     def _get_arn(self, name):
         return 'arn:aws:sns:us-east-1:{}:{}'.format(self.account_id, name)
 
