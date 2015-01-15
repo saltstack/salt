@@ -48,6 +48,7 @@ class GenesisTestCase(TestCase):
         with patch.object(genesis, '_bootstrap_pacman', return_value='A'):
             self.assertEqual(genesis.bootstrap('pacman', 'root', 'dir1'), 'A')
 
+    @patch('salt.utils.which', MagicMock(return_value=False))
     def test_avail_platforms(self):
         '''
         Test for Return which platforms are available
