@@ -158,15 +158,9 @@ def create(vm_):
 
         salt-cloud -p profile_name vm_name
     '''
-    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
-    if deploy is True and key_filename is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'private_key\' setting '
-            'is not set.'
-        )
 
     salt.utils.cloud.fire_event(
         'event',
