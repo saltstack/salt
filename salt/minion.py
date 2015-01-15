@@ -1377,14 +1377,6 @@ class Minion(MinionBase):
             tagify([self.opts['id'], 'start'], 'minion'),
         )
 
-    @property
-    def master_pub(self):
-        '''
-        Return the master publish port
-        '''
-        return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
-                                          port=self.publish_port)
-
     def module_refresh(self, force_refresh=False, notify=False):
         '''
         Refresh the functions and returners.
@@ -1568,14 +1560,11 @@ class Minion(MinionBase):
                         # re-init the subsystems to work with the new master
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
-                        del self.socket
+                        del self.pub_channel
                         del self.context
                         del self.poller
                         self._init_context_and_poller()
-                        self.socket = self.context.socket(zmq.SUB)
-                        self._set_reconnect_ivl()
-                        self._setsockopts()
-                        self.socket.connect(self.master_pub)
+                        self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
                         self.poller.register(self.socket, zmq.POLLIN)
                         self.poller.register(self.epull_sock, zmq.POLLIN)
                         self._fire_master_minion_start()
