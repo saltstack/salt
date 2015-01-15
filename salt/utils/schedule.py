@@ -161,7 +161,7 @@ This requires the python-croniter library.
 
 Using the until argument, the Salt scheduler allows you to specify
 an end time for a scheduled job.  If this argument is specified, jobs
-will not run one the 'until' time has passed.  Time should be specified
+will not run once the specified time has passed.  Time should be specified
 in a format support by the dateutil library.
 This requires the python-dateutil library.
 
