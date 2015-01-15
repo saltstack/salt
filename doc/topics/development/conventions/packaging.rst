@@ -195,7 +195,6 @@ Depends
 ~~~~~~~
 
 - `Salt Common`
-- `sshpass`
 - `Python MessagePack` (Messagepack C lib, or msgpack-pure)
 
 Salt Cloud
@@ -220,7 +219,6 @@ Depends
 ~~~~~~~
 
 - `Salt Common`
-- `sshpass`
 - `apache libcloud` >= 0.14.0
 
 Salt Doc
