@@ -245,38 +245,12 @@ _ACCUMULATORS = {}
 _ACCUMULATORS_DEPS = {}
 
 
-def _get_accumulator_dir():
-    '''
-    Return the directory that accumulator data is stored in, creating it if it
-    doesn't exist.
-    '''
-    fn_ = os.path.join(__opts__['cachedir'], 'accumulator')
-    if not os.path.isdir(fn_):
-        # accumulator_dir is not present, create it
-        os.makedirs(fn_)
-    return fn_
-
-
 def _get_accumulator_filepath():
     '''
-    Return accumulator data path, uses PID as filename for identify.
-    #TODO it needs a better thing to use as unique entity that different
-    among salt run.
+    Return accumulator data path.
     '''
-    return os.path.join(_get_accumulator_dir(), str(os.getpid()))
-
-
-def _cleanup_old_accummulator_data():
-    '''
-    Only keep current accumulator data.
-    '''
-    for fn in os.listdir(_get_accumulator_dir()):
-        path = os.path.join(_get_accumulator_dir(), fn)
-        if path != _get_accumulator_filepath():
-            try:
-                os.remove(path)
-            except Exception:
-                pass
+    return os.path.join(salt.utils.get_accumulator_dir(__opts__['cachedir']),
+                        __instance_id__)
 
 
 def _load_accumulators():
@@ -3088,7 +3062,6 @@ def accumulated(name, filename, text, **kwargs):
             _ACCUMULATORS[filename][name].append(chunk)
             ret['comment'] = ('Accumulator {0} for file {1} '
                               'was charged by text'.format(name, filename))
-    _cleanup_old_accummulator_data()
     _persist_accummulators()
     return ret
 
