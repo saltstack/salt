@@ -56,11 +56,13 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 '''
 from __future__ import absolute_import
 
+
 def __virtual__():
     '''
     Only load if boto is available.
     '''
     return 'boto_sns' if 'boto_sns.exists' in __salt__ else False
+
 
 def present(
         name,
@@ -88,7 +90,6 @@ def present(
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-
 
     is_present = __salt__['boto_sns.exists'](name, region, key, keyid, profile)
     if is_present:
