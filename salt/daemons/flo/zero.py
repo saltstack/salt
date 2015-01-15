@@ -89,7 +89,8 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
     The zeromq publisher
     '''
     Ioinits = {'opts': '.salt.opts',
-               'publish': '.salt.var.publish'}
+               'publish': '.salt.var.publish',
+               'zmq_behavior': '.salt.etc.zmq_behavior'}
 
     def postinitio(self):
         '''
@@ -102,43 +103,44 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
         Create the publish port if it is not available and then publish the
         messages on it
         '''
+        if not self.zmq_behavior:
+            return
         if not self.created:
-            context = zmq.Context(1)
-            pub_sock = context.socket(zmq.PUB)
+            self.context = zmq.Context(1)
+            self.pub_sock = self.context.socket(zmq.PUB)
             # if 2.1 >= zmq < 3.0, we only have one HWM setting
             try:
-                pub_sock.setsockopt(zmq.HWM, self.opts.value.get('pub_hwm', 1000))
+                self.pub_sock.setsockopt(zmq.HWM, self.opts.value.get('pub_hwm', 1000))
             # in zmq >= 3.0, there are separate send and receive HWM settings
             except AttributeError:
-                pub_sock.setsockopt(zmq.SNDHWM, self.opts.value.get('pub_hwm', 1000))
-                pub_sock.setsockopt(zmq.RCVHWM, self.opts.value.get('pub_hwm', 1000))
+                self.pub_sock.setsockopt(zmq.SNDHWM, self.opts.value.get('pub_hwm', 1000))
+                self.pub_sock.setsockopt(zmq.RCVHWM, self.opts.value.get('pub_hwm', 1000))
             if self.opts.value['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
                 # IPv6 sockets work for both IPv6 and IPv4 addresses
-                pub_sock.setsockopt(zmq.IPV4ONLY, 0)
-            pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts.value)
-            log.info('Starting the Salt ZeroMQ Publisher on {0}'.format(pub_uri))
-            pub_sock.bind(pub_uri)
+                self.pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+            self.pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts.value)
+            log.info('Starting the Salt ZeroMQ Publisher on {0}'.format(self.pub_uri))
+            self.pub_sock.bind(self.pub_uri)
             self.created = True
         # Don't pop the publish messages! The raet behavior still needs them
         try:
             for package in self.publish.value:
-                unpacked_package = salt.payload.unpackage(package)
-                payload = unpacked_package['payload']
+                payload = package['return']
                 if self.opts.value['zmq_filtering']:
                     # if you have a specific topic list, use that
-                    if 'topic_lst' in unpacked_package:
-                        for topic in unpacked_package['topic_lst']:
+                    if 'topic_lst' in package:
+                        for topic in package['topic_lst']:
                             # zmq filters are substring match, hash the topic
                             # to avoid collisions
                             htopic = hashlib.sha1(topic).hexdigest()
-                            pub_sock.send(htopic, flags=zmq.SNDMORE)
-                            pub_sock.send(payload)
+                            self.pub_sock.send(htopic, flags=zmq.SNDMORE)
+                            self.pub_sock.send(payload)
                             # otherwise its a broadcast
                     else:
-                        pub_sock.send('broadcast', flags=zmq.SNDMORE)
-                        pub_sock.send(payload)
+                        self.pub_sock.send('broadcast', flags=zmq.SNDMORE)
+                        self.pub_sock.send(payload)
                 else:
-                    pub_sock.send(payload)
+                    self.pub_sock.send(payload)
         except zmq.ZMQError as exc:
             if exc.errno == errno.EINTR:
                 return
