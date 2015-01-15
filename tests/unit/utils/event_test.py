@@ -299,11 +299,12 @@ class TestSaltEvent(TestCase):
     def test_send_master_event(self):
         """"Tests that sending an event through fire_master generates expected event"""
         with eventpublisher_process():
-            me = event.SaltEvent("minion", SOCK_DIR)
+            me = event.MasterEvent(SOCK_DIR)
+            me.subscribe()
             data = {"data": "foo1"}
             me.fire_master(data, "test_master")
 
-            evt = me.get_event(tag="fire_master")
+            evt = me.get_event(tag='fire_master')
             self.assertGotEvent(evt, {"data": data, "tag": "test_master", "events": None, "pretag": None})
 
 if __name__ == '__main__':
