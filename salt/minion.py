@@ -1565,7 +1565,7 @@ class Minion(MinionBase):
                         del self.poller
                         self._init_context_and_poller()
                         self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
-                        self.poller.register(self.socket, zmq.POLLIN)
+                        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
                         self.poller.register(self.epull_sock, zmq.POLLIN)
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
@@ -1814,8 +1814,8 @@ class Minion(MinionBase):
             self.epub_sock.close()
         if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
             self.epull_sock.close()
-        if hasattr(self, 'socket') and self.socket.closed is False:
-            self.socket.close()
+        if hasattr(self, 'pub_channel'):
+            del self.pub_channel
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
@@ -1907,7 +1907,7 @@ class Syndic(Minion):
 
         self._init_context_and_poller()
 
-        self.poller.register(self.socket, zmq.POLLIN)
+        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
         loop_interval = int(self.opts['loop_interval'])
 
