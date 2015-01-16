@@ -35,6 +35,10 @@ def exists(index, id, doc_type='_all', hosts=None, profile='elasticsearch'):
     '''
     Check for the existence of an elasticsearch document specified by id in the
     index.
+
+    CLI example::
+
+        salt myminion elasticsearch.exists grafana-dash mydash profile='grafana'
     '''
     es = _get_instance(hosts, profile)
     try:
@@ -46,6 +50,10 @@ def exists(index, id, doc_type='_all', hosts=None, profile='elasticsearch'):
 def index(index, doc_type, body, id=None, hosts=None, profile='elasticsearch'):
     '''
     Create or update an index with the specified body for the specified id.
+
+    CLI example::
+
+        salt myminion elasticsearch.index grafana-dash dashboard '{"user":"guest","group":"guest","body":"",...}' mydash profile='grafana'
     '''
     es = _get_instance(hosts, profile)
     return es.index(index=index, doc_type=doc_type, body=body, id=id)
@@ -54,6 +62,10 @@ def index(index, doc_type, body, id=None, hosts=None, profile='elasticsearch'):
 def get(index, id, doc_type='_all', hosts=None, profile='elasticsearch'):
     '''
     Get the contents of the specifed id from the index.
+
+    CLI example::
+
+        salt myminion elasticsearch.get grafana-dash mydash profile='grafana'
     '''
     es = _get_instance(hosts, profile)
     return es.get(index=index, id=id, doc_type=doc_type)
@@ -62,6 +74,10 @@ def get(index, id, doc_type='_all', hosts=None, profile='elasticsearch'):
 def delete(index, doc_type, id, hosts=None, profile='elasticsearch'):
     '''
     Delete the document specified by the id in the index.
+
+    CLI example::
+
+        salt myminion elasticsearch.delete grafana-dash dashboard mydash profile='grafana'
     '''
     es = _get_instance(hosts, profile)
     try:
