@@ -651,12 +651,16 @@ def reload_():
             except Exception as e:
                 ret['comment'].append('Unable to read existing schedule file: {0}'.format(e))
 
-        if 'schedule' in schedule and schedule['schedule']:
-            out = __salt__['event.fire']({'func': 'reload', 'schedule': schedule}, 'manage_schedule')
-            if out:
-                ret['comment'].append('Reloaded schedule on minion from schedule.conf.')
+        if schedule:
+            if 'schedule' in schedule and schedule['schedule']:
+                out = __salt__['event.fire']({'func': 'reload', 'schedule': schedule}, 'manage_schedule')
+                if out:
+                    ret['comment'].append('Reloaded schedule on minion from schedule.conf.')
+                else:
+                    ret['comment'].append('Failed to reload schedule on minion from schedule.conf.')
+                    ret['result'] = False
             else:
-                ret['comment'].append('Failed to reload schedule on minion from schedule.conf.')
+                ret['comment'].append('Failed to reload schedule on minion.  Saved file is empty or invalid.')
                 ret['result'] = False
         else:
             ret['comment'].append('Failed to reload schedule on minion.  Saved file is empty or invalid.')
