@@ -48,9 +48,11 @@ try:
                                 self.create_path = self.path + "/" + child
                                 self.is_acquired = True
                                 break
-                        except NoNodeError:  # pragma: nocover
+                        except NoNodeError as exp:
+                    log.error('NoNodeError {0}'.format(exp))
                             pass
-                except NoNodeError:  # pragma: nocover
+                except NoNodeError as exp:
+                    log.error('NoNodeError {0}'.format(exp))
                     pass
 
         def _get_lease(self, data=None):

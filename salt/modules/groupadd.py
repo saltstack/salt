@@ -71,7 +71,8 @@ def info(name):
     '''
     try:
         grinfo = grp.getgrnam(name)
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return {}
     else:
         return _format_info(grinfo)
@@ -182,7 +183,8 @@ def deluser(name, username):
             return not retcode
         else:
             return True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return True
 
 

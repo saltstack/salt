@@ -85,7 +85,8 @@ def _linux_brshow(br=None):
     if br:
         try:
             return brs[br]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return None
     return brs
 
@@ -208,7 +209,8 @@ def _netbsd_brshow(br=None):
     if br:
         try:
             return brs[br]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return None
     return brs
 
@@ -397,7 +399,8 @@ def find_interfaces(*args):
             try:  # a bridge may not contain interfaces
                 if iface in brs[br]['interfaces']:
                     iflist[iface] = br
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass
 
     return iflist

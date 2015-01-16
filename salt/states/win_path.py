@@ -101,7 +101,8 @@ def exists(name, index=None):
         else:  # path is in system PATH; don't care where
             ret['comment'] = '{0} is already present in the PATH at the right location'.format(name)
             return ret
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         pass
 
     if not index:

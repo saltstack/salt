@@ -71,5 +71,6 @@ class VirtKey(object):
         try:
             os.unlink(self.path)
             return True
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             return False

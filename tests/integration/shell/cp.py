@@ -110,7 +110,8 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def test_issue_7754(self):
         try:
             old_cwd = os.getcwd()
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             # Jenkins throws an OSError from os.getcwd()??? Let's not worry
             # about it
             old_cwd = None
@@ -142,7 +143,8 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.assertIn('minion', '\n'.join(ret[0]))
             self.assertIn('sub_minion', '\n'.join(ret[0]))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             if os.path.exists('/dev/log') and ret[2] != 2:
                 # If there's a syslog device and the exit code was not 2, 'No
                 # such file or directory', raise the error

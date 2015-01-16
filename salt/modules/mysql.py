@@ -250,7 +250,8 @@ def _connect(**kwargs):
             if name.startswith(prefix):
                 try:
                     name = name[len(prefix):]
-                except IndexError:
+                except IndexError as exp:
+                    log.error('IndexError {0}'.format(exp))
                     return
             val = __salt__['config.option']('mysql.{0}'.format(name), None)
             if val is not None:
@@ -417,7 +418,8 @@ def _grant_to_tokens(grant):
             try:
                 if exploded_grant[position_tracker + 1] == '.':
                     phrase = 'tables'
-            except IndexError:
+            except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
                 break
 
         elif phrase == 'tables':
@@ -448,7 +450,8 @@ def _grant_to_tokens(grant):
             grant_tokens,
             database
         ))
-    except UnboundLocalError:
+    except UnboundLocalError as exp:
+        log.error('UnboundLocalError {0}'.format(exp))
         host = ''
 
     return dict(user=user,
@@ -691,7 +694,8 @@ def version(**connection_args):
 
     try:
         return cur.fetchone()[0]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         return ''
 
 
@@ -1593,7 +1597,8 @@ def grant_exists(grant,
         target = __grant_generate(
             grant, database, user, host, grant_option, escape
         )
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error('Error during grant generation.')
         return False
 
@@ -1659,7 +1664,8 @@ def grant_add(grant,
     grant = grant.strip()
     try:
         qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error('Error during grant generation')
         return False
     try:

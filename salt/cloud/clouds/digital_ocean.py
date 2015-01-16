@@ -348,7 +348,8 @@ def create(vm_):
         try:
             # It might be already up, let's destroy it!
             destroy(vm_['name'])
-        except SaltCloudSystemExit:
+        except SaltCloudSystemExit as exp:
+            log.error('SaltCloudSystemExit {0}'.format(exp))
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
@@ -571,7 +572,8 @@ def _get_node(name):
     while attempts >= 0:
         try:
             return list_nodes_full()[name]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             attempts -= 1
             log.debug(
                 'Failed to get the data for the node {0!r}. Remaining '

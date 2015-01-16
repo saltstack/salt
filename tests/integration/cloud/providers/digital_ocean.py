@@ -85,7 +85,8 @@ class DigitalOceanTest(integration.ShellCase):
         # check if instance with salt installed returned
         try:
             self.assertIn(ret_str, instance)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
@@ -94,7 +95,8 @@ class DigitalOceanTest(integration.ShellCase):
         ret_str = '                OK'
         try:
             self.assertIn(ret_str, delete)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             raise
 
     def tearDown(self):

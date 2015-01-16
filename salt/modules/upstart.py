@@ -82,7 +82,8 @@ def _find_utmp():
     for utmp in ('/var/run/utmp', '/run/utmp'):
         try:
             result[os.stat(utmp).st_mtime] = utmp
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
     return result[sorted(result).pop()]
 
@@ -100,7 +101,8 @@ def _default_runlevel():
             for line in fp_:
                 if line.startswith('env DEFAULT_RUNLEVEL'):
                     runlevel = line.split('=')[-1].strip()
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return '2'
 
     # Look for an optional "legacy" override in /etc/inittab
@@ -109,7 +111,8 @@ def _default_runlevel():
             for line in fp_:
                 if not line.startswith('#') and 'initdefault' in line:
                     runlevel = line.split(':')[1]
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         pass
 
     # The default runlevel can also be set via the kernel command-line.
@@ -123,7 +126,8 @@ def _default_runlevel():
                     if arg in valid_strings:
                         runlevel = arg
                         break
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         pass
 
     return runlevel
@@ -138,7 +142,8 @@ def _runlevel():
     out = __salt__['cmd.run'](['runlevel', '{0}'.format(_find_utmp())], python_shell=False)
     try:
         ret = out.split()[1]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         # The runlevel is unknown, return the default
         ret = _default_runlevel()
     __context__['upstart._runlevel'] = ret

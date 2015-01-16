@@ -60,7 +60,8 @@ def __get_yubico_users(username):
             (user['id'], user['key']) = list(__opts__['yubico_users'][username].values())
         else:
             return None
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return None
 
     return user

@@ -48,7 +48,8 @@ def _find_chocolatey():
     '''
     try:
         return __context__['chocolatey._path']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
                          'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.exe', ]
 
@@ -80,7 +81,8 @@ def chocolatey_version():
     '''
     try:
         return __context__['chocolatey._version']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         cmd = [_find_chocolatey(), 'help']
         out = __salt__['cmd.run'](cmd, python_shell=False)
         for line in out.splitlines():
@@ -89,7 +91,8 @@ def chocolatey_version():
                     __context__['chocolatey._version'] = \
                         line.split(None, 1)[-1].strip("'")
                     return __context__['chocolatey._version']
-                except Exception:
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
                     pass
         raise CommandExecutionError('Unable to determine Chocolatey version')
 
@@ -120,7 +123,8 @@ def bootstrap(force=False):
     # Check if Chocolatey is already present in the path
     try:
         choc_path = _find_chocolatey()
-    except CommandExecutionError:
+    except CommandExecutionError as exp:
+        log.error('CommandExecutionError {0}'.format(exp))
         choc_path = None
     if choc_path and not force:
         return 'Chocolatey found at {0}'.format(choc_path)

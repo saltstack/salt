@@ -80,7 +80,8 @@ def status(host=DEFAULT_HOST, port=DEFAULT_PORT):
     conn = _connect(host, port)
     try:
         stats = _check_stats(conn)[0]
-    except (CommandExecutionError, IndexError):
+    except (CommandExecutionError, IndexError) as exp:
+        log.error('(CommandExecutionError, IndexError) {0}'.format(exp))
         return False
     else:
         return {stats[0]: stats[1]}
@@ -231,7 +232,8 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
 
     try:
         return conn.incr(key, delta)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         raise SaltInvocationError('Delta value must be an integer')
 
 incr = increment
@@ -262,7 +264,8 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
 
     try:
         return conn.decr(key, delta)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         raise SaltInvocationError('Delta value must be an integer')
 
 decr = decrement

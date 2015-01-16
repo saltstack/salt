@@ -69,7 +69,8 @@ def trim_dict(
                         return serializer.dumps(data)
                     else:
                         return data
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 pass
         if is_msgpacked:
             return serializer.dumps(data)

@@ -333,7 +333,8 @@ def create(vm_):
         try:
             # It might be already up, let's destroy it!
             destroy(vm_['name'])
-        except SaltCloudSystemExit:
+        except SaltCloudSystemExit as exp:
+            log.error('SaltCloudSystemExit {0}'.format(exp))
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))

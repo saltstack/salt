@@ -256,7 +256,8 @@ def showconfig(name, default=False, dict_return=False):
             error = result['stderr']
         else:
             error = ''
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         error = result
 
     if error:
@@ -286,7 +287,8 @@ def showconfig(name, default=False, dict_return=False):
             opt, val, desc = re.match(
                 r'\s+([^=]+)=(off|on): (.+)', line
             ).groups()
-        except AttributeError:
+        except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
             continue
         ret[pkg][opt] = val
 
@@ -359,7 +361,8 @@ def config(name, reset=False, **kwargs):
     new_config = showconfig(name, dict_return=True)
     try:
         new_config = new_config[next(iter(new_config))]
-    except (StopIteration, TypeError):
+    except (StopIteration, TypeError) as exp:
+        log.error('(StopIteration, TypeError) {0}'.format(exp))
         return False
 
     return all(conf_ptr[x] == new_config.get(x) for x in conf_ptr)
@@ -390,14 +393,16 @@ def update(extract=False):
         patch_count = re.search(
             r'Fetching (\d+) patches', result['stdout']
         ).group(1)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         patch_count = 0
 
     try:
         new_port_count = re.search(
             r'Fetching (\d+) new ports or files', result['stdout']
         ).group(1)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         new_port_count = 0
 
     ret.append('Applied {0} new patches'.format(patch_count))

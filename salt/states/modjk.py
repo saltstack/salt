@@ -43,7 +43,8 @@ def _bulk_state(saltfunc, lbn, workers, profile):
     ))
     try:
         cmdret = __salt__[saltfunc](workers, lbn, profile=profile)
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         ret['result'] = False
         ret['comment'] = 'unsupported function {0}'.format(
             saltfunc

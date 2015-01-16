@@ -76,7 +76,8 @@ def _cleanup():
         if res is not True:
             try:
                 _ACTIVE.remove(inst)
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 # This can happen if two threads create a new Terminal instance
                 # It's harmless that it was already removed, so ignore.
                 pass
@@ -378,7 +379,8 @@ class Terminal(object):
             '''
             try:
                 _subprocess.TerminateProcess(self._handle, 1)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 # ERROR_ACCESS_DENIED (winerror 5) is received when the
                 # process already died.
                 ecode = _subprocess.GetExitCodeProcess(self._handle)
@@ -440,7 +442,8 @@ class Terminal(object):
                 max_fd = resource.getrlimit(resource.RLIMIT_NOFILE)
                 try:
                     os.closerange(pty.STDERR_FILENO + 1, max_fd[0])
-                except OSError:
+                except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                     pass
 
                 if self.cwd is not None:
@@ -642,7 +645,8 @@ class Terminal(object):
                                 stripped = stripped[len(os.linesep):]
                             if stripped:
                                 self.stderr_logger.log(self.stderr_logger_level, stripped)
-                except OSError:
+                except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                     os.close(self.child_fde)
                     self.child_fde = None
                     self.flag_eof_stderr = True
@@ -673,7 +677,8 @@ class Terminal(object):
                                 stripped = stripped[len(os.linesep):]
                             if stripped:
                                 self.stdout_logger.log(self.stdout_logger_level, stripped)
-                except OSError:
+                except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                     os.close(self.child_fd)
                     self.child_fd = None
                     self.flag_eof_stdout = True
@@ -774,7 +779,8 @@ class Terminal(object):
 
             try:
                 pid, status = _waitpid(self.pid, waitpid_options)
-            except _os_error:
+            except _os_error as exp:
+                log.error('_os_error {0}'.format(exp))
                 err = sys.exc_info()[1]
                 # No child processes
                 if err.errno == _errno_echild:
@@ -867,7 +873,8 @@ class Terminal(object):
                     else:
                         return False
                 return False
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 # I think there are kernel timing issues that sometimes cause
                 # this to happen. I think isalive() reports True, but the
                 # process is dead to the kernel.

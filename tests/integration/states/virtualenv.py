@@ -91,7 +91,8 @@ class VirtualenvTest(integration.ModuleCase,
             self.assertSaltStateChangesEqual(
                 ret, ['pep8==1.3.3'], keys=('packages', 'new')
             )
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             # Always clean up the tests temp files
             if os.path.exists(venv_path):
                 shutil.rmtree(venv_path)
@@ -119,7 +120,8 @@ class VirtualenvTest(integration.ModuleCase,
             self.assertSaltStateChangesEqual(
                 ret, ['zope.interface==4.0.1'], keys=('packages', 'new')
             )
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             # Always clean up the tests temp files
             if os.path.exists(venv_path):
                 shutil.rmtree(venv_path)

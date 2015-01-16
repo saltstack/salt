@@ -189,12 +189,14 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         for tag in tags:
             try:
                 key = tag.get('key')
-            except KeyError:
+            except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                 log.error('Tag missing key.')
                 return False
             try:
                 value = tag.get('value')
-            except KeyError:
+            except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                 log.error('Tag missing value.')
                 return False
             propagate_at_launch = tag.get('propagate_at_launch', False)
@@ -263,12 +265,14 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         for tag in tags:
             try:
                 key = tag.get('key')
-            except KeyError:
+            except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                 log.error('Tag missing key.')
                 return False, "Tag {0} missing key".format(tag)
             try:
                 value = tag.get('value')
-            except KeyError:
+            except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                 log.error('Tag missing value.')
                 return False, "Tag {0} missing value".format(tag)
             propagate_at_launch = tag.get('propagate_at_launch', False)

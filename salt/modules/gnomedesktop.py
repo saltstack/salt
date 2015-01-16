@@ -49,7 +49,8 @@ class _GSettings(object):
         user = self.USER
         try:
             uid = pwd.getpwnam(user).pw_uid
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             log.info('User does not exist')
             return False
 
@@ -74,7 +75,8 @@ class _GSettings(object):
         user = self.USER
         try:
             uid = pwd.getpwnam(user).pw_uid
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             log.info('User does not exist')
             result = {}
             result['retcode'] = 1

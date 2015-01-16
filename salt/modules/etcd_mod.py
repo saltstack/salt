@@ -76,7 +76,8 @@ def get_(key, recurse=False, profile=None):
     except KeyError as err:
         log.error('etcd: {0}'.format(err))
         return ''
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise
 
     if recurse:
@@ -104,7 +105,8 @@ def set_(key, value, profile=None):
     except KeyError as err:
         log.error('etcd: {0}'.format(err))
         return ''
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise
 
     return getattr(result, 'value')
@@ -130,7 +132,8 @@ def ls_(path='/', profile=None):
     except KeyError as err:
         log.error('etcd: {0}'.format(err))
         return {}
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise
 
     ret = {}
@@ -167,7 +170,8 @@ def rm_(key, recurse=False, profile=None):
     except KeyError as err:
         log.error('etcd: {0}'.format(err))
         return False
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise
 
 
@@ -192,5 +196,6 @@ def tree(path='/', profile=None):
     except KeyError as err:
         log.error('etcd: {0}'.format(err))
         return {}
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise

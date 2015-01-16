@@ -327,7 +327,8 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                     'Faked missing __version__ attribute'
                 )
             )
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             # The pip version being used is already < 1.2
             pass
 

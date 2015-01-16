@@ -204,7 +204,8 @@ def installed(name,
 
     try:
         test_release = int(test_release)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         test_release = None
 
     func = __salt('buildout.buildout')

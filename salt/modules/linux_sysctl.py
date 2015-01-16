@@ -57,7 +57,8 @@ def default_config():
                 try:
                     if int(version) >= 207:
                         return '/etc/sysctl.d/99-salt.conf'
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     log.error(
                         'Unexpected non-numeric systemd version {0!r} '
                         'detected'.format(version)
@@ -93,7 +94,8 @@ def show(config_file=False):
                     key = key.strip()
                     value = value.lstrip()
                     ret[key] = value
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             log.error('Could not open sysctl file')
             return None
     else:

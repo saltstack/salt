@@ -1079,7 +1079,8 @@ class Cloud(object):
                 )
                 try:
                     selection = int(selection)
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     print(
                         '{0!r} is not a valid selection.'.format(selection)
                     )
@@ -1088,7 +1089,8 @@ class Cloud(object):
                     filename = os.path.basename(
                         globbed_key_file.pop(selection)
                     )
-                except Exception:
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
                     continue
 
                 delete = input(
@@ -1263,7 +1265,8 @@ class Cloud(object):
         # so we do it later
         try:
             opt_map = self.opts['map']
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             opt_map = False
         if self.opts['parallel'] and self.opts['start_action'] and not opt_map:
             log.info(
@@ -1704,7 +1707,8 @@ class Map(Cloud):
                 seen = []
                 try:
                     machines = values['requires']
-                except KeyError:
+                except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                     machines = []
                 for machine in machines:
                     if self._has_loop(dmap, seen=list(seen), val=machine):
@@ -1716,7 +1720,8 @@ class Map(Cloud):
             seen.append(val)
             try:
                 machines = dmap['create'][val]['requires']
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 machines = []
 
             for machine in machines:
@@ -1727,16 +1732,19 @@ class Map(Cloud):
     def _calcdep(self, dmap, machine, data, level):
         try:
             deplist = data['requires']
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return level
         levels = []
         for name in deplist:
             try:
                 data = dmap['create'][name]
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 try:
                     data = dmap['existing'][name]
-                except KeyError:
+                except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                     msg = 'Missing dependency in cloud map'
                     log.error(msg)
                     raise SaltCloudException(msg)
@@ -1888,7 +1896,8 @@ class Map(Cloud):
 
         try:
             existing_list = dmap['existing'].items()
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             existing_list = {}
 
         for key, val in existing_list:
@@ -2022,7 +2031,8 @@ class Map(Cloud):
                     )
                 )
             output[master_name] = out
-        except StopIteration:
+        except StopIteration as exp:
+            log.error('StopIteration {0}'.format(exp))
             log.debug('No make_master found in map')
             # Local master?
             # Generate the fingerprint of the master pubkey in order to
@@ -2212,7 +2222,8 @@ def run_parallel_map_providers_query(data, queue=None):
     try:
         import Crypto.Random  # pylint: disable=E0611
         Crypto.Random.atfork()
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         # PyCrypto version < 2.1
         pass
 

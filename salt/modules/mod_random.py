@@ -70,9 +70,11 @@ def str_encode(value, encoder='base64'):
     '''
     try:
         out = value.encode(encoder)
-    except LookupError:
+    except LookupError as exp:
+        log.error('LookupError {0}'.format(exp))
         raise SaltInvocationError('You must specify a valid encoder')
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         raise SaltInvocationError('Value must be an encode-able string')
 
     return out

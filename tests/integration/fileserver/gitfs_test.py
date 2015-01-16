@@ -69,7 +69,8 @@ class GitFSTest(integration.ModuleCase):
 
         try:
             shutil.copytree(self.integration_base_files, self.tmp_repo_dir + '/')
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             # We probably caught an error because files already exist. Ignore
             pass
 
@@ -81,7 +82,8 @@ class GitFSTest(integration.ModuleCase):
         if 'USERNAME' not in os.environ:
             try:
                 os.environ['USERNAME'] = pwd.getpwuid(os.geteuid()).pw_name
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 log.error('Unable to get effective username, falling back to '
                           '\'root\'.')
                 os.environ['USERNAME'] = 'root'

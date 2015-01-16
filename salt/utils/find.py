@@ -201,10 +201,12 @@ def _parse_size(value):
 
     try:
         num = int(scalar) * multiplier
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         try:
             num = int(float(scalar) * multiplier)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             raise ValueError('invalid size: "{0}"'.format(value))
 
     if style == '-':
@@ -312,7 +314,8 @@ class TypeOption(Option):
         for ftype in value:
             try:
                 self.ftypes.add(_FILE_TYPES[ftype])
-            except KeyError:
+            except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                 raise ValueError('invalid file type "{0}"'.format(ftype))
 
     def requires(self):
@@ -337,7 +340,8 @@ class OwnerOption(Option):
             else:
                 try:
                     self.uids.add(pwd.getpwnam(value).pw_uid)
-                except KeyError:
+                except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                     raise ValueError('no such user "{0}"'.format(name))
 
     def requires(self):
@@ -362,7 +366,8 @@ class GroupOption(Option):
             else:
                 try:
                     self.gids.add(grp.getgrnam(value).gr_gid)
-                except KeyError:
+                except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                     raise ValueError('no such group "{0}"'.format(name))
 
     def requires(self):
@@ -498,13 +503,15 @@ class PrintOption(Option):
                 uid = fstat[stat.ST_UID]
                 try:
                     result.append(pwd.getpwuid(uid).pw_name)
-                except KeyError:
+                except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                     result.append(uid)
             elif arg == 'group':
                 gid = fstat[stat.ST_GID]
                 try:
                     result.append(grp.getgrgid(gid).gr_name)
-                except KeyError:
+                except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):
@@ -607,7 +614,8 @@ class Finder(object):
                 raise ValueError('missing value for "{0}" option'.format(key))
             try:
                 obj = globals()[key.title() + "Option"](key, value)
-            except KeyError:
+            except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                 raise ValueError('invalid option "{0}"'.format(key))
             if hasattr(obj, 'match'):
                 requires = obj.requires()

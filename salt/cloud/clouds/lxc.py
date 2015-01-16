@@ -106,15 +106,18 @@ def _salt(fun, *args, **kw):
     '''
     try:
         poll = kw.pop('salt_job_poll')
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         poll = 0.1
     try:
         target = kw.pop('salt_target')
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         target = None
     try:
         timeout = int(kw.pop('salt_timeout'))
-    except (KeyError, ValueError):
+    except (KeyError, ValueError) as exp:
+        log.error('(KeyError, ValueError) {0}'.format(exp))
         # try to has some low timeouts for very basic commands
         timeout = __FUN_TIMEOUT.get(
             fun,
@@ -122,7 +125,8 @@ def _salt(fun, *args, **kw):
         )
     try:
         kwargs = kw.pop('kwargs')
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         kwargs = {}
     if not target:
         infos = get_configured_provider()
@@ -136,15 +140,18 @@ def _salt(fun, *args, **kw):
         laps = laps // __CACHED_FUNS[fun]
     try:
         sargs = json.dumps(args)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         sargs = ''
     try:
         skw = json.dumps(kw)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         skw = ''
     try:
         skwargs = json.dumps(kwargs)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         skwargs = ''
     cache_key = (laps, target, fun, sargs, skw, skwargs)
     if not cache or (cache and (cache_key not in __CACHED_CALLS)):
@@ -180,7 +187,8 @@ def _salt(fun, *args, **kw):
                 if not ping:
                     raise ValueError('Unreachable')
                 break
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 ping = False
                 ping_retries += 1
                 log.error('{0} unreachable, retrying'.format(target))
@@ -237,9 +245,11 @@ def _salt(fun, *args, **kw):
             if 'is not available.' in ret:
                 raise SaltCloudSystemExit(
                     'module/function {0} is not available'.format(fun))
-        except SaltCloudSystemExit:
+        except SaltCloudSystemExit as exp:
+            log.error('SaltCloudSystemExit {0}'.format(exp))
             raise
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             pass
         if cache:
             __CACHED_CALLS[cache_key] = ret
@@ -495,7 +505,8 @@ def get_configured_provider(vm_=None):
             if not ret:
                 raise Exception('error')
             return data
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             raise SaltCloudSystemExit(
                 'Configured provider {0} minion: {1} is unreachable'.format(
                     __active_provider_name__, data['target']))

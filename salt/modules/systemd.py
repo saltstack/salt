@@ -43,7 +43,8 @@ def _sd_booted():
             # http://www.freedesktop.org/software/systemd/man/sd_booted.html
             if os.stat('/run/systemd/system'):
                 __context__['systemd.sd_booted'] = True
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             __context__['systemd.sd_booted'] = False
 
     return __context__['systemd.sd_booted']

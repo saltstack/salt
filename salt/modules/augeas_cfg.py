@@ -291,7 +291,8 @@ def match(path, value=''):
 
     try:
         matches = aug.match(path)
-    except RuntimeError:
+    except RuntimeError as exp:
+        log.error('RuntimeError {0}'.format(exp))
         return ret
 
     for _match in matches:
@@ -343,7 +344,8 @@ def ls(path):  # pylint: disable=C0103
         ''' Internal match function '''
         try:
             matches = aug.match(path)
-        except RuntimeError:
+        except RuntimeError as exp:
+            log.error('RuntimeError {0}'.format(exp))
             return {}
 
         ret = {}

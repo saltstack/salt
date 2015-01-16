@@ -403,7 +403,8 @@ class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
                 # Above the defined high water mark(unsent messages), start
                 # dropping them
                 self._publisher.setsockopt(zmq.HWM, self._zmq_hwm)
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 # In ZMQ >= 3.0, there are separate send and receive HWM
                 # settings
                 self._publisher.setsockopt(zmq.SNDHWM, self._zmq_hwm)

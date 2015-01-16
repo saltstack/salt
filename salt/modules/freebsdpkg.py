@@ -134,7 +134,8 @@ def _match(names):
     for line in out.splitlines():
         try:
             full_pkg_strings.append(line.split()[0])
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             continue
     full_matches = [x for x in names if x in full_pkg_strings]
 
@@ -277,7 +278,8 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
             continue
         try:
             pkgname, pkgver = pkg.rsplit('-', 1)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkgname, pkgver)
         origins[pkgname] = origin

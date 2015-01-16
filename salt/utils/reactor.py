@@ -51,7 +51,8 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     fn_,
                     tag=tag,
                     data=data))
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 log.error('Failed to render "{0}"'.format(fn_))
         return react
 
@@ -66,13 +67,15 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
             try:
                 with salt.utils.fopen(self.opts['reactor']) as fp_:
                     react_map = yaml.safe_load(fp_.read())
-            except (OSError, IOError):
+            except (OSError, IOError) as exp:
+                log.error('(OSError, IOError) {0}'.format(exp))
                 log.error(
                     'Failed to read reactor map: "{0}"'.format(
                         self.opts['reactor']
                         )
                     )
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 log.error(
                     'Failed to parse YAML in reactor map: "{0}"'.format(
                         self.opts['reactor']
@@ -140,7 +143,8 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
             if chunks:
                 try:
                     self.call_reactions(chunks)
-                except SystemExit:
+                except SystemExit as exp:
+            log.error('SystemExit {0}'.format(exp))
                     log.warning('Exit ignored by reactor')
 
 
@@ -177,7 +181,8 @@ class ReactWrap(object):
             kwargs['user'] = self.event_user
 
             l_fun(*f_call.get('args', ()), **kwargs)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.error(
                     'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
                     exc_info=True
@@ -191,7 +196,8 @@ class ReactWrap(object):
             self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
         try:
             self.client_cache['local'].cmd_async(*args, **kwargs)
-        except SystemExit:
+        except SystemExit as exp:
+            log.error('SystemExit {0}'.format(exp))
             log.warning('Attempt to exit reactor. Ignored.')
 
     cmd = local
@@ -204,7 +210,8 @@ class ReactWrap(object):
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
         try:
             self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
-        except SystemExit:
+        except SystemExit as exp:
+            log.error('SystemExit {0}'.format(exp))
             log.warning('Attempt to exit in reactor by runner. Ignored')
 
     def wheel(self, fun, **kwargs):
@@ -215,5 +222,6 @@ class ReactWrap(object):
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
         try:
             self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
-        except SystemExit:
+        except SystemExit as exp:
+            log.error('SystemExit {0}'.format(exp))
             log.warning('Attempt to in reactor by whell. Ignored.')

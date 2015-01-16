@@ -111,7 +111,8 @@ class ExcInfoOnLogLevelFormatMixIn(object):
 
         try:
             formatted_record += record.exc_info_on_loglevel_formatted
-        except UnicodeError:
+        except UnicodeError as exp:
+            log.error('UnicodeError {0}'.format(exp))
             # According to the standard library logging formatter comments:
             #
             #     Sometimes filenames have non-ASCII chars, which can lead

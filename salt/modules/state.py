@@ -670,7 +670,8 @@ def sls(mods,
         with salt.utils.fopen(cfn, 'w+b') as fp_:
             try:
                 serial.dump(high_, fp_)
-            except TypeError:
+            except TypeError as exp:
+                log.error('TypeError {0}'.format(exp))
                 # Can't serialize pydsl
                 pass
     except (IOError, OSError) as exp:

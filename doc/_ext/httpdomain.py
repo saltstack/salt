@@ -247,7 +247,8 @@ def http_statuscode_role(name, rawtext, text, lineno, inliner,
         code = int(text)
         try:
             status = HTTP_STATUS_CODES[code]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             msg = inliner.reporter.error('%d is invalid HTTP status code'
                                          % code, lineno=lineno)
             prb = inliner.problematic(rawtext, rawtext, msg)
@@ -256,7 +257,8 @@ def http_statuscode_role(name, rawtext, text, lineno, inliner,
         try:
             code, status = re.split(r'\s', text.strip(), 1)
             code = int(code)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             msg = inliner.reporter.error(
                 'HTTP status code must be an integer (e.g. `200`) or '
                 'start with an integer (e.g. `200 OK`); %r is invalid' %
@@ -416,7 +418,8 @@ class HTTPDomain(Domain):
                      node, contnode):
         try:
             info = self.data[str(typ)][target]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return
         else:
             anchor = http_resource_anchor(typ, target)

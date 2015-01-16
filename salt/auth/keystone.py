@@ -19,7 +19,8 @@ def get_auth_url():
     '''
     try:
         return __opts__['keystone.auth_url']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return 'http://localhost:35357/v2.0'
 
 
@@ -31,7 +32,8 @@ def auth(username, password):
         keystone = client.Client(username=username, password=password,
                                  auth_url=get_auth_url())
         return keystone.authenticate()
-    except (AuthorizationFailure, Unauthorized):
+    except (AuthorizationFailure, Unauthorized) as exp:
+        log.error('(AuthorizationFailure, Unauthorized) {0}'.format(exp))
         return False
 
 

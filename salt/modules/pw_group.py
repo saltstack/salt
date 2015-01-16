@@ -82,7 +82,8 @@ def info(name):
     '''
     try:
         grinfo = grp.getgrnam(name)
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return {}
     else:
         return {'name': grinfo.gr_name,

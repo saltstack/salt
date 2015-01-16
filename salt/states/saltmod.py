@@ -153,7 +153,8 @@ def state(
 
     try:
         allow_fail = int(allow_fail)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         ret['result'] = False
         ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return ret
@@ -506,7 +507,8 @@ def wait_for_event(
             if val is not None:
                 try:
                     val_idx = id_list.index(val)
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     log.trace("wait_for_event: Event identifier '{0}' not in "
                             "id_list; skipping.".format(event_id))
                 else:

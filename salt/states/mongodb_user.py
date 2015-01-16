@@ -72,7 +72,8 @@ def present(name,
     # Check for valid port
     try:
         port = int(port)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         ret['result'] = False
         ret['comment'] = 'Port ({0}) is not an integer.'.format(port)
         return ret

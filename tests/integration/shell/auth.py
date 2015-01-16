@@ -36,7 +36,8 @@ class AuthTest(integration.ShellCase):
         # This is a little wasteful but shouldn't be a problem
         try:
             pwd.getpwnam('saltdev')
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             self.run_call('user.add saltdev createhome=False')
 
     def test_pam_auth_valid_user(self):

@@ -26,19 +26,22 @@ try:
 except ImportError:
     try:
         from ordereddict import OrderedDict
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         ## {{{ http://code.activestate.com/recipes/576693/ (r9)
         # Backport of OrderedDict() class that runs on Python 2.4, 2.5, 2.6, 2.7 and pypy.
         # Passes Python2.7's test suite and incorporates all the latest updates.
 
         try:
             from thread import get_ident as _get_ident
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             from dummy_thread import get_ident as _get_ident
 
 #        try:
 #            from _abcoll import KeysView, ValuesView, ItemsView
-#        except ImportError:
+#        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
 #            pass
 
         class OrderedDict(dict):
@@ -66,7 +69,8 @@ except ImportError:
                     )
                 try:
                     self.__root
-                except AttributeError:
+                except AttributeError as exp:
+                    log.error('AttributeError {0}'.format(exp))
                     self.__root = root = []                     # sentinel node
                     root[:] = [root, root, None]
                     self.__map = {}
@@ -115,7 +119,8 @@ except ImportError:
                     root = self.__root
                     root[:] = [root, root, None]
                     self.__map.clear()
-                except AttributeError:
+                except AttributeError as exp:
+                    log.error('AttributeError {0}'.format(exp))
                     pass
                 dict.clear(self)
 
@@ -305,7 +310,8 @@ class DefaultOrderedDict(OrderedDict):
     def __getitem__(self, key):
         try:
             return OrderedDict.__getitem__(self, key)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return self.__missing__(key)
 
     def __missing__(self, key):

@@ -119,7 +119,8 @@ class Scheduler(multiprocessing.Process):
             self.handle_schedule()
             try:
                 time.sleep(self.schedule.loop_interval)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                 break
             except IOError as exp:
                 log.error('IO Error {0}'.format(exp))
@@ -216,7 +217,8 @@ class Maintenance(multiprocessing.Process):
             last = now
             try:
                 time.sleep(self.loop_interval)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                 break
 
     def handle_search(self, now, last):
@@ -317,7 +319,8 @@ class Master(SMaster):
         # Warn if ZMQ < 3.2
         try:
             zmq_version_info = zmq.zmq_version_info()
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
             # using zmq.zmq_version() and build a version info tuple.
             zmq_version_info = tuple(
@@ -367,7 +370,8 @@ class Master(SMaster):
                     'New values for max open files soft/hard values: '
                     '{0}/{1}'.format(mof_s, mof_h)
                 )
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 # https://github.com/saltstack/salt/issues/1991#issuecomment-13025595
                 # A user under OSX reported that our 100000 default value is
                 # still too high.
@@ -438,7 +442,8 @@ class Master(SMaster):
                 _tmp = __import__(mod, globals(), locals(), [cls], -1)
                 cls = _tmp.__getattribute__(cls)
                 process_manager.add_process(cls, args=(self.opts,))
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 log.error(('Error creating ext_processes '
                            'process: {0}').format(proc))
 
@@ -464,7 +469,8 @@ class Master(SMaster):
         process_manager.add_process(run_reqserver)
         try:
             process_manager.run()
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as exp:
+            log.error('KeyboardInterrupt {0}'.format(exp))
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
             process_manager.kill_children()
@@ -521,7 +527,8 @@ class Publisher(multiprocessing.Process):
         try:
             pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
         # in zmq >= 3.0, there are separate send and receive HWM settings
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             pub_sock.setsockopt(zmq.SNDHWM, self.opts.get('pub_hwm', 1000))
             pub_sock.setsockopt(zmq.RCVHWM, self.opts.get('pub_hwm', 1000))
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
@@ -576,7 +583,8 @@ class Publisher(multiprocessing.Process):
                         continue
                     raise exc
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as exp:
+            log.error('KeyboardInterrupt {0}'.format(exp))
             if pub_sock.closed is False:
                 pub_sock.setsockopt(zmq.LINGER, 1)
                 pub_sock.close()
@@ -622,7 +630,8 @@ class ReqServer(object):
         try:
             self.clients.setsockopt(zmq.HWM, self.opts['rep_hwm'])
         # in zmq >= 3.0, there are separate send and receive HWM settings
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             self.clients.setsockopt(zmq.SNDHWM, self.opts['rep_hwm'])
             self.clients.setsockopt(zmq.RCVHWM, self.opts['rep_hwm'])
 
@@ -740,7 +749,8 @@ class MWorker(multiprocessing.Process):
                     ret = self.serial.dumps(self._handle_payload(payload))
                     socket.send(ret)
                 # don't catch keyboard interrupts, just re-raise them
-                except KeyboardInterrupt:
+                except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                     raise
                 # catch all other exceptions, so we don't go defunct
                 except Exception as exc:
@@ -758,7 +768,8 @@ class MWorker(multiprocessing.Process):
 
         # Changes here create a zeromq condition, check with thatch45 before
         # making any zeromq changes
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as exp:
+            log.error('KeyboardInterrupt {0}'.format(exp))
             socket.close()
 
     def _handle_payload(self, payload):
@@ -785,7 +796,8 @@ class MWorker(multiprocessing.Process):
         try:
             key = payload['enc']
             load = payload['load']
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return ''
         return {'aes': self._handle_aes,
                 'clear': self._handle_clear}[key](load)
@@ -813,7 +825,8 @@ class MWorker(multiprocessing.Process):
         '''
         try:
             data = self.crypticle.loads(load)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             # return something not encrypted so the minions know that they aren't
             # encrypting correctly.
             return 'bad load'
@@ -1474,7 +1487,8 @@ class AESFuncs(object):
                         func, time.time() - start
                     )
                 )
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 ret = ''
                 log.error(
                     'Error in function {0}:\n'.format(func),
@@ -1852,7 +1866,8 @@ class ClearFuncs(object):
                 try:
                     mtoken = self.master_key.key.private_decrypt(load['token'], 4)
                     aes = '{0}_|-{1}'.format(self.opts['aes'].value, mtoken)
-                except Exception:
+                except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
@@ -1867,7 +1882,8 @@ class ClearFuncs(object):
                         load['token'], 4
                     )
                     ret['token'] = pub.public_encrypt(mtoken, 4)
-                except Exception:
+                except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
@@ -2404,7 +2420,8 @@ class ClearFuncs(object):
                                                             # the jid in clear_load can be None, '', or something else.
                                                             # this is an attempt to clean up the value before passing to plugins
                                                             passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
-        except TypeError:  # The returner is not present
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
             return {}
             # TODO Error reporting over the master event bus
@@ -2428,14 +2445,16 @@ class ClearFuncs(object):
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
                 self.mminion.returners[fstr](clear_load['jid'], clear_load)
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 log.critical(
                     'The specified returner used for the external job cache '
                     '"{0}" does not have a save_load function!'.format(
                         self.opts['ext_job_cache']
                     )
                 )
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 log.critical(
                     'The specified returner threw a stack trace:\n',
                     exc_info=True
@@ -2445,14 +2464,16 @@ class ClearFuncs(object):
         try:
             fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[fstr](clear_load['jid'], clear_load)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             log.critical(
                 'The specified returner used for the master job cache '
                 '"{0}" does not have a save_load function!'.format(
                     self.opts['master_job_cache']
                 )
             )
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.critical(
                 'The specified returner threw a stack trace:\n',
                 exc_info=True

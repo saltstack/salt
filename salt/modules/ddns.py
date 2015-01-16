@@ -116,7 +116,8 @@ def delete_host(zone, name, nameserver='127.0.0.1', **kwargs):
     answer = dns.query.udp(request, nameserver)
     try:
         ips = [i.address for i in answer.answer[0].items]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         ips = []
 
     res = delete(zone, name, nameserver=nameserver, **kwargs)

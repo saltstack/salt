@@ -282,7 +282,8 @@ def latest(name,
                             current_remote = __salt__['git.config_get'](
                                 target, 'branch.{0}.remote'.format(rev),
                                 user=user)
-                        except CommandExecutionError:
+                        except CommandExecutionError as exp:
+        log.error('CommandExecutionError {0}'.format(exp))
                             current_remote = None
 
                         if current_remote != remote_name:
@@ -529,7 +530,8 @@ def config(name,
         oval = __salt__['git.config_get'](setting_name=name,
                                           cwd=repo,
                                           user=user)
-    except CommandExecutionError:
+    except CommandExecutionError as exp:
+        log.error('CommandExecutionError {0}'.format(exp))
         oval = None
 
     if value == oval:

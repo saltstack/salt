@@ -375,7 +375,8 @@ def server_status(profile='default'):
     url += '?auto'
     try:
         response = _urlopen(url, timeout=timeout).read().splitlines()
-    except URLError:
+    except URLError as exp:
+        log.error('URLError {0}'.format(exp))
         return 'error'
 
     # parse the data

@@ -437,7 +437,8 @@ def main():
                         stat[item] = 0
                     r_time = s_time
 
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as exp:
+        log.error('KeyboardInterrupt {0}'.format(exp))
         sys.exit(1)
 
 if __name__ == "__main__":

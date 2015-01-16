@@ -193,7 +193,8 @@ def fstab(jail):
                         continue
                     try:
                         device, mpoint, fstype, opts, dump, pas_ = line.split()
-                    except ValueError:
+                    except ValueError as exp:
+                        log.error('ValueError {0}'.format(exp))
                         # Gracefully continue on invalid lines
                         continue
                     ret.append({

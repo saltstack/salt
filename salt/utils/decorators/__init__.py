@@ -99,7 +99,8 @@ class Depends(object):
                 if module:
                     try:
                         func_name = module.__func_alias__[func.__name__]
-                    except (AttributeError, KeyError):
+                    except (AttributeError, KeyError) as exp:
+                        log.error('(AttributeError, KeyError) {0}'.format(exp))
                         func_name = func.__name__
 
                     mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
@@ -114,7 +115,8 @@ class Depends(object):
                             functions[mod_key] = fallback_function
                         else:
                             del functions[mod_key]
-                    except AttributeError:
+                    except AttributeError as exp:
+                        log.error('AttributeError {0}'.format(exp))
                         # we already did???
                         log.trace('{0} already removed, skipping'.format(mod_key))
                         continue

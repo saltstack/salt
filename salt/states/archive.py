@@ -162,14 +162,16 @@ def extracted(name,
         # get value of first key
         try:
             file_result = file_result[next(file_result.iterkeys())]
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             pass
 
         try:
             if not file_result['result']:
                 log.debug('failed to download {0}'.format(source))
                 return file_result
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             if not file_result:
                 log.debug('failed to download {0}'.format(source))
                 return file_result

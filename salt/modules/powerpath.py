@@ -39,7 +39,8 @@ def __virtual__():
     '''
     try:
         kernel_grain = __grains__['kernel']
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return False
 
     if not has_powerpath():

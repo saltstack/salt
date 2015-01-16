@@ -42,10 +42,12 @@ def find_file(path, saltenv='base', env=None, **kwargs):
     if 'index' in kwargs:
         try:
             root = __opts__['file_roots'][saltenv][int(kwargs['index'])]
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             # An invalid index was passed
             return fnd
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             # An invalid index option was passed
             return fnd
         full = os.path.join(root, path)
@@ -126,7 +128,8 @@ def update():
                 try:
                     file_path, mtime = line.split(':', 1)
                     old_mtime_map[file_path] = mtime
-                except ValueError:
+                except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                     # Document the invalid entry in the log
                     log.warning('Skipped invalid cache mtime entry in {0}: {1}'
                                 .format(mtime_map_path, line))
@@ -194,12 +197,14 @@ def file_hash(load, fnd):
             with salt.utils.fopen(cache_path, 'rb') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
-                except ValueError:
+                except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     # Delete the file since its incomplete (either corrupted or incomplete)
                     try:
                         os.unlink(cache_path)
-                    except OSError:
+                    except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                         pass
                     return file_hash(load, fnd)
                 if os.path.getmtime(path) == mtime:
@@ -211,7 +216,8 @@ def file_hash(load, fnd):
             # Delete the file since its incomplete (either corrupted or incomplete)
             try:
                 os.unlink(cache_path)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 pass
             return file_hash(load, fnd)
 
@@ -334,7 +340,8 @@ def symlink_list(load):
     for path in __opts__['file_roots'][load['saltenv']]:
         try:
             prefix = load['prefix'].strip('/')
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             prefix = ''
         # Adopting rsync functionality here and stopping at any encounter of a symlink
         for root, dirs, files in os.walk(os.path.join(path, prefix), followlinks=False):

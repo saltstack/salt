@@ -75,7 +75,8 @@ if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
         from setuptools.command.sdist import sdist
         from setuptools.command.egg_info import egg_info
         WITH_SETUPTOOLS = True
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         WITH_SETUPTOOLS = False
 
 if WITH_SETUPTOOLS is False:
@@ -273,7 +274,8 @@ class CloudSdist(Sdist):
                             req.status_code
                         )
                     )
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 req = urlopen(url)
 
                 if req.getcode() == 200:
@@ -632,7 +634,8 @@ class SaltDistribution(distutils.dist.Distribution):
             elif hasattr(self.metadata, attrname):
                 try:
                     setattr(self.metadata, attrname, attrvalue)
-                except AttributeError:
+                except AttributeError as exp:
+                    log.error('AttributeError {0}'.format(exp))
                     pass
 
     def discover_packages(self):
@@ -870,7 +873,8 @@ class SaltDistribution(distutils.dist.Distribution):
             try:
                 import yum  # pylint: disable=unused-variable
                 freezer_includes.append('yum')
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 pass
         elif sys.platform.startswith('sunos'):
             # (The sledgehammer approach)
@@ -884,7 +888,8 @@ class SaltDistribution(distutils.dist.Distribution):
                 for mod in mgraph.flatten():
                     if type(mod).__name__ != 'Script' and mod.filename:
                         freezer_includes.append(str(os.path.basename(mod.identifier)))
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 pass
             # Include C extension that convinces esky to package up the libsodium C library
             # This is needed for ctypes to find it in libnacl which is in turn needed for raet

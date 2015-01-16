@@ -42,7 +42,8 @@ def _number(text):
         return int(text)
     try:
         return float(text)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return text
 
 
@@ -373,7 +374,8 @@ def nproc():
     data = __salt__['cmd.run']('nproc')
     try:
         ret = int(data.strip())
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return 0
     return ret
 

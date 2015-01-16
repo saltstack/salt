@@ -130,7 +130,8 @@ def extract_masters(opts):
     master_port = opts.get('master_port')
     try:
         master_port = int(master_port)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         master_port = None
 
     if not master_port:
@@ -217,10 +218,12 @@ def parse_hostname(hostname, default_port):
         host = host.strip()
         try:
             port = int(port)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return None
 
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return None
 
     return (host, port)

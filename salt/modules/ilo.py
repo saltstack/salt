@@ -60,7 +60,8 @@ def __execute_cmd(name, xml):
                 ret[name.replace('_', ' ')].update(
                     {i.tag: i.attrib}
                 )
-    except SyntaxError:
+    except SyntaxError as exp:
+        log.error('SyntaxError {0}'.format(exp))
         return True
 
     return ret

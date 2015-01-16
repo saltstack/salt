@@ -112,7 +112,8 @@ def add(name,
 
                     # We found what we wanted, let's break out of the loop
                     break
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 log.debug('Error reading /etc/login.defs', exc_info=True)
         else:
             try:
@@ -127,7 +128,8 @@ def add(name,
 
                     # We found what we wanted, let's break out of the loop
                     break
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
 
@@ -515,7 +517,8 @@ def info(name):
     '''
     try:
         data = pwd.getpwnam(name)
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return {}
     else:
         return _format_info(data)

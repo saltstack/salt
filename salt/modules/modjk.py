@@ -194,7 +194,8 @@ def list_configured_members(lbn, profile='default'):
 
     try:
         ret = config['worker.{0}.balance_workers'.format(lbn)]
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return []
 
     return [_f for _f in ret.strip().split(',') if _f]
@@ -222,7 +223,8 @@ def workers(profile='default'):
             worker_list.extend(
                 config['worker.{0}.balance_workers'.format(lb)].split(',')
             )
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             pass
 
     worker_list = list(set(worker_list))
@@ -252,7 +254,8 @@ def recover_all(lbn, profile='default'):
     config = get_running(profile)
     try:
         workers_ = config['worker.{0}.balance_workers'.format(lbn)].split(',')
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return ret
 
     for worker in workers_:
@@ -336,7 +339,8 @@ def bulk_stop(workers, lbn, profile='default'):
     for worker in workers:
         try:
             ret[worker] = worker_stop(worker, lbn, profile)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             ret[worker] = False
 
     return ret
@@ -365,7 +369,8 @@ def bulk_activate(workers, lbn, profile='default'):
     for worker in workers:
         try:
             ret[worker] = worker_activate(worker, lbn, profile)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             ret[worker] = False
 
     return ret
@@ -394,7 +399,8 @@ def bulk_disable(workers, lbn, profile='default'):
     for worker in workers:
         try:
             ret[worker] = worker_disable(worker, lbn, profile)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             ret[worker] = False
 
     return ret
@@ -423,7 +429,8 @@ def bulk_recover(workers, lbn, profile='default'):
     for worker in workers:
         try:
             ret[worker] = worker_recover(worker, lbn, profile)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             ret[worker] = False
 
     return ret
@@ -447,7 +454,8 @@ def worker_status(worker, profile='default'):
             'activation': config['worker.{0}.activation'.format(worker)],
             'state': config['worker.{0}.state'.format(worker)],
         }
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return False
 
 

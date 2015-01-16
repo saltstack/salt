@@ -167,7 +167,8 @@ def item(*args, **kwargs):
     for arg in args:
         try:
             ret[arg] = __grains__[arg]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             pass
     if salt.utils.is_true(kwargs.get('sanitize')):
         for arg, func in _SANITIZERS.items():

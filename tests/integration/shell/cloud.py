@@ -83,7 +83,8 @@ class SaltCloudCliTest(integration.ShellCase,
                         ),
                         output[1]
                     )
-                except AssertionError:
+                except AssertionError as exp:
+                    log.error('AssertionError {0}'.format(exp))
                     print output
                     raise
             # Remove the first option from the list

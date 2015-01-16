@@ -77,7 +77,8 @@ def latest_version(*names, **kwargs):
             # return data.
             if name in names:
                 ret[name] = version_num
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as exp:
+            log.error('(ValueError, IndexError) {0}'.format(exp))
             pass
 
     pkgs = {}
@@ -203,7 +204,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             continue
         try:
             name, version_num = line.split()[0:2]
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             log.error('Problem parsing pacman -Q: Unexpected formatting in '
                       'line: "{0}"'.format(line))
         else:

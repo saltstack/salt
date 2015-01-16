@@ -184,7 +184,8 @@ fi
                 contents,
                 salt.utils.fopen(testfile, 'r').read()
             )
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             if os.path.exists(testfile):
                 shutil.copy(testfile, testfile + '.bak')
             raise

@@ -53,7 +53,8 @@ class F5Mgmt(object):
                                   fromurl=True,
                                   wsdls=['LocalLB.VirtualServer',
                                          'LocalLB.Pool'])
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             raise Exception(
                 'Unable to connect to {0}'.format(self.lb)
             )

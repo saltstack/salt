@@ -52,7 +52,8 @@ if salt.utils.is_windows():
         import wmi
         import salt.utils.winapi
         HAS_WMI = True
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         log.exception(
             'Unable to import Python wmi module, some core grains '
             'will be missing'
@@ -74,7 +75,8 @@ def _windows_cpudata():
         # conditional in templating. Also follows _linux_cpudata()
         try:
             grains['num_cpus'] = int(os.environ['NUMBER_OF_PROCESSORS'])
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             grains['num_cpus'] = 1
     grains['cpu_model'] = platform.processor()
     return grains
@@ -188,7 +190,8 @@ def _linux_gpu_data():
                 'check that you have a valid shell configured and '
                 'permissions to run lspci command'
             )
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         pass
 
     gpus = []
@@ -231,7 +234,8 @@ def _netbsd_gpu_data():
                 )
                 if vendor_match:
                     gpus.append({'vendor': vendor_match.group(1), 'model': vendor_match.group(2)})
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         pass
 
     grains = {}
@@ -259,7 +263,8 @@ def _osx_gpudata():
                 vendor = vendor.lower()
                 gpus.append({'vendor': vendor, 'model': model})
 
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         pass
 
     grains = {}
@@ -328,7 +333,8 @@ def _bsd_cpudata(osdata):
                             grains['cpu_flags'].extend(flag)
     try:
         grains['num_cpus'] = int(grains['num_cpus'])
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         grains['num_cpus'] = 1
 
     return grains
@@ -783,7 +789,8 @@ def _windows_platform_data():
             motherboardinfo = wmi_c.Win32_BaseBoard()[0]
             motherboard['product'] = motherboardinfo.Product
             motherboard['serial'] = motherboardinfo.SerialNumber
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             log.debug('Motherboard info not available on this sytem')
 
         # the name of the OS comes with a bunch of other data about the install
@@ -988,7 +995,8 @@ def os_data():
                     key
                 )
                 grains[lsb_param] = value
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             # if the python library isn't available, default to regex
             if os.path.isfile('/etc/lsb-release'):
                 # Matches any possible format:
@@ -1113,7 +1121,8 @@ def os_data():
                     )
                     osname, development, osrelease = \
                         release_re.search(rel_data).groups()
-                except AttributeError:
+                except AttributeError as exp:
+                    log.error('AttributeError {0}'.format(exp))
                     # Set a blank osrelease grain and fallback to 'Solaris'
                     # as the 'os' grain.
                     grains['os'] = grains['osfullname'] = 'Solaris'
@@ -1215,7 +1224,8 @@ def locale_info():
             grains['locale_info']['defaultlanguage'],
             grains['locale_info']['defaultencoding']
         ) = locale.getdefaultlocale()
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
         grains['locale_info']['defaultlanguage'] = 'unknown'
@@ -1483,7 +1493,8 @@ def zmqversion():
     try:
         import zmq
         return {'zmqversion': zmq.zmq_version()}
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         return {}
 
 

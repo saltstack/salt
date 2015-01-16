@@ -29,7 +29,8 @@ def is_jid(jid):
     try:
         int(jid)
         return True
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return False
 
 

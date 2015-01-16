@@ -334,7 +334,8 @@ class CkMinions(object):
                     )
                     try:
                         minions.remove(id_)
-                    except KeyError:
+                    except KeyError as exp:
+                        log.error('KeyError {0}'.format(exp))
                         pass
         return list(minions)
 
@@ -452,7 +453,8 @@ class CkMinions(object):
                       .format(results))
             try:
                 return list(eval(results))  # pylint: disable=W0123
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 log.error('Invalid compound target: {0}'.format(expr))
                 return []
         return list(minions)
@@ -476,7 +478,8 @@ class CkMinions(object):
                 try:
                     with salt.utils.fopen(datap, 'rb') as fp_:
                         grains = self.serial.load(fp_).get('grains', {})
-                except (AttributeError, IOError, OSError):
+                except (AttributeError, IOError, OSError) as exp:
+                    log.error('(AttributeError, IOError, OSError) {0}'.format(exp))
                     continue
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
@@ -517,7 +520,8 @@ class CkMinions(object):
                 minions = check_func(expr, delimiter, greedy)
             else:
                 minions = check_func(expr, greedy)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.exception(
                     'Failed matching available minions with {0} pattern: {1}'
                     .format(expr_form, expr))
@@ -579,7 +583,8 @@ class CkMinions(object):
                     vals.append(True)
                 else:
                     vals.append(False)
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 log.error('Invalid regular expression: {0}'.format(regex))
         return all(vals)
 
@@ -651,7 +656,8 @@ class CkMinions(object):
                                 for regex in ind[valid]:
                                     if self.match_check(regex, fun):
                                         return True
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             return False
         return False
 
@@ -793,6 +799,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
                 fdata = serial.load(fp_).get(fun)
                 if fdata:
                     ret[minion] = fdata
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             continue
     return ret

@@ -49,7 +49,8 @@ def _check_servers(servers):
 def _get_servers():
     try:
         return set(__salt__['ntp.get_servers']())
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         return set([False])
 
 

@@ -120,7 +120,8 @@ class NonBlockingPopen(subprocess.Popen):
                 x = msvcrt.get_osfhandle(self.stdin.fileno())
                 (errCode, written) = WriteFile(x, input)
                 #self._stdin_logger.debug(input.rstrip())
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 return self._close('stdin')
             except (subprocess.pywintypes.error, Exception) as why:
                 if why.args[0] in (109, errno.ESHUTDOWN):
@@ -141,7 +142,8 @@ class NonBlockingPopen(subprocess.Popen):
                     nAvail = maxsize
                 if nAvail > 0:
                     (errCode, read) = ReadFile(x, nAvail, None)
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 return self._close(which)
             except (subprocess.pywintypes.error, Exception) as why:
                 if why.args[0] in (109, errno.ESHUTDOWN):

@@ -366,7 +366,8 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             '__pillar__': __pillar__,
             '__grains__': __grains__
         })
-    except NameError:
+    except NameError as exp:
+        log.error('NameError {0}'.format(exp))
         pass
 
     # if salt_data is not True then we just return the global scope we've
@@ -396,7 +397,8 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             import_file = matches.group(1).strip()
             try:
                 imports = matches.group(2).split(',')
-            except IndexError:
+            except IndexError as exp:
+                log.error('IndexError {0}'.format(exp))
                 # if we don't have a third group in the matches object it means
                 # that we're importing everything
                 imports = None

@@ -70,7 +70,8 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     path = path[len(mountpoint):].lstrip(os.path.sep)
     try:
         minion, pushed_file = path.split(os.sep, 1)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return fnd
     if not _is_exposed(minion):
         return fnd
@@ -175,7 +176,8 @@ def file_hash(load, fnd):
             with salt.utils.fopen(cache_path, 'rb') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     log.debug(
                         'Fileserver attempted to read incomplete cache file. '
                         'Retrying.'

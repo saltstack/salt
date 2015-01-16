@@ -44,7 +44,8 @@ def config():
         with salt.utils.fopen(gfn, 'rb') as fp_:
             try:
                 return yaml.safe_load(fp_.read())
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.warn("Bad syntax in grains file! Skipping.")
                 return {}
     return {}

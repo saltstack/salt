@@ -709,11 +709,13 @@ def _validate_opts(opts):
             else:
                 try:
                     VALID_OPTS[key](val)
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     errors.append(
                         err.format(key, val, type(val), VALID_OPTS[key])
                     )
-                except TypeError:
+                except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                     errors.append(
                         err.format(key, val, type(val), VALID_OPTS[key])
                     )
@@ -2114,7 +2116,8 @@ def apply_master_config(overrides=None, defaults=None):
                 # serialization)
                 re.compile(regex)
                 opts['file_ignore_regex'].append(regex)
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: {0}'.format(
                         regex

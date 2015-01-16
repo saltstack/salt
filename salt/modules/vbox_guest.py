@@ -203,7 +203,8 @@ def _additions_remove_linux(**kwargs):
     try:
         return _additions_remove_linux_run(
                 os.path.join(_additions_dir(), 'uninstall.sh'))
-    except EnvironmentError:
+    except EnvironmentError as exp:
+        log.error('EnvironmentError {0}'.format(exp))
         return False
 
 
@@ -272,7 +273,8 @@ def additions_version():
     '''
     try:
         d = _additions_dir()
-    except EnvironmentError:
+    except EnvironmentError as exp:
+        log.error('EnvironmentError {0}'.format(exp))
         return False
     if d and len(os.listdir(d)) > 0:
         return re.sub(r'^{0}-'.format(_additions_dir_prefix), '',
@@ -345,5 +347,6 @@ def list_shared_folders_users():
     '''
     try:
         return __salt__['group.info'](_shared_folders_group)['members']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return []

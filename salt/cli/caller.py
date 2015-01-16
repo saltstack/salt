@@ -125,7 +125,8 @@ class ZeroMQCaller(object):
             try:
                 with salt.utils.fopen(proc_fn, 'w+b') as fp_:
                     fp_.write(self.serial.dumps(sdata))
-            except NameError:
+            except NameError as exp:
+                log.error('NameError {0}'.format(exp))
                 # Don't require msgpack with local
                 pass
             except IOError as exp:
@@ -148,7 +149,8 @@ class ZeroMQCaller(object):
             try:
                 ret['retcode'] = sys.modules[
                     func.__module__].__context__.get('retcode', 0)
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 ret['retcode'] = 1
         except (CommandExecutionError) as exc:
             msg = 'Error running \'{0}\': {1}\n'
@@ -182,7 +184,8 @@ class ZeroMQCaller(object):
             try:
                 ret['success'] = True
                 self.minion.returners['{0}.returner'.format(returner)](ret)
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass
 
         # return the job infos back up to the respective minion's master
@@ -192,7 +195,8 @@ class ZeroMQCaller(object):
                 mret = ret.copy()
                 mret['jid'] = 'req'
                 self.return_pub(mret)
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass
         # close raet channel here
         return ret

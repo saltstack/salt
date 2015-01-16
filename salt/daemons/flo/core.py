@@ -97,7 +97,8 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                 try:
                     os.unlink(path)
                     console.concise("Removed {0}\n".format(path))
-                except OSError:
+                except OSError as exp:
+                    log.error('OSError {0}'.format(exp))
                     console.concise("Failed removing {0}\n".format(path))
                     raise
 
@@ -866,7 +867,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         try:
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as exp:
+            log.error('(ValueError, IndexError) {0}'.format(exp))
             log.error('Received invalid message: {0}'.format(msg))
             return
 
@@ -922,7 +924,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         try:
             s_estate, s_yard, s_share = msg['route']['src']
             d_estate, d_yard, d_share = msg['route']['dst']
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as exp:
+            log.error('(ValueError, IndexError) {0}'.format(exp))
             log.error('Lane Router Received invalid message: {0}'.format(msg))
             return
 
@@ -1151,7 +1154,8 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
                           'reaped': self.reapeds}
                 try:
                     minions = states[state].value
-                except KeyError:
+                except KeyError as exp:
+                    log.error('KeyError {0}'.format(exp))
                     # error: wrong/unknown state requested
                     log.error('Lane Router Received invalid message: {0}'.format(msg))
                     return
@@ -1305,7 +1309,8 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         ret['id'] = mid
         try:
             oput = self.modules.value[ret['fun']].__outputter__
-        except (KeyError, AttributeError, TypeError):
+        except (KeyError, AttributeError, TypeError) as exp:
+            log.error('(KeyError, AttributeError, TypeError) {0}'.format(exp))
             pass
         else:
             if isinstance(oput, str):
@@ -1431,7 +1436,8 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                        'debug log for more info.').format(function_name, exc)
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())

@@ -397,5 +397,6 @@ def get_default_gateway():
             ).splitlines()
             if 'Default Gateway:' in x
         ))
-    except StopIteration:
+    except StopIteration as exp:
+        log.error('StopIteration {0}'.format(exp))
         raise CommandExecutionError('Unable to find default gateway')

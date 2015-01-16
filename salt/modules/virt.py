@@ -144,7 +144,8 @@ def __get_conn():
 
     try:
         conn = conn_func[hypervisor][0](*conn_func[hypervisor][1])
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
@@ -175,13 +176,15 @@ def _libvirt_creds():
         group = subprocess.Popen(g_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         group = 'root'
     try:
         user = subprocess.Popen(u_cmd,
             shell=True,
             stdout=subprocess.PIPE).communicate()[0].split('"')[1]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         user = 'root'
     return {'user': user, 'group': group}
 
@@ -320,7 +323,8 @@ def _qemu_image_info(path):
     for info, search in match_map.items():
         try:
             ret[info] = re.search(search, out).group(1)
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             continue
     return ret
 
@@ -951,7 +955,8 @@ def get_disks(vm_):
                 output.append(line)
             output = '\n'.join(output)
             disks[dev].update(yaml.safe_load(output))
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             disks[dev].update(yaml.safe_load('image: Does not exist'))
     return disks
 
@@ -1568,7 +1573,8 @@ def is_xen_hyper():
     try:
         if __grains__['virtual_subtype'] != 'Xen Dom0':
             return False
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         # virtual_subtype isn't set everywhere.
         return False
     try:
@@ -1593,7 +1599,8 @@ def is_hyper():
     '''
     try:
         import libvirt  # pylint: disable=import-error
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         # not a usable hypervisor without libvirt module
         return False
     return is_xen_hyper() or is_kvm_hyper()

@@ -140,7 +140,8 @@ def create(vm_):
 
     try:
         data = conn.create_node(**kwargs)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error(
             'Error creating {0} on GOGRID\n\n'
             'The following exception was thrown by libcloud when trying to '

@@ -144,7 +144,8 @@ def getUsage(api_key=None, api_version=None):
                 api_key = options.get('api_key')
             if not api_version:
                 api_version = options.get('api_version')
-        except (NameError, KeyError, AttributeError):
+        except (NameError, KeyError, AttributeError) as exp:
+            log.error('(NameError, KeyError, AttributeError) {0}'.format(exp))
             log.error('No Random.org api key found.')
             ret['message'] = 'No Random.org api key or api version found.'
             ret['res'] = False
@@ -218,7 +219,8 @@ def generateIntegers(api_key=None,
                 api_key = options.get('api_key')
             if not api_version:
                 api_version = options.get('api_version')
-        except (NameError, KeyError, AttributeError):
+        except (NameError, KeyError, AttributeError) as exp:
+            log.error('(NameError, KeyError, AttributeError) {0}'.format(exp))
             log.error('No Random.org api key found.')
             ret['message'] = 'No Random.org api key or api version found.'
             ret['res'] = False
@@ -333,7 +335,8 @@ def generateStrings(api_key=None,
                 api_key = options.get('api_key')
             if not api_version:
                 api_version = options.get('api_version')
-        except (NameError, KeyError, AttributeError):
+        except (NameError, KeyError, AttributeError) as exp:
+            log.error('(NameError, KeyError, AttributeError) {0}'.format(exp))
             log.error('No Random.org api key found.')
             ret['message'] = 'No Random.org api key or api version found.'
             ret['res'] = False
@@ -422,7 +425,8 @@ def generateUUIDs(api_key=None,
                 api_key = options.get('api_key')
             if not api_version:
                 api_version = options.get('api_version')
-        except (NameError, KeyError, AttributeError):
+        except (NameError, KeyError, AttributeError) as exp:
+            log.error('(NameError, KeyError, AttributeError) {0}'.format(exp))
             log.error('No Random.org api key found.')
             ret['message'] = 'No Random.org api key or api version found.'
             ret['res'] = False
@@ -504,7 +508,8 @@ def generateDecimalFractions(api_key=None,
                 api_key = options.get('api_key')
             if not api_version:
                 api_version = options.get('api_version')
-        except (NameError, KeyError, AttributeError):
+        except (NameError, KeyError, AttributeError) as exp:
+            log.error('(NameError, KeyError, AttributeError) {0}'.format(exp))
             log.error('No Random.org api key found.')
             ret['message'] = 'No Random.org api key or api version found.'
             ret['res'] = False
@@ -596,7 +601,8 @@ def generateGaussians(api_key=None,
                 api_key = options.get('api_key')
             if not api_version:
                 api_version = options.get('api_version')
-        except (NameError, KeyError, AttributeError):
+        except (NameError, KeyError, AttributeError) as exp:
+            log.error('(NameError, KeyError, AttributeError) {0}'.format(exp))
             log.error('No Random.org api key found.')
             ret['message'] = 'No Random.org api key or api version found.'
             ret['res'] = False
@@ -687,7 +693,8 @@ def generateBlobs(api_key=None,
                 api_key = options.get('api_key')
             if not api_version:
                 api_version = options.get('api_version')
-        except (NameError, KeyError, AttributeError):
+        except (NameError, KeyError, AttributeError) as exp:
+            log.error('(NameError, KeyError, AttributeError) {0}'.format(exp))
             log.error('No Random.org api key found.')
             ret['message'] = 'No Random.org api key or api version found.'
             ret['res'] = False

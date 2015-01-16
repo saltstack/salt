@@ -160,7 +160,8 @@ def query(conn_type, option, post_data=None):
         if 'data' not in returned_data:
             raise SaltCloudExecutionFailure
         return returned_data['data']
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error('Error in trying to process JSON')
         log.error(response)
 

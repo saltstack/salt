@@ -79,7 +79,8 @@ def _list(query=''):
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
             version_num = version_num[1:]
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         ret[name] = version_num
 
@@ -119,7 +120,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
         try:
             name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
             version_num = version_num[1:]
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         if not LIST_ACTIVE_ONLY or active == '(active)':
             __salt__['pkg_resource.add_pkg'](ret, name, version_num)

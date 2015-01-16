@@ -60,5 +60,6 @@ class Proxyconn(object):
         print('Proxy module {0} shutting down!!'.format(opts['id']))
         try:
             self.conn.close()
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass

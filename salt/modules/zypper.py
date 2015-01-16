@@ -85,7 +85,8 @@ def list_upgrades(refresh=True):
         try:
             status, repo, name, cur, avail, arch = \
                 [x.strip() for x in line.split('|')]
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as exp:
+            log.error('(ValueError, IndexError) {0}'.format(exp))
             continue
         if status == 'v':
             ret[name] = avail
@@ -139,7 +140,8 @@ def latest_version(*names, **kwargs):
                 key, val = line.split(':', 1)
                 key = key.lower()
                 val = val.strip()
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 continue
             else:
                 pkginfo[key] = val
@@ -260,7 +262,8 @@ def _get_repo_info(alias, repos_cfg=None):
             elif v == 'NONE':
                 meta[k] = None
         return meta
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return {}
 
 
@@ -396,7 +399,8 @@ def mod_repo(repo, **kwargs):
             # but this not always working (depends on Zypper version)
             doc = dom.parseString(__salt__['cmd.run'](('zypper -x ar {0} \'{1}\''.format(url, repo)),
                                                       output_loglevel='trace'))
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             # No XML out available, but it is still unknown the state of the result.
             pass
 

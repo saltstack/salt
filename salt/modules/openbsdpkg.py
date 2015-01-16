@@ -65,7 +65,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             continue
         pkgname += '--{0}'.format(flavor) if flavor else ''
         __salt__['pkg_resource.add_pkg'](ret, pkgname, pkgver)
@@ -101,7 +102,8 @@ def latest_version(*names, **kwargs):
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             continue
         pkgname += '--{0}'.format(flavor) if flavor else ''
         cur = pkgs.get(pkgname, '')

@@ -69,7 +69,8 @@ def minion_process(queue):
             try:
                 # check pid alive (Unix only trick!)
                 os.kill(parent_pid, 0)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 sys.exit(999)
     if not salt.utils.is_windows():
         thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
@@ -128,7 +129,8 @@ def salt_minion():
     while True:
         try:
             queue = multiprocessing.Queue()
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             # This breaks in containers
             minion = salt.cli.daemons.Minion()
             minion.start()
@@ -139,7 +141,8 @@ def salt_minion():
             process.join()
             try:
                 restart_delay = queue.get(block=False)
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 if process.exitcode == 0:
                     # Minion process ended naturally, Ctrl+C or --version
                     break
@@ -149,7 +152,8 @@ def salt_minion():
                 break
             # delay restart to reduce flooding and allow network resources to close
             time.sleep(restart_delay)
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as exp:
+            log.error('KeyboardInterrupt {0}'.format(exp))
             break
         # need to reset logging because new minion objects
         # cause extra log handlers to accumulate
@@ -168,7 +172,8 @@ def salt_syndic():
     try:
         syndic = salt.cli.daemons.Syndic()
         syndic.start()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as exp:
+        log.error('KeyboardInterrupt {0}'.format(exp))
         os.kill(pid, 15)
 
 
@@ -185,7 +190,8 @@ def salt_key():
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as exp:
+            log.error('(AttributeError, KeyError) {0}'.format(exp))
             hardcrash = False
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
@@ -207,7 +213,8 @@ def salt_cp():
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as exp:
+            log.error('(AttributeError, KeyError) {0}'.format(exp))
             hardcrash = False
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
@@ -231,7 +238,8 @@ def salt_call():
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as exp:
+            log.error('(AttributeError, KeyError) {0}'.format(exp))
             hardcrash = False
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
@@ -254,7 +262,8 @@ def salt_run():
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as exp:
+            log.error('(AttributeError, KeyError) {0}'.format(exp))
             hardcrash = False
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
@@ -277,7 +286,8 @@ def salt_ssh():
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as exp:
+            log.error('(AttributeError, KeyError) {0}'.format(exp))
             hardcrash = False
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
@@ -287,7 +297,8 @@ def salt_ssh():
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as exp:
+            log.error('(AttributeError, KeyError) {0}'.format(exp))
             hardcrash = False
         _handle_interrupt(
             SystemExit(err),
@@ -321,7 +332,8 @@ def salt_cloud():
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as exp:
+            log.error('(AttributeError, KeyError) {0}'.format(exp))
             hardcrash = False
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),
@@ -354,7 +366,8 @@ def salt_main():
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as exp:
+            log.error('(AttributeError, KeyError) {0}'.format(exp))
             hardcrash = False
         _handle_interrupt(
             SystemExit('\nExiting gracefully on Ctrl-c'),

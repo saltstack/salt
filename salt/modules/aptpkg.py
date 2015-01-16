@@ -128,7 +128,8 @@ def _get_repo(**kwargs):
     for key in ('fromrepo', 'repo'):
         try:
             return kwargs[key]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             pass
     return ''
 
@@ -149,7 +150,8 @@ def _has_dctrl_tools():
     '''
     try:
         return __context__['pkg._has_dctrl_tools']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         __context__['pkg._has_dctrl_tools'] = \
             __salt__['cmd.has_exec']('grep-available')
         return __context__['pkg._has_dctrl_tools']
@@ -161,7 +163,8 @@ def _get_virtual():
     '''
     try:
         return __context__['pkg._get_virtual']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         __context__['pkg._get_virtual'] = {}
         if HAS_APT:
             apt_cache = apt.cache.Cache()
@@ -975,7 +978,8 @@ def list_pkgs(versions_as_list=False,
         try:
             linetype, status, name, version_num, arch = \
                 [cols[x] for x in (0, 2, 3, 4, 5)]
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as exp:
+            log.error('(ValueError, IndexError) {0}'.format(exp))
             continue
         if __grains__.get('cpuarch', '') == 'x86_64':
             osarch = __grains__.get('osarch', '')
@@ -1163,7 +1167,8 @@ def _consolidate_repo_sources(sources):
     for file_ in delete_files:
         try:
             os.remove(file_)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
     return sources
 
@@ -1247,7 +1252,8 @@ def get_repo(repo, **kwargs):
                         repo_uri = '{0}{1}@{2}'.format(uri_match.group(1),
                                                        ppa_auth,
                                                        uri_match.group(2))
-        except SyntaxError:
+        except SyntaxError as exp:
+            log.error('SyntaxError {0}'.format(exp))
             raise CommandExecutionError(
                 'Error: repo {0!r} is not a well formatted definition'
                 .format(repo)
@@ -1313,7 +1319,8 @@ def del_repo(repo, **kwargs):
         deleted_from = dict()
         try:
             repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
-        except SyntaxError:
+        except SyntaxError as exp:
+            log.error('SyntaxError {0}'.format(exp))
             error_str = 'Error: repo {0!r} not a well formatted definition'
             return error_str.format(repo)
 
@@ -1329,7 +1336,8 @@ def del_repo(repo, **kwargs):
                     if not source.comps:
                         try:
                             sources.remove(source)
-                        except ValueError:
+                        except ValueError as exp:
+                            log.error('ValueError {0}'.format(exp))
                             pass
             # PPAs are special and can add deb-src where expand_ppa_line doesn't
             # always reflect this.  Lets just cleanup here for good measure
@@ -1344,7 +1352,8 @@ def del_repo(repo, **kwargs):
                     if not source.comps:
                         try:
                             sources.remove(source)
-                        except ValueError:
+                        except ValueError as exp:
+                            log.error('ValueError {0}'.format(exp))
                             pass
             sources.save()
         if deleted_from:
@@ -1360,7 +1369,8 @@ def del_repo(repo, **kwargs):
                                'removed.\n')
                         try:
                             os.remove(repo_file)
-                        except OSError:
+                        except OSError as exp:
+                            log.error('OSError {0}'.format(exp))
                             pass
                 ret += msg.format(repo, repo_file)
             # explicit refresh after a repo is deleted
@@ -1429,7 +1439,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
                 # fall back to urllib style
                 try:
                     owner_name, ppa_name = repo[4:].split('/', 1)
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     raise CommandExecutionError(
                         'Unable to get PPA info from argument. '
                         'Expected format "<PPA_OWNER>/<PPA_NAME>" '
@@ -1512,7 +1523,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
     mod_source = None
     try:
         repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
-    except SyntaxError:
+    except SyntaxError as exp:
+        log.error('SyntaxError {0}'.format(exp))
         raise SyntaxError(
             'Error: repo {0!r} not a well formatted definition'.format(repo)
         )

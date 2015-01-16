@@ -302,7 +302,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 ' * Setting up Salt daemons to execute tests',
                 top=False, width=getattr(self.options, 'output_columns', PNUM)
             )
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
@@ -402,7 +403,8 @@ def main():
         if false_count > 0:
             parser.finalize(1)
         parser.finalize(0)
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as exp:
+        log.error('KeyboardInterrupt {0}'.format(exp))
         print('\nCaught keyboard interrupt. Exiting.\n')
         exit(0)
 

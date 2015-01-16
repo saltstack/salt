@@ -153,7 +153,8 @@ class LiterateFormula(LiterateCoding):
             try:
                 with open(i, 'rb') as f:
                     return f.readlines()
-            except IOError:
+            except IOError as exp:
+                log.error('IOError {0}'.format(exp))
                 pass
 
         raise IOError("Could not find sls file '{0}'".format(sls_path))

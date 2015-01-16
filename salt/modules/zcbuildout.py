@@ -117,7 +117,8 @@ def _salt_callback(func, **kwargs):
                                              status=out.get('status', True),
                                              comment=out.get('comment', ''),
                                              out=out.get('out', out))
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             trace = traceback.format_exc(None)
             LOG.error(trace)
             _invalid(status)
@@ -326,7 +327,8 @@ def _has_old_distribute(python=sys.executable, runas=None, env=()):
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'distribute-0.6' in ret:
             old_distribute = True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         old_distribute = False
     return old_distribute
 
@@ -343,7 +345,8 @@ def _has_setuptools7(python=sys.executable, runas=None, env=()):
         ret = _Popen(cmd, runas=runas, env=env, output=True)
         if 'true' in ret.lower():
             new_st = True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         new_st = False
     return new_st
 
@@ -395,7 +398,8 @@ def _get_bootstrap_content(directory='.'):
                                 os.path.abspath(directory),
                                 'bootstrap.py')) as fic:
             oldcontent = fic.read()
-    except (OSError, IOError):
+    except (OSError, IOError) as exp:
+        log.error('(OSError, IOError) {0}'.format(exp))
         oldcontent = ''
     return oldcontent
 
@@ -432,7 +436,8 @@ def _get_buildout_ver(directory='.'):
             or '--distribute' in bcontent
         ):
             buildoutver = 1
-    except (OSError, IOError):
+    except (OSError, IOError) as exp:
+        log.error('(OSError, IOError) {0}'.format(exp))
         pass
     return buildoutver
 
@@ -521,7 +526,8 @@ def upgrade_bootstrap(directory='.',
                 salt.utils.fopen(os.path.join(
                     dbuild,
                     '{0}.updated_bootstrap'.format(buildout_ver)))
-            except (OSError, IOError):
+            except (OSError, IOError) as exp:
+                log.error('(OSError, IOError) {0}'.format(exp))
                 LOG.info('Bootstrap updated from repository')
                 data = _urlopen(booturl).read()
                 updated = True
@@ -540,7 +546,8 @@ def upgrade_bootstrap(directory='.',
                                                '{0}.updated_bootstrap'.format(
                                                    buildout_ver)), 'w') as afic:
                 afic.write('foo')
-    except (OSError, IOError):
+    except (OSError, IOError) as exp:
+        log.error('(OSError, IOError) {0}'.format(exp))
         if oldcontent:
             with salt.utils.fopen(b_py, 'w') as fic:
                 fic.write(oldcontent)

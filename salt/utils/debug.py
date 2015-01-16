@@ -49,7 +49,8 @@ def _handle_sigusr2(sig, stack):
     '''
     try:
         import yappi
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         return
     if yappi.is_running():
         yappi.stop()

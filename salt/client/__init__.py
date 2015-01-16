@@ -153,7 +153,8 @@ class LocalClient(object):
         try:
             with salt.utils.fopen(keyfile, 'r') as key:
                 return key.read()
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             # Fall back to eauth
             return ''
 
@@ -193,7 +194,8 @@ class LocalClient(object):
         if isinstance(timeout, string_types):
             try:
                 return int(timeout)
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 return self.opts['timeout']
         # Looks like the timeout is invalid, use config
         return self.opts['timeout']
@@ -321,7 +323,8 @@ class LocalClient(object):
                                 **kwargs)
         try:
             return pub_data['jid']
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return 0
 
     def cmd_subset(
@@ -598,7 +601,8 @@ class LocalClient(object):
                         continue
 
                     yield fn_ret
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                 msg = ('Exiting on Ctrl-C\nThis job\'s jid is:\n{0}\n'
                        'The minions may not have all finished running and any '
                        'remaining minions will return upon completion. To '
@@ -1287,7 +1291,8 @@ class LocalClient(object):
             try:
                 found.add(raw['id'])
                 ret = {raw['id']: {'ret': raw['return']}}
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 # Ignore other erroneous messages
                 continue
             if 'out' in raw:
@@ -1421,7 +1426,8 @@ class LocalClient(object):
 
         try:
             payload = channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as exp:
+            log.error('SaltReqTimeoutError {0}'.format(exp))
             log.error(
                 'Salt request timed out. If this error persists, '
                 'worker_threads may need to be increased.'

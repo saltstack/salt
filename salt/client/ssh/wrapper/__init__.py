@@ -71,7 +71,8 @@ class FunctionWrapper(object):
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 ret = {'_error': 'Failed to return clean data',
                        'stderr': stderr,
                        'stdout': stdout}

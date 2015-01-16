@@ -227,7 +227,8 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 try:
                     if client.cmd(name, 'test.ping', timeout=20).get(name, None):
                         seed = False
-                except (TypeError, KeyError):
+                except (TypeError, KeyError) as exp:
+                    log.error('(TypeError, KeyError) {0}'.format(exp))
                     pass
             seeds[name] = seed
             kv = salt.utils.virt.VirtKey(host, name, __opts__)

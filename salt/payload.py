@@ -36,7 +36,8 @@ except ImportError:
     # Fall back to msgpack_pure
     try:
         import msgpack_pure as msgpack
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
         LOG_FORMAT = '[%(levelname)-8s] %(message)s'
@@ -117,7 +118,8 @@ class Serial(object):
         '''
         try:
             return msgpack.dumps(msg)
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             if msgpack.version >= (0, 2, 0):
                 # Should support OrderedDict serialization, so, let's
                 # raise the exception

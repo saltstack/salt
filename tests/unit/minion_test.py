@@ -46,7 +46,8 @@ class MinionTestCase(TestCase):
             try:
                 testminion._prepare_minion_event_system()
                 result = True
-            except SaltSystemExit:
+            except SaltSystemExit as exp:
+                log.error('SaltSystemExit {0}'.format(exp))
                 result = False
         self.assertTrue(result)
 

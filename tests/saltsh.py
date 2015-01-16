@@ -117,7 +117,8 @@ def main():
             try:
                 import __builtin__
                 __builtin__._ = value
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 __builtins__._ = value
 
             salt.output.display_output(value, '', salt_vars['__opts__'])

@@ -464,7 +464,8 @@ class _BaseIP(_IPAddrBase):
         try:
             return (self._ip == other._ip
                     and self._version == other._version)
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             return NotImplemented
 
     def __ne__(self, other):
@@ -627,7 +628,8 @@ class _BaseNet(_IPAddrBase):
             return (self._version == other._version
                     and self.network == other.network
                     and int(self.netmask) == int(other.netmask))
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             if isinstance(other, _BaseIP):
                 return (self._version == other._version
                         and self._ip == other._ip)
@@ -1058,7 +1060,8 @@ class _BaseV4(object):
         for oc in octets:
             try:
                 packed_ip = (packed_ip << 8) | self._parse_octet(oc)
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 raise AddressValueError(ip_str)
         return packed_ip
 
@@ -1349,7 +1352,8 @@ class IPv4Network(_BaseV4, _BaseNet):
         bits = ip_str.split('.')
         try:
             parts = [int(x) for x in bits if int(x) in self._valid_mask_octets]
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return False
         if len(parts) != len(bits):
             return False
@@ -1379,7 +1383,8 @@ class IPv4Network(_BaseV4, _BaseNet):
             return True
         try:
             netmask = int(netmask)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return False
         return 0 <= netmask <= self._max_prefixlen
 
@@ -1442,7 +1447,8 @@ class _BaseV6(object):
             skip_index, = (
                 [i for i in range(1, len(parts) - 1) if not parts[i]] or
                 [None])
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             # Can't have more than one '::'
             raise AddressValueError(ip_str)
 
@@ -1483,7 +1489,8 @@ class _BaseV6(object):
                 ip_int <<= 16
                 ip_int |= self._parse_hextet(parts[i])
             return ip_int
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             raise AddressValueError(ip_str)
 
     def _parse_hextet(self, hextet_str):
@@ -1901,7 +1908,8 @@ class IPv6Network(_BaseV6, _BaseNet):
         """
         try:
             prefixlen = int(prefixlen)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return False
         return 0 <= prefixlen <= self._max_prefixlen
 

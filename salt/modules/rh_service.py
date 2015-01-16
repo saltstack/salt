@@ -64,7 +64,8 @@ def __virtual__():
                 return False
         try:
             osrelease = float(__grains__.get('osrelease', 0))
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return False
         if __grains__['os'] == 'Fedora':
             if osrelease > 15:
@@ -122,7 +123,8 @@ def _service_is_sysv(name):
         # Look for user-execute bit in file mode.
         return bool(os.stat(
             os.path.join('/etc/init.d', name)).st_mode & stat.S_IXUSR)
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         return False
 
 
@@ -168,7 +170,8 @@ def _chkconfig_is_enabled(name, runlevel=None):
                     return True
                 elif len(cols) < 3 and cols[1] and cols[1] == 'on':
                     return True
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             pass
     return False
 

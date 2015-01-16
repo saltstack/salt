@@ -69,7 +69,8 @@ def __virtual__(retry=False):
     try:
         import reclass
         return __virtualname__
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         if retry:
             return False
 

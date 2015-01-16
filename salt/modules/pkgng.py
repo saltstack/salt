@@ -80,7 +80,8 @@ def _get_version(name, results):
             continue
         try:
             pkgname, pkgver = line.rsplit('-', 1)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         if pkgname == name:
             return pkgver
@@ -342,7 +343,8 @@ def list_pkgs(versions_as_list=False,
         try:
             pkg, origin = line.split()
             pkgname, pkgver = pkg.rsplit('-', 1)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkgname, pkgver)
         origins[pkgname] = origin

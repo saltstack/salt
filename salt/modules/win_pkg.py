@@ -201,7 +201,8 @@ def version(*names, **kwargs):
                 if len(val) > 0:
                     try:
                         ret[reverse_dict[num]] = val
-                    except KeyError:
+                    except KeyError as exp:
+                        log.error('KeyError {0}'.format(exp))
                         ret[num] = val
             return ret
         return dict([(x, '') for x in names])
@@ -356,7 +357,8 @@ def _get_reg_software():
                     reg_key,
                     0,
                     win32con.KEY_READ)
-            except Exception:
+            except Exception as exp:
+        log.error('Exception {0}'.format(exp))
                 pass
                 #Unsinstall key may not exist for all users
             for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
@@ -375,7 +377,8 @@ def _get_reg_software():
                     "DisplayName")
                 try:
                     prd_name = prd_name.decode(encoding)
-                except Exception:
+                except Exception as exp:
+        log.error('Exception {0}'.format(exp))
                     pass
                 prd_ver = _get_reg_value(
                     reg_hive,
@@ -450,7 +453,8 @@ def _get_reg_value(reg_hive, reg_key, value_name=''):
         value_data, value_type = win32api.RegQueryValueEx(key_handle,
                                                           value_name)
         win32api.RegCloseKey(key_handle)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         value_data = 'Not Found'
     return value_data
 

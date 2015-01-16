@@ -37,7 +37,8 @@ def check_ip(addr):
     '''
     try:
         addr = addr.rsplit('/', 1)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # Non-string passed
         return False
 
@@ -51,10 +52,12 @@ def check_ip(addr):
         try:
             if 1 <= int(addr[1]) <= 32:
                 return True
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             # Non-int subnet notation
             return False
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             # No subnet notation used (i.e. just an IPv4 address)
             return True
 
@@ -68,10 +71,12 @@ def check_ip(addr):
         try:
             if 8 <= int(addr[1]) <= 128:
                 return True
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             # Non-int subnet notation
             return False
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             # No subnet notation used (i.e. just an IPv4 address)
             return True
 
@@ -225,7 +230,8 @@ def SPF(domain, record='SPF', nameserver=None):
     for section in sections[1:]:
         try:
             mechanism, address = spf_re.match(section).groups()
-        except AttributeError:
+        except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
             # Regex was not matched
             continue
         if mechanism == 'include':

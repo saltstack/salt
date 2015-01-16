@@ -101,7 +101,8 @@ def update(clear=False):
                 if not _mine_function_available(func):
                     continue
                 data[func] = __salt__[func]()
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.error('Function {0} in mine_functions failed to execute'
                       .format(func))
             continue
@@ -141,7 +142,8 @@ def send(func, *args, **kwargs):
     for ind, _ in enumerate(arg_data.get('args', [])):
         try:
             func_data[arg_data['args'][ind]] = args[ind]
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             # Safe error, arg may be in kwargs
             pass
     f_call = salt.utils.format_call(__salt__[mine_func], func_data)

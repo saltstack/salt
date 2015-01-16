@@ -199,7 +199,8 @@ class TestDaemon(object):
                     '~~~~~~~ Versions Report ', inline=True,
                     width=getattr(self.parser.options, 'output_columns', PNUM)
                 )
-            except TypeError:
+            except TypeError as exp:
+                log.error('TypeError {0}'.format(exp))
                 print_header('~~~~~~~ Versions Report ', inline=True)
 
             print('\n'.join(salt.version.versions_report()))
@@ -209,7 +210,8 @@ class TestDaemon(object):
                     '~~~~~~~ Minion Grains Information ', inline=True,
                     width=getattr(self.parser.options, 'output_columns', PNUM)
                 )
-            except TypeError:
+            except TypeError as exp:
+                log.error('TypeError {0}'.format(exp))
                 print_header('~~~~~~~ Minion Grains Information ', inline=True)
 
             grains = self.client.cmd('minion', 'grains.items')
@@ -223,7 +225,8 @@ class TestDaemon(object):
                 '=', sep='=', inline=True,
                 width=getattr(self.parser.options, 'output_columns', PNUM)
             )
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             print_header('', sep='=', inline=True)
 
         try:
@@ -640,12 +643,14 @@ class TestDaemon(object):
         try:
             salt.utils.process.clean_proc(self.syndic_process, wait_for_kill=50)
             self.syndic_process.join()
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             pass
         try:
             salt.utils.process.clean_proc(self.smaster_process, wait_for_kill=50)
             self.smaster_process.join()
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             pass
         self._exit_mockbin()
         self._exit_ssh()
@@ -753,7 +758,8 @@ class TestDaemon(object):
         path_items = path.split(os.pathsep)
         try:
             path_items.remove(MOCKBIN)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             pass
         os.environ['PATH'] = os.pathsep.join(path_items)
 
@@ -880,7 +886,8 @@ class TestDaemon(object):
                     width=getattr(self.parser.options, 'output_columns', PNUM)
 
                 )
-            except TypeError:
+            except TypeError as exp:
+                log.error('TypeError {0}'.format(exp))
                 print_header('=', sep='=', inline=True)
             raise SystemExit()
 
@@ -942,7 +949,8 @@ class TestDaemon(object):
                     # Synced!
                     try:
                         syncing.remove(name)
-                    except KeyError:
+                    except KeyError as exp:
+                        log.error('KeyError {0}'.format(exp))
                         print(
                             ' {LIGHT_RED}*{ENDC} {0} already synced??? '
                             '{1}'.format(name, output, **self.colors)
@@ -1302,7 +1310,8 @@ class SSHCase(ShellCase):
         ret = self.run_ssh(self._arg_str(function, arg))
         try:
             return json.loads(ret)['localhost']
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             return ret
 
 
@@ -1311,7 +1320,8 @@ class SaltReturnAssertsMixIn(object):
     def assertReturnSaltType(self, ret):
         try:
             self.assertTrue(isinstance(ret, dict))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             raise AssertionError(
                 '{0} is not dict. Salt returned: {1}'.format(
                     type(ret).__name__, ret
@@ -1322,7 +1332,8 @@ class SaltReturnAssertsMixIn(object):
         self.assertReturnSaltType(ret)
         try:
             self.assertNotEqual(ret, {})
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             raise AssertionError(
                 '{} is equal to {}. Salt returned an empty dictionary.'
             )
@@ -1346,7 +1357,8 @@ class SaltReturnAssertsMixIn(object):
         for part in ret.itervalues():
             try:
                 ret_item = part[okeys.pop(0)]
-            except (KeyError, TypeError):
+            except (KeyError, TypeError) as exp:
+                log.error('(KeyError, TypeError) {0}'.format(exp))
                 raise AssertionError(
                     'Could not get ret{0} from salt\'s return: {1}'.format(
                         ''.join(['[{0!r}]'.format(k) for k in keys]), part
@@ -1355,7 +1367,8 @@ class SaltReturnAssertsMixIn(object):
             while okeys:
                 try:
                     ret_item = ret_item[okeys.pop(0)]
-                except (KeyError, TypeError):
+                except (KeyError, TypeError) as exp:
+                log.error('(KeyError, TypeError) {0}'.format(exp))
                     raise AssertionError(
                         'Could not get ret{0} from salt\'s return: {1}'.format(
                             ''.join(['[{0!r}]'.format(k) for k in keys]), part
@@ -1366,7 +1379,8 @@ class SaltReturnAssertsMixIn(object):
     def assertSaltTrueReturn(self, ret):
         try:
             self.assertTrue(self.__getWithinSaltReturn(ret, 'result'))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
@@ -1374,7 +1388,8 @@ class SaltReturnAssertsMixIn(object):
                         **(ret.values()[0])
                     )
                 )
-            except (AttributeError, IndexError):
+            except (AttributeError, IndexError) as exp:
+                log.error('(AttributeError, IndexError) {0}'.format(exp))
                 raise AssertionError(
                     'Failed to get result. Salt Returned:\n{0}'.format(
                         pprint.pformat(ret)
@@ -1384,7 +1399,8 @@ class SaltReturnAssertsMixIn(object):
     def assertSaltFalseReturn(self, ret):
         try:
             self.assertFalse(self.__getWithinSaltReturn(ret, 'result'))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
@@ -1392,7 +1408,8 @@ class SaltReturnAssertsMixIn(object):
                         **(ret.values()[0])
                     )
                 )
-            except (AttributeError, IndexError):
+            except (AttributeError, IndexError) as exp:
+                log.error('(AttributeError, IndexError) {0}'.format(exp))
                 raise AssertionError(
                     'Failed to get result. Salt Returned: {0}'.format(ret)
                 )
@@ -1400,7 +1417,8 @@ class SaltReturnAssertsMixIn(object):
     def assertSaltNoneReturn(self, ret):
         try:
             self.assertIsNone(self.__getWithinSaltReturn(ret, 'result'))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             log.info('Salt Full Return:\n{0}'.format(pprint.pformat(ret)))
             try:
                 raise AssertionError(
@@ -1408,7 +1426,8 @@ class SaltReturnAssertsMixIn(object):
                         **(ret.values()[0])
                     )
                 )
-            except (AttributeError, IndexError):
+            except (AttributeError, IndexError) as exp:
+                log.error('(AttributeError, IndexError) {0}'.format(exp))
                 raise AssertionError(
                     'Failed to get result. Salt Returned: {0}'.format(ret)
                 )

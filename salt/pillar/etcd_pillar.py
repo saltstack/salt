@@ -107,7 +107,8 @@ def ext_pillar(minion_id,
 
     try:
         pillar = salt.utils.etcd_util.tree(client, path)
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         log.error('No such key in etcd profile {0}: {1}'.format(profile, path))
         pillar = {}
 

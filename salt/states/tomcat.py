@@ -120,7 +120,8 @@ def war_deployed(name,
                 status = False
             else:
                 return ret
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         deploy = True
         ret['changes']['deploy'] = ('deployed {0} in version {1}'.format(name,
             version))
@@ -272,7 +273,8 @@ def undeployed(name,
     try:
         version = __salt__['tomcat.ls'](url, timeout)[name]['version']
         ret['changes'] = {'undeploy': version}
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return ret
 
     # Test

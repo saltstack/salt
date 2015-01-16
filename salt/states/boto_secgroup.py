@@ -255,7 +255,8 @@ def _get_rule_changes(rules, _rules):
     for rule in rules:
         try:
             ip_protocol = rule.get('ip_protocol')
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             raise SaltInvocationError('ip_protocol, to_port, and from_port are'
                                       ' required arguments for security group'
                                       ' rules.')

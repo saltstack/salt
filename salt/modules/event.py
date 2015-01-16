@@ -43,7 +43,8 @@ def fire_master(data, tag, preload=None):
                 'cmd': '_minion_event'}
         try:
             channel.send(load)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
         return True
 
@@ -61,7 +62,8 @@ def fire_master(data, tag, preload=None):
         channel = salt.transport.Channel.factory(__opts__)
         try:
             channel.send(load)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
         return True
     else:
@@ -70,7 +72,8 @@ def fire_master(data, tag, preload=None):
         try:
             return salt.utils.event.MinionEvent(__opts__).fire_event(
                 {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             return False
 
 
@@ -92,7 +95,8 @@ def fire(data, tag):
                                            listen=False)
 
         return event.fire_event(data, tag)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return False
 
 

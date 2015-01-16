@@ -292,7 +292,8 @@ def auth_keys(user=None, config='.ssh/authorized_keys'):
         full = None
         try:
             full = _get_config_file(u, config)
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             pass
 
         if full and os.path.isfile(full):
@@ -622,7 +623,8 @@ def _parse_openssh_output(lines):
             continue
         try:
             hostname, enc, key = line.split()
-        except ValueError:  # incorrect format
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         fingerprint = _fingerprint(key)
         if not fingerprint:

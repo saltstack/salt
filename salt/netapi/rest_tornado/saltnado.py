@@ -337,7 +337,8 @@ def get_batch_size(batch, num_minions):
                 return int(res)
         else:
             return int(batch)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         print(('Invalid batch data sent: {0}\nData must be in the form'
                'of %10, 10% or 3').format(batch))
 
@@ -466,9 +467,11 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
 
         try:
             return ct_in_map[self.request.headers['Content-Type']](data)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             self.send_error(406)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             self.send_error(400)
 
     def _get_lowstate(self):
@@ -604,7 +607,8 @@ class SaltAuthHandler(BaseSaltAPIHandler):
                      'eauth': self.get_arguments('eauth')[0],
                      }
         # if any of the args are missing, its a bad request
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             self.send_error(400)
             return
 
@@ -621,11 +625,13 @@ class SaltAuthHandler(BaseSaltAPIHandler):
             perms = self.application.opts['external_auth'][token['eauth']][token['name']]
 
         # If we can't find the creds, then they aren't authorized
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             self.send_error(401)
             return
 
-        except (AttributeError, IndexError):
+        except (AttributeError, IndexError) as exp:
+            log.error('(AttributeError, IndexError) {0}'.format(exp))
             logging.debug("Configuration for external_auth malformed for "
                           "eauth '{0}', and user '{1}'."
                           .format(token.get('eauth'), token.get('name')), exc_info=True)
@@ -846,7 +852,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             finished_future = yield Any(inflight_futures)
             try:
                 event = finished_future.result()
-            except TimeoutException:
+            except TimeoutException as exp:
+                log.error('TimeoutException {0}'.format(exp))
                 break
             chunk_ret[event['data']['id']] = event['data']['return']
             inflight_futures.remove(finished_future)
@@ -868,7 +875,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                                                       [],
                                                       expr_form=f_call['kwargs']['expr_form'])
             pub_data = self.saltclients['local'](*f_call.get('args', ()), **f_call.get('kwargs', {}))
-        except EauthAuthenticationError:
+        except EauthAuthenticationError as exp:
+            log.error('EauthAuthenticationError {0}'.format(exp))
             raise tornado.gen.Return('Not authorized to run this job')
 
         # if the job didn't publish, lets not wait around for nothing
@@ -892,7 +900,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             try:
                 event = event_future.result()
             # if you hit a timeout, just stop waiting ;)
-            except TimeoutException:
+            except TimeoutException as exp:
+                log.error('TimeoutException {0}'.format(exp))
                 break
             # If someone returned from the ping, and they are new-- add to minions_remaining
             if event_future == ping_event:
@@ -906,7 +915,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                 # its possible to get a return that wasn't in the minion_remaining list
                 try:
                     minions_remaining.remove(event['data']['id'])
-                except ValueError:
+                except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                     pass
                 ret_event = self.application.event_listener.get_event(self, tag=ret_tag)
 
@@ -936,7 +946,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
             # only return the return data
             raise tornado.gen.Return(event['data']['return'])
-        except TimeoutException:
+        except TimeoutException as exp:
+            log.error('TimeoutException {0}'.format(exp))
             raise tornado.gen.Return('Timeout waiting for runner to execute')
 
 
@@ -1363,7 +1374,8 @@ class EventsSaltAPIHandler(SaltAPIHandler):
                 self.write(u'tag: {0}\n'.format(event.get('tag', '')))
                 self.write(u'data: {0}\n\n'.format(json.dumps(event)))
                 self.flush()
-            except TimeoutException:
+            except TimeoutException as exp:
+                log.error('TimeoutException {0}'.format(exp))
                 break
 
         self.finish()

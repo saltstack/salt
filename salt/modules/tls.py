@@ -198,13 +198,15 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
                     key = OpenSSL.crypto.load_privatekey(
                         OpenSSL.crypto.FILETYPE_PEM, fic2.read())
                     bits = key.bits()
-                except Exception:
+                except Exception as exp:
+        log.error('Exception {0}'.format(exp))
                     bits = 2048
                 try:
                     days = (datetime.datetime.strptime(cert.get_notAfter(),
                                                        '%Y%m%d%H%M%SZ') -
                             datetime.datetime.now()).days
-                except (ValueError, TypeError):
+                except (ValueError, TypeError) as exp:
+                    log.error('(ValueError, TypeError) {0}'.format(exp))
                     days = 365
                 subj = cert.get_subject()
                 create_ca(
@@ -831,7 +833,8 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
             ext = OpenSSL.crypto.X509Extension.__new__(OpenSSL.crypto.X509Extension)
             ext._extension = OpenSSL._util.lib.sk_X509_EXTENSION_value(native_exts_obj, i)
             exts.append(ext)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error('Support for extensions is not available, upgrade PyOpenSSL')
 
     cert = OpenSSL.crypto.X509()

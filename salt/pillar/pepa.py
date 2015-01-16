@@ -312,7 +312,8 @@ if __name__ == '__main__':
         try:
             import colorlog
             formatter = colorlog.ColoredFormatter("[%(log_color)s%(levelname)-8s%(reset)s] %(log_color)s%(message)s%(reset)s")
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             formatter = logging.Formatter("[%(levelname)-8s] %(message)s")
     else:
         formatter = logging.Formatter("[%(levelname)-8s] %(message)s")
@@ -501,7 +502,8 @@ def validate(output, resource):
     '''
     try:
         import cerberus
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         log.critical('You need module cerberus in order to use validation')
         return
 
@@ -619,7 +621,8 @@ if __name__ == '__main__':
             import pygments.lexers
             import pygments.formatters
             print(pygments.highlight(yaml.safe_dump(result), pygments.lexers.YamlLexer(), pygments.formatters.TerminalFormatter()))
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             print(yaml.safe_dump(result, indent=4, default_flow_style=False))
     else:
         print(yaml.safe_dump(result, indent=4, default_flow_style=False))

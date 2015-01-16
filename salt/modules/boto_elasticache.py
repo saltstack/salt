@@ -164,7 +164,8 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None,
         log.error(msg)
         log.debug(e)
         return False
-    except (IndexError, TypeError, KeyError):
+    except (IndexError, TypeError, KeyError) as exp:
+        log.error('(IndexError, TypeError, KeyError) {0}'.format(exp))
         msg = 'Failed to get cache subnet group {0} (2).'.format(name)
         log.error(msg)
         return False

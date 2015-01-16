@@ -71,7 +71,8 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
             key = self.construct_object(key_node, deep=deep)
             try:
                 hash(key)
-            except TypeError:
+            except TypeError as exp:
+                log.error('TypeError {0}'.format(exp))
                 err = ('While constructing a mapping {0} found unacceptable '
                        'key {1}').format(node.start_mark, key_node.start_mark)
                 raise ConstructorError(err)

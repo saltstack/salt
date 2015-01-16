@@ -176,7 +176,8 @@ def version(*names, **kwargs):
     if len(ret) == 1 and not pkg_glob:
         try:
             return next(ret.itervalues())
-        except StopIteration:
+        except StopIteration as exp:
+            log.error('StopIteration {0}'.format(exp))
             return ''
     return ret
 

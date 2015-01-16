@@ -507,13 +507,15 @@ def in_pack(pack, name):
             try:
                 if name == chunk['name']:
                     return True
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 pass
     elif isinstance(pack, dict):
         try:
             if name == pack['name']:
                 return True
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             pass
     return False
 
@@ -569,7 +571,8 @@ class Loader(object):
         try:
             fn_, path, desc = imp.find_module(name, self.module_dirs)
             mod = imp.load_module(name, fn_, path, desc)
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             if self.opts.get('cython_enable', True) is True:
                 # The module was not found, try to find a cython module
                 try:
@@ -585,7 +588,8 @@ class Loader(object):
                                 )
                                 return getattr(
                                     mod, fun[fun.rindex('.') + 1:])(*arg)
-                except ImportError:
+                except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                     log.info('Cython is enabled in options though it\'s not '
                              'present in the system path. Skipping Cython '
                              'modules.')
@@ -626,7 +630,8 @@ class Loader(object):
                 import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 log.info('Cython is enabled in the options but not present '
                          'in the system path. Skipping Cython modules.')
         try:
@@ -644,7 +649,8 @@ class Loader(object):
                         name
                     ), fn_, path, desc
                 )
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             log.debug(
                 'Failed to import {0} {1}:\n'.format(
                     self.tag, name
@@ -652,7 +658,8 @@ class Loader(object):
                 exc_info=True
             )
             return mod
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.error(
                 'Failed to import {0} {1}, this is due most likely to a '
                 'syntax error:\n'.format(
@@ -673,7 +680,8 @@ class Loader(object):
                 for chunk in pack:
                     try:
                         setattr(mod, chunk['name'], chunk['value'])
-                    except KeyError:
+                    except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                         pass
             else:
                 setattr(mod, pack['name'], pack['value'])
@@ -683,7 +691,8 @@ class Loader(object):
         if inspect.isfunction(module_init):
             try:
                 module_init(self.opts)
-            except TypeError:
+            except TypeError as exp:
+                log.error('TypeError {0}'.format(exp))
                 pass
         funcs = {}
         module_name = mod.__name__[mod.__name__.rindex('.') + 1:]
@@ -733,7 +742,8 @@ class Loader(object):
             context = sys.modules[
                 functions[next(iter(functions.keys()))].__module__
             ].__context__
-        except (AttributeError, StopIteration):
+        except (AttributeError, StopIteration) as exp:
+            log.error('(AttributeError, StopIteration) {0}'.format(exp))
             context = {}
         mod.__context__ = context
         return funcs
@@ -778,7 +788,8 @@ class Loader(object):
                             continue
                         try:
                             setattr(mod, chunk['name'], chunk['value'])
-                        except KeyError:
+                        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                             pass
                 else:
                     setattr(mod, pack['name'], pack['value'])
@@ -788,7 +799,8 @@ class Loader(object):
             if inspect.isfunction(module_init):
                 try:
                     module_init(self.opts)
-                except TypeError:
+                except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                     pass
 
             # Trim the full pathname to just the module
@@ -872,7 +884,8 @@ class Loader(object):
                 import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 cython_enabled = True
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 log.info('Cython is enabled in the options but not present '
                          'in the system path. Skipping Cython modules.')
         for mod_dir in self.module_dirs:
@@ -989,7 +1002,8 @@ class Loader(object):
                                     if submodule.__name__.startswith(smname) and \
                                             os.path.isfile(smfile):
                                         reload(submodule)
-                                except AttributeError:
+                                except AttributeError as exp:
+                                    log.error('AttributeError {0}'.format(exp))
                                     continue
                 except ImportError as error:
                     if failhard:
@@ -1199,7 +1213,8 @@ class Loader(object):
                     if virtualname is not True:
                         module_name = virtualname
 
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             # Key errors come out of the virtual function when passing
             # in incomplete grains sets, these can be safely ignored
             # and logged to debug, still, it includes the traceback to
@@ -1209,7 +1224,8 @@ class Loader(object):
                 exc_info=True
             )
 
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             # If the module throws an exception during __virtual__()
             # then log the information and continue to the next.
             log.error(
@@ -1305,7 +1321,8 @@ class Loader(object):
                 continue
             try:
                 ret = fun()
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 log.critical(
                     'Failed to load grains defined in grain file {0} in '
                     'function {1}, error:\n'.format(
@@ -1327,7 +1344,8 @@ class Loader(object):
                 with salt.utils.fopen(cfn, 'w+b') as fp_:
                     try:
                         self.serial.dump(grains_data, fp_)
-                    except TypeError:
+                    except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                         # Can't serialize pydsl
                         pass
 

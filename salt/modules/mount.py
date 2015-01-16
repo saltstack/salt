@@ -181,7 +181,8 @@ def active(extended=False):
         if extended:
             try:
                 _active_mountinfo(ret)
-            except CommandExecutionError:
+            except CommandExecutionError as exp:
+                log.error('CommandExecutionError {0}'.format(exp))
                 _active_mounts(ret)
         else:
             _active_mounts(ret)

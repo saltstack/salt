@@ -55,7 +55,8 @@ class Batch(object):
                     return int(res)
             else:
                 return int(self.opts['batch'])
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             if not self.quiet:
                 print_cli('Invalid batch data sent: {0}\nData must be in the '
                           'form of %10, 10% or 3'.format(self.opts['batch']))
@@ -135,7 +136,8 @@ class Batch(object):
                             parts.update({part['id']: part})
                         else:
                             parts.update(part)
-                except StopIteration:
+                except StopIteration as exp:
+                    log.error('StopIteration {0}'.format(exp))
                     # if a iterator is done:
                     # - set it to inactive
                     # - add minions that have not responded to parts{}

@@ -42,10 +42,12 @@ def _config(key, mandatory=True):
     '''
     try:
         value = __opts__['auth.ldap.{0}'.format(key)]
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         try:
             value = __defopts__['auth.ldap.{0}'.format(key)]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             if mandatory:
                 msg = 'missing auth.ldap.{0} in master config'.format(key)
                 raise SaltInvocationError(msg)

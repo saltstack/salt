@@ -148,7 +148,8 @@ def _netinfo_openbsd():
         try:
             user, cmd, pid, _, details = line.split(None, 4)
             ipv6, tcp, udp, remote_addr = _fstat_re.match(details).groups()
-        except (ValueError, AttributeError):
+        except (ValueError, AttributeError) as exp:
+            log.error('(ValueError, AttributeError) {0}'.format(exp))
             # Line either doesn't have the right number of columns, or the
             # regex which looks for address information did not match. Either
             # way, ignore this line and continue on to the next one.
@@ -278,7 +279,8 @@ def _netstat_bsd():
             # Make a pointer to the info for this connection for easier
             # reference below
             ptr = netinfo[local][remote][proto]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             continue
         # Get the pid-to-ppid mappings for this connection
         conn_ppid = dict((x, y) for x, y in ppid.items() if x in ptr)
@@ -288,7 +290,8 @@ def _netstat_bsd():
             master_pid = next(iter(
                 x for x, y in conn_ppid.items() if y not in ptr
             ))
-        except StopIteration:
+        except StopIteration as exp:
+            log.error('StopIteration {0}'.format(exp))
             continue
         ret[idx]['user'] = ptr[master_pid]['user']
         ret[idx]['program'] = '/'.join((master_pid, ptr[master_pid]['cmd']))
@@ -496,7 +499,8 @@ def traceroute(host):
         for t in traceroute_version_raw:
             try:
                 traceroute_version.append(int(t))
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 traceroute_version.append(t)
 
         if len(traceroute_version) < 3:
@@ -504,7 +508,8 @@ def traceroute(host):
 
         log.debug('traceroute_version: {0}'.format(traceroute_version))
 
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         traceroute_version = [0, 0, 0]
 
     for line in out.splitlines():
@@ -516,7 +521,8 @@ def traceroute(host):
         if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]):
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
-            except IndexError:
+            except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
                 traceline = re.findall(r'\s*(\d*)\s+(\*\s+\*\s+\*)', line)[0]
 
             log.debug('traceline: {0}'.format(traceline))
@@ -536,7 +542,8 @@ def traceroute(host):
                     }
                     for x in range(0, len(delays)):
                         result['ms{0}'.format(x + 1)] = delays[x]
-            except IndexError:
+            except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
                 result = {}
 
         elif (traceroute_version[0] >= 2 and traceroute_version[2] >= 14
@@ -796,7 +803,8 @@ def mod_hostname(hostname):
 
             try:
                 host[host.index(o_hostname)] = hostname
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 pass
 
             fh.write('\t'.join(host) + '\n')
@@ -906,7 +914,8 @@ def connect(host, port=None, **kwargs):
         ret['result'] = False
         try:
             errno, errtxt = e
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
         else:
             ret['comment'] = '{0}'.format(errtxt)

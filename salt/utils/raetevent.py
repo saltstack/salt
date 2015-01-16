@@ -129,7 +129,8 @@ class RAETEvent(object):
                 self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
                 self.stack.serviceAll()
                 self.connected = True
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass
 
     def connect_pull(self, timeout=1000):
@@ -243,7 +244,8 @@ class RAETEvent(object):
                                         'error',
                                         load['fun']],
                                        'job'))
-                except Exception:
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
                     pass
 
     def destroy(self):
@@ -279,5 +281,6 @@ class PresenceEvent(MasterEvent):
                 self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
                 self.stack.serviceAll()
                 self.connected = True
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass

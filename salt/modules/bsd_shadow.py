@@ -45,7 +45,8 @@ def info(name):
         ret = {
             'name': data.pw_name,
             'passwd': data.pw_passwd}
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return {
             'name': '',
             'passwd': ''}
@@ -60,7 +61,8 @@ def info(name):
         cmd += '| cut -f6,7 -d:'
         try:
             change, expire = __salt__['cmd.run_all'](cmd, python_shell=True)['stdout'].split(':')
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             pass
         else:
             ret['change'] = int(change)

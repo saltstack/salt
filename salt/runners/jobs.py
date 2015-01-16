@@ -109,7 +109,8 @@ def lookup_jid(jid,
 
     try:
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         return 'Requested returner could not be loaded. No JIDs could be retrieved.'
     for minion in data:
         if display_progress:
@@ -175,7 +176,8 @@ def list_jobs(ext_source=None,
 
     try:
         ret = mminion.returners['{0}.get_jids'.format(returner)]()
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         return 'Error: Requested returner could not be loaded. No jobs could be retrieved.'
 
     if search_metadata:
@@ -243,7 +245,8 @@ def print_job(jid, ext_source=None, outputter=None):
     try:
         job = mminion.returners['{0}.get_load'.format(returner)](jid)
         ret[jid] = _format_jid_instance(jid, job)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         ret[jid]['Result'] = ('Requested returner {0} is not available. Jobs cannot be retrieved. '
             'Check master log for details.'.format(returner))
         return ret

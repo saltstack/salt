@@ -370,5 +370,6 @@ class AsyncClientMixin(object):
                 yield suffix, raw['data']
                 if tag_parts[3] == 'ret':
                     raise StopIteration()  # we are done, we got return
-            except (IndexError, KeyError):
+            except (IndexError, KeyError) as exp:
+                log.error('(IndexError, KeyError) {0}'.format(exp))
                 continue

@@ -205,7 +205,8 @@ def get_jids():
         # See if the identifier is an int..
         try:
             int(row['id'])
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
 
         # Check the correct number of digits by simply casting to str and

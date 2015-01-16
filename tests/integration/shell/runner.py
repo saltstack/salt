@@ -82,7 +82,8 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         try:
             self.assertIn('doc.runner:', ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             if os.path.exists('/dev/log') and ret[2] != 2:
                 # If there's a syslog device and the exit code was not 2,
                 # 'No such file or directory', raise the error

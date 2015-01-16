@@ -219,7 +219,8 @@ def _reinterpreted_state(state):
                 'script JSON output must be a JSON object (e.g., {})!'
             )
         is_json = True
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         idx = out.rstrip().rfind('\n')
         if idx != -1:
             out = out[idx + 1:]
@@ -228,7 +229,8 @@ def _reinterpreted_state(state):
             for item in shlex.split(out):
                 key, val = item.split('=')
                 data[key] = val
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return _failout(
                 state,
                 'Failed parsing script output! '
@@ -288,7 +290,8 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
             egid = grp.getgrnam(group).gr_gid
             if not __opts__['test']:
                 os.setegid(egid)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return {'comment': 'The group {0} is not available'.format(group),
                     'result': False}
 

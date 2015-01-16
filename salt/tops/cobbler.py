@@ -52,7 +52,8 @@ def top(**kwargs):
         if user:
             server.login(user, password)
         data = server.get_blended_data(None, minion_id)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.exception(
             'Could not connect to cobbler.'
         )

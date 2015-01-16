@@ -463,7 +463,8 @@ class Client(object):
                 try:
                     if fn_[len(path)] != '/':
                         continue
-                except IndexError:
+                except IndexError as exp:
+                    log.error('IndexError {0}'.format(exp))
                     continue
                 # Remove the leading directories from path to derive
                 # the relative path on the minion.
@@ -484,7 +485,8 @@ class Client(object):
                     try:
                         if fn_[len(path)] != '/':
                             continue
-                    except IndexError:
+                    except IndexError as exp:
+                    log.error('IndexError {0}'.format(exp))
                         continue
                     # Remove the leading directories from path to derive
                     # the relative path on the minion.
@@ -493,7 +495,8 @@ class Client(object):
                     if not os.path.isdir(minion_mkdir):
                         os.makedirs(minion_mkdir)
                     ret.append(minion_mkdir)
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             pass
         ret.sort()
         return ret
@@ -562,7 +565,8 @@ class Client(object):
                                     verify_ssl=self.opts.get('s3.verify_ssl',
                                                               True))
                 return dest
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 raise MinionError('Could not fetch from {0}'.format(url))
 
         if url_data.scheme == 'swift':
@@ -575,7 +579,8 @@ class Client(object):
                                       url_data.path[1:],
                                       dest)
                 return dest
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 raise MinionError('Could not fetch from {0}'.format(url))
 
         get_kwargs = {}
@@ -835,7 +840,8 @@ class LocalClient(Client):
         ret = {}
         try:
             path = self._check_proto(path)
-        except MinionError:
+        except MinionError as exp:
+            log.error('MinionError {0}'.format(exp))
             if not os.path.isfile(path):
                 err = 'Specified file {0} is not present to generate hash'
                 log.warning(err.format(path))
@@ -1112,7 +1118,8 @@ class RemoteClient(Client):
 
         try:
             path = self._check_proto(path)
-        except MinionError:
+        except MinionError as exp:
+            log.error('MinionError {0}'.format(exp))
             if not os.path.isfile(path):
                 err = 'Specified file {0} is not present to generate hash'
                 log.warning(err.format(path))

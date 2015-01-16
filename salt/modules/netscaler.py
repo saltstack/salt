@@ -56,7 +56,8 @@ def _connect(**kwargs):
             if name.startswith(prefix):
                 try:
                     name = name[len(prefix):]
-                except IndexError:
+                except IndexError as exp:
+                    log.error('IndexError {0}'.format(exp))
                     return
             val = __salt__['config.option']('netscaler.{0}'.format(name), None)
             if val is not None:

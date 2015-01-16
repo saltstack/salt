@@ -116,7 +116,8 @@ def prep_jid(nocache=False, passed_jid=None):
     # meaning we need a new jid
     try:
         os.makedirs(jid_dir_)
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         # TODO: some sort of sleep or something? Spinning is generally bad practice
         if passed_jid is None:
             return prep_jid(nocache=nocache)
@@ -321,7 +322,8 @@ def clean_old_jobs():
                                                         int(jid[6:8]),
                                                         int(jid[8:10]),
                                                         int(jid[10:12]))
-                        except ValueError:
+                        except ValueError as exp:
+                            log.error('ValueError {0}'.format(exp))
                             # Invalid jid, scrub the dir
                             shutil.rmtree(f_path)
                         difference = cur - jidtime

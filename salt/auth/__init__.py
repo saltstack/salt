@@ -58,7 +58,8 @@ class LoadAuth(object):
         fcall = salt.utils.format_call(self.auth[fstr], load)
         try:
             return fcall['args'][0]
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             return ''
 
     def __auth_call(self, load):
@@ -79,7 +80,8 @@ class LoadAuth(object):
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
             else:
                 return self.auth[fstr](*fcall['args'])
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             err = 'Authentication module threw an exception. Exception not logged.'
             return False
 
@@ -116,9 +118,11 @@ class LoadAuth(object):
         fcall = salt.utils.format_call(self.auth[fstr], load)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             return False
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             return None
 
     def mk_token(self, load):

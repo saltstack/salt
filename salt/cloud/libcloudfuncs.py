@@ -78,7 +78,8 @@ def check_libcloud_version(reqver=LIBCLOUD_MINIMAL_VERSION, why=None):
         )
     try:
         import libcloud  # pylint: disable=redefined-outer-name
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         raise ImportError(
             'salt-cloud requires >= libcloud {0} which is not installed'.format(
                 '.'.join([str(num) for num in reqver])
@@ -225,7 +226,8 @@ def avail_sizes(conn=None, call=None):
 
             try:
                 attr_value = getattr(size, attr)
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass
 
             if isinstance(attr_value, string_types):

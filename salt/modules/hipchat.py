@@ -101,7 +101,8 @@ def _query(function, api_key=None, api_version=None, method='GET', data=None):
                 api_key = options.get('api_key')
             if not api_version:
                 api_version = options.get('api_version')
-        except (NameError, KeyError, AttributeError):
+        except (NameError, KeyError, AttributeError) as exp:
+            log.error('(NameError, KeyError, AttributeError) {0}'.format(exp))
             log.error("No HipChat api key or version found.")
             return False
 

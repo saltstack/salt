@@ -62,7 +62,8 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
                     'Unable to receive remote host key', ret
                 )
                 self.skipTest('Unable to receive remote host key')
-            except AssertionError:
+            except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
                 # raise initial assertion error
                 raise err
 
@@ -90,7 +91,8 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         )
         try:
             self.assertNotIn(ret, ('', None))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             raise AssertionError(
                 'Salt return {0!r} is in (\'\', None).'.format(ret)
             )
@@ -99,7 +101,8 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         )
         try:
             self.assertNotIn(ret, ('', None, {}))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             raise AssertionError(
                 'Salt return {0!r} is in (\'\', None,'.format(ret) + ' {})'
             )

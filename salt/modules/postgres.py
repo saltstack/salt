@@ -540,7 +540,8 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             try:
                 retrow[date_key] = datetime.datetime.strptime(
                     row['date_key'], '%Y-%m-%d %H:%M:%S')
-            except (ValueError, KeyError):
+            except (ValueError, KeyError) as exp:
+                log.error('(ValueError, KeyError) {0}'.format(exp))
                 retrow[date_key] = None
         retrow['defaults variables'] = row['defaults variables']
         if return_password:
@@ -572,7 +573,8 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
                           return_password=return_password)
     try:
         return all_users.get(name, None)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         log.error('Could not retrieve Postgres role. Is Postgres running?')
         return None
 
@@ -1728,7 +1730,8 @@ def schema_get(dbname, name,
                               db_password=db_password)
     try:
         return all_schemas.get(name, None)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         log.error('Could not retrieve Postgres schema. Is Postgres running?')
         return False
 

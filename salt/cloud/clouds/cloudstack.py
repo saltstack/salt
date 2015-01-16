@@ -98,7 +98,8 @@ def get_conn():
         try:
             import libcloud.security
             libcloud.security.VERIFY_SSL_CERT = False
-        except (ImportError, AttributeError):
+        except (ImportError, AttributeError) as exp:
+            log.error('(ImportError, AttributeError) {0}'.format(exp))
             raise SaltCloudSystemExit(
                 'Could not disable SSL certificate verification. '
                 'Not loading module.'
@@ -181,7 +182,8 @@ def get_ip(data):
     '''
     try:
         ip = data.public_ips[0]
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         ip = data.private_ips[0]
     return ip
 

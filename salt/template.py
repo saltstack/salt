@@ -188,6 +188,7 @@ def check_render_pipe_str(pipestr, renderers):
             name, argline = (part + ' ').split(' ', 1)
             results.append((renderers[name], argline.strip()))
         return results
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         log.error('The renderer "{0}" is not available'.format(pipestr))
         return []

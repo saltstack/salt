@@ -459,7 +459,8 @@ def __discover_version(saltstack_version):
 
         try:
             return SaltStackVersion.parse(out)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             if not SaltStackVersion.git_sha_regex.match(out):
                 raise
 
@@ -485,7 +486,8 @@ def __get_version(saltstack_version):
         # Try to import the version information provided at install time
         from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
         return __saltstack_version__
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         return __discover_version(saltstack_version)
 
 
@@ -541,7 +543,8 @@ def versions_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             yield name, None
 
 

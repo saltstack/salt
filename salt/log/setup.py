@@ -248,7 +248,8 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
                     )
                     handler.setFormatter(formatter)
                 handler.release()
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             # There are no registered loggers yet
             pass
         return instance
@@ -291,7 +292,8 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
         if isinstance(msg, string_types) and not isinstance(msg, text_type):
             try:
                 _msg = msg.decode('utf-8', 'replace')
-            except UnicodeDecodeError:
+            except UnicodeDecodeError as exp:
+                log.error('UnicodeDecodeError {0}'.format(exp))
                 _msg = msg.decode('utf-8', 'ignore'),
         else:
             _msg = msg

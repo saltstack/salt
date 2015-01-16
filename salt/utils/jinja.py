@@ -121,7 +121,8 @@ class SaltCacheLoader(BaseLoader):
                     def uptodate():
                         try:
                             return path.getmtime(filepath) == mtime
-                        except OSError:
+                        except OSError as exp:
+                            log.error('OSError {0}'.format(exp))
                             return False
                     return contents, filepath, uptodate
             except IOError as exp:
@@ -381,7 +382,8 @@ class SerializerExtension(Extension, object):
             value = str(value)
         try:
             return yaml.safe_load(value)
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             raise TemplateRuntimeError(
                     'Unable to load yaml from {0}'.format(value))
 
@@ -390,7 +392,8 @@ class SerializerExtension(Extension, object):
             value = str(value)
         try:
             return json.loads(value)
-        except (ValueError, TypeError, AttributeError):
+        except (ValueError, TypeError, AttributeError) as exp:
+            log.error('(ValueError, TypeError, AttributeError) {0}'.format(exp))
             raise TemplateRuntimeError(
                     'Unable to load json from {0}'.format(value))
 

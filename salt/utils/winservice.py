@@ -74,7 +74,8 @@ def instart(cls, name, display_name=None, stay_alive=True):
     cls._svc_display_name_ = display_name or name
     try:
         module_path = modules[cls.__module__].__file__
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # maybe py2exe went by
         from sys import executable
         module_path = executable

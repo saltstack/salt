@@ -76,7 +76,8 @@ class PwUserModuleTest(integration.ModuleCase):
             uinfo = self.run_function('user.info', [uname])
             self.assertIn(gname, uinfo['groups'])
 
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             self.run_function('user.delete', [uname, True, True])
             raise
 

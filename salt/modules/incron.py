@@ -138,7 +138,8 @@ def _read_file(folder, filename):
     try:
         with salt.utils.fopen(path, 'rb') as contents:
             return contents.readlines()
-    except (OSError, IOError):
+    except (OSError, IOError) as exp:
+        log.error('(OSError, IOError) {0}'.format(exp))
         return ''
 
 

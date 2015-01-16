@@ -65,7 +65,8 @@ def mkdirs(path, share='C$', conn=None, host=None, username=None, password=None)
         cwd = '\\'.join(comps[0:pos])
         try:
             conn.listPath(share, cwd)
-        except SessionError:
+        except SessionError as exp:
+            log.error('SessionError {0}'.format(exp))
             conn.createDirectory(share, cwd)
         pos += 1
 

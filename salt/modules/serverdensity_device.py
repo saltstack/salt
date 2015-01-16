@@ -38,7 +38,8 @@ def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
 
     try:
         return sd_pillar[val]
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         log.error('Cloud not find value {0} in pillar'.format(val))
         raise CommandExecutionError('{0} value was not found in pillar'.format(val))
 
@@ -79,7 +80,8 @@ def create(name, **params):
     if api_response.status_code == 200:
         try:
             return json.loads(api_response.content)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             log.error('Could not parse API Response content: {0}'.format(api_response.content))
             raise CommandExecutionError(
                 'Failed to create, API Response: {0}'.format(api_response)
@@ -110,7 +112,8 @@ def delete(device_id):
     if api_response.status_code == 200:
         try:
             return json.loads(api_response.content)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             log.error('Could not parse API Response content: {0}'.format(api_response.content))
             raise CommandExecutionError(
                 'Failed to create, API Response: {0}'.format(api_response)
@@ -158,7 +161,8 @@ def ls(**params):
     if api_response.status_code == 200:
         try:
             return json.loads(api_response.content)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             log.error(
                 'Could not parse Server Density API Response content: {0}'
                 .format(api_response.content)
@@ -197,7 +201,8 @@ def update(device_id, **params):
     if api_response.status_code == 200:
         try:
             return json.loads(api_response.content)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             log.error(
                 'Could not parse Server Density API Response content: {0}'
                 .format(api_response.content)

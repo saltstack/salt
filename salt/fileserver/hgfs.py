@@ -95,7 +95,8 @@ def _get_branch(repo, name):
     '''
     try:
         return [x for x in _all_branches(repo) if x[0] == name][0]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         return False
 
 
@@ -116,7 +117,8 @@ def _get_bookmark(repo, name):
     '''
     try:
         return [x for x in _all_bookmarks(repo) if x[0] == name][0]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         return False
 
 
@@ -138,7 +140,8 @@ def _get_tag(repo, name):
     '''
     try:
         return [x for x in _all_tags(repo) if x[0] == name][0]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         return False
 
 
@@ -228,7 +231,8 @@ def init():
             repo_conf['mountpoint'] = salt.utils.strip_proto(
                 repo_conf['mountpoint']
             )
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             # mountpoint not specified
             pass
 
@@ -278,7 +282,8 @@ def init():
                 fp_.write('# hgfs_remote map as of {0}\n'.format(timestamp))
                 for repo in repos:
                     fp_.write('{0} = {1}\n'.format(repo['hash'], repo['url']))
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             pass
         else:
             log.info('Wrote new hgfs_remote map to {0}'.format(remote_map))
@@ -293,12 +298,14 @@ def purge_cache():
     bp_ = os.path.join(__opts__['cachedir'], 'hgfs')
     try:
         remove_dirs = os.listdir(bp_)
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         remove_dirs = []
     for repo in init():
         try:
             remove_dirs.remove(repo['hash'])
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
                    if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
@@ -443,14 +450,16 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     if not os.path.isdir(destdir):
         try:
             os.makedirs(destdir)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             # Path exists and is a file, remove it and retry
             os.remove(destdir)
             os.makedirs(destdir)
     if not os.path.isdir(hashdir):
         try:
             os.makedirs(hashdir)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             # Path exists and is a file, remove it and retry
             os.remove(hashdir)
             os.makedirs(hashdir)
@@ -490,13 +499,15 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
         for filename in glob.glob(hashes_glob):
             try:
                 os.remove(filename)
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass
         with salt.utils.fopen(blobshadest, 'w+') as fp_:
             fp_.write(ref[2])
         try:
             os.remove(lk_fn)
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             pass
         fnd['rel'] = path
         fnd['path'] = dest

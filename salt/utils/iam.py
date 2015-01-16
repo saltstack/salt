@@ -78,7 +78,8 @@ def get_iam_metadata(version='latest', url='http://169.254.169.254',
         data = _retry_get_url(iam_url + roles[0], num_retries, timeout)
         meta = json.loads(data)
 
-    except (ValueError, TypeError, IndexError):
+    except (ValueError, TypeError, IndexError) as exp:
+        log.error('(ValueError, TypeError, IndexError) {0}'.format(exp))
         # JSON failed to decode, so just pass no credentials back
         log.error('Failed to read metadata. Giving up on IAM credentials.')
 

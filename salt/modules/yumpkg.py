@@ -69,7 +69,8 @@ def __virtual__():
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return False
 
     enabled = ('amazon', 'xcp', 'xenserver')
@@ -95,7 +96,8 @@ def _parse_pkginfo(line):
         name, pkg_version, release, arch, repoid = line.split('_|-')
     # Handle unpack errors (should never happen with the queryformat we are
     # using, but can't hurt to be careful).
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return None
 
     if not _check_32(arch):
@@ -249,7 +251,8 @@ def _rpm_installed(name):
     pkg = _rpm_pkginfo(name)
     try:
         return pkg.name if pkg.name in list_pkgs() else None
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return None
 
 
@@ -271,7 +274,8 @@ def normalize_name(name):
         arch = name.rsplit('.', 1)[-1]
         if arch not in __ARCHES + ('noarch',):
             return name
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return name
     if arch in (__grains__['osarch'], 'noarch') or _check_32(arch):
         return name[:-(len(arch) + 1)]
@@ -329,7 +333,8 @@ def latest_version(*names, **kwargs):
             arch = name.rsplit('.', 1)[-1]
             if arch not in __ARCHES:
                 arch = __grains__['osarch']
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             arch = __grains__['osarch']
         namearch_map[name] = arch
 
@@ -485,7 +490,8 @@ def list_repo_pkgs(*args, **kwargs):
     '''
     try:
         repos = tuple(x.strip() for x in kwargs.get('fromrepo').split(','))
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # Search in all enabled repos
         repos = tuple(
             x for x, y in six.iteritems(list_repos())
@@ -586,7 +592,8 @@ def check_db(*names, **kwargs):
         for line in lines:
             try:
                 name, arch = line.split('_|-')
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 continue
             if normalize:
                 avail.append(normalize_name('.'.join((name, arch))))
@@ -936,7 +943,8 @@ def install(name=None,
             arch = ''
             try:
                 namepart, archpart = pkgname.rsplit('.', 1)
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 pass
             else:
                 if archpart in __ARCHES:
@@ -1433,7 +1441,8 @@ def group_list():
             line = out[idx].strip()
             try:
                 name, lang = re.match(r'(.+) \[(.+)\]', line).groups()
-            except AttributeError:
+            except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
                 pass
             else:
                 ret[key][line] = {'name': name, 'language': lang}
@@ -1791,7 +1800,8 @@ def _parse_repo_file(filename):
                 try:
                     comps = line.strip().split('=')
                     repos[repo][comps[0].strip()] = '='.join(comps[1:])
-                except KeyError:
+                except KeyError as exp:
+                    log.error('KeyError {0}'.format(exp))
                     log.error('Failed to parse line in {0}, '
                               'offending line was "{1}"'.format(filename,
                                                                 line.rstrip()))

@@ -31,7 +31,8 @@ class DockerTest(integration.ModuleCase):
         for l in ret_cmdrun['stdout'].splitlines():
             try:
                 ids.append(string.split(ret_cmdrun['stdout'])[0])
-            except IndexError:
+            except IndexError as exp:
+                log.error('IndexError {0}'.format(exp))
                 pass
         return ids
 
@@ -65,7 +66,8 @@ class DockerTest(integration.ModuleCase):
                 if i['RepoTags'][0] == 'testsuite_image:latest':
                     foundit = True
                     break
-            except KeyError:
+            except KeyError as exp:
+                log.error('KeyError {0}'.format(exp))
                 pass
         self.assertTrue(foundit, 'Could not find created image.')
 

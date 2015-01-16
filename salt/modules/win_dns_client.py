@@ -88,7 +88,8 @@ def add_dns(ip, interface='Local Area Connection', index=1):
     try:
         if servers[index - 1] == ip:
             return True
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         pass
 
     # If configured in the wrong order delete it
