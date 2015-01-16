@@ -633,7 +633,7 @@ class MultiMinion(MinionBase):
                     except Exception:
                         pass
                     finally:
-                        package = None  # Ensure we don't loop
+                        package = None
 
                 # have the Minion class run anything it has to run
                 next(minion['generator'])
