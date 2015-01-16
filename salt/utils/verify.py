@@ -239,8 +239,10 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                         path = os.path.join(root, name)
                         try:
                             fmode = os.stat(path)
-                        except (IOError, OSError):
-                            pass
+
+                        except (IOError, OSError) as exp:
+                            log.error('IO/OS Error {0}'.format(exp))
+
                         if fmode.st_uid != uid or fmode.st_gid != gid:
                             if permissive and fmode.st_gid in groups:
                                 pass

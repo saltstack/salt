@@ -596,7 +596,8 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             # user is not using plain ASCII, their system should be ready to
             # handle UTF-8.
             handler = WatchedFileHandler(log_path, mode='a', encoding='utf-8', delay=0)
-        except (IOError, OSError):
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
             logging.getLogger(__name__).warning(
                 'Failed to open log file, do you have permission to write to '
                 '{0}?'.format(log_path)

@@ -232,14 +232,18 @@ def setvals(grains, destructive=False):
     try:
         with salt.utils.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)
-    except (IOError, OSError):
+
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Unable to write to grains file at {0}. Check permissions.'
         log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
         with salt.utils.fopen(fn_, 'w+') as fp_:
             fp_.write('')
-    except (IOError, OSError):
+
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
     if not __opts__.get('local', False):

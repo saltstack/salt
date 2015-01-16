@@ -339,8 +339,8 @@ def update():
         repo['repo'].close()
         try:
             os.remove(lk_fn)
-        except (IOError, OSError):
-            pass
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
 
     env_cache = os.path.join(__opts__['cachedir'], 'hgfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
@@ -367,9 +367,11 @@ def update():
             os.path.join(__opts__['cachedir'], 'hgfs/hash'),
             find_file
         )
-    except (IOError, OSError):
+
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         # Hash file won't exist if no files have yet been served up
-        pass
+
 
 
 def _env_is_exposed(env):

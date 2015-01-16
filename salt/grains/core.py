@@ -591,8 +591,9 @@ def _virtual(osdata):
                 init_root = os.stat('/proc/1/root/.')
                 if self_root != init_root:
                     grains['virtual_subtype'] = 'chroot'
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         if os.path.isfile('/proc/1/cgroup'):
             try:
                 with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
@@ -601,8 +602,8 @@ def _virtual(osdata):
                 with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
                     if ':/docker/' in fhr.read():
                         grains['virtual_subtype'] = 'Docker'
-            except IOError:
-                pass
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
         if isdir('/proc/vz'):
             if os.path.isfile('/proc/vz/version'):
                 grains['virtual'] = 'openvzhn'

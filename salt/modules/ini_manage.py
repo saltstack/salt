@@ -391,7 +391,9 @@ class _Ini(object):
             inifile = _Ini(file_name)
             inifile.refresh()
             return inifile
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             return inifile
-        except Exception:
+        except Exception as exp:
+            log.error('Error {0}'.format(exp))
             return

@@ -49,8 +49,8 @@ def get_minion_data(minion, opts):
                 try:
                     with salt.utils.fopen(datap, 'rb') as fp_:
                         miniondata = serial.load(fp_)
-                except (IOError, OSError):
-                    continue
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
                 grains = miniondata.get('grains')
                 pillar = miniondata.get('pillar')
                 return id_, grains, pillar
@@ -60,7 +60,8 @@ def get_minion_data(minion, opts):
             try:
                 with salt.utils.fopen(datap, 'rb') as fp_:
                     miniondata = serial.load(fp_)
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 return minion, None, None
             grains = miniondata.get('grains')
             pillar = miniondata.get('pillar')
@@ -259,8 +260,10 @@ class CkMinions(object):
                 try:
                     with salt.utils.fopen(datap, 'rb') as fp_:
                         grains = self.serial.load(fp_).get('grains')
-                except (IOError, OSError):
-                    continue
+
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
+
                 num_parts = len(expr.split('/'))
                 if num_parts > 2:
                     # Target is not valid CIDR, no minions match
@@ -318,8 +321,9 @@ class CkMinions(object):
                 try:
                     with salt.utils.fopen(datap, 'rb') as fp_:
                         grains = self.serial.load(fp_).get('grains')
-                except (IOError, OSError):
-                    continue
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
+
                 range_ = seco.range.Range(self.opts['range_server'])
                 try:
                     if grains.get('fqdn', '') not in range_.expand(expr) and id_ in minions:

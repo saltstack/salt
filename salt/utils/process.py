@@ -44,8 +44,9 @@ def set_pidfile(pidfile, user):
     try:
         with salt.utils.fopen(pidfile, 'w+') as ofile:
             ofile.write(str(os.getpid()))
-    except IOError:
-        pass
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
+
 
     log.debug(('Created pidfile: {0}').format(pidfile))
     if salt.utils.is_windows():

@@ -1919,8 +1919,8 @@ def get_id(opts, minion_id=False):
             if name:
                 log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False
-        except (IOError, OSError):
-            pass
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
 
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))

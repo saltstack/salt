@@ -3508,7 +3508,8 @@ def copy(
                     os.remove(name)
                 else:
                     shutil.rmtree(name)
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 return _error(
                     ret,
                     'Failed to delete "{0}" in preparation for '
@@ -3543,7 +3544,8 @@ def copy(
         shutil.copy(source, name)
         ret['changes'] = {name: source}
         __salt__['file.check_perms'](name, ret, user, group, mode)
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
     return ret
@@ -3604,7 +3606,8 @@ def rename(name, source, force=False, makedirs=False):
                     os.remove(name)
                 else:
                     shutil.rmtree(name)
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 return _error(
                     ret,
                     'Failed to delete "{0}" in preparation for '
@@ -3636,7 +3639,9 @@ def rename(name, source, force=False, makedirs=False):
             os.unlink(source)
         else:
             shutil.move(source, name)
-    except (IOError, OSError):
+
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return _error(
             ret, 'Failed to move "{0}" to "{1}"'.format(source, name))
 

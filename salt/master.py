@@ -121,7 +121,8 @@ class Scheduler(multiprocessing.Process):
                 time.sleep(self.schedule.loop_interval)
             except KeyboardInterrupt:
                 break
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 time.sleep(self.opts['loop_interval'])
 
     def handle_schedule(self):
@@ -1712,8 +1713,10 @@ class ClearFuncs(object):
                 # rejected dir.
                 try:
                     shutil.move(pubfn_pend, pubfn_rejected)
-                except (IOError, OSError):
-                    pass
+
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
+
                 log.info('Pending public key for {id} rejected via '
                          'autoreject_file'.format(**load))
                 ret = {'enc': 'clear',

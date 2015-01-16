@@ -24,11 +24,12 @@ def running(opts):
             data = _read_proc_file(path, opts)
             if data is not None:
                 ret.append(data)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             # proc files may be removed at any time during this process by
             # the minion process that is executing the JID in question, so
             # we must ignore ENOENT during this process
-            pass
+
     return ret
 
 
@@ -48,8 +49,9 @@ def _read_proc_file(path, opts):
             # Proc file is empty, remove
             try:
                 os.remove(path)
-            except IOError:
-                pass
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
+
             return None
     if not isinstance(data, dict):
         # Invalid serial object
@@ -59,8 +61,9 @@ def _read_proc_file(path, opts):
         # continue
         try:
             os.remove(path)
-        except IOError:
-            pass
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
+
         return None
     if opts['multiprocessing']:
         if data.get('pid') == pid:
@@ -69,16 +72,18 @@ def _read_proc_file(path, opts):
         if data.get('pid') != pid:
             try:
                 os.remove(path)
-            except IOError:
-                pass
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
+
             return None
         if data.get('jid') == current_thread:
             return None
         if not data.get('jid') in [x.name for x in threading.enumerate()]:
             try:
                 os.remove(path)
-            except IOError:
-                pass
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
+
             return None
 
     return data

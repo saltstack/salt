@@ -695,8 +695,9 @@ class Key(object):
                              'act': 'accept',
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
+                    
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -723,8 +724,9 @@ class Key(object):
                          'act': 'accept',
                          'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         return self.list_keys()
 
     def delete_key(self, match=None, match_dict=None, preserve_minions=False):
@@ -808,8 +810,8 @@ class Key(object):
                             'act': 'reject',
                             'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
@@ -839,8 +841,9 @@ class Key(object):
                          'act': 'reject',
                          'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
@@ -1121,8 +1124,8 @@ class RaetKey(Key):
                                 self.ACC,
                                 key)
                             )
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -1145,8 +1148,9 @@ class RaetKey(Key):
                             self.ACC,
                             key)
                         )
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         return self.list_keys()
 
     def delete_key(self, match=None, match_dict=None, preserve_minions=False):
@@ -1212,8 +1216,8 @@ class RaetKey(Key):
                                 self.REJ,
                                 key)
                             )
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
         self.check_minion_cache()
         return (
             self.name_match(match) if match is not None
@@ -1237,8 +1241,9 @@ class RaetKey(Key):
                             self.REJ,
                             key)
                         )
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         self.check_minion_cache()
         return self.list_keys()
 

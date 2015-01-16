@@ -136,8 +136,8 @@ def clean_expired_tokens(opts):
                 if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
                     try:
                         os.remove(token_path)
-                    except (IOError, OSError):
-                        pass
+                    except (IOError, OSError) exp:
+                        log.error('Error {0}'.format(exp))
 
 
 def clean_pub_auth(opts):
@@ -153,8 +153,8 @@ def clean_pub_auth(opts):
                         continue
                     if os.path.getmtime(auth_file_path) - time.time() > opts['keep_jobs']:
                         os.remove(auth_file_path)
-    except (IOError, OSError):
-        log.error('Unable to delete pub auth file')
+    except (IOError, OSError) as exp:
+        log.error('Unable to delete pub auth file({0})'.format(exp))
 
 
 def clean_old_jobs(opts):
@@ -215,10 +215,10 @@ def access_keys(opts):
         os.chmod(keyfile, 256)
         try:
             os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
-        except OSError:
+        except OSError es exp:
             # The master is not being run as root and can therefore not
             # chown the key file
-            pass
+            log.error('Error {0}'.format(exp))
         keys[user] = key
     return keys
 

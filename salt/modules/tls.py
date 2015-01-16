@@ -804,7 +804,8 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
                 )
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         return 'There is no CA named "{0}"'.format(ca_name)
 
     try:
@@ -815,7 +816,8 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
                     )
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         return 'There is no CSR that matches the CN "{0}"'.format(CN)
 
     exts = []
@@ -916,7 +918,8 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None):
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
                 )
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         return 'There is no CA named "{0}"'.format(ca_name)
 
     try:
@@ -934,7 +937,8 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None):
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
                     )
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         return 'There is no certificate that matches the CN "{0}"'.format(CN)
 
     pkcs12 = OpenSSL.crypto.PKCS12()

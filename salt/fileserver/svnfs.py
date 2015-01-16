@@ -298,9 +298,9 @@ def update():
             os.path.join(__opts__['cachedir'], 'svnfs/hash'),
             find_file
         )
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         # Hash file won't exist if no files have yet been served up
-        pass
 
 
 def _env_is_exposed(env):

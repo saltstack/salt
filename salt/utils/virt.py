@@ -35,7 +35,8 @@ class VirtKey(object):
         '''
         try:
             expiry = int(salt.utils.fopen(self.path, 'r').read())
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             log.error('Request to sign key for minion "{0}" on hyper "{1}" denied: '
                         'no authorization'.format(self.id, self.hyper))
             return False

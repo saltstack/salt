@@ -1576,7 +1576,8 @@ def contains(path, text):
                 if stripped_text in chunk:
                     return True
         return False
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 
@@ -1610,7 +1611,8 @@ def contains_regex(path, regex, lchar=''):
                 if re.search(regex, line):
                     return True
             return False
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 
@@ -1642,7 +1644,8 @@ def contains_regex_multiline(path, regex):
                 if re.search(regex, chunk, re.MULTILINE):
                     return True
             return False
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 
@@ -1670,7 +1673,8 @@ def contains_glob(path, glob_expr):
                 if fnmatch.fnmatch(chunk, glob_expr):
                     return True
             return False
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 
@@ -1784,7 +1788,8 @@ def prepend(path, *args, **kwargs):
     try:
         with salt.utils.fopen(path) as fhr:
             contents = fhr.readlines()
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         contents = []
 
     preface = []
@@ -3263,7 +3268,8 @@ def manage_file(name,
                                     real_name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 __clean_tmp(sfn)
                 return _error(
                     ret, 'Failed to commit change, permission error')
@@ -3301,7 +3307,8 @@ def manage_file(name,
                                         real_name,
                                         __salt__['config.backup_mode'](backup),
                                         __opts__['cachedir'])
-                except IOError:
+                except IOError as exp:
+                    log.error('IO Error {0}'.format(exp))
                     __clean_tmp(tmp)
                     return _error(
                         ret, 'Failed to commit change, permission error')
@@ -3332,7 +3339,9 @@ def manage_file(name,
                                     name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
+
                 __clean_tmp(sfn)
                 return _error(
                     ret, 'Failed to commit change, permission error')

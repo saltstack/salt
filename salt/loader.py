@@ -1277,8 +1277,8 @@ class Loader(object):
                         with salt.utils.fopen(cfn, 'rb') as fp_:
                             cached_grains = self.serial.load(fp_)
                         return cached_grains
-                    except (IOError, OSError):
-                        pass
+                    except (IOError, OSError) as exp:
+                        log.error('IO/OS Error {0}'.format(exp))
                 else:
                     if force_refresh:
                         log.debug('Grains refresh requested. Refreshing grains.')
@@ -1330,7 +1330,9 @@ class Loader(object):
                     except TypeError:
                         # Can't serialize pydsl
                         pass
-            except (IOError, OSError):
+
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 msg = 'Unable to write to grains cache file {0}'
                 log.error(msg.format(cfn))
             os.umask(cumask)

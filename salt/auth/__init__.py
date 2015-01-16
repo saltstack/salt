@@ -165,8 +165,9 @@ class LoadAuth(object):
             try:
                 os.remove(t_path)
                 return {}
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         return tdata
 
 
@@ -377,8 +378,9 @@ class Resolver(object):
         try:
             with salt.utils.fopen(self.opts['token_file'], 'w+') as fp_:
                 fp_.write(tdata['token'])
-        except (IOError, OSError):
-            pass
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
+
         finally:
             os.umask(oldmask)
         return tdata

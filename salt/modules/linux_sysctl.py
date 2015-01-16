@@ -180,7 +180,9 @@ def persist(name, value, config=None):
         try:
             with salt.utils.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
-        except (IOError, OSError):
+
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
             msg = 'Could not write to file: {0}'
             raise CommandExecutionError(msg.format(config))
 
@@ -192,7 +194,8 @@ def persist(name, value, config=None):
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
             config_data = _fh.readlines()
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Could not read from file: {0}'
         raise CommandExecutionError(msg.format(config))
 
@@ -240,7 +243,8 @@ def persist(name, value, config=None):
     try:
         with salt.utils.fopen(config, 'w+') as _fh:
             _fh.writelines(nlines)
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Could not write to file: {0}'
         raise CommandExecutionError(msg.format(config))
 

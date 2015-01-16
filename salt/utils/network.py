@@ -206,8 +206,8 @@ def get_hostnames():
         with salt.utils.fopen('/etc/hostname') as hfl:
             name = hfl.read()
         h.append(name)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
 
     # try /etc/hosts
     try:
@@ -221,8 +221,8 @@ def get_hostnames():
                 if ip.startswith('127.') or ip == '::1':
                     for name in names:
                         h.append(name)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
 
     # try windows hosts
     if salt.utils.is_windows():
@@ -241,8 +241,9 @@ def get_hostnames():
                                 h.append(name)
                     except IndexError:
                         pass  # could not split line (malformed entry?)
-        except (IOError, OSError):
-            pass
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
+
 
     # strip spaces and ignore empty strings
     hosts = []

@@ -162,8 +162,8 @@ def check_env_cache(opts, env_cache):
             log.trace('Returning env cache data from {0}'.format(env_cache))
             serial = salt.payload.Serial(opts)
             return serial.load(fp_)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
     return None
 
 

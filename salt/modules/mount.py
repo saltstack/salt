@@ -358,7 +358,8 @@ def set_fstab(
                 with salt.utils.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
                     ofile.writelines(lines)
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
 
@@ -382,7 +383,8 @@ def set_fstab(
                     with salt.utils.fopen(config, 'w+') as ofile:
                         # The line was changed, commit it!
                         ofile.writelines(lines)
-                except (IOError, OSError):
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
                     raise CommandExecutionError(
                         'File not writable {0}'.format(
                             config
@@ -539,7 +541,8 @@ def set_automaster(
                 with salt.utils.fopen(config, 'w+') as ofile:
                     # The line was changed, commit it!
                     ofile.writelines(lines)
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
 
@@ -561,7 +564,8 @@ def set_automaster(
                     with salt.utils.fopen(config, 'w+') as ofile:
                         # The line was changed, commit it!
                         ofile.writelines(lines)
-                except (IOError, OSError):
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
                     raise CommandExecutionError(
                         'File not writable {0}'.format(
                             config

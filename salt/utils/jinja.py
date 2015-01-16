@@ -124,7 +124,8 @@ class SaltCacheLoader(BaseLoader):
                         except OSError:
                             return False
                     return contents, filepath, uptodate
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 # there is no file under current path
                 continue
         # pylint: enable=cell-var-from-loop

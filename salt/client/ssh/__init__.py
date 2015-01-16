@@ -922,8 +922,8 @@ ARGS = {9}\n'''.format(self.minion_config,
         # Remove our shim file
         try:
             os.remove(shim_tmp_file.name)
-        except IOError:
-            pass
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
 
         # Execute shim
         ret = self.shell.exec_cmd('/bin/sh $HOME/{0}'.format(target_shim_file))

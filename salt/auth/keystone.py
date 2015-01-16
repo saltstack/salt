@@ -9,8 +9,8 @@ from __future__ import print_function
 try:
     from keystoneclient.v2_0 import client
     from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
-except ImportError:
-    pass
+except ImportError as exp:
+    log.error('Import Exception {0}'.format(exp))
 
 
 def get_auth_url():

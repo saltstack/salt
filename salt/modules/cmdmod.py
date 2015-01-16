@@ -428,7 +428,8 @@ def _run(cmd,
                         time.sleep(0.5)
                         try:
                             cstdout, cstderr = proc.recv()
-                        except IOError:
+                        except IOError as exp:
+                            log.error('IO Error {0}'.format(exp))
                             cstdout, cstderr = '', ''
                         if cstdout:
                             stdout += cstdout
@@ -1275,7 +1276,8 @@ def tty(device, echo=None):
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
         }
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         return {
             'Error': 'Echoing to {0} returned error'.format(teletype)
         }

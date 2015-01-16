@@ -22,9 +22,9 @@ from salt.ext.six.moves import zip
 try:
     from M2Crypto import RSA, EVP
     from Crypto.Cipher import AES
-except ImportError:
+except ImportError as exp:
     # No need for crypt in local mode
-    pass
+    log.error('Import Error {0}'.format(exp))
 
 # Import salt libs
 import salt.defaults.exitcodes
@@ -56,8 +56,8 @@ def dropfile(cachedir, user=None):
                 import pwd
                 uid = pwd.getpwnam(user).pw_uid
                 os.chown(dfn, uid, -1)
-            except (KeyError, ImportError, OSError, IOError):
-                pass
+            except (KeyError, ImportError, OSError, IOError) as exp:
+                log.error('Error {0}'.format(exp))
     finally:
         os.umask(mask)  # restore original umask
 
@@ -94,10 +94,10 @@ def gen_keys(keydir, keyname, keysize, user=None):
             uid = pwd.getpwnam(user).pw_uid
             os.chown(priv, uid, -1)
             os.chown(pub, uid, -1)
-        except (KeyError, ImportError, OSError):
+        except (KeyError, ImportError, OSError) exp:
             # The specified user was not found, allow the backup systems to
             # report the error
-            pass
+            log.error('Error {0}'.format(exp))
     return priv
 
 

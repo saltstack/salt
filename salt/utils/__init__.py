@@ -118,8 +118,8 @@ def safe_rm(tgt):
     '''
     try:
         os.remove(tgt)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
 
 
 def is_empty(filename):
@@ -326,7 +326,8 @@ def profile_func(filename=None):
                 retval = profiler.runcall(fun, *args, **kwargs)
                 profiler.dump_stats((filename or '{0}_func.profile'
                                      .format(fun.__name__)))
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 logging.exception(
                     'Could not open profile file {0}'.format(filename)
                 )
@@ -840,7 +841,8 @@ def istextfile(fp_, blocksize=512):
         try:
             with fopen(fp_, 'rb') as fp2_:
                 block = fp2_.read(blocksize)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             # Unable to open file, bail out and return false
             return False
     if b'\x00' in block:

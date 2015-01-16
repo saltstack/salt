@@ -789,7 +789,8 @@ def is_hyper():
     try:
         if 'xen_' not in salt.utils.fopen('/proc/modules').read():
             return False
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         return False
     # there must be a smarter way...
     return 'xenstore' in __salt__['cmd.run'](__grains__['ps'])

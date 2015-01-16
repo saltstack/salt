@@ -51,7 +51,8 @@ def recv(files, dest):
         try:
             salt.utils.fopen(final, 'w+').write(data)
             ret[final] = True
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             ret[final] = False
 
     return ret

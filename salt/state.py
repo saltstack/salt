@@ -2877,10 +2877,12 @@ class BaseHighState(object):
         err = []
         try:
             top = self.get_top()
-        except SaltRenderError as err:
+        except SaltRenderError as exp:
+            log.error("Salt Render Err {0}".format(exp))
             ret[tag_name]['comment'] = err.error
             return ret
-        except Exception:
+        except Exception as exp:
+            log.error("Salt Render Err {0}".format(exp))
             trb = traceback.format_exc()
             err.append(trb)
             return err
@@ -2920,7 +2922,9 @@ class BaseHighState(object):
                 except TypeError:
                     # Can't serialize pydsl
                     pass
-        except (IOError, OSError):
+
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
             msg = 'Unable to write to "state.highstate" cache file {0}'
             log.error(msg.format(cfn))
 

@@ -293,12 +293,13 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
 
         try:
             shutil.copy(complete_file_path, complete_file_path + '.bak')
-        except IOError:
-            pass
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
 
         try:
             file_handler = salt.utils.fopen(complete_file_path, 'r+')
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             file_handler = salt.utils.fopen(complete_file_path, 'w+')
 
         new_contents = ''
@@ -389,7 +390,8 @@ def get_flags_from_package_conf(conf, atom):
         flags = []
         try:
             file_handler = salt.utils.fopen(package_file)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             return []
         else:
             for line in file_handler:
@@ -471,7 +473,8 @@ def is_present(conf, atom):
         match_list = set(_porttree().dbapi.xmatch("match-all", atom))
         try:
             file_handler = salt.utils.fopen(package_file)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             return False
         else:
             for line in file_handler:

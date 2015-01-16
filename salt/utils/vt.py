@@ -690,7 +690,8 @@ class Terminal(object):
                 packed = struct.pack('HHHH', 0, 0, 0, 0)
                 ioctl = fcntl.ioctl(sys.stdin.fileno(), TIOCGWINSZ, packed)
                 return struct.unpack('HHHH', ioctl)[0:2]
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 # Return a default value of 24x80
                 return 24, 80
         # <---- Internal API -------------------------------------------------

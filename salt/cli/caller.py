@@ -128,7 +128,8 @@ class ZeroMQCaller(object):
             except NameError:
                 # Don't require msgpack with local
                 pass
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 sys.stderr.write(
                     'Cannot write to process directory. '
                     'Do you have permissions to '
@@ -163,8 +164,8 @@ class ZeroMQCaller(object):
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
-        except (IOError, OSError):
-            pass
+        except (IOError, OSError) as exp:
+            log.error('IO Error {0}'.format(exp))
         if hasattr(self.minion.functions[fun], '__outputter__'):
             oput = self.minion.functions[fun].__outputter__
             if isinstance(oput, string_types):

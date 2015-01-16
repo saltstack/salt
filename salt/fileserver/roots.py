@@ -109,9 +109,9 @@ def update():
             os.path.join(__opts__['cachedir'], 'roots/hash'),
             find_file
         )
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
         # Hash file won't exist if no files have yet been served up
-        pass
+        log.error('Error {0}'.format(exp))
 
     mtime_map_path = os.path.join(__opts__['cachedir'], 'roots/mtime_map')
     # data to send on event

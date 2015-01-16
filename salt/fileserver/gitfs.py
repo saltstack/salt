@@ -988,7 +988,7 @@ def update():
             )
         try:
             os.remove(lk_fn)
-        except (IOError, OSError):
+        except (IOError, OSError) as exp:
             pass
 
     env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
@@ -1016,9 +1016,10 @@ def update():
             os.path.join(__opts__['cachedir'], 'gitfs/hash'),
             find_file
         )
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
         # Hash file won't exist if no files have yet been served up
-        pass
+        log.error('IO/OS Error {0}'.format(exp))
+
 
 
 def _env_is_exposed(env):

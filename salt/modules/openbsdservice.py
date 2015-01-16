@@ -136,7 +136,8 @@ def _get_rc():
         # to know what are the system enabled daemons
         with salt.utils.fopen('/etc/rc', 'r') as handle:
             lines = handle.readlines()
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         log.error('Unable to read /etc/rc')
     else:
         for line in lines:

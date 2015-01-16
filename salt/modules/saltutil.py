@@ -89,9 +89,9 @@ def _sync(form, saltenv=None):
         log.info('Creating module dir {0!r}'.format(mod_dir))
         try:
             os.makedirs(mod_dir)
-        except (IOError, OSError):
-            msg = 'Cannot create cache module directory {0}. Check permissions.'
-            log.error(msg.format(mod_dir))
+        except (IOError, OSError) as exp:
+            msg = 'Cannot create cache module directory {0}. Check permissions. Error {0}'
+            log.error(msg.format(mod_dir, exp))
     for sub_env in saltenv:
         log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
         cache = []

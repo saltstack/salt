@@ -581,7 +581,8 @@ def init(name,
                 mode = (0o0777 ^ mask) & 0o0666
                 os.chmod(img_dest, mode)
 
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 return False
             seedable = True
         else:
@@ -1547,7 +1548,8 @@ def is_kvm_hyper():
     try:
         if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
             return False
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])
@@ -1572,7 +1574,8 @@ def is_xen_hyper():
     try:
         if 'xen_' not in salt.utils.fopen('/proc/modules').read():
             return False
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         # No /proc/modules? Are we on Windows? Or Solaris?
         return False
     return 'libvirtd' in __salt__['cmd.run'](__grains__['ps'])

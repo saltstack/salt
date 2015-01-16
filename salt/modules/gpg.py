@@ -608,7 +608,8 @@ def import_key(user=None,
             with salt.utils.flopen(filename, 'rb') as _fp:
                 lines = _fp.readlines()
                 text = ''.join(lines)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             raise SaltInvocationError('filename does not exist.')
 
     imported_data = gpg.import_keys(text)

@@ -402,7 +402,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         try:
             # TODO make this check if writeable
             os.path.exists(log)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             raise IOError('{0!r} is not writeable'.format(log))
 
         cmd.append('--log={0}'.format(log))
@@ -690,7 +691,8 @@ def uninstall(pkgs=None,
         try:
             # TODO make this check if writeable
             os.path.exists(log)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             raise IOError('{0!r} is not writeable'.format(log))
 
         cmd.append('--log={0}'.format(log))
