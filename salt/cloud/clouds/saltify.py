@@ -22,7 +22,7 @@ import salt.utils
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.exceptions import SaltCloudConfigError, SaltCloudSystemExit
+from salt.exceptions import SaltCloudConfigError
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def create(vm_):
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
             }
         }
-    
+
     key_filename = config.get_cloud_config_value(
         'key_filename', vm_, __opts__, search_global=False, default=None
     )

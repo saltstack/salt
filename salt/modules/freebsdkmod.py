@@ -17,7 +17,7 @@ __virtualname__ = 'kmod'
 _LOAD_MODULE = '{0}_load="YES"'
 _LOADER_CONF = '/boot/loader.conf'
 _MODULE_RE = '^{0}_load="YES"'
-_MODULES_RE = '^(\w+)_load="YES"'
+_MODULES_RE = r'^(\w+)_load="YES"'
 
 
 def __virtual__():
