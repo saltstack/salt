@@ -312,7 +312,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         except AttributeError:
             _bad_cwd()
 
-    if runas and (euid != uinfo['uid'] or guid != uinfo['gid']):
+    if runas and (euid != uinfo['uid'] or egid != uinfo['gid']):
         # Change the egid first, as changing it after the euid will fail
         # if the runas user is non-privileged.
         os.setegid(uinfo['gid'])
@@ -496,7 +496,7 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
 
     zip_file, dest = _render_filenames(zip_file, dest, None, template)
 
-    if runas and (euid != uinfo['uid'] or guid != uinfo['gid']):
+    if runas and (euid != uinfo['uid'] or egid != uinfo['gid']):
         # Change the egid first, as changing it after the euid will fail
         # if the runas user is non-privileged.
         os.setegid(uinfo['gid'])
