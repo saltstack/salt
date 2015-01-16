@@ -89,7 +89,8 @@ class DebApacheTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-            self.assertEqual(deb_apache.a2ensite('saltstack.com')[0], 'error')
+            self.assertEqual(deb_apache.a2ensite('saltstack.com').message,
+                             'error')
 
     # 'a2dissite' function tests: 4
 
@@ -132,7 +133,8 @@ class DebApacheTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-            self.assertEqual(deb_apache.a2dissite('saltstack.com')[0], 'error')
+            self.assertEqual(deb_apache.a2dissite('saltstack.com').message,
+                             'error')
 
     # 'check_mod_enabled' function tests: 3
 
@@ -198,7 +200,8 @@ class DebApacheTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-            self.assertEqual(deb_apache.a2enmod('vhost_alias')[0], 'error')
+            self.assertEqual(deb_apache.a2enmod('vhost_alias').message,
+                             'error')
 
     # 'a2dismod' function tests: 4
 
@@ -241,7 +244,8 @@ class DebApacheTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
-            self.assertEqual(deb_apache.a2dismod('vhost_alias')[0], 'error')
+            self.assertEqual(deb_apache.a2dismod('vhost_alias').message,
+                             'error')
 
 
 if __name__ == '__main__':
