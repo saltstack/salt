@@ -41,9 +41,9 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         Call super if override so House Framer and Frame are setup correctly
         """
         super(PresenterTestCase, self).setUp()
-        self.addBenterDeed("SaltRaetTestOptsSetup")
+        self.addBenterDeed("PresenterTestOptsSetup")
         self.addBenterDeed("SaltRaetManorLaneSetup")
-        self.addBenterDeed("SaltRaetPresenterTestSetup")
+        self.addBenterDeed("PresenterTestSetup")
 
         self.act = self.addEnterDeed("SaltRaetPresenter")
         self.assertIn(self.act, self.frame.enacts)
@@ -442,6 +442,72 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                    'data': {'present': {'alpha': '1.1.1.1',
                                                         'beta': None,
                                                         'gamma': None}}})
+
+
+    def testPresenceAllowedNoMinions(self):
+        """
+        Test Presenter 'allowed' request with no minions in the state (D4)
+        """
+        console.terse("{0}\n".format(self.testPresenceAllowed.__doc__))
+
+        # Prepare
+        # add presence request
+        testStack = self.store.fetch('.salt.test.lane.stack').value
+        presenceReq = self.store.fetch('.salt.presence.event_req').value
+        ryn = 'manor'
+        msg = {'route': {'dst': (None, ryn, 'presence_req'),
+                         'src': (None, testStack.local.name, None)},
+               'data': {'state': 'allowed'}}
+        presenceReq.append(msg)
+
+        # Test
+        self.frame.enter()  # run in frame
+
+        # Check
+        self.assertEqual(len(testStack.rxMsgs), 0)
+        testStack.serviceAll()
+        self.assertEqual(len(testStack.rxMsgs), 1)
+
+        tag = tagify('present', 'presence')
+        msg, sender = testStack.rxMsgs.popleft()
+        self.assertDictEqual(msg, {'route': {'src': [None, 'manor', None],
+                                             'dst': [None, None, 'event_fire']},
+                                   'tag': tag,
+                                   'data': {'allowed': {}}})
+
+
+    def testPresenceAllowedOneMinion(self):
+        """
+        Test Presenter 'allowed' request with one minion in the state (D5)
+        """
+        console.terse("{0}\n".format(self.testPresenceAllowed.__doc__))
+
+        # Prepare
+        # add allowed minions
+        self.addPresenceInfo('alloweds', 'alpha', '1.1.1.1', '1234')
+        # add presence request
+        testStack = self.store.fetch('.salt.test.lane.stack').value
+        presenceReq = self.store.fetch('.salt.presence.event_req').value
+        ryn = 'manor'
+        msg = {'route': {'dst': (None, ryn, 'presence_req'),
+                         'src': (None, testStack.local.name, None)},
+               'data': {'state': 'allowed'}}
+        presenceReq.append(msg)
+
+        # Test
+        self.frame.enter()  # run in frame
+
+        # Check
+        self.assertEqual(len(testStack.rxMsgs), 0)
+        testStack.serviceAll()
+        self.assertEqual(len(testStack.rxMsgs), 1)
+
+        tag = tagify('present', 'presence')
+        msg, sender = testStack.rxMsgs.popleft()
+        self.assertDictEqual(msg, {'route': {'src': [None, 'manor', None],
+                                             'dst': [None, None, 'event_fire']},
+                                   'tag': tag,
+                                   'data': {'allowed': {'alpha': '1.1.1.1'}}})
 
 
 def runOne(test):

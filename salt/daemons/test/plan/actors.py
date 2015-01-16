@@ -17,27 +17,31 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 from raet import nacling
+from raet.stacking import Stack
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
+from salt.utils.event import tagify
 
-class SaltRaetTestOptsSetup(ioflo.base.deeding.Deed):
+
+class DeedTestWrapper():
+    def assertTrue(self, condition):
+        if not condition:
+            self.failure.value = 'Fail'
+            raise Exception("Test Failed")
+
+
+def createStack(ip):
+    stack = Stack()
+    stack.ha = (ip, '1234')
+    return stack
+
+
+class PresenterTestOptsSetup(ioflo.base.deeding.Deed):
     '''
-    Fire presence events!
-    FloScript:
-
-    do salt raet presenter
-
+    Setup opts share
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'presence_req': '.salt.presence.event_req',
-               'lane_stack': '.salt.lane.manor.stack',
-               'event_stack': '.salt.test.lane.stack',
-               'aliveds': {'ipath': '.salt.var.presence.aliveds',
-                           'ival': odict()},
-               'availables': {'ipath': '.salt.var.presence.availables',
-                              'ival': set()},
-               'is_done': '.is_done'}
+    Ioinits = {'opts': '.salt.opts'}
 
     def action(self):
         '''
@@ -94,6 +98,7 @@ class SaltRaetTestOptsSetup(ioflo.base.deeding.Deed):
             )
         return True
 
+
 def serviceStacks(stacks, duration=1.0):
     '''
     Utility method to service queues for list of stacks. Call from test method.
@@ -110,16 +115,12 @@ def serviceStacks(stacks, duration=1.0):
         console.terse("Stack {0} remotes: {1}\n".format(stack.name, stack.nameRemotes))
     console.terse("Service stacks exit\n")
 
-class SaltRaetPresenterTestSetup(ioflo.base.deeding.Deed):
-    '''
-    Fire presence events!
-    FloScript:
 
-    do salt raet presenter
-
+class PresenterTestSetup(ioflo.base.deeding.Deed):
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'presence_req': '.salt.presence.event_req',
+    Setup shares for presence tests
+    '''
+    Ioinits = {'presence_req': '.salt.presence.event_req',
                'lane_stack': '.salt.lane.manor.stack',
                'event_stack': '.salt.test.lane.stack',
                'alloweds': {'ipath': '.salt.var.presence.alloweds',
@@ -129,8 +130,7 @@ class SaltRaetPresenterTestSetup(ioflo.base.deeding.Deed):
                'reapeds': {'ipath': '.salt.var.presence.reapeds',
                            'ival': odict()},
                'availables': {'ipath': '.salt.var.presence.availables',
-                              'ival': set()},
-               'is_done': '.is_done'}
+                              'ival': set()}}
 
     def action(self):
 
@@ -139,8 +139,6 @@ class SaltRaetPresenterTestSetup(ioflo.base.deeding.Deed):
         self.alloweds.value = odict()
         self.aliveds.value = odict()
         self.reapeds.value = odict()
-
-        self.is_done.value = False
 
         # Create event stack
         name = 'event' + nacling.uuid(size=18)
@@ -166,3 +164,539 @@ class SaltRaetPresenterTestSetup(ioflo.base.deeding.Deed):
         serviceStacks([stack, self.lane_stack.value])
         return True
 
+
+class PresenterTestCleanup(ioflo.base.deeding.Deed):
+    '''
+    Clean up after a test
+    '''
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'alloweds': {'ipath': '.salt.var.presence.alloweds',
+                            'ival': odict()},
+               'aliveds': {'ipath': '.salt.var.presence.aliveds',
+                           'ival': odict()},
+               'reapeds': {'ipath': '.salt.var.presence.reapeds',
+                           'ival': odict()},
+               'availables': {'ipath': '.salt.var.presence.availables',
+                              'ival': set()}}
+
+    def action(self):
+
+        self.presence_req.value = deque()
+        self.availables.value = set()
+        self.alloweds.value = odict()
+        self.aliveds.value = odict()
+        self.reapeds.value = odict()
+
+
+class TestPresenceAvailable(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'aliveds': {'ipath': '.salt.var.presence.aliveds',
+                           'ival': odict()},
+               'availables': {'ipath': '.salt.var.presence.availables',
+                              'ival': set()}}
+
+    def action(self):
+        """
+        Test Presenter 'available' request (A1, B*)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add available minions
+        self.availables.value.add('alpha')
+        self.availables.value.add('beta')
+        self.aliveds.value['alpha'] = createStack('1.1.1.1')
+        self.aliveds.value['beta'] = createStack('1.2.3.4')
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        # general available request format
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'available'}})
+        # missing 'data', fallback to available
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)}})
+        # missing 'state' in 'data', fallback to available
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {}})
+        # requested None state, fallback to available
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': None}})
+        # requested 'present' state that is alias for available
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'present'}})
+
+
+class TestPresenceAvailableCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 5)
+
+        tag = tagify('present', 'presence')
+        while testStack.rxMsgs:
+            msg, sender = testStack.rxMsgs.popleft()
+            self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                              'dst': [None, None, 'event_fire']},
+                                    'tag': tag,
+                                    'data': {'present': {'alpha': '1.1.1.1',
+                                                         'beta': '1.2.3.4'}}})
+
+
+class TestPresenceJoined(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'alloweds': {'ipath': '.salt.var.presence.alloweds',
+                            'ival': odict()}}
+
+    def action(self):
+        """
+        Test Presenter 'joined' request (A2)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add joined minions
+        self.alloweds.value['alpha'] = createStack('1.1.1.1')
+        self.alloweds.value['beta'] = createStack('1.2.3.4')
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'joined'}})
+
+
+class TestPresenceJoinedCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        msg, sender = testStack.rxMsgs.popleft()
+        self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                          'dst': [None, None, 'event_fire']},
+                                'tag': tag,
+                                'data': {'joined': {'alpha': '1.1.1.1',
+                                                    'beta': '1.2.3.4'}}})
+
+
+class TestPresenceAllowed(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'alloweds': {'ipath': '.salt.var.presence.alloweds',
+                            'ival': odict()}}
+
+    def action(self):
+        """
+        Test Presenter 'allowed' request (A3)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add allowed minions
+        self.alloweds.value['alpha'] = createStack('1.1.1.1')
+        self.alloweds.value['beta'] = createStack('1.2.3.4')
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'allowed'}})
+
+
+class TestPresenceAllowedCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        msg, sender = testStack.rxMsgs.popleft()
+        self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                          'dst': [None, None, 'event_fire']},
+                                'tag': tag,
+                                'data': {'allowed': {'alpha': '1.1.1.1',
+                                                     'beta': '1.2.3.4'}}})
+
+
+class TestPresenceAlived(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'aliveds': {'ipath': '.salt.var.presence.aliveds',
+                            'ival': odict()}}
+
+    def action(self):
+        """
+        Test Presenter 'alived' request (A4)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add alived minions
+        self.aliveds.value['alpha'] = createStack('1.1.1.1')
+        self.aliveds.value['beta'] = createStack('1.2.3.4')
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'alived'}})
+
+
+class TestPresenceAlivedCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        msg, sender = testStack.rxMsgs.popleft()
+        self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                          'dst': [None, None, 'event_fire']},
+                                'tag': tag,
+                                'data': {'alived': {'alpha': '1.1.1.1',
+                                                    'beta': '1.2.3.4'}}})
+
+
+class TestPresenceReaped(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'reapeds': {'ipath': '.salt.var.presence.reapeds',
+                           'ival': odict()}}
+
+    def action(self):
+        """
+        Test Presenter 'reaped' request (A5)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add reaped minions
+        self.reapeds.value['alpha'] = createStack('1.1.1.1')
+        self.reapeds.value['beta'] = createStack('1.2.3.4')
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'reaped'}})
+
+
+class TestPresenceReapedCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        msg, sender = testStack.rxMsgs.popleft()
+        self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                          'dst': [None, None, 'event_fire']},
+                                'tag': tag,
+                                'data': {'reaped': {'alpha': '1.1.1.1',
+                                                    'beta': '1.2.3.4'}}})
+
+
+class TestPresenceNoRequest(ioflo.base.deeding.Deed):
+    Ioinits = {}
+
+    def action(self):
+        """
+        Test Presenter with no requests (C1)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        pass # do nothing
+
+
+class TestPresenceNoRequestCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+
+
+class TestPresenceUnknownSrc(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        """
+        Test Presenter handles request from unknown (disconnected) source (C2)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        name = 'unknown_name'
+        self.assertTrue(name != testStack.local.name)
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, name, None)}})
+
+
+class TestPresenceUnknownSrcCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+
+
+class TestPresenceAvailableNoMinions(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack'}
+
+    def action(self):
+        """
+        Test Presenter 'available' request with no minions in the state (D1)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'available'}})
+
+
+class TestPresenceAvailableNoMinionsCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        while testStack.rxMsgs:
+            msg, sender = testStack.rxMsgs.popleft()
+            self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                              'dst': [None, None, 'event_fire']},
+                                    'tag': tag,
+                                    'data': {'present': {}}})
+
+
+class TestPresenceAvailableOneMinion(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'aliveds': {'ipath': '.salt.var.presence.aliveds',
+                           'ival': odict()},
+               'availables': {'ipath': '.salt.var.presence.availables',
+                              'ival': set()}}
+
+    def action(self):
+        """
+        Test Presenter 'available' request with one minions in the state (D2)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add available minions
+        self.availables.value.add('alpha')
+        self.aliveds.value['alpha'] = createStack('1.1.1.1')
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'available'}})
+
+
+class TestPresenceAvailableOneMinionCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        while testStack.rxMsgs:
+            msg, sender = testStack.rxMsgs.popleft()
+            self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                              'dst': [None, None, 'event_fire']},
+                                    'tag': tag,
+                                    'data': {'present': {'alpha': '1.1.1.1'}}})
+
+
+class TestPresenceAvailableUnknownIp(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'aliveds': {'ipath': '.salt.var.presence.aliveds',
+                           'ival': odict()},
+               'availables': {'ipath': '.salt.var.presence.availables',
+                              'ival': set()}}
+
+    def action(self):
+        """
+        Test Presenter 'available' request with one minions in the state (D3)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add available minions
+        self.availables.value.add('alpha')
+        self.availables.value.add('beta')
+        self.availables.value.add('gamma')
+        self.aliveds.value['alpha'] = createStack('1.1.1.1')
+        self.aliveds.value['delta'] = createStack('1.2.3.4')
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'available'}})
+
+
+class TestPresenceAvailableUnknownIpCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        while testStack.rxMsgs:
+            msg, sender = testStack.rxMsgs.popleft()
+            self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                              'dst': [None, None, 'event_fire']},
+                                    'tag': tag,
+                                    'data': {'present': {'alpha': '1.1.1.1',
+                                                         'beta': None,
+                                                         'gamma': None}}})
+
+
+class TestPresenceAllowedNoMinions(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack'}
+
+    def action(self):
+        """
+        Test Presenter 'allowed' request with no minions in the state (D4)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'allowed'}})
+
+
+class TestPresenceAllowedNoMinionsCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        msg, sender = testStack.rxMsgs.popleft()
+        self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                          'dst': [None, None, 'event_fire']},
+                                'tag': tag,
+                                'data': {'allowed': {}}})
+
+
+class TestPresenceAllowedOneMinion(ioflo.base.deeding.Deed):
+    Ioinits = {'presence_req': '.salt.presence.event_req',
+               'event_stack': '.salt.test.lane.stack',
+               'alloweds': {'ipath': '.salt.var.presence.alloweds',
+                            'ival': odict()}}
+
+    def action(self):
+        """
+        Test Presenter 'allowed' request with one minion in the state (D5)
+        """
+        console.terse("{0}\n".format(self.action.__doc__))
+
+        # Prepare
+        # add allowed minion
+        self.alloweds.value['alpha'] = createStack('1.1.1.1')
+        # add presence request
+        testStack = self.event_stack.value
+        presenceReq = self.presence_req.value
+        ryn = 'manor'
+        presenceReq.append({'route': {'dst': (None, ryn, 'presence_req'),
+                                      'src': (None, testStack.local.name, None)},
+                            'data': {'state': 'allowed'}})
+
+
+class TestPresenceAllowedOneMinionCheck(ioflo.base.deeding.Deed, DeedTestWrapper):
+    Ioinits = {'event_stack': '.salt.test.lane.stack',
+               'failure': '.meta.failure'}
+
+    def action(self):
+        testStack = self.event_stack.value
+        self.assertTrue(len(testStack.rxMsgs) == 0)
+        testStack.serviceAll()
+        self.assertTrue(len(testStack.rxMsgs) == 1)
+
+        tag = tagify('present', 'presence')
+        msg, sender = testStack.rxMsgs.popleft()
+        self.assertTrue(msg == {'route': {'src': [None, 'manor', None],
+                                          'dst': [None, None, 'event_fire']},
+                                'tag': tag,
+                                'data': {'allowed': {'alpha':'1.1.1.1'}}})
