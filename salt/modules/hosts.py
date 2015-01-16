@@ -233,8 +233,8 @@ def _write_hosts(hosts):
 
     hfn = __get_hosts_filename()
     with salt.utils.fopen(hfn, 'w+') as ofile:
-        ofile.write(
-            '\n'.join(
-                [l.strip() for l in lines if l.strip()]
-            )
-        )
+        for line in lines:
+            if line.strip():
+                # /etc/hosts needs to end with EOL so that some utils that read
+                # it do not break
+                ofile.write('{0}\n'.format(line.strip()))
