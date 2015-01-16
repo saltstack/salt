@@ -21,6 +21,8 @@ import salt.config
 import salt.utils
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
+import logging
+log = logging.getLogger(__name__)
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 

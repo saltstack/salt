@@ -19,7 +19,8 @@ import time
 import shutil
 import optparse
 import subprocess
-
+import logging
+log = logging.getLogger(__name__)
 # Import Salt libs
 try:
     from salt.utils.nb_popen import NonBlockingPopen

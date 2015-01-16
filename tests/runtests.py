@@ -10,6 +10,8 @@ from __future__ import print_function
 import os
 import resource
 import tempfile
+import logging
+log = logging.getLogger(__name__)
 
 # Import salt libs
 from integration import TestDaemon, TMP  # pylint: disable=W0403

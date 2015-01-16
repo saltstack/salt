@@ -26,6 +26,8 @@ import datetime
 import yaml
 import zmq
 from collections import namedtuple
+import logging
+log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
 try:

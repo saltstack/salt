@@ -16,6 +16,8 @@ import jinja2
 from salt.utils.serializers import json, yamlex, yaml, msgpack
 from salt.utils.serializers import SerializationError
 from salt.utils.odict import OrderedDict
+import logging
+log = logging.getLogger(__name__)
 
 SKIP_MESSAGE = '%s is unavailable, do prerequisites have been met?'
 

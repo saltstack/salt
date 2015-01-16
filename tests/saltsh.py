@@ -21,6 +21,8 @@ completion behavior can be customized via the ~/.inputrc file.
 
 '''
 # pylint: disable=file-perms
+import logging
+log = logging.getLogger(__name__)
 
 # Import python libs
 import atexit

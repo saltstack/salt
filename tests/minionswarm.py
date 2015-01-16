@@ -17,6 +17,8 @@ import subprocess
 import tempfile
 import shutil
 import sys
+import logging
+log = logging.getLogger(__name__)
 
 # Import salt libs
 import salt
