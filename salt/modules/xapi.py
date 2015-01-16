@@ -24,6 +24,8 @@ import contextlib
 import os
 from salt.ext.six.moves import range
 from salt.ext.six.moves import map
+import logging
+log = logging.getLogger(__name__)
 
 try:
     import importlib
