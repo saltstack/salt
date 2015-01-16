@@ -91,8 +91,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                               connect_timeout=30,
-                               request_timeout=30,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -110,8 +110,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                               connect_timeout=30,
-                               request_timeout=30,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
@@ -130,8 +130,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                               connect_timeout=30,
-                               request_timeout=30,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -151,8 +151,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                               connect_timeout=30,
-                               request_timeout=30,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -170,8 +170,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                               connect_timeout=30,
-                               request_timeout=30,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
@@ -270,8 +270,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                               connect_timeout=30,
-                               request_timeout=30,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [['minion', 'sub_minion']])
