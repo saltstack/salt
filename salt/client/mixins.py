@@ -338,7 +338,7 @@ class AsyncClientMixin(object):
 
     def get_async_returns(self, tag, timeout=None, event=None):
         '''
-        Yield all events from a given tag until "ret" is recieved or timeout is
+        Yield all events from a given tag until "ret" is received or timeout is
         reached.
         '''
         if timeout is None:
