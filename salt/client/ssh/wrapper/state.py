@@ -204,6 +204,7 @@ def high(data, **kwargs):
 
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     '''
+    __pillar__.update(kwargs.get('pillar', {}))
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
@@ -269,6 +270,7 @@ def highstate(test=None, **kwargs):
         salt '*' state.highstate exclude=sls_to_exclude
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
+    __pillar__.update(kwargs.get('pillar', {}))
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
@@ -338,6 +340,7 @@ def top(topfn, test=None, **kwargs):
         salt '*' state.top reverse_top.sls exclude=sls_to_exclude
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
+    __pillar__.update(kwargs.get('pillar', {}))
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
     if salt.utils.test_mode(test=test, **kwargs):
@@ -406,6 +409,7 @@ def show_highstate():
 
         salt '*' state.show_highstate
     '''
+    __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -425,6 +429,7 @@ def show_lowstate():
 
         salt '*' state.show_lowstate
     '''
+    __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -445,6 +450,7 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
 
         salt '*' state.show_sls core,edit.vim dev
     '''
+    __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
     if env is not None:
         salt.utils.warn_until(
@@ -492,6 +498,7 @@ def show_top():
 
         salt '*' state.show_top
     '''
+    __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
