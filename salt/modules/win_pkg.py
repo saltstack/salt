@@ -568,7 +568,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         cmd = []
         if msiexec:
-            cmd.extend('msiexec', '/i')
+            cmd.extend(['msiexec', '/i'])
         cmd.append(cached_pkg)
         cmd.extend(install_flags.split())
 
