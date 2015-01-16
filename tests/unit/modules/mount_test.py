@@ -119,9 +119,11 @@ class MountTestCase(TestCase):
                               mount.set_fstab, 'A', 'B', 'C')
 
         mock = MagicMock(return_value=True)
+        mock_read = MagicMock(side_effect=OSError)
         with patch.object(os.path, 'isfile', mock):
-            self.assertRaises(CommandExecutionError,
-                              mount.set_fstab, 'A', 'B', 'C')
+            with patch.object(salt.utils, 'fopen', mock_read):
+                self.assertRaises(CommandExecutionError,
+                                  mount.set_fstab, 'A', 'B', 'C')
 
         mock = MagicMock(return_value=True)
         with patch.object(os.path, 'isfile', mock):
@@ -227,36 +229,35 @@ class MountTestCase(TestCase):
         with patch.object(salt.utils, 'which', mock):
             self.assertFalse(mount.is_fuse_exec('cmd'))
 
-    @patch('salt.modules.mount.__grains__')
-    def test_swaps(self, salt_modules_mount_grains):
+    def test_swaps(self):
         '''
         Return a dict containing information on active swap
         '''
 
         file_data = '\n'.join(['Filename Type Size Used Priority',
                                '/dev/sda1 partition 31249404 4100 -1'])
-        with patch('salt.utils.fopen',
-                   mock_open(read_data=file_data),
-                   create=True) as m:
-            m.return_value.__iter__.return_value = file_data.splitlines()
+        with patch.dict(mount.__grains__, {'os': ''}):
+            with patch('salt.utils.fopen',
+                       mock_open(read_data=file_data),
+                       create=True) as m:
+                m.return_value.__iter__.return_value = file_data.splitlines()
 
-            salt_modules_mount_grains.return_value = {'os': ''}
-            self.assertDictEqual(mount.swaps(), {'/dev/sda1':
-                                                 {'priority': '-1',
-                                                  'size': '31249404',
-                                                  'type': 'partition',
-                                                  'used': '4100'}})
+                self.assertDictEqual(mount.swaps(), {'/dev/sda1':
+                                                     {'priority': '-1',
+                                                      'size': '31249404',
+                                                      'type': 'partition',
+                                                      'used': '4100'}})
 
-        file_data = '\n'.join(['Device Type Size Used Priority',
-                               '/dev/sda1 partition 31249404 4100 -1'])
-        salt_modules_mount_grains.return_value = {'os': 'OpenBSD'}
+        file_data = '\n'.join(['Device Size Used Unknown Unknown Priority',
+                               '/dev/sda1 31249404 4100 unknown unknown -1'])
         mock = MagicMock(return_value=file_data)
-        with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
-            self.assertDictEqual(mount.swaps(), {'/dev/sda1':
-                                                 {'priority': '-1',
-                                                  'size': '31249404',
-                                                  'type': 'partition',
-                                                  'used': '4100'}})
+        with patch.dict(mount.__grains__, {'os': 'OpenBSD'}):
+            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+                self.assertDictEqual(mount.swaps(), {'/dev/sda1':
+                                                     {'priority': '-1',
+                                                      'size': '31249404',
+                                                      'type': 'partition',
+                                                      'used': '4100'}})
 
     def test_swapon(self):
         '''
