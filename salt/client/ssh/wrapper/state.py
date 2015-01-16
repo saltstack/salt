@@ -409,7 +409,6 @@ def show_highstate():
 
         salt '*' state.show_highstate
     '''
-    __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -429,7 +428,6 @@ def show_lowstate():
 
         salt '*' state.show_lowstate
     '''
-    __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -498,7 +496,6 @@ def show_top():
 
         salt '*' state.show_top
     '''
-    __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
