@@ -43,7 +43,10 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         '''
         Test the root path which returns the list of clients we support
         '''
-        response = self.fetch('/')
+        response = self.fetch('/',
+                              connect_timeout=30,
+                              request_timeout=30,
+                )
         self.assertEqual(response.code, 200)
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['clients'],
@@ -67,7 +70,9 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               method='POST',
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json']},
-                              follow_redirects=False
+                              follow_redirects=False,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         self.assertEqual(response.code, 302)
         self.assertEqual(response.headers['Location'], '/login')
@@ -86,6 +91,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                               connect_timeout=30,
+                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -103,6 +110,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                               connect_timeout=30,
+                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
@@ -121,6 +130,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                               connect_timeout=30,
+                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -140,6 +151,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                               connect_timeout=30,
+                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -157,6 +170,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                               connect_timeout=30,
+                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
@@ -255,6 +270,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                               connect_timeout=30,
+                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [['minion', 'sub_minion']])
@@ -374,9 +391,8 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                                method='GET',
                                headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                                follow_redirects=False,
-                               request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
                                )
-        response = self.wait(timeout=10)
+        response = self.wait(timeout=30)
         response_obj = json.loads(response.body)['return'][0]
         for jid, ret in response_obj.iteritems():
             self.assertIn('Function', ret)
@@ -393,9 +409,8 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                                method='GET',
                                headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                                follow_redirects=False,
-                               request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
                                )
-        response = self.wait(timeout=10)
+        response = self.wait(timeout=30)
         response_obj = json.loads(response.body)['return'][0]
         self.assertIn('Function', response_obj)
         self.assertIn('Target', response_obj)
@@ -456,7 +471,7 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
         self.events_to_fire = 5
         response = self.fetch('/events',
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              streaming_callback=self.on_event
+                              streaming_callback=self.on_event,
                               )
 
     def _stop(self):

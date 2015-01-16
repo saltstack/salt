@@ -246,7 +246,7 @@ def _get_serv():
         conn.close()
 
 
-class merger(object):
+class Merger(object):
     '''
         This class receives and processes the database rows in a database
         agnostic way.
@@ -469,7 +469,7 @@ def ext_pillar(minion_id,
     #    log.debug('ext_pillar MySQL kwargs: {0}'.format(kwargs))
     #
     # Most of the heavy lifting is in this class for ease of testing.
-    return_data = merger()
+    return_data = Merger()
     qbuffer = return_data.extract_queries(args, kwargs)
     with _get_serv() as cur:
         for root, details in qbuffer:
@@ -477,7 +477,7 @@ def ext_pillar(minion_id,
             cur.execute(details['query'], (minion_id,))
 
             # Extract the field names MySQL has returned and process them
-            # All heavy lifting is done in the merger class to decouple the
+            # All heavy lifting is done in the Merger class to decouple the
             # logic from MySQL.  Makes it easier to test.
             return_data.process_fields([row[0] for row in cur.description],
                                        details['depth'])

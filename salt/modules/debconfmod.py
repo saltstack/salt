@@ -104,7 +104,7 @@ def _set_file(path):
     '''
     cmd = 'debconf-set-selections {0}'.format(path)
 
-    __salt__['cmd.run_stdout'](cmd)
+    __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
 
 def set_(package, question, type, value, *extra):

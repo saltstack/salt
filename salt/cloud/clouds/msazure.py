@@ -26,22 +26,26 @@ http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-managemen
 
 from __future__ import absolute_import
 
-# Import python libs
-import time
 import copy
-import pprint
 import logging
+import pprint
+import time
 
-# Import salt cloud libs
 import salt.config as config
-import salt.utils.cloud
 from salt.exceptions import SaltCloudSystemExit
+import salt.utils.cloud
+import yaml
 
+
+# Import python libs
+# Import salt cloud libs
 # Import azure libs
 HAS_LIBS = False
 try:
     import azure
     import azure.servicemanagement
+    from azure import (WindowsAzureConflictError,
+                       WindowsAzureMissingResourceError)
     HAS_LIBS = True
 except ImportError:
     pass
@@ -428,17 +432,21 @@ def create(vm_):
     conn = get_conn()
 
     label = vm_.get('label', vm_['name'])
+    service_name = vm_.get('service_name', vm_['name'])
     service_kwargs = {
-        'service_name': vm_['name'],
+        'service_name': service_name,
         'label': label,
         'description': vm_.get('desc', vm_['name']),
         'location': vm_['location'],
     }
 
+    ssh_port = config.get_cloud_config_value('port', vm_, __opts__,
+                                             default='22', search_global=True)
+
     ssh_endpoint = azure.servicemanagement.ConfigurationSetInputEndpoint(
         name='SSH',
         protocol='TCP',
-        port='22',
+        port=ssh_port,
         local_port='22',
     )
 
@@ -460,8 +468,8 @@ def create(vm_):
     os_hd = azure.servicemanagement.OSVirtualHardDisk(vm_['image'], media_link)
 
     vm_kwargs = {
-        'service_name': vm_['name'],
-        'deployment_name': vm_['name'],
+        'service_name': service_name,
+        'deployment_name': service_name,
         'deployment_slot': vm_['slot'],
         'label': label,
         'role_name': vm_['name'],
@@ -491,7 +499,8 @@ def create(vm_):
 
     try:
         conn.create_hosted_service(**service_kwargs)
-        conn.create_virtual_machine_deployment(**vm_kwargs)
+    except WindowsAzureConflictError:
+        log.debug("Cloud service already exists")
     except Exception as exc:
         error = 'The hosted service name is invalid.'
         if error in str(exc):
@@ -516,17 +525,54 @@ def create(vm_):
                 exc_info_on_loglevel=logging.DEBUG
             )
         return False
+    try:
+        conn.create_virtual_machine_deployment(**vm_kwargs)
+    except WindowsAzureConflictError:
+        log.debug("Conflict error. The deployment may already exist, trying add_role")
+        # Deleting two useless keywords
+        del vm_kwargs['deployment_slot']
+        del vm_kwargs['label']
+        conn.add_role(**vm_kwargs)
+    except Exception as exc:
+        error = 'The hosted service name is invalid.'
+        if error in str(exc):
+            log.error(
+                'Error creating {0} on Azure.\n\n'
+                'The VM name is invalid. The name can contain '
+                'only letters, numbers, and hyphens. The name must start with '
+                'a letter and must end with a letter or a number.'.format(
+                    vm_['name']
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+        else:
+            log.error(
+                'Error creating {0} on Azure.\n\n'
+                'The Virtual Machine could not be created. If you '
+                'are using an already existing Cloud Service, '
+                'make sure you set up the `port` variable corresponding '
+                'to the SSH port exists and that the port number is not '
+                'already in use.\nThe following exception was thrown when trying to '
+                'run the initial deployment: \n{1}'.format(
+                    vm_['name'], str(exc)
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+        return False
 
     def wait_for_hostname():
         '''
         Wait for the IP address to become available
         '''
         try:
-            data = show_instance(vm_['name'], call='action')
-        except Exception:
+            conn.get_role(service_name, service_name, vm_["name"])
+            data = show_instance(service_name, call='action')
+            if 'url' in data and data['url'] != str(''):
+                return data['url']
+        except WindowsAzureMissingResourceError:
             pass
-        if 'url' in data and data['url'] != str(''):
-            return data['url']
         time.sleep(1)
         return False
 
@@ -555,6 +601,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': hostname,
+            'port': ssh_port,
             'username': ssh_username,
             'password': ssh_password,
             'script': deploy_script,
@@ -656,6 +703,37 @@ def create(vm_):
                 )
             )
 
+    # Attaching volumes
+    volumes = config.get_cloud_config_value(
+        'volumes', vm_, __opts__, search_global=True
+    )
+    if volumes:
+        salt.utils.cloud.fire_event(
+            'event',
+            'attaching volumes',
+            'salt/cloud/{0}/attaching_volumes'.format(vm_['name']),
+            {'volumes': volumes},
+            transport=__opts__['transport']
+        )
+
+        log.info('Create and attach volumes to node {0}'.format(vm_['name']))
+        created = create_attach_volumes(
+            vm_['name'],
+            {
+                'volumes': volumes,
+                'service_name': service_name,
+                'deployment_name': vm_['name'],
+                'media_link': media_link,
+                'role_name': vm_['name'],
+                'del_all_vols_on_destroy': vm_.get('set_del_all_vols_on_destroy', False)
+            },
+            call='action'
+        )
+        ret['Attached Volumes'] = created
+
+    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+        ret.setdefault(key, value)
+
     data = show_instance(vm_['name'], call='action')
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
@@ -681,9 +759,105 @@ def create(vm_):
     return ret
 
 
-def destroy(name, conn=None, call=None):
+def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
+    '''
+    Create and attach volumes to created node
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_attach_volumes action must be called with '
+            '-a or --action.'
+        )
+
+    if isinstance(kwargs['volumes'], str):
+        volumes = yaml.safe_load(kwargs['volumes'])
+    else:
+        volumes = kwargs['volumes']
+
+    # From the Azure .NET SDK doc
+    #
+    # The Create Data Disk operation adds a data disk to a virtual
+    # machine. There are three ways to create the data disk using the
+    # Add Data Disk operation.
+    #    Option 1 - Attach an empty data disk to
+    # the role by specifying the disk label and location of the disk
+    # image. Do not include the DiskName and SourceMediaLink elements in
+    # the request body. Include the MediaLink element and reference a
+    # blob that is in the same geographical region as the role. You can
+    # also omit the MediaLink element. In this usage, Azure will create
+    # the data disk in the storage account configured as default for the
+    # role.
+    #    Option 2 - Attach an existing data disk that is in the image
+    # repository. Do not include the DiskName and SourceMediaLink
+    # elements in the request body. Specify the data disk to use by
+    # including the DiskName element. Note: If included the in the
+    # response body, the MediaLink and LogicalDiskSizeInGB elements are
+    # ignored.
+    #    Option 3 - Specify the location of a blob in your storage
+    # account that contain a disk image to use. Include the
+    # SourceMediaLink element. Note: If the MediaLink element
+    # isincluded, it is ignored.  (see
+    # http://msdn.microsoft.com/en-us/library/windowsazure/jj157199.aspx
+    # for more information)
+    #
+    # Here only option 1 is implemented
+    conn = get_conn()
+    ret = []
+    for volume in volumes:
+        if "disk_name" in volume:
+            log.error("You cannot specify a disk_name. Only new volumes are allowed")
+            return False
+        # Use the size keyword to set a size, but you can use the
+        # azure name too. If neither is set, the disk has size 100GB
+        volume.setdefault("logical_disk_size_in_gb", volume.get("size", 100))
+        volume.setdefault("host_caching", "ReadOnly")
+        volume.setdefault("lun", 0)
+        # The media link is vm_name-disk-[0-15].vhd
+        volume.setdefault("media_link",
+                          kwargs["media_link"][:-4] + "-disk-{0}.vhd".format(volume["lun"]))
+        volume.setdefault("disk_label",
+                          kwargs["role_name"] + "-disk-{0}".format(volume["lun"]))
+        volume_dict = {
+            'volume_name': volume["lun"],
+            'disk_label': volume["disk_label"]
+        }
+
+        # Preparing the volume dict to be passed with **
+        kwargs_add_data_disk = ["lun", "host_caching", "media_link",
+                                "disk_label", "disk_name",
+                                "logical_disk_size_in_gb",
+                                "source_media_link"]
+        for key in set(volume.keys()) - set(kwargs_add_data_disk):
+            del volume[key]
+
+        attach = conn.add_data_disk(kwargs["service_name"], kwargs["deployment_name"], kwargs["role_name"],
+                                    **volume)
+        log.debug(attach)
+
+        # If attach is None then everything is fine
+        if attach:
+            msg = (
+                '{0} attached to {1} (aka {2})'.format(
+                    volume_dict['volume_name'],
+                    kwargs['role_name'],
+                    name,
+                )
+            )
+            log.info(msg)
+            ret.append(msg)
+        else:
+            log.error('Error attaching {0} on Azure'.format(volume_dict))
+    return ret
+
+
+def destroy(name, conn=None, call=None, kwargs=None):
     '''
     Destroy a VM
+
+    CLI Examples::
+
+        salt-cloud -d myminion
+        salt-cloud -a destroy myminion service_name=myservice
     '''
     if call == 'function':
         raise SaltCloudSystemExit(
@@ -694,10 +868,15 @@ def destroy(name, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
+    service_name = kwargs.get('service_name', name)
+
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    del_vm = conn.delete_deployment(service_name=name, deployment_name=name)
+    del_vm = conn.delete_deployment(service_name=service_name, deployment_name=name)
     del_service = conn.delete_hosted_service
     ret[name] = {
         'request_id': del_vm.request_id,

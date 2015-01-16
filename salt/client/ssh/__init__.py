@@ -18,6 +18,8 @@ import re
 import time
 import yaml
 import uuid
+import tempfile
+import binascii
 from salt.ext.six.moves import input
 
 # Import salt libs
@@ -312,11 +314,11 @@ class SSH(object):
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
-        if salt.exitcodes.EX_OK != retcode:
+        if salt.defaults.exitcodes.EX_OK != retcode:
             return {host: stderr}
         return {host: stdout}
 
-    def handle_routine(self, que, opts, host, target):
+    def handle_routine(self, que, opts, host, target, mine=False):
         '''
         Run the routine in a "Thread", put a dict on the queue
         '''
@@ -328,6 +330,7 @@ class SSH(object):
                 mods=self.mods,
                 fsclient=self.fsclient,
                 thin=self.thin,
+                mine=mine,
                 **target)
         ret = {'id': single.id}
         stdout, stderr, retcode = single.run()
@@ -350,7 +353,7 @@ class SSH(object):
             }
         que.put(ret)
 
-    def handle_ssh(self):
+    def handle_ssh(self, mine=False):
         '''
         Spin up the needed threads or processes and execute the subsequent
         routines
@@ -378,6 +381,7 @@ class SSH(object):
                         self.opts,
                         host,
                         self.targets[host],
+                        mine,
                         )
                 routine = multiprocessing.Process(
                                 target=self.handle_routine,
@@ -407,9 +411,14 @@ class SSH(object):
             if len(rets) >= len(self.targets):
                 break
 
-    def run_iter(self):
+    def run_iter(self, mine=False):
         '''
         Execute and yield returns as they come in, do not print to the display
+
+        mine
+            The Single objects will use mine_functions defined in the roster,
+            pillar, or master config (they will be checked in that order) and
+            will modify the argv with the arguments from mine_functions
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         jid = self.returners[fstr]()
@@ -436,7 +445,7 @@ class SSH(object):
         # save load to the master job cache
         self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
-        for ret in self.handle_ssh():
+        for ret in self.handle_ssh(mine=mine):
             host = next(ret.iterkeys())
             self.cache_job(jid, host, ret[host])
             if self.event:
@@ -546,7 +555,12 @@ class Single(object):
             mods=None,
             fsclient=None,
             thin=None,
+            mine=False,
             **kwargs):
+        # Get mine setting and mine_functions if defined in kwargs (from roster)
+        self.mine = mine
+        self.mine_functions = kwargs.get('mine_functions')
+
         self.opts = opts
         self.tty = tty
         if kwargs.get('wipe'):
@@ -675,7 +689,7 @@ class Single(object):
             cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
-        elif self.fun in self.wfuncs:
+        elif self.fun in self.wfuncs or self.mine:
             stdout = self.run_wfunc()
 
         else:
@@ -780,8 +794,31 @@ class Single(object):
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
+
+        # We're running in the mind, need to fetch the arguments from the
+        # roster, pillar, master config (in that order)
+        if self.mine:
+            mine_args = None
+            if self.mine_functions and self.fun in self.mine_functions:
+                mine_args = self.mine_functions[self.fun]
+            elif opts['pillar'] and self.fun in opts['pillar'].get('mine_functions', {}):
+                mine_args = opts['pillar']['mine_functions'][self.fun]
+            elif self.fun in self.context['master_opts'].get('mine_functions', {}):
+                mine_args = self.context['master_opts']['mine_functions'][self.fun]
+
+            # If we found mine_args, replace our command's args
+            if isinstance(mine_args, dict):
+                self.args = []
+                self.kwargs = mine_args
+            elif isinstance(mine_args, list):
+                self.args = mine_args
+                self.kwargs = {}
+
         try:
-            result = self.wfuncs[self.fun](*self.args, **self.kwargs)
+            if self.mine:
+                result = wrapper[self.fun](*self.args, **self.kwargs)
+            else:
+                result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
         except Exception as exc:
@@ -858,6 +895,44 @@ ARGS = {9}\n'''.format(self.minion_config,
         for stdout, stderr, retcode in self.shell.exec_nb_cmd(cmd_str):
             yield stdout, stderr, retcode
 
+    def shim_cmd(self, cmd_str):
+        '''
+        Run a shim command.
+
+        If tty is enabled, we must scp the shim to the target system and
+        execute it there
+        '''
+        if not self.tty:
+            return self.shell.exec_cmd(cmd_str)
+
+        # Write the shim to a file
+        shim_dir = os.path.join(self.opts['cachedir'], 'ssh_shim')
+        if not os.path.exists(shim_dir):
+            os.makedirs(shim_dir)
+        with tempfile.NamedTemporaryFile(mode='w',
+                                         prefix='shim_',
+                                         dir=shim_dir,
+                                         delete=False) as shim_tmp_file:
+            shim_tmp_file.write(cmd_str)
+
+        # Copy shim to target system, under $HOME/.<randomized name>
+        target_shim_file = '.{0}'.format(binascii.hexlify(os.urandom(6)))
+        self.shell.send(shim_tmp_file.name, target_shim_file)
+
+        # Remove our shim file
+        try:
+            os.remove(shim_tmp_file.name)
+        except IOError:
+            pass
+
+        # Execute shim
+        ret = self.shell.exec_cmd('/bin/sh $HOME/{0}'.format(target_shim_file))
+
+        # Remove shim from target system
+        self.shell.exec_cmd('rm $HOME/{0}'.format(target_shim_file))
+
+        return ret
+
     def cmd_block(self, is_retry=False):
         '''
         Prepare the pre-check command to send to the subsystem
@@ -871,7 +946,7 @@ ARGS = {9}\n'''.format(self.minion_config,
 
         log.debug('Performing shimmed, blocking command as follows:\n{0}'.format(' '.join(self.argv)))
         cmd_str = self._cmd_str()
-        stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
+        stdout, stderr, retcode = self.shim_cmd(cmd_str)
 
         log.debug('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
         log.debug('STDERR {1}\n{0}'.format(stderr, self.target['host']))
@@ -881,7 +956,7 @@ ARGS = {9}\n'''.format(self.minion_config,
         if error:
             if error == 'Undefined SHIM state':
                 self.deploy()
-                stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
+                stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
@@ -910,7 +985,7 @@ ARGS = {9}\n'''.format(self.minion_config,
             shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
             if 'deploy' == shim_command and retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY:
                 self.deploy()
-                stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
+                stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     if not self.tty:
                         # If RSTR is not seen in both stdout and stderr then there
@@ -927,7 +1002,7 @@ ARGS = {9}\n'''.format(self.minion_config,
                     stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             elif 'ext_mods' == shim_command:
                 self.deploy_ext()
-                stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
+                stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.

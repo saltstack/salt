@@ -142,6 +142,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if querystring:
             requesturl += '?{0}'.format(querystring)
 
+    data = None
     if method == 'PUT':
         if local_file:
             with salt.utils.fopen(local_file, 'r') as ifile:

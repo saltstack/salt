@@ -7,6 +7,7 @@ involves preparing the three listeners and the workers needed by the master.
 from __future__ import absolute_import
 
 # Import python libs
+import ctypes
 import os
 import re
 import time
@@ -17,6 +18,7 @@ import hashlib
 import resource
 import multiprocessing
 import sys
+import tempfile
 
 # Import third party libs
 import zmq
@@ -77,6 +79,7 @@ class SMaster(object):
         :param dict opts: The salt options dictionary
         '''
         self.opts = opts
+        self.opts['aes'] = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
         self.crypticle = self.__prep_crypticle()
@@ -85,7 +88,7 @@ class SMaster(object):
         '''
         Return the crypticle used for AES
         '''
-        return salt.crypt.Crypticle(self.opts, self.opts['aes'])
+        return salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
 
     def __prep_key(self):
         '''
@@ -225,20 +228,36 @@ class Maintenance(multiprocessing.Process):
 
     def handle_key_rotate(self, now):
         '''
-        Rotate the AES key on a schedule
+        Rotate the AES key rotation
         '''
+        to_rotate = False
+        dfn = os.path.join(self.opts['cachedir'], '.dfn')
+        try:
+            stats = os.stat(dfn)
+            if stats.st_mode == 0o100400:
+                to_rotate = True
+            else:
+                log.error('Found dropfile with incorrect permissions, ignoring...')
+            os.remove(dfn)
+        except os.error:
+            pass
+
         if self.opts.get('publish_session'):
             if now - self.rotate >= self.opts['publish_session']:
-                salt.crypt.dropfile(
-                    self.opts['cachedir'],
-                    self.opts['user'],
-                    self.opts['sock_dir'])
-                self.rotate = now
-                if self.opts.get('ping_on_rotate'):
-                    # Ping all minions to get them to pick up the new key
-                    log.debug('Pinging all connected minions '
-                              'due to AES key rotation')
-                    salt.utils.master.ping_all_connected_minions(self.opts)
+                to_rotate = True
+
+        if to_rotate:
+            log.info('Rotating master AES key')
+            # should be unecessary-- since no one else should be modifying
+            with self.opts['aes'].get_lock():
+                self.opts['aes'].value = salt.crypt.Crypticle.generate_key_string()
+            self.event.fire_event({'rotate_aes_key': True}, tag='key')
+            self.rotate = now
+            if self.opts.get('ping_on_rotate'):
+                # Ping all minions to get them to pick up the new key
+                log.debug('Pinging all connected minions '
+                          'due to AES key rotation')
+                salt.utils.master.ping_all_connected_minions(self.opts)
 
     def handle_pillargit(self):
         '''
@@ -794,7 +813,9 @@ class MWorker(multiprocessing.Process):
         try:
             data = self.crypticle.loads(load)
         except Exception:
-            return ''
+            # return something not encrypted so the minions know that they aren't
+            # encrypting correctly.
+            return 'bad load'
         if 'cmd' not in data:
             log.error('Received malformed command {0}'.format(data))
             return {}
@@ -808,27 +829,10 @@ class MWorker(multiprocessing.Process):
         Check to see if a fresh AES key is available and update the components
         of the worker
         '''
-        dfn = os.path.join(self.opts['cachedir'], '.dfn')
-        try:
-            stats = os.stat(dfn)
-        except os.error:
-            return
-        if stats.st_mode != 0o100400:
-            # Invalid dfn, return
-            return
-        if stats.st_mtime > self.k_mtime:
-            # new key, refresh crypticle
-            with salt.utils.fopen(dfn) as fp_:
-                aes = fp_.read()
-            if len(aes) != 76:
-                return
-            log.debug('New master AES key found by pid {0}'.format(os.getpid()))
-            self.crypticle = salt.crypt.Crypticle(self.opts, aes)
+        if self.opts['aes'].value != self.crypticle.key_string:
+            self.crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
             self.clear_funcs.crypticle = self.crypticle
-            self.clear_funcs.opts['aes'] = aes
             self.aes_funcs.crypticle = self.crypticle
-            self.aes_funcs.opts['aes'] = aes
-            self.k_mtime = stats.st_mtime
 
     def run(self):
         '''
@@ -1220,12 +1224,15 @@ class AESFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+b') as fp_:
+            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+            os.close(tmpfh)
+            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                 fp_.write(
                     self.serial.dumps(
                         {'grains': load['grains'],
                          'pillar': data})
                     )
+            os.rename(tmpfname, datap)
         for mod in mods:
             sys.modules[mod].__grains__ = self.opts['grains']
         return data
@@ -1788,11 +1795,20 @@ class ClearFuncs(object):
 
         log.info('Authentication accepted from {id}'.format(**load))
         # only write to disk if you are adding the file, and in open mode,
-        # which implies we accept any key from a minion (key needs to be
-        # written every time because what's on disk is used for encrypting)
-        if not os.path.isfile(pubfn) or self.opts['open_mode']:
+        # which implies we accept any key from a minion.
+        if not os.path.isfile(pubfn) and not self.opts['open_mode']:
             with salt.utils.fopen(pubfn, 'w+') as fp_:
                 fp_.write(load['pub'])
+        elif self.opts['open_mode']:
+            disk_key = ''
+            if os.path.isfile(pubfn):
+                with salt.utils.fopen(pubfn, 'r') as fp_:
+                    disk_key = fp_.read()
+            if load['pub'] and load['pub'] != disk_key:
+                log.debug('Host key change detected in open mode.')
+                with salt.utils.fopen(pubfn, 'w+') as fp_:
+                    fp_.write(load['pub'])
+
         pub = None
 
         # the con_cache is enabled, send the minion id to the cache
@@ -1832,13 +1848,13 @@ class ClearFuncs(object):
             if 'token' in load:
                 try:
                     mtoken = self.master_key.key.private_decrypt(load['token'], 4)
-                    aes = '{0}_|-{1}'.format(self.opts['aes'], mtoken)
+                    aes = '{0}_|-{1}'.format(self.opts['aes'].value, mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
             else:
-                aes = self.opts['aes']
+                aes = self.opts['aes'].value
 
             ret['aes'] = pub.public_encrypt(aes, 4)
         else:
@@ -1853,8 +1869,8 @@ class ClearFuncs(object):
                     # support older minions
                     pass
 
-            aes = self.opts['aes']
-            ret['aes'] = pub.public_encrypt(self.opts['aes'], 4)
+            aes = self.opts['aes'].value
+            ret['aes'] = pub.public_encrypt(self.opts['aes'].value, 4)
         # Be aggressive about the signature
         digest = hashlib.sha256(aes).hexdigest()
         ret['sig'] = self.master_key.key.private_encrypt(digest, 5)
@@ -2222,11 +2238,17 @@ class ClearFuncs(object):
                 # If a group_auth_match is set it means only that we have a user which matches at least one or more
                 # of the groups defined in the configuration file.
 
+                external_auth_in_db = False
+                for d in self.opts['external_auth'][extra['eauth']]:
+                    if d.startswith('^'):
+                        external_auth_in_db = True
+
                 # If neither a catchall, a named membership or a group membership is found, there is no need
                 # to continue. Simply deny the user access.
                 if not ((name in self.opts['external_auth'][extra['eauth']]) |
                         ('*' in self.opts['external_auth'][extra['eauth']]) |
-                        group_auth_match):
+                        group_auth_match | external_auth_in_db):
+
                         # A group def is defined and the user is a member
                         #[group for groups in ['external_auth'][extra['eauth']]]):
                     # Auth successful, but no matching user found in config

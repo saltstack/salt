@@ -10,3 +10,4 @@ Salt SSH
 - Added support for ``state.single`` in ``salt-ssh``
 - Added support for ``publish.publish``, ``publish.full_data``, and
   ``publish.runner`` in ``salt-ssh``
+- Added support for ``mine.get`` in ``salt-ssh``

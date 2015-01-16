@@ -801,6 +801,9 @@ def installed(
     if not isinstance(version, string_types) and version is not None:
         version = str(version)
 
+    if version is not None and version == 'latest':
+        version = __salt__['pkg.latest_version'](name)
+
     kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
                                    fromrepo=fromrepo,

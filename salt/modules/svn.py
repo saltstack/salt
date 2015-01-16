@@ -7,7 +7,6 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import shlex
-import subprocess
 
 # Import salt libs
 from salt import utils, exceptions
@@ -59,21 +58,21 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
     kwargs
         Additional options to pass to the run-cmd
     '''
-    cmd = 'svn --non-interactive {0} '.format(cmd)
+    cmd = ['svn', '--non-interactive', cmd]
     if username:
-        opts += ('--username', username)
+        opts.extend(['--username', username])
     if password:
-        opts += ('--password', '\'{0}\''.format(password))
+        opts.extend(['--password', password])
     if opts:
-        cmd += subprocess.list2cmdline(opts)
+        cmd.extend(opts)
 
-    result = __salt__['cmd.run_all'](cmd, cwd=cwd, runas=user, **kwargs)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=cwd, runas=user, **kwargs)
 
     retcode = result['retcode']
 
     if retcode == 0:
         return result['stdout']
-    raise exceptions.CommandExecutionError(result['stderr'] + '\n\n' + cmd)
+    raise exceptions.CommandExecutionError(result['stderr'] + '\n\n' + ' '.join(cmd))
 
 
 def info(cwd,

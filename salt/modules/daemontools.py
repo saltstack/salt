@@ -60,7 +60,7 @@ def start(name):
     '''
     __salt__['file.remove']('{0}/down'.format(_service_path(name)))
     cmd = 'svc -u {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 #-- states.service compatible args
@@ -76,7 +76,7 @@ def stop(name):
     '''
     __salt__['file.touch']('{0}/down'.format(_service_path(name)))
     cmd = 'svc -d {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def term(name):
@@ -90,7 +90,7 @@ def term(name):
         salt '*' daemontools.term <service name>
     '''
     cmd = 'svc -t {0}'.format(_service_path(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 #-- states.service compatible
@@ -150,7 +150,7 @@ def status(name, sig=None):
         salt '*' daemontools.status <service name>
     '''
     cmd = 'svstat {0}'.format(_service_path(name))
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
     try:
         pid = re.search(r'\(pid (\d+)\)', out).group(1)
     except AttributeError:

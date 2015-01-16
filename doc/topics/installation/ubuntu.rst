@@ -67,6 +67,20 @@ may be given at a time:
 
     sudo apt-get install salt-syndic
 
+Some core components are packaged separately in the Ubuntu repositories.  These should be installed as well: salt-cloud, salt-ssh, salt-api
+
+.. code-block:: bash
+
+    sudo apt-get install salt-cloud
+    
+.. code-block:: bash
+
+    sudo apt-get install salt-ssh
+    
+.. code-block:: bash
+
+    sudo apt-get install salt-api
+
 .. _ubuntu-config:
 
 

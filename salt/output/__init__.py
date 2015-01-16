@@ -29,13 +29,6 @@ import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
-STATIC = (
-    'yaml_out',
-    'text_out',
-    'raw_out',
-    'json_out',
-)
-
 
 def get_progress(opts, out, progress):
     '''

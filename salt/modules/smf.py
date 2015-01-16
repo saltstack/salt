@@ -30,7 +30,7 @@ def _get_enabled_disabled(enabled_prop="true"):
     '''
     ret = set()
     cmd = '/usr/bin/svcprop -c -p general/enabled "*"'
-    lines = __salt__['cmd.run_stdout'](cmd).splitlines()
+    lines = __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -52,7 +52,7 @@ def get_running():
     '''
     ret = set()
     cmd = '/usr/bin/svcs -H -o FMRI,STATE -s FMRI'
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -74,7 +74,7 @@ def get_stopped():
     '''
     ret = set()
     cmd = '/usr/bin/svcs -aH -o FMRI,STATE -s FMRI'
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         comps = line.split()
         if not comps:
@@ -99,7 +99,7 @@ def available(name):
         salt '*' service.available net-snmp
     '''
     cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
-    name = __salt__['cmd.run'](cmd)
+    name = __salt__['cmd.run'](cmd, python_shell=False)
     return name in get_all()
 
 
@@ -116,7 +116,7 @@ def missing(name):
         salt '*' service.missing net-snmp
     '''
     cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
-    name = __salt__['cmd.run'](cmd)
+    name = __salt__['cmd.run'](cmd, python_shell=False)
     return name not in get_all()
 
 
@@ -152,7 +152,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '/usr/sbin/svcadm enable -s -t {0}'.format(name)
-    retcode = __salt__['cmd.retcode'](cmd)
+    retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
     if not retcode:
         return True
     if retcode == 3:
@@ -160,8 +160,8 @@ def start(name):
         # A common case is being in the 'maintenance' state
         # Attempt a clear and try one more time
         clear_cmd = '/usr/sbin/svcadm clear {0}'.format(name)
-        __salt__['cmd.retcode'](clear_cmd)
-        return not __salt__['cmd.retcode'](cmd)
+        __salt__['cmd.retcode'](clear_cmd, python_shell=False)
+        return not __salt__['cmd.retcode'](cmd, python_shell=False)
     return False
 
 
@@ -176,7 +176,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '/usr/sbin/svcadm disable -s -t {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -190,7 +190,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/usr/sbin/svcadm restart {0}'.format(name)
-    if not __salt__['cmd.retcode'](cmd):
+    if not __salt__['cmd.retcode'](cmd, python_shell=False):
         # calling restart doesn't clear maintenance
         # or tell us that the service is in the 'online' state
         return start(name)
@@ -208,7 +208,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '/usr/sbin/svcadm refresh {0}'.format(name)
-    if not __salt__['cmd.retcode'](cmd):
+    if not __salt__['cmd.retcode'](cmd, python_shell=False):
         # calling reload doesn't clear maintenance
         # or tell us that the service is in the 'online' state
         return start(name)
@@ -227,7 +227,7 @@ def status(name, sig=None):
         salt '*' service.status <service name>
     '''
     cmd = '/usr/bin/svcs -H -o STATE {0}'.format(name)
-    line = __salt__['cmd.run'](cmd)
+    line = __salt__['cmd.run'](cmd, python_shell=False)
     if line == 'online':
         return True
     else:
@@ -245,7 +245,7 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
     '''
     cmd = '/usr/sbin/svcadm enable {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def disable(name, **kwargs):
@@ -259,7 +259,7 @@ def disable(name, **kwargs):
         salt '*' service.disable <service name>
     '''
     cmd = '/usr/sbin/svcadm disable {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def enabled(name, **kwargs):
@@ -276,9 +276,9 @@ def enabled(name, **kwargs):
     # can only be queried using the full FMRI
     # We extract the FMRI and then do the query
     fmri_cmd = '/usr/bin/svcs -H -o FMRI {0}'.format(name)
-    fmri = __salt__['cmd.run'](fmri_cmd)
+    fmri = __salt__['cmd.run'](fmri_cmd, python_shell=False)
     cmd = '/usr/sbin/svccfg -s {0} listprop general/enabled'.format(fmri)
-    comps = __salt__['cmd.run'](cmd).split()
+    comps = __salt__['cmd.run'](cmd, python_shell=False).split()
     if comps[2] == 'true':
         return True
     else:

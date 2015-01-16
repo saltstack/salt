@@ -18,6 +18,7 @@ except ImportError:
     # In case a non-master needs to import this module
     pass
 
+import tempfile
 
 # Import salt libs
 import salt.crypt
@@ -687,12 +688,15 @@ class RemoteFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+b') as fp_:
+            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+            os.close(tmpfh)
+            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                 fp_.write(
                         self.serial.dumps(
                             {'grains': load['grains'],
                              'pillar': data})
                             )
+            os.rename(tmpfname, datap)
         return data
 
     def _minion_event(self, load):

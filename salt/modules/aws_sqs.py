@@ -61,7 +61,7 @@ def _run_aws(cmd, region, opts, user, **kwargs):
         region=_region(region),
         out=_OUTPUT)
 
-    rtn = __salt__['cmd.run'](cmd, runas=user)
+    rtn = __salt__['cmd.run'](cmd, runas=user, python_shell=False)
 
     return json.loads(rtn) if rtn else ''
 

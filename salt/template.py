@@ -37,6 +37,10 @@ def compile_template(template,
     derived from the template.
     '''
 
+    # if any error occurs, we return an empty dictionary
+    ret = {}
+
+    log.debug('compile template: {0}'.format(template))
     # We "map" env to the same as saltenv until Boron is out in order to follow the same deprecation path
     kwargs.setdefault('env', saltenv)
     salt.utils.warn_until(
@@ -48,13 +52,16 @@ def compile_template(template,
 
     # Template was specified incorrectly
     if not isinstance(template, string_types):
-        return {}
+        log.error('Template was specified incorrectly: {0}'.format(template))
+        return ret
     # Template does not exists
     if not os.path.isfile(template):
-        return {}
+        log.error('Template does not exists: {0}'.format(template))
+        return ret
     # Template is an empty file
     if salt.utils.is_empty(template):
-        return {}
+        log.error('Template is an empty file: {0}'.format(template))
+        return ret
 
     # Get the list of render funcs in the render pipe line.
     render_pipe = template_shebang(template, renderers, default)
@@ -64,14 +71,16 @@ def compile_template(template,
         input_data = ifile.read()
         if not input_data.strip():
             # Template is nothing but whitespace
-            return {}
+            log.error('Template is nothing but whitespace: {0}'.format(template))
+            return ret
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
         try:
             input_data.seek(0)
-        except Exception:
-            pass
+        except Exception as exp:
+            log.error('error: {0}'.format(exp))
+
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
         if argline:
@@ -89,6 +98,10 @@ def compile_template(template,
                     ret.read()))
                 ret.seek(0)
             except Exception:
+                # ret is not a StringIO, which means it was rendered using
+                # yaml, mako, or another engine which renders to a data
+                # structure. We don't want to log this, so ignore this
+                # exception.
                 pass
     return ret
 

@@ -108,3 +108,24 @@ command:
                 public:
                     True
     ...SNIP...
+
+
+SmartDataCenter
+===============
+This driver can also be used with the Joyent SmartDataCenter project. More
+details can be found at:
+
+.. _`SmartDataCenter`: https://github.com/joyent/sdc
+
+This requires that an api_host_suffix is set. The default value for this is
+`.api.joyentcloud.com`. All characters, including the leading `.`, should be
+included:
+
+.. code-block:: yaml
+
+    my-joyent-config:
+        provider: joyent
+        user: fred
+        password: saltybacon
+        private_key: /root/joyent.pem
+        api_host_suffix: .api.myhostname.com
