@@ -561,23 +561,7 @@ class Single(object):
         Return the function name and the arg list
         '''
         fun = self.argv[0] if self.argv else ''
-        args = []
-        kws = {}
-        for arg in self.argv[1:]:
-            # FIXME - there is a bug here that will steal a non-keyword argument.
-            # example:
-            #
-            # .. code-block:: bash
-            #
-            #     salt-ssh '*' cmd.run_all 'n=$((RANDOM%8)); exit $n'
-            #
-            # The 'n=' appears to be a keyword argument, but it is
-            # simply the argument!
-            if re.match(r'\w+=', arg):
-                (key, val) = arg.split('=', 1)
-                kws[key] = val
-            else:
-                args.append(arg)
+        args, kws = salt.utils.args.parse_input(args)
         return fun, args, kws
 
     def _escape_arg(self, arg):
