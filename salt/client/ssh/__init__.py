@@ -561,7 +561,7 @@ class Single(object):
         Return the function name and the arg list
         '''
         fun = self.argv[0] if self.argv else ''
-        args, kws = salt.utils.args.parse_input(args)
+        args, kws = salt.utils.args.parse_input(self.argv[1:])
         return fun, args, kws
 
     def _escape_arg(self, arg):
