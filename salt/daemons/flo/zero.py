@@ -99,7 +99,10 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
         Set up tracking value(s)
         '''
         self.created = False
-        self.crypticle.value = salt.crypt.Crypticle(self.opts.value, self.aes.value)
+        self.crypticle.value = salt.crypt.Crypticle(
+                self.opts.value,
+                self.opts.value['aes'])
+        self.serial = salt.payload.Serial(self.opts.value)
 
     def action(self):
         '''
@@ -129,21 +132,17 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
         try:
             for package in self.publish.value:
                 payload = {'enc': 'aes'}
-                load = package['return']
-                payload['load'] = self.crypticle.value.dumps(package['return'])
-                if self.opts['sign_pub_messages']:
+                payload['load'] = self.crypticle.value.dumps(package['return']['pub'])
+                if self.opts.value['sign_pub_messages']:
                     master_pem_path = os.path.join(self.opts.value['pki_dir'], 'master.pem')
                     log.debug('Signing data packet for publish')
                     payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
-                int_payload = {'payload': self.serial.dumps(payload)}
 
-                if load['tgt_type'] == 'list':
-                    int_payload['topic_lst'] = load['tgt']
-                send_payload = self.serial.dumps(int_payload)
+                send_payload = self.serial.dumps(payload)
                 if self.opts.value['zmq_filtering']:
                     # if you have a specific topic list, use that
-                    if 'topic_lst' in package:
-                        for topic in package['topic_lst']:
+                    if package['return']['pub']['tgt_type'] == 'list':
+                        for topic in package['return']['pub']['tgt']:
                             # zmq filters are substring match, hash the topic
                             # to avoid collisions
                             htopic = hashlib.sha1(topic).hexdigest()
