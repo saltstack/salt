@@ -1,4 +1,37 @@
 # -*- coding: utf-8 -*-
+'''
+Connection module for Amazon SNS
+
+:configuration: This module accepts explicit sns credentials but can also
+    utilize IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    credentials are then automatically obtained from AWS API and no further
+    configuration is necessary. More Information available at::
+
+       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+
+    If IAM roles are not used you need to specify them either in a pillar or
+    in the minion's config file::
+
+        sns.keyid: GKTADJGHEIQSXMKKRBJ08H
+        sns.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    A region may also be specified in the configuration::
+
+        sns.region: us-east-1
+
+    If a region is not specified, the default is us-east-1.
+
+    It's also possible to specify key, keyid and region via a profile, either
+    as a passed in dict, or as a string to pull from pillars or minion config:
+
+        myprofile:
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            region: us-east-1
+
+:depends: boto
+'''
+from __future__ import absolute_import
 
 import logging
 
@@ -57,7 +90,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sns.exists mytopic region=us-east-1
     '''
-    topics = get_all_topics(region=region, key=key, keyid=keyid, profile=profile)
+    topics = get_all_topics(region=region, key=key, keyid=keyid,
+                            profile=profile)
     if name.startswith('arn:aws:sns:'):
         return name in topics.values()
     else:
@@ -73,7 +107,7 @@ def create(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_sns.create mytopic region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    ret = conn.create_topic(name)
+    conn.create_topic(name)
     log.info('Created SNS topic {0}'.format(name))
     return True
 
@@ -103,7 +137,8 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
     if name.startswith('arn:aws:sns:'):
         return name
     account_id = __salt__['boto_iam.get_account_id']()
-    return 'arn:aws:sns:{0}:{1}:{2}'.format(_get_region(region), account_id, name)
+    return 'arn:aws:sns:{0}:{1}:{2}'.format(_get_region(region), account_id,
+                                            name)
 
 
 def _get_region(region=None):
