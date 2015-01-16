@@ -1292,7 +1292,7 @@ class LocalClient(object):
                 found.add(raw['id'])
                 ret = {raw['id']: {'ret': raw['return']}}
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 # Ignore other erroneous messages
                 continue
             if 'out' in raw:

@@ -142,7 +142,7 @@ def salt_minion():
             try:
                 restart_delay = queue.get(block=False)
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 if process.exitcode == 0:
                     # Minion process ended naturally, Ctrl+C or --version
                     break

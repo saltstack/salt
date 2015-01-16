@@ -19,6 +19,8 @@ ensure_in_syspath('../../')
 import integration
 
 from salttesting import skipIf
+import logging
+log = logging.getLogger(__name__)
 
 
 class AuthTest(integration.ShellCase):

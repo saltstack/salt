@@ -626,7 +626,7 @@ class Schedule(object):
                             try:
                                 when__ = dateutil_parser.parse(__when)
                             except ValueError as exp:
-                            log.error('ValueError {0}'.format(exp))
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string. Ignoring')
                                 continue
                         elif ('whens' in self.opts['grains'] and
@@ -640,14 +640,14 @@ class Schedule(object):
                             try:
                                 when__ = dateutil_parser.parse(__when)
                             except ValueError as exp:
-                            log.error('ValueError {0}'.format(exp))
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string. Ignoring')
                                 continue
                         else:
                             try:
                                 when__ = dateutil_parser.parse(i)
                             except ValueError as exp:
-                            log.error('ValueError {0}'.format(exp))
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string {0}.'
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
@@ -820,13 +820,13 @@ class Schedule(object):
                             try:
                                 start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
                             except ValueError as exp:
-                            log.error('ValueError {0}'.format(exp))
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
                                 continue
                             try:
                                 end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
                             except ValueError as exp:
-                            log.error('ValueError {0}'.format(exp))
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
                                 continue
                             if end > start:
@@ -917,7 +917,7 @@ def clean_proc_dir(opts):
                 if job_data:
                     job = salt.payload.Serial(opts).load(fp_)
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))  # It's corrupted
+                log.error('Exception {0}'.format(exp))  # It's corrupted
                 try:
                     os.unlink(fn_)
                     continue

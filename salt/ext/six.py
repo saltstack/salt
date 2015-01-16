@@ -33,7 +33,8 @@ import functools
 import operator
 import sys
 import types
-
+import logging
+log = logging.getLogger(__name__)
 __author__ = "Benjamin Peterson <benjamin@python.org>"
 __version__ = "1.8.0"
 
@@ -198,7 +199,7 @@ class _SixMetaPathImporter(object):
             return sys.modules[fullname]
         except KeyError as exp:
             log.error('KeyError {0}'.format(exp))
-            pass
+
         mod = self.__get_module(fullname)
         if isinstance(mod, MovedModule):
             mod = mod._resolve()

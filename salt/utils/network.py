@@ -242,8 +242,8 @@ def get_hostnames():
                             for name in entry[1:]:  # try each name in the row
                                 h.append(name)
                     except IndexError as exp:
-                    log.error('IndexError {0}'.format(exp))
-                        pass  # could not split line (malformed entry?)
+                        log.error('IndexError {0}'.format(exp))
+                        # could not split line (malformed entry?)
         except (IOError, OSError) as exp:
             log.error('IO/OS Error {0}'.format(exp))
 

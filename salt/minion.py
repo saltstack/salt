@@ -124,8 +124,8 @@ def resolve_dns(opts):
                         )
                         break
                     except SaltClientError as exp:
-                log.error('SaltClientError {0}'.format(exp))
-                        pass
+                        log.error('SaltClientError {0}'.format(exp))
+
             else:
                 ret['master_ip'] = '127.0.0.1'
         except SaltSystemExit as exp:
@@ -265,7 +265,7 @@ class SMinion(object):
                         self.gen_modules()
                         break
                     except SaltClientError as exp:
-                log.error('SaltClientError {0}'.format(exp))
+                        log.error('SaltClientError {0}'.format(exp))
                         log.warning(('Attempted to authenticate with master '
                                      '{0} and failed'.format(master)))
                         continue
@@ -532,8 +532,7 @@ class MultiMinion(MinionBase):
                 try:
                     package = self.epull_sock.recv(zmq.NOBLOCK)
                 except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-                    pass
+                    log.error('Exception {0}'.format(exp))
 
             masters = list(minions.keys())
             shuffle(masters)
@@ -554,7 +553,7 @@ class MultiMinion(MinionBase):
                             minions[master]['generator'] = t_minion.tune_in_no_block()
                             minions[master]['auth_wait'] = self.opts['acceptance_wait_time']
                         except SaltClientError as exp:
-                log.error('SaltClientError {0}'.format(exp))
+                            log.error('SaltClientError {0}'.format(exp))
                             log.error('Error while bring up minion for multi-master. Is master {0} responding?'.format(master))
                             continue
                     else:
@@ -573,16 +572,16 @@ class MultiMinion(MinionBase):
                             try:
                                 minions[master]['minion'].handle_event(package)
                             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-                                pass
+                                log.error('Exception {0}'.format(exp))
+
                     else:
                         try:
                             minion['minion'].handle_event(package)
                             package = None
                             self.epub_sock.send(package)
                         except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-                            pass
+                            log.error('Exception {0}'.format(exp))
+
 
                 # have the Minion class run anything it has to run
                 next(minion['generator'])
@@ -788,7 +787,7 @@ class Minion(MinionBase):
                         conn = True
                         break
                 except SaltClientError as exp:
-                log.error('SaltClientError {0}'.format(exp))
+                    log.error('SaltClientError {0}'.format(exp))
                     msg = ('Master {0} could not be reached, trying '
                            'next master (if any)'.format(opts['master']))
                     log.info(msg)
@@ -1112,7 +1111,7 @@ class Minion(MinionBase):
                 ret['return'] = msg
                 ret['out'] = 'nested'
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
@@ -1226,7 +1225,7 @@ class Minion(MinionBase):
                 except (OSError, IOError) as exp:
                     log.error('(OSError, IOError) {0}'.format(exp))
                     # The file is gone already
-                    pass
+
         log.info('Returning information for job: {0}'.format(jid))
         channel = salt.transport.Channel.factory(self.opts)
         if ret_cmd == '_syndic_return':
@@ -1257,7 +1256,7 @@ class Minion(MinionBase):
                 oput = self.functions[fun].__outputter__
             except (KeyError, AttributeError, TypeError) as exp:
                 log.error('(KeyError, AttributeError, TypeError) {0}'.format(exp))
-                pass
+
             else:
                 if isinstance(oput, string_types):
                     load['out'] = oput
@@ -1667,7 +1666,7 @@ class Minion(MinionBase):
                     del thread
                 except (ValueError, NameError) as exp:
                     log.error('(ValueError, NameError) {0}'.format(exp))
-                    pass
+
 
     # Main Minion Tune In
     def tune_in(self):
@@ -1755,7 +1754,7 @@ class Minion(MinionBase):
                         self.handle_event(package)
                         self.epub_sock.send(package)
                     except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                        log.error('Exception {0}'.format(exp))
                         log.debug('Exception while handling events', exc_info=True)
                     # Add an extra fallback in case a forked process leeks through
                     multiprocessing.active_children()
@@ -1774,7 +1773,7 @@ class Minion(MinionBase):
                 log.error('SaltClientError {0}'.format(exp))
                 raise
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the minion',
                     exc_info=True
@@ -1813,7 +1812,7 @@ class Minion(MinionBase):
                 # If a zeromq error happens recover
                 yield True
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the minion',
                     exc_info=True
@@ -2012,7 +2011,7 @@ class Syndic(Minion):
             except zmq.ZMQError:
                 yield True
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the minion',
                     exc_info=True
@@ -2080,7 +2079,7 @@ class Syndic(Minion):
             # errors they may need some kind of handling so log them
             # for now.
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the syndic',
                     exc_info=True
@@ -2349,7 +2348,7 @@ class MultiSyndic(MinionBase):
             # errors they may need some kind of handling so log them
             # for now.
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the syndic',
                     exc_info=True

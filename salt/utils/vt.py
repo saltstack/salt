@@ -443,8 +443,7 @@ class Terminal(object):
                 try:
                     os.closerange(pty.STDERR_FILENO + 1, max_fd[0])
                 except OSError as exp:
-                log.error('OSError {0}'.format(exp))
-                    pass
+                    log.error('OSError {0}'.format(exp))
 
                 if self.cwd is not None:
                     os.chdir(self.cwd)
@@ -646,7 +645,7 @@ class Terminal(object):
                             if stripped:
                                 self.stderr_logger.log(self.stderr_logger_level, stripped)
                 except OSError as exp:
-                log.error('OSError {0}'.format(exp))
+                    log.error('OSError {0}'.format(exp))
                     os.close(self.child_fde)
                     self.child_fde = None
                     self.flag_eof_stderr = True
@@ -678,7 +677,7 @@ class Terminal(object):
                             if stripped:
                                 self.stdout_logger.log(self.stdout_logger_level, stripped)
                 except OSError as exp:
-                log.error('OSError {0}'.format(exp))
+                    log.error('OSError {0}'.format(exp))
                     os.close(self.child_fd)
                     self.child_fd = None
                     self.flag_eof_stdout = True

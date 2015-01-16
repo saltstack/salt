@@ -579,8 +579,7 @@ class SaltEvent(object):
                                         load['fun']],
                                        'job'))
                 except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-                    pass
+                    log.error('Exception {0}'.format(exp))
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
@@ -798,7 +797,7 @@ class StateFire(object):
             channel.send(load)
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
+
         return True
 
     def fire_running(self, running):
@@ -829,5 +828,5 @@ class StateFire(object):
             channel.send(load)
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
+
         return True

@@ -508,8 +508,8 @@ def in_pack(pack, name):
                 if name == chunk['name']:
                     return True
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
-                pass
+                log.error('KeyError {0}'.format(exp))
+
     elif isinstance(pack, dict):
         try:
             if name == pack['name']:
@@ -589,7 +589,7 @@ class Loader(object):
                                 return getattr(
                                     mod, fun[fun.rindex('.') + 1:])(*arg)
                 except ImportError as exp:
-                log.error('ImportError {0}'.format(exp))
+                    log.error('ImportError {0}'.format(exp))
                     log.info('Cython is enabled in options though it\'s not '
                              'present in the system path. Skipping Cython '
                              'modules.')
@@ -681,8 +681,8 @@ class Loader(object):
                     try:
                         setattr(mod, chunk['name'], chunk['value'])
                     except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
-                        pass
+                        log.error('KeyError {0}'.format(exp))
+
             else:
                 setattr(mod, pack['name'], pack['value'])
 
@@ -789,8 +789,8 @@ class Loader(object):
                         try:
                             setattr(mod, chunk['name'], chunk['value'])
                         except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
-                            pass
+                            log.error('KeyError {0}'.format(exp))
+
                 else:
                     setattr(mod, pack['name'], pack['value'])
 
@@ -1322,7 +1322,7 @@ class Loader(object):
             try:
                 ret = fun()
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'Failed to load grains defined in grain file {0} in '
                     'function {1}, error:\n'.format(
@@ -1345,9 +1345,9 @@ class Loader(object):
                     try:
                         self.serial.dump(grains_data, fp_)
                     except TypeError as exp:
-                    log.error('TypeError {0}'.format(exp))
+                        log.error('TypeError {0}'.format(exp))
                         # Can't serialize pydsl
-                        pass
+
 
             except (IOError, OSError) as exp:
                 log.error('IO/OS Error {0}'.format(exp))

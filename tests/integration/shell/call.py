@@ -23,6 +23,8 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+import logging
+log = logging.getLogger(__name__)
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):

@@ -486,7 +486,7 @@ class Client(object):
                         if fn_[len(path)] != '/':
                             continue
                     except IndexError as exp:
-                    log.error('IndexError {0}'.format(exp))
+                        log.error('IndexError {0}'.format(exp))
                         continue
                     # Remove the leading directories from path to derive
                     # the relative path on the minion.

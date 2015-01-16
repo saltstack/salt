@@ -94,7 +94,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
             uid = pwd.getpwnam(user).pw_uid
             os.chown(priv, uid, -1)
             os.chown(pub, uid, -1)
-        except (KeyError, ImportError, OSError) exp as exp:
+        except (KeyError, ImportError, OSError) as exp:
             log.error('(KeyError, ImportError, OSError) exp {0}'.format(exp))
             # The specified user was not found, allow the backup systems to
             # report the error
@@ -441,7 +441,7 @@ class SAuth(object):
                 try:
                     mkey = RSA.load_pub_key(m_path)
                 except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                    log.error('Exception {0}'.format(exp))
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
                 m_digest = mkey.public_decrypt(payload['sig'], 5)
@@ -569,7 +569,7 @@ class SAuth(object):
                     )
                     return ''
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.error(
                     'The master failed to decrypt the random minion token'
                 )

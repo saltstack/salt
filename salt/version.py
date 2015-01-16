@@ -7,7 +7,8 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function
 import re
 import sys
-
+import logging
+log = logging.getLogger(__name__)
 # Don't rely on external packages in this module since it's used at install time
 if sys.version_info[0] == 3:
     MAX_SIZE = sys.maxsize

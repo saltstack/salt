@@ -454,7 +454,7 @@ class CkMinions(object):
             try:
                 return list(eval(results))  # pylint: disable=W0123
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.error('Invalid compound target: {0}'.format(expr))
                 return []
         return list(minions)
@@ -584,7 +584,7 @@ class CkMinions(object):
                 else:
                     vals.append(False)
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.error('Invalid regular expression: {0}'.format(regex))
         return all(vals)
 

@@ -20,6 +20,8 @@ ensure_in_syspath('../../')
 import integration
 from salt.states import pip_state
 from salt.exceptions import CommandExecutionError
+import logging
+log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
 try:

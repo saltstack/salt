@@ -953,7 +953,7 @@ def fopen(*args, **kwargs):
         try:
             FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
         except AttributeError as exp:
-        log.error('AttributeError {0}'.format(exp))
+            log.error('AttributeError {0}'.format(exp))
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
         if lock and is_fcntl_available(check_sunos=True):
@@ -1057,7 +1057,7 @@ def subdict_match(data,
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
         elif exact_match:
@@ -1137,7 +1137,7 @@ def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
             try:
                 idx = int(each)
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 embed_match = False
                 # Index was not numeric, lets look at any embedded dicts
                 for embedded in (x for x in data if isinstance(x, dict)):
@@ -1146,7 +1146,7 @@ def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
                         embed_match = True
                         break
                     except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                        log.error('KeyError {0}'.format(exp))
                         pass
                 if not embed_match:
                     # No embedded dicts matched, return the default
@@ -1381,7 +1381,7 @@ def test_mode(**kwargs):
             if arg.lower() == 'test' and is_true(value):
                 return True
         except AttributeError as exp:
-        log.error('AttributeError {0}'.format(exp))
+            log.error('AttributeError {0}'.format(exp))
             continue
     return False
 
@@ -1655,8 +1655,7 @@ def date_cast(date):
                 if HAS_TIMELIB:
                     return timelib.strtodatetime(date)
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
-                pass
+                log.error('ValueError {0}'.format(exp))
 
             # not parsed yet, obviously a timestamp?
             if date.isdigit():
