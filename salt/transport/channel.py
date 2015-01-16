@@ -48,7 +48,7 @@ class ReqChannel(object):
         '''
         raise NotImplementedError()
 
-# TODO:
+
 class PubChannel(object):
     '''
     Factory class to create subscription channels to the master's Publisher
@@ -68,9 +68,12 @@ class PubChannel(object):
         if ttype == 'zeromq':
             import salt.transport.zeromq
             return salt.transport.zeromq.ZeroMQPubChannel(opts, **kwargs)
-        elif ttype == 'raet':
+        elif ttype == 'raet':  # TODO:
             import salt.transport.raet
             return salt.transport.raet.RAETPubChannel(opts, **kwargs)
+        elif ttype == 'local':  # TODO:
+            import salt.transport.local
+            return salt.transport.local.LocalPubChannel(opts, **kwargs)
         else:
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
