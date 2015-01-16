@@ -793,23 +793,6 @@ ARGS = {9}\n'''.format(self.minion_config,
 
         return cmd
 
-    def cmd(self):
-        '''
-        Prepare the pre-check command to send to the subsystem
-        '''
-        if self.fun.startswith('state.highstate'):
-            self.highstate_seed()
-        elif self.fun.startswith('state.sls'):
-            args, kwargs = salt.minion.load_args_and_kwargs(
-                self.sls_seed,
-                salt.utils.args.parse_input(self.args)
-            )
-            self.sls_seed(*args, **kwargs)
-        cmd_str = self._cmd_str()
-
-        for stdout, stderr, retcode in self.shell.exec_nb_cmd(cmd_str):
-            yield stdout, stderr, retcode
-
     def shim_cmd(self, cmd_str):
         '''
         Run a shim command.
