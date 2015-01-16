@@ -708,6 +708,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             for index in range(self.opts.value['worker_threads']):
                 worker_seed.append('worker{0}'.format(index + 1))
             self.workers.value = itertools.cycle(worker_seed)
+        return True
 
 
 class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
@@ -1140,7 +1141,7 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
             if state in [None, 'available', 'present']:
                 present = odict()
                 for name in self.availables.value:
-                    minion = self.aliveds.value[name]
+                    minion = self.aliveds.value.get(name, None)
                     present[name] = minion.ha[0] if minion else None
                 data = {'present': present}
             else:
