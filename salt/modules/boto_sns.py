@@ -26,6 +26,13 @@ def __virtual__():
 
 
 def get_all_topics(region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns a list of the all topics..
+
+    CLI example::
+
+        salt myminion boto_sns.get_all_topics
+    '''
     cache_key = 'boto_sns.topics_cache'
     try:
         return __context__[cache_key]
@@ -86,6 +93,13 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
 
 def get_arn(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns the full ARN for a given topic name.
+
+    CLI example::
+
+        salt myminion boto_sns.get_arn mytopic
+    '''
     if name.startswith('arn:aws:sns:'):
         return name
     account_id = __salt__['boto_iam.get_account_id']()
