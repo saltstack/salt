@@ -182,6 +182,9 @@ def __virtual__():
 
 
 def _parse_profile(profile):
+    '''
+    From a pillar key, or a dictionary, return index and host keys.
+    '''
     if isinstance(profile, string_types):
         _profile = __salt__['config.option'](profile)
         if not _profile:
