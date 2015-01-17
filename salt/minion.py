@@ -557,24 +557,16 @@ class MultiMinion(MinionBase):
                 # run scheduled jobs if you have them
                 loop_interval = self.process_schedule(minion['minion'], loop_interval)
 
-                # if you have an event to handle, do it on a single minion
-                # (first one to not throw an exception)
+                # If a minion instance receives event, handle the event on all
+                # instances
                 if package:
-                    # If we need to expand this, we may want to consider a specific header
-                    # or another approach entirely.
-                    if package.startswith('_minion_mine'):
-                        for multi_minion in minions:
-                            try:
-                                minions[master]['minion'].handle_event(package)
-                            except Exception:
-                                pass
-                    else:
-                        try:
-                            minion['minion'].handle_event(package)
-                            package = None
-                            self.epub_sock.send(package)
-                        except Exception:
-                            pass
+                    try:
+                        for master in masters:
+                            minions[master].handle_event(package)
+                    except Exception:
+                        pass
+                    finally:
+                        package = None
 
                 # have the Minion class run anything it has to run
                 next(minion['generator'])
