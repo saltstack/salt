@@ -203,12 +203,17 @@ class Client(object):
             saltenv = env
 
         ret = []
+
         path = self._check_proto(path)
-        # We want to make sure files start with this *directory*, use
-        # '/' explicitly because the master (that's generating the
-        # list of files) only runs on POSIX
-        if not path.endswith('/'):
-            path = path + '/'
+        # We want to make sure files start with this *directory*. Use the os
+        # path seperator only if the file_client is local since the master is
+        # running on a POSIX system.
+        if self.opts.get('file_client', 'remote') == 'local':
+            if not path.endswith(os.path.sep):
+                path = path + os.path.sep
+        else:
+            if not path.endswith('/'):
+                path = path + '/'
 
         log.info(
             'Caching directory {0!r} for environment {1!r}'.format(
