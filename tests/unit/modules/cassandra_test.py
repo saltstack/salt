@@ -15,15 +15,7 @@ from salttesting.mock import (
 # Import Salt Libs
 from salt.modules import cassandra
 
-HAS_PYCASSA = False
-try:
-    from pycassa.system_manager import SystemManager
-    HAS_PYCASSA = True
-except ImportError:
-    pass
 
-# Globals
-# from pycassa.system_manager.SystemManager import list_keyspaces
 cassandra.__grains__ = {}
 cassandra.__salt__ = {}
 cassandra.__context__ = {}
@@ -87,61 +79,60 @@ class CassandraTestCase(TestCase):
         '''
         Test for Return existing keyspaces
         '''
-        mock = MagicMock(side_effect=['8000', 'localhost'])
-        with patch.dict(cassandra.__salt__, {'config.option': mock}):
-            with patch.object(SystemManager,
-                              'list_keyspaces') as mock_method:
-                mock_method.return_value = ['A']
-                self.assertEqual(cassandra.keyspaces(), ['A'])
+        mock_keyspaces = ['A', 'B', 'C', 'D']
+
+        class MockSystemManager(object):
+            def list_keyspaces(self):
+                return mock_keyspaces
+
+        mock_sys_mgr = MagicMock(return_value=MockSystemManager())
+
+        with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
+            self.assertEqual(cassandra.keyspaces(), mock_keyspaces)
 
     def test_column_families(self):
         '''
         Test for Return existing column families for all keyspaces
         '''
-        mock = MagicMock(side_effect=['8000', 'localhost'])
-        with patch.dict(cassandra.__salt__, {'config.option': mock}):
-            with patch.object(SystemManager,
-                              'list_keyspaces') as mock_method:
-                mock_method.return_value = ['A']
-                self.assertEqual(cassandra.column_families('B'), None)
+        mock_keyspaces = ['A', 'B']
 
-        mock = MagicMock(side_effect=['8000', 'localhost'])
-        with patch.dict(cassandra.__salt__, {'config.option': mock}):
-            with patch.object(SystemManager,
-                              'list_keyspaces') as mock_method:
-                mock_method.return_value = ['A']
-                with patch.object(SystemManager,
-                                  'get_keyspace_column_families') as mock_method:
-                    mock_method.return_value = {'B': 1, 'C': 2}
-                    self.assertEqual(cassandra.column_families('A'),
-                                     ['C', 'B'])
+        class MockSystemManager(object):
+            def list_keyspaces(self):
+                return mock_keyspaces
 
-        mock = MagicMock(side_effect=['8000', 'localhost'])
-        with patch.dict(cassandra.__salt__, {'config.option': mock}):
-            with patch.object(SystemManager,
-                              'list_keyspaces') as mock_method:
-                mock_method.return_value = ['A']
-                with patch.object(SystemManager,
-                                  'get_keyspace_column_families') as mock_method:
-                    mock_method.return_value = {'B': 1, 'C': 2}
-                    self.assertEqual(cassandra.column_families(), {'A':
-                                                                   ['C', 'B']})
+            def get_keyspace_column_families(self, keyspace):
+                if keyspace == 'A':
+                    return {'a': 'saltines', 'b': 'biscuits'}
+                if keyspace == 'B':
+                    return {'c': 'cheese', 'd': 'crackers'}
+
+        mock_sys_mgr = MagicMock(return_value=MockSystemManager())
+
+        with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
+            self.assertEqual(cassandra.column_families('A'),
+                             ['a', 'b'])
+            self.assertEqual(cassandra.column_families('Z'),
+                             None)
+            self.assertEqual(cassandra.column_families(),
+                             {'A': ['a', 'b'], 'B': ['c', 'd']})
 
     def test_column_family_definition(self):
         '''
         Test for Return a dictionary of column family definitions for the given
         keyspace/column_family
         '''
-        mock = MagicMock(side_effect=['8000', 'localhost'])
-        with patch.dict(cassandra.__salt__, {'config.option': mock}):
-            with patch.object(SystemManager,
-                              'list_keyspaces') as mock_method:
-                mock_method.return_value = ['A']
-                with patch.object(SystemManager,
-                                  'get_keyspace_column_families') as mock_method:
-                    mock_method.return_value = {'B': 1, 'C': 2}
-                    self.assertEqual(cassandra.column_family_definition('A', 'B'),
-                                     None)
+        class MockSystemManager(object):
+            def get_keyspace_column_families(self, keyspace):
+                if keyspace == 'A':
+                    return {'a': object, 'b': object}
+                if keyspace == 'B':
+                    raise Exception
+
+        mock_sys_mgr = MagicMock(return_value=MockSystemManager())
+
+        with patch.object(cassandra, '_sys_mgr', mock_sys_mgr):
+            self.assertEqual(cassandra.column_family_definition('A', 'a'), vars(object))
+            self.assertEqual(cassandra.column_family_definition('B', 'a'), None)
 
 
 if __name__ == '__main__':
