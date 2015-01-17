@@ -123,7 +123,8 @@ def send_msg(recipient,
             except smtplib.SMTPException:
                 log.debug("The server does not support the STARTTLS extension.")
                 return False
-            except RuntimeError:
+            except RuntimeError as exp:
+                log.error('RuntimeError {0}'.format(exp))
                 log.debug("SSL/TLS support is not available \
                         to your Python interpreter.")
                 return False

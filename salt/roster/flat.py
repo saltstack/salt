@@ -47,7 +47,8 @@ class RosterMatcher(object):
         '''
         try:
             return getattr(self, 'ret_{0}_minions'.format(self.tgt_type))()
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             return {}
 
     def ret_glob_minions(self):

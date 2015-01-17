@@ -195,7 +195,8 @@ class SaltRaetWorkerRouter(ioflo.base.deeding.Deed):
             try:
                 s_estate, s_yard, s_share = msg['route']['src']
                 d_estate, d_yard, d_share = msg['route']['dst']
-            except (ValueError, IndexError):
+            except (ValueError, IndexError) as exp:
+                log.error('(ValueError, IndexError) {0}'.format(exp))
                 log.error('Received invalid message: {0}'.format(msg))
                 return
 

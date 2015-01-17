@@ -189,7 +189,8 @@ def get_minions():
             try:
                 int(name)
                 continue
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 pass
         ret.append(name)
     return ret
@@ -206,7 +207,8 @@ def get_jids():
             try:
                 int(name)
                 ret.append(name)
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 pass
     return ret
 

@@ -217,7 +217,8 @@ def build_centos(opts):
         with open('/etc/redhat-release', 'r') as fp_:
             redhat_release = fp_.read().strip()
             major_release = int(redhat_release.split()[2].split('.')[0])
-    except (ValueError, IndexError):
+    except (ValueError, IndexError) as exp:
+        log.error('(ValueError, IndexError) {0}'.format(exp))
         _abort('Unable to determine major release from /etc/redhat-release '
                'contents: {0!r}'.format(redhat_release))
     except IOError as exc:
@@ -247,7 +248,8 @@ def build_centos(opts):
     # Make the sdist
     try:
         sdist = _make_sdist(opts, python_bin=python_bin)
-    except NameError:
+    except NameError as exp:
+        log.error('NameError {0}'.format(exp))
         sdist = _make_sdist(opts)
 
     # Example tarball names:
@@ -256,7 +258,8 @@ def build_centos(opts):
     tarball_re = re.compile(r'^salt-([^-]+)(?:-(\d+)-(g[0-9a-f]+))?\.tar\.gz$')
     try:
         base, offset, oid = tarball_re.match(os.path.basename(sdist)).groups()
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         _abort('Unable to extract version info from sdist filename {0!r}'
                .format(sdist))
 
@@ -274,7 +277,8 @@ def build_centos(opts):
         path = os.path.join(opts.build_dir, build_dir)
         try:
             os.makedirs(path)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             pass
         if not os.path.isdir(path):
             _abort('Unable to make directory: {0}'.format(path))

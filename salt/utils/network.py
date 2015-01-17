@@ -79,7 +79,8 @@ def host_to_ip(host):
         elif family == socket.AF_INET6:
             ip, port, flow_info, scope_id = sockaddr
 
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         ip = None
     return ip
 
@@ -206,8 +207,8 @@ def get_hostnames():
         with salt.utils.fopen('/etc/hostname') as hfl:
             name = hfl.read()
         h.append(name)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
 
     # try /etc/hosts
     try:
@@ -216,13 +217,14 @@ def get_hostnames():
                 names = line.split()
                 try:
                     ip = names.pop(0)
-                except IndexError:
+                except IndexError as exp:
+                    log.error('IndexError {0}'.format(exp))
                     continue
                 if ip.startswith('127.') or ip == '::1':
                     for name in names:
                         h.append(name)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
 
     # try windows hosts
     if salt.utils.is_windows():
@@ -239,10 +241,12 @@ def get_hostnames():
                         if entry[0].startswith('127.'):
                             for name in entry[1:]:  # try each name in the row
                                 h.append(name)
-                    except IndexError:
-                        pass  # could not split line (malformed entry?)
-        except (IOError, OSError):
-            pass
+                    except IndexError as exp:
+                        log.error('IndexError {0}'.format(exp))
+                        # could not split line (malformed entry?)
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
+
 
     # strip spaces and ignore empty strings
     hosts = []
@@ -332,7 +336,8 @@ def ip_to_host(ip):
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         hostname = None
     return hostname
 
@@ -347,7 +352,8 @@ def cidr_to_ipv4_netmask(cidr_bits):
         cidr_bits = int(cidr_bits)
         if not 1 <= cidr_bits <= 32:
             return ''
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return ''
 
     netmask = ''
@@ -764,7 +770,8 @@ def in_subnet(cidr, addrs=None):
     try:
         netstart, netsize = cidr.split('/')
         netsize = int(netsize)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 
@@ -864,7 +871,8 @@ def hex2ip(hex_ip, invert=False):
     '''
     try:
         hip = int(hex_ip, 16)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return hex_ip
     if invert:
         return '{3}.{2}.{1}.{0}'.format(hip >> 24 & 255,

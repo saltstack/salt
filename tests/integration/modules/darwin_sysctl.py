@@ -53,7 +53,8 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             self.has_conf = True
             try:
                 self.conf = self.__copy_sysctl()
-            except CommandExecutionError:
+            except CommandExecutionError as exp:
+                log.error('CommandExecutionError {0}'.format(exp))
                 msg = 'Could not copy file: {0}'
                 raise CommandExecutionError(msg.format(CONFIG))
             os.remove(CONFIG)
@@ -73,10 +74,12 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             info = int(self.run_function('sysctl.get', [ASSIGN_CMD]))
             try:
                 self.assertEqual(rand, info)
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 self.run_function('sysctl.assign', [ASSIGN_CMD, self.val])
                 raise
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             self.run_function('sysctl.assign', [ASSIGN_CMD, self.val])
             raise
 
@@ -96,9 +99,11 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             found = self.__check_string(CONFIG, line)
             try:
                 self.assertTrue(found)
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 raise
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             os.remove(CONFIG)
             raise
 
@@ -117,9 +122,11 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             ret = self.run_function('sysctl.persist', [ASSIGN_CMD, 50])
             try:
                 self.assertEqual(ret, 'Already set')
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 raise
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             os.remove(CONFIG)
             raise
 
@@ -143,9 +150,11 @@ class DarwinSysctlModuleTest(integration.ModuleCase):
             info = int(self.run_function('sysctl.get', [ASSIGN_CMD]))
             try:
                 self.assertEqual(info, rand)
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 raise
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             os.remove(CONFIG)
             raise
 

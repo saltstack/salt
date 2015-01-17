@@ -160,7 +160,8 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
             peer_name, path = brick.split(':')
             if not path.startswith('/'):
                 return 'Error: Brick paths must start with /'
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return 'Error: Brick syntax is <peer>:<path>'
 
     # Format creation call

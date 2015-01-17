@@ -111,7 +111,8 @@ class AzureTest(integration.ShellCase):
         # check if instance installed salt and returned correctly
         try:
             self.assertIn(ret_str, instance)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
@@ -120,7 +121,8 @@ class AzureTest(integration.ShellCase):
         not_deleted = 'No machines were found to be destroyed'
         try:
             self.assertNotEqual(not_deleted, delete)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             raise
 
     def tearDown(self):

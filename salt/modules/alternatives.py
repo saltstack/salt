@@ -73,7 +73,8 @@ def show_current(name):
     alt_link_path = '/etc/alternatives/{0}'.format(name)
     try:
         return os.readlink(alt_link_path)
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         log.error(
             'alternatives: path {0} does not exist'.format(alt_link_path)
         )

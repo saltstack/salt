@@ -25,7 +25,8 @@ def __virtual__():
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return False
 
     enabled = ('amazon', 'xcp', 'xenserver')

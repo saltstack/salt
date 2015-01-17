@@ -181,7 +181,8 @@ def _validate_keys(key_file):
                             'comment': comment,
                             'options': options,
                             'fingerprint': fingerprint}
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         raise CommandExecutionError(
             'Problem reading ssh key file {0}'.format(key_file)
         )
@@ -259,7 +260,8 @@ def host_keys(keydir=None):
             try:
                 with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
                     keys[kname] = _fh.readline().strip()
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 keys[kname] = ''
     return keys
 
@@ -290,7 +292,8 @@ def auth_keys(user=None, config='.ssh/authorized_keys'):
         full = None
         try:
             full = _get_config_file(u, config)
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             pass
 
         if full and os.path.isfile(full):
@@ -620,7 +623,8 @@ def _parse_openssh_output(lines):
             continue
         try:
             hostname, enc, key = line.split()
-        except ValueError:  # incorrect format
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         fingerprint = _fingerprint(key)
         if not fingerprint:
@@ -933,8 +937,9 @@ def user_keys(user=None, pubfile=None, prvfile=None):
                 try:
                     with salt.utils.fopen(fn_, 'r') as _fh:
                         keys[u][keyname] = ''.join(_fh.readlines())
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
+
 
     # clean up any empty items
     _keys = {}

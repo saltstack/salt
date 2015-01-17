@@ -133,7 +133,8 @@ class KeyCLI(object):
                     self.opts)
             try:
                 veri = input('Proceed? [n/Y] ')
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                 raise SystemExit("\nExiting on CTRL-c")
             if not veri or veri.lower().startswith('y'):
                 _print_accepted(
@@ -197,7 +198,8 @@ class KeyCLI(object):
                     self.opts)
             try:
                 veri = input('Proceed? [N/y] ')
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                 raise SystemExit("\nExiting on CTRL-c")
             if veri.lower().startswith('y'):
                 _print_deleted(
@@ -595,7 +597,8 @@ class Key(object):
                 for fn_ in salt.utils.isorted(os.listdir(dir_)):
                     if os.path.isfile(os.path.join(dir_, fn_)):
                         ret[os.path.basename(dir_)].append(fn_)
-            except (OSError, IOError):
+            except (OSError, IOError) as exp:
+                log.error('(OSError, IOError) {0}'.format(exp))
                 # key dir kind is not created yet, just skip
                 continue
         return ret
@@ -695,8 +698,9 @@ class Key(object):
                              'act': 'accept',
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
+                    
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -723,8 +727,9 @@ class Key(object):
                          'act': 'accept',
                          'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         return self.list_keys()
 
     def delete_key(self, match=None, match_dict=None, preserve_minions=False):
@@ -748,7 +753,8 @@ class Key(object):
                              'act': 'delete',
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (OSError, IOError):
+                except (OSError, IOError) as exp:
+                log.error('(OSError, IOError) {0}'.format(exp))
                     pass
         self.check_minion_cache(preserve_minions=matches.get('minions', []))
         if self.opts.get('rotate_aes_key'):
@@ -770,7 +776,8 @@ class Key(object):
                              'act': 'delete',
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (OSError, IOError):
+                except (OSError, IOError) as exp:
+                log.error('(OSError, IOError) {0}'.format(exp))
                     pass
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
@@ -808,8 +815,8 @@ class Key(object):
                             'act': 'reject',
                             'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
@@ -839,8 +846,9 @@ class Key(object):
                          'act': 'reject',
                          'id': key}
                 self.event.fire_event(eload, tagify(prefix='key'))
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
@@ -1121,8 +1129,8 @@ class RaetKey(Key):
                                 self.ACC,
                                 key)
                             )
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
         return (
             self.name_match(match) if match is not None
             else self.dict_match(matches)
@@ -1145,8 +1153,9 @@ class RaetKey(Key):
                             self.ACC,
                             key)
                         )
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         return self.list_keys()
 
     def delete_key(self, match=None, match_dict=None, preserve_minions=False):
@@ -1164,7 +1173,8 @@ class RaetKey(Key):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
-                except (OSError, IOError):
+                except (OSError, IOError) as exp:
+                log.error('(OSError, IOError) {0}'.format(exp))
                     pass
         self.check_minion_cache(preserve_minions=matches.get('minions', []))
         return (
@@ -1180,7 +1190,8 @@ class RaetKey(Key):
             for key in keys:
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
-                except (OSError, IOError):
+                except (OSError, IOError) as exp:
+                log.error('(OSError, IOError) {0}'.format(exp))
                     pass
         self.check_minion_cache()
         return self.list_keys()
@@ -1212,8 +1223,8 @@ class RaetKey(Key):
                                 self.REJ,
                                 key)
                             )
-                except (IOError, OSError):
-                    pass
+                except (IOError, OSError) as exp:
+                    log.error('IO/OS Error {0}'.format(exp))
         self.check_minion_cache()
         return (
             self.name_match(match) if match is not None
@@ -1237,8 +1248,9 @@ class RaetKey(Key):
                             self.REJ,
                             key)
                         )
-            except (IOError, OSError):
-                pass
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
+
         self.check_minion_cache()
         return self.list_keys()
 

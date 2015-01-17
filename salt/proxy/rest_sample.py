@@ -124,7 +124,8 @@ class Proxyconn(object):
                 return True
             else:
                 return False
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             return False
 
     def shutdown(self, opts):

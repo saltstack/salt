@@ -218,7 +218,8 @@ def _format_host(host, data):
             try:
                 if not isinstance(ret['comment'], six.text_type):
                     ret['comment'] = ret['comment'].decode('utf-8')
-            except UnicodeDecodeError:
+            except UnicodeDecodeError as exp:
+                log.error('UnicodeDecodeError {0}'.format(exp))
                 # but try to continue on errors
                 pass
             try:
@@ -226,12 +227,14 @@ def _format_host(host, data):
                 comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
-            except AttributeError:  # Assume comment is a list
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 try:
                     comment = ret['comment'].join(' ').replace(
                         u'\n',
                         u'\n' + u' ' * 13)
-                except AttributeError:
+                except AttributeError as exp:
+                    log.error('AttributeError {0}'.format(exp))
                     # Comment isn't a list either, just convert to string
                     comment = str(ret['comment'])
                     comment = comment.strip().replace(

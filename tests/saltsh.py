@@ -21,6 +21,8 @@ completion behavior can be customized via the ~/.inputrc file.
 
 '''
 # pylint: disable=file-perms
+import logging
+log = logging.getLogger(__name__)
 
 # Import python libs
 import atexit
@@ -117,7 +119,8 @@ def main():
             try:
                 import __builtin__
                 __builtin__._ = value
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 __builtins__._ = value
 
             salt.output.display_output(value, '', salt_vars['__opts__'])

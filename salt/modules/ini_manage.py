@@ -90,7 +90,8 @@ def set_option(file_name, sections=None, summary=True):
                     if not summary:
                         changes[section].update({option:
                                                  sections[section][option]})
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 ret.update({'error':
                             'while setting option {0} in section {1}'.
                             format(option, section)})
@@ -241,7 +242,8 @@ class _Section(list):
         for item in self:
             try:
                 contents.update({item.name: item.value})
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass  # item was a comment
         return contents
 
@@ -391,7 +393,9 @@ class _Ini(object):
             inifile = _Ini(file_name)
             inifile.refresh()
             return inifile
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             return inifile
-        except Exception:
+        except Exception as exp:
+            log.error('Error {0}'.format(exp))
             return

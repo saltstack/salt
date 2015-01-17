@@ -66,7 +66,8 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.add', [ADD_GROUP, 3456])
             group_info = self.run_function('group.info', [ADD_GROUP])
             self.assertEqual(group_info['name'], ADD_GROUP)
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             self.run_function('group.delete', [ADD_GROUP])
             raise
 
@@ -86,7 +87,8 @@ class MacGroupModuleTest(integration.ModuleCase):
             # Now try to delete the added group
             ret = self.run_function('group.delete', [DEL_GROUP])
             self.assertTrue(ret)
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             raise
 
     @destructiveTest
@@ -105,7 +107,8 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.chgid', [CHANGE_GROUP, 6789])
             group_info = self.run_function('group.info', [CHANGE_GROUP])
             self.assertEqual(group_info['gid'], 6789)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             self.run_function('group.delete', [CHANGE_GROUP])
             raise
 

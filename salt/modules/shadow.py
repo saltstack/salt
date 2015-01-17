@@ -60,7 +60,8 @@ def info(name):
             'warn': data.sp_warn,
             'inact': data.sp_inact,
             'expire': data.sp_expire}
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return {
             'name': '',
             'passwd': '',

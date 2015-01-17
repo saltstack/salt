@@ -221,7 +221,8 @@ def has_value(key, value=None):
                 return True
             else:
                 return False
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return False
     return True
 

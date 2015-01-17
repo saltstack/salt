@@ -68,7 +68,8 @@ def _get_salt_params():
         params['swapSpace'] = str(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
         params['privateIPs'] = all_grains['fqdn_ip4']
         params['privateDNS'] = all_grains['fqdn']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         pass
 
     return params

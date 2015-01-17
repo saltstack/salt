@@ -27,8 +27,8 @@ def clear():
     '''
     try:
         os.remove(os.path.join(__opts__['cachedir'], 'datastore'))
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
     return True
 
 
@@ -48,7 +48,8 @@ def load():
         datastore_path = os.path.join(__opts__['cachedir'], 'datastore')
         fn_ = salt.utils.fopen(datastore_path, 'rb')
         return serial.load(fn_)
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return {}
 
 
@@ -75,8 +76,8 @@ def dump(new_data):
             serial.dump(new_data, fn_)
 
         return True
-
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 

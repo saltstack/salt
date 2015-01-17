@@ -208,7 +208,8 @@ class Sls(object):
             # adds a leading dot to make use of stateconf's namespace feature.
         try:
             return self.get_all_decls()[id]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             self.get_all_decls()[id] = s = StateDeclaration(id)
             self.decls.append(s)
             return s
@@ -311,7 +312,8 @@ class StateDeclaration(object):
             for m in self._mods:
                 try:
                     sls.funcs.remove(m._func)
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     pass
 
         result = HighState.get_active().state.functions['state.high'](

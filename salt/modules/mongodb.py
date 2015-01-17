@@ -294,7 +294,8 @@ def user_roles_exists(name, roles, database, user=None, password=None, host=None
     '''
     try:
         roles = _to_dict(roles)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return 'Roles provided in wrong format'
 
     users = user_list(user, password, host, port, database)
@@ -336,7 +337,8 @@ def user_grant_roles(name, roles, database, user=None, password=None, host=None,
 
     try:
         roles = _to_dict(roles)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return 'Roles provided in wrong format'
 
     try:
@@ -375,7 +377,8 @@ def user_revoke_roles(name, roles, database, user=None, password=None, host=None
 
     try:
         roles = _to_dict(roles)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return 'Roles provided in wrong format'
 
     try:
@@ -411,7 +414,8 @@ def insert(objects, collection, user=None, password=None,
 
     try:
         objects = _to_dict(objects)
-    except Exception, err:
+    except Exception, err as exp:
+        log.error('Exception, err {0}'.format(exp))
         return err.message
 
     try:
@@ -433,7 +437,8 @@ def find(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception, err:
+    except Exception, err as exp:
+        log.error('Exception, err {0}'.format(exp))
         return err.message
 
     try:
@@ -465,7 +470,8 @@ def remove(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception, err:
+    except Exception, err as exp:
+        log.error('Exception, err {0}'.format(exp))
         return err.message
 
     try:

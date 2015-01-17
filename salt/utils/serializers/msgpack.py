@@ -28,7 +28,8 @@ except ImportError:
     # Fall back to msgpack_pure
     try:
         import msgpack_pure as msgpack
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
         LOG_FORMAT = '[%(levelname)-8s] %(message)s'

@@ -25,7 +25,8 @@ def output(data):
             try:
                 for line in value.splitlines():
                     ret += '{0}: {1}\n'.format(key, line)
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 ret += '{0}: {1}\n'.format(key, value)
     else:
         # For non-dictionary data, just use print

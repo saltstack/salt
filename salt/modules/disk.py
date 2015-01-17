@@ -102,7 +102,8 @@ def usage(args=None):
                         'available': comps[3],
                         'capacity': comps[4],
                 }
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             log.warn('Problem parsing disk usage information')
             ret = {}
     return ret
@@ -149,7 +150,8 @@ def inodeusage(args=None):
                     'use': comps[4],
                     'filesystem': comps[0],
                 }
-        except (IndexError, ValueError):
+        except (IndexError, ValueError) as exp:
+            log.error('(IndexError, ValueError) {0}'.format(exp))
             log.warn('Problem parsing inode usage information')
             ret = {}
     return ret
@@ -187,7 +189,8 @@ def percent(args=None):
                 ret[comps[8]] = comps[4]
             else:
                 ret[comps[5]] = comps[4]
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             log.warn('Problem parsing disk usage information')
             ret = {}
     if args:

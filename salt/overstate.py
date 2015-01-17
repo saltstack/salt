@@ -54,7 +54,8 @@ class OverState(object):
                 try:
                     # TODO Use render system
                     return self.__sort_stages(yaml.safe_load(fp_))
-                except Exception:
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
                     return {}
         if self.saltenv not in self.opts['file_roots']:
             return {}
@@ -69,7 +70,8 @@ class OverState(object):
                 try:
                     # TODO Use render system
                     return self.__sort_stages(yaml.safe_load(fp_))
-                except Exception:
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
                     return {}
         return {}
 

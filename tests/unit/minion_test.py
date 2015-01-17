@@ -15,6 +15,8 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
 from salt import minion
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
+import logging
+log = logging.getLogger(__name__)
 
 ensure_in_syspath('../')
 
@@ -46,7 +48,8 @@ class MinionTestCase(TestCase):
             try:
                 testminion._prepare_minion_event_system()
                 result = True
-            except SaltSystemExit:
+            except SaltSystemExit as exp:
+                log.error('SaltSystemExit {0}'.format(exp))
                 result = False
         self.assertTrue(result)
 

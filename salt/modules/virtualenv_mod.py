@@ -152,7 +152,8 @@ def create(path,
             virtualenv_version_info = tuple(
                 [int(i) for i in version.split('rc')[0].split('.')]
             )
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             # Unable to import?? Let's parse the version from the console
             version_cmd = '{0} --version'.format(venv_bin)
             ret = __salt__['cmd.run_all'](

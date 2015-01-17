@@ -23,6 +23,8 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+import logging
+log = logging.getLogger(__name__)
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -179,7 +181,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         )
         try:
             self.assertIn('local:', ret)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             if os.path.isfile(minion_config_file):
                 os.unlink(minion_config_file)
             # Let's remove our key from the master
@@ -216,7 +219,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 'Process Killed!'.format(timeout),
                 out
             )
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             if os.path.isfile(minion_config_file):
                 os.unlink(minion_config_file)
             # Let's remove our key from the master
@@ -235,7 +239,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         )
         try:
             self.assertIn('local:', ret)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             if os.path.isfile(minion_config_file):
                 os.unlink(minion_config_file)
             # Let's remove our key from the master
@@ -292,7 +297,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         try:
             self.assertIn('local:', ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             # We now fail when we're unable to properly set the syslog logger
             self.assertIn(
                 'Failed to setup the Syslog logging handler', '\n'.join(ret[1])

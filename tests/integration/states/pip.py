@@ -333,7 +333,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     'New python executable',
                     ret['stdout']
                 )
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 import pprint
                 pprint.pprint(ret)
                 raise
@@ -351,7 +352,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     'Successfully installed pip',
                     ret['stdout']
                 )
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 import pprint
                 pprint.pprint(ret)
                 raise
@@ -374,7 +376,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     ret,
                     ['changes', 'pip==1.4.1']
                 )
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 import pprint
                 pprint.pprint(ret)
                 raise

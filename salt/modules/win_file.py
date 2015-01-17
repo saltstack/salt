@@ -350,7 +350,8 @@ def get_pgid(path, follow_symlinks=True):
     # SAMBA shares, or VirtualBox's shared folders.  If we
     # can't load a file descriptor for the file, we default
     # to "Everyone" - http://support.microsoft.com/kb/243330
-    except MemoryError:
+    except MemoryError as exp:
+        log.error('MemoryError {0}'.format(exp))
         # generic memory error (win2k3+)
         return 'S-1-1-0'
     except pywinerror as exc:
@@ -546,7 +547,8 @@ def get_uid(path, follow_symlinks=True):
         secdesc = win32security.GetFileSecurity(
             path, win32security.OWNER_SECURITY_INFORMATION
         )
-    except MemoryError:
+    except MemoryError as exp:
+        log.error('MemoryError {0}'.format(exp))
         # generic memory error (win2k3+)
         return 'S-1-1-0'
     except pywinerror as exc:
@@ -685,14 +687,16 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
     # get SID object for user
     try:
         userSID, domainName, objectType = win32security.LookupAccountName(None, user)
-    except pywinerror:
+    except pywinerror as exp:
+        log.error('pywinerror {0}'.format(exp))
         err += 'User does not exist\n'
 
     if pgroup:
         # get SID object for group
         try:
             groupSID, domainName, objectType = win32security.LookupAccountName(None, pgroup)
-        except pywinerror:
+        except pywinerror as exp:
+        log.error('pywinerror {0}'.format(exp))
             err += 'Group does not exist\n'
     else:
         groupSID = None
@@ -769,7 +773,8 @@ def chpgrp(path, group):
     # get SID object for group
     try:
         groupSID, domainName, objectType = win32security.LookupAccountName(None, group)
-    except pywinerror:
+    except pywinerror as exp:
+        log.error('pywinerror {0}'.format(exp))
         err += 'Group does not exist\n'
 
     if not os.path.exists(path):
@@ -1116,7 +1121,8 @@ def is_link(path):
     try:
         if not _is_reparse_point(path):
             return False
-    except SaltInvocationError:
+    except SaltInvocationError as exp:
+        log.error('SaltInvocationError {0}'.format(exp))
         return False
 
     # check that it is a symlink reparse point (in case it is something else,

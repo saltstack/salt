@@ -544,7 +544,8 @@ def _set_symlink_ownership(path, user, group):
     '''
     try:
         __salt__['file.lchown'](path, user, group)
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         pass
     return _check_symlink_ownership(path, user, group)
 
@@ -935,7 +936,8 @@ def absent(name):
             ret['comment'] = 'Removed directory {0}'.format(name)
             ret['changes']['removed'] = name
             return ret
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             return _error(ret, 'Failed to remove directory {0}'.format(name))
 
     ret['comment'] = 'File {0} is not present'.format(name)
@@ -2055,7 +2057,8 @@ def recurse(name,
     try:
         for idx, val in enumerate(sources):
             sources[idx] = val.rstrip('/')
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         ret['result'] = False
         ret['comment'] = '\'source\' parameter(s) must be a string'
         return ret
@@ -2954,7 +2957,8 @@ def append(name,
 
             try:
                 lines = chunk.splitlines()
-            except AttributeError:
+            except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
                 log.debug(
                     'Error appending text to {0}; given object is: {1}'.format(
                         name, type(chunk)
@@ -2970,7 +2974,8 @@ def append(name,
                 else:
                     __salt__['file.append'](name, line)
                 count += 1
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         ret['comment'] = 'No text found to append. Nothing appended'
         ret['result'] = False
         return ret
@@ -3130,7 +3135,8 @@ def prepend(name,
 
         try:
             lines = chunk.splitlines()
-        except AttributeError:
+        except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
             log.debug(
                 'Error appending text to {0}; given object is: {1}'.format(
                     name, type(chunk)
@@ -3508,7 +3514,8 @@ def copy(
                     os.remove(name)
                 else:
                     shutil.rmtree(name)
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 return _error(
                     ret,
                     'Failed to delete "{0}" in preparation for '
@@ -3543,7 +3550,8 @@ def copy(
         shutil.copy(source, name)
         ret['changes'] = {name: source}
         __salt__['file.check_perms'](name, ret, user, group, mode)
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
     return ret
@@ -3604,7 +3612,8 @@ def rename(name, source, force=False, makedirs=False):
                     os.remove(name)
                 else:
                     shutil.rmtree(name)
-            except (IOError, OSError):
+            except (IOError, OSError) as exp:
+                log.error('IO/OS Error {0}'.format(exp))
                 return _error(
                     ret,
                     'Failed to delete "{0}" in preparation for '
@@ -3636,7 +3645,9 @@ def rename(name, source, force=False, makedirs=False):
             os.unlink(source)
         else:
             shutil.move(source, name)
-    except (IOError, OSError):
+
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return _error(
             ret, 'Failed to move "{0}" to "{1}"'.format(source, name))
 

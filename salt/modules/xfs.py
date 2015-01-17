@@ -439,7 +439,8 @@ def mkfs(device, label=None, ssize=None, noforce=None,
             if getopts(opts):
                 cmd.append(switch)
                 cmd.append(opts)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             raise CommandExecutionError("Wrong parameters \"{0}\" for option \"{1}\"".format(opts, switch))
 
     if not noforce:

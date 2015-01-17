@@ -9,8 +9,8 @@ from __future__ import print_function
 try:
     from keystoneclient.v2_0 import client
     from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
-except ImportError:
-    pass
+except ImportError as exp:
+    log.error('Import Exception {0}'.format(exp))
 
 
 def get_auth_url():
@@ -19,7 +19,8 @@ def get_auth_url():
     '''
     try:
         return __opts__['keystone.auth_url']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return 'http://localhost:35357/v2.0'
 
 
@@ -31,7 +32,8 @@ def auth(username, password):
         keystone = client.Client(username=username, password=password,
                                  auth_url=get_auth_url())
         return keystone.authenticate()
-    except (AuthorizationFailure, Unauthorized):
+    except (AuthorizationFailure, Unauthorized) as exp:
+        log.error('(AuthorizationFailure, Unauthorized) {0}'.format(exp))
         return False
 
 

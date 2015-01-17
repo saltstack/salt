@@ -70,7 +70,8 @@ if salt.utils.is_windows():
     # pylint: disable=W0611
     try:
         import msgpack
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         import msgpack_pure as msgpack
     from distutils.version import LooseVersion  # pylint: disable=E0611,F0401
     # pylint: enable=W0611
@@ -814,7 +815,8 @@ def installed(
 
     try:
         desired, targets, to_unpurge, to_reinstall, altered_files = result
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         # _find_install_targets() found no targets or encountered an error
 
         # check that the hold function is available

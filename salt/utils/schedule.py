@@ -472,7 +472,8 @@ class Schedule(object):
                         try:
                             log.info('Invalid job file found.  Removing.')
                             os.remove(fn_)
-                        except OSError:
+                        except OSError as exp:
+                            log.error('OSError {0}'.format(exp))
                             log.info('Unable to remove file: {0}.'.format(fn_))
 
         salt.utils.daemonize_if(self.opts)
@@ -540,7 +541,8 @@ class Schedule(object):
                     load[key] = value
                 channel.send(load)
 
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.exception("Unhandled exception running {0}".format(ret['fun']))
             # Although catch-all exception handlers are bad, the exception here
             # is to let the exception bubble up to the top of the thread context,
@@ -654,7 +656,8 @@ class Schedule(object):
                             __when = self.opts['pillar']['whens'][i]
                             try:
                                 when__ = dateutil_parser.parse(__when)
-                            except ValueError:
+                            except ValueError as exp:
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string. Ignoring')
                                 continue
                         elif ('whens' in self.opts['grains'] and
@@ -667,13 +670,15 @@ class Schedule(object):
                             __when = self.opts['grains']['whens'][i]
                             try:
                                 when__ = dateutil_parser.parse(__when)
-                            except ValueError:
+                            except ValueError as exp:
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string. Ignoring')
                                 continue
                         else:
                             try:
                                 when__ = dateutil_parser.parse(i)
-                            except ValueError:
+                            except ValueError as exp:
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string {0}.'
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
@@ -722,7 +727,8 @@ class Schedule(object):
                         _when = self.opts['pillar']['whens'][data['when']]
                         try:
                             when__ = dateutil_parser.parse(_when)
-                        except ValueError:
+                        except ValueError as exp:
+                            log.error('ValueError {0}'.format(exp))
                             log.error('Invalid date string. Ignoring')
                             continue
                     elif ('whens' in self.opts['grains'] and
@@ -733,13 +739,15 @@ class Schedule(object):
                         _when = self.opts['grains']['whens'][data['when']]
                         try:
                             when__ = dateutil_parser.parse(_when)
-                        except ValueError:
+                        except ValueError as exp:
+                            log.error('ValueError {0}'.format(exp))
                             log.error('Invalid date string. Ignoring')
                             continue
                     else:
                         try:
                             when__ = dateutil_parser.parse(data['when'])
-                        except ValueError:
+                        except ValueError as exp:
+                            log.error('ValueError {0}'.format(exp))
                             log.error('Invalid date string. Ignoring')
                             continue
                     when = int(time.mktime(when__.timetuple()))
@@ -770,7 +778,8 @@ class Schedule(object):
                 now = int(time.mktime(datetime.datetime.now().timetuple()))
                 try:
                     cron = int(croniter.croniter(data['cron'], now).get_next())
-                except (ValueError, KeyError):
+                except (ValueError, KeyError) as exp:
+                    log.error('(ValueError, KeyError) {0}'.format(exp))
                     log.error('Invalid cron string. Ignoring')
                     continue
                 seconds = cron - now
@@ -841,12 +850,14 @@ class Schedule(object):
                         if isinstance(data['range'], dict):
                             try:
                                 start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
-                            except ValueError:
+                            except ValueError as exp:
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
                                 continue
                             try:
                                 end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
-                            except ValueError:
+                            except ValueError as exp:
+                                log.error('ValueError {0}'.format(exp))
                                 log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
                                 continue
                             if end > start:
@@ -936,11 +947,13 @@ def clean_proc_dir(opts):
                 job_data = fp_.read()
                 if job_data:
                     job = salt.payload.Serial(opts).load(fp_)
-            except Exception:  # It's corrupted
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))  # It's corrupted
                 try:
                     os.unlink(fn_)
                     continue
-                except OSError:
+                except OSError as exp:
+                    log.error('OSError {0}'.format(exp))
                     continue
             log.debug('schedule.clean_proc_dir: checking job {0} for process '
                       'existence'.format(job))
@@ -955,5 +968,6 @@ def clean_proc_dir(opts):
                     # Maybe the file is already gone
                     try:
                         os.unlink(fn_)
-                    except OSError:
+                    except OSError as exp:
+                        log.error('OSError {0}'.format(exp))
                         pass

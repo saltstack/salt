@@ -411,7 +411,8 @@ def migrate(name, target=''):
     origin_data = _find_vm(name, data, quiet=True)
     try:
         origin_hyper = list(origin_data.keys())[0]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         __jid_event__.fire_event({'error': 'Named vm {0} was not found to migrate'.format(name)}, 'progress')
         return ''
     disks = origin_data[origin_hyper][name]['disks']

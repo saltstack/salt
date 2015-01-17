@@ -74,7 +74,8 @@ class Base(TestCase):
             )
             try:
                 download_to(url, dest)
-            except URLError:
+            except URLError as exp:
+                log.error('URLError {0}'.format(exp))
                 log.debug('Failed to download {0}'.format(url))
         # creating a new setuptools install
         cls.ppy_st = os.path.join(cls.rdir, 'psetuptools')

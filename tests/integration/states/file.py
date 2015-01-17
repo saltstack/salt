@@ -972,7 +972,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         name = os.path.join(integration.TMP, fname)
         try:
             self.assertFalse(os.path.exists(name))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             os.remove(name)
         try:
             # Non existing file get's touched
@@ -1030,7 +1031,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if not os.path.isdir(name):
                 # left behind... Don't fail because of this!
                 os.makedirs(name)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             self.skipTest('Failed to create directory {0}'.format(name))
 
         self.assertTrue(os.path.isdir(name))
@@ -1075,7 +1077,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 contents_post = fp_.read()
 
             self.assertEqual(contents_pre, contents_post)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             shutil.copy(tmp_file_append, tmp_file_append + '.bak')
             raise
         finally:
@@ -1142,7 +1145,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment('Pattern already commented', ret)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
         finally:
@@ -1170,7 +1174,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment('Appended 1 lines', ret)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             shutil.copy(tmp_file, tmp_file + '.bak')
             raise
         finally:

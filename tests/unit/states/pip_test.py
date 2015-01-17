@@ -20,6 +20,8 @@ ensure_in_syspath('../../')
 import integration
 from salt.states import pip_state
 from salt.exceptions import CommandExecutionError
+import logging
+log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
 try:
@@ -327,7 +329,8 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                     'Faked missing __version__ attribute'
                 )
             )
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             # The pip version being used is already < 1.2
             pass
 

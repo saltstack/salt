@@ -419,7 +419,8 @@ def info(name):
         ret['roomnumber'] = gecos_field[1]
         ret['workphone'] = gecos_field[2]
         ret['homephone'] = gecos_field[3]
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return {}
     return ret
 

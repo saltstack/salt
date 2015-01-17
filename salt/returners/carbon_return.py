@@ -169,7 +169,8 @@ def _walk(path, value, metrics, timestamp, skip):
         try:
             val = float(value)
             metrics.append((path, val, timestamp))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exp:
+            log.error('(TypeError, ValueError) {0}'.format(exp))
             msg = 'Error in carbon returner, when trying to convert metric: ' \
                   '{0}, with val: {1}'.format(path, value)
             if skip:

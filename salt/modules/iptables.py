@@ -390,7 +390,8 @@ def get_saved_policy(table='filter', chain=None, conf_file=None, family='ipv4'):
     rules = _parse_conf(conf_file, family=family)
     try:
         return rules[table][chain]['policy']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return None
 
 
@@ -413,7 +414,8 @@ def get_policy(table='filter', chain=None, family='ipv4'):
     rules = _parse_conf(in_mem=True, family=family)
     try:
         return rules[table][chain]['policy']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return None
 
 

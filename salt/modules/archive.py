@@ -306,7 +306,8 @@ def cmd_unzip_(zip_file, dest, excludes=None, template=None, options=None, runas
         try:
             if not options.startswith('-'):
                 options = '-{0}'.format(options)
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             raise SaltInvocationError(
                 'Invalid option(s): {0}'.format(options)
             )

@@ -91,7 +91,8 @@ def _validate_partition_boundary(boundary):
             if boundary.endswith(unit):
                 return
         int(boundary)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid partition boundary passed: "{0}"'.format(boundary)
         )
@@ -238,7 +239,8 @@ def align_check(device, part_type, partition):
 
     try:
         int(partition)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid partition passed to partition.align_check'
         )
@@ -266,7 +268,8 @@ def check(device, minor):
 
     try:
         int(minor)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid minor number passed to partition.check'
         )
@@ -295,7 +298,8 @@ def cp(device, from_minor, to_minor):  # pylint: disable=C0103
     try:
         int(from_minor)
         int(to_minor)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid minor number passed to partition.cp'
         )
@@ -328,7 +332,8 @@ def get_id(device, minor):
 
     try:
         int(minor)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid minor number passed to partition.get_id'
         )
@@ -361,7 +366,8 @@ def set_id(device, minor, system_id):
 
     try:
         int(minor)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid minor number passed to partition.set_id'
         )
@@ -558,7 +564,8 @@ def name(device, partition, name):
 
     try:
         int(partition)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid partition passed to partition.name'
         )
@@ -618,7 +625,8 @@ def resize(device, minor, start, end):
 
     try:
         int(minor)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid minor number passed to partition.resize'
         )
@@ -650,7 +658,8 @@ def rm(device, minor):  # pylint: disable=C0103
 
     try:
         int(minor)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid minor number passed to partition.rm'
         )
@@ -678,7 +687,8 @@ def set_(device, minor, flag, state):
 
     try:
         int(minor)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid minor number passed to partition.set'
         )
@@ -711,7 +721,8 @@ def toggle(device, partition, flag):
 
     try:
         int(partition)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'Invalid partition number passed to partition.toggle'
         )

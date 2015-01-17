@@ -51,7 +51,8 @@ def recv(files, dest):
         try:
             salt.utils.fopen(final, 'w+').write(data)
             ret[final] = True
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             ret[final] = False
 
     return ret
@@ -340,7 +341,8 @@ def cache_file(path, saltenv='base', env=None):
         env_splitter = '?env='
     try:
         path, saltenv = path.split(env_splitter)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         pass
     result = __context__['cp.fileclient'].cache_file(path, saltenv)
     if not result:

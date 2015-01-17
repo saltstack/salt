@@ -25,7 +25,8 @@ except ImportError:
             sys.path.insert(0, '/usr/lib/portage/pym')
             import portage
             HAS_PORTAGE = True
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             pass
 
 
@@ -174,7 +175,8 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                         for line in file_handler:
                             try:
                                 atom = line.strip().split()[0]
-                            except IndexError:
+                            except IndexError as exp:
+                                log.error('IndexError {0}'.format(exp))
                                 new_contents += line
                             else:
                                 if atom[0] == '#' or \
@@ -197,7 +199,8 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
             for bfile in backup_files:
                 try:
                     os.remove(bfile)
-                except OSError:
+                except OSError as exp:
+            log.error('OSError {0}'.format(exp))
                     pass
 
         if clean:
@@ -293,12 +296,13 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
 
         try:
             shutil.copy(complete_file_path, complete_file_path + '.bak')
-        except IOError:
-            pass
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
 
         try:
             file_handler = salt.utils.fopen(complete_file_path, 'r+')
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             file_handler = salt.utils.fopen(complete_file_path, 'w+')
 
         new_contents = ''
@@ -343,7 +347,8 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         file_handler.close()
         try:
             os.remove(complete_file_path + '.bak')
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             pass
 
 
@@ -384,12 +389,14 @@ def get_flags_from_package_conf(conf, atom):
             atom = _p_to_cp(atom)
         try:
             match_list = set(_porttree().dbapi.xmatch("match-all", atom))
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             return []
         flags = []
         try:
             file_handler = salt.utils.fopen(package_file)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             return []
         else:
             for line in file_handler:
@@ -471,7 +478,8 @@ def is_present(conf, atom):
         match_list = set(_porttree().dbapi.xmatch("match-all", atom))
         try:
             file_handler = salt.utils.fopen(package_file)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             return False
         else:
             for line in file_handler:

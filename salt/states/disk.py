@@ -34,13 +34,15 @@ def status(name, maximum=None, minimum=None):
         try:
             if isinstance(maximum, string_types):
                 maximum = int(maximum.strip('%'))
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             ret['comment'] += 'Max argument must be an integer '
     if minimum:
         try:
             if isinstance(minimum, string_types):
                 minimum = int(minimum.strip('%'))
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             ret['comment'] += 'Min argument must be an integer '
     if minimum and maximum:
         if minimum >= maximum:

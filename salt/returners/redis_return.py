@@ -139,7 +139,8 @@ def get_fun(fun):
         ind_str = '{0}:{1}'.format(minion, fun)
         try:
             jid = serv.lindex(ind_str, 0)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             continue
         data = serv.get('{0}:{1}'.format(minion, jid))
         if data:

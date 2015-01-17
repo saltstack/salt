@@ -33,7 +33,8 @@ except ImportError:
             sys.path.insert(0, '/usr/lib/portage/pym')
             import portage
             HAS_PORTAGE = True
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             pass
 
 log = logging.getLogger(__name__)
@@ -953,7 +954,8 @@ def check_extra_requirements(pkgname, pkgver):
 
     try:
         cur_repo, cur_use = _vartree().dbapi.aux_get(cpv, ['repository', 'USE'])
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return False
 
     des_repo = re.match(r'^.+::([^\[]+).*$', atom)

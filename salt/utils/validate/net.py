@@ -37,7 +37,8 @@ def __ip_addr(addr, address_family=socket.AF_INET):
     try:
         if '/' not in addr:
             addr = '{addr}/{mask_max}'.format(addr=addr, mask_max=mask_max)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         return False
 
     ip, mask = addr.rsplit('/', 1)
@@ -51,7 +52,8 @@ def __ip_addr(addr, address_family=socket.AF_INET):
     # Verify that mask is valid
     try:
         mask = int(mask)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return False
     else:
         if not 1 <= mask <= int(mask_max):

@@ -19,6 +19,8 @@ ensure_in_syspath('../../')
 import integration
 
 from salttesting import skipIf
+import logging
+log = logging.getLogger(__name__)
 
 
 class AuthTest(integration.ShellCase):
@@ -36,7 +38,8 @@ class AuthTest(integration.ShellCase):
         # This is a little wasteful but shouldn't be a problem
         try:
             pwd.getpwnam('saltdev')
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             self.run_call('user.add saltdev createhome=False')
 
     def test_pam_auth_valid_user(self):

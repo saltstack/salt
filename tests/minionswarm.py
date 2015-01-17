@@ -17,6 +17,8 @@ import subprocess
 import tempfile
 import shutil
 import sys
+import logging
+log = logging.getLogger(__name__)
 
 # Import salt libs
 import salt
@@ -159,7 +161,8 @@ class Swarm(object):
         while True:
             try:
                 time.sleep(5)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                 print('\nShutting down minions')
                 self.clean_configs()
                 break
@@ -194,13 +197,15 @@ class Swarm(object):
                 try:
                     pid = int(open(pidfile).read().strip())
                     os.kill(pid, signal.SIGTERM)
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     pass
                 if os.path.exists(pidfile):
                     os.remove(pidfile)
                 if not self.opts['no_clean']:
                     shutil.rmtree(path)
-            except (OSError, IOError):
+            except (OSError, IOError) as exp:
+                log.error('(OSError, IOError) {0}'.format(exp))
                 pass
 
 

@@ -279,7 +279,8 @@ class SaltObject(object):
             def __getattr__(wself, func):  # pylint: disable=E0213
                 try:
                     return self._salt['{0}.{1}'.format(mod, func)]
-                except KeyError:
+                except KeyError as exp:
+                    log.error('KeyError {0}'.format(exp))
                     raise AttributeError
         return __wrapper__()
 

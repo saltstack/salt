@@ -65,7 +65,8 @@ def need_deployment():
 def get_hash(path, form='sha1', chunk_size=4096):
     try:
         hash_type = getattr(hashlib, form)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         raise ValueError('Invalid hash type: {0}'.format(form))
     with open(path, 'rb') as ifile:
         hash_obj = hash_type()

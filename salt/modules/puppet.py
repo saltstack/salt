@@ -47,7 +47,8 @@ def _format_fact(output):
     try:
         fact, value = output.split(' => ', 1)
         value = value.strip()
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         fact = None
         value = None
     return (fact, value)
@@ -271,7 +272,8 @@ def status():
             with salt.utils.fopen(puppet.run_lockfile, 'r') as fp_:
                 pid = int(fp_.read())
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
-        except (OSError, ValueError):
+        except (OSError, ValueError) as exp:
+            log.error('(OSError, ValueError) {0}'.format(exp))
             return 'Stale lockfile'
         else:
             return 'Applying a catalog'
@@ -281,7 +283,8 @@ def status():
             with salt.utils.fopen(puppet.agent_pidfile, 'r') as fp_:
                 pid = int(fp_.read())
                 os.kill(pid, 0)  # raise an OSError if process doesn't exist
-        except (OSError, ValueError):
+        except (OSError, ValueError) as exp:
+            log.error('(OSError, ValueError) {0}'.format(exp))
             return 'Stale pidfile'
         else:
             return 'Idle daemon'
@@ -314,7 +317,8 @@ def summary():
             try:
                 result['last_run'] = datetime.datetime.fromtimestamp(
                     int(report['time']['last_run'])).isoformat()
-            except (TypeError, ValueError, KeyError):
+            except (TypeError, ValueError, KeyError) as exp:
+                log.error('(TypeError, ValueError, KeyError) {0}'.format(exp))
                 result['last_run'] = 'invalid or missing timestamp'
 
             result['time'] = {}

@@ -272,7 +272,8 @@ class SaltEvent(object):
         try:
             # bug in 0MQ default send timeout of -1 (infinite) is not infinite
             self.push.setsockopt(zmq.SNDTIMEO, timeout)
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
             #                        CentOS5, which still uses 2.1.9)
             pass
@@ -577,8 +578,8 @@ class SaltEvent(object):
                                         'error',
                                         load['fun']],
                                        'job'))
-                except Exception:
-                    pass
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
 
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
@@ -682,7 +683,8 @@ class EventPublisher(multiprocessing.Process):
                     if exc.errno == errno.EINTR:
                         continue
                     raise exc
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as exp:
+            log.error('KeyboardInterrupt {0}'.format(exp))
             if self.epub_sock.closed is False:
                 self.epub_sock.setsockopt(zmq.LINGER, linger)
                 self.epub_sock.close()
@@ -730,7 +732,8 @@ class EventReturn(multiprocessing.Process):
                         '{0}.event_return'.format(self.opts['event_return'])
                     ](event_queue)
                     event_queue = []
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             log.error((
                 'Could not store return for events {0}. Returner {1} '
                 'not found.'
@@ -792,8 +795,9 @@ class StateFire(object):
         channel = salt.transport.Channel.factory(self.opts)
         try:
             channel.send(load)
-        except Exception:
-            pass
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
+
         return True
 
     def fire_running(self, running):
@@ -822,6 +826,7 @@ class StateFire(object):
         channel = salt.transport.Channel.factory(self.opts)
         try:
             channel.send(load)
-        except Exception:
-            pass
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
+
         return True

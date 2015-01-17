@@ -304,7 +304,8 @@ class Pillar(object):
                                     if not isinstance(order, int):
                                         try:
                                             order = int(order)
-                                        except ValueError:
+                                        except ValueError as exp:
+                                            log.error('ValueError {0}'.format(exp))
                                             order = 0
                                     orders[saltenv][tgt] = order
                                 if comp.get('ignore_missing', False):

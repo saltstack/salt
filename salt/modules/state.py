@@ -302,7 +302,9 @@ def request(mods=None,
             __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
         with salt.utils.fopen(notify_path, 'w+b') as fp_:
             serial.dump(req, fp_)
-    except (IOError, OSError):
+
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Unable to write state request file {0}. Check permission.'
         log.error(msg.format(notify_path))
     os.umask(cumask)
@@ -347,8 +349,9 @@ def clear_request(name=None):
     if not name:
         try:
             os.remove(notify_path)
-        except (IOError, OSError):
-            pass
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
+
     else:
         req = check_request()
         if name in req:
@@ -362,7 +365,9 @@ def clear_request(name=None):
                 __salt__['cmd.run']('attrib -R "{0}"'.format(notify_path))
             with salt.utils.fopen(notify_path, 'w+b') as fp_:
                 serial.dump(req, fp_)
-        except (IOError, OSError):
+
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
             msg = 'Unable to write state request file {0}. Check permission.'
             log.error(msg.format(notify_path))
         os.umask(cumask)
@@ -390,8 +395,8 @@ def run_request(name='default', **kwargs):
         ret = apply_(n_req['mods'], **n_req['kwargs'])
         try:
             os.remove(os.path.join(__opts__['cachedir'], 'req_state.p'))
-        except (IOError, OSError):
-            pass
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
         return ret
     return {}
 
@@ -650,7 +655,9 @@ def sls(mods,
             __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
         with salt.utils.fopen(cache_file, 'w+b') as fp_:
             serial.dump(ret, fp_)
-    except (IOError, OSError):
+
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
 
@@ -663,10 +670,12 @@ def sls(mods,
         with salt.utils.fopen(cfn, 'w+b') as fp_:
             try:
                 serial.dump(high_, fp_)
-            except TypeError:
+            except TypeError as exp:
+                log.error('TypeError {0}'.format(exp))
                 # Can't serialize pydsl
                 pass
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
         log.error(msg.format(cfn))
     return ret
@@ -1113,8 +1122,8 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
     ret = st_.call_chunks(lowstate)
     try:
         shutil.rmtree(root)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
     return ret
 
 

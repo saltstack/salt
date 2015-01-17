@@ -35,7 +35,8 @@ def zmq_version():
     '''
     try:
         import zmq
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         # Return True for local mode
         return True
     ver = zmq.__version__
@@ -154,7 +155,8 @@ def verify_files(files, user):
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
 
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
@@ -176,7 +178,8 @@ def verify_files(files, user):
         if uid != stats.st_uid:
             try:
                 os.chown(fn_, uid, -1)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 pass
     return True
 
@@ -195,7 +198,8 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         gid = pwnam[3]
         groups = salt.utils.get_gid_list(user, include_default=False)
 
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
@@ -239,8 +243,10 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                         path = os.path.join(root, name)
                         try:
                             fmode = os.stat(path)
-                        except (IOError, OSError):
-                            pass
+
+                        except (IOError, OSError) as exp:
+                            log.error('IO/OS Error {0}'.format(exp))
+
                         if fmode.st_uid != uid or fmode.st_gid != gid:
                             if permissive and fmode.st_gid in groups:
                                 pass
@@ -300,7 +306,8 @@ def check_user(user):
             os.setgid(pwuser.pw_gid)
             os.setuid(pwuser.pw_uid)
 
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             msg = 'Salt configured to run as user "{0}" but unable to switch.'
             msg = msg.format(user)
             if is_console_configured():
@@ -308,7 +315,8 @@ def check_user(user):
             else:
                 sys.stderr.write("CRITICAL: {0}\n".format(msg))
             return False
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         msg = 'User not found: "{0}"'.format(user)
         if is_console_configured():
             log.critical(msg)

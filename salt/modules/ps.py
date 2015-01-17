@@ -475,7 +475,8 @@ def total_physical_memory():
     '''
     try:
         return psutil.virtual_memory().total
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # TOTAL_PHYMEM is deprecated but with older psutil versions this is
         # needed as a fallback.
         return psutil.TOTAL_PHYMEM
@@ -493,7 +494,8 @@ def num_cpus():
     '''
     try:
         return psutil.cpu_count()
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # NUM_CPUS is deprecated but with older psutil versions this is needed
         # as a fallback.
         return psutil.NUM_CPUS
@@ -520,7 +522,8 @@ def boot_time(time_format=None):
     '''
     try:
         b_time = int(psutil.boot_time())
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # get_boot_time() has been removed in newer psutil versions, and has
         # been replaced by boot_time() which provides the same information.
         b_time = int(psutil.get_boot_time())
@@ -591,7 +594,8 @@ def get_users():
     try:
         recs = psutil.get_users()
         return [dict(x._asdict()) for x in recs]
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # get_users is only present in psutil > v0.5.0
         # try utmp
         try:
@@ -608,5 +612,6 @@ def get_users():
                         started = started[0]
                     result.append({'name': rec[4], 'terminal': rec[2],
                                    'started': started, 'host': rec[5]})
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             return False

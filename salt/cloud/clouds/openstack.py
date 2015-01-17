@@ -326,7 +326,8 @@ def preferred_ip(vm_, ips):
         try:
             socket.inet_pton(family, ip)
             return ip
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             continue
 
     return False
@@ -697,7 +698,8 @@ def create(vm_):
                 )
                 data.public_ips.append(ip)
                 public = data.public_ips
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 # Note(pabelanger): Because we loop, we only want to attach the
                 # floating IP address one. So, expect failures if the IP is
                 # already attached.
@@ -763,7 +765,8 @@ def create(vm_):
         try:
             # It might be already up, let's destroy it!
             destroy(vm_['name'])
-        except SaltCloudSystemExit:
+        except SaltCloudSystemExit as exp:
+            log.error('SaltCloudSystemExit {0}'.format(exp))
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))

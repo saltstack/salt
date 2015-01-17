@@ -26,6 +26,8 @@ import datetime
 import yaml
 import zmq
 from collections import namedtuple
+import logging
+log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
 try:
@@ -137,7 +139,8 @@ class UtilsTestCase(TestCase):
     def test_safe_rm_exceptions(self):
         try:
             utils.safe_rm('/tmp/no_way_this_is_a_file_nope.sh')
-        except (IOError, OSError):
+        except (IOError, OSError) as exp:
+            log.error('(IOError, OSError) {0}'.format(exp))
             self.assertTrue(False, "utils.safe_rm raised exception when it should not have")
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -489,12 +492,14 @@ class UtilsTestCase(TestCase):
             ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
             expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
             self.assertEqual(ret, expected_ret)
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             try:
                 ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
                 expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
                 self.assertEqual(ret, expected_ret)
-            except RuntimeError:
+            except RuntimeError as exp:
+                log.error('RuntimeError {0}'.format(exp))
                 # Unparseable without timelib installed
                 self.skipTest('\'timelib\' is not installed')
 

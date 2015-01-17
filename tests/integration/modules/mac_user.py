@@ -66,7 +66,8 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.add', [ADD_USER])
             user_info = self.run_function('user.info', [ADD_USER])
             self.assertEqual(ADD_USER, user_info['name'])
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             self.run_function('user.delete', [ADD_USER])
             raise
 
@@ -87,7 +88,8 @@ class MacUserModuleTest(integration.ModuleCase):
             # Now try to delete the added user
             ret = self.run_function('user.delete', [DEL_USER])
             self.assertTrue(ret)
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             raise
 
     @destructiveTest
@@ -133,7 +135,8 @@ class MacUserModuleTest(integration.ModuleCase):
             groups_info = self.run_function('user.info', [CHANGE_USER])
             self.assertEqual(groups_info['groups'], ['wheel'])
 
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             self.run_function('user.delete', [CHANGE_USER])
             raise
 

@@ -59,7 +59,8 @@ def _config(name, conf):
     '''
     try:
         value = conf[name]
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         value = None
     return value
 
@@ -125,7 +126,8 @@ def _do_search(conf):
     # Build search args
     try:
         _filter = conf['filter']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         raise SaltInvocationError('missing filter')
     _dn = _config('dn', conf)
     scope = _config('scope', conf)
@@ -138,14 +140,16 @@ def _do_search(conf):
     try:
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
                                          **connargs)['results'][0][1]
-    except IndexError:  # we got no results for this search
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         log.debug(
             'LDAP search returned no results for filter {0}'.format(
                 _filter
             )
         )
         result = {}
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.critical(
             'Failed to retrieve pillar data from LDAP:\n', exc_info=True
         )

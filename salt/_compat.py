@@ -23,15 +23,18 @@ except ImportError:
     try:
         # Python >2.5
         import xml.etree.ElementTree as ElementTree
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         try:
             # normal cElementTree install
             import elementtree.cElementTree as ElementTree
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             try:
                 # normal ElementTree install
                 import elementtree.ElementTree as ElementTree
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 raise
 
 
@@ -120,5 +123,6 @@ def string_io(data=None):  # cStringIO can't handle unicode
     '''
     try:
         return cStringIO(bytes(data))
-    except (UnicodeEncodeError, TypeError):
+    except (UnicodeEncodeError, TypeError) as exp:
+        log.error('(UnicodeEncodeError, TypeError) {0}'.format(exp))
         return StringIO(data)

@@ -218,7 +218,8 @@ def _read_file(path):
     try:
         with salt.utils.flopen(path, 'rb') as contents:
             return contents.readlines()
-    except (OSError, IOError):
+    except (OSError, IOError) as exp:
+        log.error('(OSError, IOError) {0}'.format(exp))
         return ''
 
 
@@ -307,7 +308,8 @@ def __int(value):
     try:
         _value = int(value)
         valid = True
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         pass
     return (valid, _value, 'integer')
 
@@ -318,7 +320,8 @@ def __float(value):
     try:
         _value = float(value)
         valid = True
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         pass
     return (valid, _value, 'float')
 
@@ -347,7 +350,8 @@ def __within2(value, within=None, errmsg=None, dtype=None):
         try:
             _value = dtype(value)  # TODO: this is a bit loose when dtype is a class
             valid = _value in within
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             pass
     else:
         valid = _value in within
@@ -378,9 +382,11 @@ def __space_delimited_list(value):
             if _value == []:
                 raise ValueError
             valid = True
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         pass
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         pass
     return (valid, _value, errmsg)
 
@@ -829,7 +835,8 @@ def _parse_settings_bond_0(opts, iface, bond_def):
         try:
             int(opts['arp_interval'])
             bond.update({'arp_interval': opts['arp_interval']})
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             _raise_error_iface(iface, 'arp_interval', ['integer'])
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
@@ -853,7 +860,8 @@ def _parse_settings_bond_1(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -902,7 +910,8 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         try:
             int(opts['arp_interval'])
             bond.update({'arp_interval': opts['arp_interval']})
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             _raise_error_iface(iface, 'arp_interval', ['integer'])
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
@@ -936,7 +945,8 @@ def _parse_settings_bond_3(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -980,7 +990,8 @@ def _parse_settings_bond_4(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, valid)
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -1023,7 +1034,8 @@ def _parse_settings_bond_5(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -1059,7 +1071,8 @@ def _parse_settings_bond_6(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -1098,7 +1111,8 @@ def _parse_bridge_opts(opts, iface):
             try:
                 float(opts[opt])
                 config.update({opt: opts[opt]})
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, opt, ['float'])
 
     for opt in ['bridgeprio', 'maxwait']:
@@ -1122,7 +1136,8 @@ def _parse_bridge_opts(opts, iface):
                 port, cost_or_prio = opts[opt].split()
                 int(cost_or_prio)
                 config.update({opt: '{0} {1}'.format(port, cost_or_prio)})
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, opt, ['interface integer'])
 
     if 'stp' in opts:
@@ -1265,7 +1280,8 @@ def _parse_network_settings(opts, current):
         try:
             opts['networking'] = current['networking']
             _log_default_network('networking', current['networking'])
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             _raise_error_network('networking', valid)
     else:
         opts['networking'] = opts['enabled']
@@ -1282,7 +1298,8 @@ def _parse_network_settings(opts, current):
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             _raise_error_network('hostname', ['server1.example.com'])
 
     if opts['hostname']:

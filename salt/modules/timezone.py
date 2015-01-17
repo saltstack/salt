@@ -41,7 +41,8 @@ def get_zone():
         for line in (x.strip() for x in out.splitlines()):
             try:
                 return re.match(r'Time ?zone:\s+(\S+)', line).group(1)
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 pass
         raise CommandExecutionError(
             'Failed to parse timedatectl output, this is likely a bug'
@@ -203,7 +204,8 @@ def get_hwclock():
                         return 'localtime'
                     else:
                         return 'UTC'
-                except IndexError:
+                except IndexError as exp:
+                    log.error('IndexError {0}'.format(exp))
                     pass
         raise CommandExecutionError(
             'Failed to parse timedatectl output, this is likely a bug'

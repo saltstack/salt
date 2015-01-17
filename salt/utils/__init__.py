@@ -118,8 +118,8 @@ def safe_rm(tgt):
     '''
     try:
         os.remove(tgt)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
 
 
 def is_empty(filename):
@@ -128,7 +128,8 @@ def is_empty(filename):
     '''
     try:
         return os.stat(filename).st_size == 0
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         # Non-existent file or permission denied to the parent dir
         return False
 
@@ -149,7 +150,8 @@ def get_color_theme(theme):
                 log.warning('The theme file {0} is not a dict'.format(theme))
                 return {}
             return ret
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.warning('Failed to read the color theme {0}'.format(theme))
         return {}
 
@@ -326,7 +328,8 @@ def profile_func(filename=None):
                 retval = profiler.runcall(fun, *args, **kwargs)
                 profiler.dump_stats((filename or '{0}_func.profile'
                                      .format(fun.__name__)))
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 logging.exception(
                     'Could not open profile file {0}'.format(filename)
                 )
@@ -361,7 +364,8 @@ def which(exe=None):
                     pattern = r'.*\.' + ext.lstrip('.') + r'$'
                     re.match(pattern, exe, re.I).groups()
                     return True
-                except AttributeError:
+                except AttributeError as exp:
+                    log.error('AttributeError {0}'.format(exp))
                     continue
             return False
 
@@ -487,7 +491,8 @@ def dns_check(addr, safe=False, ipv6=False):
                     break
             if not addr:
                 error = True
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
         raise SaltSystemExit(code=42, msg=err)
     except socket.error:
@@ -518,7 +523,8 @@ def required_module_list(docstring=None):
     for mod in modules:
         try:
             imp.find_module(mod)
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             ret.append(mod)
     return ret
 
@@ -711,7 +717,8 @@ def format_call(fun,
     for key in kwargs:
         try:
             kwargs[key] = data.pop(key)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             # Let's leave the default value in place
             pass
 
@@ -719,7 +726,8 @@ def format_call(fun,
         arg = args.pop(0)
         try:
             ret['args'].append(data.pop(arg))
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             missing_args.append(arg)
 
     if missing_args:
@@ -834,13 +842,15 @@ def istextfile(fp_, blocksize=512):
         b'\n\r\t\f\b')
     try:
         block = fp_.read(blocksize)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # This wasn't an open filehandle, so treat it as a file path and try to
         # open the file
         try:
             with fopen(fp_, 'rb') as fp2_:
                 block = fp2_.read(blocksize)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             # Unable to open file, bail out and return false
             return False
     if b'\x00' in block:
@@ -912,10 +922,12 @@ def str_to_num(text):
     '''
     try:
         return int(text)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         try:
             return float(text)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return text
 
 
@@ -940,7 +952,8 @@ def fopen(*args, **kwargs):
         # unix and unix-like systems only
         try:
             FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
         if lock and is_fcntl_available(check_sunos=True):
@@ -995,7 +1008,8 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
                 if expr_match(expr, value):
                     in_whitelist = True
                     break
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             log.error('Non-iterable whitelist {0}'.format(whitelist))
             whitelist = None
     else:
@@ -1007,7 +1021,8 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
                 if expr_match(expr, value):
                     in_blacklist = True
                     break
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             log.error('Non-iterable blacklist {0}'.format(whitelist))
             blacklist = None
     else:
@@ -1041,7 +1056,8 @@ def subdict_match(data,
         if regex_match:
             try:
                 return re.match(pattern.lower(), str(target).lower())
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.error('Invalid regex {0!r} in match'.format(pattern))
                 return False
         elif exact_match:
@@ -1098,7 +1114,8 @@ def traverse_dict(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
     try:
         for each in key.split(delimiter):
             data = data[each]
-    except (KeyError, IndexError, TypeError):
+    except (KeyError, IndexError, TypeError) as exp:
+        log.error('(KeyError, IndexError, TypeError) {0}'.format(exp))
         # Encountered a non-indexable value in the middle of traversing
         return default
     return data
@@ -1119,7 +1136,8 @@ def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
         if isinstance(data, list):
             try:
                 idx = int(each)
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 embed_match = False
                 # Index was not numeric, lets look at any embedded dicts
                 for embedded in (x for x in data if isinstance(x, dict)):
@@ -1127,7 +1145,8 @@ def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
                         data = embedded[each]
                         embed_match = True
                         break
-                    except KeyError:
+                    except KeyError as exp:
+                        log.error('KeyError {0}'.format(exp))
                         pass
                 if not embed_match:
                     # No embedded dicts matched, return the default
@@ -1135,12 +1154,14 @@ def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
             else:
                 try:
                     data = data[idx]
-                except IndexError:
+                except IndexError as exp:
+                    log.error('IndexError {0}'.format(exp))
                     return default
         else:
             try:
                 data = data[each]
-            except (KeyError, TypeError):
+            except (KeyError, TypeError) as exp:
+                log.error('(KeyError, TypeError) {0}'.format(exp))
                 return default
     return data
 
@@ -1211,7 +1232,8 @@ def is_linux():
     try:
         if 'salt-proxy-minion' in main.__file__:
             is_proxy = True
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         pass
     if is_proxy:
         return False
@@ -1358,7 +1380,8 @@ def test_mode(**kwargs):
         try:
             if arg.lower() == 'test' and is_true(value):
                 return True
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             continue
     return False
 
@@ -1375,11 +1398,13 @@ def is_true(value=None):
     # First, try int/float conversion
     try:
         value = int(value)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as exp:
+        log.error('(ValueError, TypeError) {0}'.format(exp))
         pass
     try:
         value = float(value)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as exp:
+        log.error('(ValueError, TypeError) {0}'.format(exp))
         pass
 
     # Now check for truthiness
@@ -1500,7 +1525,8 @@ def print_cli(msg):
     try:
         try:
             print(msg)
-        except UnicodeEncodeError:
+        except UnicodeEncodeError as exp:
+            log.error('UnicodeEncodeError {0}'.format(exp))
             print(msg.encode('utf-8'))
     except IOError as exc:
         if exc.errno != errno.EPIPE:
@@ -1570,7 +1596,8 @@ def get_hash(path, form='md5', chunk_size=65536):
     '''
     try:
         hash_type = getattr(hashlib, form)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         raise ValueError('Invalid hash type: {0}'.format(form))
     with salt.utils.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
@@ -1627,8 +1654,8 @@ def date_cast(date):
             try:
                 if HAS_TIMELIB:
                     return timelib.strtodatetime(date)
-            except ValueError:
-                pass
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
 
             # not parsed yet, obviously a timestamp?
             if date.isdigit():
@@ -1922,7 +1949,8 @@ def argspec_report(functions, module=''):
         for fun in fnmatch.filter(functions, target_mod):
             try:
                 aspec = salt.utils.args.get_function_argspec(functions[fun])
-            except TypeError:
+            except TypeError as exp:
+                log.error('TypeError {0}'.format(exp))
                 # this happens if not callable
                 continue
 
@@ -1939,7 +1967,8 @@ def argspec_report(functions, module=''):
             if fun == module or fun.startswith(target_module):
                 try:
                     aspec = salt.utils.args.get_function_argspec(functions[fun])
-                except TypeError:
+                except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                     # this happens if not callable
                     continue
 
@@ -1998,7 +2027,8 @@ def find_json(raw):
         working = '\n'.join(raw.splitlines()[ind:])
         try:
             ret = json.loads(working, object_hook=decode_dict)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         if ret:
             return ret
@@ -2093,7 +2123,8 @@ def get_group_list(user=None, include_default=True):
         log.trace('Trying os.getgrouplist for {0!r}'.format(user))
         try:
             group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
     else:
         # Try pysss.getgrouplist
@@ -2101,7 +2132,8 @@ def get_group_list(user=None, include_default=True):
         try:
             import pysss
             group_names = list(pysss.getgrouplist(user))
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
     if group_names is None:
         # Fall back to generic code
@@ -2113,7 +2145,8 @@ def get_group_list(user=None, include_default=True):
             default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
             if default_group not in group_names:
                 group_names.append(default_group)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             # If for some reason the user does not have a default group
             pass
     ugroups.update(group_names)
@@ -2125,7 +2158,8 @@ def get_group_list(user=None, include_default=True):
         try:
             default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
             ugroups.remove(default_group)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             # If for some reason the user does not have a default group
             pass
     log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
@@ -2180,7 +2214,8 @@ def import_json():
             mod = __import__(fast_json)
             log.trace('loaded {0} json lib'.format(fast_json))
             return mod
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             continue
 
 
@@ -2297,6 +2332,7 @@ def sdecode(string_):
             # Make sure unicode string ops work
             u' ' + decoded  # pylint: disable=W0104
             return decoded
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as exp:
+            log.error('UnicodeDecodeError {0}'.format(exp))
             continue
     return string_

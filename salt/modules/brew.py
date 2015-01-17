@@ -107,7 +107,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name = name_and_versions[0]
             installed_versions = name_and_versions[1:]
             newest_version = sorted(installed_versions, cmp=salt.utils.version_cmp).pop()
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         __salt__['pkg_resource.add_pkg'](ret, name, newest_version)
 

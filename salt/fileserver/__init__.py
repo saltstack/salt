@@ -128,7 +128,8 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                     # Set the w_lock and go
                     refresh_cache = True
                     break
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 time.sleep(0.2)
                 attempt += 1
                 continue
@@ -162,8 +163,8 @@ def check_env_cache(opts, env_cache):
             log.trace('Returning env cache data from {0}'.format(env_cache))
             serial = salt.payload.Serial(opts)
             return serial.load(fp_)
-    except (IOError, OSError):
-        pass
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
     return None
 
 
@@ -179,7 +180,8 @@ def generate_mtime_map(path_map):
                     try:
                         file_path = os.path.join(directory, item)
                         file_map[file_path] = os.path.getmtime(file_path)
-                    except (OSError, IOError):
+                    except (OSError, IOError) as exp:
+                        log.error('(OSError, IOError) {0}'.format(exp))
                         # skip dangling symlinks
                         log.info(
                             'Failed to get mtime on {0}, '
@@ -224,7 +226,8 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 file_rel_path = os.path.relpath(file_path, env_base)
                 try:
                     filename, _, hash_type = file_rel_path.rsplit('.', 2)
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     log.warn((
                         'Found invalid hash file [{0}] when attempting to reap'
                         ' cache directory.'

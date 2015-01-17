@@ -25,7 +25,8 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
     try:
         return yaml.safe_load(__salt__['cmd.run']('{0}'.format(command)))
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.critical(
                 'YAML data from {0} failed to parse'.format(command)
                 )

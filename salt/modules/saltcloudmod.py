@@ -43,6 +43,7 @@ def create(name, profile):
     out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
     try:
         ret = json.loads(out, object_hook=salt.utils.decode_dict)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         ret = {}
     return ret

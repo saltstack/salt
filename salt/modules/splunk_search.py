@@ -101,7 +101,8 @@ def get(name, profile="splunk"):
     # uglyness of splunk lib
     try:
         search = client.saved_searches[name]
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         pass
     return search
 
@@ -181,7 +182,8 @@ def delete(name, profile="splunk"):
     try:
         client.saved_searches.delete(name)
         return True
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return None
 
 
@@ -251,7 +253,8 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
     name = "splunk_search.list_all get defaults"
     try:
         client.saved_searches.delete(name)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         pass
     search = client.saved_searches.create(name, search="nothing")
     defaults = dict(search.content)

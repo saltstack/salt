@@ -7,7 +7,8 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function
 import re
 import sys
-
+import logging
+log = logging.getLogger(__name__)
 # Don't rely on external packages in this module since it's used at install time
 if sys.version_info[0] == 3:
     MAX_SIZE = sys.maxsize
@@ -459,7 +460,8 @@ def __discover_version(saltstack_version):
 
         try:
             return SaltStackVersion.parse(out)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             if not SaltStackVersion.git_sha_regex.match(out):
                 raise
 
@@ -485,7 +487,8 @@ def __get_version(saltstack_version):
         # Try to import the version information provided at install time
         from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
         return __saltstack_version__
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         return __discover_version(saltstack_version)
 
 
@@ -541,7 +544,8 @@ def versions_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             yield name, None
 
 

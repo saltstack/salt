@@ -304,7 +304,8 @@ def __virtual__():
     #     try:
     #         passed = subprocess.check_output(
     #             'lxc-version').split(':')[1].strip() >= '1.0'
-    #     except Exception:
+    #     except Exception as exp:
+        log.error('Exception {0}'.format(exp))
     #         pass
     #     if not passed:
     #         log.warning('Support for lxc < 1.0 may be incomplete.')
@@ -960,7 +961,8 @@ def init(name,
                         name,
                         'sh -c \'touch "{0}"; '
                         'test -e "{0}";echo ${{?}}\''.format(gid)))
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 lxcret = 1
             ret['result'] = not bool(lxcret)
             if not cret['result']:
@@ -996,7 +998,8 @@ def init(name,
                         name,
                         'sh -c \'touch "{0}"; '
                         'test -e "{0}";echo ${{?}}\''.format(gid)))
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 lxcret = 1
             ret['result'] = not lxcret
             if not cret['result']:
@@ -1340,7 +1343,8 @@ def list_(extra=False):
         if extra:
             try:
                 infos = info(container)
-            except Exception:
+            except Exception as exp:
+        log.error('Exception {0}'.format(exp))
                 trace = traceback.format_exc()
                 infos = {'error': 'Error while getting extra infos',
                          'comment': trace}
@@ -1680,12 +1684,14 @@ def info(name):
         try:
             limit = int(get_parameter(name, 'memory.limit_in_bytes').get(
                 'memory.limit_in_bytes'))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exp:
+            log.error('(TypeError, ValueError) {0}'.format(exp))
             limit = 0
         try:
             usage = int(get_parameter(name, 'memory.usage_in_bytes').get(
                 'memory.usage_in_bytes'))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exp:
+            log.error('(TypeError, ValueError) {0}'.format(exp))
             usage = 0
         free = limit - usage
         ret['memory_limit'] = limit
@@ -1801,7 +1807,8 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
                     try:
                         filtered_lxc_conf.append((conf.strip(),
                                                   row[conf].strip()))
-                    except AttributeError:
+                    except AttributeError as exp:
+                        log.error('AttributeError {0}'.format(exp))
                         filtered_lxc_conf.append((conf.strip(),
                                                   str(row[conf]).strip()))
             ret['comment'] = 'lxc.conf is up to date'
@@ -2155,7 +2162,8 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                         time.sleep(0.5)
                         try:
                             cstdout, cstderr = proc.recv()
-                        except IOError:
+                        except IOError as exp:
+                            log.error('IOError {0}'.format(exp))
                             cstdout, cstderr = '', ''
                         if cstdout:
                             stdout_buffer += cstdout
@@ -2165,7 +2173,8 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                             stderr_buffer += cstderr
                         else:
                             cstderr = ''
-                    except KeyboardInterrupt:
+                    except KeyboardInterrupt as exp:
+                        log.error('KeyboardInterrupt {0}'.format(exp))
                         break
                 res = {'retcode': proc.exitstatus,
                        'pid': 2,
@@ -2376,7 +2385,8 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
 
     try:
         conf = read_conf(conf_file, out_format='commented')
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         conf = []
 
     for line in conf:

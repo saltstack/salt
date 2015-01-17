@@ -33,7 +33,8 @@ class PkgrepoTest(integration.ModuleCase,
         if grains['os_family'] == 'Debian':
             try:
                 from aptsources import sourceslist
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 self.skipTest(
                     'aptsources.sourceslist python module not found'
                 )

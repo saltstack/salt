@@ -225,7 +225,8 @@ sys.stdout.write('cheese')
         cwd = '/path/to/nowhere'
         try:
             cmdmod.run_all(cmd, cwd=cwd)
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             pass
         else:
             raise RuntimeError

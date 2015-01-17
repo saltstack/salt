@@ -39,7 +39,8 @@ def _parse_localectl():
         if cur_param == 'System Locale':
             try:
                 key, val = re.match('^([A-Z_]+)=(.*)$', cols[0]).groups()
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 log.error('Odd locale parameter "{0}" detected in localectl '
                           'output. This should not happen. localectl should '
                           'catch this. You should probably investigate what '
@@ -107,7 +108,8 @@ def get_locale():
 
     try:
         return __salt__['cmd.run'](cmd).split('=')[1].replace('"', '')
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         return ''
 
 

@@ -80,7 +80,8 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
-        except (AssertionError, TypeError):
+        except (AssertionError, TypeError) as exp:
+            log.error('(AssertionError, TypeError) {0}'.format(exp))
             import pprint
             pprint.pprint(ret)
             raise
@@ -97,7 +98,8 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('uninstalled pep8', ret['stdout'])
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             import pprint
             pprint.pprint(ret)
             raise
@@ -111,7 +113,8 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             import pprint
             pprint.pprint(ret)
             raise
@@ -126,7 +129,8 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             import pprint
             pprint.pprint(ret)
             raise
@@ -138,7 +142,8 @@ class PipModuleTest(integration.ModuleCase):
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('uninstalled pep8', ret['stdout'])
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             import pprint
             pprint.pprint(ret)
             raise
@@ -161,7 +166,8 @@ class PipModuleTest(integration.ModuleCase):
             self.assertIn(
                 'Successfully installed Blinker SaltTesting', ret['stdout']
             )
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             import pprint
             pprint.pprint(ret)
             raise
@@ -185,7 +191,8 @@ class PipModuleTest(integration.ModuleCase):
                 'Successfully installed pep8 Blinker SaltTesting',
                 ret['stdout']
             )
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             import pprint
             pprint.pprint(ret)
             raise

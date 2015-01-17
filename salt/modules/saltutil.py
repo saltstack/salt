@@ -57,7 +57,8 @@ def _get_top_file_envs():
     '''
     try:
         return __context__['saltutil._top_file_envs']
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         try:
             st_ = salt.state.HighState(__opts__)
             top = st_.get_top()
@@ -89,9 +90,9 @@ def _sync(form, saltenv=None):
         log.info('Creating module dir {0!r}'.format(mod_dir))
         try:
             os.makedirs(mod_dir)
-        except (IOError, OSError):
-            msg = 'Cannot create cache module directory {0}. Check permissions.'
-            log.error(msg.format(mod_dir))
+        except (IOError, OSError) as exp:
+            msg = 'Cannot create cache module directory {0}. Check permissions. Error {0}'
+            log.error(msg.format(mod_dir, exp))
     for sub_env in saltenv:
         log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
         cache = []
@@ -412,7 +413,8 @@ def refresh_pillar():
     '''
     try:
         ret = __salt__['event.fire']({}, 'pillar_refresh')
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
@@ -432,7 +434,8 @@ def refresh_modules():
     '''
     try:
         ret = __salt__['event.fire']({}, 'module_refresh')
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
@@ -562,7 +565,8 @@ def signal_job(jid, sig):
                         jid,
                         data['pid']
                         )
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 path = os.path.join(__opts__['cachedir'], 'proc', str(jid))
                 if os.path.isfile(path):
                     os.remove(path)
@@ -642,7 +646,8 @@ def revoke_auth(preserve_minion_cache=False):
 
     try:
         return channel.send(load)
-    except SaltReqTimeoutError:
+    except SaltReqTimeoutError as exp:
+        log.error('SaltReqTimeoutError {0}'.format(exp))
         return False
 
 

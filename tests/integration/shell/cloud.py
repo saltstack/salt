@@ -23,6 +23,8 @@ try:
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
+import logging
+log = logging.getLogger(__name__)
 
 
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.11.4')
@@ -83,7 +85,8 @@ class SaltCloudCliTest(integration.ShellCase,
                         ),
                         output[1]
                     )
-                except AssertionError:
+                except AssertionError as exp:
+                    log.error('AssertionError {0}'.format(exp))
                     print output
                     raise
             # Remove the first option from the list

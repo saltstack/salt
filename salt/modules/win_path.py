@@ -112,7 +112,8 @@ def add(path, index=0):
             sysPath.pop(currIndex)
         else:
             return True
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         pass
 
     # Add it to the Path
@@ -140,7 +141,8 @@ def remove(path):
     sysPath = get_path()
     try:
         sysPath.remove(path)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return True
 
     regedit = __salt__['reg.set_key'](

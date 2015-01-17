@@ -106,7 +106,8 @@ def resolve_dns(opts):
         try:
             ret['master_ip'] = \
                     salt.utils.dns_check(opts['master'], True, opts['ipv6'])
-        except SaltClientError:
+        except SaltClientError as exp:
+            log.error('SaltClientError {0}'.format(exp))
             if opts['retry_dns']:
                 while True:
                     import salt.log
@@ -122,11 +123,13 @@ def resolve_dns(opts):
                             opts['master'], True, opts['ipv6']
                         )
                         break
-                    except SaltClientError:
-                        pass
+                    except SaltClientError as exp:
+                        log.error('SaltClientError {0}'.format(exp))
+
             else:
                 ret['master_ip'] = '127.0.0.1'
-        except SaltSystemExit:
+        except SaltSystemExit as exp:
+            log.error('SaltSystemExit {0}'.format(exp))
             err = 'Master address: {0} could not be resolved. Invalid or unresolveable address.'.format(
                 opts.get('master', 'Unknown'))
             log.error(err)
@@ -261,7 +264,8 @@ class SMinion(object):
                     try:
                         self.gen_modules()
                         break
-                    except SaltClientError:
+                    except SaltClientError as exp:
+                        log.error('SaltClientError {0}'.format(exp))
                         log.warning(('Attempted to authenticate with master '
                                      '{0} and failed'.format(master)))
                         continue
@@ -527,8 +531,8 @@ class MultiMinion(MinionBase):
             if socks.get(self.epull_sock) == zmq.POLLIN:
                 try:
                     package = self.epull_sock.recv(zmq.NOBLOCK)
-                except Exception:
-                    pass
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
 
             masters = list(minions.keys())
             shuffle(masters)
@@ -548,7 +552,8 @@ class MultiMinion(MinionBase):
                             minions[master]['minion'] = t_minion
                             minions[master]['generator'] = t_minion.tune_in_no_block()
                             minions[master]['auth_wait'] = self.opts['acceptance_wait_time']
-                        except SaltClientError:
+                        except SaltClientError as exp:
+                            log.error('SaltClientError {0}'.format(exp))
                             log.error('Error while bring up minion for multi-master. Is master {0} responding?'.format(master))
                             continue
                     else:
@@ -566,15 +571,17 @@ class MultiMinion(MinionBase):
                         for multi_minion in minions:
                             try:
                                 minions[master]['minion'].handle_event(package)
-                            except Exception:
-                                pass
+                            except Exception as exp:
+                                log.error('Exception {0}'.format(exp))
+
                     else:
                         try:
                             minion['minion'].handle_event(package)
                             package = None
                             self.epub_sock.send(package)
-                        except Exception:
-                            pass
+                        except Exception as exp:
+                            log.error('Exception {0}'.format(exp))
+
 
                 # have the Minion class run anything it has to run
                 next(minion['generator'])
@@ -597,7 +604,8 @@ class Minion(MinionBase):
         if HAS_ZMQ:
             try:
                 zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
                 # using zmq.zmq_version() and build a version info tuple.
                 zmq_version_info = tuple(
@@ -717,7 +725,8 @@ class Minion(MinionBase):
                         raise TypeError
                     # we take whatever the module returns as master address
                     opts['master'] = master_mod[mod + '.' + fun]()
-                except TypeError:
+                except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                     msg = ('Failed to evaluate master address from '
                            'module \'{0}\''.format(opts['master']))
                     log.error(msg)
@@ -777,7 +786,8 @@ class Minion(MinionBase):
                     if self.authenticate(timeout, safe) != 'full':
                         conn = True
                         break
-                except SaltClientError:
+                except SaltClientError as exp:
+                    log.error('SaltClientError {0}'.format(exp))
                     msg = ('Master {0} could not be reached, trying '
                            'next master (if any)'.format(opts['master']))
                     log.info(msg)
@@ -879,7 +889,8 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         try:
             result = channel.send(load)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.info("fire_master failed: {0}".format(traceback.format_exc()))
 
     def _handle_payload(self, payload):
@@ -906,7 +917,8 @@ class Minion(MinionBase):
 
         try:
             data = self.crypticle.loads(load)
-        except AuthenticationError:
+        except AuthenticationError as exp:
+            log.error('AuthenticationError {0}'.format(exp))
             # decryption of the payload failed, try to re-auth
             self.authenticate()
             data = self.crypticle.loads(load)
@@ -1098,7 +1110,8 @@ class Minion(MinionBase):
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
@@ -1209,9 +1222,10 @@ class Minion(MinionBase):
             if os.path.isfile(fn_):
                 try:
                     os.remove(fn_)
-                except (OSError, IOError):
+                except (OSError, IOError) as exp:
+                    log.error('(OSError, IOError) {0}'.format(exp))
                     # The file is gone already
-                    pass
+
         log.info('Returning information for job: {0}'.format(jid))
         channel = salt.transport.Channel.factory(self.opts)
         if ret_cmd == '_syndic_return':
@@ -1240,8 +1254,9 @@ class Minion(MinionBase):
         else:
             try:
                 oput = self.functions[fun].__outputter__
-            except (KeyError, AttributeError, TypeError):
-                pass
+            except (KeyError, AttributeError, TypeError) as exp:
+                log.error('(KeyError, AttributeError, TypeError) {0}'.format(exp))
+
             else:
                 if isinstance(oput, string_types):
                     load['out'] = oput
@@ -1258,7 +1273,8 @@ class Minion(MinionBase):
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         try:
             ret_val = channel.send(load)
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as exp:
+            log.error('SaltReqTimeoutError {0}'.format(exp))
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
                    'overloaded. If the master is running consider increasing '
@@ -1648,8 +1664,9 @@ class Minion(MinionBase):
                 try:
                     self.win_proc.remove(thread)
                     del thread
-                except (ValueError, NameError):
-                    pass
+                except (ValueError, NameError) as exp:
+                    log.error('(ValueError, NameError) {0}'.format(exp))
+
 
     # Main Minion Tune In
     def tune_in(self):
@@ -1736,7 +1753,8 @@ class Minion(MinionBase):
                     try:
                         self.handle_event(package)
                         self.epub_sock.send(package)
-                    except Exception:
+                    except Exception as exp:
+                        log.error('Exception {0}'.format(exp))
                         log.debug('Exception while handling events', exc_info=True)
                     # Add an extra fallback in case a forked process leeks through
                     multiprocessing.active_children()
@@ -1751,9 +1769,11 @@ class Minion(MinionBase):
                     log.critical('Unexpected ZMQError while polling minion',
                                  exc_info=True)
                 continue
-            except SaltClientError:
+            except SaltClientError as exp:
+                log.error('SaltClientError {0}'.format(exp))
                 raise
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the minion',
                     exc_info=True
@@ -1791,7 +1811,8 @@ class Minion(MinionBase):
             except zmq.ZMQError:
                 # If a zeromq error happens recover
                 yield True
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the minion',
                     exc_info=True
@@ -1874,7 +1895,8 @@ class Syndic(Minion):
         # If the AES authentication has changed, re-authenticate
         try:
             data = self.crypticle.loads(load)
-        except AuthenticationError:
+        except AuthenticationError as exp:
+            log.error('AuthenticationError {0}'.format(exp))
             self.authenticate()
             data = self.crypticle.loads(load)
         # Verify that the publication is valid
@@ -1988,7 +2010,8 @@ class Syndic(Minion):
                     self._process_cmd_socket()
             except zmq.ZMQError:
                 yield True
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the minion',
                     exc_info=True
@@ -2055,7 +2078,8 @@ class Syndic(Minion):
             # in the process_*_socket methods. If we see any other
             # errors they may need some kind of handling so log them
             # for now.
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the syndic',
                     exc_info=True
@@ -2212,7 +2236,8 @@ class MultiSyndic(MinionBase):
                 self.master_syndics[master]['dead_until'] = 0
 
                 return True
-            except SaltClientError:
+            except SaltClientError as exp:
+                log.error('SaltClientError {0}'.format(exp))
                 log.error('Error while bring up minion for multi-syndic. Is master {0} responding?'.format(master))
                 # re-use auth-wait as backoff for syndic
                 minion['dead_until'] = time.time() + minion['auth_wait']
@@ -2235,7 +2260,8 @@ class MultiSyndic(MinionBase):
             try:
                 getattr(syndic_dict['syndic'], func)(*args, **kwargs)
                 return
-            except SaltClientError:
+            except SaltClientError as exp:
+                log.error('SaltClientError {0}'.format(exp))
                 log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
                 # re-use auth-wait as backoff for syndic
                 syndic_dict['dead_until'] = time.time() + syndic_dict['auth_wait']
@@ -2321,7 +2347,8 @@ class MultiSyndic(MinionBase):
             # in the process_*_socket methods. If we see any other
             # errors they may need some kind of handling so log them
             # for now.
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'An exception occurred while polling the syndic',
                     exc_info=True
@@ -2610,7 +2637,8 @@ class Matcher(object):
         results = ' '.join(results)
         try:
             return eval(results)  # pylint: disable=W0123
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.error('Invalid compound target: {0} for results: {1}'.format(tgt, results))
             return False
         return False
@@ -2643,7 +2671,8 @@ class ProxyMinion(Minion):
         if HAS_ZMQ:
             try:
                 zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
                 # using zmq.zmq_version() and build a version info tuple.
                 zmq_version_info = tuple(

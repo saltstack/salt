@@ -391,7 +391,8 @@ def info(name):
     '''
     try:
         data = pwd.getpwnam(name)
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return {}
     else:
         return _format_info(data)

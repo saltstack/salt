@@ -55,7 +55,8 @@ class NestDisplay(object):
         try:
             return u'{0}{1}{2}{3}{4}{5}\n'.format(
                 indent, color, prefix, msg, endc, suffix)
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as exp:
+            log.error('UnicodeDecodeError {0}'.format(exp))
             return u'{0}{1}{2}{3}{4}{5}\n'.format(
                 indent, color, prefix, salt.utils.sdecode(msg), endc, suffix)
 

@@ -1460,7 +1460,8 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
     _loglevel_config_setting_name_ = 'cli_salt_log_file'
     try:
         os.getcwd()
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         sys.exit("Cannot access current working directory. Exiting!")
 
     def _mixin_setup(self):
@@ -1601,7 +1602,8 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         if len(self.args) <= 1 and not self.options.doc:
             try:
                 self.print_help()
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 # We get an argument that Python's optparser just can't deal
                 # with. Perhaps stdout was redirected, or a file glob was
                 # passed in. Regardless, we're in an unknown state here.
@@ -1627,12 +1629,14 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                     self.config['tgt'] = self.args[0].replace(' ', '').split(',')
                 else:
                     self.config['tgt'] = self.args[0].split()
-            except IndexError:
+            except IndexError as exp:
+                log.error('IndexError {0}'.format(exp))
                 self.exit(42, '\nCannot execute command without defining a target.\n\n')
         else:
             try:
                 self.config['tgt'] = self.args[0]
-            except IndexError:
+            except IndexError as exp:
+                log.error('IndexError {0}'.format(exp))
                 self.exit(42, '\nCannot execute command without defining a target.\n\n')
         # Detect compound command and set up the data for it
         if self.args:
@@ -1673,7 +1677,8 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 # parse the args and kwargs before sending to the publish interface
                 self.config['arg'] = \
                     salt.utils.args.parse_input(self.config['arg'])
-            except IndexError:
+            except IndexError as exp:
+                log.error('IndexError {0}'.format(exp))
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
     def setup_config(self):

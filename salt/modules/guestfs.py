@@ -42,7 +42,8 @@ def mount(location, access='rw'):
     if not os.path.isdir(root):
         try:
             os.makedirs(root)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             # somehow the directory already exists
             pass
     while True:

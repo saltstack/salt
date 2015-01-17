@@ -163,7 +163,8 @@ def get_fun(fun):
         ind_str = '{0}:{1}'.format(minion, fun)
         try:
             jid = serv.lindex(ind_str, 0)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             continue
         data = serv.get('{0}:{1}'.format(minion, jid))
         if data:
@@ -178,7 +179,8 @@ def get_jids():
     serv = _get_serv(ret=None)
     try:
         return serv.get('jids').strip(',').split(',')
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return []
 
 
@@ -189,5 +191,6 @@ def get_minions():
     serv = _get_serv(ret=None)
     try:
         return serv.get('minions').strip(',').split(',')
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return []

@@ -19,7 +19,8 @@ import time
 import shutil
 import optparse
 import subprocess
-
+import logging
+log = logging.getLogger(__name__)
 # Import Salt libs
 try:
     from salt.utils.nb_popen import NonBlockingPopen
@@ -33,7 +34,8 @@ except ImportError:
     try:
         # Let's try using the current checked out code
         from salt.utils.nb_popen import NonBlockingPopen
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         # Still an ImportError??? Let's use some "brute-force"
         sys.path.insert(
             0,
@@ -480,7 +482,8 @@ def run(opts):
                 #sys.exit(retcode)
             else:
                 print('matches!')
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
     if opts.cloud_only:
@@ -650,7 +653,8 @@ def run(opts):
                     delete_vm(opts)
                 sys.exit(retcode)
             print('matches!')
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
     if opts.test_git_commit is not None:
@@ -696,7 +700,8 @@ def run(opts):
                     delete_vm(opts)
                 sys.exit(retcode)
             print('matches!')
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
 
     # Run tests here
@@ -729,13 +734,16 @@ def run(opts):
     try:
         match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
         retcode = int(match.group('exitcode'))
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # No regex matching
         retcode = 1
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         # Not a number!?
         retcode = 1
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         # No output!?
         retcode = 1
         if stdout:

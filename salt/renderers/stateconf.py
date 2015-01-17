@@ -151,7 +151,8 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             # We must extract no matter what so extending a stateconf sls file
             # works!
             extract_state_confs(data)
-        except SaltRenderError:
+        except SaltRenderError as exp:
+            log.error('SaltRenderError {0}'.format(exp))
             raise
         except Exception as err:
             log.exception(
@@ -201,7 +202,8 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             render_template = renderers[name]  # e.g., the mako renderer
         except KeyError as err:
             raise SaltRenderError('Renderer: {0} is not available!'.format(err))
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             raise INVALID_USAGE_ERROR
 
         if isinstance(input, string_types):
@@ -455,7 +457,8 @@ def add_implicit_requires(data):
         if prev_state[0] is not None:
             try:
                 nvlist(args, ['require']).next()[2].insert(0, dict([prev_state]))
-            except StopIteration:  # i.e., there's no require
+            except StopIteration as exp:
+                log.error('StopIteration {0}'.format(exp))
                 args.append(dict(require=[dict([prev_state])]))
 
         states_before.add(tag)

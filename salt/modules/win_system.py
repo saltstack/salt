@@ -173,7 +173,8 @@ def get_pending_computer_name():
                 line
             ).group(1)
             break
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             continue
 
     if pending is not None:
@@ -336,7 +337,8 @@ def _validate_datetime(newdatetime, valid_formats):
         try:
             datetime.datetime.strptime(newdatetime, dt_format)
             return True
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
     return False
 

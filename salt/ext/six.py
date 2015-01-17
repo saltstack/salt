@@ -33,7 +33,8 @@ import functools
 import operator
 import sys
 import types
-
+import logging
+log = logging.getLogger(__name__)
 __author__ = "Benjamin Peterson <benjamin@python.org>"
 __version__ = "1.8.0"
 
@@ -67,7 +68,8 @@ else:
                 return 1 << 31
         try:
             len(X())
-        except OverflowError:
+        except OverflowError as exp:
+            log.error('OverflowError {0}'.format(exp))
             # 32-bit
             MAXSIZE = int((1 << 31) - 1)
         else:
@@ -187,15 +189,17 @@ class _SixMetaPathImporter(object):
     def __get_module(self, fullname):
         try:
             return self.known_modules[fullname]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             raise ImportError("This loader does not know module " + fullname)
 
     def load_module(self, fullname):
         try:
             # in case of a reload
             return sys.modules[fullname]
-        except KeyError:
-            pass
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
+
         mod = self.__get_module(fullname)
         if isinstance(mod, MovedModule):
             mod = mod._resolve()
@@ -477,10 +481,12 @@ def remove_move(name):
     """Remove item from six.moves."""
     try:
         delattr(_MovedItems, name)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         try:
             del moves.__dict__[name]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             raise AttributeError("no such move, %r" % (name,))
 
 

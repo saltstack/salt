@@ -21,6 +21,8 @@ import salt.config
 import salt.utils
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
+import logging
+log = logging.getLogger(__name__)
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
@@ -83,7 +85,8 @@ class PyDSLRendererTestCase(TestCase):
         s_iter = result.itervalues()
         try:
             s = s_iter.next()['file']
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             s = s_iter.next()['file']
         self.assertEqual(s[0], 'managed')
         self.assertEqual(s[1]['name'], 'myfile.txt')

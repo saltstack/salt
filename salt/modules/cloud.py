@@ -174,7 +174,8 @@ def get_instance(name, provider=None):
     try:
         # get the first: [alias][driver][vm_name]
         info = info.itervalues().next().itervalues().next().itervalues().next()
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return None
     return info
 

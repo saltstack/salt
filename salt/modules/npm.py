@@ -121,7 +121,8 @@ def install(pkg=None,
     npm_output = result['stdout'] or result['stderr']
     try:
         return json.loads(npm_output)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         # Not JSON! Try to coax the json out of it!
         pass
 
@@ -135,7 +136,8 @@ def install(pkg=None,
 
         try:
             return json.loads(''.join(lines))
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             lines = lines[1:]
 
     # Still no JSON!! Return the stdout as a string

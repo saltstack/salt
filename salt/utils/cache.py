@@ -149,7 +149,8 @@ class CacheRegex(object):
         try:
             self.cache[pattern][0] += 1
             return self.cache[pattern][1]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             pass
         if len(self.cache) > self.size:
             self.sweep()

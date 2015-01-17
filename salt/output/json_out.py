@@ -74,7 +74,8 @@ def output(data):
 
         return json.dumps(data, default=repr, indent=indent, sort_keys=sort_keys)
 
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         log.debug('An error occurred while outputting JSON', exc_info=True)
     # Return valid JSON for unserializable objects
     return json.dumps({})

@@ -91,7 +91,8 @@ class RackspaceTest(integration.ShellCase):
         # check if instance with salt installed returned successfully
         try:
             self.assertIn(ret, instance)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
@@ -100,7 +101,8 @@ class RackspaceTest(integration.ShellCase):
         ret = '            True'
         try:
             self.assertIn(ret, delete)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             raise
 
     def tearDown(self):

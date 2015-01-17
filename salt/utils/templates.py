@@ -107,7 +107,8 @@ def wrap_tmpl_func(render_str):
             log.error("Rendering exception occurred :{0}".format(exc))
             #return dict(result=False, data=str(exc))
             raise
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             return dict(result=False, data=traceback.format_exc())
         else:
             if to_str:  # then render as string
@@ -133,7 +134,8 @@ def _get_jinja_error_slug(tb_data):
             for x in tb_data if x[2] in ('top-level template code',
                                          'template')
         ][-1]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         pass
 
 
@@ -144,7 +146,8 @@ def _get_jinja_error_message(tb_data):
     try:
         line = _get_jinja_error_slug(tb_data)
         return u'{0}({1}):\n{3}'.format(*line)
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         pass
     return None
 
@@ -155,7 +158,8 @@ def _get_jinja_error_line(tb_data):
     '''
     try:
         return _get_jinja_error_slug(tb_data)[1]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         pass
     return None
 
@@ -452,7 +456,8 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             target.write(data)
         return {'result': True,
                 'data': tgt}
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}

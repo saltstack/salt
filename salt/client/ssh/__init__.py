@@ -194,7 +194,8 @@ class SSH(object):
         if not os.path.isfile(priv):
             try:
                 salt.client.ssh.shell.gen_key(priv)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
         self.defaults = {
             'user': self.opts.get(
@@ -310,7 +311,8 @@ class SSH(object):
             try:
                 data = salt.utils.find_json(stdout)
                 return {host: data.get('local', data)}
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
@@ -345,7 +347,8 @@ class SSH(object):
                     'stderr': stderr,
                     'retcode': retcode,
                 }
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             ret['ret'] = {
                 'stdout': stdout,
                 'stderr': stderr,
@@ -370,7 +373,8 @@ class SSH(object):
             if len(running) < self.opts.get('ssh_max_procs', 25) and not init:
                 try:
                     host = next(target_iter)
-                except StopIteration:
+                except StopIteration as exp:
+                    log.error('StopIteration {0}'.format(exp))
                     init = True
                     continue
                 for default in self.defaults:
@@ -394,7 +398,8 @@ class SSH(object):
                 ret = que.get(False)
                 if 'id' in ret:
                     returned.add(ret['id'])
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 pass
             for host in running:
                 if host in returned:
@@ -922,8 +927,8 @@ ARGS = {9}\n'''.format(self.minion_config,
         # Remove our shim file
         try:
             os.remove(shim_tmp_file.name)
-        except IOError:
-            pass
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
 
         # Execute shim
         ret = self.shell.exec_cmd('/bin/sh $HOME/{0}'.format(target_shim_file))
@@ -1205,5 +1210,6 @@ def ssh_version():
             stderr=subprocess.PIPE).communicate()
     try:
         return ret[1].split(',')[0].split('_')[1]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         return '2.0'

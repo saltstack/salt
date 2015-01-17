@@ -722,7 +722,8 @@ def remote_get(cwd, remote='origin', user=None):
             return res
         else:
             return None
-    except CommandExecutionError:
+    except CommandExecutionError as exp:
+        log.error('CommandExecutionError {0}'.format(exp))
         return None
 
 

@@ -127,7 +127,8 @@ class MasterPillarUtil(object):
                         mdata = self.serial.loads(fp_.read())
                         if isinstance(mdata, dict):
                             mine_data[minion_id] = mdata
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             return mine_data
         return mine_data
 
@@ -153,7 +154,8 @@ class MasterPillarUtil(object):
                             grains[minion_id] = mdata['grains']
                         if mdata.get('pillar', False):
                             pillars[minion_id] = mdata['pillar']
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             return grains, pillars
         return grains, pillars
 
@@ -403,7 +405,8 @@ class MasterPillarUtil(object):
                             with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
                             os.rename(tmpfname, mine_file)
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             return True
         return True
 
@@ -571,7 +574,8 @@ class ConnectedCache(multiprocessing.Process):
             # we check for new events with the poller
             try:
                 socks = dict(poller.poll(1))
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                 self.stop()
             except zmq.ZMQError as zmq_err:
                 log.error('ConCache ZeroMQ-Error occurred')

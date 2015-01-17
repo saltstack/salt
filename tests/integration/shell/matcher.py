@@ -270,7 +270,8 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         try:
             self.assertIn('minion', '\n'.join(ret[0]))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             # We now fail when we're unable to properly set the syslog logger
             self.assertIn(
                 'Failed to setup the Syslog logging handler', '\n'.join(ret[1])

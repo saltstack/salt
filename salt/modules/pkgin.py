@@ -241,7 +241,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for line in out.splitlines():
         try:
             pkg, ver = line.split(' ')[0].rsplit('-', 1)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
 

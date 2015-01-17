@@ -63,10 +63,12 @@ class BrewModuleTest(integration.ModuleCase):
             pkg_list = self.run_function('pkg.list_pkgs')
             try:
                 self.assertIn(ADD_PKG, pkg_list)
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 self.run_function('pkg.remove', [ADD_PKG])
                 raise
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             self.run_function('pkg.remove', [ADD_PKG])
             raise
 
@@ -90,9 +92,11 @@ class BrewModuleTest(integration.ModuleCase):
             del_list = self.run_function('pkg.list_pkgs')
             try:
                 self.assertNotIn(DEL_PKG, del_list)
-            except AssertionError:
+            except AssertionError as exp:
+                log.error('AssertionError {0}'.format(exp))
                 raise
-        except CommandExecutionError:
+        except CommandExecutionError as exp:
+            log.error('CommandExecutionError {0}'.format(exp))
             self.run_function('pkg.remove', [DEL_PKG])
             raise
 

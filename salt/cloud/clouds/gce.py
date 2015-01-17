@@ -214,7 +214,8 @@ def _expand_node(node):
     ret.update(node.__dict__)
     try:
         del ret['extra']['boot_disk']
-    except Exception:  # pylint: disable=W0703
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         pass
     zone = ret['extra']['zone']
     ret['extra']['zone'] = {}
@@ -385,7 +386,8 @@ def __get_tags(vm_):
     # could not be interpreted, bad formatting?
     try:
         tags = literal_eval(t)
-    except Exception:  # pylint: disable=W0703
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         tags = None
     if not tags or not isinstance(tags, list):
         tags = None
@@ -403,7 +405,8 @@ def __get_metadata(vm_):
     # could not be interpreted, bad formatting?
     try:
         metadata = literal_eval(md)
-    except Exception:  # pylint: disable=W0703
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         metadata = None
     if not metadata or not isinstance(metadata, dict):
         metadata = {'items': [{
@@ -469,7 +472,8 @@ def __create_orget_address(conn, name, region):
     '''
     try:
         addy = conn.ex_get_address(name, region)
-    except ResourceNotFoundError:  # pylint: disable=W0703
+    except ResourceNotFoundError as exp:
+        log.error('ResourceNotFoundError {0}'.format(exp))
         addr_kwargs = {
             'name': name,
             'region': region
@@ -2089,7 +2093,8 @@ def create(vm_=None, call=None):
 
     try:
         node_dict = show_instance(node_data['name'], 'action')
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         # node_data is a libcloud Node which is unsubscriptable
         node_dict = show_instance(node_data.name, 'action')
 

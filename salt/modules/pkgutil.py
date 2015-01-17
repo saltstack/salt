@@ -208,7 +208,8 @@ def latest_version(*names, **kwargs):
     for line in output:
         try:
             name, version_rev = line.split()[1:3]
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             continue
 
         if name in names:

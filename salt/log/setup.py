@@ -248,7 +248,8 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
                     )
                     handler.setFormatter(formatter)
                 handler.release()
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             # There are no registered loggers yet
             pass
         return instance
@@ -291,7 +292,8 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
         if isinstance(msg, string_types) and not isinstance(msg, text_type):
             try:
                 _msg = msg.decode('utf-8', 'replace')
-            except UnicodeDecodeError:
+            except UnicodeDecodeError as exp:
+                log.error('UnicodeDecodeError {0}'.format(exp))
                 _msg = msg.decode('utf-8', 'ignore'),
         else:
             _msg = msg
@@ -596,7 +598,8 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             # user is not using plain ASCII, their system should be ready to
             # handle UTF-8.
             handler = WatchedFileHandler(log_path, mode='a', encoding='utf-8', delay=0)
-        except (IOError, OSError):
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
             logging.getLogger(__name__).warning(
                 'Failed to open log file, do you have permission to write to '
                 '{0}?'.format(log_path)

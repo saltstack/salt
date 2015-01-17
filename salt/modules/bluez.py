@@ -254,7 +254,8 @@ def pair(address, key):
 
     try:
         int(key)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         raise CommandExecutionError(
             'bluetooth.pair requires a numerical key to be used'
         )

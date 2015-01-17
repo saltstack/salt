@@ -14,7 +14,8 @@ except ImportError:
     HAS_SPWD = False
     try:
         import pwd
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         pass  # We're most likely on a Windows machine.
 
 # Import salt libs
@@ -68,7 +69,8 @@ def info(name):
                 'warn': data.sp_warn,
                 'inact': data.sp_inact,
                 'expire': data.sp_expire}
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             ret = {
                 'name': '',
                 'passwd': '',
@@ -97,7 +99,8 @@ def info(name):
         ret.update({
             'name': name
         })
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return ret
 
     # To compensate for lack of spwd module, read in password hash from /etc/shadow

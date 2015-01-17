@@ -79,7 +79,8 @@ def item(*args):
     for arg in args:
         try:
             ret[arg] = __pillar__[arg]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             pass
     return ret
 

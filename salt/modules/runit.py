@@ -145,7 +145,8 @@ def status(name, sig=None):
     out = __salt__['cmd.run_stdout'](cmd)
     try:
         pid = re.search(r'{0}: \(pid (\d+)\)'.format(name), out).group(1)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         pid = ''
     return pid
 

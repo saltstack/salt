@@ -97,7 +97,8 @@ def __virtual__():
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
         return False
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         pass
 
     if get_configured_provider() is False:
@@ -406,7 +407,8 @@ def create(vm_):
         try:
             # It might be already up, let's destroy it!
             destroy(vm_['name'])
-        except SaltCloudSystemExit:
+        except SaltCloudSystemExit as exp:
+            log.error('SaltCloudSystemExit {0}'.format(exp))
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
@@ -600,7 +602,8 @@ def stop(name, call=None):
         data = conn.ex_stop_node(node=node)
         log.debug(data)
         log.info('Stopped node {0}'.format(name))
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error('Failed to stop node {0}\n'.format(name), exc_info=True)
 
     return data
@@ -624,7 +627,8 @@ def start(name, call=None):
         data = conn.ex_start_node(node=node)
         log.debug(data)
         log.info('Started node {0}'.format(name))
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error('Failed to start node {0}\n'.format(name), exc_info=True)
 
     return data
@@ -656,7 +660,8 @@ def set_tags(name, tags, call=None):
         if 'Name' in tags:
             return get_tags(tags['Name'])
         return get_tags(name)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error('Failed to set tags for {0}\n'.format(name), exc_info=True)
 
 
@@ -678,7 +683,8 @@ def get_tags(name, call=None):
         log.info('Retrieving tags from {0}'.format(name))
         data = conn.ex_describe_tags(resource=node)
         log.info(data)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error(
             'Failed to retrieve tags from {0}\n'.format(name),
             exc_info=True
@@ -717,7 +723,8 @@ def del_tags(name, kwargs, call=None):
         conn.ex_delete_tags(resource=node, tags=tags)
         log.info('Deleting tags from {0}'.format(name))
         ret = get_tags(name)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.error(
             'Failed to delete tags from {0}\n'.format(name),
             exc_info=True

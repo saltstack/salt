@@ -74,7 +74,8 @@ def __virtual__():
     try:
         # Import botocore
         import botocore.session
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         # Botocore is not available, the Libcloud AWS module will be loaded
         # instead.
         return False

@@ -499,7 +499,8 @@ def create(vm_):
 
     try:
         conn.create_hosted_service(**service_kwargs)
-    except WindowsAzureConflictError:
+    except WindowsAzureConflictError as exp:
+        log.error('WindowsAzureConflictError {0}'.format(exp))
         log.debug("Cloud service already exists")
     except Exception as exc:
         error = 'The hosted service name is invalid.'
@@ -527,7 +528,8 @@ def create(vm_):
         return False
     try:
         conn.create_virtual_machine_deployment(**vm_kwargs)
-    except WindowsAzureConflictError:
+    except WindowsAzureConflictError as exp:
+        log.error('WindowsAzureConflictError {0}'.format(exp))
         log.debug("Conflict error. The deployment may already exist, trying add_role")
         # Deleting two useless keywords
         del vm_kwargs['deployment_slot']
@@ -571,7 +573,8 @@ def create(vm_):
             data = show_instance(service_name, call='action')
             if 'url' in data and data['url'] != str(''):
                 return data['url']
-        except WindowsAzureMissingResourceError:
+        except WindowsAzureMissingResourceError as exp:
+            log.error('WindowsAzureMissingResourceError {0}'.format(exp))
             pass
         time.sleep(1)
         return False

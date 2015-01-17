@@ -59,13 +59,15 @@ def init_git_pillar(opts):
         if 'git' in opts_dict:
             try:
                 import git
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 return pillargitfs
             parts = opts_dict['git'].strip().split()
             try:
                 br = parts[0]
                 loc = parts[1]
-            except IndexError:
+            except IndexError as exp:
+                log.error('IndexError {0}'.format(exp))
                 log.critical(
                     'Unable to extract external pillar data: {0}'
                     .format(opts_dict['git'])
@@ -110,7 +112,8 @@ def clean_fsbackend(opts):
             )
             try:
                 file_lists_caches = os.listdir(file_lists_dir)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 continue
             for file_lists_cache in fnmatch.filter(file_lists_caches, '*.p'):
                 cache_file = os.path.join(file_lists_dir, file_lists_cache)
@@ -136,8 +139,9 @@ def clean_expired_tokens(opts):
                 if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
                     try:
                         os.remove(token_path)
-                    except (IOError, OSError):
-                        pass
+                    except (IOError, OSError) exp as exp:
+                        log.error('(IOError, OSError) exp {0}'.format(exp))
+                        log.error('Error {0}'.format(exp))
 
 
 def clean_pub_auth(opts):
@@ -153,8 +157,8 @@ def clean_pub_auth(opts):
                         continue
                     if os.path.getmtime(auth_file_path) - time.time() > opts['keep_jobs']:
                         os.remove(auth_file_path)
-    except (IOError, OSError):
-        log.error('Unable to delete pub auth file')
+    except (IOError, OSError) as exp:
+        log.error('Unable to delete pub auth file({0})'.format(exp))
 
 
 def clean_old_jobs(opts):
@@ -196,7 +200,8 @@ def access_keys(opts):
         if user not in users:
             try:
                 user = pwd.getpwnam(user).pw_name
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 log.error('ACL user {0} is not available'.format(user))
                 continue
         keyfile = os.path.join(
@@ -215,10 +220,11 @@ def access_keys(opts):
         os.chmod(keyfile, 256)
         try:
             os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
-        except OSError:
+        except OSError es exp as exp:
+            log.error('OSError es exp {0}'.format(exp))
             # The master is not being run as root and can therefore not
             # chown the key file
-            pass
+            log.error('Error {0}'.format(exp))
         keys[user] = key
     return keys
 
@@ -262,7 +268,8 @@ class AutoKey(object):
             uid = pwnam[2]
             gid = pwnam[3]
             groups = salt.utils.get_gid_list(user, include_default=False)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             log.error(
                 'Failed to determine groups for user {0}. The user is not '
                 'available.\n'.format(
@@ -545,7 +552,8 @@ class RemoteFuncs(object):
                     fdata = self.serial.load(fp_).get(load['fun'])
                     if fdata:
                         ret[minion] = fdata
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 continue
         return ret
 
@@ -591,7 +599,8 @@ class RemoteFuncs(object):
                         if mine_data.pop(load['fun'], False):
                             with salt.utils.fopen(datap, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
-                except OSError:
+                except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                     return False
         return True
 
@@ -609,7 +618,8 @@ class RemoteFuncs(object):
             if os.path.isfile(datap):
                 try:
                     os.remove(datap)
-                except OSError:
+                except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                     return False
         return True
 
@@ -910,7 +920,8 @@ class RemoteFuncs(object):
         if 'tmo' in load:
             try:
                 pub_load['timeout'] = int(load['tmo'])
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 msg = 'Failed to parse timeout value: {0}'.format(
                         load['tmo'])
                 log.warn(msg)
@@ -918,7 +929,8 @@ class RemoteFuncs(object):
         if 'timeout' in load:
             try:
                 pub_load['timeout'] = int(load['timeout'])
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 msg = 'Failed to parse timeout value: {0}'.format(
                         load['timeout'])
                 log.warn(msg)
@@ -1514,14 +1526,16 @@ class LocalFuncs(object):
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
                 self.mminion.returners[fstr](load['jid'], load)
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 log.critical(
                     'The specified returner used for the external job cache '
                     '"{0}" does not have a save_load function!'.format(
                         self.opts['ext_job_cache']
                     )
                 )
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 log.critical(
                     'The specified returner threw a stack trace:\n',
                     exc_info=True
@@ -1531,14 +1545,16 @@ class LocalFuncs(object):
         try:
             fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[fstr](load['jid'], load)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             log.critical(
                 'The specified returner used for the master job cache '
                 '"{0}" does not have a save_load function!'.format(
                     self.opts['master_job_cache']
                 )
             )
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             log.critical(
                 'The specified returner threw a stack trace:\n',
                 exc_info=True

@@ -63,7 +63,8 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     if not salt.utils.is_windows():
         try:
             fstat = os.stat(dest)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             pass
     shutil.move(tgt, dest)
     if fstat is not None:
@@ -75,7 +76,8 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         policy = False
         try:
             policy = salt.modules.selinux.getenforce()
-        except (ImportError, CommandExecutionError):
+        except (ImportError, CommandExecutionError) as exp:
+            log.error('(ImportError, CommandExecutionError) {0}'.format(exp))
             pass
         if policy == 'Enforcing':
             with salt.utils.fopen(os.devnull, 'w') as dev_null:
@@ -85,5 +87,6 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
         # The temp file failed to move
         try:
             os.remove(tgt)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass

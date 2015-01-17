@@ -71,7 +71,8 @@ def list_():
             autoruns[full_dir] = []
             for afile in files:
                 autoruns[full_dir].append(afile)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
 
     return autoruns

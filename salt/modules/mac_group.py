@@ -116,7 +116,8 @@ def info(name):
     try:
         # getgrnam seems to cache weirdly, so don't use it
         grinfo = next(iter(x for x in grp.getgrall() if x.gr_name == name))
-    except StopIteration:
+    except StopIteration as exp:
+        log.error('StopIteration {0}'.format(exp))
         return {}
     else:
         return _format_info(grinfo)

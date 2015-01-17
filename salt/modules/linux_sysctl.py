@@ -57,7 +57,8 @@ def default_config():
                 try:
                     if int(version) >= 207:
                         return '/etc/sysctl.d/99-salt.conf'
-                except ValueError:
+                except ValueError as exp:
+                    log.error('ValueError {0}'.format(exp))
                     log.error(
                         'Unexpected non-numeric systemd version {0!r} '
                         'detected'.format(version)
@@ -93,7 +94,8 @@ def show(config_file=False):
                     key = key.strip()
                     value = value.lstrip()
                     ret[key] = value
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             log.error('Could not open sysctl file')
             return None
     else:
@@ -180,7 +182,9 @@ def persist(name, value, config=None):
         try:
             with salt.utils.fopen(config, 'w+') as _fh:
                 _fh.write('#\n# Kernel sysctl configuration\n#\n')
-        except (IOError, OSError):
+
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
             msg = 'Could not write to file: {0}'
             raise CommandExecutionError(msg.format(config))
 
@@ -192,7 +196,8 @@ def persist(name, value, config=None):
             # and it seems unnecessary to indent the below for
             # loop since it is a fairly large block of code.
             config_data = _fh.readlines()
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Could not read from file: {0}'
         raise CommandExecutionError(msg.format(config))
 
@@ -240,7 +245,8 @@ def persist(name, value, config=None):
     try:
         with salt.utils.fopen(config, 'w+') as _fh:
             _fh.writelines(nlines)
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         msg = 'Could not write to file: {0}'
         raise CommandExecutionError(msg.format(config))
 

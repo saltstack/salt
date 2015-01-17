@@ -78,7 +78,8 @@ def parse_kwarg(string_):
     '''
     try:
         return KWARG_REGEX.match(string_).groups()
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return None, None
 
 
@@ -136,7 +137,8 @@ def yamlify_arg(arg):
         else:
             # we don't support this type
             return original_arg
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         # In case anything goes wrong...
         return original_arg
 

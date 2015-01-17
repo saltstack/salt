@@ -478,7 +478,8 @@ class Syndic(parsers.SyndicOptionParser):
         if check_user(self.config['user']):
             try:
                 self.syndic.tune_in()
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as exp:
+                log.error('KeyboardInterrupt {0}'.format(exp))
                 logger.warn('Stopping the Salt Syndic Minion')
                 self.shutdown()
 

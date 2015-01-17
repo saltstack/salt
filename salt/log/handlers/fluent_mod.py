@@ -81,7 +81,8 @@ except ImportError:
     # Fall back to msgpack_pure
     try:
         import msgpack_pure as msgpack
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
         LOG_FORMAT = '[%(levelname)-8s] %(message)s'
@@ -319,7 +320,8 @@ class FluentSender(object):
 
         try:
             self._reconnect()
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             # will be retried in emit()
             self._close()
 
@@ -363,7 +365,8 @@ class FluentSender(object):
 
             # send finished
             self.pendings = None
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             # close socket
             self._close()
             # clear buffer if it exceeds max bufer size

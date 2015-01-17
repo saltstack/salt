@@ -323,7 +323,8 @@ def _dulwich_walk_tree(repo, tree, path):
     for parent in path.split(os.path.sep):
         try:
             tree = repo.get_object(tree[parent][1])
-        except (KeyError, TypeError):
+        except (KeyError, TypeError) as exp:
+            log.error('(KeyError, TypeError) {0}'.format(exp))
             # Directory not found, or tree passed into function is not a Tree
             # object. Either way, desired path does not exist.
             return None
@@ -381,7 +382,8 @@ def _get_tree_pygit2(repo, tgt_env):
         return None
     try:
         commit = repo['repo'].revparse_single(tgt_env)
-    except (KeyError, TypeError):
+    except (KeyError, TypeError) as exp:
+        log.error('(KeyError, TypeError) {0}'.format(exp))
         # Not a valid commit, likely not a commit SHA
         pass
     else:
@@ -428,7 +430,8 @@ def _get_tree_dulwich(repo, tgt_env):
         return None
     try:
         int(tgt_env, 16)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         # Not hexidecimal, likely just a non-matching environment
         return None
 
@@ -451,17 +454,20 @@ def _get_tree_dulwich(repo, tgt_env):
                 return None
             try:
                 sha_commit = matches.pop()
-            except IndexError:
+            except IndexError as exp:
+                log.error('IndexError {0}'.format(exp))
                 pass
     except TypeError as exc:
         log.warning('Invalid environment {0}: {1}'.format(tgt_env, exc))
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         # No matching SHA
         return None
 
     try:
         return repo['repo'].get_object(sha_commit.tree)
-    except NameError:
+    except NameError as exp:
+        log.error('NameError {0}'.format(exp))
         # No matching sha_commit object was created. Unable to find SHA.
         pass
     return None
@@ -683,7 +689,8 @@ def init():
             repo_conf['mountpoint'] = salt.utils.strip_proto(
                 repo_conf['mountpoint']
             )
-        except TypeError:
+        except TypeError as exp:
+            log.error('TypeError {0}'.format(exp))
             # mountpoint not specified
             pass
 
@@ -746,7 +753,8 @@ def init():
                 fp_.write('# gitfs_remote map as of {0}\n'.format(timestamp))
                 for repo in repos:
                     fp_.write('{0} = {1}\n'.format(repo['hash'], repo['url']))
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             pass
         else:
             log.info('Wrote new gitfs_remote map to {0}'.format(remote_map))
@@ -801,7 +809,8 @@ def _init_pygit2(rp_, repo_url, ssl_verify):
         # Repo cachedir exists, try to attach
         try:
             repo = pygit2.Repository(rp_)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             log.error(_INVALID_REPO.format(rp_, repo_url))
             return None, new
     if not repo.remotes:
@@ -861,12 +870,14 @@ def purge_cache():
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     try:
         remove_dirs = os.listdir(bp_)
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         remove_dirs = []
     for repo in init():
         try:
             remove_dirs.remove(repo['hash'])
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
                    if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
@@ -906,7 +917,8 @@ def update():
             if provider == 'gitpython':
                 try:
                     fetch_results = origin.fetch()
-                except AssertionError:
+                except AssertionError as exp:
+                    log.error('AssertionError {0}'.format(exp))
                     fetch_results = origin.fetch()
                 for fetch in fetch_results:
                     if fetch.old_commit is not None:
@@ -914,14 +926,16 @@ def update():
             elif provider == 'pygit2':
                 try:
                     origin.credentials = repo['credentials']
-                except KeyError:
+                except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                     # No credentials configured for this repo
                     pass
                 fetch = origin.fetch()
                 try:
                     # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
                     received_objects = fetch['received_objects']
-                except (AttributeError, TypeError):
+                except (AttributeError, TypeError) as exp:
+                    log.error('(AttributeError, TypeError) {0}'.format(exp))
                     # pygit2.Remote.fetch() returns a class instance in
                     # pygit2 >= 0.21.0
                     received_objects = fetch.received_objects
@@ -946,7 +960,8 @@ def update():
                         'end.'.format(repo['url'])
                     )
                     continue
-                except KeyError:
+                except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                     log.critical(
                         'Local repository cachedir {0!r} (corresponding '
                         'remote: {1}) has been corrupted. Salt will now '
@@ -988,7 +1003,7 @@ def update():
             )
         try:
             os.remove(lk_fn)
-        except (IOError, OSError):
+        except (IOError, OSError) as exp:
             pass
 
     env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
@@ -1016,9 +1031,10 @@ def update():
             os.path.join(__opts__['cachedir'], 'gitfs/hash'),
             find_file
         )
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
         # Hash file won't exist if no files have yet been served up
-        pass
+        log.error('IO/OS Error {0}'.format(exp))
+
 
 
 def _env_is_exposed(env):
@@ -1153,14 +1169,16 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     if not os.path.isdir(destdir):
         try:
             os.makedirs(destdir)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             # Path exists and is a file, remove it and retry
             os.remove(destdir)
             os.makedirs(destdir)
     if not os.path.isdir(hashdir):
         try:
             os.makedirs(hashdir)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             # Path exists and is a file, remove it and retry
             os.remove(hashdir)
             os.makedirs(hashdir)
@@ -1180,7 +1198,8 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                 continue
             try:
                 blob = tree / repo_path
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 continue
             blob_hexsha = blob.hexsha
 
@@ -1192,7 +1211,8 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             try:
                 oid = tree[repo_path].oid
                 blob = repo['repo'][oid]
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 continue
             blob_hexsha = blob.hex
 
@@ -1207,7 +1227,8 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                 # Referencing the path in the tree returns a tuple, the
                 # second element of which is the object ID of the blob
                 blob = repo['repo'].get_object(tree[filename][1])
-            except KeyError:
+            except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
                 continue
             blob_hexsha = blob.sha().hexdigest()
 
@@ -1224,7 +1245,8 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
         for filename in glob.glob(hashes_glob):
             try:
                 os.remove(filename)
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 pass
         with salt.utils.fopen(dest, 'w+') as fp_:
             if provider == 'gitpython':
@@ -1237,7 +1259,8 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             fp_.write(blob_hexsha)
         try:
             os.remove(lk_fn)
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             pass
         fnd['rel'] = path
         fnd['path'] = dest
@@ -1417,7 +1440,8 @@ def _file_list_gitpython(repo, tgt_env):
     if repo['root']:
         try:
             tree = tree / repo['root']
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return ret
     for blob in tree.traverse():
         if not isinstance(blob, git.Blob):
@@ -1460,7 +1484,8 @@ def _file_list_pygit2(repo, tgt_env):
             # spans more than one directory
             oid = tree[repo['root']].oid
             tree = repo['repo'][oid]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return ret
         if not isinstance(tree, pygit2.Tree):
             return ret
@@ -1569,7 +1594,8 @@ def _dir_list_gitpython(repo, tgt_env):
     if repo['root']:
         try:
             tree = tree / repo['root']
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return ret
     for blob in tree.traverse():
         if not isinstance(blob, git.Tree):
@@ -1611,7 +1637,8 @@ def _dir_list_pygit2(repo, tgt_env):
         try:
             oid = tree[repo['root']].oid
             tree = repo['repo'][oid]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             return ret
         if not isinstance(tree, pygit2.Tree):
             return ret

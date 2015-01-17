@@ -247,7 +247,8 @@ def delete_jail(name):
     if os.path.isfile(make_file):
         try:
             os.remove(make_file)
-        except (IOError, OSError):
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
             return ('Deleted jail "{0}" but was unable to remove jail make '
                     'file').format(name)
         __salt__['file.remove'](make_file)

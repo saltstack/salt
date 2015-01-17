@@ -107,5 +107,6 @@ def start():
 
     try:
         tornado.ioloop.IOLoop.instance().start()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as exp:
+        log.error('KeyboardInterrupt {0}'.format(exp))
         raise SystemExit(0)

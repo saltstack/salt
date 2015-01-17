@@ -16,7 +16,8 @@ except ImportError:
     try:
         import winreg as _winreg
         HAS_WINDOWS_MODULES = True
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         HAS_WINDOWS_MODULES = False
 
 # Import python libs
@@ -51,7 +52,8 @@ class Registry(object):
     def __getattr__(self, k):
         try:
             return self.hkeys[k]
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             msg = 'No hkey named \'{0}. Try one of {1}\''
             hkeys = ', '.join(self.hkeys)
             raise CommandExecutionError(msg.format(k, hkeys))
@@ -83,7 +85,8 @@ def read_key(hkey, path, key, reflection=True):
     try:
         handle = _winreg.OpenKeyEx(hkey2, path, 0, access_mask)
         return _winreg.QueryValueEx(handle, key)[0]
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return None
 
 
@@ -104,7 +107,8 @@ def set_key(hkey, path, key, value, vtype='REG_DWORD', reflection=True):
 
     try:
         _type = getattr(_winreg, vtype)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return False
 
     try:
@@ -112,7 +116,8 @@ def set_key(hkey, path, key, value, vtype='REG_DWORD', reflection=True):
         _winreg.SetValueEx(handle, key, 0, _type, value)
         _winreg.CloseKey(handle)
         return True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         handle = _winreg.CreateKeyEx(hkey2, path, 0, access_mask)
         _winreg.SetValueEx(handle, key, 0, _type, value)
         _winreg.CloseKey(handle)
@@ -137,7 +142,8 @@ def create_key(hkey, path, key, value=None, reflection=True):
         handle = _winreg.OpenKey(hkey2, path, 0, access_mask)
         _winreg.CloseKey(handle)
         return True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         handle = _winreg.CreateKeyEx(hkey2, path, 0, access_mask)
         if value:
             _winreg.SetValueEx(handle, key, 0, _winreg.REG_DWORD, value)
@@ -166,13 +172,15 @@ def delete_key(hkey, path, key, reflection=True):
         _winreg.DeleteKeyEx(handle, key)
         _winreg.CloseKey(handle)
         return True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         pass
 
     try:
         _winreg.DeleteValue(handle, key)
         _winreg.CloseKey(handle)
         return True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _winreg.CloseKey(handle)
         return False

@@ -135,7 +135,8 @@ class Target(object):
         '''
         try:
             return getattr(self, 'get_{0}'.format(self.tgt_type))()
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             return {}
 
     def get_glob(self):

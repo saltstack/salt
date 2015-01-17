@@ -195,7 +195,8 @@ def mod_list(only_persist=False):
                         mod_name = _strip_module_name(line)
                         if not line.startswith('#') and mod_name:
                             mods.add(mod_name)
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 log.error('kmod module could not open modules file at {0}'.format(conf))
     else:
         for mod in lsmod():

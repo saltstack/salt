@@ -402,7 +402,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         try:
             # TODO make this check if writeable
             os.path.exists(log)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             raise IOError('{0!r} is not writeable'.format(log))
 
         cmd.append('--log={0}'.format(log))
@@ -413,7 +414,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if timeout:
         try:
             int(timeout)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             raise ValueError(
                 '{0!r} is not a valid integer base 10.'.format(timeout)
             )
@@ -597,7 +599,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         for requirement in cleanup_requirements:
             try:
                 os.remove(requirement)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 pass
 
 
@@ -690,7 +693,8 @@ def uninstall(pkgs=None,
         try:
             # TODO make this check if writeable
             os.path.exists(log)
-        except IOError:
+        except IOError as exp:
+            log.error('IO Error {0}'.format(exp))
             raise IOError('{0!r} is not writeable'.format(log))
 
         cmd.append('--log={0}'.format(log))
@@ -701,7 +705,8 @@ def uninstall(pkgs=None,
     if timeout:
         try:
             int(timeout)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             raise ValueError(
                 '{0!r} is not a valid integer base 10.'.format(timeout)
             )
@@ -718,7 +723,8 @@ def uninstall(pkgs=None,
                             req_pkg, _ = req.split('==')
                             if req_pkg in pkgs:
                                 pkgs.remove(req_pkg)
-                        except ValueError:
+                        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                             pass
         cmd.extend(pkgs)
 
@@ -732,7 +738,8 @@ def uninstall(pkgs=None,
         for requirement in cleanup_requirements:
             try:
                 os.remove(requirement)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 pass
 
 
@@ -863,7 +870,8 @@ def version(bin_env=None):
     output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return None
 
 

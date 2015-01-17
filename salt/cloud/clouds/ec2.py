@@ -1442,7 +1442,8 @@ def request_instance(vm_=None, call=None):
                 params[
                     spot_prefix + 'IamInstanceProfile.Name'
                 ] = ex_iam_profile
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             raise SaltCloudConfigError(
                 '\'iam_profile\' should be a string value.'
             )
@@ -1728,7 +1729,8 @@ def request_instance(vm_=None, call=None):
                 log.debug('Canceled spot instance request {0}. Data '
                           'returned: {1}'.format(sir_id, data))
 
-            except SaltCloudSystemExit:
+            except SaltCloudSystemExit as exp:
+                log.error('SaltCloudSystemExit {0}'.format(exp))
                 pass
             finally:
                 raise SaltCloudSystemExit(str(exc))
@@ -1846,7 +1848,8 @@ def query_instance(vm_=None, call=None):
         try:
             # It might be already up, let's destroy it!
             destroy(vm_['name'])
-        except SaltCloudSystemExit:
+        except SaltCloudSystemExit as exp:
+            log.error('SaltCloudSystemExit {0}'.format(exp))
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
@@ -2830,7 +2833,8 @@ def _get_node(name=None, instance_id=None, location=None):
                                   opts=__opts__,
                                   sigver='4')
             return _extract_instance_info(instances)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             attempts -= 1
             log.debug(
                 'Failed to get the data for the node {0!r}. Remaining '

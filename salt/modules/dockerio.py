@@ -312,7 +312,8 @@ def _get_image_infos(image):
                    id_=infos['Id'],
                    out=infos,
                    comment='found')
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         pass
     if not status['id']:
         _invalid(status)
@@ -341,7 +342,8 @@ def _get_container_infos(container):
             _valid(status,
                    id_=container_info['Id'],
                    out=container_info)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         pass
     if not status['id']:
         raise CommandExecutionError(
@@ -437,7 +439,8 @@ def logs(container):
     try:
         container_logs = client.logs(_get_container_infos(container)['Id'])
         _valid(status, id_=container, out=container_logs)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
@@ -491,7 +494,8 @@ def commit(container,
         image = _get_image_infos(image_id)['Id']
         comment = 'Image {0} created from {1}'.format(image, container)
         _valid(status, id_=image, out=commit_info, comment=comment)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
@@ -514,7 +518,8 @@ def diff(container):
     try:
         container_diff = client.diff(_get_container_infos(container)['Id'])
         _valid(status, id_=container, out=container_diff)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
@@ -550,7 +555,8 @@ def export(container, path):
         _valid(status,
                id_=container, out=ppath,
                comment='Exported to {0}'.format(ppath))
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
@@ -655,7 +661,8 @@ def create_container(image,
         }
         __salt__['mine.send']('docker.get_containers', host=True)
         return callback(status, id_=container, comment=comment, out=out)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=image, out=traceback.format_exc())
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
@@ -676,7 +683,8 @@ def version():
     try:
         docker_version = client.version()
         _valid(status, out=docker_version)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, out=traceback.format_exc())
     return status
 
@@ -696,7 +704,8 @@ def info():
     try:
         version_info = client.info()
         _valid(status, out=version_info)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, out=traceback.format_exc())
     return status
 
@@ -726,7 +735,8 @@ def port(container, private_port):
             _get_container_infos(container)['Id'],
             private_port)
         _valid(status, id_=container, out=port_info)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
@@ -766,7 +776,8 @@ def stop(container, timeout=10):
                    comment='Container {0} was already stopped'.format(
                        container),
                    id_=container)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc(),
                  comment=(
                      'An exception occurred while stopping '
@@ -808,7 +819,8 @@ def kill(container):
                    comment='Container {0} was already stopped'.format(
                        container),
                    id_=container)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status,
                  id_=container,
                  out=traceback.format_exc(),
@@ -846,7 +858,8 @@ def restart(container, timeout=10):
                    id_=container)
         else:
             _invalid(status)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc(),
                  comment=(
                      'An exception occurred while restarting '
@@ -897,7 +910,8 @@ def start(container,
                     bindings = {}
                     for k, v in port_bindings.items():
                         bindings[k] = (v.get('HostIp', ''), v['HostPort'])
-                except AttributeError:
+                except AttributeError as exp:
+                    log.error('AttributeError {0}'.format(exp))
                     raise SaltInvocationError(
                         'port_bindings must be formatted as a dictionary of '
                         'dictionaries'
@@ -926,7 +940,8 @@ def start(container,
             _valid(status,
                    comment='Container {0} was already started'.format(container),
                    id_=container)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status,
                  id_=container,
                  out=traceback.format_exc(),
@@ -966,7 +981,8 @@ def wait(container):
             _valid(status,
                    comment='Container {0} was already stopped'.format(container),
                    id_=container)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc(),
                  comment=(
                      'An exception occurred while waiting '
@@ -994,7 +1010,8 @@ def exists(container):
     try:
         _get_container_infos(container)
         return True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return False
 
 
@@ -1016,7 +1033,8 @@ def is_running(container):
     try:
         infos = _get_container_infos(container)
         return infos.get('State', {}).get('Running')
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return False
 
 
@@ -1060,10 +1078,12 @@ def remove_container(container, force=False, v=False):
             _get_container_infos(dcontainer)
             _invalid(status,
                      comment='Container was not removed: {0}'.format(container))
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             status['status'] = True
             status['comment'] = 'Container {0} was removed'.format(container)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc())
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
@@ -1105,7 +1125,8 @@ def top(container):
         else:
             _invalid(status,
                      comment='Container {0} is not running'.format(container))
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc())
     return status
 
@@ -1129,7 +1150,8 @@ def inspect_container(container):
     try:
         infos = _get_container_infos(container)
         _valid(status, id_=container, out=infos)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc(),
                  comment='Container does not exit: {0}'.format(container))
     return status
@@ -1215,7 +1237,8 @@ def _create_image_assemble_error_status(status, ret, image_logs):
                             err_log['errorDetail']['message'],
                         )
                     comment += msg
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         is_invalid = True
         trace = traceback.format_exc()
         out = (
@@ -1261,7 +1284,8 @@ def import_image(src, repo, tag=None):
                        out=ret)
         else:
             _invalid(status)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, out=traceback.format_exc())
     return status
 
@@ -1293,7 +1317,8 @@ def tag(image, repository, tag=None, force=False):
     try:
         dimage = _get_image_infos(image)['Id']
         ret = client.tag(dimage, repository, tag=tag, force=force)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status,
                  out=traceback.format_exc(),
                  comment='Cant tag image {0} {1}{2}'.format(
@@ -1338,7 +1363,8 @@ def get_images(name=None, quiet=False, all=True):
             inf = infos[i]
             try:
                 inf['Human_Size'] = _sizeof_fmt(int(inf['Size']))
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 pass
             try:
                 ts = int(inf['Created'])
@@ -1346,15 +1372,18 @@ def get_images(name=None, quiet=False, all=True):
                 inf['Human_IsoCreated'] = dts.isoformat()
                 inf['Human_Created'] = dts.strftime(
                     '%Y-%m-%d %H:%M:%S')
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 pass
             try:
                 inf['Human_VirtualSize'] = (
                     _sizeof_fmt(int(inf['VirtualSize'])))
-            except ValueError:
+            except ValueError as exp:
+                log.error('ValueError {0}'.format(exp))
                 pass
         _valid(status, out=infos)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, out=traceback.format_exc())
     return status
 
@@ -1421,7 +1450,8 @@ def build(path=None,
                 else:
                     _invalid(status, id_=id_, out=out)
 
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             _invalid(status,
                     out=traceback.format_exc(),
                     comment='Unexpected error while building an image')
@@ -1452,7 +1482,8 @@ def remove_image(image):
             status['id'] = infos['Id']
             try:
                 client.remove_image(infos['Id'])
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 _invalid(status,
                          id_=image,
                          out=traceback.format_exc(),
@@ -1462,11 +1493,13 @@ def remove_image(image):
                 _invalid(status,
                          comment=(
                              'Image marked to be deleted but not deleted yet'))
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 _valid(status, id_=image, comment='Image deleted')
         else:
             _invalid(status)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status,
                  out=traceback.format_exc(),
                  comment='Image does not exist: {0}'.format(image))
@@ -1495,10 +1528,12 @@ def inspect_image(image):
                 infos[
                     'Human_{0}'.format(k)
                 ] = _sizeof_fmt(int(infos[k]))
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
         _valid(status, id_=image, out=infos)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=image, out=traceback.format_exc(),
                  comment='Image does not exist')
     return status
@@ -1521,7 +1556,8 @@ def _parse_image_multilogs_string(ret):
             if pushd == 0:
                 try:
                     buf = json.loads(buf)
-                except Exception:
+                except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                     pass
                 else:
                     image_logs.append(buf)
@@ -1576,7 +1612,8 @@ def _pull_assemble_error_status(status, ret, logs):
                             err_log['errorDetail']['message'],
                         )
                     comment += msg
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         out = traceback.format_exc()
     _invalid(status, out=out, comment=comment)
     return status
@@ -1630,7 +1667,8 @@ def pull(repo, tag=None, insecure_registry=False):
                 _pull_assemble_error_status(status, ret, image_logs)
         else:
             _invalid(status)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=repo, out=traceback.format_exc())
     return status
 
@@ -1667,7 +1705,8 @@ def _push_assemble_error_status(status, ret, logs):
                             err_log['errorDetail']['message'],
                         )
                     comment += msg
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         trace = traceback.format_exc()
         status['out'] = (
             'An error occurred while '
@@ -1740,7 +1779,8 @@ def push(repo, tag=None, quiet=False, insecure_registry=False):
                 _push_assemble_error_status(status, ret, image_logs)
         else:
             _invalid(status)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=repo, out=traceback.format_exc())
     return status
 
@@ -1799,7 +1839,8 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
             return _invalid(status, id_=container, out=ret,
                             comment=comment)
         _valid(status, id_=container, out=ret, comment=comment,)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container,
                  comment=comment, out=traceback.format_exc())
     return status
@@ -1832,7 +1873,8 @@ def load(imagepath):
                                 comment='Command to load image {0} failed.'.format(imagepath))
 
             _valid(status, id_=None, out=ret, comment='Image load success')
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             _invalid(status, id_=None,
                     comment="Image not loaded.",
                     out=traceback.format_exc())
@@ -1866,7 +1908,8 @@ def save(image, filename):
     try:
         _info = _get_image_infos(image)
         ok = True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=image,
                 comment="docker image {0} could not be found.".format(image),
                 out=traceback.format_exc())
@@ -1883,7 +1926,8 @@ def save(image, filename):
                                 comment='Command to save image {0} to {1} failed.'.format(image, filename))
 
             _valid(status, id_=image, out=ret, comment='Image save success')
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             _invalid(status, id_=image, comment="Image not saved.", out=traceback.format_exc())
 
     return status
@@ -2072,7 +2116,8 @@ def get_container_root(container):
                 if robj:
                     rootfs = robj.groups()[0]
                     break
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         rootfs = default_rootfs
     return rootfs
 
@@ -2141,7 +2186,8 @@ def _script(status,
                            reset_system_locale=reset_system_locale)
         if not no_clean:
             os.remove(path)
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         _invalid(status, id_=container, out=traceback.format_exc())
     return status
 

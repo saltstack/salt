@@ -16,6 +16,8 @@ import jinja2
 from salt.utils.serializers import json, yamlex, yaml, msgpack
 from salt.utils.serializers import SerializationError
 from salt.utils.odict import OrderedDict
+import logging
+log = logging.getLogger(__name__)
 
 SKIP_MESSAGE = '%s is unavailable, do prerequisites have been met?'
 
@@ -116,7 +118,8 @@ class TestSerializers(TestCase):
         sls_obj = yamlex.deserialize(yamlex.serialize(obj))
         try:
             yml_obj = yaml.deserialize(yaml.serialize(obj))
-        except SerializationError:
+        except SerializationError as exp:
+            log.error('SerializationError {0}'.format(exp))
             # BLAAM! yaml was unable to serialize OrderedDict,
             # but it's not the purpose of the current test.
             yml_obj = obj.copy()

@@ -97,7 +97,8 @@ class EC2Test(integration.ShellCase):
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
@@ -108,7 +109,8 @@ class EC2Test(integration.ShellCase):
         # check if deletion was performed appropriately
         try:
             self.assertIn(ret_str, delete)
-        except AssertionError:
+        except AssertionError as exp:
+            log.error('AssertionError {0}'.format(exp))
             raise
 
     def tearDown(self):

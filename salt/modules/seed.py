@@ -133,7 +133,8 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
     tmp = os.path.join(mpt, 'tmp')
     try:
         os.makedirs(tmp)
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         if not os.path.isdir(tmp):
             raise
     cfg_files = mkconfig(config, tmp=tmp, id_=id_, approve_key=approve_key)

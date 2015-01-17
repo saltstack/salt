@@ -71,7 +71,8 @@ def _publish(
     channel = salt.transport.Channel.factory(__opts__)
     try:
         peer_data = channel.send(load)
-    except SaltReqTimeoutError:
+    except SaltReqTimeoutError as exp:
+        log.error('SaltReqTimeoutError {0}'.format(exp))
         return '{0!r} publish timed out'.format(fun)
     if not peer_data:
         return {}
@@ -204,5 +205,6 @@ def runner(fun, arg=None, timeout=5):
     channel = salt.transport.Channel.factory(__opts__)
     try:
         return channel.send(load)
-    except SaltReqTimeoutError:
+    except SaltReqTimeoutError as exp:
+        log.error('SaltReqTimeoutError {0}'.format(exp))
         return '{0!r} runner publish timed out'.format(fun)

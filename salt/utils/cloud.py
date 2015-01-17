@@ -98,7 +98,8 @@ def __render_script(path, vm_=None, opts=None, minion=''):
         with salt.utils.fopen(path, 'r') as fp_:
             template = Template(fp_.read())
             return str(template.render(opts=opts, vm=vm_, minion=minion))
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         # Specified renderer was not found
         with salt.utils.fopen(path, 'r') as fp_:
             return fp_.read()
@@ -782,7 +783,8 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             return False
         except SaltCloudPasswordError:
             raise
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             if trycount >= maxtries:
                 return False
             time.sleep(trysleep)
@@ -1382,7 +1384,8 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
             listen=False)
     try:
         event.fire_event(msg, tag)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         # We're using at least a 0.17.x version of salt
         if isinstance(args, dict):
             args[key] = msg
@@ -1811,7 +1814,8 @@ def remove_sshkey(host, known_hosts=None):
                 known_hosts = '{0}/.ssh/known_hosts'.format(
                     pwd.getpwuid(os.getuid()).pwd_dir
                 )
-            except Exception:
+            except Exception as exp:
+            log.error('Exception {0}'.format(exp))
                 pass
 
     if known_hosts is not None:
@@ -2226,7 +2230,8 @@ def update_bootstrap(config, url=None):
         log.debug('Updating the bootstrap-salt.sh script to latest stable')
         try:
             import requests
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             return {'error': (
                 'Updating the bootstrap-salt.sh script requires the '
                 'Python requests library to be installed'
@@ -2464,7 +2469,8 @@ def diff_node_cache(prov_dir, node, new_data, opts):
     with salt.utils.fopen(path, 'r') as fh_:
         try:
             cache_data = msgpack.load(fh_)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             log.warning('Cache for {0} was corrupt: Deleting'.format(node))
             cache_data = {}
 
@@ -2542,7 +2548,8 @@ def retrieve_password_from_keyring(credential_id, username):
     try:
         import keyring
         return keyring.get_password(credential_id, username)
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         log.error('USE_KEYRING configured as a password, but no keyring module is installed')
         return False
 
@@ -2554,7 +2561,8 @@ def _save_password_in_keyring(credential_id, username, password):
     try:
         import keyring
         return keyring.set_password(credential_id, username, password)
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         log.error('Tried to store password in keyring, but no keyring module is installed')
         return False
 
@@ -2570,7 +2578,8 @@ def store_password_in_keyring(credential_id, username, password=None):
             prompt = 'Please enter password for {0}: '.format(credential_id)
             try:
                 password = getpass.getpass(prompt)
-            except EOFError:
+            except EOFError as exp:
+                log.error('EOFError {0}'.format(exp))
                 password = None
 
             if not password:
@@ -2582,7 +2591,8 @@ def store_password_in_keyring(credential_id, username, password=None):
             _save_password_in_keyring(credential_id, username, password)
         except keyring.errors.PasswordSetError as exc:
             log.debug('Problem saving password in the keyring: {0}'.format(exc))
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         log.error('Tried to store password in keyring, but no keyring module is installed')
         return False
 

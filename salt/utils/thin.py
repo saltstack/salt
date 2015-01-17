@@ -37,7 +37,8 @@ except ImportError:
     try:
         from requests.packages import urllib3
         HAS_URLLIB3 = True
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         HAS_URLLIB3 = False
 try:
     import chardet
@@ -47,7 +48,8 @@ except ImportError:
     try:
         from requests.packages.urllib3.packages import chardet
         HAS_CHARDET = True
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         HAS_CHARDET = False
 try:
     import markupsafe
@@ -65,7 +67,8 @@ except ImportError:
     try:
         from requests.packages.urllib3.packages import ssl_match_hostname
         HAS_SSL_MATCH_HOSTNAME = True
-    except ImportError:
+    except ImportError as exp:
+        log.error('ImportError {0}'.format(exp))
         HAS_SSL_MATCH_HOSTNAME = False
 
 # Import salt libs
@@ -114,7 +117,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             if overwrite or not os.path.isfile(thinver):
                 try:
                     os.remove(thintar)
-                except OSError:
+                except OSError as exp:
+                    log.error('OSError {0}'.format(exp))
                     pass
             elif fh_.read() == salt.version.__version__:
                 return thintar
@@ -151,7 +155,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
                     tops.append(moddir)
                 else:
                     tops.append(os.path.join(moddir, base + '.py'))
-            except ImportError:
+            except ImportError as exp:
+                log.error('ImportError {0}'.format(exp))
                 # Not entirely sure this is the right thing, but the only
                 # options seem to be 1) fail, 2) spew errors, or 3) pass.
                 # Nothing else in here spits errors, and the markupsafe code
@@ -162,7 +167,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
         try:
             locals()[mod] = __import__(mod)
             tops.append(locals()[mod].__file__)
-        except ImportError:
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
             pass   # As per comment above
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))

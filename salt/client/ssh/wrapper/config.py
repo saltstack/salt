@@ -96,7 +96,8 @@ def valid_fileproto(uri):
     '''
     try:
         return bool(re.match('^(?:salt|https?|ftp)://', uri))
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return False
 
 

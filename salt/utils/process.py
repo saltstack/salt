@@ -44,8 +44,9 @@ def set_pidfile(pidfile, user):
     try:
         with salt.utils.fopen(pidfile, 'w+') as ofile:
             ofile.write(str(os.getpid()))
-    except IOError:
-        pass
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
+
 
     log.debug(('Created pidfile: {0}').format(pidfile))
     if salt.utils.is_windows():
@@ -58,7 +59,8 @@ def set_pidfile(pidfile, user):
         uid = pwnam[2]
         gid = pwnam[3]
         #groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
-    except IndexError:
+    except IndexError as exp:
+        log.error('IndexError {0}'.format(exp))
         sys.stderr.write(
             'Failed to set the pid to user: {0}. The user is not '
             'available.\n'.format(
@@ -105,7 +107,8 @@ def clean_proc(proc, wait_for_kill=10):
                     )
                 )
                 os.kill(proc.pid, signal.SIGKILL)
-    except (AssertionError, AttributeError):
+    except (AssertionError, AttributeError) as exp:
+        log.error('(AssertionError, AttributeError) {0}'.format(exp))
         # Catch AssertionError when the proc is evaluated inside the child
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType
@@ -122,7 +125,8 @@ def os_is_running(pid):
         try:
             os.kill(pid, 0)  # SIG 0 is the "are you alive?" signal
             return True
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             return False
 
 
@@ -260,7 +264,8 @@ class ProcessManager(object):
         try:
             if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
                 systemd.daemon.notify('READY=1')
-        except SystemError:
+        except SystemError as exp:
+            log.error('SystemError {0}'.format(exp))
             # Daemon wasn't started by systemd
             pass
 
@@ -276,7 +281,8 @@ class ProcessManager(object):
                     continue
                 self.restart_process(pid)
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 break
 
     def check_children(self):
@@ -313,12 +319,14 @@ class ProcessManager(object):
                 # This is a race condition if a signal was passed to all children
                 try:
                     del self._process_map[pid]
-                except KeyError:
+                except KeyError as exp:
+                    log.error('KeyError {0}'.format(exp))
                     pass
         # if anyone is done after
         for pid in self._process_map:
             try:
                 os.kill(signal.SIGKILL, pid)
             # in case the process has since decided to die, os.kill returns OSError
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 pass

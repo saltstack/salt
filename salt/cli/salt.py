@@ -109,7 +109,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 try:
                     with salt.utils.fopen(os.path.join(self.config['cachedir'], '.root_key'), 'r') as fp_:
                         kwargs['key'] = fp_.readline()
-                except IOError:
+                except IOError as exp:
+                    log.error('IOError {0}'.format(exp))
                     kwargs['token'] = self.config['token']
 
             kwargs['delimiter'] = self.options.delimiter
@@ -194,7 +195,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                                 retcodes.append(retcode)
                                 self._output_ret(ret_, out)
                                 ret.update(ret_)
-                            except KeyError:
+                            except KeyError as exp:
+                                log.error('KeyError {0}'.format(exp))
                                 errors.append(full_ret)
 
                     # Returns summary

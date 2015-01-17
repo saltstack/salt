@@ -217,7 +217,8 @@ def master_compile(master_opts, minion_opts, grains, id_, saltenv):
 def ishashable(obj):
     try:
         hash(obj)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         return False
     return True
 
@@ -619,7 +620,8 @@ class State(object):
                 try:
                     low = self.states[agg_fun](low, chunks, running)
                     low['__agg__'] = True
-                except TypeError:
+                except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                     log.error('Failed to execute aggregate for state {0}'.format(low['state']))
         return low
 
@@ -725,7 +727,8 @@ class State(object):
             # order for the newly installed package to be importable.
             try:
                 reload(site)
-            except RuntimeError:
+            except RuntimeError as exp:
+                log.error('RuntimeError {0}'.format(exp))
                 log.error('Error encountered during module reload. Modules were not reloaded.')
         self.load_modules()
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
@@ -885,7 +888,8 @@ class State(object):
             try:
                 if name.startswith('__'):
                     continue
-            except AttributeError:
+            except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
                 pass
             if not isinstance(name, string_types):
                 errors.append(
@@ -1549,7 +1553,8 @@ class State(object):
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
             self.verify_ret(ret)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
             # populated with what we might have expected, so just be smart
@@ -2319,7 +2324,8 @@ class BaseHighState(object):
                                     states.add(comp)
                             top[saltenv][tgt] = matches
                             top[saltenv][tgt].extend(list(states))
-                    except TypeError:
+                    except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                         raise SaltRenderError('Unable to render top file. No targets found.')
         return top
 
@@ -2487,7 +2493,8 @@ class BaseHighState(object):
             errors.append('{0}\n{1}'.format(msg, traceback.format_exc()))
         try:
             mods.add('{0}:{1}'.format(saltenv, sls))
-        except AttributeError:
+        except AttributeError as exp:
+            log.error('AttributeError {0}'.format(exp))
             pass
         if state:
             if not isinstance(state, dict):
@@ -2594,7 +2601,8 @@ class BaseHighState(object):
                         errors.append(msg)
                 try:
                     self._handle_iorder(state)
-                except TypeError:
+                except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                     log.critical('Could not render SLS {0}. Syntax error detected.'.format(sls))
         else:
             state = {}
@@ -2752,7 +2760,8 @@ class BaseHighState(object):
             for sls_match in states:
                 try:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
-                except KeyError:
+                except KeyError as exp:
+                    log.error('KeyError {0}'.format(exp))
                     all_errors.extend(['No matching salt environment for environment {0!r} found'.format(saltenv)])
                 # if we did not found any sls in the fileserver listing, this
                 # may be because the sls was generated or added later, we can
@@ -2816,7 +2825,8 @@ class BaseHighState(object):
                     )
         try:
             highstate.update(state)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             errors.append(
                 'Error when rendering state with contents: {0}'.format(state)
             )
@@ -2877,10 +2887,12 @@ class BaseHighState(object):
         err = []
         try:
             top = self.get_top()
-        except SaltRenderError as err:
+        except SaltRenderError as exp:
+            log.error("Salt Render Err {0}".format(exp))
             ret[tag_name]['comment'] = err.error
             return ret
-        except Exception:
+        except Exception as exp:
+            log.error("Salt Render Err {0}".format(exp))
             trb = traceback.format_exc()
             err.append(trb)
             return err
@@ -2917,10 +2929,13 @@ class BaseHighState(object):
             with salt.utils.fopen(cfn, 'w+b') as fp_:
                 try:
                     self.serial.dump(high, fp_)
-                except TypeError:
+                except TypeError as exp:
+                    log.error('TypeError {0}'.format(exp))
                     # Can't serialize pydsl
                     pass
-        except (IOError, OSError):
+
+        except (IOError, OSError) as exp:
+            log.error('IO/OS Error {0}'.format(exp))
             msg = 'Unable to write to "state.highstate" cache file {0}'
             log.error(msg.format(cfn))
 
@@ -3003,7 +3018,8 @@ class HighState(BaseHighState):
     def get_active(cls):
         try:
             return cls.stack[-1]
-        except IndexError:
+        except IndexError as exp:
+            log.error('IndexError {0}'.format(exp))
             return None
 
 
@@ -3079,5 +3095,6 @@ class RemoteHighState(object):
                 'cmd': '_master_state'}
         try:
             return self.channel.send(load, tries=3, timeout=72000)
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as exp:
+            log.error('SaltReqTimeoutError {0}'.format(exp))
             return {}

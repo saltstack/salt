@@ -569,7 +569,8 @@ def save():
         with salt.utils.fopen(sfn, 'w+') as fp_:
             fp_.write(yaml_out)
         ret['comment'] = 'Schedule (non-pillar items) saved to {0}.'.format(sfn)
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         ret['comment'] = 'Unable to write to schedule file at {0}. Check permissions.'.format(sfn)
         ret['result'] = False
     return ret

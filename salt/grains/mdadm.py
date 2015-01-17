@@ -27,7 +27,8 @@ def mdadm():
                     continue
                 if ' : ' in line:
                     devices.add(line.split(' : ')[0])
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         return {}
 
     devices = sorted(devices)

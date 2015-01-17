@@ -27,7 +27,8 @@ def ext_pillar(minion_id,
         data = yaml.safe_load(__salt__['cmd.run']('{0} {1}'.format(command, minion_id)))
         data = data['parameters']
         return data
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         log.critical(
                 'YAML data from {0} failed to parse'.format(command)
                 )

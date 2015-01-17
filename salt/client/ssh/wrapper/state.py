@@ -115,8 +115,8 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     # Clean up our tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError):
-        pass
+    except (OSError, IOError) as exp:
+        log.error('IO Error {0}'.format(exp))
 
     # Read in the JSON data and return the data structure
     try:
@@ -181,8 +181,8 @@ def low(data, **kwargs):
     # Clean up our tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError):
-        pass
+    except (OSError, IOError) as exp:
+        log.error('IO Error {0}'.format(exp))
 
     # Read in the JSON data and return the data structure
     try:
@@ -244,8 +244,8 @@ def high(data, **kwargs):
     # Clean up our tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError):
-        pass
+    except (OSError, IOError) as exp:
+        log.error('IO Error {0}'.format(exp))
 
     # Read in the JSON data and return the data structure
     try:
@@ -314,8 +314,9 @@ def highstate(test=None, **kwargs):
     # Clean up our tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError):
-        pass
+    except (OSError, IOError) exp as exp:
+        log.error('(OSError, IOError) exp {0}'.format(exp))
+        log.error('IO Error {0}'.format(exp))
 
     # Read in the JSON data and return the data structure
     try:
@@ -384,8 +385,9 @@ def top(topfn, test=None, **kwargs):
     # Clean up our tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError):
-        pass
+    except (OSError, IOError) exp as exp:
+        log.error('(OSError, IOError) exp {0}'.format(exp))
+        log.error('IO Error {0}'.format(exp))
 
     # Read in the JSON data and return the data structure
     try:
@@ -611,8 +613,9 @@ def single(fun, name, test=None, **kwargs):
     # Clean up our tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError):
-        pass
+    except (OSError, IOError) exp as exp:
+        log.error('(OSError, IOError) exp {0}'.format(exp))
+        log.error('IO Error {0}'.format(exp))
 
     # Read in the JSON data and return the data structure
     try:

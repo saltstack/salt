@@ -145,7 +145,8 @@ def gid_to_group(gid):
     '''
     try:
         gid = int(gid)
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         # This is not an integer, maybe it's already the group name?
         gid = group_to_gid(gid)
 
@@ -155,7 +156,8 @@ def gid_to_group(gid):
 
     try:
         return grp.getgrgid(gid).gr_name
-    except (KeyError, NameError):
+    except (KeyError, NameError) as exp:
+        log.error('(KeyError, NameError) {0}'.format(exp))
         return ''
 
 
@@ -178,7 +180,8 @@ def group_to_gid(group):
         if isinstance(group, int):
             return group
         return grp.getgrnam(group).gr_gid
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return ''
 
 
@@ -242,7 +245,8 @@ def uid_to_user(uid):
     '''
     try:
         return pwd.getpwuid(uid).pw_name
-    except (KeyError, NameError):
+    except (KeyError, NameError) as exp:
+        log.error('(KeyError, NameError) {0}'.format(exp))
         return ''
 
 
@@ -265,7 +269,8 @@ def user_to_uid(user):
         if isinstance(user, int):
             return user
         return pwd.getpwnam(user).pw_uid
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         return ''
 
 
@@ -360,7 +365,8 @@ def set_mode(path, mode):
         raise CommandExecutionError('{0}: File not found'.format(path))
     try:
         os.chmod(path, int(mode, 8))
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return 'Invalid Mode ' + mode
     return get_mode(path)
 
@@ -442,7 +448,8 @@ def chown(path, user, group):
         try:
             # Broken symlinks will return false, but still need to be chowned
             return os.lchown(path, uid, gid)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             pass
         err += 'File not found'
     if err:
@@ -1576,7 +1583,8 @@ def contains(path, text):
                 if stripped_text in chunk:
                     return True
         return False
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 
@@ -1610,7 +1618,8 @@ def contains_regex(path, regex, lchar=''):
                 if re.search(regex, line):
                     return True
             return False
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 
@@ -1642,7 +1651,8 @@ def contains_regex_multiline(path, regex):
                 if re.search(regex, chunk, re.MULTILINE):
                     return True
             return False
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 
@@ -1670,7 +1680,8 @@ def contains_glob(path, glob_expr):
                 if fnmatch.fnmatch(chunk, glob_expr):
                     return True
             return False
-    except (IOError, OSError):
+    except (IOError, OSError) as exp:
+        log.error('IO/OS Error {0}'.format(exp))
         return False
 
 
@@ -1784,7 +1795,8 @@ def prepend(path, *args, **kwargs):
     try:
         with salt.utils.fopen(path) as fhr:
             contents = fhr.readlines()
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         contents = []
 
     preface = []
@@ -1884,7 +1896,8 @@ def touch(name, atime=None, mtime=None):
             times = (atime, mtime)
         os.utime(name, times)
 
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         raise SaltInvocationError('atime and mtime must be integers')
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
@@ -1998,7 +2011,8 @@ def link(src, path):
     try:
         os.link(src, path)
         return True
-    except (OSError, IOError):
+    except (OSError, IOError) as exp:
+        log.error('(OSError, IOError) {0}'.format(exp))
         raise CommandExecutionError('Could not create {0!r}'.format(path))
     return False
 
@@ -2039,7 +2053,8 @@ def symlink(src, path):
     try:
         os.symlink(src, path)
         return True
-    except (OSError, IOError):
+    except (OSError, IOError) as exp:
+        log.error('(OSError, IOError) {0}'.format(exp))
         raise CommandExecutionError('Could not create {0!r}'.format(path))
     return False
 
@@ -2063,7 +2078,8 @@ def rename(src, dst):
     try:
         os.rename(src, dst)
         return True
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         raise CommandExecutionError(
             'Could not rename {0!r} to {1!r}'.format(src, dst)
         )
@@ -2114,7 +2130,8 @@ def copy(src, dst, recurse=False, remove_existing=False):
                 salt.utils.files.recursive_copy(src, dst)
         else:
             shutil.copyfile(src, dst)
-    except OSError:
+    except OSError as exp:
+        log.error('OSError {0}'.format(exp))
         raise CommandExecutionError(
             'Could not copy {0!r} to {1!r}'.format(src, dst)
         )
@@ -2146,7 +2163,8 @@ def lstat(path):
         lst = os.lstat(path)
         return dict((key, getattr(lst, key)) for key in ('st_atime', 'st_ctime',
             'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return {}
 
 
@@ -2259,7 +2277,8 @@ def statvfs(path):
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
-    except (OSError, IOError):
+    except (OSError, IOError) as exp:
+        log.error('(OSError, IOError) {0}'.format(exp))
         raise CommandExecutionError('Could not create {0!r}'.format(link))
     return False
 
@@ -2282,7 +2301,8 @@ def stats(path, hash_type=None, follow_symlinks=True):
             # Broken symlinks will return False for os.path.exists(), but still
             # have a uid and gid
             pstat = os.lstat(path)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             # Not a broken symlink, just a nonexistent path
             return ret
     else:
@@ -2454,7 +2474,8 @@ def get_selinux_context(path):
 
     try:
         ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         ret = 'No selinux context information is available for {0}'.format(path)
 
     return ret
@@ -2524,7 +2545,8 @@ def source_list(source, source_hash, saltenv):
                 env_splitter = '?env='
             try:
                 _, senv = single.split(env_splitter)
-            except ValueError:
+            except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                 continue
             else:
                 mfiles += ['{0}?saltenv={1}'.format(f, senv)
@@ -2836,7 +2858,8 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
                 group = perms['lgroup']
             try:
                 chown_func(name, user, group)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 ret['result'] = False
 
     if user:
@@ -3263,7 +3286,8 @@ def manage_file(name,
                                     real_name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
                 __clean_tmp(sfn)
                 return _error(
                     ret, 'Failed to commit change, permission error')
@@ -3301,7 +3325,8 @@ def manage_file(name,
                                         real_name,
                                         __salt__['config.backup_mode'](backup),
                                         __opts__['cachedir'])
-                except IOError:
+                except IOError as exp:
+                    log.error('IO Error {0}'.format(exp))
                     __clean_tmp(tmp)
                     return _error(
                         ret, 'Failed to commit change, permission error')
@@ -3332,7 +3357,9 @@ def manage_file(name,
                                     name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
-            except IOError:
+            except IOError as exp:
+                log.error('IO Error {0}'.format(exp))
+
                 __clean_tmp(sfn)
                 return _error(
                     ret, 'Failed to commit change, permission error')
@@ -3895,9 +3922,11 @@ def list_backups(path, limit=None):
 
     try:
         limit = int(limit)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         pass
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         log.error('file.list_backups: \'limit\' value must be numeric')
         limit = None
 
@@ -3924,7 +3953,8 @@ def list_backups(path, limit=None):
             strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
         try:
             timestamp = datetime.datetime.strptime(fn, strpfmt)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             # File didn't match the strp format string, so it's not a backup
             # for this file. Move on to the next one.
             continue
@@ -3966,9 +3996,11 @@ def list_backups_dir(path, limit=None):
 
     try:
         limit = int(limit)
-    except TypeError:
+    except TypeError as exp:
+        log.error('TypeError {0}'.format(exp))
         pass
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         log.error('file.list_backups_dir: \'limit\' value must be numeric')
         limit = None
 
@@ -3991,7 +4023,8 @@ def list_backups_dir(path, limit=None):
                 strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
                 try:
                     timestamp = datetime.datetime.strptime(x, strpfmt)
-                except ValueError:
+                except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
                     # Folder didn't match the strp format string, so it's not a backup
                     # for this folder. Move on to the next one.
                     continue
@@ -4037,9 +4070,11 @@ def restore_backup(path, backup_id):
             backup = list_backups(path)[int(backup_id)]
         else:
             return ret
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return ret
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         ret['comment'] = 'backup_id \'{0}\' does not exist for ' \
                          '{1}'.format(backup_id, path)
         return ret
@@ -4061,7 +4096,8 @@ def restore_backup(path, backup_id):
     if not salt.utils.is_windows():
         try:
             fstat = os.stat(path)
-        except (OSError, IOError):
+        except (OSError, IOError) as exp:
+            log.error('(OSError, IOError) {0}'.format(exp))
             ret['comment'] += ', but was unable to set ownership'
         else:
             os.chown(path, fstat.st_uid, fstat.st_gid)
@@ -4097,9 +4133,11 @@ def delete_backup(path, backup_id):
             backup = list_backups(path)[int(backup_id)]
         else:
             return ret
-    except ValueError:
+    except ValueError as exp:
+        log.error('ValueError {0}'.format(exp))
         return ret
-    except KeyError:
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         ret['comment'] = 'backup_id \'{0}\' does not exist for ' \
                          '{1}'.format(backup_id, path)
         return ret
@@ -4188,7 +4226,8 @@ def open_files(by_pid=False):
     for pfile in procfs:
         try:
             pids[int(pfile)] = []
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             # Not a valid PID, move on
             pass
 
@@ -4198,7 +4237,8 @@ def open_files(by_pid=False):
         ppath = '/proc/{0}'.format(pid)
         try:
             tids = os.listdir('{0}/task'.format(ppath))
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             continue
 
         # Collect the names of all of the file descriptors
@@ -4217,7 +4257,8 @@ def open_files(by_pid=False):
                 fd_.append(
                     os.path.realpath('{0}/task/{1}/exe'.format(ppath, tid))
                 )
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 continue
 
             for tpath in os.listdir('{0}/task/{1}/fd'.format(ppath, tid)):
@@ -4233,7 +4274,8 @@ def open_files(by_pid=False):
                 # Running stat on the file cuts out all of the sockets and
                 # deleted files from the list
                 os.stat(name)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 continue
 
             if name not in files:
@@ -4360,7 +4402,8 @@ def diskusage(path):
 
             try:
                 stat_structure = os.stat(fp)
-            except OSError:
+            except OSError as exp:
+                log.error('OSError {0}'.format(exp))
                 continue
 
             if stat_structure.st_ino in seen:

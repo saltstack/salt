@@ -67,7 +67,8 @@ class VTTestCase(TestCase):
                 )
                 stdout, _ = proc.communicate()
                 return int(stdout.strip())
-            except (ValueError, OSError, IOError):
+            except (ValueError, OSError, IOError) as exp:
+                log.error('(ValueError, OSError, IOError) {0}'.format(exp))
                 if is_darwin():
                     # We're unable to findout how many PTY's are open
                     self.skipTest(
@@ -89,7 +90,8 @@ class VTTestCase(TestCase):
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions/2)):
                         self.fail('VT is not cleaning up PTY\'s')
-                except (ValueError, OSError, IOError):
+                except (ValueError, OSError, IOError) as exp:
+                    log.error('(ValueError, OSError, IOError) {0}'.format(exp))
                     self.fail('Unable to find out how many PTY\'s are open')
             except Exception as exc:
                 if 'out of pty devices' in exc:
@@ -109,7 +111,8 @@ class VTTestCase(TestCase):
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions/2)):
                         self.fail('VT is not cleaning up PTY\'s')
-                except (ValueError, OSError, IOError):
+                except (ValueError, OSError, IOError) as exp:
+                log.error('(ValueError, OSError, IOError) {0}'.format(exp))
                     self.fail('Unable to find out how many PTY\'s are open')
             except Exception as exc:
                 if 'out of pty devices' in exc:

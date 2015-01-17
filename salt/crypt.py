@@ -22,9 +22,9 @@ from salt.ext.six.moves import zip
 try:
     from M2Crypto import RSA, EVP
     from Crypto.Cipher import AES
-except ImportError:
+except ImportError as exp:
     # No need for crypt in local mode
-    pass
+    log.error('Import Error {0}'.format(exp))
 
 # Import salt libs
 import salt.defaults.exitcodes
@@ -56,8 +56,8 @@ def dropfile(cachedir, user=None):
                 import pwd
                 uid = pwd.getpwnam(user).pw_uid
                 os.chown(dfn, uid, -1)
-            except (KeyError, ImportError, OSError, IOError):
-                pass
+            except (KeyError, ImportError, OSError, IOError) as exp:
+                log.error('Error {0}'.format(exp))
     finally:
         os.umask(mask)  # restore original umask
 
@@ -94,10 +94,11 @@ def gen_keys(keydir, keyname, keysize, user=None):
             uid = pwd.getpwnam(user).pw_uid
             os.chown(priv, uid, -1)
             os.chown(pub, uid, -1)
-        except (KeyError, ImportError, OSError):
+        except (KeyError, ImportError, OSError) as exp:
+            log.error('(KeyError, ImportError, OSError) exp {0}'.format(exp))
             # The specified user was not found, allow the backup systems to
             # report the error
-            pass
+            log.error('Error {0}'.format(exp))
     return priv
 
 
@@ -395,7 +396,8 @@ class SAuth(object):
                 os.path.join(self.opts['pki_dir'], self.mpub)
             )
             payload['load']['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             pass
         with salt.utils.fopen(self.pub_path, 'r') as fp_:
             payload['load']['pub'] = fp_.read()
@@ -438,7 +440,8 @@ class SAuth(object):
             if os.path.exists(m_path):
                 try:
                     mkey = RSA.load_pub_key(m_path)
-                except Exception:
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
                 m_digest = mkey.public_decrypt(payload['sig'], 5)
@@ -565,7 +568,8 @@ class SAuth(object):
                         'The master failed to decrypt the random minion token'
                     )
                     return ''
-            except Exception:
+            except Exception as exp:
+                log.error('Exception {0}'.format(exp))
                 log.error(
                     'The master failed to decrypt the random minion token'
                 )

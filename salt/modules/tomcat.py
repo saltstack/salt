@@ -223,11 +223,13 @@ def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     try:
         # Trying tomcat >= 7 url
         ret['msg'] = _urlopen(url, timeout=timeout).read().splitlines()
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         try:
             # Trying tomcat6 url
             ret['msg'] = _urlopen(url6, timeout=timeout).read().splitlines()
-        except Exception:
+        except Exception as exp:
+            log.error('Exception {0}'.format(exp))
             ret['msg'] = 'Failed to create HTTP request'
 
     if not ret['msg'][0].startswith('OK'):
@@ -247,7 +249,8 @@ def _simple_cmd(cmd, app, url='http://localhost:8080/manager', timeout=180):
             'version': ls(url)[app]['version']
         }
         return '\n'.join(_wget(cmd, opts, url, timeout=timeout)['msg'])
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return 'FAIL - No context exists for path {0}'.format(app)
 
 
@@ -570,7 +573,8 @@ def deploy_war(war,
             return 'FAIL - could not cache the WAR file'
         try:
             __salt__['file.set_mode'](cached, '0644')
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             pass
     else:
         tfile = war

@@ -57,7 +57,8 @@ def __virtual__():
             import re
             if int(re.split(r'\D+', __grains__.get('osrelease', ''))[0]) >= 12:
                 return False
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             return False
     return 'service'
 

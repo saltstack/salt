@@ -47,5 +47,6 @@ def auth(username, password):
     try:
         account = app.authenticate_account(username, password)
         return True
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         return False

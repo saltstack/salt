@@ -62,7 +62,8 @@ def _chroot_pids(chroot):
                 pids.append(int(os.path.basename(
                     os.path.dirname(root)
                 )))
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             pass
     return pids
 
@@ -139,7 +140,8 @@ def _check_loglevel(level='info', quiet=False):
         level = level.lower()
         if level not in LOG_LEVELS:
             return _bad_level(level)
-    except AttributeError:
+    except AttributeError as exp:
+        log.error('AttributeError {0}'.format(exp))
         return _bad_level(level)
 
     return LOG_LEVELS[level]
@@ -251,7 +253,8 @@ def _run(cmd,
         # Save the original command before munging it
         try:
             pwd.getpwnam(runas)
-        except KeyError:
+        except KeyError as exp:
+            log.error('KeyError {0}'.format(exp))
             raise CommandExecutionError(
                 'User {0!r} is not available'.format(runas)
             )
@@ -285,7 +288,8 @@ def _run(cmd,
             for key, val in six.iteritems(env):
                 if isinstance(val, six.text_type):
                     env[key] = val.encode(fse)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             raise CommandExecutionError(
                 'Environment could not be retrieved for User {0!r}'.format(
                     runas
@@ -337,7 +341,8 @@ def _run(cmd,
 
         try:
             _umask = int(_umask, 8)
-        except ValueError:
+        except ValueError as exp:
+            log.error('ValueError {0}'.format(exp))
             msg = 'Invalid umask: \'{0}\''.format(umask)
             raise CommandExecutionError(msg)
     else:
@@ -428,7 +433,8 @@ def _run(cmd,
                         time.sleep(0.5)
                         try:
                             cstdout, cstderr = proc.recv()
-                        except IOError:
+                        except IOError as exp:
+                            log.error('IO Error {0}'.format(exp))
                             cstdout, cstderr = '', ''
                         if cstdout:
                             stdout += cstdout
@@ -444,7 +450,8 @@ def _run(cmd,
                                     timeout, stderr)
                             ret['retcode'] = None
                             break
-                    except KeyboardInterrupt:
+                    except KeyboardInterrupt as exp:
+                        log.error('KeyboardInterrupt {0}'.format(exp))
                         ret['stderr'] = 'SALT: User break\n{0}'.format(stderr)
                         ret['retcode'] = 1
                         break
@@ -467,7 +474,8 @@ def _run(cmd,
             proc.close(terminate=True, kill=True)
     try:
         __context__['retcode'] = ret['retcode']
-    except NameError:
+    except NameError as exp:
+        log.error('NameError {0}'.format(exp))
         # Ignore the context error during grain generation
         pass
     return ret
@@ -1275,7 +1283,8 @@ def tty(device, echo=None):
         return {
             'Success': 'Message was successfully echoed to {0}'.format(teletype)
         }
-    except IOError:
+    except IOError as exp:
+        log.error('IO Error {0}'.format(exp))
         return {
             'Error': 'Echoing to {0} returned error'.format(teletype)
         }
@@ -1352,7 +1361,8 @@ def _is_valid_shell(shell):
                     continue
                 else:
                     available_shells.append(line)
-        except OSError:
+        except OSError as exp:
+            log.error('OSError {0}'.format(exp))
             return True
     else:
         # No known method of determining available shells

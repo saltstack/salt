@@ -61,7 +61,8 @@ def _available_services():
                     with salt.utils.fopen(file_path):
                         plist = plistlib.readPlist(true_path)
 
-                except Exception:
+                except Exception as exp:
+                    log.error('Exception {0}'.format(exp))
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
                     cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(true_path)

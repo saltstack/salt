@@ -47,7 +47,8 @@ def update_progress(opts, progress, progress_iter, out):
     # Look up the outputter
     try:
         progress_outputter = salt.loader.outputters(opts)[out]
-    except KeyError:  # Outputter is not loaded
+    except KeyError as exp:
+        log.error('KeyError {0}'.format(exp))
         log.warning('Progress outputter not available.')
         return False
     progress_outputter(progress, progress_iter)
@@ -56,7 +57,8 @@ def update_progress(opts, progress, progress_iter, out):
 def progress_end(progress_iter):
     try:
         progress_iter.stop()
-    except Exception:
+    except Exception as exp:
+        log.error('Exception {0}'.format(exp))
         pass
     return None
 
@@ -69,7 +71,8 @@ def display_output(data, out=None, opts=None):
         opts = {}
     try:
         display_data = get_printout(out, opts)(data).rstrip()
-    except (KeyError, AttributeError):
+    except (KeyError, AttributeError) as exp:
+        log.error('(KeyError, AttributeError) {0}'.format(exp))
         log.debug(traceback.format_exc())
         opts.pop('output', None)
         display_data = get_printout('nested', opts)(data).rstrip()
@@ -84,7 +87,8 @@ def display_output(data, out=None, opts=None):
                 if isinstance(fdata, six.text_type):
                     try:
                         fdata = fdata.encode('utf-8')
-                    except (UnicodeDecodeError, UnicodeEncodeError):
+                    except (UnicodeDecodeError, UnicodeEncodeError) as exp:
+                        log.error('(UnicodeDecodeError, UnicodeEncodeError) {0}'.format(exp))
                         # try to let the stream write
                         # even if we didn't encode it
                         pass
@@ -125,7 +129,8 @@ def get_printout(out, opts=None, **kwargs):
             '''
             try:
                 fileno = sys.stdout.fileno()
-            except AttributeError:
+            except AttributeError as exp:
+                log.error('AttributeError {0}'.format(exp))
                 fileno = -1  # sys.stdout is StringIO or fake
             return not os.isatty(fileno)
 
