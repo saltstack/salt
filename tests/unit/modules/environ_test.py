@@ -41,9 +41,12 @@ class EnvironTestCase(TestCase):
         with patch.object(os.environ, 'pop', mock):
             self.assertFalse(environ.setval('key', False, True))
 
-        self.assertEqual(environ.setval('key', False), '')
+        mock_environ = {}
+        with patch.dict(os.environ, mock_environ):
+            self.assertEqual(environ.setval('key', False), '')
 
-        self.assertFalse(environ.setval('key', True))
+        with patch.dict(os.environ, mock_environ):
+            self.assertFalse(environ.setval('key', True))
 
     def test_setenv(self):
         '''
@@ -57,14 +60,11 @@ class EnvironTestCase(TestCase):
                                         True,
                                         False))
 
-        mock = MagicMock(return_value={})
-        with patch.dict(os.environ, mock):
-            mock = MagicMock(return_value=None)
-            with patch.object(environ, 'setval', mock):
-                self.assertEqual(environ.setenv({},
-                                                False,
-                                                True,
-                                                False)['QT_QPA_PLATFORMTHEME'],
+        mock_environ = {'key': 'value'}
+        with patch.dict(os.environ, mock_environ):
+            mock_setval = MagicMock(return_value=None)
+            with patch.object(environ, 'setval', mock_setval):
+                self.assertEqual(environ.setenv({}, False, True, False)['key'],
                                  None)
 
     def test_get(self):
@@ -81,16 +81,20 @@ class EnvironTestCase(TestCase):
         environment dictionary. Optionally compare the current value
         of the environment against the supplied value string.
         '''
-        self.assertFalse(environ.has_value(True))
+        mock_environ = {}
+        with patch.dict(os.environ, mock_environ):
+            self.assertFalse(environ.has_value(True))
 
-        self.assertTrue(environ.has_value('QT_QPA_PLATFORMTHEME',
-                                          'appmenu-qt5'))
+            os.environ['salty'] = 'yes'
+            self.assertTrue(environ.has_value('salty', 'yes'))
 
-        self.assertFalse(environ.has_value('QT_QPA_PLATFORMTHEME', 'value'))
+            os.environ['too_salty'] = 'no'
+            self.assertFalse(environ.has_value('too_salty', 'yes'))
 
-        self.assertFalse(environ.has_value('key', 'value'))
+            self.assertFalse(environ.has_value('key', 'value'))
 
-        self.assertFalse(environ.has_value('key'))
+            os.environ['key'] = 'value'
+            self.assertTrue(environ.has_value('key'))
 
     def test_item(self):
         '''
