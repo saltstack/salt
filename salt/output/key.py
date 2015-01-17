@@ -21,6 +21,9 @@ def output(data):
             __opts__.get('color'),
             __opts__.get('color_theme'))
     strip_colors = __opts__.get('strip_colors', True)
+    ident = 0
+    if __opts__.get('__multi_key'):
+        ident = 4
     if __opts__['transport'] == 'zeromq':
         acc = 'minions'
         pend = 'minions_pre'
@@ -33,19 +36,24 @@ def output(data):
                 rej: color['BLUE'],
                 'local': color['MAGENTA']}
 
-        trans = {pend: u'{0}Unaccepted Keys:{1}'.format(
+        trans = {pend: u'{0}{1}Unaccepted Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_RED'],
                                     color['ENDC']),
-                 acc: u'{0}Accepted Keys:{1}'.format(
+                 acc: u'{0}{1}Accepted Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_GREEN'],
                                     color['ENDC']),
-                 den: u'{0}Denied Keys:{1}'.format(
+                 den: u'{0}{1}Denied Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_MAGENTA'],
                                     color['ENDC']),
-                 rej: u'{0}Rejected Keys:{1}'.format(
+                 rej: u'{0}{1}Rejected Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_BLUE'],
                                     color['ENDC']),
-                 'local': u'{0}Local Keys:{1}'.format(
+                 'local': u'{0}{1}Local Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_MAGENTA'],
                                     color['ENDC'])}
     else:
@@ -58,16 +66,20 @@ def output(data):
                 rej: color['BLUE'],
                 'local': color['MAGENTA']}
 
-        trans = {pend: u'{0}Unaccepted Keys:{1}'.format(
+        trans = {pend: u'{0}{1}Unaccepted Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_RED'],
                                     color['ENDC']),
-                 acc: u'{0}Accepted Keys:{1}'.format(
+                 acc: u'{0}{1}Accepted Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_GREEN'],
                                     color['ENDC']),
-                 rej: u'{0}Rejected Keys:{1}'.format(
+                 rej: u'{0}{1}Rejected Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_BLUE'],
                                     color['ENDC']),
-                 'local': u'{0}Local Keys:{1}'.format(
+                 'local': u'{0}{1}Local Keys:{2}'.format(
+                                    ' ' * ident,
                                     color['LIGHT_MAGENTA'],
                                     color['ENDC'])}
 
@@ -80,12 +92,14 @@ def output(data):
             if strip_colors:
                 skey = salt.output.strip_esc_sequence(key)
             if isinstance(data[status], list):
-                ret += u'{0}{1}{2}\n'.format(
+                ret += u'{0}{1}{2}{3}\n'.format(
+                        ' ' * ident,
                         cmap[status],
                         skey,
                         color['ENDC'])
             if isinstance(data[status], dict):
-                ret += u'{0}{1}:  {2}{3}\n'.format(
+                ret += u'{0}{1}{2}:  {3}{4}\n'.format(
+                        ' ' * ident,
                         cmap[status],
                         skey,
                         data[status][key],
