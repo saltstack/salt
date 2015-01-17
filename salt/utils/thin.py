@@ -20,11 +20,6 @@ import salt.ext.six as six
 
 # pylint: disable=import-error,no-name-in-module
 try:
-    import msgpack
-    HAS_MSGPACK = True
-except ImportError:
-    HAS_MSGPACK = False
-try:
     import certifi
     HAS_CERTIFI = True
 except ImportError:
@@ -124,9 +119,6 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             os.path.dirname(yaml.__file__),
             os.path.dirname(requests.__file__)
             ]
-    if HAS_MSGPACK:
-        tops.append(os.path.dirname(msgpack.__file__))
-
     if HAS_URLLIB3:
         tops.append(os.path.dirname(urllib3.__file__))
 
