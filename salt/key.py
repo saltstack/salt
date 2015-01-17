@@ -435,6 +435,7 @@ class MultiKeyCLI(KeyCLI):
     Manage multiple key backends from the CLI
     '''
     def __init__(self, opts):
+        opts['__multi_key'] = True
         self.opts = opts
         zopts = copy.copy(opts)
         ropts = copy.copy(opts)
