@@ -13,6 +13,7 @@ import shutil
 import fnmatch
 import hashlib
 import json
+import copy
 import logging
 from salt.ext.six.moves import input
 
@@ -44,13 +45,8 @@ class KeyCLI(object):
     '''
     Manage key CLI operations
     '''
-    def __init__(self, opts, backend=None):
+    def __init__(self, opts):
         self.opts = opts
-        if backend:
-            if backend == 'zeromq':
-                self.key = Key(opts)
-            else:
-                self.key = RaetKey(opts)
         if self.opts['transport'] == 'zeromq':
             self.key = Key(opts)
         else:
@@ -440,8 +436,13 @@ class MultiKeyCLI(KeyCLI):
     '''
     def __init__(self, opts):
         self.opts = opts
-        self.keys = {'RAET Keys': KeyCLI(self.opts, 'raet'),
-                'ZMQ Keys': KeyCLI(self.opts, 'zeromq')}
+        zopts = copy.copy(opts)
+        ropts = copy.copy(opts)
+        self.keys = {}
+        zopts['transport'] = 'zeromq'
+        self.keys['ZMQ Keys'] = KeyCLI(zopts)
+        ropts['transport'] = 'raet'
+        self.keys['RAET Keys'] = KeyCLI(ropts)
 
     def _call_all(self, fun, *args):
         '''
