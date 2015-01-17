@@ -77,8 +77,8 @@ class DnsmasqTestCase(TestCase):
             m.return_value.__iter__.return_value = text_file_data.splitlines()
             self.assertDictEqual(dnsmasq._parse_dnamasq('filename'),
                                  {'A': 'B',
-                                  'unparsed': ['a line here',
-                                               'the second line']})
+                                  'unparsed': ['line here',
+                                               'second line']})
 
 
 if __name__ == '__main__':
