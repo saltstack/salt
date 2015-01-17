@@ -1101,8 +1101,9 @@ def _create_eni(interface):
 
     for subnet_query_result in subnet_query:
         if 'item' in subnet_query_result:
-            for subnet in subnet_query_result['item']:
-                if subnet['subnetId'] == interface['SubnetId']:
+            log.debug('subnet_quer_result: ' + str(subnet_query_result['item']))
+            if 'subnetId' in subnet_query_result['item']:
+                if subnet_query_result['item']['subnetId'] == interface['SubnetId']:
                     found = True
                     break
 
