@@ -32,9 +32,13 @@ class DebianServicesTestCase(TestCase):
         '''
         Test for Return a list of service that are enabled on boot
         '''
-        mock = MagicMock(return_value=1)
-        with patch.object(debian_service, '_get_runlevel', mock):
-            self.assertEqual(debian_service.get_enabled()[0], 'apparmor')
+        mock_runlevel = MagicMock(return_value=1)
+        mock_prefix = '/etc/rc1.d/S'
+        mock_glob = MagicMock(return_value=[mock_prefix + '01name'])
+
+        with patch.object(debian_service, '_get_runlevel', mock_runlevel):
+            with patch.object(debian_service.glob, 'glob', mock_glob):
+                self.assertEqual(debian_service.get_enabled()[0], 'name')
 
     def test_get_disabled(self):
         '''
