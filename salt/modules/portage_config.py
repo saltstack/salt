@@ -27,7 +27,6 @@ except ImportError:
             HAS_PORTAGE = True
         except ImportError as exp:
             log.error('ImportError {0}'.format(exp))
-            pass
 
 
 BASE_PATH = '/etc/portage/package.{0}'
@@ -200,8 +199,8 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                 try:
                     os.remove(bfile)
                 except OSError as exp:
-            log.error('OSError {0}'.format(exp))
-                    pass
+                    log.error('OSError {0}'.format(exp))
+                    #pass
 
         if clean:
             for triplet in os.walk(path):
@@ -349,7 +348,6 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
             os.remove(complete_file_path + '.bak')
         except OSError as exp:
             log.error('OSError {0}'.format(exp))
-            pass
 
 
 def append_use_flags(atom, uses=None, overwrite=False):

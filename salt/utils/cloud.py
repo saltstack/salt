@@ -1815,7 +1815,7 @@ def remove_sshkey(host, known_hosts=None):
                     pwd.getpwuid(os.getuid()).pwd_dir
                 )
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 pass
 
     if known_hosts is not None:

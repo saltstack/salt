@@ -696,7 +696,7 @@ def chown(path, user, group=None, pgroup=None, follow_symlinks=True):
         try:
             groupSID, domainName, objectType = win32security.LookupAccountName(None, pgroup)
         except pywinerror as exp:
-        log.error('pywinerror {0}'.format(exp))
+            log.error('pywinerror {0}'.format(exp))
             err += 'Group does not exist\n'
     else:
         groupSID = None

@@ -316,7 +316,7 @@ def _parse_settings_bond_1(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -401,7 +401,7 @@ def _parse_settings_bond_3(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -446,7 +446,7 @@ def _parse_settings_bond_4(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 _raise_error_iface(iface, binding, valid)
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -490,7 +490,7 @@ def _parse_settings_bond_5(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -527,7 +527,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])

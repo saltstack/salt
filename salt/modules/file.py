@@ -2546,7 +2546,7 @@ def source_list(source, source_hash, saltenv):
             try:
                 _, senv = single.split(env_splitter)
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 continue
             else:
                 mfiles += ['{0}?saltenv={1}'.format(f, senv)
@@ -3924,7 +3924,7 @@ def list_backups(path, limit=None):
         limit = int(limit)
     except TypeError as exp:
         log.error('TypeError {0}'.format(exp))
-        pass
+
     except ValueError as exp:
         log.error('ValueError {0}'.format(exp))
         log.error('file.list_backups: \'limit\' value must be numeric')
@@ -3998,7 +3998,7 @@ def list_backups_dir(path, limit=None):
         limit = int(limit)
     except TypeError as exp:
         log.error('TypeError {0}'.format(exp))
-        pass
+
     except ValueError as exp:
         log.error('ValueError {0}'.format(exp))
         log.error('file.list_backups_dir: \'limit\' value must be numeric')
@@ -4024,7 +4024,7 @@ def list_backups_dir(path, limit=None):
                 try:
                     timestamp = datetime.datetime.strptime(x, strpfmt)
                 except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                    log.error('ValueError {0}'.format(exp))
                     # Folder didn't match the strp format string, so it's not a backup
                     # for this folder. Move on to the next one.
                     continue

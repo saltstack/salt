@@ -305,7 +305,7 @@ def __virtual__():
     #         passed = subprocess.check_output(
     #             'lxc-version').split(':')[1].strip() >= '1.0'
     #     except Exception as exp:
-        log.error('Exception {0}'.format(exp))
+    #     log.error('Exception {0}'.format(exp))
     #         pass
     #     if not passed:
     #         log.warning('Support for lxc < 1.0 may be incomplete.')
@@ -1344,7 +1344,7 @@ def list_(extra=False):
             try:
                 infos = info(container)
             except Exception as exp:
-        log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 trace = traceback.format_exc()
                 infos = {'error': 'Error while getting extra infos',
                          'comment': trace}

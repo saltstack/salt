@@ -414,9 +414,9 @@ def insert(objects, collection, user=None, password=None,
 
     try:
         objects = _to_dict(objects)
-    except Exception, err as exp:
+    except Exception as exp:
         log.error('Exception, err {0}'.format(exp))
-        return err.message
+        return exp.message
 
     try:
         log.info("Inserting %r into %s.%s", objects, database, collection)
@@ -437,9 +437,9 @@ def find(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception, err as exp:
+    except Exception as exp:
         log.error('Exception, err {0}'.format(exp))
-        return err.message
+        return exp.message
 
     try:
         log.info("Searching for %r in %s", query, collection)
@@ -470,9 +470,9 @@ def remove(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception, err as exp:
+    except Exception as exp:
         log.error('Exception, err {0}'.format(exp))
-        return err.message
+        return exp.message
 
     try:
         log.info("Removing %r from %s", query, collection)

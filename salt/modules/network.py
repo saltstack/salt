@@ -291,7 +291,7 @@ def _netstat_bsd():
                 x for x, y in conn_ppid.items() if y not in ptr
             ))
         except StopIteration as exp:
-            log.error('StopIteration {0}'.format(exp))
+            #log.error('StopIteration {0}'.format(exp))
             continue
         ret[idx]['user'] = ptr[master_pid]['user']
         ret[idx]['program'] = '/'.join((master_pid, ptr[master_pid]['cmd']))
@@ -500,7 +500,7 @@ def traceroute(host):
             try:
                 traceroute_version.append(int(t))
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 traceroute_version.append(t)
 
         if len(traceroute_version) < 3:
@@ -522,7 +522,7 @@ def traceroute(host):
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
             except IndexError as exp:
-        log.error('IndexError {0}'.format(exp))
+                log.error('IndexError {0}'.format(exp))
                 traceline = re.findall(r'\s*(\d*)\s+(\*\s+\*\s+\*)', line)[0]
 
             log.debug('traceline: {0}'.format(traceline))
@@ -543,7 +543,7 @@ def traceroute(host):
                     for x in range(0, len(delays)):
                         result['ms{0}'.format(x + 1)] = delays[x]
             except IndexError as exp:
-        log.error('IndexError {0}'.format(exp))
+                log.error('IndexError {0}'.format(exp))
                 result = {}
 
         elif (traceroute_version[0] >= 2 and traceroute_version[2] >= 14
@@ -804,8 +804,7 @@ def mod_hostname(hostname):
             try:
                 host[host.index(o_hostname)] = hostname
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
-                pass
+                log.error('ValueError {0}'.format(exp))
 
             fh.write('\t'.join(host) + '\n')
 

@@ -468,7 +468,7 @@ def _fixlocaluser(username):
                     None, pywintypes.SID(nt.GetObject('', 'WinNT://./' + username).objectSID))
                 username = (('{0}\\{1}').format(user_info[1], user_info[0]))
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 username = ('{0}\\{1}').format(__salt__['grains.get']('host').upper(), username)
 
     return username

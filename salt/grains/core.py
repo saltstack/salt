@@ -591,14 +591,15 @@ def _virtual(osdata):
     isdir = os.path.isdir
     sysctl = salt.utils.which('sysctl')
     if osdata['kernel'] in choices:
-        if os.path.isdir('/proc'):
-            try:
+        if os.geteuid() == 0 :
+            if os.path.isdir('/proc'):
+#            try:
                 self_root = os.stat('/')
                 init_root = os.stat('/proc/1/root/.')
                 if self_root != init_root:
                     grains['virtual_subtype'] = 'chroot'
-            except (IOError, OSError) as exp:
-                log.error('IO/OS Error {0}'.format(exp))
+#            except (IOError, OSError) as exp:
+#                log.error('IO/OS Error {0}'.format(exp))
 
         if os.path.isfile('/proc/1/cgroup'):
             try:
@@ -718,7 +719,7 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
     for command in failed_commands:
-        log.warn(
+        log.warning(
             'Although {0!r} was found in path, the current user '
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
@@ -1175,7 +1176,8 @@ def os_data():
     grains.update(_hw_data(grains))
 
     # Load the virtual machine info
-    grains.update(_virtual(grains))
+    if os.geteuid() == 0:
+        grains.update(_virtual(grains))
     grains.update(_ps(grains))
 
     # Load additional OS family grains

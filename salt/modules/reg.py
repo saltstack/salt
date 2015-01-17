@@ -7,18 +7,22 @@ Manage the registry on Windows
 
 # TODO: Figure out the exceptions _winreg can raise and properly  catch
 #       them instead of a bare except that catches any exception at all
+import logging
+log = logging.getLogger(__name__)
+import sys
 
-# Import third party libs
-try:
-    import _winreg
-    HAS_WINDOWS_MODULES = True
-except ImportError:
+if sys.platform == 'win32':
+    # Import third party libs
     try:
-        import winreg as _winreg
+        import _winreg
         HAS_WINDOWS_MODULES = True
-    except ImportError as exp:
-        log.error('ImportError {0}'.format(exp))
-        HAS_WINDOWS_MODULES = False
+    except ImportError:
+        try:
+            import winreg as _winreg
+            HAS_WINDOWS_MODULES = True
+        except ImportError as exp:
+            log.error('ImportError {0}'.format(exp))
+            HAS_WINDOWS_MODULES = False
 
 # Import python libs
 import logging

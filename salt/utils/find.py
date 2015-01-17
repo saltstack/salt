@@ -341,7 +341,7 @@ class OwnerOption(Option):
                 try:
                     self.uids.add(pwd.getpwnam(value).pw_uid)
                 except KeyError as exp:
-                log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     raise ValueError('no such user "{0}"'.format(name))
 
     def requires(self):
@@ -367,7 +367,7 @@ class GroupOption(Option):
                 try:
                     self.gids.add(grp.getgrnam(value).gr_gid)
                 except KeyError as exp:
-                log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     raise ValueError('no such group "{0}"'.format(name))
 
     def requires(self):
@@ -504,14 +504,14 @@ class PrintOption(Option):
                 try:
                     result.append(pwd.getpwuid(uid).pw_name)
                 except KeyError as exp:
-                log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     result.append(uid)
             elif arg == 'group':
                 gid = fstat[stat.ST_GID]
                 try:
                     result.append(grp.getgrgid(gid).gr_name)
                 except KeyError as exp:
-                log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     result.append(gid)
             elif arg == 'md5':
                 if stat.S_ISREG(fstat[stat.ST_MODE]):

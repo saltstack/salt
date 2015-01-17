@@ -35,7 +35,7 @@ from salt.ext.six import string_types, text_type
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 import sys
-
+import getpass
 log = logging.getLogger(__name__)
 
 _DFLT_LOG_DATEFMT = '%H:%M:%S'
@@ -279,6 +279,7 @@ VALID_OPTS = {
     'cache_sreqs': bool,
 }
 
+
 # default configurations
 DEFAULT_MINION_OPTS = {
     'interface': '0.0.0.0',
@@ -292,7 +293,7 @@ DEFAULT_MINION_OPTS = {
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
     'syndic_finger': '',
-    'user': 'root',
+    'user': getpass.getuser(),
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
     'id': None,

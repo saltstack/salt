@@ -288,7 +288,7 @@ def showconfig(name, default=False, dict_return=False):
                 r'\s+([^=]+)=(off|on): (.+)', line
             ).groups()
         except AttributeError as exp:
-        log.error('AttributeError {0}'.format(exp))
+            log.error('AttributeError {0}'.format(exp))
             continue
         ret[pkg][opt] = val
 
@@ -361,7 +361,11 @@ def config(name, reset=False, **kwargs):
     new_config = showconfig(name, dict_return=True)
     try:
         new_config = new_config[next(iter(new_config))]
-    except (StopIteration, TypeError) as exp:
+    except (StopIteration) as exp:
+        #log.debug('(StopIteration) {0}'.format(exp))
+        return False
+
+    except (TypeError) as exp:
         log.error('(StopIteration, TypeError) {0}'.format(exp))
         return False
 

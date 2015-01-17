@@ -161,15 +161,17 @@ class OptionParser(optparse.OptionParser):
 
         # Run the functions on self._mixin_after_parsed_funcs
         for mixin_after_parsed_func in self._mixin_after_parsed_funcs:
-            try:
-                mixin_after_parsed_func(self)
-            except Exception as err:
-                logging.getLogger(__name__).exception(err)
-                self.error(
-                    'Error while processing {0}: {1}'.format(
-                        mixin_after_parsed_func, traceback.format_exc(err)
-                    )
-                )
+            mixin_after_parsed_func(self)
+            # try:
+            #     mixin_after_parsed_func(self)
+            # except Exception as err:
+            #     raise err
+            #     logging.getLogger(__name__).exception(err)
+            #     self.error(
+            #         'Error while processing {0}: {1}'.format(
+            #             mixin_after_parsed_func, traceback.format_exc(err)
+            #         )
+            #     )
 
         if self.config.get('conf_file', None) is not None:
             logging.getLogger(__name__).debug(

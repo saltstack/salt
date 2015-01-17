@@ -419,7 +419,7 @@ def _grant_to_tokens(grant):
                 if exploded_grant[position_tracker + 1] == '.':
                     phrase = 'tables'
             except IndexError as exp:
-        log.error('IndexError {0}'.format(exp))
+                log.error('IndexError {0}'.format(exp))
                 break
 
         elif phrase == 'tables':

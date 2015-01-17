@@ -194,11 +194,12 @@ class _SixMetaPathImporter(object):
             raise ImportError("This loader does not know module " + fullname)
 
     def load_module(self, fullname):
-        try:
-            # in case of a reload
-            return sys.modules[fullname]
-        except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+        if fullname in sys.modules:
+            try:
+                # in case of a reload
+                return sys.modules[fullname]
+            except KeyError as exp:
+                log.error('six tried to load {0}'.format(exp))
 
         mod = self.__get_module(fullname)
         if isinstance(mod, MovedModule):

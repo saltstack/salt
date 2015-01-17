@@ -1158,10 +1158,9 @@ def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
                     log.error('IndexError {0}'.format(exp))
                     return default
         else:
-            try:
+            if each in data:
                 data = data[each]
-            except (KeyError, TypeError) as exp:
-                log.error('(KeyError, TypeError) {0}'.format(exp))
+            else:
                 return default
     return data
 
@@ -2128,9 +2127,11 @@ def get_group_list(user=None, include_default=True):
             pass
     else:
         # Try pysss.getgrouplist
+        # on debian it is python-sss - Python module for the System Security Services Daemon
+
         log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
         try:
-            import pysss
+            import pysss 
             group_names = list(pysss.getgrouplist(user))
         except Exception as exp:
             log.error('Exception {0}'.format(exp))

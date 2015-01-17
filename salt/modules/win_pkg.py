@@ -358,8 +358,8 @@ def _get_reg_software():
                     0,
                     win32con.KEY_READ)
             except Exception as exp:
-        log.error('Exception {0}'.format(exp))
-                pass
+                log.error('Exception {0}'.format(exp))
+                #pass
                 #Unsinstall key may not exist for all users
             for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
                 prd_uninst_key = "\\".join([reg_key, name])
@@ -378,8 +378,8 @@ def _get_reg_software():
                 try:
                     prd_name = prd_name.decode(encoding)
                 except Exception as exp:
-        log.error('Exception {0}'.format(exp))
-                    pass
+                    log.error('Exception {0}'.format(exp))
+                    #pass
                 prd_ver = _get_reg_value(
                     reg_hive,
                     prd_uninst_key,

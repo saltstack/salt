@@ -889,8 +889,8 @@ class State(object):
                 if name.startswith('__'):
                     continue
             except AttributeError as exp:
-            log.error('AttributeError {0}'.format(exp))
-                pass
+                log.error('AttributeError {0}'.format(exp))
+
             if not isinstance(name, string_types):
                 errors.append(
                     'ID {0!r} in SLS {1!r} is not formed as a string, but '
@@ -2325,7 +2325,7 @@ class BaseHighState(object):
                             top[saltenv][tgt] = matches
                             top[saltenv][tgt].extend(list(states))
                     except TypeError as exp:
-                    log.error('TypeError {0}'.format(exp))
+                        log.error('TypeError {0}'.format(exp))
                         raise SaltRenderError('Unable to render top file. No targets found.')
         return top
 
@@ -2495,7 +2495,7 @@ class BaseHighState(object):
             mods.add('{0}:{1}'.format(saltenv, sls))
         except AttributeError as exp:
             log.error('AttributeError {0}'.format(exp))
-            pass
+
         if state:
             if not isinstance(state, dict):
                 errors.append(
@@ -2932,7 +2932,7 @@ class BaseHighState(object):
                 except TypeError as exp:
                     log.error('TypeError {0}'.format(exp))
                     # Can't serialize pydsl
-                    pass
+
 
         except (IOError, OSError) as exp:
             log.error('IO/OS Error {0}'.format(exp))

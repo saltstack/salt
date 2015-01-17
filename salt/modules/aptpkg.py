@@ -83,7 +83,7 @@ def __virtual__():
     return __virtualname__
 
 
-def __init__():
+def __init__(opts):
     '''
     For Debian and derivative systems, set up
     a few env variables to keep apt happy and

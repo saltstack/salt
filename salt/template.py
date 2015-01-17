@@ -55,8 +55,12 @@ def compile_template(template,
         log.error('Template was specified incorrectly: {0}'.format(template))
         return ret
     # Template does not exists
+    if template == '':
+        raise Exception('Template has no name')
+
+    # Template does not exists
     if not os.path.isfile(template):
-        log.error('Template does not exists: {0}'.format(template))
+        log.error('Template does not exist: {0}'.format(template))
         return ret
     # Template is an empty file
     if salt.utils.is_empty(template):

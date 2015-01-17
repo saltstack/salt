@@ -861,7 +861,7 @@ def _parse_settings_bond_1(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -946,7 +946,7 @@ def _parse_settings_bond_3(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -991,7 +991,7 @@ def _parse_settings_bond_4(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, valid)
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -1035,7 +1035,7 @@ def _parse_settings_bond_5(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -1072,7 +1072,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -1112,7 +1112,7 @@ def _parse_bridge_opts(opts, iface):
                 float(opts[opt])
                 config.update({opt: opts[opt]})
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, opt, ['float'])
 
     for opt in ['bridgeprio', 'maxwait']:
@@ -1137,7 +1137,7 @@ def _parse_bridge_opts(opts, iface):
                 int(cost_or_prio)
                 config.update({opt: '{0} {1}'.format(port, cost_or_prio)})
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 _raise_error_iface(iface, opt, ['interface integer'])
 
     if 'stp' in opts:

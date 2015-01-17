@@ -231,7 +231,7 @@ def SPF(domain, record='SPF', nameserver=None):
         try:
             mechanism, address = spf_re.match(section).groups()
         except AttributeError as exp:
-        log.error('AttributeError {0}'.format(exp))
+            log.error('AttributeError {0}'.format(exp))
             # Regex was not matched
             continue
         if mechanism == 'include':

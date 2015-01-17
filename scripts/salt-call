@@ -3,6 +3,13 @@
 Directly call a salt command in the modules, does not require a running salt
 minion to run.
 '''
+import logging
+def myerror(x) :
+    raise x
+logging.error
+logging.error=myerror
+print logging.error
+#logging.exception
 
 from salt.scripts import salt_call
 

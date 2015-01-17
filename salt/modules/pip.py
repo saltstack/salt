@@ -724,8 +724,8 @@ def uninstall(pkgs=None,
                             if req_pkg in pkgs:
                                 pkgs.remove(req_pkg)
                         except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
-                            pass
+                            log.error('ValueError {0}'.format(exp))
+
         cmd.extend(pkgs)
 
     cmd_kwargs = dict(python_shell=False, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
@@ -740,7 +740,7 @@ def uninstall(pkgs=None,
                 os.remove(requirement)
             except OSError as exp:
                 log.error('OSError {0}'.format(exp))
-                pass
+
 
 
 def freeze(bin_env=None,

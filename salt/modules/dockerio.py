@@ -314,7 +314,7 @@ def _get_image_infos(image):
                    comment='found')
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
-        pass
+
     if not status['id']:
         _invalid(status)
         raise CommandExecutionError(
@@ -344,7 +344,7 @@ def _get_container_infos(container):
                    out=container_info)
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
-        pass
+
     if not status['id']:
         raise CommandExecutionError(
             'Container_id {0} could not be resolved to '
@@ -1373,14 +1373,14 @@ def get_images(name=None, quiet=False, all=True):
                 inf['Human_Created'] = dts.strftime(
                     '%Y-%m-%d %H:%M:%S')
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-                pass
+                log.error('Exception {0}'.format(exp))
+
             try:
                 inf['Human_VirtualSize'] = (
                     _sizeof_fmt(int(inf['VirtualSize'])))
             except ValueError as exp:
                 log.error('ValueError {0}'.format(exp))
-                pass
+
         _valid(status, out=infos)
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
@@ -1483,7 +1483,7 @@ def remove_image(image):
             try:
                 client.remove_image(infos['Id'])
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 _invalid(status,
                          id_=image,
                          out=traceback.format_exc(),
@@ -1494,7 +1494,7 @@ def remove_image(image):
                          comment=(
                              'Image marked to be deleted but not deleted yet'))
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 _valid(status, id_=image, comment='Image deleted')
         else:
             _invalid(status)
@@ -1557,8 +1557,8 @@ def _parse_image_multilogs_string(ret):
                 try:
                     buf = json.loads(buf)
                 except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-                    pass
+                    log.error('Exception {0}'.format(exp))
+
                 else:
                     image_logs.append(buf)
                 buf = ''

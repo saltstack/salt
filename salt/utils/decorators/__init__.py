@@ -97,10 +97,12 @@ class Depends(object):
                 )
                 # if not, unload dependent_set
                 if module:
-                    try:
+                    #                   try:
+                    if '__func_alias__' in module.__dict__:
                         func_name = module.__func_alias__[func.__name__]
-                    except (AttributeError, KeyError) as exp:
-                        log.error('(AttributeError, KeyError) {0}'.format(exp))
+                        #                    except (AttributeError, KeyError) as exp:
+                        #                        log.error('(AttributeError, KeyError) {0}'.format(exp))
+                    else:
                         func_name = func.__name__
 
                     mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],

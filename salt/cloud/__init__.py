@@ -1708,7 +1708,7 @@ class Map(Cloud):
                 try:
                     machines = values['requires']
                 except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     machines = []
                 for machine in machines:
                     if self._has_loop(dmap, seen=list(seen), val=machine):
@@ -1721,7 +1721,7 @@ class Map(Cloud):
             try:
                 machines = dmap['create'][val]['requires']
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 machines = []
 
             for machine in machines:
@@ -1740,11 +1740,11 @@ class Map(Cloud):
             try:
                 data = dmap['create'][name]
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 try:
                     data = dmap['existing'][name]
                 except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     msg = 'Missing dependency in cloud map'
                     log.error(msg)
                     raise SaltCloudException(msg)
@@ -2225,7 +2225,7 @@ def run_parallel_map_providers_query(data, queue=None):
     except ImportError as exp:
         log.error('ImportError {0}'.format(exp))
         # PyCrypto version < 2.1
-        pass
+
 
     cloud = Cloud(data['opts'])
     try:

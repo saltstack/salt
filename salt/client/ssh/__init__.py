@@ -312,7 +312,7 @@ class SSH(object):
                 data = salt.utils.find_json(stdout)
                 return {host: data.get('local', data)}
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
@@ -374,7 +374,7 @@ class SSH(object):
                 try:
                     host = next(target_iter)
                 except StopIteration as exp:
-                    log.error('StopIteration {0}'.format(exp))
+                    #log.error('StopIteration {0}'.format(exp))
                     init = True
                     continue
                 for default in self.defaults:
@@ -399,8 +399,8 @@ class SSH(object):
                 if 'id' in ret:
                     returned.add(ret['id'])
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-                pass
+                log.error('Exception {0}'.format(exp))
+
             for host in running:
                 if host in returned:
                     if not running[host]['thread'].is_alive():

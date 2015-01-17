@@ -593,7 +593,7 @@ def check_db(*names, **kwargs):
             try:
                 name, arch = line.split('_|-')
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 continue
             if normalize:
                 avail.append(normalize_name('.'.join((name, arch))))
@@ -944,7 +944,7 @@ def install(name=None,
             try:
                 namepart, archpart = pkgname.rsplit('.', 1)
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 pass
             else:
                 if archpart in __ARCHES:
@@ -1442,7 +1442,7 @@ def group_list():
             try:
                 name, lang = re.match(r'(.+) \[(.+)\]', line).groups()
             except AttributeError as exp:
-        log.error('AttributeError {0}'.format(exp))
+                log.error('AttributeError {0}'.format(exp))
                 pass
             else:
                 ret[key][line] = {'name': name, 'language': lang}

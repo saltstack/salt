@@ -49,11 +49,11 @@ try:
                                 self.is_acquired = True
                                 break
                         except NoNodeError as exp:
-                    log.error('NoNodeError {0}'.format(exp))
-                            pass
+                            log.error('NoNodeError {0}'.format(exp))
+
                 except NoNodeError as exp:
                     log.error('NoNodeError {0}'.format(exp))
-                    pass
+
 
         def _get_lease(self, data=None):
             # Make sure the session is still valid

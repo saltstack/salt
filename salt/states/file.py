@@ -2958,7 +2958,7 @@ def append(name,
             try:
                 lines = chunk.splitlines()
             except AttributeError as exp:
-        log.error('AttributeError {0}'.format(exp))
+                log.error('AttributeError {0}'.format(exp))
                 log.debug(
                     'Error appending text to {0}; given object is: {1}'.format(
                         name, type(chunk)
@@ -3136,7 +3136,7 @@ def prepend(name,
         try:
             lines = chunk.splitlines()
         except AttributeError as exp:
-        log.error('AttributeError {0}'.format(exp))
+            log.error('AttributeError {0}'.format(exp))
             log.debug(
                 'Error appending text to {0}; given object is: {1}'.format(
                     name, type(chunk)

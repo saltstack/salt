@@ -75,7 +75,7 @@ if os.name == 'nt':  # pragma: no cover
                 _CloseHandle(tra)
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
-        pass
+
 
     def atomic_rename(src, dst):
         # Try atomic or pseudo-atomic rename
@@ -93,8 +93,8 @@ if os.name == 'nt':  # pragma: no cover
             try:
                 os.unlink(old)
             except Exception as exp:
-        log.error('Exception {0}'.format(exp))
-                pass
+                log.error('Exception {0}'.format(exp))
+
 else:
     atomic_rename = os.rename  # pylint: disable=C0103
     CAN_RENAME_OPEN_FILE = True
@@ -130,7 +130,7 @@ class _AtomicWFile(object):
                 os.remove(self._tmp_filename)
             except OSError as exp:
                 log.error('OSError {0}'.format(exp))
-                pass
+
 
     def __repr__(self):
         return '<{0} {1}{2}, mode {3}>'.format(

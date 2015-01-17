@@ -599,7 +599,10 @@ class Loader(object):
         '''
         Load a single module and pack it with the functions passed
         '''
+        log.debug('gen_module {0}'.format(name))
+
         if not name:
+            log.error('no name passed for gen_module')
             return {}
 
         full = ''
@@ -693,7 +696,7 @@ class Loader(object):
                 module_init(self.opts)
             except TypeError as exp:
                 log.error('TypeError {0}'.format(exp))
-                pass
+
         funcs = {}
         module_name = mod.__name__[mod.__name__.rindex('.') + 1:]
         if virtual_enable:
@@ -752,6 +755,7 @@ class Loader(object):
                       provider_overrides=False, include_errors=False, initial_load=False):
         '''
         Return a dict of functions found in the defined module_dirs
+        Injects global variables into the modules
         '''
         funcs = {}
         error_funcs = {}
@@ -761,6 +765,10 @@ class Loader(object):
             # If this is a proxy minion then MOST modules cannot work.  Therefore, require that
             # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
             # containing the names of the proxy types that the module supports.
+
+            log.debug("Attempting to init {0}".format( mod.__name__))
+            log.debug("Attempting to init {0}".format( mod.__file__))
+
             if not hasattr(mod, 'render') and 'proxy' in self.opts:
                 if not hasattr(mod, '__proxyenabled__'):
                     # This is a proxy minion but this module doesn't support proxy
@@ -778,8 +786,11 @@ class Loader(object):
             else:
                 mod.__opts__ = self.opts
 
-            mod.__grains__ = self.grains
-            mod.__pillar__ = self.pillar
+            if not hasattr(mod, '__grains__'):
+                mod.__grains__ = self.grains
+
+            if not hasattr(mod, '__pillar__'):
+                mod.__pillar__ = self.pillar
 
             if pack:
                 if isinstance(pack, list):
@@ -787,11 +798,14 @@ class Loader(object):
                         if not isinstance(chunk, dict):
                             continue
                         try:
+                            #log.debug('set attr {0} ={1}'.format(chunk['name'], chunk['value']))
+                            log.debug('set attr {0} = ...'.format(chunk['name']))
                             setattr(mod, chunk['name'], chunk['value'])
                         except KeyError as exp:
                             log.error('KeyError {0}'.format(exp))
 
                 else:
+                    log.debug('set attr {0} = ...'.format(pack['name'])) #, pack['value']
                     setattr(mod, pack['name'], pack['value'])
 
             # Call a module's initialization method if it exists
@@ -800,8 +814,8 @@ class Loader(object):
                 try:
                     module_init(self.opts)
                 except TypeError as exp:
-                    log.error('TypeError {0}'.format(exp))
-                    pass
+                    log.error('TypeError {0} while trying to call module_init({1})'.format(exp, self.opts))
+
 
             # Trim the full pathname to just the module
             # this will be the short name that other salt modules and state
@@ -870,6 +884,7 @@ class Loader(object):
     def load_modules(self, initial_load=False):
         '''
         Loads all of the modules from module_dirs and returns a list of them
+        TODO : dont load the modules we 
         '''
 
         self.modules = []
@@ -957,77 +972,82 @@ class Loader(object):
 
         def load_names(names, failhard=False, initial_load=False):
             for name in names:
-                try:
-                    if names[name].endswith('.pyx'):
-                        # If there's a name which ends in .pyx it means the above
-                        # cython_enabled is True. Continue...
-                        mod = pyximport.load_module(
-                            '{0}.{1}.{2}.{3}'.format(
-                                self.loaded_base_name,
-                                self.mod_type_check(names[name]),
-                                self.tag,
-                                name
-                            ), names[name], tempfile.gettempdir()
-                        )
-                    else:
-                        fn_, path, desc = imp.find_module(name, self.module_dirs)
-                        mod = imp.load_module(
-                            '{0}.{1}.{2}.{3}'.format(
-                                self.loaded_base_name,
-                                self.mod_type_check(path),
-                                self.tag,
-                                name
-                            ), fn_, path, desc
-                        )
-                        if not initial_load:
-                            # reload all submodules if necessary
-                            submodules = [
-                                getattr(mod, sname) for sname in dir(mod) if
-                                isinstance(getattr(mod, sname), mod.__class__)
-                            ]
-
-                            # reload only custom "sub"modules i.e. is a submodule in
-                            # parent module that are still available on disk (i.e. not
-                            # removed during sync_modules)
-                            for submodule in submodules:
-                                try:
-                                    smname = '{0}.{1}.{2}'.format(
-                                        self.loaded_base_name,
-                                        self.tag,
-                                        name
-                                    )
-                                    smfile = '{0}.py'.format(
-                                        os.path.splitext(submodule.__file__)[0]
-                                    )
-                                    if submodule.__name__.startswith(smname) and \
-                                            os.path.isfile(smfile):
-                                        reload(submodule)
-                                except AttributeError as exp:
-                                    log.error('AttributeError {0}'.format(exp))
-                                    continue
-                except ImportError as error:
-                    if failhard:
-                        log.debug(
-                            'Failed to import {0} {1}, this is most likely NOT a '
-                            'problem, but the exception was {2}\n'.format(
-                                self.tag, name, error
-                            ),
-                            exc_info=True
-                        )
-                    if not failhard:
-                        log.debug('Failed to import {0} {1}. The exeception was {2}. Another attempt will be made to try to resolve dependencies.'.format(
-                            self.tag, name, error))
-                        failed_loads[name] = path
-                    continue
-                except Exception as error:
-                    log.warning(
-                        'Failed to import {0} {1}, this is due most likely to a '
-                        'syntax error. The exception is {2}. Traceback raised:\n'.format(
-                            self.tag, name, error
-                        ),
-                        exc_info=True
+                #try:
+                if names[name].endswith('.pyx'):
+                    # If there's a name which ends in .pyx it means the above
+                    # cython_enabled is True. Continue...
+                    mod = pyximport.load_module(
+                        '{0}.{1}.{2}.{3}'.format(
+                            self.loaded_base_name,
+                            self.mod_type_check(names[name]),
+                            self.tag,
+                            name
+                        ), names[name], tempfile.gettempdir()
                     )
-                    continue
+                else:
+                    fn_, path, desc = imp.find_module(name, self.module_dirs)
+                    mod = imp.load_module(
+                        '{0}.{1}.{2}.{3}'.format(
+                            self.loaded_base_name,
+                            self.mod_type_check(path),
+                            self.tag,
+                            name
+                        ), fn_, path, desc
+                    )
+                    if not initial_load:
+                        # reload all submodules if necessary
+                        submodules = [
+                            getattr(mod, sname) for sname in dir(mod) if
+                            isinstance(getattr(mod, sname), mod.__class__)
+                        ]
+
+                        # reload only custom "sub"modules i.e. is a submodule in
+                        # parent module that are still available on disk (i.e. not
+                        # removed during sync_modules)
+                        for submodule in submodules:
+                            #try:
+                            smname = '{0}.{1}.{2}'.format(
+                                self.loaded_base_name,
+                                self.tag,
+                                name
+                            )
+                            #print submodule
+                            if '__file__' in submodule.__dict__ :
+                                smfile = '{0}.py'.format(
+                                    os.path.splitext(submodule.__file__)[0]
+                                )
+                            else:
+                                smname = 'unknown'
+                            if submodule.__name__.startswith(smname) and \
+                               os.path.isfile(smfile):
+                                reload(submodule)
+                            # except AttributeError as exp:
+                            #     log.error('AttributeError {0}'.format(exp))
+                            #     continue
+                # except ImportError as error:
+                #     if failhard:
+                #         log.debug(
+                #             'Failed to import {0} {1}, this is most likely NOT a '
+                #             'problem, but the exception was {2}\n'.format(
+                #                 self.tag, name, error
+                #             ),
+                #             exc_info=True
+                #         )
+                #     if not failhard:
+                #         log.debug('Failed to import {0} {1}. The exeception was {2}. Another attempt will be made to try to resolve dependencies.'.format(
+                #             self.tag, name, error))
+                #         failed_loads[name] = path
+                #     continue
+                # except Exception as error:
+                #     raise error
+                #     log.error(
+                #         'Failed to import {0} {1}, this is due most likely to a '
+                #         'syntax error. The exception is {2}. Traceback raised:\n'.format(
+                #             self.tag, name, error
+                #         ),
+                #         exc_info=True
+                #     )
+                #     continue
                 self.modules.append(mod)
         load_names(names, failhard=False, initial_load=initial_load)
         if failed_loads:
@@ -1127,6 +1147,7 @@ class Loader(object):
                             end, module_name)
                     log.warning(msg)
                 else:
+                    log.debug('going to call virtual for mod "{0}"'.format(module_name))
                     virtual = mod.__virtual__()
                     if isinstance(virtual, tuple):
                         error_reasons = virtual[1]
@@ -1212,30 +1233,57 @@ class Loader(object):
                 elif virtual is True and virtualname != module_name:
                     if virtualname is not True:
                         module_name = virtualname
-
-        except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
-            # Key errors come out of the virtual function when passing
-            # in incomplete grains sets, these can be safely ignored
-            # and logged to debug, still, it includes the traceback to
-            # help debugging.
+        #except :
+            
+        finally:
             log.debug(
-                'KeyError when loading {0}'.format(module_name),
-                exc_info=True
+                'loaded {0}'.format(module_name),
             )
 
-        except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-            # If the module throws an exception during __virtual__()
-            # then log the information and continue to the next.
-            log.error(
-                'Failed to read the virtual function for '
-                '{0}: {1}'.format(
-                    self.tag, module_name
-                ),
-                exc_info=True
-            )
-            return (False, module_name, error_reasons)
+        # except KeyError as exp:
+        #     log.error('KeyError {0}'.format(exp))
+        #     # Key errors come out of the virtual function when passing
+        #     # in incomplete grains sets, these can be safely ignored
+        #     # and logged to debug, still, it includes the traceback to
+        #     # help debugging.
+        #     log.debug(
+        #         'KeyError when loading {0}'.format(module_name),
+        #         exc_info=True
+        #     )
+
+        # except AttributeError as exp:
+        #     log.error(
+        #         'Attribute error in the  virtual function for '
+        #         '{0}: {1} with erro {2}'.format(
+        #             self.tag, module_name, exp
+        #         ),
+        #         exc_info=True
+        #     )
+
+        #     raise
+
+        # except ImportError as exp:
+        #     log.error(
+        #         'Import error in the  virtual function for '
+        #         '{0}: {1} with erro {2}'.format(
+        #             self.tag, module_name, exp
+        #         ),
+        #         exc_info=True
+        #     )
+
+        #     raise
+
+        # except Exception as exp:
+        #     # If the module throws an exception during __virtual__()
+        #     # then log the information and continue to the next.
+        #     log.error(
+        #         'Failed to read the virtual function for '
+        #         '{0}: {1} with erro {2}'.format(
+        #             self.tag, module_name, exp
+        #         ),
+        #         exc_info=True
+        #     )
+        #     return (False, module_name, error_reasons)
 
         return (True, module_name, [])
 

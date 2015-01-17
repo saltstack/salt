@@ -283,7 +283,7 @@ def latest(name,
                                 target, 'branch.{0}.remote'.format(rev),
                                 user=user)
                         except CommandExecutionError as exp:
-        log.error('CommandExecutionError {0}'.format(exp))
+                            log.error('CommandExecutionError {0}'.format(exp))
                             current_remote = None
 
                         if current_remote != remote_name:

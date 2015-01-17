@@ -784,24 +784,24 @@ def __remove_temp_logging_handler():
         logging.captureWarnings(True)
 
 
-def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
-    '''
-    This function will log all python exceptions.
-    '''
-    # Log the exception
-    logging.getLogger(__name__).error(
-        'An un-handled exception was caught by salt\'s global exception '
-        'handler:\n{0}: {1}\n{2}'.format(
-            exc_type.__name__,
-            exc_value,
-            ''.join(traceback.format_exception(
-                exc_type, exc_value, exc_traceback
-            )).strip()
-        )
-    )
-    # Call the original sys.excepthook
-    sys.__excepthook__(exc_type, exc_value, exc_traceback)
+# def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
+#     '''
+#     This function will log all python exceptions.
+#     '''
+#     # Log the exception
+#     logging.getLogger(__name__).error(
+#         'An un-handled exception was caught by salt\'s global exception '
+#         'handler:\n{0}: {1}\n{2}'.format(
+#             exc_type.__name__,
+#             exc_value,
+#             ''.join(traceback.format_exception(
+#                 exc_type, exc_value, exc_traceback
+#             )).strip()
+#         )
+#     )
+#     # Call the original sys.excepthook
+#     sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
 
-# Set our own exception handler as the one to use
-sys.excepthook = __global_logging_exception_handler
+# # Set our own exception handler as the one to use
+# sys.excepthook = __global_logging_exception_handler

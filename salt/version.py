@@ -483,13 +483,13 @@ def __get_version(saltstack_version):
     If we can get a version provided at installation time or from Git, use
     that instead, otherwise we carry on.
     '''
-    try:
-        # Try to import the version information provided at install time
-        from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
-        return __saltstack_version__
-    except ImportError as exp:
-        log.error('ImportError {0}'.format(exp))
-        return __discover_version(saltstack_version)
+    # try:
+    #     # Try to import the version information provided at install time
+    #     from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
+    #     return __saltstack_version__
+    # except ImportError as exp:
+    #     log.error('ImportError {0}'.format(exp))
+    return __discover_version(saltstack_version)
 
 
 # Get additional version information if available

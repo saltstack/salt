@@ -199,7 +199,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
                         OpenSSL.crypto.FILETYPE_PEM, fic2.read())
                     bits = key.bits()
                 except Exception as exp:
-        log.error('Exception {0}'.format(exp))
+                    log.error('Exception {0}'.format(exp))
                     bits = 2048
                 try:
                     days = (datetime.datetime.strptime(cert.get_notAfter(),

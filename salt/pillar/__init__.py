@@ -222,21 +222,29 @@ class Pillar(object):
                         ]
             else:
                 for saltenv in self._get_envs():
-                    tops[saltenv].append(
+                    filename = self.client.cache_file(
+                        self.opts['state_top'],
+                        saltenv
+                    )
+                    if filename != '':
+                        log.debug("compile {0}".format(filename))
+                        tops[saltenv].append(
                             compile_template(
-                                self.client.cache_file(
-                                    self.opts['state_top'],
-                                    saltenv
-                                    ),
+                                filename,
                                 self.rend,
                                 self.opts['renderer'],
                                 saltenv=saltenv
-                                )
                             )
-        except Exception as exc:
-            errors.append(
-                    ('Rendering Primary Top file failed, render error:\n{0}'
-                        .format(exc)))
+                        )
+                    else:
+                        log.debug("no template found {0}".format( self.opts['state_top']))
+        # except Exception as exc:
+        #     log.error('Exception {0}'.format(exc))
+        #     errors.append(
+        #             ('Rendering Primary Top file failed, render error:\n{0}'
+        #                 .format(exc)))
+        finally:
+            log.debug("pillar top file")
 
         # Search initial top files for includes
         for saltenv, ctops in tops.items():
@@ -268,10 +276,15 @@ class Pillar(object):
                                     saltenv=saltenv
                                     )
                                 )
-                    except Exception as exc:
-                        errors.append(
-                                ('Rendering Top file {0} failed, render error'
-                                 ':\n{1}').format(sls, exc))
+                        # except Exception as exc:
+                        #     errors.append(
+                        #             ('Rendering Top file {0} failed, render error'
+                        #              ':\n{1}').format(sls, exc))
+                        #     raise exc
+                    finally:
+                        log.debug('Rendering Top file {0}'.format(sls))
+
+
                     done[saltenv].append(sls)
             for saltenv in pops:
                 if saltenv in include:
