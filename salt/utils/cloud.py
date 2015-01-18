@@ -39,6 +39,7 @@ except ImportError:
 
 try:
     import salt.utils.smb
+
     HAS_SMB = True
 except ImportError:
     HAS_SMB = False
@@ -72,6 +73,7 @@ import yaml
 
 try:
     import getpass
+
     HAS_GETPASS = True
 except ImportError:
     HAS_GETPASS = False
@@ -87,6 +89,7 @@ SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 
 # Get logging started
 log = logging.getLogger(__name__)
+
 
 def __render_script(path, vm_=None, opts=None, minion=''):
     '''
@@ -303,7 +306,8 @@ def bootstrap(vm_, opts):
         if stat.S_ISSOCK(os.stat(os.environ['SSH_AUTH_SOCK']).st_mode):
             has_ssh_agent = True
 
-    if key_filename is None and ('password' not in vm_ or not vm_['password']) and has_ssh_agent is False:
+    if key_filename is None and ('password' not in vm_
+                                 or not vm_['password']) and has_ssh_agent is False:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
             'is not set and there is no password set for the vm. '
@@ -321,19 +325,24 @@ def bootstrap(vm_, opts):
     )
 
     inline_script_code = salt.config.get_cloud_config_value(
-            'inline_script', vm_, opts, default=[]
+        'inline_script', vm_, opts, default=None
         )
 
     ssh_username = salt.config.get_cloud_config_value(
         'ssh_username', vm_, opts, default='root'
     )
 
+    '''
+    NOTE: deploy_kwargs is also used to pass inline_script variable content
+          to run_inline_script function
+    '''
     deploy_kwargs = {
         'opts': opts,
         'host': vm_['ssh_host'],
         'salt_host': vm_.get('salt_host', vm_['ssh_host']),
         'username': ssh_username,
         'script': deploy_script_code,
+        'inline_script': inline_script_code,
         'name': vm_['name'],
         'has_ssh_agent': has_ssh_agent,
         'tmp_dir': salt.config.get_cloud_config_value(
@@ -382,38 +391,7 @@ def bootstrap(vm_, opts):
         ),
     }
 
-    inline_script_kwargs = {
-        'opts': opts,
-        'host': vm_['ssh_host'],
-        'salt_host': vm_.get('salt_host', vm_['ssh_host']),
-        'username': ssh_username,
-        'inline_script': inline_script_code,
-        'name': vm_['name'],
-        'has_ssh_agent': has_ssh_agent,
-        'tmp_dir': salt.config.get_cloud_config_value(
-            'tmp_dir', vm_, opts, default='/tmp/.saltcloud-inline_script'
-        ),
-        'parallel': opts['parallel'],
-        'sudo': salt.config.get_cloud_config_value(
-            'sudo', vm_, opts, default=(ssh_username != 'root')
-        ),
-        'sudo_password': salt.config.get_cloud_config_value(
-            'sudo_password', vm_, opts, default=None
-        ),
-        'tty': salt.config.get_cloud_config_value(
-            'tty', vm_, opts, default=True
-        ),
-        'password': salt.config.get_cloud_config_value(
-            'password', vm_, opts, search_global=False
-        ),
-        'key_filename': key_filename,
-        'display_ssh_output': salt.config.get_cloud_config_value(
-            'display_ssh_output', vm_, opts, default=True
-        ),
-        'known_hosts_file': salt.config.get_cloud_config_value(
-            'known_hosts_file', vm_, opts, default='/dev/null'
-        ),
-    }
+    inline_script_kwargs = deploy_kwargs
 
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
@@ -719,7 +697,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
         )
     )
     creds = '-U {0}%{1} //{2}'.format(
-            username, password, host)
+        username, password, host)
     trycount = 0
     while True:
         trycount += 1
@@ -858,9 +836,9 @@ def deploy_windows(host,
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
     if wait_for_port(host=host, port=port, timeout=port_timeout * 60) and \
-                wait_for_winexesvc(host=host, port=port,
-                             username=username, password=password,
-                             timeout=port_timeout * 60):
+            wait_for_winexesvc(host=host, port=port,
+                               username=username, password=password,
+                               timeout=port_timeout * 60):
         log.debug('SMB port {0} on {1} is available'.format(port, host))
         log.debug(
             'Logging into {0}:{1} as {2}'.format(
@@ -1371,7 +1349,7 @@ def deploy_script(host,
                 if queuereturn and start_action:
                     # client = salt.client.LocalClient(conf_file)
                     # output = client.cmd_iter(
-                    #    host, 'state.highstate', timeout=timeout
+                    # host, 'state.highstate', timeout=timeout
                     # )
                     # for line in output:
                     #    print(line)
@@ -1408,13 +1386,14 @@ def deploy_script(host,
             return True
     return False
 
+
 def run_inline_script(host,
                       name=None,
                       port=22,
                       timeout=900,
                       username='root',
                       key_filename=None,
-                      inline_script=[],
+                      inline_script=None,
                       ssh_timeout=15,
                       display_ssh_output=True,
                       parallel=False,
@@ -1482,7 +1461,8 @@ def run_inline_script(host,
                     log.debug('Found inline script to execute.')
                     for cmd_line in inline_script:
                         log.info("Executing inline command: " + str(cmd_line))
-                        ret = root_cmd('sh -c "( {0} )"'.format(cmd_line), tty, sudo, allow_failure=True, **ssh_kwargs)
+                        ret = root_cmd('sh -c "( {0} )"'.format(cmd_line),
+                                       tty, sudo, allow_failure=True, **ssh_kwargs)
                         if ret:
                             log.info("[" + str(cmd_line) + "] Output: " + str(ret))
 
@@ -1495,10 +1475,10 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     if sock_dir is None:
         sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
     event = salt.utils.event.get_event(
-            'master',
-            sock_dir,
-            transport,
-            listen=False)
+        'master',
+        sock_dir,
+        transport,
+        listen=False)
     try:
         event.fire_event(msg, tag)
     except ValueError:
@@ -1533,8 +1513,8 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
                 if (
-                    kwargs.get('password', None)
-                    and (sent_password < password_retries)
+                            kwargs.get('password', None)
+                        and (sent_password < password_retries)
                 ):
                     sent_password += 1
                     proc.sendline(kwargs['password'])
@@ -2173,7 +2153,7 @@ def request_minion_cachedir(
         pubkey=None,
         provider=None,
         base=None,
-    ):
+):
     '''
     Creates an entry in the requested/ cachedir. This means that Salt Cloud has
     made a request to a cloud provider to create an instance, but it has not
@@ -2209,7 +2189,7 @@ def change_minion_cachedir(
         cachedir,
         data=None,
         base=None,
-    ):
+):
     '''
     Changes the info inside a minion's cachedir entry. The type of cachedir
     must be specified (i.e., 'requested' or 'active'). A dict is also passed in
@@ -2323,7 +2303,6 @@ def cache_nodes_ip(opts, base=None):
 
 
 def update_bootstrap(config, url=None):
-
     '''
     Update the salt-bootstrap script
 
@@ -2641,7 +2620,7 @@ def _salt_cloud_force_ascii(exc):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
     unicode_trans = {
-        u'\xa0': u' ',   # Convert non-breaking space to space
+        u'\xa0': u' ',  # Convert non-breaking space to space
         u'\u2013': u'-',  # Convert en dash to dash
     }
 
@@ -2650,6 +2629,7 @@ def _salt_cloud_force_ascii(exc):
 
     # There's nothing else we can do, raise the exception
     raise exc
+
 
 codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)
 
@@ -2660,6 +2640,7 @@ def retrieve_password_from_keyring(credential_id, username):
     '''
     try:
         import keyring
+
         return keyring.get_password(credential_id, username)
     except ImportError:
         log.error('USE_KEYRING configured as a password, but no keyring module is installed')
@@ -2672,6 +2653,7 @@ def _save_password_in_keyring(credential_id, username, password):
     '''
     try:
         import keyring
+
         return keyring.set_password(credential_id, username, password)
     except ImportError:
         log.error('Tried to store password in keyring, but no keyring module is installed')
@@ -2685,6 +2667,7 @@ def store_password_in_keyring(credential_id, username, password=None):
     try:
         import keyring
         import keyring.errors
+
         if password is None:
             prompt = 'Please enter password for {0}: '.format(credential_id)
             try:
@@ -2720,7 +2703,8 @@ def _unwrap_dict(dictionary, index_string):
     return dictionary
 
 
-def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=None, required_argument_response=None):
+def run_func_until_ret_arg(fun, kwargs, fun_call=None,
+                           argument_being_watched=None, required_argument_response=None):
     '''
     Waits until the function retrieves some required argument.
     NOTE: Tested with ec2 describe_volumes and describe_snapshots only.

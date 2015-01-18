@@ -1236,7 +1236,7 @@ class Cloud(object):
                 vm_,
                 self.opts
             )
-        except:
+        except KeyError:
             pass
 
         try:
