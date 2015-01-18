@@ -294,6 +294,18 @@ class TestSaltEvent(TestCase):
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
 
+    # Test the fire_master function. As it wraps the underlying fire_event,
+    # we don't need to perform extensive testing.
+    def test_send_master_event(self):
+        '''Tests that sending an event through fire_master generates expected event'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            me.subscribe()
+            data = {'data': 'foo1'}
+            me.fire_master(data, 'test_master')
+
+            evt = me.get_event(tag='fire_master')
+            self.assertGotEvent(evt, {'data': data, 'tag': 'test_master', 'events': None, 'pretag': None})
 
 if __name__ == '__main__':
     from integration import run_tests

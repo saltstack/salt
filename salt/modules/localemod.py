@@ -163,7 +163,9 @@ def _normalize_locale(locale):
 
 def avail(locale):
     '''
-    Check if a locale is available
+    Check if a locale is available.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -180,7 +182,9 @@ def avail(locale):
 
 def gen_locale(locale):
     '''
-    Generate a locale
+    Generate a locale.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 

@@ -2300,3 +2300,32 @@ def sdecode(string_):
         except UnicodeDecodeError:
             continue
     return string_
+
+
+def relpath(path, start='.'):
+    '''
+    Work around Python bug #5117, which is not (and will not be) patched in
+    Python 2.6 (http://bugs.python.org/issue5117)
+    '''
+    if sys.version_info < (2, 7) and 'posix' in sys.builtin_module_names:
+        # The below code block is based on posixpath.relpath from Python 2.7,
+        # which has the fix for this bug.
+        if not path:
+            raise ValueError('no path specified')
+
+        start_list = [
+            x for x in os.path.abspath(start).split(os.path.sep) if x
+        ]
+        path_list = [
+            x for x in os.path.abspath(path).split(os.path.sep) if x
+        ]
+
+        # work out how much of the filepath is shared by start and path.
+        i = len(os.path.commonprefix([start_list, path_list]))
+
+        rel_list = [os.path.pardir] * (len(start_list)-i) + path_list[i:]
+        if not rel_list:
+            return os.path.curdir
+        return os.path.join(*rel_list)
+
+    return os.path.relpath(path, start=start)

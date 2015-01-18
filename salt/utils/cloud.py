@@ -134,21 +134,6 @@ def os_script(os_, vm_=None, opts=None, minion=''):
     return ''
 
 
-# def inline_script(script_, vm_=None, opts=None, minion=''):
-#     '''
-#     Run a sequence of commands _after_ the deploy script was run, or if the
-#     deploy script was skipped.
-#
-#     Inline scripts are to be defined as a list of commands which
-#     will then be converted into a bash script and run on the minion.
-#     '''
-#
-#     if script_:
-#         return script_
-#
-#     return []
-
-
 def gen_keys(keysize=2048):
     '''
     Generate Salt minion keys and return them as PEM file strings
@@ -317,13 +302,6 @@ def bootstrap(vm_, opts):
     if opts.get('ssh_agent', False) and 'SSH_AUTH_SOCK' in os.environ:
         if stat.S_ISSOCK(os.stat(os.environ['SSH_AUTH_SOCK']).st_mode):
             has_ssh_agent = True
-
-    if key_filename is None and salt.utils.which('sshpass') is None and has_ssh_agent is False:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
-        )
 
     if key_filename is None and ('password' not in vm_ or not vm_['password']) and has_ssh_agent is False:
         raise SaltCloudSystemExit(

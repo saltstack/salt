@@ -132,6 +132,9 @@ def _check_loglevel(level='info', quiet=False):
         )
         return LOG_LEVELS['info']
 
+    if salt.utils.is_true(quiet) or str(level).lower() == 'quiet':
+        return None
+
     try:
         level = level.lower()
         if level not in LOG_LEVELS:
@@ -139,8 +142,6 @@ def _check_loglevel(level='info', quiet=False):
     except AttributeError:
         return _bad_level(level)
 
-    if salt.utils.is_true(quiet) or level == 'quiet':
-        return None
     return LOG_LEVELS[level]
 
 
@@ -214,6 +215,8 @@ def _run(cmd,
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
+    if salt.utils.is_windows() and use_vt:  # Memozation so not much overhead
+        raise CommandExecutionError('VT not available on windows')
 
     if shell.lower().strip() == 'powershell':
         # If we were called by script(), then fakeout the Windows
@@ -399,7 +402,8 @@ def _run(cmd,
         to = ''
         if timeout:
             to = ' (timeout: {0}s)'.format(timeout)
-        log.debug('Running {0} in VT{1}'.format(cmd, to))
+        if _check_loglevel(output_loglevel, quiet) is not None:
+            log.debug('Running {0} in VT{1}'.format(cmd, to))
         stdout, stderr = '', ''
         now = time.time()
         if timeout:

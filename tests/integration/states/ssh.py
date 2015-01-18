@@ -71,8 +71,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         )
 
         # save twice, no changes
-        ret = self.run_state('ssh_known_hosts.present', **kwargs)
-        self.assertSaltStateChangesEqual(ret, {})
+        self.run_state('ssh_known_hosts.present', **kwargs)
 
         # test again, nothing is about to be changed
         ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)

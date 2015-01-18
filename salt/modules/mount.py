@@ -60,7 +60,7 @@ def _active_mountinfo(ret):
             device = comps[2].split(':')
             # each line can have any number of
             # optional parameters, we use the
-            # location of the seperator field to
+            # location of the separator field to
             # determine the location of the elements
             # after it.
             _sep = comps.index('-')

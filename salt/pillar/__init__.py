@@ -89,8 +89,6 @@ class RemotePillar(object):
             load['ext'] = self.ext
         ret_pillar = self.channel.crypted_transfer_decode_dictentry(load,
                                                                     dictkey='pillar',
-                                                                    tries=3,
-                                                                    timeout=7200,
                                                                     )
 
         if not isinstance(ret_pillar, dict):
@@ -139,6 +137,7 @@ class Pillar(object):
             self.merge_strategy = opts['pillar_source_merging_strategy']
 
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
+        self.ignored_pillars = {}
 
     def __valid_ext(self, ext):
         '''
@@ -293,6 +292,7 @@ class Pillar(object):
                         matches = []
                         states = OrderedDict()
                         orders[saltenv][tgt] = 0
+                        ignore_missing = False
                         for comp in ctop[saltenv][tgt]:
                             if isinstance(comp, dict):
                                 if 'match' in comp:
@@ -305,8 +305,12 @@ class Pillar(object):
                                         except ValueError:
                                             order = 0
                                     orders[saltenv][tgt] = order
+                                if comp.get('ignore_missing', False):
+                                    ignore_missing = True
                             if isinstance(comp, string_types):
                                 states[comp] = True
+                        if ignore_missing:
+                            self.ignored_pillars[saltenv] = states.keys()
                         top[saltenv][tgt] = matches
                         top[saltenv][tgt].extend(states)
         return self.sort_top_targets(top, orders)
@@ -373,7 +377,11 @@ class Pillar(object):
         errors = []
         fn_ = self.client.get_state(sls, saltenv).get('dest', False)
         if not fn_:
-            if self.opts['pillar_roots'].get(saltenv):
+            if sls in self.ignored_pillars.get(saltenv, []):
+                log.debug('Skipping ignored and missing SLS {0!r} in'
+                          ' environment {1!r}'.format(sls, saltenv))
+                return None, mods, errors
+            elif self.opts['pillar_roots'].get(saltenv):
                 msg = ('Specified SLS {0!r} in environment {1!r} is not'
                        ' available on the salt master').format(sls, saltenv)
                 log.error(msg)

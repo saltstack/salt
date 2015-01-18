@@ -1173,14 +1173,14 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         for k, v in options.items():
             cmd += ' --{0} {1}'.format(k, v)
 
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] == 0 and exists(name):
         return {'created': True}
     else:
         if exists(name):
             # destroy the container if it was partially created
             cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd)
+            __salt__['cmd.retcode'](cmd, python_shell=False)
         log.warn('lxc-create failed to create container')
         return {'created': False, 'error':
                 'container could not be created with cmd "{0}": {1}'.format(cmd, ret['stderr'])}
@@ -1257,14 +1257,14 @@ def clone(name,
     if backing:
         cmd += ' -B {0}'.format(backing)
 
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] == 0 and exists(name):
         return {'cloned': True}
     else:
         if exists(name):
             # destroy the container if it was partially created
             cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd)
+            __salt__['cmd.retcode'](cmd, python_shell=False)
         log.warn('lxc-clone failed to create container')
         return {'cloned': False, 'error': (
             'container could not be created'
@@ -1282,7 +1282,7 @@ def ls_():
 
         salt '*' lxc.ls
     '''
-    return __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
+    return __salt__['cmd.run']('lxc-ls | sort -u', python_shell=True).splitlines()
 
 
 def list_(extra=False):
@@ -1311,7 +1311,7 @@ def list_(extra=False):
         salt '*' lxc.list
         salt '*' lxc.list extra=True
     '''
-    ctnrs = __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
+    ctnrs = __salt__['cmd.run']('lxc-ls | sort -u', python_shell=True).splitlines()
 
     if extra:
         stopped = {}
@@ -1328,7 +1328,7 @@ def list_(extra=False):
 
     for container in ctnrs:
         c_infos = __salt__['cmd.run'](
-                'lxc-info -n {0}'.format(container)).splitlines()
+                'lxc-info -n {0}'.format(container), python_shell=False).splitlines()
         log.debug(c_infos)
         c_state = None
         for c_info in c_infos:
@@ -1372,7 +1372,7 @@ def _change_state(cmd, name, expected):
         return {'state': expected, 'change': False}
 
     cmd = '{0} -n {1}'.format(cmd, name)
-    err = __salt__['cmd.run_stderr'](cmd)
+    err = __salt__['cmd.run_stderr'](cmd, python_shell=False)
     if err:
         s2 = state(name)
         r = {'state': s2, 'change': s1 != s2, 'error': err}
@@ -1380,7 +1380,7 @@ def _change_state(cmd, name, expected):
         if expected is not None:
             # some commands do not wait, so we will
             cmd = 'lxc-wait -n {0} -s {1}'.format(name, expected.upper())
-            __salt__['cmd.run'](cmd, timeout=30)
+            __salt__['cmd.run'](cmd, timeout=30, python_shell=False)
         s2 = state(name)
         r = {'state': s2, 'change': s1 != s2}
     return r
@@ -1551,7 +1551,7 @@ def state(name):
         return None
 
     cmd = 'lxc-info -n {0}'.format(name)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
@@ -1579,7 +1579,7 @@ def get_parameter(name, parameter):
         return None
 
     cmd = 'lxc-cgroup -n {0} {1}'.format(name, parameter)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
@@ -1600,7 +1600,7 @@ def set_parameter(name, parameter, value):
         return None
 
     cmd = 'lxc-cgroup -n {0} {1} {2}'.format(name, parameter, value)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
@@ -1692,9 +1692,9 @@ def info(name):
         ret['memory_free'] = free
         ret['size'] = __salt__['cmd.run'](
             ('lxc-attach --clear-env -n {0} -- '
-             'df /|tail -n1|awk \'{{print $2}}\'').format(pipes.quote(name)))
+             'df /|tail -n1|awk \'{{print $2}}\'').format(pipes.quote(name)), python_shell=True)
         ipaddr = __salt__['cmd.run'](
-            'lxc-attach --clear-env -n {0} -- ip addr show'.format(pipes.quote(name)))
+            'lxc-attach --clear-env -n {0} -- ip addr show'.format(pipes.quote(name)), python_shell=False)
         for line in ipaddr.splitlines():
             if 'inet' in line:
                 line = line.split()
@@ -1754,7 +1754,7 @@ def set_pass(name, users, password):
                     pipes.quote(password),
                 )
             cmd += " true\""
-            cret = __salt__['cmd.run_all'](cmd)
+            cret = __salt__['cmd.run_all'](cmd, python_shell=False)
             if cret['retcode'] != 0:
                 raise ValueError('Can\'t change passwords')
             ret['comment'] = 'Password updated for {0}'.format(users)
@@ -1905,7 +1905,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
         'lxc-attach --clear-env -n {0} -- rm /etc/resolv.conf &&'
         'echo {1}|lxc-attach --clear-env -n {0} -- '
         'tee /etc/resolv.conf'
-    ).format(pipes.quote(name), pipes.quote(dns)))
+    ).format(pipes.quote(name), pipes.quote(dns)), python_shell=True)
     if not cret['retcode']:
         ret['result'] = True
     return ret
@@ -2076,7 +2076,7 @@ def attachable(name):
         salt 'minion' lxc.attachable ubuntu
     '''
     cmd = 'lxc-attach -n {0} -- true'.format(pipes.quote(name))
-    data = __salt__['cmd.run_all'](cmd)
+    data = __salt__['cmd.run_all'](cmd, python_shell=False)
     if not data['retcode']:
         return True
     if data['stderr'].startswith('lxc-attach: failed to get the init pid'):
@@ -2136,9 +2136,9 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
         cmd = 'lxc-attach --clear-env {0} -n {1} -- {2}'.format(env, pipes.quote(name), cmd)
 
         if not use_vt:
-            res = __salt__['cmd.run_all'](cmd)
+            res = __salt__['cmd.run_all'](cmd, python_shell=False)
         else:
-            stdout, stderr = '', ''
+            stdout_buffer, stderr_buffer = '', ''
             try:
                 proc = vt.Terminal(cmd,
                                    shell=True,
@@ -2158,31 +2158,31 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                         except IOError:
                             cstdout, cstderr = '', ''
                         if cstdout:
-                            stdout += cstdout
+                            stdout_buffer += cstdout
                         else:
                             cstdout = ''
                         if cstderr:
-                            stderr += cstderr
+                            stderr_buffer += cstderr
                         else:
                             cstderr = ''
                     except KeyboardInterrupt:
                         break
                 res = {'retcode': proc.exitstatus,
                        'pid': 2,
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_buffer,
+                       'stderr': stderr_buffer}
             except vt.TerminalException:
                 trace = traceback.format_exc()
                 log.error(trace)
                 res = {'retcode': 127,
                        'pid': '2',
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_buffer,
+                       'stderr': stderr_buffer}
             finally:
                 proc.close(terminate=True, kill=True)
     else:
         rootfs = info(name).get('rootfs')
-        res = __salt__['cmd.run_chroot'](rootfs, cmd)
+        res = __salt__['cmd.run_chroot'](rootfs, cmd, python_shell=False)
 
     if preserve_state:
         if prior_state == 'stopped':
@@ -2227,13 +2227,13 @@ def cp(name, src, dest):
 
     # before touching to existing file which may disturb any running
     # process, check that the md5sum are different
-    cmd = 'md5sum {0} 2> /dev/null'.format(src)
-    csrcmd5 = __salt__['cmd.run_all'](cmd)
+    cmd = 'md5sum {0}'.format(src)
+    csrcmd5 = __salt__['cmd.run_all'](cmd, python_shell=False)
     srcmd5 = csrcmd5['stdout'].split()[0]
 
-    cmd = 'lxc-attach --clear-env -n {0} -- md5sum {1} 2> /dev/null'.format(
-        pipes.quote(name), dest)
-    cdestmd5 = __salt__['cmd.run_all'](cmd)
+    cmd = 'lxc-attach --clear-env -n {0} -- md5sum {1}'.format(
+        name, dest)
+    cdestmd5 = __salt__['cmd.run_all'](cmd, python_shell=False)
     if not cdestmd5['retcode']:
         try:
             destmd5 = cdestmd5['stdout'].split()[0]
@@ -2251,7 +2251,7 @@ def cp(name, src, dest):
         cmd = 'cat {0} | lxc-attach --clear-env -n {1} -- tee {2} > /dev/null'.format(
             pipes.quote(src), pipes.quote(name), pipes.quote(dest))
         log.info(cmd)
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=True)
     return ret
 
 
