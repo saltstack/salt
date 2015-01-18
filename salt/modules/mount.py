@@ -383,7 +383,7 @@ def set_fstab(
         criteria = entry.pick( match_on )
 
     except KeyError:
-        invalid_keys = filter( lambda key: key in _fstab_entry.fstab_keys, match_on )
+        invalid_keys = filter( lambda key: key not in _fstab_entry.fstab_keys, match_on )
         raise CommandExecutionError( 'Unrecognized keys in match_on: "{0}"'.format( invalid_keys ) )
 
     # parse file, use ret to cache status
