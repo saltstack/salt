@@ -14,6 +14,7 @@ from __future__ import print_function, with_statement
 import os
 import sys
 import glob
+import time
 try:
     from urllib2 import urlopen
 except ImportError:
@@ -106,7 +107,6 @@ SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.t
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
 SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'cloud.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
-SALT_SYSPATHS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'syspaths.py')
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')
@@ -115,7 +115,6 @@ PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 # pylint: disable=W0122
 exec(compile(open(SALT_VERSION).read(), SALT_VERSION, 'exec'))
-exec(compile(open(SALT_SYSPATHS).read(), SALT_SYSPATHS, 'exec'))
 # pylint: enable=W0122
 
 
@@ -436,33 +435,58 @@ class Install(install):
     def initialize_options(self):
         install.initialize_options(self)
         # pylint: disable=undefined-variable
-        self.salt_root_dir = ROOT_DIR
-        self.salt_config_dir = CONFIG_DIR
-        self.salt_cache_dir = CACHE_DIR
-        self.salt_sock_dir = SOCK_DIR
-        self.salt_srv_root_dir = SRV_ROOT_DIR
-        self.salt_base_file_roots_dir = BASE_FILE_ROOTS_DIR
-        self.salt_base_pillar_roots_dir = BASE_PILLAR_ROOTS_DIR
-        self.salt_base_master_roots_dir = BASE_MASTER_ROOTS_DIR
-        self.salt_logs_dir = LOGS_DIR
-        self.salt_pidfile_dir = PIDFILE_DIR
+        if __saltstack_version__.info >= SaltStackVersion.from_name('Boron'):
+            # XXX: Remove the Salt Specific Options In Salt Boron. They are now global options
+            raise DistutilsArgError(
+                'Developers, please remove the salt paths configuration '
+                'setting from the setup\'s install command'
+            )
         # pylint: enable=undefined-variable
+        self.salt_root_dir = None
+        self.salt_config_dir = None
+        self.salt_cache_dir = None
+        self.salt_sock_dir = None
+        self.salt_srv_root_dir = None
+        self.salt_base_file_roots_dir = None
+        self.salt_base_pillar_roots_dir = None
+        self.salt_base_master_roots_dir = None
+        self.salt_logs_dir = None
+        self.salt_pidfile_dir = None
 
     def finalize_options(self):
         install.finalize_options(self)
 
+        logged_warnings = False
         for optname in ('root_dir', 'config_dir', 'cache_dir', 'sock_dir',
                         'srv_root_dir', 'base_file_roots_dir',
                         'base_pillar_roots_dir', 'base_master_roots_dir',
                         'logs_dir', 'pidfile_dir'):
             optvalue = getattr(self, 'salt_{0}'.format(optname))
-            if not optvalue:
-                raise DistutilsArgError(
-                    'The value of --salt-{0} needs a proper path value'.format(
+            if optvalue is not None:
+                dist_opt_value = getattr(self.distribution, 'salt_{0}'.format(optname))
+                logged_warnings = True
+                log.warn(
+                    'The \'--salt-{0}\' setting is now a global option just pass it '
+                    'right after \'setup.py\'. This install setting will still work '
+                    'until Salt Boron but please migrate to the global setting as '
+                    'soon as possible.'.format(
                         optname.replace('_', '-')
                     )
+
                 )
-            setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
+                if dist_opt_value is not None:
+                    raise DistutilsArgError(
+                        'The \'--salt-{0}\' setting was passed as a global option '
+                        'and as an option to the install command. Please only pass '
+                        'one of them, preferrably the global option since the other '
+                        'is now deprecated and will be removed in Salt Boron.'.format(
+                            optname.replace('_', '-')
+                        )
+                    )
+                setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
+
+        if logged_warnings is True:
+            time.sleep(3)
 
     def run(self):
         # Let's set the running_salt_install attribute so we can add
@@ -527,7 +551,28 @@ class SaltDistribution(distutils.dist.Distribution):
     global_options = distutils.dist.Distribution.global_options + [
         ('ssh-packaging', None, 'Run in SSH packaging mode'),
         ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
-                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq')
+                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq')] + [
+        # Salt's Paths Configuration Settings
+        ('salt-root-dir=', None,
+         'Salt\'s pre-configured root directory'),
+        ('salt-config-dir=', None,
+         'Salt\'s pre-configured configuration directory'),
+        ('salt-cache-dir=', None,
+         'Salt\'s pre-configured cache directory'),
+        ('salt-sock-dir=', None,
+         'Salt\'s pre-configured socket directory'),
+        ('salt-srv-root-dir=', None,
+         'Salt\'s pre-configured service directory'),
+        ('salt-base-file-roots-dir=', None,
+         'Salt\'s pre-configured file roots directory'),
+        ('salt-base-pillar-roots-dir=', None,
+         'Salt\'s pre-configured pillar roots directory'),
+        ('salt-base-master-roots-dir=', None,
+         'Salt\'s pre-configured master roots directory'),
+        ('salt-logs-dir=', None,
+         'Salt\'s pre-configured logs directory'),
+        ('salt-pidfile-dir=', None,
+         'Salt\'s pre-configured pidfiles directory'),
     ]
 
     def __init__(self, attrs=None):
@@ -535,6 +580,19 @@ class SaltDistribution(distutils.dist.Distribution):
 
         self.ssh_packaging = PACKAGED_FOR_SALT_SSH
         self.salt_transport = None
+
+        # Salt Paths Configuration Settings
+        self.salt_root_dir = None
+        self.salt_config_dir = None
+        self.salt_cache_dir = None
+        self.salt_sock_dir = None
+        self.salt_srv_root_dir = None
+        self.salt_base_file_roots_dir = None
+        self.salt_base_pillar_roots_dir = None
+        self.salt_base_master_roots_dir = None
+        self.salt_logs_dir = None
+        self.salt_pidfile_dir = None
+
 
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.version = __version__  # pylint: disable=undefined-variable

@@ -708,6 +708,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             for index in range(self.opts.value['worker_threads']):
                 worker_seed.append('worker{0}'.format(index + 1))
             self.workers.value = itertools.cycle(worker_seed)
+        return True
 
 
 class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
@@ -1135,42 +1136,35 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
                 state = msg['data']['state']
             else:
                 state = None
+
             # create answer message
-            if state is None or state == 'available' or state == 'present':
+            if state in [None, 'available', 'present']:
                 present = odict()
                 for name in self.availables.value:
-                    minion = self.aliveds.value[name]
+                    minion = self.aliveds.value.get(name, None)
                     present[name] = minion.ha[0] if minion else None
                 data = {'present': present}
-            elif state == 'joined':
-                joined = odict()
-                # For now use alloweds here.
-                # TODO: update to really return joineds
-                for name in self.alloweds.value:
-                    joined[name] = self.alloweds.value[name].ha[0]
-                data = {'joined': joined}
-            elif state == 'allowed':
-                allowed = odict()
-                for name in self.alloweds.value:
-                    allowed[name] = self.alloweds.value[name].ha[0]
-                data = {'allowed': allowed}
-            elif state == 'alived':
-                alived = odict()
-                for name in self.aliveds.value:
-                    alived[name] = self.aliveds.value[name].ha[0]
-                data = {'alived': alived}
-            elif state == 'reaped':
-                reaped = odict()
-                for name in self.reapeds.value:
-                    reaped[name] = self.reapeds.value[name].ha[0]
-                data = {'reaped': reaped}
             else:
-                # error: wrong/unknown state requested
-                log.error('Lane Router Received invalid message: {0}'.format(msg))
-                return
+                # TODO: update to really return joineds
+                states = {'joined': self.alloweds,
+                          'allowed': self.alloweds,
+                          'alived': self.aliveds,
+                          'reaped': self.reapeds}
+                try:
+                    minions = states[state].value
+                except KeyError:
+                    # error: wrong/unknown state requested
+                    log.error('Lane Router Received invalid message: {0}'.format(msg))
+                    return
+
+                result = odict()
+                for name in minions:
+                    result[name] = minions[name].ha[0]
+                data = {state: result}
+
             tag = tagify('present', 'presence')
             route = {'dst': (None, None, 'event_fire'),
-                    'src': (None, self.lane_stack.value.local.name, None)}
+                     'src': (None, self.lane_stack.value.local.name, None)}
             msg = {'route': route, 'tag': tag, 'data': data}
             self.lane_stack.value.transmit(msg,
                                            self.lane_stack.value.fetchUidByName(y_name))

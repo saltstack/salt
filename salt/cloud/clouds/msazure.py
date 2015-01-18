@@ -26,19 +26,19 @@ http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-managemen
 
 from __future__ import absolute_import
 
+# Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import pprint
 import time
 
+# Import salt cloud libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 import yaml
 
-
-# Import python libs
-# Import salt cloud libs
 # Import azure libs
 HAS_LIBS = False
 try:
@@ -410,6 +410,37 @@ def show_instance(name, call=None):
     nodes = list_nodes_full()
     salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
+
+
+def show_service(kwargs=None, conn=None, call=None):
+    '''
+    Show the details from the provider concerning an instance
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_service function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    services = conn.list_hosted_services()
+    for service in services:
+        if kwargs['service_name'] != service.service_name:
+            continue
+        props = service.hosted_service_properties
+        ret = {
+            'affinity_group': props.affinity_group,
+            'date_created': props.date_created,
+            'date_last_modified': props.date_last_modified,
+            'description': props.description,
+            'extended_properties': props.extended_properties,
+            'label': props.label,
+            'location': props.location,
+            'status': props.status,
+        }
+        return ret
+    return None
 
 
 def create(vm_):

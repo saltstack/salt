@@ -17,8 +17,6 @@ from collections import defaultdict
 
 from salt.utils import kinds
 
-log = logging.getLogger(__name__)
-
 try:
     from raet import raeting, nacling
     from raet.lane.stacking import LaneStack
@@ -26,6 +24,8 @@ try:
 except (ImportError, OSError):
     # Don't die on missing transport libs since only one transport is required
     pass
+
+log = logging.getLogger(__name__)
 
 # Module globals for default LaneStack. Because RaetChannels are created on demand
 # they do not have access to the master estate that motivated their creation
@@ -61,8 +61,10 @@ class Channel(object):
             return ZeroMQChannel(opts, **kwargs)
         elif ttype == 'raet':
             return RAETChannel(opts, **kwargs)
+        elif ttype == 'local':
+            return LocalChannel(opts, **kwargs)
         else:
-            raise Exception('Channels are only defined for ZeroMQ and raet')
+            raise Exception('Channels are only defined for ZeroMQ (\'zeromq\') and RAET(\'raet\'), but you specified {0}'.format(ttype))
             # return NewKindOfChannel(opts, **kwargs)
 
     def send(self, load, tries=3, timeout=60):
@@ -97,6 +99,7 @@ class RAETChannel(Channel):
         The difference between the two is how the destination route
         is assigned.
     '''
+
     def __init__(self, opts, usage=None, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
@@ -129,7 +132,7 @@ class RAETChannel(Channel):
         '''
         role = self.opts.get('id')
         if not role:
-            emsg = ("Missing role required to setup RAETChannel.")
+            emsg = ("Missing role(\'id\') required to setup RAETChannel.")
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
@@ -308,3 +311,38 @@ class ZeroMQChannel(Channel):
             return self._uncrypted_transfer(load, tries, timeout)
         else:  # for just about everything else
             return self._crypted_transfer(load, tries, timeout)
+
+
+class LocalChannel(Channel):
+    '''
+    Local channel for testing purposes
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
+        self.kwargs = kwargs
+        self.tries = 0
+
+    def send(self, load, tries=3, timeout=60):
+
+        if self.tries == 0:
+            log.debug('LocalChannel load: {0}').format(load)
+            #data = json.loads(load)
+            #{'path': 'apt-cacher-ng/map.jinja', 'saltenv': 'base', 'cmd': '_serve_file', 'loc': 0}
+            #f = open(data['path'])
+            f = open(load['path'])
+            ret = {
+                'data': ''.join(f.readlines()),
+                'dest': load['path'],
+            }
+            print 'returning', ret
+        else:
+            # end of buffer
+            ret = {
+                'data': None,
+                'dest': None,
+            }
+        self.tries = self.tries + 1
+        return ret
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        super(LocalChannel, self).crypted_transfer_decode_dictentry()

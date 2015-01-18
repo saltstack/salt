@@ -201,6 +201,16 @@ def mounted(name,
                     keyval_option = opt.split('=')[0]
                     if keyval_option in mount_invisible_keys:
                         opt = keyval_option
+
+                    size_match = re.match(r'size=(?P<size_value>[0-9]+)(?P<size_unit>k|m|g)', opt)
+                    if size_match:
+                        converted_size = int(size_match.group('size_value'))
+                        if size_match.group('size_unit') == 'm':
+                            converted_size = int(size_match.group('size_value')) * 1024
+                        if size_match.group('size_unit') == 'g':
+                            converted_size = int(size_match.group('size_value')) * 1024 * 1024
+                        opt = "size={0}k".format(converted_size)
+
                     if opt not in active[real_name]['opts'] and opt not in active[real_name]['superopts'] and opt not in mount_invisible_options:
                         if __opts__['test']:
                             ret['result'] = None
