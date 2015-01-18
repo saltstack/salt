@@ -6,6 +6,9 @@ Provide authentication using OpenStack Keystone
 '''
 
 from __future__ import print_function
+import logging
+log = logging.getLogger(__name__)
+
 try:
     from keystoneclient.v2_0 import client
     from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
