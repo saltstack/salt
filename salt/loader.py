@@ -950,7 +950,7 @@ class Loader(object):
                     if _name in names:
                         # Since we load custom modules first, if this logic is true it means
                         # that an internal module was shadowed by an external custom module
-                        log.trace(
+                        log.warning(
                             'The {0!r} module from {1!r} was shadowed by '
                             'the module in {2!r}'.format(
                                 _name,
@@ -973,7 +973,9 @@ class Loader(object):
         def load_names(names, failhard=False, initial_load=False):
             for name in names:
                 #try:
-                if names[name].endswith('.pyx'):
+                if name.startswith(".#"):
+                    pass
+                elif names[name].endswith('.pyx'):
                     # If there's a name which ends in .pyx it means the above
                     # cython_enabled is True. Continue...
                     mod = pyximport.load_module(
@@ -985,6 +987,7 @@ class Loader(object):
                         ), names[name], tempfile.gettempdir()
                     )
                 else:
+                    log.debug("find module {0}".format(name))
                     fn_, path, desc = imp.find_module(name, self.module_dirs)
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(

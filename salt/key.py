@@ -754,8 +754,8 @@ class Key(object):
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError) as exp:
-                log.error('(OSError, IOError) {0}'.format(exp))
-                    pass
+                    log.error('(OSError, IOError) {0}'.format(exp))
+
         self.check_minion_cache(preserve_minions=matches.get('minions', []))
         if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
@@ -777,8 +777,8 @@ class Key(object):
                              'id': key}
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError) as exp:
-                log.error('(OSError, IOError) {0}'.format(exp))
-                    pass
+                    log.error('(OSError, IOError) {0}'.format(exp))
+
         self.check_minion_cache()
         if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
@@ -1174,8 +1174,8 @@ class RaetKey(Key):
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError) as exp:
-                log.error('(OSError, IOError) {0}'.format(exp))
-                    pass
+                    log.error('(OSError, IOError) {0}'.format(exp))
+
         self.check_minion_cache(preserve_minions=matches.get('minions', []))
         return (
             self.name_match(match) if match is not None
@@ -1191,8 +1191,8 @@ class RaetKey(Key):
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError) as exp:
-                log.error('(OSError, IOError) {0}'.format(exp))
-                    pass
+                    log.error('(OSError, IOError) {0}'.format(exp))
+
         self.check_minion_cache()
         return self.list_keys()
 
@@ -1225,6 +1225,7 @@ class RaetKey(Key):
                             )
                 except (IOError, OSError) as exp:
                     log.error('IO/OS Error {0}'.format(exp))
+
         self.check_minion_cache()
         return (
             self.name_match(match) if match is not None

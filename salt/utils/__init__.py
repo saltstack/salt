@@ -1394,12 +1394,17 @@ def is_true(value=None):
         2. The string values "True" and "true"
         3. Any object for which bool(obj) returns True
     '''
-    # First, try int/float conversion
+
+    # First, try None
+    if value is None:
+        return False
+
+    # Then, try int/float conversion
     try:
         value = int(value)
     except (ValueError, TypeError) as exp:
         log.error('(ValueError, TypeError) {0}'.format(exp))
-        pass
+
     try:
         value = float(value)
     except (ValueError, TypeError) as exp:

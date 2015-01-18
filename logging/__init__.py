@@ -32,15 +32,29 @@ class L(object):
 
     def warning(self,x , exc_info=None):
         print "WARN",x
-        raise Exception(x)
+        #raise Exception(x)
         #for line in traceback.format_stack():
         #    print line.strip()  
 
+    def info(self,x , exc_info=None):
+        print "INFO",x
+        #raise Exception(x)
+        
     def trace(self,x ):
         print "TRACE",x
         #for line in traceback.format_stack():
         #    print line.strip()  
 l = L()
+
+class G:
+    def __init__(self):
+        self.emittedNoHandlerWarning= 0
+
+class F:
+    def __init__(self):
+        self.manager = G()
+
+Logger = F()
 
 def getLogger(x=None):
     return l
@@ -82,7 +96,7 @@ class LogRecord(object):
 
 
 class Formatter(object):
-    def __init__(self, x, datefmt):
+    def __init__(self, x, datefmt=None):
         pass
 
 def setLoggerClass(x):

@@ -129,7 +129,7 @@ def update():
                     file_path, mtime = line.split(':', 1)
                     old_mtime_map[file_path] = mtime
                 except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                    log.error('ValueError {0}'.format(exp))
                     # Document the invalid entry in the log
                     log.warning('Skipped invalid cache mtime entry in {0}: {1}'
                                 .format(mtime_map_path, line))
@@ -198,14 +198,14 @@ def file_hash(load, fnd):
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                    log.error('ValueError {0}'.format(exp))
                     log.debug('Fileserver attempted to read incomplete cache file. Retrying.')
                     # Delete the file since its incomplete (either corrupted or incomplete)
                     try:
                         os.unlink(cache_path)
                     except OSError as exp:
-                log.error('OSError {0}'.format(exp))
-                        pass
+                        log.error('OSError {0}'.format(exp))
+
                     return file_hash(load, fnd)
                 if os.path.getmtime(path) == mtime:
                     # check if mtime changed
@@ -218,7 +218,7 @@ def file_hash(load, fnd):
                 os.unlink(cache_path)
             except OSError as exp:
                 log.error('OSError {0}'.format(exp))
-                pass
+
             return file_hash(load, fnd)
 
     # if we don't have a cache entry-- lets make one

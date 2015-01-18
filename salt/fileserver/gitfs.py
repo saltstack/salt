@@ -927,9 +927,9 @@ def update():
                 try:
                     origin.credentials = repo['credentials']
                 except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     # No credentials configured for this repo
-                    pass
+                    #pass
                 fetch = origin.fetch()
                 try:
                     # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
@@ -961,7 +961,7 @@ def update():
                     )
                     continue
                 except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     log.critical(
                         'Local repository cachedir {0!r} (corresponding '
                         'remote: {1}) has been corrupted. Salt will now '
@@ -1199,7 +1199,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             try:
                 blob = tree / repo_path
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 continue
             blob_hexsha = blob.hexsha
 
@@ -1212,7 +1212,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                 oid = tree[repo_path].oid
                 blob = repo['repo'][oid]
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 continue
             blob_hexsha = blob.hex
 
@@ -1228,7 +1228,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                 # second element of which is the object ID of the blob
                 blob = repo['repo'].get_object(tree[filename][1])
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 continue
             blob_hexsha = blob.sha().hexdigest()
 
