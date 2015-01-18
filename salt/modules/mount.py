@@ -275,7 +275,7 @@ def fstab(config='/etc/fstab'):
         return ret
     with salt.utils.fopen(config) as ifile:
         for line in ifile:
-        try:
+            try:
                 entry = _fstab_entry.dict_from_line( line, _fstab_entry.compatibility_keys )
                 ret[ entry.pop( 'name' ) ] = entry
             except _fstab_entry.ParseError:
