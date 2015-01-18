@@ -12,6 +12,8 @@ import ast
 # Import salt libs
 import salt.utils
 import salt.payload
+import logging
+log = logging.getLogger(__name__)
 
 
 def clear():

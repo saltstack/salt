@@ -14,6 +14,8 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+import logging
+log = logging.getLogger(__name__)
 
 
 AVAILABLE_PYTHON_EXECUTABLE = salt.utils.which_bin([
@@ -227,7 +229,6 @@ sys.stdout.write('cheese')
             cmdmod.run_all(cmd, cwd=cwd)
         except CommandExecutionError as exp:
             log.error('CommandExecutionError {0}'.format(exp))
-            pass
         else:
             raise RuntimeError
 

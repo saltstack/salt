@@ -227,7 +227,7 @@ class CloudSdist(Sdist):
     def finalize_options(self):
         Sdist.finalize_options(self)
         if 'SKIP_BOOTSTRAP_DOWNLOAD' in os.environ:
-            log('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
+            log.error('Please stop using \'SKIP_BOOTSTRAP_DOWNLOAD\' and use '
                 '\'DOWNLOAD_BOOTSTRAP_SCRIPT\' instead')
 
         if 'DOWNLOAD_BOOTSTRAP_SCRIPT' in os.environ:

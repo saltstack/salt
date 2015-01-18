@@ -5,9 +5,6 @@ def error(x):
 import traceback
 class L(object):
     def __init__(self):
-        pass
-
-    def __init__(self):
         self.handlers=[]
 
     def setLevel(self, X):
@@ -19,31 +16,34 @@ class L(object):
     def error(self,x, exc_info=None , exc_info_on_loglevel=None):
         raise Exception(x)
 
-    def critical(self,x, exc_info=None ):
+    def log(self,x, exc_info=None , exc_info_on_loglevel=None):
+        print "LOG",x        
+
+    def critical(self,x , exc_info=None , exc_info_on_loglevel=None  ):
         raise Exception(x)
 
-    def exception(self,x ):
+    def exception(self,x , exc_info=None , exc_info_on_loglevel=None  ):
         raise Exception(x)
 
-    def debug(self,x ):
+    def debug(self,x, exc_info=None , exc_info_on_loglevel=None  ):
         #print "DEBUG",x
         #for line in traceback.format_stack():
         #    print line.strip()  
         pass
 
-    def warning(self,x , exc_info=None):
+    def warning(self,x , exc_info=None , exc_info_on_loglevel=None ):
         #print "WARN",x
         #raise Exception(x)
         #for line in traceback.format_stack():
         #    print line.strip()  
         pass
 
-    def info(self,x , exc_info=None):
+    def info(self,x , exc_info=None , exc_info_on_loglevel=None ):
         #print "INFO",x
         #raise Exception(x)
         pass
 
-    def trace(self,x ):
+    def trace(self,x , exc_info=None , exc_info_on_loglevel=None  ):
         #print "TRACE",x
         #for line in traceback.format_stack():
         #    print line.strip()  
@@ -120,3 +120,10 @@ def captureWarnings(x):
 
 def getLevelName(x):
     return "DEBUG"
+
+def basicConfig(
+        filename,
+        format,
+        datefmt,
+        level):
+    pass

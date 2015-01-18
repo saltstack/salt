@@ -18,6 +18,8 @@ import re
 
 # Import Salt libs
 import salt.utils
+import logging
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'ini'
 
@@ -244,7 +246,7 @@ class _Section(list):
                 contents.update({item.name: item.value})
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                pass  # item was a comment
+                
         return contents
 
     def __nonzero__(self):
