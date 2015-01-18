@@ -1231,6 +1231,15 @@ class Cloud(object):
         )
 
         try:
+            vm_['inline_script'] = salt.config.get_cloud_config_value(
+                'inline_script',
+                vm_,
+                self.opts
+            )
+        except:
+            pass
+
+        try:
             alias, driver = vm_['provider'].split(':')
             func = '{0}.create'.format(driver)
             with context.func_globals_inject(

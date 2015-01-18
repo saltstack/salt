@@ -88,7 +88,6 @@ SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 # Get logging started
 log = logging.getLogger(__name__)
 
-
 def __render_script(path, vm_=None, opts=None, minion=''):
     '''
     Return the rendered script
@@ -135,19 +134,19 @@ def os_script(os_, vm_=None, opts=None, minion=''):
     return ''
 
 
-def inline_script(script_, vm_, opts, minion):
-    '''
-    Run a sequence of commands _after_ the deploy script was run, or if the
-    deploy script was skipped.
-
-    Inline scripts are to be defined as a list of commands which
-    will then be converted into a bash script and run on the minion.
-    '''
-
-    for line in script_:
-        print line
-
-    return ''
+# def inline_script(script_, vm_=None, opts=None, minion=''):
+#     '''
+#     Run a sequence of commands _after_ the deploy script was run, or if the
+#     deploy script was skipped.
+#
+#     Inline scripts are to be defined as a list of commands which
+#     will then be converted into a bash script and run on the minion.
+#     '''
+#
+#     if script_:
+#         return script_
+#
+#     return []
 
 
 def gen_keys(keysize=2048):
@@ -304,6 +303,7 @@ def bootstrap(vm_, opts):
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
             }
         }
+
     key_filename = salt.config.get_cloud_config_value(
         'key_filename', vm_, opts, search_global=False, default=None
     )
@@ -341,6 +341,10 @@ def bootstrap(vm_, opts):
         ),
         vm_, opts, minion_conf
     )
+
+    inline_script_code = salt.config.get_cloud_config_value(
+            'inline_script', vm_, opts, default=[]
+        )
 
     ssh_username = salt.config.get_cloud_config_value(
         'ssh_username', vm_, opts, default='root'
@@ -399,6 +403,40 @@ def bootstrap(vm_, opts):
             'file_map', vm_, opts, default=None
         ),
     }
+
+    inline_script_kwargs = {
+        'opts': opts,
+        'host': vm_['ssh_host'],
+        'salt_host': vm_.get('salt_host', vm_['ssh_host']),
+        'username': ssh_username,
+        'inline_script': inline_script_code,
+        'name': vm_['name'],
+        'has_ssh_agent': has_ssh_agent,
+        'tmp_dir': salt.config.get_cloud_config_value(
+            'tmp_dir', vm_, opts, default='/tmp/.saltcloud-inline_script'
+        ),
+        'parallel': opts['parallel'],
+        'sudo': salt.config.get_cloud_config_value(
+            'sudo', vm_, opts, default=(ssh_username != 'root')
+        ),
+        'sudo_password': salt.config.get_cloud_config_value(
+            'sudo_password', vm_, opts, default=None
+        ),
+        'tty': salt.config.get_cloud_config_value(
+            'tty', vm_, opts, default=True
+        ),
+        'password': salt.config.get_cloud_config_value(
+            'password', vm_, opts, search_global=False
+        ),
+        'key_filename': key_filename,
+        'display_ssh_output': salt.config.get_cloud_config_value(
+            'display_ssh_output', vm_, opts, default=True
+        ),
+        'known_hosts_file': salt.config.get_cloud_config_value(
+            'known_hosts_file', vm_, opts, default='/dev/null'
+        ),
+    }
+
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
     if 'gateway' in vm_:
@@ -454,10 +492,17 @@ def bootstrap(vm_, opts):
     )
 
     deployed = False
+    inline_script_deployed = False
+
     if win_installer:
         deployed = deploy_windows(**deploy_kwargs)
     else:
         deployed = deploy_script(**deploy_kwargs)
+
+    if inline_script_code:
+        inline_script_deployed = run_inline_script(**inline_script_kwargs)
+        if inline_script_deployed is not False:
+            log.info('Inline script(s) ha(s|ve) run on {0}'.format(vm_['name']))
 
     if deployed is not False:
         ret['deployed'] = True
@@ -1346,11 +1391,11 @@ def deploy_script(host,
                 queuereturn = queue.get()
                 process.join()
                 if queuereturn and start_action:
-                    #client = salt.client.LocalClient(conf_file)
-                    #output = client.cmd_iter(
+                    # client = salt.client.LocalClient(conf_file)
+                    # output = client.cmd_iter(
                     #    host, 'state.highstate', timeout=timeout
-                    #)
-                    #for line in output:
+                    # )
+                    # for line in output:
                     #    print(line)
                     log.info(
                         'Executing {0} on the salt-minion'.format(
@@ -1384,6 +1429,87 @@ def deploy_script(host,
                 }
             return True
     return False
+
+def run_inline_script(host,
+                      name=None,
+                      port=22,
+                      timeout=900,
+                      username='root',
+                      key_filename=None,
+                      inline_script=[],
+                      ssh_timeout=15,
+                      display_ssh_output=True,
+                      parallel=False,
+                      sudo_password=None,
+                      sudo=False,
+                      password=None,
+                      tty=None,
+                      opts=None,
+                      tmp_dir='/tmp/.saltcloud-inline_script',
+                      **kwargs):
+    '''
+    Run the inline script commands, one by one
+    :**kwargs: catch all other things we may get but don't actually need/use
+    '''
+
+    gateway = None
+    if 'gateway' in kwargs:
+        gateway = kwargs['gateway']
+
+    starttime = time.mktime(time.localtime())
+    log.debug('Deploying {0} at {1}'.format(host, starttime))
+
+    known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+
+    if wait_for_port(host=host, port=port, gateway=gateway):
+        log.debug('SSH port {0} on {1} is available'.format(port, host))
+        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        if wait_for_passwd(host, port=port, username=username,
+                           password=password, key_filename=key_filename,
+                           ssh_timeout=ssh_timeout,
+                           display_ssh_output=display_ssh_output,
+                           gateway=gateway, known_hosts_file=known_hosts_file):
+
+            log.debug(
+                'Logging into {0}:{1} as {2}'.format(
+                    host, port, username
+                )
+            )
+            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+            ssh_kwargs = {
+                'hostname': host,
+                'port': port,
+                'username': username,
+                'timeout': ssh_timeout,
+                'display_ssh_output': display_ssh_output,
+                'sudo_password': sudo_password,
+                'sftp': opts.get('use_sftp', False)
+            }
+            if gateway:
+                ssh_kwargs['ssh_gateway'] = gateway['ssh_gateway']
+                ssh_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+                ssh_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+            if key_filename:
+                log.debug('Using {0} as the key_filename'.format(key_filename))
+                ssh_kwargs['key_filename'] = key_filename
+            elif password and 'has_ssh_agent' in kwargs and kwargs['has_ssh_agent'] is False:
+                log.debug('Using {0} as the password'.format(password))
+                ssh_kwargs['password'] = password
+
+            # TODO: write some tests ???
+            # TODO: check edge cases (e.g. ssh gateways, salt deploy disabled, etc.)
+            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo,
+                        allow_failure=True, **ssh_kwargs):
+                if inline_script:
+                    log.debug('Found inline script to execute.')
+                    for cmd_line in inline_script:
+                        log.info("Executing inline command: " + str(cmd_line))
+                        ret = root_cmd('sh -c "( {0} )"'.format(cmd_line), tty, sudo, allow_failure=True, **ssh_kwargs)
+                        if ret:
+                            log.info("[" + str(cmd_line) + "] Output: " + str(ret))
+
+    # TODO: ensure we send the correct return value
+    return True
 
 
 def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
