@@ -19,6 +19,7 @@ DEVICE={{name}}
 {%endif%}{% if peerdns %}PEERDNS={{peerdns}}
 {%endif%}{% if bridge %}BRIDGE={{bridge}}
 {%endif%}{% if delay %}DELAY={{delay}}
+{%endif%}{% if mtu %}MTU="{{mtu}}"
 {%endif%}{%if bonding %}BONDING_OPTS="{%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}"
 {%endif%}{% if ethtool %}ETHTOOL_OPTS="{%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}"
 {%endif%}{% if domain %}DOMAIN="{{ domain|join(' ') }}"
