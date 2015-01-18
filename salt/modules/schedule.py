@@ -44,7 +44,7 @@ SCHEDULE_CONF = [
         'days',
         'enabled',
         'cron'
-        ]
+]
 
 
 def list_(show_all=False, return_yaml=True):
@@ -77,7 +77,6 @@ def list_(show_all=False, return_yaml=True):
         for item in schedule[job]:
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
-                continue
             if schedule[job][item] == 'true':
                 schedule[job][item] = True
             if schedule[job][item] == 'false':
@@ -95,7 +94,7 @@ def list_(show_all=False, return_yaml=True):
         else:
             return schedule
     else:
-        return None
+        return {'schedule': {}}
 
 
 def purge(**kwargs):
@@ -267,6 +266,8 @@ def add(name, **kwargs):
     .. code-block:: bash
 
         salt '*' schedule.add job1 function='test.ping' seconds=3600
+        # If function have some arguments, use job_args
+        salt '*' schedule.add job2 function='cmd.run' job_args=['date >> /tmp/date.log'] seconds=60
     '''
 
     ret = {'comment': [],

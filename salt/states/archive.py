@@ -28,6 +28,7 @@ def __virtual__():
 def extracted(name,
               source,
               archive_format,
+              archive_user=None,
               tar_options=None,
               source_hash=None,
               if_missing=None,
@@ -48,8 +49,7 @@ def extracted(name,
     .. code-block:: yaml
 
         graylog2-server:
-          archive:
-            - extracted
+          archive.extracted:
             - name: /opt/
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.lzma
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
@@ -60,8 +60,7 @@ def extracted(name,
     .. code-block:: yaml
 
         graylog2-server:
-          archive:
-            - extracted
+          archive.extracted:
             - name: /opt/
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.gz
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
@@ -81,6 +80,9 @@ def extracted(name,
 
     archive_format
         tar, zip or rar
+
+    archive_user:
+        user to extract files as
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
@@ -185,7 +187,8 @@ def extracted(name,
     if archive_format in ('zip', 'rar'):
         log.debug('Extract {0} in {1}'.format(filename, name))
         files = __salt__['archive.un{0}'.format(archive_format)](filename,
-                                                                 name)
+                                                                 name,
+                                                                 runas=archive_user)
     else:
         if tar_options is None:
             with closing(tarfile.open(filename, 'r')) as tar:
@@ -194,13 +197,13 @@ def extracted(name,
         else:
             log.debug('Untar {0} in {1}'.format(filename, name))
 
-            results = __salt__['cmd.run_all']('tar {0} -f {1!r}'.format(
-                tar_options, filename), cwd=name)
+            tar_cmd = ['tar', 'x{0}'.format(tar_options), '-f', repr(filename)]
+            results = __salt__['cmd.run_all'](tar_cmd, cwd=name, python_shell=False)
             if results['retcode'] != 0:
                 ret['result'] = False
                 ret['changes'] = results
                 return ret
-            if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
+            if __salt__['cmd.retcode']('tar --version | grep bsdtar', python_shell=True) == 0:
                 files = results['stderr']
             else:
                 files = results['stdout']

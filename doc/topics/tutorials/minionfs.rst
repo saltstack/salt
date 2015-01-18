@@ -39,7 +39,7 @@ master. The :conf_master:`fileserver_backend` option needs to contain a value of
     fileserver_backend:
       - roots
       - minion
-    
+
     file_recv: True
 
 These changes require a restart of the master, then new requests for the
@@ -68,12 +68,12 @@ First, lets make sure that ``/root/.ssh`` exists and has the right permissions:
 
 .. code-block:: bash
 
-    [root@salt-master file]# salt '*' file.mkdir dir_path=/root/.ssh user=root group=root mode=700 
+    [root@salt-master file]# salt '*' file.mkdir dir_path=/root/.ssh user=root group=root mode=700
     minion-source:
         None
     minion-destination:
         None
-    
+
 We create an RSA key pair without a passphrase [*]_:
 
 .. code-block:: bash
@@ -121,10 +121,10 @@ Lets copy that as the only authorized key to ``minion-destination``:
 
 .. code-block:: bash
 
-    [root@salt-master file]# salt 'minion-destination' cp.get_file salt://minion-source/root/.ssh/id_rsa.pub /root/.ssh/authorized_keys 
+    [root@salt-master file]# salt 'minion-destination' cp.get_file salt://minion-source/root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
     minion-destination:
         /root/.ssh/authorized_keys
-    
+
 Or we can use a more elegant and salty way to add an SSH key:
 
 .. code-block:: bash

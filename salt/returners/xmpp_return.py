@@ -55,7 +55,7 @@ XMPP settings may also be configured as::
 from __future__ import absolute_import
 
 # Import python libs
-import distutils.version
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import pprint
 
@@ -63,7 +63,7 @@ import salt.returners
 
 HAS_LIBS = False
 try:
-    from sleekxmpp import ClientXMPP as _ClientXMPP
+    from sleekxmpp import ClientXMPP as _ClientXMPP  # pylint: disable=import-error
     HAS_LIBS = True
 except ImportError:
     class _ClientXMPP(object):

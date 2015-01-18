@@ -44,10 +44,10 @@ except ImportError:
 # Import 3rd-party libs
 import yaml
 try:
-    import github
-    HAS_GITHUB = True
+    import requests
+    HAS_REQUESTS = True
 except ImportError:
-    HAS_GITHUB = False
+    HAS_REQUESTS = False
 
 SALT_GIT_URL = 'https://github.com/saltstack/salt.git'
 
@@ -57,7 +57,8 @@ def build_pillar_data(options):
     Build a YAML formatted string to properly pass pillar data
     '''
     pillar = {'test_transport': options.test_transport,
-              'cloud_only': options.cloud_only}
+              'cloud_only': options.cloud_only,
+              'with_coverage': options.test_without_coverage is False}
     if options.test_git_commit is not None:
         pillar['test_git_commit'] = options.test_git_commit
     if options.test_git_url is not None:
@@ -113,11 +114,11 @@ def delete_vm(options):
         stderr=subprocess.PIPE,
         stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    proc.poll_and_read_until_finish(interval=0.5)
     proc.communicate()
 
 
-def echo_parseable_environment(options):
+def echo_parseable_environment(options, parser):
     '''
     Echo NAME=VAL parseable output
     '''
@@ -139,37 +140,38 @@ def echo_parseable_environment(options):
         # This is a Jenkins triggered Pull Request
         # We need some more data about the Pull Request available to the
         # environment
-        if not HAS_GITHUB:
-            print('# The script NEEDS the github python package installed')
-            sys.stdout.write('\n'.join(output))
-            sys.stdout.flush()
-            return
+        if HAS_REQUESTS is False:
+            parser.error(
+                'The python \'requests\' library needs to be installed'
+            )
+
+        headers = {}
+        url = 'https://api.github.com/repos/saltstack/salt/pulls/{0}'.format(options.pull_request)
 
         github_access_token_path = os.path.join(
-            os.environ['JENKINS_HOME'], '.github_token'
+            os.environ.get('JENKINS_HOME', os.path.expanduser('~')),
+            '.github_token'
         )
-        if not os.path.isfile(github_access_token_path):
-            print(
-                '# The github token file({0}) does not exit'.format(
-                    github_access_token_path
+        if os.path.isfile(github_access_token_path):
+            headers = {
+                'Authorization': 'token {0}'.format(
+                    open(github_access_token_path).read().strip()
                 )
-            )
-            sys.stdout.write('\n'.join(output))
-            sys.stdout.flush()
-            return
+            }
 
-        GITHUB = github.Github(open(github_access_token_path).read().strip())
-        REPO = GITHUB.get_repo('saltstack/salt')
-        try:
-            PR = REPO.get_pull(options.pull_request)
-            output.extend([
-                'SALT_PR_GIT_URL={0}'.format(PR.head.repo.clone_url),
-                'SALT_PR_GIT_COMMIT={0}'.format(PR.head.sha)
-            ])
-            options.test_git_url = PR.head.repo.clone_url
-            options.test_git_commit = PR.head.sha
-        except ValueError:
-            print('# Failed to get the PR id from the environment')
+        http_req = requests.get(url, headers=headers)
+        if http_req.status_code != 200:
+            parser.error(
+                'Unable to get the pull request: {0[message]}'.format(http_req.json())
+            )
+
+        pr_details = http_req.json()
+        output.extend([
+            'SALT_PR_GIT_URL={0}'.format(pr_details['head']['repo']['clone_url']),
+            'SALT_PR_GIT_BRANCH={0}'.format(pr_details['head']['ref']),
+            'SALT_PR_GIT_COMMIT={0}'.format(pr_details['head']['sha']),
+            'SALT_PR_GIT_BASE_BRANCH={0}'.format(pr_details['base']['ref']),
+        ])
 
     sys.stdout.write('\n\n{0}\n\n'.format('\n'.join(output)))
     sys.stdout.flush()
@@ -187,7 +189,7 @@ def download_unittest_reports(options):
     os.makedirs(xml_reports_path)
 
     cmds = (
-        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unitests-output/',
+        'salt {0} archive.tar zcvf /tmp/xml-test-reports.tar.gz \'*.xml\' cwd=/tmp/xml-unittests-output/',
         'salt {0} cp.push /tmp/xml-test-reports.tar.gz',
         'mv -f /var/cache/salt/master/minions/{1}/files/tmp/xml-test-reports.tar.gz {2} && '
         'tar zxvf {2}/xml-test-reports.tar.gz -C {2}/xml-test-reports && '
@@ -207,7 +209,7 @@ def download_unittest_reports(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -247,7 +249,7 @@ def download_coverage_report(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -303,7 +305,7 @@ def download_remote_logs(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -349,7 +351,7 @@ def download_packages(options):
             stderr=subprocess.PIPE,
             stream_stds=True
         )
-        proc.poll_and_read_until_finish()
+        proc.poll_and_read_until_finish(interval=0.5)
         proc.communicate()
         if proc.returncode != 0:
             print(
@@ -370,7 +372,8 @@ def run(opts):
     )
 
     if opts.download_remote_reports:
-        opts.download_coverage_report = vm_name
+        if opts.test_without_coverage is False:
+            opts.download_coverage_report = vm_name
         opts.download_unittest_reports = vm_name
         opts.download_packages = vm_name
 
@@ -411,7 +414,7 @@ def run(opts):
         stderr=subprocess.PIPE,
         stream_stds=True
     )
-    proc.poll_and_read_until_finish()
+    proc.poll_and_read_until_finish(interval=0.5)
     proc.communicate()
 
     retcode = proc.returncode
@@ -465,6 +468,7 @@ def run(opts):
                 'SALT_MINION_BOOTSTRAP_RELEASE',
                 opts.bootstrap_salt_commit[:7]
             )
+            print('Minion reported salt version: {0}'.format(version_info))
             if bootstrap_minion_version not in version_info[vm_name]:
                 print('\n\nATTENTION!!!!\n')
                 print('The boostrapped minion version commit does not contain the desired commit:')
@@ -765,15 +769,15 @@ def run(opts):
             print(stderr)
         sys.stderr.flush()
 
-        # Download packages only if the script ran and was successful
-        if 'Build complete' in stdout:
-            download_packages(opts)
+        # Grab packages and log file (or just log file if build failed)
+        download_packages(opts)
 
     if opts.download_remote_reports:
         # Download unittest reports
         download_unittest_reports(opts)
         # Download coverage report
-        download_coverage_report(opts)
+        if opts.test_without_coverage is False:
+            download_coverage_report(opts)
 
     if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
         delete_vm(opts)
@@ -829,6 +833,12 @@ def parse():
         default='zeromq',
         choices=('zeromq', 'raet'),
         help='Set to raet to run integration tests with raet transport. Default: %default')
+    parser.add_option(
+        '--test-without-coverage',
+        default=False,
+        action='store_true',
+        help='Do not generate coverage reports'
+    )
     parser.add_option(
         '--prep-sls',
         default='git.salt',
@@ -943,9 +953,10 @@ def parse():
         download_unittest_reports(options)
         parser.exit(0)
 
-    if options.download_coverage_report is not None and not options.test_git_commit:
-        download_coverage_report(options)
-        parser.exit(0)
+    if options.test_without_coverage is False:
+        if options.download_coverage_report is not None and not options.test_git_commit:
+            download_coverage_report(options)
+            parser.exit(0)
 
     if options.download_remote_logs is not None and not options.test_git_commit:
         download_remote_logs(options)
@@ -958,7 +969,7 @@ def parse():
         parser.exit('--provider or --pull-request is required')
 
     if options.echo_parseable_environment:
-        echo_parseable_environment(options)
+        echo_parseable_environment(options, parser)
         parser.exit(0)
 
     if not options.test_git_commit and not options.pull_request:

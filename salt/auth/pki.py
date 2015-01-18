@@ -27,6 +27,9 @@ except ImportError:
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -60,7 +63,7 @@ def auth(pem, **kwargs):
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem)
 
     cacert_file = __salt__['config.get']('external_auth:pki:ca_file')
-    with open(cacert_file) as f:
+    with salt.utils.fopen(cacert_file) as f:
         cacert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
 
     log.debug('Attempting to authenticate via pki.')

@@ -17,6 +17,10 @@ import os
 import re
 import logging
 import json
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import third party libs
 import yaml
@@ -563,9 +567,11 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return {}
     cmd = ['apt-get', '-q', '-y', action]
     cmd.extend(targets)
+    env = _parse_env(kwargs.get('env'))
+    env.update(DPKG_ENV_VARS.copy())
     __salt__['cmd.run'](
         cmd,
-        env=kwargs.get('env'),
+        env=env,
         python_shell=False,
         output_loglevel='trace'
     )
@@ -579,6 +585,54 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return ret
     else:
         return ret['installed']
+
+
+def autoremove(list_only=False):
+    '''
+    .. versionadded:: Lithium
+
+    Remove packages not required by another package using ``apt-get
+    autoremove``.
+
+    list_only : False
+        Only retrieve the list of packages to be auto-removed, do not actually
+        perform the auto-removal.
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.autoremove
+        salt '*' pkg.autoremove list_only=True
+    '''
+    if list_only:
+        ret = []
+        out = __salt__['cmd.run'](
+            ['apt-get', '--assume-no', 'autoremove'],
+            python_shell=False,
+            ignore_retcode=True
+        )
+        found = False
+        for line in out.splitlines():
+            if found is True:
+                if line.startswith(' '):
+                    ret.extend(line.split())
+                else:
+                    found = False
+            elif 'The following packages will be REMOVED:' in line:
+                found = True
+        ret.sort()
+        return ret
+    else:
+        old = list_pkgs()
+        __salt__['cmd.run'](
+            ['apt-get', '--assume-yes', 'autoremove'],
+            python_shell=False
+        )
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        return salt.utils.compare_dicts(old, new)
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -906,10 +960,13 @@ def list_pkgs(versions_as_list=False,
         return ret
 
     ret = {'installed': {}, 'removed': {}, 'purge_desired': {}}
-    cmd = 'dpkg-query --showformat=\'${Status} ${Package} ' \
-          '${Version} ${Architecture}\n\' -W'
+    cmd = ['dpkg-query', '--showformat',
+           '${Status} ${Package} ${Version} ${Architecture}\n', '-W']
 
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run_stdout'](
+            cmd,
+            output_loglevel='trace',
+            python_shell=False)
     # Typical lines of output:
     # install ok installed zsh 4.3.17-1ubuntu1 amd64
     # deinstall ok config-files mc 3:4.8.1-2ubuntu1 amd64
@@ -1054,7 +1111,7 @@ def version_cmp(pkg1, pkg2):
     try:
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
             cmd = 'dpkg --compare-versions {0!r} {1} ' \
-                  '{2!r}'.format(pkg1, oper, pkg2)
+                  '{2!r}'.format(_cmd_quote(pkg1), oper, _cmd_quote(pkg2))
             retcode = __salt__['cmd.retcode'](
                 cmd, output_loglevel='trace', ignore_retcode=True
             )
@@ -1088,6 +1145,7 @@ def _consolidate_repo_sources(sources):
     repos = [s for s in sources.list if not s.invalid]
 
     for repo in repos:
+        repo.uri = repo.uri.rstrip('/')
         key = str((getattr(repo, 'architectures', []),
                    repo.disabled, repo.type, repo.uri))
         if key in consolidated:
@@ -1095,7 +1153,7 @@ def _consolidate_repo_sources(sources):
             combined_comps = set(repo.comps).union(set(combined.comps))
             consolidated[key].comps = list(combined_comps)
         else:
-            consolidated[key] = sourceslist.SourceEntry(repo.line)
+            consolidated[key] = sourceslist.SourceEntry(_strip_uri(repo.line))
 
         if repo.file != base_file:
             delete_files.add(repo.file)
@@ -1354,9 +1412,9 @@ def mod_repo(repo, saltenv='base', **kwargs):
                     return {repo: repo_info}
                 else:
                     if float(__grains__['osrelease']) < 12.04:
-                        cmd = 'apt-add-repository {0}'.format(repo)
+                        cmd = 'apt-add-repository {0}'.format(_cmd_quote(repo))
                     else:
-                        cmd = 'apt-add-repository -y {0}'.format(repo)
+                        cmd = 'apt-add-repository -y {0}'.format(_cmd_quote(repo))
                     out = __salt__['cmd.run_stdout'](cmd, **kwargs)
                     # explicit refresh when a repo is modified.
                     if kwargs.get('refresh_db', True):
@@ -1467,14 +1525,16 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if not keyid or not keyserver:
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
-        cmd = 'apt-key export {0}'.format(keyid)
+        cmd = 'apt-key export {0}'.format(_cmd_quote(keyid))
         output = __salt__['cmd.run_stdout'](cmd, **kwargs)
         imported = output.startswith('-----BEGIN PGP')
         if keyserver:
             if not imported:
                 cmd = ('apt-key adv --keyserver {0} --logger-fd 1 '
                        '--recv-keys {1}')
-                ret = __salt__['cmd.run_all'](cmd.format(keyserver, keyid), **kwargs)
+                ret = __salt__['cmd.run_all'](cmd.format(_cmd_quote(keyserver),
+                                                         _cmd_quote(keyid)),
+                                                         **kwargs)
                 if ret['retcode'] != 0:
                     raise CommandExecutionError(
                         'Error: key retrieval failed: {0}'
@@ -1484,7 +1544,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url, saltenv)
-        cmd = 'apt-key add {0}'.format(fn_)
+        cmd = 'apt-key add {0}'.format(_cmd_quote(fn_))
         out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
             raise CommandExecutionError(
@@ -1713,7 +1773,7 @@ def get_selections(pattern=None, state=None):
     ret = {}
     cmd = 'dpkg --get-selections'
     if pattern:
-        cmd += ' {0!r}'.format(pattern)
+        cmd += ' {0!r}'.format(_cmd_quote(pattern))
     else:
         cmd += ' "*"'
     stdout = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
@@ -1818,12 +1878,11 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
             for _pkg in _pkgs:
                 if _state == sel_revmap.get(_pkg):
                     continue
-                cmd = 'echo {0} {1} | dpkg --set-selections'.format(
-                    _pkg,
-                    _state
-                    )
+                cmd = 'dpkg --set-selections'
+                cmd_in = '{0} {1}'.format(_pkg, _state)
                 if not __opts__['test']:
                     result = __salt__['cmd.run_all'](cmd,
+                                                     stdin=cmd_in,
                                                      output_loglevel='trace')
                     if result['retcode'] != 0:
                         log.error(
@@ -1901,10 +1960,11 @@ def owner(*paths):
     if not paths:
         return ''
     ret = {}
-    cmd = 'dpkg -S {0!r} | cut -f1 -d:'
+    cmd = 'dpkg -S {0!r}'
     for path in paths:
-        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='trace')
+        output = __salt__['cmd.run_stdout'](cmd.format(_cmd_quote(path)),
+                                            output_loglevel='trace')
+        ret[path] = output.split(':')[0]
         if 'no path found' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:

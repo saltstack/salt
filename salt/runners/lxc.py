@@ -6,22 +6,22 @@ Control Linux Containers via Salt
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import time
 import os
 import copy
 import logging
-from salt.ext.six import string_types
 
 # Import Salt libs
-from salt.utils.odict import OrderedDict
 import salt.client
+import salt.utils
 import salt.utils.virt
 import salt.utils.cloud
 import salt.key
-import salt.ext.six as six
+from salt.utils.odict import OrderedDict as _OrderedDict
 
+# Import 3rd-party lib
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -63,18 +63,18 @@ def _do_names(names, fun):
 
     client = salt.client.get_local_client(__opts__['conf_file'])
     cmds = []
-    for host, sub_names in hosts.items():
+    for id_, sub_names in hosts.items():
         for name in sub_names:
             cmds.append(client.cmd_iter(
-                    host,
+                    id_,
                     'lxc.{0}'.format(fun),
                     [name],
                     timeout=60))
     for cmd in cmds:
         data = next(cmd)
-        data = data.get(host, {}).get('ret', None)
+        data = data.get(id_, {}).get('ret', None)
         if data:
-            ret.update({host: data})
+            ret.update({id_: data})
     return ret
 
 
@@ -93,7 +93,7 @@ def find_guest(name, quiet=False):
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
-                    __progress__(host, outputter='lxc_find_host')
+                    __jid_event__.fire_event({'data': host, 'outputter': 'lxc_find_host'}, 'progress')
                 return host
     return None
 
@@ -190,7 +190,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['comment'] = 'A host must be provided'
         ret['result'] = False
         return ret
-    if isinstance(names, string_types):
+    if isinstance(names, six.string_types):
         names = names.split(',')
     if not isinstance(names, list):
         ret['comment'] = 'Container names are not formed as a list'
@@ -252,7 +252,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 host, 'lxc.cloud_init_interface', args + [kw],
                 expr_form='list', timeout=600).get(host, {})
         name = kw.pop('name', name)
-        # be sure not to seed an alrady seeded host
+        # be sure not to seed an already seeded host
         kw['seed'] = seeds[name]
         if not kw['seed']:
             kw.pop('seed_cmd', '')
@@ -261,12 +261,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
              name,
              client.cmd_iter(host, 'lxc.init', args, kwarg=kw, timeout=600)))
     done = ret.setdefault('done', [])
-    errors = ret.setdefault('errors', OrderedDict())
+    errors = ret.setdefault('errors', _OrderedDict())
 
     for ix, acmd in enumerate(cmds):
         hst, container_name, cmd = acmd
         containers = ret.setdefault(hst, [])
-        herrs = errors.setdefault(hst, OrderedDict())
+        herrs = errors.setdefault(hst, _OrderedDict())
         serrs = herrs.setdefault(container_name, [])
         sub_ret = next(cmd)
         error = None
@@ -305,10 +305,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         if explicit_auth:
             fcontent = ''
             if os.path.exists(key):
-                with open(key) as fic:
+                with salt.utils.fopen(key) as fic:
                     fcontent = fic.read().strip()
             if pub_key.strip() != fcontent:
-                with open(key, 'w') as fic:
+                with salt.utils.fopen(key, 'w') as fic:
                     fic.write(pub_key)
                     fic.flush()
         mid = j_ret.get('mid', None)
@@ -332,7 +332,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     if not done:
         ret['result'] = False
     if not quiet:
-        __progress__(ret)
+        __jid_event__.fire_event({'message': ret}, 'progress')
     return ret
 
 
@@ -395,7 +395,7 @@ def list_(host=None, quiet=False):
     for chunk in it:
         ret.update(chunk)
         if not quiet:
-            __progress__(chunk, outputter='lxc_list')
+            __jid_event__.fire_event({'data': chunk, 'outputter': 'lxc_list'}, 'progress')
     return ret
 
 
@@ -420,7 +420,7 @@ def purge(name, delete_key=True, quiet=False):
         return
 
     if not quiet:
-        __progress__(data, outputter='lxc_purge')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_purge'}, 'progress')
     return data
 
 
@@ -434,7 +434,7 @@ def start(name, quiet=False):
     '''
     data = _do_names(name, 'start')
     if data and not quiet:
-        __progress__(data, outputter='lxc_start')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_start'}, 'progress')
     return data
 
 
@@ -448,7 +448,7 @@ def stop(name, quiet=False):
     '''
     data = _do_names(name, 'stop')
     if data and not quiet:
-        __progress__(data, outputter='lxc_force_off')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_force_off'}, 'progress')
     return data
 
 
@@ -462,7 +462,7 @@ def freeze(name, quiet=False):
     '''
     data = _do_names(name, 'freeze')
     if data and not quiet:
-        __progress__(data, outputter='lxc_pause')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_pause'}, 'progress')
     return data
 
 
@@ -476,7 +476,7 @@ def unfreeze(name, quiet=False):
     '''
     data = _do_names(name, 'unfreeze')
     if data and not quiet:
-        __progress__(data, outputter='lxc_resume')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_resume'}, 'progress')
     return data
 
 
@@ -490,5 +490,5 @@ def info(name, quiet=False):
     '''
     data = _do_names(name, 'info')
     if data and not quiet:
-        __progress__(data, outputter='lxc_info')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_info'}, 'progress')
     return data

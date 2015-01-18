@@ -38,15 +38,17 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 import re
-from distutils.version import LooseVersion as _LooseVersion
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=import-error
     import boto
     import boto.ec2
+    # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -119,7 +121,7 @@ def _split_rules(rules):
     return split
 
 
-def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
+def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):  # pylint: disable=W0613
     '''
     Get a group object given a name, name and vpc_id or group_id. Return a
     boto.ec2.securitygroup.SecurityGroup object if the group is found, else
@@ -137,6 +139,10 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
             for group in filtered_groups:
                 # a group in EC2-Classic will have vpc_id set to None
                 if group.vpc_id is None:
+                    log.debug('Found EC2-Classic group: {0}'.format(group))
+                    return group
+                else:
+                    log.debug('Found EC2-VPC group: {0}'.format(group))
                     return group
             return None
         elif vpc_id:

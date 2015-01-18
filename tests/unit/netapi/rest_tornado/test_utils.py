@@ -36,12 +36,12 @@ from unit.utils.event_test import eventpublisher_process, event, SOCK_DIR  # pyl
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
 class TestUtils(TestCase):
     def test_batching(self):
-        assert 1 == saltnado.get_batch_size('1', 10)
-        assert 2 == saltnado.get_batch_size('2', 10)
+        self.assertEqual(1, saltnado.get_batch_size('1', 10))
+        self.assertEqual(2, saltnado.get_batch_size('2', 10))
 
-        assert 1 == saltnado.get_batch_size('10%', 10)
+        self.assertEqual(1, saltnado.get_batch_size('10%', 10))
         # TODO: exception in this case? The core doesn't so we shouldn't
-        assert 11 == saltnado.get_batch_size('110%', 10)
+        self.assertEqual(11, saltnado.get_batch_size('110%', 10))
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
@@ -59,28 +59,28 @@ class TestSaltnadoUtils(AsyncTestCase):
 
         # create an any future, make sure it isn't immediately done
         any_ = saltnado.Any(futures)
-        assert any_.done() is False
+        self.assertIs(any_.done(), False)
 
         # finish one, lets see who finishes
         futures[0].set_result('foo')
         self.wait()
 
-        assert any_.done() is True
-        assert futures[0].done() is True
-        assert futures[1].done() is False
-        assert futures[2].done() is False
+        self.assertIs(any_.done(), True)
+        self.assertIs(futures[0].done(), True)
+        self.assertIs(futures[1].done(), False)
+        self.assertIs(futures[2].done(), False)
 
         # make sure it returned the one that finished
-        assert any_.result() == futures[0]
+        self.assertEqual(any_.result(), futures[0])
 
         futures = futures[1:]
         # re-wait on some other futures
         any_ = saltnado.Any(futures)
         futures[0].set_result('foo')
         self.wait()
-        assert any_.done() is True
-        assert futures[0].done() is True
-        assert futures[1].done() is False
+        self.assertIs(any_.done(), True)
+        self.assertIs(futures[0].done(), True)
+        self.assertIs(futures[1].done(), False)
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
@@ -105,9 +105,9 @@ class TestEventListener(AsyncTestCase):
             self.wait()  # wait for the future
 
             # check that we got the event we wanted
-            assert event_future.done()
-            assert event_future.result()['tag'] == 'evt1'
-            assert event_future.result()['data']['data'] == 'foo1'
+            self.assertTrue(event_future.done())
+            self.assertEqual(event_future.result()['tag'], 'evt1')
+            self.assertEqual(event_future.result()['data']['data'], 'foo1')
 
 
 if __name__ == '__main__':

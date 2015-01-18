@@ -147,17 +147,14 @@ executed when the state it is watching changes. Example:
 .. code-block:: yaml
 
     /usr/local/bin/postinstall.sh:
-      cmd:
-        - wait
+      cmd.wait:
         - watch:
           - pkg: mycustompkg
-      file:
-        - managed
+      file.managed:
         - source: salt://utils/scripts/postinstall.sh
 
     mycustompkg:
-      pkg:
-        - installed
+      pkg.installed:
         - require:
           - file: /usr/local/bin/postinstall.sh
 
@@ -297,7 +294,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
 
     if onlyif is not None:
         if isinstance(onlyif, string_types):
-            cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, **cmd_kwargs)
+            cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd != 0:
                 return {'comment': 'onlyif execution failed',
@@ -305,7 +302,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
                         'result': True}
         elif isinstance(onlyif, list):
             for entry in onlyif:
-                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, **cmd_kwargs)
+                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0:
                     return {'comment': 'onlyif execution failed',
@@ -320,7 +317,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
 
     if unless is not None:
         if isinstance(unless, string_types):
-            cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, **cmd_kwargs)
+            cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd == 0:
                 return {'comment': 'unless execution succeeded',
@@ -328,7 +325,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
                         'result': True}
         elif isinstance(unless, list):
             for entry in unless:
-                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, **cmd_kwargs)
+                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd == 0:
                     return {'comment': 'unless execution succeeded',
@@ -712,7 +709,7 @@ def run(name,
         if not __opts__['test']:
             try:
                 cmd_all = __salt__['cmd.run_all'](
-                    name, timeout=timeout, **cmd_kwargs
+                    name, timeout=timeout, python_shell=True, **cmd_kwargs
                 )
             except CommandExecutionError as err:
                 ret['comment'] = str(err)
@@ -907,7 +904,7 @@ def script(name,
 
         # Wow, we passed the test, run this sucker!
         try:
-            cmd_all = __salt__['cmd.script'](source, **cmd_kwargs)
+            cmd_all = __salt__['cmd.script'](source, python_shell=True, **cmd_kwargs)
         except (CommandExecutionError, SaltRenderError, IOError) as err:
             ret['comment'] = str(err)
             return ret

@@ -73,6 +73,8 @@ append a ``%`` to the ID:
           - '*':
             - 'pkg.*'
 
+.. _salt-token-generation:
+
 Tokens
 ------
 

@@ -46,7 +46,7 @@ def add(overlay):
     ret = list()
     old_overlays = list_local()
     cmd = 'layman --quietness=0 --add {0}'.format(overlay)
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.retcode'](cmd, python_shell=False)
     new_overlays = list_local()
 
     # If we did not have any overlays before and we successfully added
@@ -78,7 +78,7 @@ def delete(overlay):
     ret = list()
     old_overlays = list_local()
     cmd = 'layman --quietness=0 --delete {0}'.format(overlay)
-    __salt__['cmd.retcode'](cmd)
+    __salt__['cmd.retcode'](cmd, python_shell=False)
     new_overlays = list_local()
 
     # If we now have no overlays added, We need to ensure that the make.conf
@@ -108,7 +108,7 @@ def sync(overlay='ALL'):
         salt '*' layman.sync
     '''
     cmd = 'layman --quietness=0 --sync {0}'.format(overlay)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def list_local():
@@ -124,6 +124,6 @@ def list_local():
         salt '*' layman.list_local
     '''
     cmd = 'layman --quietness=1 --list-local --nocolor'
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd, python_shell=False).split('\n')
     ret = [line.split()[1] for line in out if len(line.split()) > 2]
     return ret

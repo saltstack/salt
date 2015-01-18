@@ -160,7 +160,7 @@ master:
    <gitfs-authentication>`.
 
 3. Restart the master to load the new configuration.
-   
+
 
 .. note::
 
@@ -394,10 +394,10 @@ be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
 
 
-Branches, Environments and Top Files
+Branches, Environments, and Top Files
 ====================================
 
-When using the gitfs backend, branches and tags will be mapped to environments
+When using the gitfs backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
 
 There is one exception to this rule: the ``master`` branch is implicitly mapped
@@ -621,7 +621,7 @@ server via SSH:
 .. code-block:: bash
 
     $ su
-    Password: 
+    Password:
     # ssh github.com
     The authenticity of host 'github.com (192.30.252.128)' can't be established.
     RSA key fingerprint is 16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48.

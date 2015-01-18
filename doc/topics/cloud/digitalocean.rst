@@ -7,7 +7,7 @@ DigitalOcean is a public cloud provider that specializes in Linux instances.
 
 Configuration
 =============
-Using Salt for DigitalOcean requires a personal_access_token, an ssh_key_file, 
+Using Salt for DigitalOcean requires a personal_access_token, an ssh_key_file,
 and at least one SSH key name in ssh_key_names, more can be added by comma-separating them.
 The personal_access_token can be found in the Digital Ocean web interface,
 in the "Apps & API" section. The SSH key name can be found under the "SSH Keys" section.

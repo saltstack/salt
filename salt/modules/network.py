@@ -34,6 +34,37 @@ def __virtual__():
     return True
 
 
+def wol(mac, bcast='255.255.255.255', destport=9):
+    '''
+    Send Wake On Lan packet to a host
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.wol 08-00-27-13-69-77
+        salt '*' network.wol 080027136977 255.255.255.255 7
+        salt '*' network.wol 08:00:27:13:69:77 255.255.255.255 7
+    '''
+    if len(mac) == 12:
+        pass
+    elif len(mac) == 17:
+        sep = mac[2]
+        mac = mac.replace(sep, '')
+    else:
+        raise ValueError('Invalid MAC address')
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    dest = ('\\x' + mac[0:2]).decode('string_escape') + \
+           ('\\x' + mac[2:4]).decode('string_escape') + \
+           ('\\x' + mac[4:6]).decode('string_escape') + \
+           ('\\x' + mac[6:8]).decode('string_escape') + \
+           ('\\x' + mac[8:10]).decode('string_escape') + \
+           ('\\x' + mac[10:12]).decode('string_escape')
+    sock.sendto('\xff' * 6 + dest * 16, (bcast, int(destport)))
+    return True
+
+
 def ping(host, timeout=False, return_boolean=False):
     '''
     Performs a ping to a host
@@ -665,6 +696,19 @@ def in_subnet(cidr):
     return salt.utils.network.in_subnet(cidr)
 
 
+def ip_in_subnet(ip_addr, cidr):
+    '''
+    Returns True if given IP is within specified subnet, otherwise False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_in_subnet 172.17.0.4 172.16.0.0/12
+    '''
+    return salt.utils.network.ip_in_subnet(ip_addr, cidr)
+
+
 def ip_addrs(interface=None, include_loopback=False, cidr=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
@@ -899,6 +943,19 @@ def is_loopback(ip_addr):
     return salt.utils.network.IPv4Address(ip_addr).is_loopback
 
 
+def reverse_ip(ip_addr):
+    '''
+    Returns the reversed IP address
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.reverse_ip 172.17.0.4
+    '''
+    return salt.utils.network.IPv4Address(ip_addr).reverse_pointer
+
+
 def _get_bufsize_linux(iface):
     '''
     Return network interface buffer information using ethtool
@@ -998,20 +1055,20 @@ def routes(family=None):
         raise CommandExecutionError('Invalid address family {0}'.format(family))
 
     if __grains__['kernel'] == 'Linux':
-        routes = _netstat_route_linux()
+        routes_ = _netstat_route_linux()
     elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
-        routes = _netstat_route_freebsd()
+        routes_ = _netstat_route_freebsd()
     elif __grains__['os'] in ['NetBSD']:
-        routes = _netstat_route_netbsd()
+        routes_ = _netstat_route_netbsd()
     elif __grains__['os'] in ['OpenBSD']:
-        routes = _netstat_route_openbsd()
+        routes_ = _netstat_route_openbsd()
     else:
         raise CommandExecutionError('Not yet supported on this platform')
 
     if not family:
-        return routes
+        return routes_
     else:
-        ret = [route for route in routes if route['addr_family'] == family]
+        ret = [route for route in routes_ if route['addr_family'] == family]
         return ret
 
 

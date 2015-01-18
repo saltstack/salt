@@ -26,8 +26,8 @@ def halt():
 
         salt '*' system.halt
     '''
-    cmd = 'halt'
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['halt']
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -41,8 +41,8 @@ def init(runlevel):
 
         salt '*' system.init 3
     '''
-    cmd = 'init {0}'.format(runlevel)
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['init', '{0}'.format(runlevel)]
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -56,8 +56,8 @@ def poweroff():
 
         salt '*' system.poweroff
     '''
-    cmd = 'poweroff'
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['poweroff']
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -71,8 +71,8 @@ def reboot():
 
         salt '*' system.reboot
     '''
-    cmd = 'reboot'
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['reboot']
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -88,8 +88,8 @@ def shutdown(at_time=None):
     '''
 
     if at_time:
-        cmd = 'shutdown -h {0}'.format(at_time)
+        cmd = ['shutdown', '-h', '{0}'.format(at_time)]
     else:
-        cmd = 'shutdown -h now'
-    ret = __salt__['cmd.run'](cmd)
+        cmd = ['shutdown', '-h', 'now']
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret

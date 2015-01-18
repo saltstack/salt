@@ -702,7 +702,7 @@ class Cloud(object):
                         continue
 
                 for vm_name, details in vms.items():
-                    # XXX: The logic bellow can be removed once the aws driver
+                    # XXX: The logic below can be removed once the aws driver
                     # is removed
                     if vm_name not in names:
                         continue
@@ -1857,7 +1857,7 @@ class Map(Cloud):
                                 ret['existing'] = {}
                             ret['existing'][name] = ret['create'].pop(name)
 
-        if self.opts['hard']:
+        if 'hard' in self.opts and self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
                 raise SaltCloudSystemExit(
                     'The --hard map can be extremely dangerous to use, '

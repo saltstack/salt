@@ -14,7 +14,14 @@ init-hook="
 # Pickle collected data for later comparisons.
 persistent=no
 
-load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,salttesting.pylintplugins.strings
+load-plugins=salttesting.pylintplugins.pep8,
+  salttesting.pylintplugins.pep263,
+  salttesting.pylintplugins.strings,
+  salttesting.pylintplugins.fileperms
+
+# Fileperms Lint Plugin Settings
+fileperms-default=0644
+fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
 [MESSAGES CONTROL]
 
@@ -34,6 +41,7 @@ load-plugins=salttesting.pylintplugins.pep8,salttesting.pylintplugins.pep263,sal
 # --disable=W"
 disable=R,
   I0011,
+  I0012,
   I0013,
   E1101,
   E1103,
@@ -59,6 +67,7 @@ disable=R,
   W0622,
   W0631,
   W0704,
+  W1202,
   F0220,
   F0401,
   E8501,
@@ -77,6 +86,7 @@ disable=R,
 # Disabled:
 # R* [refactoring suggestions & reports]
 # I0011 (locally-disabling)
+# I0012 (locally-enabling)
 # I0013 (file-ignored)
 # E1101 (no-member) [pylint isn't smart enough]
 # E1103 (maybe-no-member)
@@ -144,7 +154,7 @@ indent-string='    '
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
-additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__low__,__states__,__lowstate__,__running__,__active_provider_name__,__master_opts__,__progress__
+additional-builtins=__opts__,__salt__,__pillar__,__grains__,__context__,__ret__,__env__,__low__,__states__,__lowstate__,__running__,__active_provider_name__,__master_opts__,__jid_event__
 
 
 [IMPORTS]

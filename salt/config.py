@@ -24,7 +24,6 @@ except Exception:
     pass
 
 # Import salt libs
-import salt.crypt
 import salt.utils
 import salt.utils.network
 import salt.syspaths
@@ -137,6 +136,10 @@ VALID_OPTS = {
     'recon_max': float,
     'recon_default': float,
     'recon_randomize': float,
+    'event_return': str,
+    'event_return_queue': int,
+    'event_return_whitelist': list,
+    'event_return_blacklist': list,
     'win_repo_cachefile': str,
     'pidfile': str,
     'range_server': str,
@@ -218,6 +221,8 @@ VALID_OPTS = {
     'publish_session': int,
     'reactor': list,
     'reactor_refresh_interval': int,
+    'reactor_worker_threads': int,
+    'reactor_worker_hwm': int,
     'serial': str,
     'search': str,
     'search_index_interval': int,
@@ -250,6 +255,8 @@ VALID_OPTS = {
     'ssh_sudo': bool,
     'ssh_timeout': float,
     'ssh_user': str,
+    'ssh_scan_ports': str,
+    'ssh_scan_timeout': float,
     'ioflo_verbose': int,
     'ioflo_period': float,
     'ioflo_realtime': bool,
@@ -537,6 +544,12 @@ DEFAULT_MASTER_OPTS = {
     'range_server': 'range:80',
     'reactor': [],
     'reactor_refresh_interval': 60,
+    'reactor_worker_threads': 10,
+    'reactor_worker_hwm': 10000,
+    'event_return': '',
+    'event_return_queue': 0,
+    'event_return_whitelist': [],
+    'event_return_blacklist': [],
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
@@ -573,6 +586,8 @@ DEFAULT_MASTER_OPTS = {
     'ssh_sudo': False,
     'ssh_timeout': 60,
     'ssh_user': 'root',
+    'ssh_scan_ports': '22',
+    'ssh_scan_timeout': 0.01,
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
     'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
@@ -2020,7 +2035,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
-    if opts.get('transport') == 'raet':
+    if opts.get('transport') == 'raet' and not opts.get('zmq_behavior') and 'aes' in opts:
         opts.pop('aes')
     return opts
 
@@ -2029,6 +2044,7 @@ def apply_master_config(overrides=None, defaults=None):
     '''
     Returns master configurations dict.
     '''
+    import salt.crypt
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
 
@@ -2039,8 +2055,6 @@ def apply_master_config(overrides=None, defaults=None):
 
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
-
-    opts['aes'] = salt.crypt.Crypticle.generate_key_string()
 
     opts['extension_modules'] = (
         opts.get('extension_modules') or
@@ -2112,7 +2126,7 @@ def apply_master_config(overrides=None, defaults=None):
         if isinstance(opts['file_ignore_glob'], str):
             opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
-    # Let's make sure `worker_threads` does not drop bellow 3 which has proven
+    # Let's make sure `worker_threads` does not drop below 3 which has proven
     # to make `salt.modules.publish` not work under the test-suite.
     if opts['worker_threads'] < 3 and opts.get('peer', None):
         log.warning(

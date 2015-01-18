@@ -142,6 +142,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if querystring:
             requesturl += '?{0}'.format(querystring)
 
+    data = None
     if method == 'PUT':
         if local_file:
             with salt.utils.fopen(local_file, 'r') as ifile:
@@ -153,6 +154,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
 
     try:
         result = requests.request(method, requesturl, headers=headers,
+                                  data=data,
                                   verify=verify_ssl)
         response = result.content
     except requests.exceptions.HTTPError as exc:
@@ -165,7 +167,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     log.debug('S3 Response Status Code: {0}'.format(result.status_code))
 
     if method == 'PUT':
-        if result.getcode() == 200:
+        if result.status_code == 200:
             if local_file:
                 log.debug('Uploaded from {0} to {1}'.format(local_file, path))
             else:
@@ -175,14 +177,14 @@ def query(key, keyid, method='GET', params=None, headers=None,
                 log.debug('Failed to upload from {0} to {1}: {2}'.format(
                                                     local_file,
                                                     path,
-                                                    result.getcode(),
+                                                    result.status_code,
                                                     ))
             else:
                 log.debug('Failed to create bucket {0}'.format(bucket))
         return
 
     if method == 'DELETE':
-        if str(result.getcode()).startswith('2'):
+        if str(result.status_code).startswith('2'):
             if path:
                 log.debug('Deleted {0} from bucket {1}'.format(path, bucket))
             else:
@@ -192,7 +194,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
                 log.debug('Failed to delete {0} from bucket {1}: {2}'.format(
                                                     path,
                                                     bucket,
-                                                    result.getcode(),
+                                                    result.status_code,
                                                     ))
             else:
                 log.debug('Failed to delete bucket {0}'.format(bucket))

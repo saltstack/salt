@@ -1,4 +1,5 @@
 /build
+/src
 *.py[co]
 pkg/arch/*.tar.xz
 *.sw[pon]
@@ -23,6 +24,8 @@ lib64
 pip/
 share/
 tests/integration/tmp/
+tests/cachedir/
+tests/unit/templates/roots/
 
 # tox - ignore any tox-created virtualenv dirs
 .tox
@@ -63,3 +66,7 @@ _version.py
 
 # Ignore grains file written out during tests
 tests/integration/files/conf/grains
+/salt/_syspaths.py
+
+# ignore the local root
+/root/**

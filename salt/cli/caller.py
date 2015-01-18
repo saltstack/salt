@@ -10,20 +10,20 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
-import datetime
 import traceback
 import multiprocessing
 import time
 
 # Import salt libs
 import salt
-import salt.exitcodes
 import salt.loader
 import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
 import salt.utils.args
+import salt.utils.jid
+import salt.defaults.exitcodes
 from salt.ext.six import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
@@ -99,7 +99,7 @@ class ZeroMQCaller(object):
         '''
         ret = {}
         fun = self.opts['fun']
-        ret['jid'] = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        ret['jid'] = salt.utils.jid.gen_jid()
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
             ret['jid']
@@ -143,7 +143,7 @@ class ZeroMQCaller(object):
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:
                     sys.stderr.write(trace)
-                sys.exit(salt.exitcodes.EX_GENERIC)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
                 ret['retcode'] = sys.modules[
                     func.__module__].__context__.get('retcode', 0)
@@ -156,11 +156,11 @@ class ZeroMQCaller(object):
             if active_level <= logging.DEBUG:
                 sys.stderr.write(traceback.format_exc())
             sys.stderr.write(msg.format(fun, str(exc)))
-            sys.exit(salt.exitcodes.EX_GENERIC)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except CommandNotFoundError as exc:
             msg = 'Command required for \'{0}\' not found: {1}\n'
             sys.stderr.write(msg.format(fun, str(exc)))
-            sys.exit(salt.exitcodes.EX_GENERIC)
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         try:
             os.remove(proc_fn)
         except (IOError, OSError):

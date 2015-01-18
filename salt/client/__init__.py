@@ -23,7 +23,6 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import time
-import copy
 import logging
 import errno
 from datetime import datetime
@@ -31,6 +30,7 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.config
+import salt.minion
 import salt.payload
 import salt.transport
 import salt.loader
@@ -76,6 +76,7 @@ def get_local_client(
     if mopts:
         opts = mopts
     else:
+        # Late import to prevent circular import
         import salt.config
         opts = salt.config.client_config(c_path)
     if opts['transport'] == 'raet':
@@ -333,6 +334,7 @@ class LocalClient(object):
             kwarg=None,
             sub=3,
             cli=False,
+            progress=False,
             **kwargs):
         '''
         Execute a command on a random subset of the targeted systems
@@ -364,6 +366,7 @@ class LocalClient(object):
                 expr_form='list',
                 ret=ret,
                 kwarg=kwarg,
+                progress=progress,
                 **kwargs)
 
     def cmd_batch(
@@ -555,6 +558,7 @@ class LocalClient(object):
             ret='',
             verbose=False,
             kwarg=None,
+            progress=False,
             **kwargs):
         '''
         Used by the :command:`salt` CLI. This method returns minion returns as
@@ -587,6 +591,7 @@ class LocalClient(object):
                         tgt,
                         expr_form,
                         verbose,
+                        progress,
                         **kwargs):
 
                     if not fn_ret:
@@ -789,7 +794,8 @@ class LocalClient(object):
     def get_returns_no_block(
             self,
             jid,
-            event=None):
+            event=None,
+            gather_errors=False):
         '''
         Raw function to just return events of jid excluding timeout logic
 
@@ -799,13 +805,19 @@ class LocalClient(object):
             event = self.event
         jid_tag = 'salt/job/{0}'.format(jid)
         while True:
-            if HAS_ZMQ:
+            if self.opts.get('transport') == 'zeromq':
                 try:
                     raw = event.get_event_noblock()
-                    if raw and raw.get('tag', '').startswith(jid_tag):
-                        yield raw
+                    if gather_errors:
+                        if (raw and
+                               (raw.get('tag', '').startswith('_salt_error') or
+                                raw.get('tag', '').startswith(jid_tag))):
+                            yield raw
                     else:
-                        yield None
+                        if raw and raw.get('tag', '').startswith(jid_tag):
+                            yield raw
+                        else:
+                            yield None
                 except zmq.ZMQError as ex:
                     if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                         yield None
@@ -826,6 +838,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             expect_minions=False,
+            gather_errors=True,
             **kwargs):
         '''
         Watch the event system and return job data as it comes in
@@ -856,7 +869,7 @@ class LocalClient(object):
         syndic_wait = 0
         last_time = False
         # iterator for this job's return
-        ret_iter = self.get_returns_no_block(jid)
+        ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
         # iterator for the info of this job
         jinfo_iter = []
         timeout_at = time.time() + timeout
@@ -874,7 +887,10 @@ class LocalClient(object):
                 # if we got None, then there were no events
                 if raw is None:
                     break
-
+                if gather_errors:
+                    if raw['tag'] == '_salt_error':
+                        ret = {raw['data']['id']: raw['data']['data']}
+                        yield ret
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -891,6 +907,10 @@ class LocalClient(object):
                     ret = {raw['data']['id']: {'ret': raw['data']['return']}}
                     if 'out' in raw['data']:
                         ret[raw['data']['id']]['out'] = raw['data']['out']
+                    if 'retcode' in raw['data']:
+                        ret[raw['data']['id']]['retcode'] = raw['data']['retcode']
+                    if kwargs.get('_cmd_meta', False):
+                        ret[raw['data']['id']].update(raw['data'])
                     log.debug('jid {0} return from {1}'.format(jid, raw['data']['id']))
                     yield ret
 
@@ -1188,6 +1208,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             verbose=False,
+            progress=False,
             show_timeout=False,
             show_jid=False,
             **kwargs):
@@ -1205,6 +1226,7 @@ class LocalClient(object):
 
         # lazy load the connected minions
         connected_minions = None
+        return_count = 0
 
         for ret in self.get_iter_returns(jid,
                                          minions,
@@ -1213,6 +1235,11 @@ class LocalClient(object):
                                          tgt_type=tgt_type,
                                          expect_minions=(verbose or show_timeout)
                                          ):
+            return_count = return_count + 1
+            if progress:
+                for id_, min_ret in six.iteritems(ret):
+                    if not min_ret.get('failed') is True:
+                        yield {'minion_count': len(minions), 'return_count': return_count}
             # replace the return structure for missing minions
             for id_, min_ret in six.iteritems(ret):
                 if min_ret.get('failed') is True:
@@ -1257,8 +1284,12 @@ class LocalClient(object):
                 break
             if 'minions' in raw.get('data', {}):
                 continue
-            found.add(raw['id'])
-            ret = {raw['id']: {'ret': raw['return']}}
+            try:
+                found.add(raw['id'])
+                ret = {raw['id']: {'ret': raw['return']}}
+            except KeyError:
+                # Ignore other erroneous messages
+                continue
             if 'out' in raw:
                 ret[raw['id']]['out'] = raw['out']
             yield ret
@@ -1384,12 +1415,12 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                      ':' + str(self.opts['ret_port'])
-        sreq = salt.transport.Channel.factory(self.opts,
-                                              crypt='clear',
-                                              master_uri=master_uri)
+        channel = salt.transport.Channel.factory(self.opts,
+                                                 crypt='clear',
+                                                 master_uri=master_uri)
 
         try:
-            payload = sreq.send(payload_kwargs)
+            payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
             log.error(
                 'Salt request timed out. If this error persists, '
@@ -1405,12 +1436,12 @@ class LocalClient(object):
                 return payload
             self.key = key
             payload_kwargs['key'] = self.key
-            payload = sreq.send(payload_kwargs)
+            payload = channel.send(payload_kwargs)
             if not payload:
                 return payload
 
-        # We have the payload, let's get rid of SREQ fast(GC'ed faster)
-        del sreq
+        # We have the payload, let's get rid of the channel fast(GC'ed faster)
+        del channel
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1420,102 +1451,8 @@ class LocalClient(object):
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
         if hasattr(self, 'event'):
-            # The call bellow will take care of calling 'self.event.destroy()'
+            # The call below will take care of calling 'self.event.destroy()'
             del self.event
-
-
-class SSHClient(object):
-    '''
-    Create a client object for executing routines via the salt-ssh backend
-    '''
-    def __init__(self,
-                 c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
-                 mopts=None):
-        if mopts:
-            self.opts = mopts
-        else:
-            if os.path.isdir(c_path):
-                log.warning(
-                    '{0} expects a file path not a directory path({1}) to '
-                    'it\'s \'c_path\' keyword argument'.format(
-                        self.__class__.__name__, c_path
-                    )
-                )
-            self.opts = salt.config.client_config(c_path)
-
-    def _prep_ssh(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            expr_form='glob',
-            kwarg=None,
-            **kwargs):
-        '''
-        Prepare the arguments
-        '''
-        opts = copy.deepcopy(self.opts)
-        opts.update(kwargs)
-        if timeout:
-            opts['timeout'] = timeout
-        arg = salt.utils.args.condition_input(arg, kwarg)
-        opts['argv'] = [fun] + arg
-        opts['selected_target_option'] = expr_form
-        opts['tgt'] = tgt
-        opts['arg'] = arg
-        return salt.client.ssh.SSH(opts)
-
-    def cmd_iter(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            expr_form='glob',
-            ret='',
-            kwarg=None,
-            **kwargs):
-        '''
-        Execute a single command via the salt-ssh subsystem and return a
-        generator
-        '''
-        ssh = self._prep_ssh(
-                tgt,
-                fun,
-                arg,
-                timeout,
-                expr_form,
-                kwarg,
-                **kwargs)
-        for ret in ssh.run_iter():
-            yield ret
-
-    def cmd(
-            self,
-            tgt,
-            fun,
-            arg=(),
-            timeout=None,
-            expr_form='glob',
-            kwarg=None,
-            **kwargs):
-        '''
-        Execute a single command via the salt-ssh subsystem and return all
-        routines at once
-        '''
-        ssh = self._prep_ssh(
-                tgt,
-                fun,
-                arg,
-                timeout,
-                expr_form,
-                kwarg,
-                **kwargs)
-        final = {}
-        for ret in ssh.run_iter():
-            final.update(ret)
-        return final
 
 
 class FunctionWrapper(dict):

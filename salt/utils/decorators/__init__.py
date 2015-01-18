@@ -97,8 +97,13 @@ class Depends(object):
                 )
                 # if not, unload dependent_set
                 if module:
+                    try:
+                        func_name = module.__func_alias__[func.__name__]
+                    except (AttributeError, KeyError):
+                        func_name = func.__name__
+
                     mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
-                                               func.__name__)
+                                               func_name)
 
                     # if we don't have this module loaded, skip it!
                     if mod_key not in functions:

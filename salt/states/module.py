@@ -64,12 +64,11 @@ arguments. For example:
             interface: eth0
 '''
 from __future__ import absolute_import
-# Import python libs
-import datetime
 
 # Import salt libs
 import salt.loader
 import salt.utils
+import salt.utils.jid
 from salt.ext.six.moves import range
 
 
@@ -130,7 +129,7 @@ def run(name, **kwargs):
         ret['comment'] = 'Module function {0} is set to execute'.format(name)
         return ret
 
-    aspec = salt.utils.get_function_argspec(__salt__[name])
+    aspec = salt.utils.args.get_function_argspec(__salt__[name])
     args = []
     defaults = {}
 
@@ -217,7 +216,7 @@ def run(name, **kwargs):
                 'id': __opts__['id'],
                 'ret': mret,
                 'fun': name,
-                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+                'jid': salt.utils.jid.gen_jid()}
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)

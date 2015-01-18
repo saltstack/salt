@@ -108,5 +108,5 @@ each file. Here is an example from salt/modules/cp.py:
 
 
 .. note:: Because __context__ may or may not have been destroyed, always be
-          sure to check for the existence of the key in __context__ and 
+          sure to check for the existence of the key in __context__ and
           generate the key before using it.

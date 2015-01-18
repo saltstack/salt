@@ -16,6 +16,7 @@ Full list of builtin state modules
     apache_module
     apt
     archive
+    artifactory
     at
     augeas
     aws_sqs
@@ -56,6 +57,7 @@ Full list of builtin state modules
     ini_manage
     ipset
     iptables
+    jboss7
     keyboard
     keystone
     kmod

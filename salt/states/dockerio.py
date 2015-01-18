@@ -222,7 +222,7 @@ def mod_watch(name, sfun=None, *args, **kw):
 
 
 def pulled(name,
-           tag=None,
+           tag='latest',
            force=False,
            insecure_registry=False,
            *args,
@@ -254,19 +254,20 @@ def pulled(name,
     insecure_registry
         Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
+
+    if tag:
+        name = '{0}:{1}'.format(name, tag)
+
     inspect_image = __salt__['docker.inspect_image']
-    image_infos = inspect_image(name)
+    image_infos = inspect_image('{0}:{1}'.format(name, tag))
     if image_infos['status'] and not force:
         return _valid(
             name=name,
-            comment='Image already pulled: {0}'.format(name))
+            comment='Image already pulled: {0}:{1}'.format(name, tag))
 
     if __opts__['test'] and force:
-        comment = 'Image {0} will be pulled'.format(name)
-        return {'name': name,
-                'changes': {},
-                'result': None,
-                'comment': comment}
+        comment = 'Image {0}:{1} will be pulled'.format(name, tag)
+        return _ret_status(name=name, comment=comment)
 
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     pull = __salt__['docker.pull']
@@ -279,7 +280,7 @@ def pulled(name,
     return _ret_status(returned, name, changes=changes)
 
 
-def pushed(name, tag=None, insecure_registry=False):
+def pushed(name, tag='latest', insecure_registry=False):
     '''
     Push an image from a docker registry. (`docker push`)
 
@@ -306,11 +307,8 @@ def pushed(name, tag=None, insecure_registry=False):
     '''
 
     if __opts__['test']:
-        comment = 'Image {0} will be pushed'.format(name)
-        return {'name': name,
-                'changes': {},
-                'result': None,
-                'comment': comment}
+        comment = 'Image {0}:{1} will be pushed'.format(name, tag)
+        return _ret_status(name=name, comment=comment)
 
     push = __salt__['docker.push']
     returned = push(name, tag=tag, insecure_registry=insecure_registry)

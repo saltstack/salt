@@ -14,6 +14,7 @@ import os
 import sys
 import random
 import subprocess
+import time
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -169,7 +170,7 @@ class VTTestCase(TestCase):
             term.close(terminate=True, kill=True)
 
         expected_data = 'Alive!\nAlive!\n'
-        term = vt.Terminal('echo "Alive!"; sleep 1; echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
+        term = vt.Terminal('echo "Alive!"; sleep 5; echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)
         buffer_o = buffer_e = ''
         try:
             while term.has_unread_data:
@@ -184,6 +185,8 @@ class VTTestCase(TestCase):
 
                 if buffer_o != expected_data:
                     self.assertTrue(term.isalive())
+                # Don't spin
+                time.sleep(0.1)
 
             # term should be dead now
             self.assertEqual(buffer_o, expected_data)

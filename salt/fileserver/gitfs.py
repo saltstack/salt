@@ -129,10 +129,11 @@ def _verify_gitpython(quiet=False):
     Check if GitPython is available and at a compatible version (>= 0.3.0)
     '''
     if not HAS_GITPYTHON:
-        log.error(
-            'Git fileserver backend is enabled in master config file, but '
-            'could not be loaded, is GitPython installed?'
-        )
+        if not quiet:
+            log.error(
+                'Git fileserver backend is enabled in master config file, but '
+                'could not be loaded, is GitPython installed?'
+            )
         if HAS_PYGIT2 and not quiet:
             log.error(_RECOMMEND_PYGIT2)
         if HAS_DULWICH and not quiet:
@@ -172,10 +173,11 @@ def _verify_pygit2(quiet=False):
     must be at least 0.21.0.
     '''
     if not HAS_PYGIT2:
-        log.error(
-            'Git fileserver backend is enabled in master config file, but '
-            'could not be loaded, are pygit2 and libgit2 installed?'
-        )
+        if not quiet:
+            log.error(
+                'Git fileserver backend is enabled in master config file, but '
+                'could not be loaded, are pygit2 and libgit2 installed?'
+            )
         if HAS_GITPYTHON and not quiet:
             log.error(_RECOMMEND_GITPYTHON)
         if HAS_DULWICH and not quiet:
@@ -226,10 +228,11 @@ def _verify_dulwich(quiet=False):
     Check if dulwich is available.
     '''
     if not HAS_DULWICH:
-        log.error(
-            'Git fileserver backend is enabled in master config file, but '
-            'could not be loaded, is Dulwich installed?'
-        )
+        if not quiet:
+            log.error(
+                'Git fileserver backend is enabled in master config file, but '
+                'could not be loaded, is Dulwich installed?'
+            )
         if HAS_GITPYTHON and not quiet:
             log.error(_RECOMMEND_GITPYTHON)
         if HAS_PYGIT2 and not quiet:

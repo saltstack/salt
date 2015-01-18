@@ -148,6 +148,7 @@ all interfaces are ignored unless specified.
         - proto: dhcp
         - bridge: br0
         - delay: 0
+        - ports: eth4
         - bypassfirewall: True
         - use:
           - network: eth4
@@ -170,6 +171,10 @@ all interfaces are ignored unless specified.
 
     .. versionadded:: Lithium
 
+.. note::
+
+    When managing bridged interfaces on a Debian or Ubuntu based system, the
+    ports argument is required.  Red Hat systems will ignore the argument.
 '''
 from __future__ import absolute_import
 
@@ -215,7 +220,6 @@ def managed(name, type, enabled=True, **kwargs):
     # to enhance the user experience. This does not look like
     # it will cause a problem. Just giving a heads up in case
     # it does create a problem.
-
     ret = {
         'name': name,
         'changes': {},
@@ -263,8 +267,6 @@ def managed(name, type, enabled=True, **kwargs):
             old = __salt__['ip.get_bond'](name)
             new = __salt__['ip.build_bond'](name, **kwargs)
             if kwargs['test']:
-                if old == new:
-                    pass
                 if not old and new:
                     ret['result'] = None
                     ret['comment'] = 'Bond interface {0} is set to be ' \
@@ -297,7 +299,16 @@ def managed(name, type, enabled=True, **kwargs):
     # Bring up/shutdown interface
     try:
         # Get Interface current status
-        interface_status = salt.utils.network.interfaces()[name].get('up')
+        interfaces = salt.utils.network.interfaces()
+        interface_status = False
+        if name in interfaces:
+            interface_status = interfaces[name].get('up')
+        else:
+            for iface in interfaces:
+                if 'secondary' in interfaces[iface]:
+                    for second in interfaces[iface]['secondary']:
+                        if second.get('label', '') == 'name':
+                            interface_status = True
         if enabled:
             if interface_status:
                 if ret['changes']:

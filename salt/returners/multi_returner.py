@@ -43,11 +43,11 @@ def prep_jid(nocache=False, passed_jid=None):
     '''
 
     jid = passed_jid
-    for returner in __opts__[CONFIG_KEY]:
+    for returner_ in __opts__[CONFIG_KEY]:
         if jid is None:
-            jid = _mminion().returners['{0}.prep_jid'.format(returner)](nocache=nocache)
+            jid = _mminion().returners['{0}.prep_jid'.format(returner_)](nocache=nocache)
         else:
-            r_jid = _mminion().returners['{0}.prep_jid'.format(returner)](nocache=nocache)
+            r_jid = _mminion().returners['{0}.prep_jid'.format(returner_)](nocache=nocache)
             if r_jid != jid:
                 log.debug('Uhh.... crud the jids do not match')
     return jid
@@ -57,16 +57,16 @@ def returner(load):
     '''
     Write return to all returners in multi_returner
     '''
-    for returner in __opts__[CONFIG_KEY]:
-        _mminion().returners['{0}.returner'.format(returner)](load)
+    for returner_ in __opts__[CONFIG_KEY]:
+        _mminion().returners['{0}.returner'.format(returner_)](load)
 
 
 def save_load(jid, clear_load):
     '''
     Write load to all returners in multi_returner
     '''
-    for returner in __opts__[CONFIG_KEY]:
-        _mminion().returners['{0}.save_load'.format(returner)](jid, clear_load)
+    for returner_ in __opts__[CONFIG_KEY]:
+        _mminion().returners['{0}.save_load'.format(returner_)](jid, clear_load)
 
 
 def get_load(jid):
@@ -74,8 +74,8 @@ def get_load(jid):
     Merge the load data from all returners
     '''
     ret = {}
-    for returner in __opts__[CONFIG_KEY]:
-        ret.update(_mminion().returners['{0}.get_load'.format(returner)](jid))
+    for returner_ in __opts__[CONFIG_KEY]:
+        ret.update(_mminion().returners['{0}.get_load'.format(returner_)](jid))
 
     return ret
 
@@ -85,8 +85,8 @@ def get_jid(jid):
     Merge the return data from all returners
     '''
     ret = {}
-    for returner in __opts__[CONFIG_KEY]:
-        ret.update(_mminion().returners['{0}.get_jid'.format(returner)](jid))
+    for returner_ in __opts__[CONFIG_KEY]:
+        ret.update(_mminion().returners['{0}.get_jid'.format(returner_)](jid))
 
     return ret
 
@@ -96,8 +96,8 @@ def get_jids():
     Return all job data from all returners
     '''
     ret = {}
-    for returner in __opts__[CONFIG_KEY]:
-        ret.update(_mminion().returners['{0}.get_jids'.format(returner)]())
+    for returner_ in __opts__[CONFIG_KEY]:
+        ret.update(_mminion().returners['{0}.get_jids'.format(returner_)]())
 
     return ret
 
@@ -106,7 +106,7 @@ def clean_old_jobs():
     '''
     Clean out the old jobs from all returners (if you have it)
     '''
-    for returner in __opts__[CONFIG_KEY]:
-        fstr = '{0}.clean_old_jobs'.format(returner)
+    for returner_ in __opts__[CONFIG_KEY]:
+        fstr = '{0}.clean_old_jobs'.format(returner_)
         if fstr in _mminion().returners:
             _mminion().returners[fstr]()

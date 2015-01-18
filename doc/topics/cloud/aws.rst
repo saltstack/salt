@@ -797,7 +797,7 @@ will be used.
 Attaching Volumes
 -----------------
 Unattached volumes may be attached to an instance. The following values are
-required; name or instance_id, volume_id and device.
+required; name or instance_id, volume_id, and device.
 
 .. code-block:: bash
 
@@ -926,7 +926,7 @@ the network interfaces of your virtual machines, for example:-
           # interface (will be associated with the primary private ip address
           # of the interface
           #
-          # allocation_new_eip: True
+          # allocate_new_eip: True
 
           # Uncomment this instead to allocate a new Elastic IP Address to
           # both the primary private ip address and each of the secondary ones

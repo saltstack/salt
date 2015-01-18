@@ -16,8 +16,8 @@ before_install:
   - pip install git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
 
 install:
-  - pip install -r zeromq-requirements.txt -r cloud-requirements.txt
-  - pip install --allow-all-external -r opt_requirements.txt
+  - pip install -r requirements/zeromq.txt -r requirements/cloud.txt
+  - pip install --allow-all-external -r requirements/opt.txt
 
 before_script:
   - "/home/travis/virtualenv/python${TRAVIS_PYTHON_VERSION}/bin/pylint --rcfile=.testing.pylintrc salt/ && echo 'Finished Pylint Check Cleanly' || echo 'Finished Pylint Check With Errors'"

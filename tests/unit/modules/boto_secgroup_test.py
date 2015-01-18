@@ -4,9 +4,10 @@
 import random
 import string
 from copy import deepcopy
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # import Python Third Party Libs
+# pylint: disable=import-error
 try:
     import boto
     HAS_BOTO = True
@@ -29,6 +30,7 @@ except ImportError:
         def stub_function(self):
             pass
         return stub_function
+# pylint: disable=import-error
 
 # Import Salt Libs
 from salt.utils.odict import OrderedDict

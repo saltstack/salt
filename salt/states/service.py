@@ -9,16 +9,14 @@ rc scripts, services can be defined as running or dead.
 .. code-block:: yaml
 
     httpd:
-      service:
-        - running
+      service.running: []
 
 The service can also be set to be started at runtime via the enable option:
 
 .. code-block:: yaml
 
     openvpn:
-      service:
-        - running
+      service.running:
         - enable: True
 
 By default if a service is triggered to refresh due to a watch statement the
@@ -28,8 +26,7 @@ service, then set the reload value to True:
 .. code-block:: yaml
 
     redis:
-      service:
-        - running
+      service.running:
         - enable: True
         - reload: True
         - watch:
@@ -41,6 +38,8 @@ service, then set the reload value to True:
     :doc:`Requisites </ref/states/requisites>` documentation.
 
 '''
+
+import time
 
 
 def __virtual__():
@@ -96,7 +95,6 @@ def _enable(name, started, result=True, **kwargs):
     if __salt__['service.enabled'](name, **kwargs):
         # Service is enabled
         if started is True:
-            ret['changes'][name] = True
             ret['comment'] = ('Service {0} is already enabled,'
                               ' and is running').format(name)
             return ret
@@ -258,7 +256,7 @@ def _available(name, ret):
     return avail
 
 
-def running(name, enable=None, sig=None, **kwargs):
+def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     '''
     Verify that the service is running
 
@@ -272,6 +270,14 @@ def running(name, enable=None, sig=None, **kwargs):
 
     sig
         The string to search for when looking for the service process with ps
+
+    init_delay
+        Some services may not be truly available for a short period after their
+        startup script indicates to the system that they are. Provide an 'init_delay'
+        to specify that this state should wait an additional given number of seconds
+        after a service has started before returning. Useful for requisite states
+        wherein a dependent state might assume a service has started but is not yet
+        fully initialized.
     '''
     ret = {'name': name,
            'changes': {},
@@ -314,6 +320,9 @@ def running(name, enable=None, sig=None, **kwargs):
             ret['comment'] = 'Service {0} failed to start'.format(name)
             return ret
 
+    if init_delay:
+        time.sleep(init_delay)
+
     if enable is True:
         return _enable(name, True, **kwargs)
     elif enable is False:
@@ -321,6 +330,8 @@ def running(name, enable=None, sig=None, **kwargs):
     else:
         ret['changes'] = changes
         ret['comment'] = 'Started Service {0}'.format(name)
+        if init_delay:
+            ret['changes'] = '{0}\nDelayed return for {1} seconds'.format(ret['commant'], init_delay)
         return ret
 
 
@@ -416,7 +427,12 @@ def disabled(name, **kwargs):
     return _disable(name, None, **kwargs)
 
 
-def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
+def mod_watch(name,
+              sfun=None,
+              sig=None,
+              reload=False,
+              full_restart=False,
+              **kwargs):
     '''
     The service watcher, called to invoke the watch command.
 

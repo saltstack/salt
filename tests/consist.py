@@ -7,25 +7,10 @@ import hashlib
 import pprint
 import optparse
 
-BLACK = '\033[0;30m'
-DARK_GRAY = '\033[1;30m'
-LIGHT_GRAY = '\033[0;37m'
-BLUE = '\033[0;34m'
-LIGHT_BLUE = '\033[1;34m'
-GREEN = '\033[0;32m'
-LIGHT_GREEN = '\033[1;32m'
-CYAN = '\033[0;36m'
-LIGHT_CYAN = '\033[1;36m'
-RED = '\033[0;31m'
-LIGHT_RED = '\033[1;31m'
-PURPLE = '\033[0;35m'
-LIGHT_PURPLE = '\033[1;35m'
-BROWN = '\033[0;33m'
-YELLOW = '\033[1;33m'
-WHITE = '\033[1;37m'
-DEFAULT_COLOR = '\033[00m'
-RED_BOLD = '\033[01;31m'
-ENDC = '\033[0m'
+from salt.utils import get_colors
+
+
+colors = get_colors()
 
 
 def parse():
@@ -38,7 +23,7 @@ def parse():
             dest='runs',
             default=10,
             type=int,
-            help='Specify the number of times to fun the consistency check')
+            help='Specify the number of times to run the consistency check')
     parser.add_option('-c',
             '--command',
             dest='command',
@@ -65,9 +50,9 @@ def run(command):
         hashes.add(has)
     if len(hashes) > 1:
         print('{0}Command: {1} gave inconsistent returns{2}'.format(
-            RED,
+            colors['LIGHT_RED'],
             command,
-            ENDC,
+            colors['ENDC']
             ))
 
 

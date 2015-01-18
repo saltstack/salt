@@ -11,6 +11,7 @@ import re
 import logging
 
 # Import Salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -35,17 +36,18 @@ def _get_mounts(fs_type):
     List mounted filesystems.
     '''
     mounts = {}
-    for line in open("/proc/mounts").readlines():
-        device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
-        if fstype != fs_type:
-            continue
-        if mounts.get(device) is None:
-            mounts[device] = []
+    with salt.utils.fopen("/proc/mounts") as fhr:
+        for line in fhr.readlines():
+            device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
+            if fstype != fs_type:
+                continue
+            if mounts.get(device) is None:
+                mounts[device] = []
 
-        mounts[device].append({
-            'mount_point': mntpnt,
-            'options': options.split(",")
-        })
+            mounts[device].append({
+                'mount_point': mntpnt,
+                'options': options.split(",")
+            })
 
     return mounts
 

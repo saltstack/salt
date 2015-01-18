@@ -420,6 +420,9 @@ def _grant_to_tokens(grant):
             except IndexError:
                 break
 
+        elif phrase == 'tables':
+            database += token
+
         elif phrase == 'user':
             if dict_mode:
                 break
@@ -1032,7 +1035,6 @@ def user_exists(user,
             and password:
         # Clear the previous error
         __context__['mysql.error'] = None
-        log.info('Retrying with "{0}" as connection password for {1} ...'.format(password, user))
         connection_args['connection_pass'] = password
         dbc = _connect(**connection_args)
     if dbc is None:

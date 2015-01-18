@@ -29,7 +29,8 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
 
     ret = __salt__['cmd.run_all'](
         cmdline,
-        runas=runas
+        runas=runas,
+        python_shell=False
         )
 
     if ret['retcode'] == 0:
@@ -78,7 +79,7 @@ def install(gems,           # pylint: disable=C0103
 
         salt '*' gem.install vagrant
 
-        salt '*' gem.install redphone gem_bin=/opt/sensu/embeded/bin/gem
+        salt '*' gem.install redphone gem_bin=/opt/sensu/embedded/bin/gem
     '''
     options = []
     if version:

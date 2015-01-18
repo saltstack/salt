@@ -18,6 +18,7 @@ except ImportError:
     # In case a non-master needs to import this module
     pass
 
+import tempfile
 
 # Import salt libs
 import salt.crypt
@@ -38,6 +39,7 @@ import salt.utils.event
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
+import salt.utils.jid
 from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
@@ -136,6 +138,23 @@ def clean_expired_tokens(opts):
                         os.remove(token_path)
                     except (IOError, OSError):
                         pass
+
+
+def clean_pub_auth(opts):
+    try:
+        auth_cache = os.path.join(opts['cachedir'], 'publish_auth')
+        if not os.path.exists(auth_cache):
+            return
+        else:
+            for (dirpath, dirnames, filenames) in os.walk(auth_cache):
+                for auth_file in filenames:
+                    auth_file_path = os.path.join(dirpath, auth_file)
+                    if not os.path.isfile(auth_file_path):
+                        continue
+                    if os.path.getmtime(auth_file_path) - time.time() > opts['keep_jobs']:
+                        os.remove(auth_file_path)
+    except (IOError, OSError):
+        log.error('Unable to delete pub auth file')
 
 
 def clean_old_jobs(opts):
@@ -669,12 +688,15 @@ class RemoteFuncs(object):
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
             datap = os.path.join(cdir, 'data.p')
-            with salt.utils.fopen(datap, 'w+b') as fp_:
+            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+            os.close(tmpfh)
+            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                 fp_.write(
                         self.serial.dumps(
                             {'grains': load['grains'],
                              'pillar': data})
                             )
+            os.rename(tmpfname, datap)
         return data
 
     def _minion_event(self, load):
@@ -856,7 +878,7 @@ class RemoteFuncs(object):
             fp_.write(load['id'])
         return ret
 
-    def minion_publish(self, load, skip_verify=False):
+    def minion_publish(self, load):
         '''
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
@@ -937,7 +959,9 @@ class RemoteFuncs(object):
         if 'id' not in load:
             return False
         keyapi = salt.key.Key(self.opts)
-        keyapi.delete_key(load['id'])
+        keyapi.delete_key(load['id'],
+                          preserve_minions=load.get('preserve_minion_cache',
+                                                         False))
         return True
 
 
@@ -1118,7 +1142,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name='TokenAuthenticationError',
                                        message=msg))
 
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
@@ -1188,7 +1212,7 @@ class LocalFuncs(object):
                 return dict(error=dict(name='EauthAuthenticationError',
                                        message=msg))
 
-            jid = salt.utils.gen_jid()
+            jid = salt.utils.jid.gen_jid()
             fun = load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
@@ -1519,8 +1543,6 @@ class LocalFuncs(object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-        # Set up the payload
-        payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
         # break compatibility with minion/master versions and even tiny
         # additions can have serious implications on the performance of the
@@ -1543,6 +1565,13 @@ class LocalFuncs(object):
             pub_load['tgt_type'] = load['tgt_type']
         if 'to' in load:
             pub_load['to'] = load['to']
+
+        if 'kwargs' in load:
+            if 'ret_config' in load['kwargs']:
+                pub_load['ret_config'] = load['kwargs'].get('ret_config')
+
+            if 'metadata' in load['kwargs']:
+                pub_load['metadata'] = load['kwargs'].get('metadata')
 
         if 'user' in load:
             log.info(

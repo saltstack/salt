@@ -224,7 +224,7 @@ def install_agent(agent_key):
     account_url = get_sd_auth('account_url')
 
     __salt__['cmd.run'](
-        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh > install.sh',
+        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh -o install.sh',
         cwd=work_dir
     )
     __salt__['cmd.run'](cmd='chmod +x install.sh', cwd=work_dir)

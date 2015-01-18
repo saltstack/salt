@@ -9,7 +9,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
 .. seealso:: More Orchestrate documentation
 
-    * :ref:`Full Orchestrate Tutorial <orchestrate-tutorial>`
+    * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 '''
 from __future__ import absolute_import
@@ -336,15 +336,19 @@ def function(
     ssh
         Set to `True` to use the ssh client instaed of the standard salt client
     '''
-    if kwarg is None:
-        kwarg = {}
-
-    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
-
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': True}
+    if kwarg is None:
+        kwarg = {}
+    if isinstance(arg, str):
+        ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
+                           'Modifying in place, but please update SLS file '
+                           'to remove this warning.']
+        arg = arg.split()
+
+    cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
 
     if expr_form and tgt_type:
         ret['warnings'] = [
@@ -360,6 +364,7 @@ def function(
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
+    cmd_kw['_cmd_meta'] = True
     fun = name
     if __opts__['test'] is True:
         ret['comment'] = (
@@ -386,7 +391,9 @@ def function(
 
     for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
-
+        if mdata.get('retcode'):
+            ret['result'] = False
+            fail.add(minion)
         if mdata.get('failed', False):
             m_func = False
         else:

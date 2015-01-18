@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import re
+import inspect
 
 # Import salt libs
 from salt.ext.six import string_types, integer_types
@@ -138,3 +139,24 @@ def yamlify_arg(arg):
     except Exception:
         # In case anything goes wrong...
         return original_arg
+
+
+def get_function_argspec(func):
+    '''
+    A small wrapper around getargspec that also supports callable classes
+    '''
+    if not callable(func):
+        raise TypeError('{0} is not a callable'.format(func))
+
+    if inspect.isfunction(func):
+        aspec = inspect.getargspec(func)
+    elif inspect.ismethod(func):
+        aspec = inspect.getargspec(func)
+        del aspec.args[0]  # self
+    elif isinstance(func, object):
+        aspec = inspect.getargspec(func.__call__)
+        del aspec.args[0]  # self
+    else:
+        raise TypeError('Cannot inspect argument list for {0!r}'.format(func))
+
+    return aspec

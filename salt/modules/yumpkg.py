@@ -333,13 +333,14 @@ def latest_version(*names, **kwargs):
             arch = __grains__['osarch']
         namearch_map[name] = arch
 
-    # Refresh before looking for the latest version available
-    if refresh:
-        refresh_db(**kwargs)
-
-    # Get updates for specified package(s)
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
+
+    # Refresh before looking for the latest version available
+    if refresh:
+        refresh_db(_get_branch_option(**kwargs), repo_arg, exclude_arg)
+
+    # Get updates for specified package(s)
     updates = _repoquery_pkginfo(
         '{0} {1} --pkgnarrow=available {2}'
         .format(repo_arg, exclude_arg, ' '.join(names))
@@ -529,11 +530,11 @@ def list_upgrades(refresh=True, **kwargs):
 
         salt '*' pkg.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
-        refresh_db(**kwargs)
-
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
+
+    if salt.utils.is_true(refresh):
+        refresh_db(_get_branch_option(**kwargs), repo_arg, exclude_arg)
     updates = _repoquery_pkginfo(
         '{0} {1} --all --pkgnarrow=updates'.format(repo_arg, exclude_arg)
     )
@@ -609,7 +610,7 @@ def check_db(*names, **kwargs):
     return ret
 
 
-def refresh_db(**kwargs):
+def refresh_db(branch_arg, repo_arg, exclude_arg):
     '''
     Check the yum repos for updated packages
 
@@ -630,11 +631,19 @@ def refresh_db(**kwargs):
         0: None,
         1: False,
     }
-    branch_arg = _get_branch_option(**kwargs)
 
-    clean_cmd = 'yum -q clean expire-cache'
+    clean_cmd = 'yum -q clean expire-cache {repo} {exclude} {branch}'.format(
+        repo=repo_arg,
+        exclude=exclude_arg,
+        branch=branch_arg
+    )
     __salt__['cmd.run'](clean_cmd)
-    update_cmd = 'yum -q check-update {0}'.format(branch_arg)
+    update_cmd = 'yum -q check-update {repo} {exclude} {branch}'.format(
+        repo=repo_arg,
+        exclude=exclude_arg,
+        branch=branch_arg
+    )
+
     ret = __salt__['cmd.retcode'](update_cmd, ignore_retcode=True)
     return retcodes.get(ret, False)
 
@@ -652,7 +661,7 @@ def clean_metadata(**kwargs):
 
         salt '*' pkg.clean_metadata
     '''
-    return refresh_db(**kwargs)
+    return refresh_db(_get_branch_option(**kwargs), _get_repo_options(**kwargs), _get_excludes_option(**kwargs))
 
 
 def group_install(name,
@@ -872,8 +881,12 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    branch_arg = _get_branch_option(**kwargs)
+    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+    exclude_arg = _get_excludes_option(**kwargs)
+
     if salt.utils.is_true(refresh):
-        refresh_db(**kwargs)
+        refresh_db(branch_arg, repo_arg, exclude_arg)
     reinstall = salt.utils.is_true(reinstall)
 
     try:
@@ -894,10 +907,6 @@ def install(name=None,
         else:
             log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
-
-    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
-    exclude_arg = _get_excludes_option(**kwargs)
-    branch_arg = _get_branch_option(**kwargs)
 
     old = list_pkgs()
     targets = []
@@ -982,17 +991,26 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+
+    versionName = pkgname
     ret = salt.utils.compare_dicts(old, new)
+
+    if sources is not None:
+        versionName = pkgname + '-' + new.get(pkgname, '')
+        if pkgname in ret:
+            ret[versionName] = ret.pop(pkgname)
     for pkgname in to_reinstall:
-        if not pkgname not in old:
-            ret.update({pkgname: {'old': old.get(pkgname, ''),
+        if not versionName not in old:
+            ret.update({versionName: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
         else:
-            if pkgname not in ret:
-                ret.update({pkgname: {'old': old.get(pkgname, ''),
+            if versionName not in ret:
+                ret.update({versionName: {'old': old.get(pkgname, ''),
                                       'new': new.get(pkgname, '')}})
     if ret:
         __context__.pop('pkg._avail', None)
+    elif sources is not None:
+        ret = {versionName: {}}
     return ret
 
 
@@ -1033,12 +1051,12 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
 
         .. versionadded:: 2014.7.0
     '''
-    if salt.utils.is_true(refresh):
-        refresh_db(**kwargs)
-
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     branch_arg = _get_branch_option(**kwargs)
+
+    if salt.utils.is_true(refresh):
+        refresh_db(branch_arg, repo_arg, exclude_arg)
 
     old = list_pkgs()
     cmd = 'yum -q -y {repo} {exclude} {branch} {gpgcheck} upgrade'.format(
@@ -1173,7 +1191,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     targets = []
     if pkgs:
-        for pkg in pkgs:
+        for pkg in salt.utils.repack_dictlist(pkgs):
             ret = check_db(pkg)
             if not ret[pkg]['found']:
                 raise SaltInvocationError(
@@ -1266,7 +1284,8 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     targets = []
     if pkgs:
-        targets.extend(pkgs)
+        for pkg in salt.utils.repack_dictlist(pkgs):
+            targets.append(pkg)
     elif sources:
         for source in sources:
             targets.append(next(iter(source)))
@@ -1441,7 +1460,7 @@ def group_info(name):
         'default packages': [],
         'description': ''
     }
-    cmd_template = 'repoquery --plugins --group --grouppkgs={0} --list {1!r}'
+    cmd_template = 'repoquery --plugins --group --grouppkgs={0} --list {1}'
 
     cmd = cmd_template.format('all', _cmd_quote(name))
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
@@ -1465,7 +1484,7 @@ def group_info(name):
     # considered to be conditional packages.
     ret['conditional packages'] = sorted(all_pkgs)
 
-    cmd = 'repoquery --plugins --group --info {0!r}'.format(_cmd_quote(name))
+    cmd = 'repoquery --plugins --group --info {0}'.format(_cmd_quote(name))
     out = __salt__['cmd.run_stdout'](
             cmd, output_loglevel='trace'
             )

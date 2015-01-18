@@ -29,12 +29,36 @@ import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
-STATIC = (
-    'yaml_out',
-    'text_out',
-    'raw_out',
-    'json_out',
-)
+
+def get_progress(opts, out, progress):
+    '''
+    Get the progress bar from the given outputter
+    '''
+    return salt.loader.raw_mod(opts,
+                                out,
+                                'rawmodule',
+                                mod='output')['{0}.progress_iter'.format(out)](progress)
+
+
+def update_progress(opts, progress, progress_iter, out):
+    '''
+    Update the progress iterator for the given outputter
+    '''
+    # Look up the outputter
+    try:
+        progress_outputter = salt.loader.outputters(opts)[out]
+    except KeyError:  # Outputter is not loaded
+        log.warning('Progress outputter not available.')
+        return False
+    progress_outputter(progress, progress_iter)
+
+
+def progress_end(progress_iter):
+    try:
+        progress_iter.stop()
+    except Exception:
+        pass
+    return None
 
 
 def display_output(data, out=None, opts=None):
@@ -90,6 +114,8 @@ def get_printout(out, opts=None, **kwargs):
 
     if out is None:
         out = 'nested'
+    if opts.get('progress', False):
+        out = 'progress'
 
     opts.update(kwargs)
     if 'color' not in opts:

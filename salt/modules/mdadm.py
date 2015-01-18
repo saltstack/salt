@@ -49,7 +49,8 @@ def list_():
     '''
     ret = {}
     for line in (__salt__['cmd.run_stdout']
-                 ('mdadm --detail --scan').splitlines()):
+                    (['mdadm', '--detail', '--scan'],
+                     python_shell=False).splitlines()):
         if ' ' not in line:
             continue
         comps = line.split()
@@ -80,8 +81,8 @@ def detail(device='/dev/md0'):
         msg = "Device {0} doesn't exist!"
         raise CommandExecutionError(msg.format(device))
 
-    cmd = 'mdadm --detail {0}'.format(device)
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    cmd = ['mdadm', '--detail', device]
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.startswith(device):
             continue
         if ' ' not in line:
@@ -124,12 +125,13 @@ def destroy(device):
     except CommandExecutionError:
         return False
 
-    stop_cmd = 'mdadm --stop {0}'.format(device)
-    zero_cmd = 'mdadm --zero-superblock {0}'
+    stop_cmd = ['mdadm', '--stop', device]
+    zero_cmd = ['mdadm', '--zero-superblock']
 
-    if __salt__['cmd.retcode'](stop_cmd):
+    if __salt__['cmd.retcode'](stop_cmd, python_shell=False):
         for number in details['members']:
-            __salt__['cmd.retcode'](zero_cmd.format(number['device']))
+            zero_cmd.append(details['members'][number]['device'])
+        __salt__['cmd.retcode'](zero_cmd, python_shell=False)
 
     # Remove entry from config file:
     if __grains__.get('os_family') == 'Debian':
@@ -137,7 +139,10 @@ def destroy(device):
     else:
         cfg_file = '/etc/mdadm.conf'
 
-    __salt__['file.replace'](cfg_file, 'ARRAY {0} .*'.format(device), '')
+    try:
+        __salt__['file.replace'](cfg_file, 'ARRAY {0} .*'.format(device), '')
+    except SaltInvocationError:
+        pass
 
     if __salt__['raid.list']().get(device) is None:
         return True
@@ -182,7 +187,7 @@ def create(name,
 
     .. code-block:: bash
 
-        salt '*' raid.create /dev/md0 level=1 chunk=256 ['/dev/xvdd', '/dev/xvde'] test_mode=True
+        salt '*' raid.create /dev/md0 level=1 chunk=256 devices="['/dev/xvdd', '/dev/xvde']" test_mode=True
 
     .. note::
 
@@ -227,17 +232,20 @@ def create(name,
         if not key.startswith('__'):
             opts.append('--{0}'.format(key))
             if kwargs[key] is not True:
-                opts.append(kwargs[key])
+                opts.append(str(kwargs[key]))
 
     cmd = ['mdadm',
            '-C', name,
+           '-R',
            '-v'] + opts + [
-           '-l', level,
+           '-l', str(level),
            '-e', metadata,
-           '-n', len(devices)] + devices
+           '-n', str(len(devices))] + devices
+
+    cmd_str = ' '.join(cmd)
 
     if test_mode is True:
-        return cmd
+        return cmd_str
     elif test_mode is False:
         return __salt__['cmd.run'](cmd, python_shell=False)
 
@@ -259,8 +267,8 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan').splitlines()
-    # Issue with mdadm and ubuntu requires removal of name and metadata tags
+    scan = __salt__['cmd.run']('mdadm --detail --scan', python_shell=False).split()
+    # Issue with mdadm and ubuntu
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
         buggy_ubuntu_tags = ['name', 'metadata']

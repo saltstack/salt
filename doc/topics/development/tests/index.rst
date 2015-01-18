@@ -8,8 +8,8 @@ the lines below, depending on the relevant Python version:
 
 .. code-block:: bash
 
-    pip install -r dev_requirements_python26.txt
-    pip install -r dev_requirements_python27.txt
+    pip install -r requirements/dev_python26.txt
+    pip install -r requirements/dev_python27.txt
 
 .. note::
 
@@ -245,7 +245,7 @@ minions. This allows the syndic interface to be tested and master/minion
 communication to be verified. All of the integration tests are executed as
 live salt commands sent through the started daemons.
 
-Integration tests are particularly good at testing modules, states and shell
+Integration tests are particularly good at testing modules, states, and shell
 commands.
 
 * :doc:`Writing integration tests <integration>`

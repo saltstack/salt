@@ -24,8 +24,9 @@ import os
 from . import core
 from . import worker
 from . import maint
+from . import zero
 
-__all__ = ['core', 'worker', 'maint']
+__all__ = ['core', 'worker', 'maint', 'zero']
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -39,9 +40,9 @@ def explode_opts(opts):
     Explode the opts into a preloads list
     '''
     preloads = [('.salt.opts', dict(value=opts))]
-    #for key, val in opts.items():
-        #ukey = key.replace('.', '_')
-        #preloads.append(('.salt.etc.{0}'.format(ukey), dict(value=val)))
+    for key, val in opts.items():
+        ukey = key.replace('.', '_')
+        preloads.append(('.salt.etc.{0}'.format(ukey), dict(value=val)))
     preloads.append(('.salt.etc.id', dict(value=opts['id'])))
     return preloads
 

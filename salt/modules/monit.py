@@ -27,7 +27,7 @@ def start(name):
     '''
     cmd = 'monit start {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -42,7 +42,7 @@ def stop(name):
     '''
     cmd = 'monit stop {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -57,7 +57,7 @@ def restart(name):
     '''
     cmd = 'monit restart {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def unmonitor(name):
@@ -72,7 +72,7 @@ def unmonitor(name):
     '''
     cmd = 'monit unmonitor {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def monitor(name):
@@ -87,7 +87,7 @@ def monitor(name):
     '''
     cmd = 'monit monitor {0}'.format(name)
 
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def summary(svc_name=''):

@@ -50,6 +50,14 @@ config:
 
     renderer: jinja | yaml | gpg
 
+Setting a gpg renderer in the master currently requires minions to be
+configured for gpg.  The workaround for this is to add a line to the top of
+any pillar with gpg data in it.
+
+.. code-block:: yaml
+
+    #!yaml|gpg
+
 Now you can include your ciphers in your pillar data like so:
 
 .. code-block:: yaml
@@ -71,8 +79,10 @@ Now you can include your ciphers in your pillar data like so:
 '''
 from __future__ import absolute_import
 
+import os
 import re
 import salt.utils
+import salt.syspaths
 try:
     import gnupg
     HAS_GPG = True
@@ -86,7 +96,7 @@ from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
-DEFAULT_GPG_KEYDIR = '/etc/salt/gpgkeys'
+DEFAULT_GPG_KEYDIR = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
 
 
 def decrypt_ciphertext(c, gpg):

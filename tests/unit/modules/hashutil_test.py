@@ -2,8 +2,6 @@
 
 # Import salt testing libs
 from salttesting.case import ModuleCase
-from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../../')
 
 # Import Salt libs
 import salt.loader

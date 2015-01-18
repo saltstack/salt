@@ -10,7 +10,6 @@ import logging
 import hashlib
 import os
 import shutil
-import time
 import requests
 
 # Import salt libs
@@ -32,12 +31,6 @@ from salt.utils.openstack.swift import SaltSwift
 import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
-from salt.ext.six.moves.urllib.request import (
-        HTTPPasswordMgrWithDefaultRealm as url_passwd_mgr,
-        HTTPBasicAuthHandler as url_auth_handler,
-        build_opener as url_build_opener,
-        install_opener as url_install_opener
-)
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
@@ -505,7 +498,7 @@ class Client(object):
         ret.sort()
         return ret
 
-    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None):
+    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None, no_cache=False):
         '''
         Get a single file from a URL.
         '''
@@ -538,7 +531,7 @@ class Client(object):
                     os.makedirs(destdir)
                 else:
                     return ''
-        else:
+        elif not no_cache:
             if salt.utils.is_windows():
                 netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
             else:
@@ -585,31 +578,30 @@ class Client(object):
             except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
 
+        get_kwargs = {}
         if url_data.username is not None \
                 and url_data.scheme in ('http', 'https'):
             _, netloc = url_data.netloc.split('@', 1)
             fixed_url = urlunparse(
                 (url_data.scheme, netloc, url_data.path,
                  url_data.params, url_data.query, url_data.fragment))
-            passwd_mgr = url_passwd_mgr()
-            passwd_mgr.add_password(
-                None, fixed_url, url_data.username, url_data.password)
-            auth_handler = url_auth_handler(passwd_mgr)
-            opener = url_build_opener(auth_handler)
-            url_install_opener(opener)
+            get_kwargs['auth'] = (url_data.username, url_data.password)
         else:
             fixed_url = url
         try:
             if requests.__version__[0] == '0':
                 # 'stream' was called 'prefetch' before 1.0, with flipped meaning
-                get_kwargs = {'prefetch': False}
+                get_kwargs['prefetch'] = False
             else:
-                get_kwargs = {'stream': True}
+                get_kwargs['stream'] = True
             response = requests.get(fixed_url, **get_kwargs)
-            with salt.utils.fopen(dest, 'wb') as destfp:
-                for chunk in response.iter_content(chunk_size=32*1024):
-                    destfp.write(chunk)
-            return dest
+            if not no_cache:
+                with salt.utils.fopen(dest, 'wb') as destfp:
+                    for chunk in response.iter_content(chunk_size=32*1024):
+                        destfp.write(chunk)
+                return dest
+            else:
+                return response.text
         except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
                 exc.code,
@@ -922,14 +914,6 @@ class RemoteClient(Client):
         else:
             self.auth = ''
 
-    def _get_channel(self):
-        '''
-        Return the right channel
-        '''
-        if self.auth:
-            return self.channel
-        return salt.transport.Channel.factory(self.opts)
-
     def get_file(self,
                  path,
                  dest='',
@@ -997,18 +981,11 @@ class RemoteClient(Client):
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
         while True:
-            init_retries = 10
             if not fn_:
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
-            channel = self._get_channel()
-            data = channel.send(load)
-            if not data:
-                if init_retries:
-                    init_retries -= 1
-                    time.sleep(0.02)
-                    continue
+            data = self.channel.send(load)
             if 'data' not in data:
                 log.error('Data is {0}'.format(data))
             if not data['data']:
@@ -1068,8 +1045,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list'}
 
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
         '''
@@ -1088,8 +1064,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_file_list_emptydirs'}
-        channel = self._get_channel()
-        channel.send(load)
+        self.channel.send(load)
 
     def dir_list(self, saltenv='base', prefix='', env=None):
         '''
@@ -1108,8 +1083,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_dir_list'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def symlink_list(self, saltenv='base', prefix='', env=None):
         '''
@@ -1118,8 +1092,7 @@ class RemoteClient(Client):
         load = {'saltenv': saltenv,
                 'prefix': prefix,
                 'cmd': '_symlink_list'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def hash_file(self, path, saltenv='base', env=None):
         '''
@@ -1154,8 +1127,7 @@ class RemoteClient(Client):
         load = {'path': path,
                 'saltenv': saltenv,
                 'cmd': '_file_hash'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def list_env(self, saltenv='base', env=None):
         '''
@@ -1173,24 +1145,21 @@ class RemoteClient(Client):
 
         load = {'saltenv': saltenv,
                 'cmd': '_file_list'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def envs(self):
         '''
         Return a list of available environments
         '''
         load = {'cmd': '_file_envs'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def master_opts(self):
         '''
         Return the master opts data
         '''
         load = {'cmd': '_master_opts'}
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
     def ext_nodes(self):
         '''
@@ -1202,8 +1171,7 @@ class RemoteClient(Client):
                 'opts': self.opts}
         if self.auth:
             load['tok'] = self.auth.gen_token('salt')
-        channel = self._get_channel()
-        return channel.send(load)
+        return self.channel.send(load)
 
 
 class FSClient(RemoteClient):

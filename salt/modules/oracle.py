@@ -61,7 +61,7 @@ def _cx_oracle_req():
     '''
     Fallback function stub
     '''
-    return 'Need "cx_Oracle" and Oracle Client installed for this functin exist'
+    return 'Need "cx_Oracle" and Oracle Client installed for this function exist'
 
 
 def _unicode_output(cursor, name, default_type, size, precision, scale):

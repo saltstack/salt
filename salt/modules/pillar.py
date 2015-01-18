@@ -19,12 +19,14 @@ from salt.ext.six import string_types
 __proxyenabled__ = ['*']
 
 
-def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
+def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14
 
     Attempt to retrieve the named value from pillar, if the named value is not
-    available return the passed default. The default return is an empty string.
+    available return the passed default. The default return is an empty string
+    except __opts__['pillar_raise_on_missing'] is set to True, in which case a
+    KeyError will be raised.
 
     If the merge parameter is set to ``True``, the default will be recursively
     merged into the returned pillar data.
@@ -56,16 +58,24 @@ def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
 
         salt '*' pillar.get pkg:apache
     '''
+    if not __opts__.get('pillar_raise_on_missing'):
+        if default is KeyError:
+            default = ''
+
     if merge:
         ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
             return salt.utils.dictupdate.update(default, ret)
 
-    return salt.utils.traverse_dict_and_list(__pillar__,
-                                             key,
-                                             default,
-                                             delimiter)
+    ret = salt.utils.traverse_dict_and_list(__pillar__,
+                                            key,
+                                            default,
+                                            delimiter)
+    if ret is KeyError:
+        raise KeyError("Pillar key not found: {0}".format(key))
+
+    return ret
 
 
 def items(*args):
@@ -96,6 +106,72 @@ def items(*args):
 
 # Allow pillar.data to also be used to return pillar data
 data = items
+
+
+def _obfuscate_inner(var):
+    '''
+    Recursive obfuscation of collection types.
+
+    Leaf or unknown Python types get replaced by the type name
+    Known collection types trigger recursion.
+    In the special case of mapping types, keys are not obfuscated
+    '''
+    if isinstance(var, (dict, salt.utils.odict.OrderedDict)):
+        return var.__class__((k, _obfuscate_inner(v))
+                             for k, v in var.iteritems())
+    elif isinstance(var, (list, set, tuple)):
+        return type(var)(_obfuscate_inner(v) for v in var)
+    else:
+        return '<{0}>'.format(var.__class__.__name__)
+
+
+def obfuscate(*args):
+    '''
+    .. versionadded:: Beryllium
+
+    Same as :py:func:`items`, but replace pillar values with a simple type indication.
+
+    This is useful to avoid displaying sensitive information on console or
+    flooding the console with long output, such as certificates.
+    For many debug or control purposes, the stakes lie more in dispatching than in
+    actual values.
+
+    In case the value is itself a collection type, obfuscation occurs within the value.
+    For mapping types, keys are not obfuscated.
+    Here are some examples:
+
+    * ``'secret password'`` becomes ``'<str>'``
+    * ``['secret', 1]`` becomes ``['<str>', '<int>']
+    * ``{'login': 'somelogin', 'pwd': 'secret'}`` becomes
+      ``{'login': '<str>', 'pwd': '<str>'}``
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pillar.obfuscate
+
+    '''
+    return _obfuscate_inner(items(*args))
+
+
+# naming chosen for consistency with grains.ls, although it breaks the short
+# identifier rule.
+def ls(*args):
+    '''
+    .. versionadded:: Beryllium
+
+    Calls the master for a fresh pillar, generates the pillar data on the
+    fly (same as :py:func:`items`), but only shows the available main keys.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pillar.ls
+    '''
+
+    return items(*args).keys()
 
 
 def item(*args):

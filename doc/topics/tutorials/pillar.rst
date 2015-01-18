@@ -100,7 +100,7 @@ To ensure that the minions have the new pillar data, issue a command
 to them asking that they fetch their pillars from the master:
 
 .. code-block:: bash
-    
+
     salt '*' saltutil.refresh_pillar
 
 Now that the minions have the new pillar, it can be retrieved:
@@ -247,8 +247,7 @@ A simple formula:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -266,8 +265,7 @@ Can be easily transformed into a powerful, parameterized formula:
 .. code-block:: jinja
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['pkgs']['vim'] }}
 
     /etc/vimrc:

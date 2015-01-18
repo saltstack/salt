@@ -90,6 +90,15 @@ Presence events
 Cloud Events
 ============
 
+Unlike other Master events, ``salt-cloud`` events are not fired on behalf of a
+Salt Minion. Instead, ``salt-cloud`` events are fired on behalf of a VM. This
+is because the minion-to-be may not yet exist to fire events to or also may have
+been destroyed.
+
+This behavior is reflected by the ``name`` variable in the event data for
+``salt-cloud`` events as compared to the ``id`` variable for Salt
+Minion-triggered events.
+
 .. salt:event:: salt/cloud/<VM NAME>/creating
 
     Fired when salt-cloud starts the VM creation process.
@@ -119,7 +128,7 @@ Cloud Events
 
     :var event: description of the event.
     :var location: the location of the VM being requested.
-    :var kwargs: options available as the VM is being requested: 
+    :var kwargs: options available as the VM is being requested:
         ``Action``, ``ImageId``, ``InstanceType``, ``KeyName``, ``MaxCount``,
         ``MinCount``, ``SecurityGroup.1``
 

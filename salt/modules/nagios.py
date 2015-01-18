@@ -34,7 +34,9 @@ def _execute_cmd(plugin, args='', run_type='cmd.retcode'):
 
     all_plugins = list_plugins()
     if plugin in all_plugins:
-        data = __salt__[run_type]('{0}{1} {2}'.format(PLUGINDIR, plugin, args))
+        data = __salt__[run_type](
+                '{0}{1} {2}'.format(PLUGINDIR, plugin, args),
+                python_shell=False)
 
     return data
 
@@ -46,10 +48,10 @@ def _execute_pillar(pillar_name, run_type):
     ------
     webserver:
         Ping_google:
-            - check_icmp:8.8.8.8
-            - check_icmp:google.com
+            - check_icmp: 8.8.8.8
+            - check_icmp: google.com
         Load:
-            - check_load:-w 0.8 -c 1
+            - check_load: -w 0.8 -c 1
         APT:
             - check_apt
     -------
@@ -135,10 +137,10 @@ def retcode_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------
@@ -196,10 +198,10 @@ def run_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------
@@ -228,10 +230,10 @@ def run_all_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------

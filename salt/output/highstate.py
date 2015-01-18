@@ -35,7 +35,9 @@ state_tabular:
     output format.  If you wish to use a custom format, this can be set to a
     string.
 
-Example output::
+Example output:
+
+.. code-block:: text
 
     myminion:
     ----------
@@ -59,7 +61,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import pprint
-import sys
 
 # Import salt libs
 import salt.utils
@@ -78,16 +79,26 @@ def output(data):
 
 
 def _format_host(host, data):
-    colors = salt.utils.get_colors(__opts__.get('color'))
+    colors = salt.utils.get_colors(
+            __opts__.get('color'),
+            __opts__.get('color_theme'))
     tabular = __opts__.get('state_tabular', False)
     rcounts = {}
     hcolor = colors['GREEN']
     hstrs = []
     nchanges = 0
     strip_colors = __opts__.get('strip_colors', True)
+
+    if isinstance(data, int) or isinstance(data, str):
+        # Data in this format is from saltmod.function,
+        # so it is always a 'change'
+        nchanges = 1
+        hstrs.append((u'{0}    {1}{2[ENDC]}'
+                      .format(hcolor, data, colors)))
+        hcolor = colors['CYAN']  # Print the minion name in cyan
     if isinstance(data, list):
         # Errors have been detected, list them in RED!
-        hcolor = colors['RED_BOLD']
+        hcolor = colors['LIGHT_RED']
         hstrs.append((u'    {0}Data failed to compile:{1[ENDC]}'
                       .format(hcolor, colors)))
         for err in data:
@@ -102,7 +113,7 @@ def _format_host(host, data):
             data = _strip_clean(data)
         # Verify that the needed data is present
         for tname, info in data.items():
-            if '__run_num__' not in info:
+            if isinstance(info, dict) and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
                        'return missing data is:')
@@ -132,8 +143,8 @@ def _format_host(host, data):
                 hcolor = colors['RED']
                 tcolor = colors['RED']
             if ret['result'] is None:
-                hcolor = colors['YELLOW']
-                tcolor = colors['YELLOW']
+                hcolor = colors['LIGHT_YELLOW']
+                tcolor = colors['LIGHT_YELLOW']
             comps = tname.split('_|-')
             if __opts__.get('state_output', 'full').lower() == 'filter':
                 # By default, full data is shown for all types. However, return
@@ -193,9 +204,12 @@ def _format_host(host, data):
                 u'    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
                 u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
                 u'    {tcolor} Comment: {comment}{colors[ENDC]}',
-                u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
-                u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}'
             ]
+            if __opts__.get('state_output_profile', True):
+                state_lines.extend([
+                    u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                    u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
+                ])
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
                 state_lines.insert(
@@ -208,7 +222,7 @@ def _format_host(host, data):
                 # but try to continue on errors
                 pass
             try:
-                comment = ret['comment'].decode(sys.getfilesystemencoding())
+                comment = salt.utils.sdecode(ret['comment'])
                 comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
@@ -267,7 +281,7 @@ def _format_host(host, data):
             # test=True states
             changestats.append(
                 colorfmt.format(
-                    colors['YELLOW'],
+                    colors['LIGHT_YELLOW'],
                     u'unchanged={0}'.format(rcounts.get(None, 0)),
                     colors
                 )

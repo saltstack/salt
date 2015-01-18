@@ -74,9 +74,7 @@ class RemotePillar(object):
         self.ext = ext
         self.grains = grains
         self.id_ = id_
-        self.serial = salt.payload.Serial(self.opts)
-        self.sreq = salt.transport.Channel.factory(opts)
-        # self.auth = salt.crypt.SAuth(opts)
+        self.channel = salt.transport.Channel.factory(opts)
 
     def compile_pillar(self):
         '''
@@ -89,13 +87,9 @@ class RemotePillar(object):
                 'cmd': '_pillar'}
         if self.ext:
             load['ext'] = self.ext
-        # ret = self.sreq.send(load, tries=3, timeout=7200)
-        ret_pillar = self.sreq.crypted_transfer_decode_dictentry(load, dictkey='pillar', tries=3, timeout=7200)
-
-        # key = self.auth.get_keys()
-        # aes = key.private_decrypt(ret['key'], 4)
-        # pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        # ret_pillar = pcrypt.loads(ret['pillar'])
+        ret_pillar = self.channel.crypted_transfer_decode_dictentry(load,
+                                                                    dictkey='pillar',
+                                                                    )
 
         if not isinstance(ret_pillar, dict):
             log.error(
@@ -135,11 +129,15 @@ class Pillar(object):
         # location of file_roots. Issue 5951
         ext_pillar_opts = dict(self.opts)
         ext_pillar_opts['file_roots'] = self.actual_file_roots
+        # TODO: consolidate into "sanitize opts"
+        if 'aes' in ext_pillar_opts:
+            ext_pillar_opts.pop('aes')
         self.merge_strategy = 'smart'
         if opts.get('pillar_source_merging_strategy'):
             self.merge_strategy = opts['pillar_source_merging_strategy']
 
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
+        self.ignored_pillars = {}
 
     def __valid_ext(self, ext):
         '''
@@ -167,6 +165,7 @@ class Pillar(object):
             saltenv = env
         opts = dict(opts_in)
         opts['file_roots'] = opts['pillar_roots']
+        opts['__pillar'] = True
         opts['file_client'] = 'local'
         if not grains:
             opts['grains'] = {}
@@ -293,6 +292,7 @@ class Pillar(object):
                         matches = []
                         states = OrderedDict()
                         orders[saltenv][tgt] = 0
+                        ignore_missing = False
                         for comp in ctop[saltenv][tgt]:
                             if isinstance(comp, dict):
                                 if 'match' in comp:
@@ -305,8 +305,12 @@ class Pillar(object):
                                         except ValueError:
                                             order = 0
                                     orders[saltenv][tgt] = order
+                                if comp.get('ignore_missing', False):
+                                    ignore_missing = True
                             if isinstance(comp, string_types):
                                 states[comp] = True
+                        if ignore_missing:
+                            self.ignored_pillars[saltenv] = states.keys()
                         top[saltenv][tgt] = matches
                         top[saltenv][tgt].extend(states)
         return self.sort_top_targets(top, orders)
@@ -373,7 +377,11 @@ class Pillar(object):
         errors = []
         fn_ = self.client.get_state(sls, saltenv).get('dest', False)
         if not fn_:
-            if self.opts['pillar_roots'].get(saltenv):
+            if sls in self.ignored_pillars.get(saltenv, []):
+                log.debug('Skipping ignored and missing SLS {0!r} in'
+                          ' environment {1!r}'.format(sls, saltenv))
+                return None, mods, errors
+            elif self.opts['pillar_roots'].get(saltenv):
                 msg = ('Specified SLS {0!r} in environment {1!r} is not'
                        ' available on the salt master').format(sls, saltenv)
                 log.error(msg)
@@ -592,6 +600,7 @@ class Pillar(object):
         errors.extend(terrors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)
+            # TODO: consolidate into sanitize function
             if 'grains' in mopts:
                 mopts.pop('grains')
             if 'aes' in mopts:

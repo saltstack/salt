@@ -32,7 +32,7 @@ import logging
 
 # Import Salt libraries
 import salt.returners
-import salt.utils
+import salt.utils.jid
 
 log = logging.getLogger(__name__)
 
@@ -82,4 +82,4 @@ def prep_jid(nocache, passed_jid=None):
     '''
     Do any work necessary to prepare a JID, including sending a custom ID
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

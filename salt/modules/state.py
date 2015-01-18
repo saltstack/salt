@@ -12,12 +12,12 @@ import shutil
 import time
 import logging
 import tarfile
-import datetime
 import tempfile
 
 # Import salt libs
 import salt.config
 import salt.utils
+import salt.utils.jid
 import salt.state
 import salt.payload
 from salt.ext.six import string_types
@@ -80,7 +80,7 @@ def _wait(jid):
     Wait for all previously started state jobs to finish running
     '''
     if jid is None:
-        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        jid = salt.utils.jid.gen_jid()
     states = _prior_running_states(jid)
     while states:
         time.sleep(1)
@@ -110,7 +110,7 @@ def running(concurrent=False):
         ).format(
             data['fun'],
             data['pid'],
-            salt.utils.jid_to_time(data['jid']),
+            salt.utils.jid.jid_to_time(data['jid']),
             data['jid'],
         )
         ret.append(err)
@@ -322,7 +322,7 @@ def check_request(name=None):
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
     serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
-        with open(notify_path, 'rb') as fp_:
+        with salt.utils.fopen(notify_path, 'rb') as fp_:
             req = serial.load(fp_)
         if name:
             return req[name]
@@ -490,6 +490,9 @@ def highstate(test=None,
             kwargs.get('terse'):
         ret = _filter_running(ret)
 
+    serial = salt.payload.Serial(__opts__)
+    cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
+
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -644,7 +647,7 @@ def sls(mods,
     try:
         if salt.utils.is_windows():
             # Make sure cache file isn't read-only
-            __salt__['cmd.run']('attrib -R "{0}"'.format(cache_file))
+            __salt__['cmd.run'](['attrib', '-R', cache_file], python_shell=False)
         with salt.utils.fopen(cache_file, 'w+b') as fp_:
             serial.dump(ret, fp_)
     except (IOError, OSError):

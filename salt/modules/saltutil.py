@@ -14,7 +14,6 @@ import shutil
 import signal
 import logging
 import fnmatch
-import time
 import sys
 import copy
 
@@ -36,6 +35,7 @@ import salt
 import salt.payload
 import salt.state
 import salt.client
+import salt.client.ssh.client
 import salt.runner
 import salt.utils
 import salt.utils.process
@@ -613,16 +613,19 @@ def regen_keys():
             os.remove(path)
         except os.error:
             pass
-    time.sleep(60)
-    sreq = salt.payload.SREQ(__opts__['master_uri'])
-    auth = salt.crypt.SAuth(__opts__)
+    # TODO: move this into a channel function? Or auth?
+    # create a channel again, this will force the key regen
+    channel = salt.transport.Channel.factory(__opts__)
 
 
-def revoke_auth():
+def revoke_auth(preserve_minion_cache=False):
     '''
     The minion sends a request to the master to revoke its own key.
     Note that the minion session will be revoked and the minion may
     not be able to return the result of this command back to the master.
+
+    If the 'preserve_minion_cache' flag is set to True, the master
+    cache for this minion will not be removed.
 
     CLI Example:
 
@@ -630,26 +633,22 @@ def revoke_auth():
 
         salt '*' saltutil.revoke_auth
     '''
-    # sreq = salt.payload.SREQ(__opts__['master_uri'])
-    auth = salt.crypt.SAuth(__opts__)
-    tok = auth.gen_token('salt')
+    channel = salt.transport.Channel.factory(__opts__)
+    tok = channel.auth.gen_token('salt')
     load = {'cmd': 'revoke_auth',
             'id': __opts__['id'],
-            'tok': tok}
+            'tok': tok,
+            'preserve_minion_cache': preserve_minion_cache}
 
-    sreq = salt.transport.Channel.factory(__opts__)
     try:
-        sreq.send(load)
-        # return auth.crypticle.loads(
-        #         sreq.send('aes', auth.crypticle.dumps(load), 1))
+        return channel.send(load)
     except SaltReqTimeoutError:
         return False
-    return False
 
 
 def _get_ssh_or_api_client(cfgfile, ssh=False):
     if ssh:
-        client = salt.client.SSHClient(cfgfile)
+        client = salt.client.ssh.client.SSHClient(cfgfile)
     else:
         client = salt.client.get_local_client(cfgfile)
     return client
@@ -726,7 +725,7 @@ def cmd_iter(tgt,
         salt '*' saltutil.cmd_iter
     '''
     if ssh:
-        client = salt.client.SSHClient(__opts__['conf_file'])
+        client = salt.client.ssh.client.SSHClient(__opts__['conf_file'])
     else:
         client = salt.client.get_local_client(__opts__['conf_file'])
     for ret in client.cmd_iter(

@@ -253,6 +253,10 @@ def get_url(path, dest, saltenv='base', env=None):
     '''
     Used to get a single file from a URL.
 
+    The default behaviuor is to write the fetched file to the given
+    destination path. To simply return the text contents instead, set destination to
+    None.
+
     CLI Example:
 
     .. code-block:: bash
@@ -270,7 +274,10 @@ def get_url(path, dest, saltenv='base', env=None):
         saltenv = env
 
     _mk_client()
-    return __context__['cp.fileclient'].get_url(path, dest, False, saltenv)
+    if dest:
+        return __context__['cp.fileclient'].get_url(path, dest, False, saltenv)
+    else:
+        return __context__['cp.fileclient'].get_url(path, None, False, saltenv, no_cache=True)
 
 
 def get_file_str(path, saltenv='base', env=None):
@@ -669,14 +676,14 @@ def push(path, keep_symlinks=False):
             'id': __opts__['id'],
             'path': path.lstrip(os.sep),
             'tok': auth.gen_token('salt')}
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.fopen(path, 'rb') as fp_:
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
             if not load['data']:
                 return True
-            ret = sreq.send(load)
+            ret = channel.send(load)
             if not ret:
                 log.error('cp.push Failed transfer failed. Ensure master has '
                 '\'file_recv\' set to \'True\' and that the file is not '

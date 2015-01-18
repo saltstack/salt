@@ -15,8 +15,8 @@ import os
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
 import salt.ext.six as six
-from salt.ext.six.moves import shlex_quote as _cmd_quote, configparser
-from salt.ext.six.moves.urllib.parse import urlparse
+from salt.ext.six.moves import configparser
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 from xml.dom import minidom as dom
@@ -129,11 +129,7 @@ def latest_version(*names, **kwargs):
     # Split call to zypper into batches of 500 packages
     while restpackages:
         cmd = 'zypper info -t package {0}'.format(' '.join(restpackages[:500]))
-        output = __salt__['cmd.run_stdout'](
-                cmd,
-                output_loglevel='trace',
-                python_shell=True
-                )
+        output = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
         outputs.extend(re.split('Information for package \\S+:\n', output))
         restpackages = restpackages[500:]
     for package in outputs:
@@ -220,14 +216,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    pkg_fmt = '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n'
-    cmd = 'rpm -qa --queryformat {0}'.format(_cmd_quote(pkg_fmt))
+    cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n']
     ret = {}
     out = __salt__['cmd.run'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=True
-            )
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
     for line in out.splitlines():
         name, pkgver, rel = line.split('_|-')
         if rel:
@@ -371,7 +366,7 @@ def mod_repo(repo, **kwargs):
             raise CommandExecutionError(
                 'Repository \'{0}\' not found and no URL passed to create one.'.format(repo))
 
-        if not urlparse(url).scheme:
+        if not _urlparse(url).scheme:
             raise CommandExecutionError(
                 'Repository \'{0}\' not found and passed URL looks wrong.'.format(repo))
 
@@ -380,15 +375,15 @@ def mod_repo(repo, **kwargs):
             repo_meta = _get_repo_info(alias, repos_cfg=repos_cfg)
 
             # Complete user URL, in case it is not
-            new_url = urlparse(url)
+            new_url = _urlparse(url)
             if not new_url.path:
-                new_url = urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
+                new_url = _urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
                                                netloc=new_url.netloc,
                                                path='/',
                                                params=new_url.params,
                                                query=new_url.query,
                                                fragment=new_url.fragment)
-            base_url = urlparse(repo_meta['baseurl'])
+            base_url = _urlparse(repo_meta['baseurl'])
 
             if new_url == base_url:
                 raise CommandExecutionError(
@@ -608,27 +603,25 @@ def install(name=None,
     old = list_pkgs()
     downgrades = []
     if fromrepo:
-        fromrepoopt = '--force --force-resolution --from {0} '.format(fromrepo)
+        fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ''
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        # Quotes needed around package targets because of the possibility of
-        # output redirection characters "<" or ">" in zypper command.
-        quoted_targets = [_cmd_quote(target) for target in targets[:500]]
-        cmd = (
-                'zypper --non-interactive install --name '
-                '--auto-agree-with-licenses {0}{1}'
-                .format(fromrepoopt, ' '.join(quoted_targets))
-                )
+        cmd = ['zypper', '--non-interactive', 'install', '--name',
+               '--auto-agree-with-licenses']
+        if fromrepo:
+            cmd.extend(fromrepoopt)
+        cmd.extend(targets[:500])
         targets = targets[500:]
+
         out = __salt__['cmd.run'](
-                cmd,
-                output_loglevel='trace',
-                python_shell=True
-                )
+            cmd,
+            output_loglevel='trace',
+            python_shell=False
+        )
         for line in out.splitlines():
             match = re.match(
                 "^The selected package '([^']+)'.+has lower version",
@@ -638,13 +631,14 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = (
-            'zypper --non-interactive install --name '
-            '--auto-agree-with-licenses --force {0}{1}'
-            .format(fromrepoopt, ' '.join(downgrades[:500]))
-        )
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
+        cmd = ['zypper', '--non-interactive', 'install', '--name',
+               '--auto-agree-with-licenses', '--force']
+        if fromrepo:
+            cmd.extend(fromrepoopt)
+        cmd.extend(downgrades[:500])
         downgrades = downgrades[500:]
+
+        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -708,7 +702,7 @@ def _uninstall(action='remove', name=None, pkgs=None):
             'zypper --non-interactive remove {0} {1}'
             .format(purge_arg, ' '.join(targets[:500]))
         )
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=True)
+        __salt__['cmd.run'](cmd, output_loglevel='trace')
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -796,13 +790,14 @@ def list_locks():
         return False
 
     locks = {}
-    for meta in [item.split('\n') for item in open(LOCKS).read().split('\n\n')]:
-        lock = {}
-        for element in [el for el in meta if el]:
-            if ':' in element:
-                lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
-        if lock.get('solvable_name'):
-            locks[lock.pop('solvable_name')] = lock
+    with salt.utils.fopen(LOCKS) as fhr:
+        for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
+            lock = {}
+            for element in [el for el in meta if el]:
+                if ':' in element:
+                    lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
+            if lock.get('solvable_name'):
+                locks[lock.pop('solvable_name')] = lock
 
     return locks
 

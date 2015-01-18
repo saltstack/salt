@@ -149,7 +149,7 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
     return functions
 
 
-def raw_mod(opts, name, functions):
+def raw_mod(opts, name, functions, mod='modules'):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
 
@@ -162,7 +162,7 @@ def raw_mod(opts, name, functions):
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
-    load = _create_loader(opts, 'modules', 'rawmodule')
+    load = _create_loader(opts, mod, 'rawmodule')
     return load.gen_module(name, functions)
 
 
@@ -756,8 +756,8 @@ class Loader(object):
                     # This is a proxy minion but this module doesn't support proxy
                     # minions at all
                     continue
-                if not self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
-                        '*' in mod.__proxyenabled__:
+                if not (self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or
+                        '*' in mod.__proxyenabled__):
                     # This is a proxy minion, this module supports proxy
                     # minions, but not this particular minion
                     log.debug(mod)
@@ -859,6 +859,7 @@ class Loader(object):
         '''
         Loads all of the modules from module_dirs and returns a list of them
         '''
+
         self.modules = []
 
         log.trace('loading {0} in {1}'.format(self.tag, self.module_dirs))
@@ -990,25 +991,25 @@ class Loader(object):
                                         reload(submodule)
                                 except AttributeError:
                                     continue
-                except ImportError:
+                except ImportError as error:
                     if failhard:
                         log.debug(
                             'Failed to import {0} {1}, this is most likely NOT a '
-                            'problem:\n'.format(
-                                self.tag, name
+                            'problem, but the exception was {2}\n'.format(
+                                self.tag, name, error
                             ),
                             exc_info=True
                         )
                     if not failhard:
-                        log.debug('Failed to import {0} {1}. Another attempt will be made to try to resolve dependencies.'.format(
-                            self.tag, name))
+                        log.debug('Failed to import {0} {1}. The exeception was {2}. Another attempt will be made to try to resolve dependencies.'.format(
+                            self.tag, name, error))
                         failed_loads[name] = path
                     continue
-                except Exception:
+                except Exception as error:
                     log.warning(
                         'Failed to import {0} {1}, this is due most likely to a '
-                        'syntax error. Traceback raised:\n'.format(
-                            self.tag, name
+                        'syntax error. The exception is {2}. Traceback raised:\n'.format(
+                            self.tag, name, error
                         ),
                         exc_info=True
                     )

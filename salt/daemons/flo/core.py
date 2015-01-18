@@ -33,6 +33,7 @@ from raet.lane.yarding import RemoteYard
 from salt import daemons
 from salt.daemons import salting
 from salt.utils import kinds
+from salt.utils.event import tagify
 
 from salt.exceptions import (
         CommandExecutionError, CommandNotFoundError, SaltInvocationError)
@@ -400,7 +401,27 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
         availables={'ipath': '.salt.var.presence.availables',
                     'ival': set()},
         changeds={'ipath': '.salt.var.presence.changeds',
-                  'ival': odict(plus=set(), minus=set())},)
+                  'ival': odict(plus=set(), minus=set())},
+        event='.salt.event.events',)
+
+    def _fire_events(self):
+        stack = self.stack.value
+        if self.changeds.data.plus or self.changeds.data.minus:
+            # fire presence change event
+            data = {'new': list(self.changeds.data.plus),
+                    'lost': list(self.changeds.data.minus)}
+            tag = tagify('change', 'presence')
+            route = {'dst': (None, None, 'event_fire'),
+                     'src': (None, stack.local.name, None)}
+            msg = {'route': route, 'tag': tag, 'data': data}
+            self.event.value.append(msg)
+        # fire presence present event
+        data = {'present': list(self.aliveds.value)}
+        tag = tagify('present', 'presence')
+        route = {'dst': (None, None, 'event_fire'),
+                 'src': (None, stack.local.name, None)}
+        msg = {'route': route, 'tag': tag, 'data': data}
+        self.event.value.append(msg)
 
     def action(self, **kwa):
         '''
@@ -434,7 +455,8 @@ class SaltRaetRoadStackManager(ioflo.base.deeding.Deed):
                     self.alloweds.value,
                     self.aliveds.value,
                     self.reapeds.value))
-            # need to queue presence event message if either plus or minus is not empty
+
+            self._fire_events()
 
 
 class SaltRaetRoadStackPrinter(ioflo.base.deeding.Deed):
@@ -626,6 +648,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                'worker_verify': '.salt.var.worker_verify',
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
+               'presence_req': '.salt.presence.event_req',
                'workers': '.salt.track.workers',
                'inode': '.salt.lane.manor.',
                'stack': 'stack',
@@ -649,7 +672,8 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
-        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.master]:
+        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.master],
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.syndic]]:
             lanename = 'master'
         elif kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion],
                       kinds.APPL_KIND_NAMES[kinds.applKinds.caller], ]:
@@ -676,6 +700,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         self.fun.value = deque()
         self.event.value = deque()
         self.event_req.value = deque()
+        self.presence_req.value = deque()
         self.publish.value = deque()
         self.worker_verify.value = salt.utils.rand_string()
         if self.opts.value.get('worker_threads'):
@@ -683,6 +708,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             for index in range(self.opts.value['worker_threads']):
                 worker_seed.append('worker{0}'.format(index + 1))
             self.workers.value = itertools.cycle(worker_seed)
+        return True
 
 
 class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
@@ -821,7 +847,9 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'publish': '.salt.var.publish',
                'fun': '.salt.var.fun',
                'event': '.salt.event.events',
-               'event_req': '.salt.event.event_req',
+               'event_req': '.salt.event.event_req',  # deque
+               'presence_req': '.salt.presence.event_req',  # deque
+               'availables': '.salt.var.presence.availables',  # set()
                'workers': '.salt.track.workers',
                'worker_verify': '.salt.var.worker_verify',
                'lane_stack': '.salt.lane.manor.stack',
@@ -853,9 +881,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                                             self.lane_stack.value.local.name,
                                             msg))
 
-        if d_estate is None:
-            pass
-        elif d_estate != self.road_stack.value.local.name:
+        if d_estate is not None and d_estate != self.road_stack.value.local.name:
             log.error(
                     'Road Router Received message for wrong estate: {0}'.format(d_estate))
             return
@@ -885,8 +911,6 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         elif d_share == 'fun':
             if self.road_stack.value.kind == kinds.applKinds.minion:
                 self.fun.value.append(msg)
-            elif self.road_stack.value.kind == kinds.applKinds.syndic:
-                self.self.publish.value.append(msg)
 
     def _process_uxd_rxmsg(self, msg, sender):
         '''
@@ -927,6 +951,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             return
 
         if d_share == 'pub_ret':
+            # only publish to available minions
+            msg['return']['ret']['minions'] = self._availablize(msg['return']['ret']['minions'])
             if msg.get('__worker_verify') == self.worker_verify.value:
                 self.publish.value.append(msg)
 
@@ -952,6 +978,9 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         elif d_share == 'event_fire':
             self.event.value.append(msg)
             #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+        elif d_share == 'presence_req':
+            self.presence_req.value.append(msg)
+            #log.debug("\n**** Presence Request \n {0}\n".format(msg))
         elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
             if not self.road_stack.value.remotes:
                 log.error("**** Lane Router: Missing joined master. Unable to route "
@@ -994,6 +1023,15 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         self.master_estate_name.value = master.name if master else ''
 
         return self.master_estate_name.value
+
+    def _availablize(self, minions):
+        '''
+        Return set that is intersection of associated minion estates for
+        roles in minions and the set of available minion estates.
+        '''
+        suffix = '_{0}'.format(kinds.APPL_KIND_NAMES[kinds.applKinds.minion])
+        return list(set(minions) &
+                    set((name.rstrip(suffix) for name in self.availables.value)))
 
     def action(self):
         '''
@@ -1068,6 +1106,81 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
                     )
 
 
+class SaltRaetPresenter(ioflo.base.deeding.Deed):
+    '''
+    Fire presence events!
+    FloScript:
+
+    do salt raet presenter
+
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'presence_req': '.salt.presence.event_req',
+               'lane_stack': '.salt.lane.manor.stack',
+               'alloweds': '.salt.var.presence.alloweds',  # odict
+               'aliveds': '.salt.var.presence.aliveds',  # odict
+               'reapeds': '.salt.var.presence.reapeds',  # odict
+               'availables': '.salt.var.presence.availables',  # set
+              }
+
+    def _send_presence(self, msg):
+        '''
+        Forward an presence message to all subscribed yards
+        Presence message has a route
+        '''
+        y_name = msg['route']['src'][1]
+        if y_name not in self.lane_stack.value.nameRemotes:  # subscriber not a remote
+            pass  # drop msg don't answer
+        else:
+            if 'data' in msg and 'state' in msg['data']:
+                state = msg['data']['state']
+            else:
+                state = None
+
+            # create answer message
+            if state in [None, 'available', 'present']:
+                present = odict()
+                for name in self.availables.value:
+                    minion = self.aliveds.value.get(name, None)
+                    present[name] = minion.ha[0] if minion else None
+                data = {'present': present}
+            else:
+                # TODO: update to really return joineds
+                states = {'joined': self.alloweds,
+                          'allowed': self.alloweds,
+                          'alived': self.aliveds,
+                          'reaped': self.reapeds}
+                try:
+                    minions = states[state].value
+                except KeyError:
+                    # error: wrong/unknown state requested
+                    log.error('Lane Router Received invalid message: {0}'.format(msg))
+                    return
+
+                result = odict()
+                for name in minions:
+                    result[name] = minions[name].ha[0]
+                data = {state: result}
+
+            tag = tagify('present', 'presence')
+            route = {'dst': (None, None, 'event_fire'),
+                     'src': (None, self.lane_stack.value.local.name, None)}
+            msg = {'route': route, 'tag': tag, 'data': data}
+            self.lane_stack.value.transmit(msg,
+                                           self.lane_stack.value.fetchUidByName(y_name))
+            self.lane_stack.value.serviceAll()
+
+    def action(self):
+        '''
+        Register presence requests
+        Iterate over the registered presence yards and fire!
+        '''
+        while self.presence_req.value:  # presence are msgs with routes
+            self._send_presence(
+                self.presence_req.value.popleft()
+            )
+
+
 class SaltRaetPublisher(ioflo.base.deeding.Deed):
     '''
     Publish to the minions
@@ -1079,8 +1192,8 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'publish': '.salt.var.publish',
                'stack': '.salt.road.manor.stack',
-               'availables': {'ipath': '.salt.var.presence.availables',
-                              'ival': set()}, }
+               'availables': '.salt.var.presence.availables',
+            }
 
     def _publish(self, pub_msg):
         '''
@@ -1274,7 +1387,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                             if not iret:
                                 iret = []
                             iret.append(single)
-                        tag = salt.utils.event.tagify(
+                        tag = tagify(
                                 [data['jid'], 'prog', self.opts['id'], str(ind)],
                                 'job')
                         event_data = {'return': single}

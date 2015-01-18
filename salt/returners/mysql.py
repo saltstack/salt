@@ -64,6 +64,20 @@ Use the following mysql database schema::
       KEY `fun` (`fun`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+    --
+    -- Table structure for table `salt_events`
+    --
+
+    DROP TABLE IF EXISTS `salt_events`;
+    CREATE TABLE `salt_events` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `tag` varchar(255) NOT NULL,
+    `data` varchar(1024) NOT NULL,
+    `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `tag` (`tag`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 Required python modules: MySQLdb
 
   To use the mysql returner, append '--return mysql' to the salt command. ex:
@@ -86,7 +100,7 @@ import logging
 
 # Import salt libs
 import salt.returners
-import salt.utils
+import salt.utils.jid
 
 # Import third party libs
 try:
@@ -177,6 +191,22 @@ def returner(ret):
                           ret['id'],
                           ret['success'],
                           json.dumps(ret)))
+
+
+def event_return(events):
+    '''
+    Return event to mysql server
+
+    Requires that configuration be enabled via 'event_return'
+    option in master config.
+    '''
+    with _get_serv(events, commit=True) as cur:
+        for event in events:
+            tag = event.get('tag', '')
+            data = event.get('data', '')
+            sql = '''INSERT INTO `salt_events` (`tag`, `data` )
+                     VALUES (%s, %s)'''
+            cur.execute(sql, (tag, data))
 
 
 def save_load(jid, load):
@@ -286,4 +316,4 @@ def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
