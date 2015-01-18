@@ -14,7 +14,8 @@ import salt.ext.six as six
 
 #KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
 KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
-
+import logging
+log = logging.getLogger(__name__)
 
 def condition_input(args, kwargs):
     '''

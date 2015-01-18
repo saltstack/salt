@@ -23,6 +23,7 @@ class StdTest(integration.ModuleCase):
                 kwarg={'qux': 'quux'}
                 )
         for ret in cmd_iter:
+            self.assertIn('minion', ret)
             data = ret['minion']['ret']
             self.assertIn('foo', data)
             self.assertIn('baz', data)
@@ -42,6 +43,7 @@ class StdTest(integration.ModuleCase):
                 kwarg={'qux': 'quux'}
                 )
         for ret in cmd_iter:
+            self.assertIn('minion', ret)
             data = ret['minion']['ret']
             self.assertIn('foo', data)
             self.assertIn('baz', data)
@@ -81,6 +83,7 @@ class StdTest(integration.ModuleCase):
                 ['foo=bar', 'baz=quo'],
                 kwarg={'qux': 'quux'}
                 )
+        self.assertIn('minion', ret)
         data = ret['minion']
         self.assertIn('foo', data['ret'])
         self.assertIn('baz', data['ret'])

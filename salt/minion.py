@@ -1426,7 +1426,10 @@ class Minion(MinionBase):
         if self.opts.get('syndic_master_publish_port'):
             self.publish_port = self.opts.get('syndic_master_publish_port')
         else:
-            self.publish_port = auth.creds['publish_port']
+            if isinstance(auth.creds, dict):
+                self.publish_port = auth.creds['publish_port']
+            else:
+                self.publish_port = None
 
     def module_refresh(self, force_refresh=False):
         '''

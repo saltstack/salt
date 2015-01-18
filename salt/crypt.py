@@ -341,8 +341,17 @@ class SAuth(object):
                     log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
                 continue
             break
+
         self.creds = creds
-        self.crypticle = Crypticle(self.opts, creds['aes'])
+
+        if isinstance(creds, str):
+            if creds == 'nokey' :
+                #log.error('Authentication creds {0} not dict'.format(creds))
+                #self.crypticle = Crypticle(self.opts, creds)
+                #raise Exception('Authentication creds {0} not dict'.format(creds))
+                self.crypticle=None # no key
+        else:
+            self.crypticle = Crypticle(self.opts, creds['aes'])
 
     def get_keys(self):
         '''
@@ -394,7 +403,7 @@ class SAuth(object):
         payload['load']['id'] = self.opts['id']
 
         filename = os.path.join(self.opts['pki_dir'], self.mpub)
-        if os.path.exist(filename):
+        if os.path.exists(filename):
             pub = RSA.load_pub_key(
                 os.path.join(self.opts['pki_dir'], self.mpub)
             )
@@ -687,11 +696,15 @@ class SAuth(object):
         )
 
         try:
-            payload = sreq.send_auto(
-                self.minion_sign_in_payload(),
-                tries=tries,
-                timeout=timeout
-            )
+            s  = self.minion_sign_in_payload()
+            if s :
+                payload = sreq.send_auto(
+                    self.minion_sign_in_payload(),
+                    tries=tries,
+                    timeout=timeout
+                )
+            else:
+                return "nokey"
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))

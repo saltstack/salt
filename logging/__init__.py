@@ -16,7 +16,7 @@ class L(object):
     def addHandler(self, X):
         pass
 
-    def error(self,x, exc_info=None ):
+    def error(self,x, exc_info=None , exc_info_on_loglevel=None):
         raise Exception(x)
 
     def critical(self,x, exc_info=None ):
@@ -26,24 +26,28 @@ class L(object):
         raise Exception(x)
 
     def debug(self,x ):
-        print "DEBUG",x
+        #print "DEBUG",x
         #for line in traceback.format_stack():
         #    print line.strip()  
+        pass
 
     def warning(self,x , exc_info=None):
-        print "WARN",x
+        #print "WARN",x
         #raise Exception(x)
         #for line in traceback.format_stack():
         #    print line.strip()  
+        pass
 
     def info(self,x , exc_info=None):
-        print "INFO",x
+        #print "INFO",x
         #raise Exception(x)
-        
+        pass
+
     def trace(self,x ):
-        print "TRACE",x
+        #print "TRACE",x
         #for line in traceback.format_stack():
         #    print line.strip()  
+        pass
 l = L()
 
 class G:

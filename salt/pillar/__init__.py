@@ -93,11 +93,14 @@ class RemotePillar(object):
                                                                     timeout=7200,
                                                                     )
 
-        if not isinstance(ret_pillar, dict):
-            log.error(
-                'Got a bad pillar from master, type {0}, expecting dict: '
-                '{1}'.format(type(ret_pillar).__name__, ret_pillar)
-            )
+        if ret_pillar:
+            if not isinstance(ret_pillar, dict):
+                log.error(
+                    'Got a bad pillar from master, type {0}, expecting dict: '
+                    '{1}'.format(type(ret_pillar).__name__, ret_pillar)
+                )
+                return {}
+        else:
             return {}
         return ret_pillar
 

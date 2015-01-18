@@ -916,8 +916,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                 try:
                     minions_remaining.remove(event['data']['id'])
                 except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
-                    pass
+                    log.error('ValueError {0}'.format(exp))
+
                 ret_event = self.application.event_listener.get_event(self, tag=ret_tag)
 
         raise tornado.gen.Return(chunk_ret)

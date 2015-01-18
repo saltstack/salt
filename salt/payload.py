@@ -235,9 +235,13 @@ class SREQ(object):
         '''
         Detect the encryption type based on the payload
         '''
-        enc = payload.get('enc', 'clear')
-        load = payload.get('load', {})
-        return self.send(enc, load, tries, timeout)
+        if payload:
+            enc = payload.get('enc', 'clear')
+            load = payload.get('load', {})
+            return self.send(enc, load, tries, timeout)
+        else:
+            raise Exception('None')
+        
 
     def destroy(self):
         if isinstance(self.poller.sockets, dict):

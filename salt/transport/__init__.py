@@ -271,11 +271,14 @@ class ZeroMQChannel(Channel):
             self.auth = salt.crypt.SAuth(self.opts)
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
-        ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), tries, timeout)
-        key = self.auth.get_keys()
-        aes = key.private_decrypt(ret['key'], 4)
-        pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        return pcrypt.loads(ret[dictkey])
+        if self.auth.crypticle:
+            ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), tries, timeout)
+            key = self.auth.get_keys()
+            aes = key.private_decrypt(ret['key'], 4)
+            pcrypt = salt.crypt.Crypticle(self.opts, aes)
+            return pcrypt.loads(ret[dictkey])
+        else:
+            return None
 
     def _crypted_transfer(self, load, tries=3, timeout=60):
         '''

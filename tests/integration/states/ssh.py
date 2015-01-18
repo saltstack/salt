@@ -63,7 +63,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
                 )
                 self.skipTest('Unable to receive remote host key')
             except AssertionError as exp:
-            log.error('AssertionError {0}'.format(exp))
+                log.error('AssertionError {0}'.format(exp))
                 # raise initial assertion error
                 raise err
 

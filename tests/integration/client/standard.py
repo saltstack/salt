@@ -26,6 +26,7 @@ class StdTest(integration.ModuleCase):
                 'test.ping',
                 )
         for ret in cmd_iter:
+            self.assertIn('minion', ret)
             self.assertTrue(ret['minion'])
 
         # make sure that the iter waits for long running jobs too
@@ -68,6 +69,7 @@ class StdTest(integration.ModuleCase):
                 'test.ping',
                 )
         for ret in cmd_iter:
+            self.assertIn('minion', ret)
             self.assertTrue(ret['minion'])
 
     def test_iter_no_block(self):
@@ -81,6 +83,7 @@ class StdTest(integration.ModuleCase):
         for ret in cmd_iter:
             if ret is None:
                 continue
+            self.assertIn('minion', ret)
             self.assertTrue(ret['minion'])
 
     def test_full_returns(self):

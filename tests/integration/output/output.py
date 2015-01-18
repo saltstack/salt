@@ -14,6 +14,8 @@ from salt.output import display_output
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+import logging
+log = logging.getLogger(_
 
 
 class OutputReturnTest(integration.ShellCase):
