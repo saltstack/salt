@@ -215,10 +215,12 @@ def get_hostnames():
         with salt.utils.fopen('/etc/hosts') as hfl:
             for line in hfl:
                 names = line.split()
-                try:
+                if len(names) > 0:
+                    #try:
                     ip = names.pop(0)
-                except IndexError as exp:
-                    log.error('IndexError {0}'.format(exp))
+                    #except IndexError as exp:
+                    #    log.error('IndexError {0}'.format(exp))
+                else:
                     continue
                 if ip.startswith('127.') or ip == '::1':
                     for name in names:

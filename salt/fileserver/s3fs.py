@@ -345,7 +345,6 @@ def _init():
             metadata = _read_buckets_cache_file(cache_file)
     except OSError as exp:
         log.error('OSError {0}'.format(exp))
-        pass
 
     if metadata is None:
         # bucket files cache expired or does not exist
@@ -437,9 +436,8 @@ def _refresh_buckets_cache_file(cache_file):
                         log.warning("'{0}' response for bucket '{1}'".format(meta_response['Message'], bucket_name))
                         continue
                     except KeyError as exp:
-                log.error('KeyError {0}'.format(exp))
                         # no human readable error message provided
-                        log.warning("'{0}' response for bucket '{1}'".format(meta_response['Code'], bucket_name))
+                        log.warning("'error {3} {0}' response for bucket '{1}'".format(meta_response['Code'], bucket_name, exp))
                         continue
 
             metadata[saltenv] = bucket_files
@@ -468,7 +466,7 @@ def _refresh_buckets_cache_file(cache_file):
                     log.warning("'{0}' response for bucket '{1}'".format(meta_response['Message'], bucket_name))
                     continue
                 except KeyError as exp:
-                log.error('KeyError {0}'.format(exp))
+                    log.error('KeyError {0}'.format(exp))
                     # no human readable error message provided
                     log.warning("'{0}' response for bucket '{1}'".format(meta_response['Code'], bucket_name))
                     continue
@@ -575,7 +573,6 @@ def _find_file_meta(metadata, bucket_name, saltenv, path):
                 item_meta['ETag'] = item_meta['ETag'].strip('"')
             except KeyError as exp:
                 log.error('KeyError {0}'.format(exp))
-                pass
             return item_meta
 
 

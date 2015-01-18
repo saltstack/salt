@@ -2885,17 +2885,17 @@ class BaseHighState(object):
                     return self.state.call_high(high)
         # File exists so continue
         err = []
-        try:
-            top = self.get_top()
-        except SaltRenderError as exp:
-            log.error("Salt Render Err {0}".format(exp))
-            ret[tag_name]['comment'] = err.error
-            return ret
-        except Exception as exp:
-            log.error("Salt Render Err {0}".format(exp))
-            trb = traceback.format_exc()
-            err.append(trb)
-            return err
+        #try:
+        top = self.get_top()
+        # except SaltRenderError as exp:
+        #     log.error("Salt Render Err {0}".format(exp))
+        #     ret[tag_name]['comment'] = err.error
+        #     return ret
+        # except Exception as exp:
+        #     log.error("Salt Render Err {0}".format(exp))
+        #     trb = traceback.format_exc()
+        #     err.append(trb)
+        #     return err
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:

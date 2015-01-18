@@ -64,7 +64,8 @@ class Client(object):
         Make sure that this path is intended for the salt master and trim it
         '''
         if not path.startswith('salt://'):
-            raise MinionError('Unsupported path: {0}'.format(path))
+            #raise MinionError('Unsupported path: {0}'.format(path))
+            return None
         return path[7:]
 
     def _file_local_list(self, dest):
@@ -1116,10 +1117,9 @@ class RemoteClient(Client):
             # Backwards compatibility
             saltenv = env
 
-        try:
-            path = self._check_proto(path)
-        except MinionError as exp:
-            log.error('MinionError {0}'.format(exp))
+        #try:
+        path = self._check_proto(path)
+        if not path :
             if not os.path.isfile(path):
                 err = 'Specified file {0} is not present to generate hash'
                 log.warning(err.format(path))

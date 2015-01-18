@@ -1914,7 +1914,8 @@ def get_id(opts, minion_id=False):
                             'minion_id')
 
     if opts.get('minion_id_caching', True):
-        try:
+        if os.path.exists(id_cache):
+            #       try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.readline().strip()
                 if name.startswith(codecs.BOM):  # Remove BOM if exists
@@ -1922,8 +1923,8 @@ def get_id(opts, minion_id=False):
             if name:
                 log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False
-        except (IOError, OSError) as exp:
-            log.error('IO/OS Error {0}'.format(exp))
+        #        except (IOError, OSError) as exp:
+        #            log.error('IO/OS Error {0}'.format(exp))
 
     log.debug('Guessing ID. The id can be explicitly in set {0}'
               .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))

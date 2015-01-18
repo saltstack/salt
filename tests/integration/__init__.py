@@ -45,6 +45,8 @@ from salttesting import TestCase
 from salttesting.case import ShellTestCase
 from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
+import salttesting.helpers
+print (salttesting.helpers)
 from salttesting.helpers import requires_sshd_server
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
 
@@ -760,7 +762,7 @@ class TestDaemon(object):
             path_items.remove(MOCKBIN)
         except ValueError as exp:
             log.error('ValueError {0}'.format(exp))
-            pass
+
         os.environ['PATH'] = os.pathsep.join(path_items)
 
     @classmethod
@@ -1368,7 +1370,7 @@ class SaltReturnAssertsMixIn(object):
                 try:
                     ret_item = ret_item[okeys.pop(0)]
                 except (KeyError, TypeError) as exp:
-                log.error('(KeyError, TypeError) {0}'.format(exp))
+                    log.error('(KeyError, TypeError) {0}'.format(exp))
                     raise AssertionError(
                         'Could not get ret{0} from salt\'s return: {1}'.format(
                             ''.join(['[{0!r}]'.format(k) for k in keys]), part

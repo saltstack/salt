@@ -443,7 +443,7 @@ class Master(SMaster):
                 cls = _tmp.__getattribute__(cls)
                 process_manager.add_process(cls, args=(self.opts,))
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.error(('Error creating ext_processes '
                            'process: {0}').format(proc))
 
@@ -750,7 +750,7 @@ class MWorker(multiprocessing.Process):
                     socket.send(ret)
                 # don't catch keyboard interrupts, just re-raise them
                 except KeyboardInterrupt as exp:
-                log.error('KeyboardInterrupt {0}'.format(exp))
+                    log.error('KeyboardInterrupt {0}'.format(exp))
                     raise
                 # catch all other exceptions, so we don't go defunct
                 except Exception as exc:
@@ -1488,7 +1488,7 @@ class AESFuncs(object):
                     )
                 )
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 ret = ''
                 log.error(
                     'Error in function {0}:\n'.format(func),
@@ -1867,10 +1867,10 @@ class ClearFuncs(object):
                     mtoken = self.master_key.key.private_decrypt(load['token'], 4)
                     aes = '{0}_|-{1}'.format(self.opts['aes'].value, mtoken)
                 except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                    log.error('Exception {0}'.format(exp))
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
-                    pass
+
             else:
                 aes = self.opts['aes'].value
 
@@ -1883,10 +1883,10 @@ class ClearFuncs(object):
                     )
                     ret['token'] = pub.public_encrypt(mtoken, 4)
                 except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                    log.error('Exception {0}'.format(exp))
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
-                    pass
+
 
             aes = self.opts['aes'].value
             ret['aes'] = pub.public_encrypt(self.opts['aes'].value, 4)
@@ -2446,7 +2446,7 @@ class ClearFuncs(object):
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
                 self.mminion.returners[fstr](clear_load['jid'], clear_load)
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 log.critical(
                     'The specified returner used for the external job cache '
                     '"{0}" does not have a save_load function!'.format(
@@ -2454,7 +2454,7 @@ class ClearFuncs(object):
                     )
                 )
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'The specified returner threw a stack trace:\n',
                     exc_info=True

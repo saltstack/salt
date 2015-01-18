@@ -1,0 +1,303 @@
+#!/usr/bin/env python
+'''
+Directly call a salt command in the modules, does not require a running salt
+minion to run.
+'''
+import salt.loader
+import types
+import sys
+
+for n in ('salt.loaded.ext.module',
+          'salt.loaded.ext'):
+    plugins = types.ModuleType(n)
+    plugins.__path__ = [n]
+    sys.modules[n] = plugins
+
+
+prerequisites = [
+    'tvdb_api',
+    'nagiosplugin',
+    'rethinkdb',
+    'netifaces',
+    'cloudify',
+'conjur',
+    'pystache',
+]
+# we need a way to specify simply what role a file plays
+
+# these look like normal python modules..
+    #"/mnt/data/home/mdupont/experiments/salt-formulas/KyleBenson_SmartAmericaSensors/scale_client/virtual_csn_server",
+    #'./KyleBenson_SmartAmericaSensors/scale_client/virtual_csn_server/',
+        
+    #"/mnt/data/home/mdupont/experiments/salt-formulas/MadeiraCloud_salt/libs/",
+
+for x in [
+        #"/mnt/data/home/mdupont/experiments/salt-formulas/cloudify-cosmo_cloudify-saltstack-plugin/main/saltapimgr",
+        #'/mnt/data/home/mdupont/experiments/salt-formulas/cloudify-cosmo_cloudify-saltstack-plugin/main',
+        "/mnt/data/home/mdupont/experiments/salt-formulas/Korrigan_pepperstack/"
+]:
+    sys.path.append(x )
+
+all_module_dirs = [
+    "/mnt/data/home/mdupont/experiments/salt-formulas/CSSCorp_openstack-automation/file_root/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ConsumerAffairs_salt-states/opt/graphite/webapp/graphite",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ConsumerAffairs_salt-states/usr/local/bin",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/FleetingClouds_SaltStackToolSet/gdata_oerp_pump/srv/salt/gdata_oerp_pump",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/Gohan_salt-state/tools/python27",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/Ins1ne_salt-states/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/Ins1ne_salt-states/salt/_runners",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/Ins1ne_salt-states/salt/app",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/JustinCarmony_vagrant-cloud/saltstack/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/Korrigan_pepperstack/pepperstack",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/Korrigan_pepperstack/salt_ext_modules/pillar",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/MadeiraCloud_salt/sources/mod",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/MadeiraCloud_salt/sources/salt/client/ssh/wrapper",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/aboe76_packer_salt-states_testing/salt/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/aboe76_packer_salt-states_testing/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ahale_salt-playground/playground/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/astral1_vagrant-salt-test/salt/modules/pillar",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/astral1_vagrant-salt-test/salt/roots/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/astral1_vagrant-salt-test/salt/roots/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/auser_states/states/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/bclermont_states/states/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/bclermont_states/states/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/bclermont_states/states/apt",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/bclermont_states/states/backup/server",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/bclermont_states/states/elasticsearch",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/bclermont_states/states/firewall",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/bclermont_states/states/nrpe",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/bossjones_salt-scarlett/salt/roots/salt/django",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/cgallemore_djvasa/djvasa/templates",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/conjurdemos_salt-stack-ssh/srv/runners",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/corywright_salt-pillar-overlay-bug/salt/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/d1rk_salt/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/david415_halite/src/python",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/daviddyball_salt/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/dkilcy_juno-saltstack/states/openstack/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/eHealthAfrica_salt_demo/saltstack/demo-app",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/master",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/scripts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/slaves",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/salt/base/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/felskrone_salt-eventsd/doc/share/doc/eventsd_workers",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/fxdgear_salt-states/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/fxdgear_salt-states/salt/saltsrc",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/bolts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/nuts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/ovirt",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/salt/execution",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/grischa_mytardis-salt/salt/mytardis/templates",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gtmtechltd_salthiera/salt/pillar",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/halfss_salt-dashboard/salt_dashboard/api",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/halfss_salt-dashboard/salt_dashboard/views",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/hipikat_salt-formulas/wsgi_still-formula/scripts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ionutbalutoiu_salt-openstack/file_root/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ist0ne_salt-states/salt/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ist0ne_salt-states/salt/_runners",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/jaddison_salt-base-states/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/jeffh_Seafood/configurations/base/states/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/jnrain_salt-conf/states/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/jwineinger_salt-experiments/salt/graphite",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/kerncai_saltstack/salt_configuration/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/cloudera-cm5-agent/root/bin",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/openstack-dashboard-ubuntu-theme/etc/openstack-dashboard",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/openstack-dashboard/etc/openstack-dashboard",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/kstaken_salt-test-runner/example_test/test",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/lincolnloop_salt-stats/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/pillar",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/renderers",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/returners",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/runners",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/states",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/tests",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/matthewpatterson_minions/modules/phpenv/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/mattnorris_grain/src/virtualenv",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/mingfang_docker-salt/srv/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ministryofjustice_graphite-formula/graphite/templates/graphite",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ministryofjustice_sentry-formula/sentry/templates",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/mjgorman_salinity/salinity/salinity",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/mjgorman_salinity/salinity/salinity_front",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/morlandi_stack_basic/saltstack/salt/django-learn-postgresql",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/oba11_salt-collectd/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/oba11_salt-nfs/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ogrisel_cardice/cardice/templates",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/olemartinorg_my-i3-state/i3/doti3",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/pengyao_salt-lvs/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/pengyao_salt-zabbix/salt/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/pgexperts_saltstack-talk-examples/srvsalt/01-users-only/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/pgexperts_saltstack-talk-examples/srvsalt/02-postgresql/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/pgexperts_saltstack-talk-examples/srvsalt/03-postgresql-pillar/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/pgexperts_saltstack-talk-examples/srvsalt/04-pgbouncer-mine/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rabits_salt-stack-modules/xbmc/addons/script.securitycam",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rackeric_salt-nummr/application/python_apps",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/bin",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/templatetags",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/views",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/access",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabcmds",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabhistory",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabpkgs",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/templatetags",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/management/commands",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/static/admin/js",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rubic_shaker/docs/_themes",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_halite/halite/test",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-contrib/modules/wireunlurk",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-contrib/tests/unit/modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-contrib/tests/unit/states",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-qa/salt/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-qa/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-qa/salt/saltsrc",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/docs/source",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/salttesting/cherrypytest",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/salttesting/ext",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/salttesting/parser",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/salttesting/pylintplugins",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-vsx/django-demo-app/file_root",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_saltstack_org/saltutil/templatetags",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/servo_saltfs/buildbot/master",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/shomodj_salt-states/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/shomodj_salt-states/salt/modoboa/nginx",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/stackstrap_stackstrap/stackstrap/commands",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/tateeskew_salt-states/graphite/graphite-web/opt/graphite/webapp/graphite",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/tcpcloud_salt-opencontrail-formula/opencontrail/conf",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/tf198_salt-states/states/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/tf198_salt-states/tests/unit",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/thatch45_salt-alert/salt/ext/alert",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/thedrow_python-baseline/salt/roots/usr/local/sbin",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/tomgruner_salt-states/salt/django_projects",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vdcit_SaltStack/salt/horizon/file",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vdcit_SaltStack/salt/neutron-controller/file",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/imgseek/scripts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/postgresql/server",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/scrapy",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/wendall911_wendall911-salt-states/salt/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/westurner_cookiecutter-saltformula/{{cookiecutter.repo_name}}/tests",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/wunki_django-salted/demo_project/demo_project",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/y0j_salt-configs/dev/django",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/yumike_pycon2013/salt/roots/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/yumike_pycon2013/salt/roots/salt/helloworld",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/salt/_grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/salt/_modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/tools/key",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/tools/monitor",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/zombiemonkey_ebi/ebi/cli",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/eHealthAfrica_salt_demo/saltstack/demo-app",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/master",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/scripts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/slaves",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/fxdgear_salt-states/salt/saltsrc",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/bolts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/nuts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/ovirt",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/salt/execution",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/grischa_mytardis-salt/salt/mytardis/templates",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/halfss_salt-dashboard/salt_dashboard/api",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/halfss_salt-dashboard/salt_dashboard/views",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/jwineinger_salt-experiments/salt/graphite",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/cloudera-cm4-agent/root/bin",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/cloudera-cm5-agent/root/bin",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/openstack-dashboard/etc/openstack-dashboard",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/kstaken_salt-test-runner/example_test/test",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/grains",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/modules",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/runners",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/tests",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/mattnorris_grain/src/virtualenv",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ministryofjustice_graphite-formula/graphite/templates/graphite",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/ministryofjustice_sentry-formula/sentry/templates",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/mjgorman_salinity/salinity/salinity",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/mjgorman_salinity/salinity/salinity_front",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/olemartinorg_my-i3-state/i3/doti3",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rabits_salt-stack-modules/xbmc/addons/script.securitycam",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/templatetags",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/views",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/access",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabcmds",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabhistory",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabpkgs",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/templatetags",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/management/commands",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/static/admin/js",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/rubic_shaker/docs/_themes",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_halite/halite/test",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-contrib/tests/unit/states",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-qa/salt/saltsrc",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/docs/source",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/salttesting/cherrypytest",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/salttesting/pylintplugins",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-vsx/django-demo-app/file_root",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/servo_saltfs/buildbot/master",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/stackstrap_stackstrap/stackstrap/commands",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/tcpcloud_salt-opencontrail-formula/opencontrail/conf",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/tf198_salt-states/tests/unit",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/thatch45_salt-alert/salt/ext/alert",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/tomgruner_salt-states/salt/django_projects",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vdcit_SaltStack/salt/horizon/file",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vdcit_SaltStack/salt/neutron-controller/file",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/imgseek/scripts",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/postgresql/server",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/wunki_django-salted/demo_project/demo_project",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/tools/key",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/tools/monitor",
+    "/mnt/data/home/mdupont/experiments/salt-formulas/zombiemonkey_ebi/ebi/cli"
+]
+
+
+newbad=[
+]
+
+bad = ['/mnt/data/home/mdupont/experiments/salt-formulas/eHealthAfrica_salt_demo/saltstack/demo-app', '/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/master', '/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/scripts', '/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/slaves', '/mnt/data/home/mdupont/experiments/salt-formulas/fxdgear_salt-states/salt/saltsrc', '/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/bolts', '/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/nuts', '/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/ovirt', '/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/salt/execution', '/mnt/data/home/mdupont/experiments/salt-formulas/grischa_mytardis-salt/salt/mytardis/templates', '/mnt/data/home/mdupont/experiments/salt-formulas/halfss_salt-dashboard/salt_dashboard/views', '/mnt/data/home/mdupont/experiments/salt-formulas/jwineinger_salt-experiments/salt/graphite', '/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/cloudera-cm5-agent/root/bin', '/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/openstack-dashboard/etc/openstack-dashboard', '/mnt/data/home/mdupont/experiments/salt-formulas/kstaken_salt-test-runner/example_test/test', '/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/grains', '/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/modules', '/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/runners', '/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/tests', '/mnt/data/home/mdupont/experiments/salt-formulas/mattnorris_grain/src/virtualenv', '/mnt/data/home/mdupont/experiments/salt-formulas/ministryofjustice_graphite-formula/graphite/templates/graphite', '/mnt/data/home/mdupont/experiments/salt-formulas/ministryofjustice_sentry-formula/sentry/templates', '/mnt/data/home/mdupont/experiments/salt-formulas/mjgorman_salinity/salinity/salinity', '/mnt/data/home/mdupont/experiments/salt-formulas/mjgorman_salinity/salinity/salinity_front', '/mnt/data/home/mdupont/experiments/salt-formulas/olemartinorg_my-i3-state/i3/doti3', '/mnt/data/home/mdupont/experiments/salt-formulas/rabits_salt-stack-modules/xbmc/addons/script.securitycam', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/templatetags', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/views', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/access', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabcmds', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabhistory', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabpkgs', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/templatetags', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/management/commands', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/static/admin/js', '/mnt/data/home/mdupont/experiments/salt-formulas/rubic_shaker/docs/_themes', '/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_halite/halite/test', '/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-qa/salt/saltsrc', '/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/docs/source', '/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-vsx/django-demo-app/file_root', '/mnt/data/home/mdupont/experiments/salt-formulas/servo_saltfs/buildbot/master', '/mnt/data/home/mdupont/experiments/salt-formulas/stackstrap_stackstrap/stackstrap/commands', '/mnt/data/home/mdupont/experiments/salt-formulas/tcpcloud_salt-opencontrail-formula/opencontrail/conf', '/mnt/data/home/mdupont/experiments/salt-formulas/tf198_salt-states/tests/unit', '/mnt/data/home/mdupont/experiments/salt-formulas/thatch45_salt-alert/salt/ext/alert', '/mnt/data/home/mdupont/experiments/salt-formulas/tomgruner_salt-states/salt/django_projects', '/mnt/data/home/mdupont/experiments/salt-formulas/vdcit_SaltStack/salt/horizon/file', '/mnt/data/home/mdupont/experiments/salt-formulas/vdcit_SaltStack/salt/neutron-controller/file', '/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/imgseek/scripts', '/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/postgresql/server', '/mnt/data/home/mdupont/experiments/salt-formulas/westurner_cookiecutter-saltformula/{{cookiecutter.repo_name}}/tests', '/mnt/data/home/mdupont/experiments/salt-formulas/wunki_django-salted/demo_project/demo_project', '/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/tools/key', '/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/tools/monitor', '/mnt/data/home/mdupont/experiments/salt-formulas/zombiemonkey_ebi/ebi/cli', '/mnt/data/home/mdupont/experiments/salt-formulas/eHealthAfrica_salt_demo/saltstack/demo-app', '/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/master', '/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/scripts', '/mnt/data/home/mdupont/experiments/salt-formulas/elbaschid_dockbot/dockbot/slaves', '/mnt/data/home/mdupont/experiments/salt-formulas/fxdgear_salt-states/salt/saltsrc', '/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/bolts', '/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/nuts', '/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/pyOvirt/ovirt', '/mnt/data/home/mdupont/experiments/salt-formulas/gladiatr72_pyOvirt/salt/execution', '/mnt/data/home/mdupont/experiments/salt-formulas/grischa_mytardis-salt/salt/mytardis/templates', '/mnt/data/home/mdupont/experiments/salt-formulas/halfss_salt-dashboard/salt_dashboard/views', '/mnt/data/home/mdupont/experiments/salt-formulas/jwineinger_salt-experiments/salt/graphite', '/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/cloudera-cm4-agent/root/bin', '/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/cloudera-cm5-agent/root/bin', '/mnt/data/home/mdupont/experiments/salt-formulas/khrisrichardson_salt-states/salt/openstack-dashboard/etc/openstack-dashboard', '/mnt/data/home/mdupont/experiments/salt-formulas/kstaken_salt-test-runner/example_test/test', '/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/grains', '/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/modules', '/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/runners', '/mnt/data/home/mdupont/experiments/salt-formulas/makinacorpus_makina-states/mc_states/tests', '/mnt/data/home/mdupont/experiments/salt-formulas/mattnorris_grain/src/virtualenv', '/mnt/data/home/mdupont/experiments/salt-formulas/ministryofjustice_graphite-formula/graphite/templates/graphite', '/mnt/data/home/mdupont/experiments/salt-formulas/ministryofjustice_sentry-formula/sentry/templates', '/mnt/data/home/mdupont/experiments/salt-formulas/mjgorman_salinity/salinity/salinity', '/mnt/data/home/mdupont/experiments/salt-formulas/mjgorman_salinity/salinity/salinity_front', '/mnt/data/home/mdupont/experiments/salt-formulas/olemartinorg_my-i3-state/i3/doti3', '/mnt/data/home/mdupont/experiments/salt-formulas/rabits_salt-stack-modules/xbmc/addons/script.securitycam', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/templatetags', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/admin/views', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/access', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabcmds', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabhistory', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/fabpkgs', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/fabric/templatetags', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/apps/management/commands', '/mnt/data/home/mdupont/experiments/salt-formulas/rangertaha_salt-manager/salt-manager/webapp/static/admin/js', '/mnt/data/home/mdupont/experiments/salt-formulas/rubic_shaker/docs/_themes', '/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_halite/halite/test', '/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-qa/salt/saltsrc', '/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-testing/docs/source', '/mnt/data/home/mdupont/experiments/salt-formulas/saltstack_salt-vsx/django-demo-app/file_root', '/mnt/data/home/mdupont/experiments/salt-formulas/servo_saltfs/buildbot/master', '/mnt/data/home/mdupont/experiments/salt-formulas/stackstrap_stackstrap/stackstrap/commands', '/mnt/data/home/mdupont/experiments/salt-formulas/tcpcloud_salt-opencontrail-formula/opencontrail/conf', '/mnt/data/home/mdupont/experiments/salt-formulas/tf198_salt-states/tests/unit', '/mnt/data/home/mdupont/experiments/salt-formulas/thatch45_salt-alert/salt/ext/alert', '/mnt/data/home/mdupont/experiments/salt-formulas/tomgruner_salt-states/salt/django_projects', '/mnt/data/home/mdupont/experiments/salt-formulas/vdcit_SaltStack/salt/horizon/file', '/mnt/data/home/mdupont/experiments/salt-formulas/vdcit_SaltStack/salt/neutron-controller/file', '/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/imgseek/scripts', '/mnt/data/home/mdupont/experiments/salt-formulas/vinta_HeelsFetishism-Deployment/salt/postgresql/server', '/mnt/data/home/mdupont/experiments/salt-formulas/wunki_django-salted/demo_project/demo_project', '/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/tools/key', '/mnt/data/home/mdupont/experiments/salt-formulas/yyf1986_saltstack/tools/monitor', '/mnt/data/home/mdupont/experiments/salt-formulas/zombiemonkey_ebi/ebi/cli']
+
+def check():
+    good=[]
+    for x in all_module_dirs:
+        if x in bad:
+            print "skipping", x
+        else:
+            try :
+                print "try",x
+                l = salt.loader.Loader([x])
+                l.load_modules(True)
+                good.append(x)
+            except Exception as exp:
+                print "Error,", exp
+                newbad.append(x)
+                good.remove(x)
+
+    print "newbad = {0}".format(newbad)
+    print "good = {0}".format(good)
+
+def recheck():
+    modules = {}
+    good = []
+    for x in bad:
+        try :
+            print "try",x
+            l = salt.loader.Loader([x])
+            l.load_modules(True)
+            print "OK",x
+        except ImportError as exp:
+            modules[str(exp)] =1 
+            good.remove(x)
+        except SyntaxError as exp :
+            if 'expected an indented block' in str(exp):
+                raise exp
+            else:
+                print "syntax", exp
+                newbad.append(x)
+                good.remove(x)
+
+        good.append(x)
+
+    print "good = {0}".format(good)
+    print modules
+    print newbad
+
+#recheck()
+check()

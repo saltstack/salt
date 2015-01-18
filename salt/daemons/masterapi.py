@@ -139,7 +139,7 @@ def clean_expired_tokens(opts):
                 if 'expire' not in token_data or token_data.get('expire', 0) < time.time():
                     try:
                         os.remove(token_path)
-                    except (IOError, OSError) exp as exp:
+                    except (IOError, OSError) as exp:
                         log.error('(IOError, OSError) exp {0}'.format(exp))
                         log.error('Error {0}'.format(exp))
 
@@ -201,7 +201,7 @@ def access_keys(opts):
             try:
                 user = pwd.getpwnam(user).pw_name
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 log.error('ACL user {0} is not available'.format(user))
                 continue
         keyfile = os.path.join(
@@ -220,7 +220,7 @@ def access_keys(opts):
         os.chmod(keyfile, 256)
         try:
             os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
-        except OSError es exp as exp:
+        except OSError as exp:
             log.error('OSError es exp {0}'.format(exp))
             # The master is not being run as root and can therefore not
             # chown the key file
@@ -553,7 +553,7 @@ class RemoteFuncs(object):
                     if fdata:
                         ret[minion] = fdata
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 continue
         return ret
 
@@ -600,7 +600,7 @@ class RemoteFuncs(object):
                             with salt.utils.fopen(datap, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
                 except OSError as exp:
-                log.error('OSError {0}'.format(exp))
+                    log.error('OSError {0}'.format(exp))
                     return False
         return True
 
@@ -619,7 +619,7 @@ class RemoteFuncs(object):
                 try:
                     os.remove(datap)
                 except OSError as exp:
-                log.error('OSError {0}'.format(exp))
+                    log.error('OSError {0}'.format(exp))
                     return False
         return True
 
@@ -1527,7 +1527,7 @@ class LocalFuncs(object):
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
                 self.mminion.returners[fstr](load['jid'], load)
             except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
+                log.error('KeyError {0}'.format(exp))
                 log.critical(
                     'The specified returner used for the external job cache '
                     '"{0}" does not have a save_load function!'.format(
@@ -1535,7 +1535,7 @@ class LocalFuncs(object):
                     )
                 )
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.critical(
                     'The specified returner threw a stack trace:\n',
                     exc_info=True

@@ -874,8 +874,8 @@ class SaltDistribution(distutils.dist.Distribution):
                 import yum  # pylint: disable=unused-variable
                 freezer_includes.append('yum')
             except ImportError as exp:
-                log.error('ImportError {0}'.format(exp))
-                pass
+                log.warning('ImportError {0}'.format(exp))
+
         elif sys.platform.startswith('sunos'):
             # (The sledgehammer approach)
             # Just try to include everything

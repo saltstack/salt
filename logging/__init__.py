@@ -113,3 +113,6 @@ root = Root()
 
 def captureWarnings(x):
     pass
+
+def getLevelName(x):
+    return "DEBUG"

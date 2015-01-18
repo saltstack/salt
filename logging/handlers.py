@@ -26,7 +26,8 @@ class WatchedFileHandler(LoggingHandler):
         pass
 
 class FileHandler(LoggingHandler):
-    pass
+    def __init__(self, filename=None, log_path=None, mode=None, encoding=None, delay=None):
+        pass
 
 class MemoryHandler(LoggingHandler):
     pass

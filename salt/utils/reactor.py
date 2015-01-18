@@ -52,7 +52,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     tag=tag,
                     data=data))
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.error('Failed to render "{0}"'.format(fn_))
         return react
 
@@ -75,7 +75,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                         )
                     )
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 log.error(
                     'Failed to parse YAML in reactor map: "{0}"'.format(
                         self.opts['reactor']
@@ -144,7 +144,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 try:
                     self.call_reactions(chunks)
                 except SystemExit as exp:
-            log.error('SystemExit {0}'.format(exp))
+                    log.error('SystemExit {0}'.format(exp))
                     log.warning('Exit ignored by reactor')
 
 

@@ -9,6 +9,7 @@ from __future__ import print_function
 
 # Import python libs
 import os
+import os.path
 import sys
 import time
 import hmac
@@ -391,17 +392,20 @@ class SAuth(object):
         payload['load'] = {}
         payload['load']['cmd'] = '_auth'
         payload['load']['id'] = self.opts['id']
-        try:
+
+        filename = os.path.join(self.opts['pki_dir'], self.mpub)
+        if os.path.exist(filename):
             pub = RSA.load_pub_key(
                 os.path.join(self.opts['pki_dir'], self.mpub)
             )
             payload['load']['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
-        except Exception as exp:
-            log.error('Exception {0}'.format(exp))
-            pass
-        with salt.utils.fopen(self.pub_path, 'r') as fp_:
-            payload['load']['pub'] = fp_.read()
-        return payload
+            #        except Exception as exp:
+            #            log.error('Exception {0}'.format(exp))
+            #            pass
+            with salt.utils.fopen(self.pub_path, 'r') as fp_:
+                payload['load']['pub'] = fp_.read()
+                return payload
+        return None
 
     def decrypt_aes(self, payload, master_pub=True):
         '''

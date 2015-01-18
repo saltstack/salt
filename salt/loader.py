@@ -811,10 +811,10 @@ class Loader(object):
             # Call a module's initialization method if it exists
             module_init = getattr(mod, '__init__', None)
             if inspect.isfunction(module_init):
-                try:
-                    module_init(self.opts)
-                except TypeError as exp:
-                    log.error('TypeError {0} while trying to call module_init({1})'.format(exp, self.opts))
+                #try:
+                module_init(self.opts)
+                #except TypeError as exp:
+                #    log.error('TypeError {0} while trying to call module_init({1})'.format(exp, self.opts))
 
 
             # Trim the full pathname to just the module

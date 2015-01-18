@@ -63,7 +63,7 @@ def _check_xenapi():
             return importlib.import_module('xen.xm.XenAPI')
         return __import__('xen.xm.XenAPI').xm.XenAPI
     except (ImportError, AttributeError) as exp:
-        log.error('(ImportError, AttributeError) {0}'.format(exp))
+        log.debug('(ImportError, AttributeError) {0}'.format(exp))
         return False
 
 
