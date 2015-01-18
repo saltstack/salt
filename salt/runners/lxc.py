@@ -93,7 +93,7 @@ def find_guest(name, quiet=False):
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
-                    __progress__(host, outputter='lxc_find_host')
+                    __jid_event__.fire_event({'data': host, 'outputter': 'lxc_find_host'}, 'progress')
                 return host
     return None
 
@@ -332,7 +332,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     if not done:
         ret['result'] = False
     if not quiet:
-        __progress__(ret)
+        __jid_event__.fire_event({'message': ret}, 'progress')
     return ret
 
 
@@ -395,7 +395,7 @@ def list_(host=None, quiet=False):
     for chunk in it:
         ret.update(chunk)
         if not quiet:
-            __progress__(chunk, outputter='lxc_list')
+            __jid_event__.fire_event({'data': chunk, 'outputter': 'lxc_list'}, 'progress')
     return ret
 
 
@@ -420,7 +420,7 @@ def purge(name, delete_key=True, quiet=False):
         return
 
     if not quiet:
-        __progress__(data, outputter='lxc_purge')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_purge'}, 'progress')
     return data
 
 
@@ -434,7 +434,7 @@ def start(name, quiet=False):
     '''
     data = _do_names(name, 'start')
     if data and not quiet:
-        __progress__(data, outputter='lxc_start')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_start'}, 'progress')
     return data
 
 
@@ -448,7 +448,7 @@ def stop(name, quiet=False):
     '''
     data = _do_names(name, 'stop')
     if data and not quiet:
-        __progress__(data, outputter='lxc_force_off')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_force_off'}, 'progress')
     return data
 
 
@@ -462,7 +462,7 @@ def freeze(name, quiet=False):
     '''
     data = _do_names(name, 'freeze')
     if data and not quiet:
-        __progress__(data, outputter='lxc_pause')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_pause'}, 'progress')
     return data
 
 
@@ -476,7 +476,7 @@ def unfreeze(name, quiet=False):
     '''
     data = _do_names(name, 'unfreeze')
     if data and not quiet:
-        __progress__(data, outputter='lxc_resume')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_resume'}, 'progress')
     return data
 
 
@@ -490,5 +490,5 @@ def info(name, quiet=False):
     '''
     data = _do_names(name, 'info')
     if data and not quiet:
-        __progress__(data, outputter='lxc_info')
+        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_info'}, 'progress')
     return data

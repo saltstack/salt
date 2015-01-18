@@ -53,7 +53,7 @@ def genrepo():
                         # when log.debug works
                         log.debug('Failed to compile'
                                   '{0}: {1}'.format(os.path.join(root, name), exc))
-                        __progress__('Failed to compile {0}: {1}'.format(os.path.join(root, name), exc))
+                        __jid_event__.fire_event({'error': 'Failed to compile {0}: {1}'.format(os.path.join(root, name), exc)}, 'progress')
                 if config:
                     revmap = {}
                     for pkgname, versions in config.items():
@@ -64,7 +64,7 @@ def genrepo():
                             if not isinstance(repodata, dict):
                                 log.debug('Failed to compile'
                                           '{0}.'.format(os.path.join(root, name)))
-                                __progress__('Failed to compile {0}.'.format(os.path.join(root, name)))
+                                __jid_event__.fire_event({'error': 'Failed to compile {0}.'.format(os.path.join(root, name))}, 'progress')
                                 continue
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
