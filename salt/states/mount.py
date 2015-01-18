@@ -90,8 +90,9 @@ def mounted(name,
     user
         The user to own the mount; this defaults to the user salt is
         running as on the minion
+
     match_on
-        A name or list of fstab properties on which this state shoudl be applied. 
+        A name or list of fstab properties on which this state should be applied. 
         Default is ``auto``, a special value indicating to guess based on fstype.
         In general, ``auto`` matches on name for recognized special devices and
         device otherwise.
