@@ -188,76 +188,76 @@ def active(extended=False):
     return ret
 
 
-class _fstab_entry():
-	'''
-	Utility class for manipulating fstab entries. Primarily we're parsing,
-	formating, and comparing lines. Parsing emits dicts expected from
-	fstab() or raises a ValueError.
+class _fstab_entry( object ):
+    '''
+    Utility class for manipulating fstab entries. Primarily we're parsing,
+    formating, and comparing lines. Parsing emits dicts expected from
+    fstab() or raises a ValueError.
 
-	Note: We'll probably want to use os.normpath and os.normcase on 'name'
-	'''
+    Note: We'll probably want to use os.normpath and os.normcase on 'name'
+    '''
 
-	class ParseError( ValueError ):
-		pass
+    class ParseError( ValueError ):
+        '''Error raised when a line isn't parsible as an fstab entry'''
 
-	fstab_keys = [ 'device', 'name', 'fstype', 'opts', 'dump', 'pass_num' ]
+    fstab_keys = [ 'device', 'name', 'fstype', 'opts', 'dump', 'pass_num' ]
 
-	# preserve data format
-	compatibility_keys = [ 'device', 'name', 'fstype', 'opts', 'dump', 'pass' ]
+    # preserve data format
+    compatibility_keys = [ 'device', 'name', 'fstype', 'opts', 'dump', 'pass' ]
 
-	fstab_format = '{device}\t\t{name}\t{fstype}\t{opts}\t{dump} {pass_num}\n'
+    fstab_format = '{device}\t\t{name}\t{fstype}\t{opts}\t{dump} {pass_num}\n'
 
-	@classmethod
-	def dict_from_line( cls, line, keys = fstab_keys ):
-		if len( keys ) != 6:
-			raise ValueError( 'Invalid key array: {0}'.format( keys ) )
-		if line.startswith('#'):
-			raise cls.ParseError( "Comment!" )
+    @classmethod
+    def dict_from_line( cls, line, keys = fstab_keys ):
+        if len( keys ) != 6:
+            raise ValueError( 'Invalid key array: {0}'.format( keys ) )
+        if line.startswith('#'):
+            raise cls.ParseError( "Comment!" )
 
-		comps = line.split()
-		if len(comps) != 6:
-			raise cls.ParseError( "Invalid Entry!" )
+        comps = line.split()
+        if len(comps) != 6:
+            raise cls.ParseError( "Invalid Entry!" )
 
-		return dict( zip( keys, comps ) )
+        return dict( zip( keys, comps ) )
 
-	@classmethod
-	def from_line( cls, *args, **kwargs ):
-		return cls( ** cls.dict_from_line( *args, **kwargs ) )
+    @classmethod
+    def from_line( cls, *args, **kwargs ):
+        return cls( ** cls.dict_from_line( *args, **kwargs ) )
 
-	@classmethod
-	def dict_to_line( cls, entry ):
-		return cls.fstab_format.format( **entry )
+    @classmethod
+    def dict_to_line( cls, entry ):
+        return cls.fstab_format.format( **entry )
 
-	def __str__( self ):
-		'''string value, only works for full repr'''
-		return self.dict_to_line( self.criteria )
+    def __str__( self ):
+        '''string value, only works for full repr'''
+        return self.dict_to_line( self.criteria )
 
-	def __repr__( self ):
-		'''always works'''
-		return str( self.criteria )
+    def __repr__( self ):
+        '''always works'''
+        return str( self.criteria )
 
-	def pick( self, keys ):
-		'''returns an instance with just those keys'''
-		return self.__class__( **dict( map( lambda key: ( key, self.criteria[ key ] ), keys ) ) )
+    def pick( self, keys ):
+        '''returns an instance with just those keys'''
+        return self.__class__( **dict( map( lambda key: ( key, self.criteria[ key ] ), keys ) ) )
 
-	def __init__( self, **criteria ):
-		'''Store non-empty, non-null values to use as filter'''
-		items = filter( lambda (key, value): value is not None, criteria.items() )
-		items = map( lambda (key, value): (key, str( value ) ), items )
-		self.criteria = dict( items )
+    def __init__( self, **criteria ):
+        '''Store non-empty, non-null values to use as filter'''
+        items = filter( lambda (key, value): value is not None, criteria.items() )
+        items = map( lambda (key, value): (key, str( value ) ), items )
+        self.criteria = dict( items )
 
-	@staticmethod
-	def norm_path( path ):
-		'''Resolve equivalent paths equivalently'''
-		return os.path.normcase( os.path.normpath( path ) )
+    @staticmethod
+    def norm_path( path ):
+        '''Resolve equivalent paths equivalently'''
+        return os.path.normcase( os.path.normpath( path ) )
 
-	def match( self, line ):
-		'''compare potentially partial criteria against line'''
-		entry = self.dict_from_line( line )
-		for key, value in self.criteria.items():
-			if entry[ key ] != value:
-				return False
-		return True
+    def match( self, line ):
+        '''compare potentially partial criteria against line'''
+        entry = self.dict_from_line( line )
+        for key, value in self.criteria.items():
+            if entry[ key ] != value:
+                return False
+        return True
 
 
 def fstab(config='/etc/fstab'):
@@ -275,7 +275,7 @@ def fstab(config='/etc/fstab'):
         return ret
     with salt.utils.fopen(config) as ifile:
         for line in ifile:
-	    try:
+        try:
                 entry = _fstab_entry.dict_from_line( line, _fstab_entry.compatibility_keys )
                 ret[ entry.pop( 'name' ) ] = entry
             except _fstab_entry.ParseError:
@@ -297,8 +297,8 @@ def rm_fstab(name, device, config='/etc/fstab' ):
     modified = False
 
     criteria = _fstab_entry( 
-	name = name, 
-	device = device )
+        name = name, 
+        device = device )
 
     lines = []
     try:
@@ -367,7 +367,7 @@ def set_fstab(
     if isinstance( match_on, list ):
         pass
     elif not isinstance( match_on, string_types ):
-	raise CommandExecutionError( 'match_on must be a string or list of strings' )
+        raise CommandExecutionError( 'match_on must be a string or list of strings' )
     elif match_on == 'auto':
         # Try to guess right criteria for auto....missing some special fstypes here
         if fstype in frozenset([ 'tmpfs', 'sysfs', 'proc', 'fusectl', 'debugfs', 'securityfs', 'devtmpfs', 'cgroup']):
@@ -375,7 +375,7 @@ def set_fstab(
         else:
             match_on = [ 'device' ]
     else:
-	match_on = [ match_on ]
+        match_on = [ match_on ]
 
     # generate entry and criteria objects, handle invalid keys in match_on
     entry = _fstab_entry( **entry_args )
@@ -415,7 +415,7 @@ def set_fstab(
 
     # add line if not present or changed
     if ret is None:
-	lines.append( str( entry ) )
+        lines.append( str( entry ) )
         ret = 'new'
 
     if ret != 'present': # ret in [ 'new', 'change' ]:
