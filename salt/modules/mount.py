@@ -187,6 +187,8 @@ class _fstab_entry():
 	Utility class for manipulating fstab entries. Primarily we're parsing,
 	formating, and comparing lines. Parsing emits dicts expected from
 	fstab() or raises a ValueError.
+
+	Note: We'll probably want to use os.normpath and os.normcase on 'name'
 	'''
 
 	class ParseError( ValueError ):
@@ -234,11 +236,18 @@ class _fstab_entry():
 
 	def __init__( self, **criteria ):
 		'''Store non-empty, non-null values to use as filter'''
-		self.criteria = dict( filter( lambda (key,value): value ), criteria.items )
+		items = filter( lambda (key, value): value is not None, criteria.items() )
+		items = map( lambda (key, value): (key, str( value ) ), items )
+		self.criteria = dict( items )
+
+	@staticmethod
+	def norm_path( path ):
+		'''Resolve equivalent paths equivalently'''
+		return os.path.normcase( os.path.normpath( path ) )
 
 	def match( self, line ):
 		'''compare potentially partial criteria against line'''
-		entry = self.line_to_dict( line )
+		entry = self.dict_from_line( line )
 		for key, value in self.criteria.items():
 			if entry[ key ] != value:
 				return False
@@ -261,7 +270,7 @@ def fstab(config='/etc/fstab'):
     with salt.utils.fopen(config) as ifile:
         for line in ifile:
 	    try:
-                entry = _fstab_entry.line_to_dict( line, _fstab_entry.compatibility_keys )
+                entry = _fstab_entry.dict_from_line( line, _fstab_entry.compatibility_keys )
                 ret[ entry.pop( 'name' ) ] = entry
             except _fstab_entry.ParseError:
                 pass
@@ -280,9 +289,6 @@ def rm_fstab(name, device, config='/etc/fstab' ):
         salt '*' mount.rm_fstab /mnt/foo
     '''
     modified = False
-
-    if isinstance( opts, list ):
-        opts = ','.join( opts )
 
     criteria = _fstab_entry( 
 	name = name, 
@@ -312,6 +318,9 @@ def rm_fstab(name, device, config='/etc/fstab' ):
         except (IOError, OSError) as exc:
             msg = "Couldn't write to {0}: {1}"
             raise CommandExecutionError(msg.format(config, str(exc)))
+
+    # Note: not clear why we always return 'True'
+    # --just copying previous behavior at this point...
     return True
 
 
@@ -384,9 +393,12 @@ def set_fstab(
                         ret = 'present'
                         if entry.match( line ):
                             lines.append( line )
-                        else
+                        else:
                             ret = 'change'
                             lines.append( str( entry ) )
+                    else:
+                       lines.append( line )
+
                 except _fstab_entry.ParseError:
                     lines.append( line )                        
 
