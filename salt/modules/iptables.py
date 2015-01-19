@@ -143,7 +143,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
     rule = ''
     proto = False
-    bang_not_pat = re.compile(r'[!|not]\s?')
+    bang_not_pat = re.compile(r'(!|not)\s?')
 
     if 'if' in kwargs:
         if kwargs['if'].startswith('!') or kwargs['if'].startswith('not'):
