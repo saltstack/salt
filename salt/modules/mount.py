@@ -200,15 +200,15 @@ class _fstab_entry(object):
     class ParseError(ValueError):
         '''Error raised when a line isn't parsible as an fstab entry'''
 
-    fstab_keys = ['device', 'name', 'fstype', 'opts', 'dump', 'pass_num']
+    fstab_keys = ('device', 'name', 'fstype', 'opts', 'dump', 'pass_num')
 
     # preserve data format
-    compatibility_keys = ['device', 'name', 'fstype', 'opts', 'dump', 'pass']
+    compatibility_keys = ('device', 'name', 'fstype', 'opts', 'dump', 'pass')
 
     fstab_format = '{device}\t\t{name}\t{fstype}\t{opts}\t{dump} {pass_num}\n'
 
     @classmethod
-    def dict_from_line(cls, line, keys = fstab_keys):
+    def dict_from_line(cls, line, keys=fstab_keys):
         if len(keys) != 6:
             raise ValueError('Invalid key array: {0}'.format(keys))
         if line.startswith('#'):
@@ -277,7 +277,7 @@ def fstab(config='/etc/fstab'):
         for line in ifile:
             try:
                 entry = _fstab_entry.dict_from_line(line, _fstab_entry.compatibility_keys)
-		entry['opts'] = entry['opts'].split(',')
+                entry['opts'] = entry['opts'].split(',')
                 ret[entry.pop('name')] = entry
             except _fstab_entry.ParseError:
                 pass
