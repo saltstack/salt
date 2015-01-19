@@ -39,7 +39,7 @@ def __virtual__():
     return False
 
 
-def present(name, acl_type, acl_name, perms, recurse=False):
+def present(name, acl_type, acl_name='', perms='', recurse=False):
     '''
     Ensure a Linux ACL is present
     '''
@@ -89,7 +89,7 @@ def present(name, acl_type, acl_name, perms, recurse=False):
     return ret
 
 
-def absent(name, acl_type, acl_name, perms, recurse=False):
+def absent(name, acl_type, acl_name='', perms='', recurse=False):
     '''
     Ensure a Linux ACL does not exist
     '''
