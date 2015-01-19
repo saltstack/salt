@@ -93,7 +93,7 @@ def mounted(name,
         running as on the minion
 
     match_on
-        A name or list of fstab properties on which this state should be applied. 
+        A name or list of fstab properties on which this state should be applied.
         Default is ``auto``, a special value indicating to guess based on fstype.
         In general, ``auto`` matches on name for recognized special devices and
         device otherwise.
