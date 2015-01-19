@@ -15,6 +15,8 @@ import inspect
 
 # Import salt libs
 import salt.utils
+import logging
+log = logging.getLogger(__name__)
 
 
 def _makepretty(printout, stack):
