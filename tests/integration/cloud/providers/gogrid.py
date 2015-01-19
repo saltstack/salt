@@ -15,6 +15,8 @@ ensure_in_syspath('../../../')
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
+import logging
+log = logging.getLogger(__name__)
 
 
 @skipIf(True, 'waiting on bug report fixes from #13365')

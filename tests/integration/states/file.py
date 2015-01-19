@@ -27,7 +27,8 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
-
+import logging
+log = logging.getLogger(__name__)
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''

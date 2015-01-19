@@ -7,6 +7,8 @@
 import os
 import random
 import string
+import logging
+log = logging.getLogger(__name__)
 
 # Import Salt Testing Libs
 from salttesting import skipIf

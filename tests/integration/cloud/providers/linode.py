@@ -12,6 +12,9 @@ import string
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
+import logging
+log = logging.getLogger(__name__)
+
 ensure_in_syspath('../../../')
 
 # Import Salt Libs

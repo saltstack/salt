@@ -13,6 +13,8 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+import logging
+log = logging.getLogger(__name__)
 
 
 class StateModuleTest(integration.ModuleCase,

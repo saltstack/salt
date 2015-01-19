@@ -14,11 +14,15 @@ from salttesting.helpers import (
     requires_system_grains
 )
 ensure_in_syspath('../../')
+import logging
+log = logging.getLogger(__name__)
 
 # Import Salt Libs
 import integration
 import salt.utils
 from salt.exceptions import CommandExecutionError
+import logging
+log = logging.getLogger(__name__)
 
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew

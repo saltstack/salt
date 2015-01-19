@@ -7,6 +7,8 @@
 import os
 import random
 import string
+import logging
+log = logging.getLogger(__name__)
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath, expensiveTest

@@ -36,6 +36,8 @@ ADD_USER = __random_string()
 DEL_USER = __random_string()
 CHANGE_USER = __random_string()
 
+import logging
+log = logging.getLogger(__name__)
 
 class MacUserModuleTest(integration.ModuleCase):
     '''

@@ -16,6 +16,10 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import logging
+log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
 
 
 class UseraddModuleTest(integration.ModuleCase):

@@ -16,6 +16,8 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import logging
+log = logging.getLogger(__name__)
 
 
 @requires_salt_modules('docker')

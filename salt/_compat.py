@@ -11,6 +11,8 @@ import types
 # Import 3rd-party libs
 from salt.ext.six import binary_type, string_types, text_type
 from salt.ext.six.moves import cStringIO, StringIO
+import logging
+log = logging.getLogger(__name__)
 
 try:
     import cPickle as pickle

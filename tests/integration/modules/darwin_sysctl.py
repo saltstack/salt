@@ -24,6 +24,8 @@ ensure_in_syspath('../../')
 # Module Variables
 ASSIGN_CMD = 'net.inet.icmp.icmplim'
 CONFIG = '/etc/sysctl.conf'
+import logging
+log = logging.getLogger(__name__)
 
 
 class DarwinSysctlModuleTest(integration.ModuleCase):

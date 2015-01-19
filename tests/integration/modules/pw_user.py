@@ -16,6 +16,8 @@ import random
 from salttesting import skipIf
 from salttesting.helpers import destructiveTest, ensure_in_syspath
 ensure_in_syspath('../../')
+import logging
+log = logging.getLogger(__name__)
 
 # Import salt libs
 import integration
