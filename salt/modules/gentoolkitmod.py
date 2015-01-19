@@ -254,7 +254,7 @@ def _glsa_list_process_output(output):
             ret[glsa_id] = {'description': desc, 'status': status,
                             'CVEs': cves}
         except ValueError as exp:
-            log.error('ValueError {0}'.format(
+            log.error('ValueError {0}'.format(exp))
     return ret
 
 
