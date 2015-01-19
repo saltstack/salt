@@ -13,6 +13,8 @@ import errno
 import time
 import random
 import salt.ext.six as six
+import logging
+log = logging.getLogger(__name__)
 
 
 CAN_RENAME_OPEN_FILE = False

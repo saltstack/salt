@@ -6,7 +6,8 @@ from __future__ import absolute_import
 
 # Python Libs
 import re
-
+import logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
@@ -103,7 +104,6 @@ def exists(name, index=None):
             return ret
     except ValueError as exp:
         log.error('ValueError {0}'.format(exp))
-        pass
 
     if not index:
         index = len(sysPath)    # put it at the end

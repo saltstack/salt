@@ -32,6 +32,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import json
+import logging
+log = logging.getLogger(__name__)
 
 # Import Salt libs
 import salt.utils.jid

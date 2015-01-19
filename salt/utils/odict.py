@@ -20,6 +20,8 @@
         http://stackoverflow.com/questions/6190331/
 '''
 from collections import Callable
+import logging
+log = logging.getLogger(__name__)
 
 try:
     from collections import OrderedDict  # pylint: disable=E0611

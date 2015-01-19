@@ -38,6 +38,8 @@ import salt.ext.six as six
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
+import logging
+log = logging.getLogger(__name__)
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -322,7 +324,7 @@ def profile_func(filename=None):
     def proffunc(fun):
         def profiled_func(*args, **kwargs):
             import cProfile
-            logging.info('Profiling function {0}'.format(fun.__name__))
+            log.info('Profiling function {0}'.format(fun.__name__))
             try:
                 profiler = cProfile.Profile()
                 retval = profiler.runcall(fun, *args, **kwargs)
@@ -330,7 +332,7 @@ def profile_func(filename=None):
                                      .format(fun.__name__)))
             except IOError as exp:
                 log.error('IO Error {0}'.format(exp))
-                logging.exception(
+                log.exception(
                     'Could not open profile file {0}'.format(filename)
                 )
 

@@ -60,6 +60,8 @@ Example of a ``cmd`` state calling a python function::
 
 '''
 from __future__ import absolute_import
+import logging
+log = logging.getLogger(__name__)
 
 # Implementation note:
 #  - There's a bit of terminology mix-up here:

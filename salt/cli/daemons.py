@@ -10,6 +10,7 @@ import os
 import sys
 import warnings
 
+
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     'once',                 # Show once
@@ -479,7 +480,7 @@ class Syndic(parsers.SyndicOptionParser):
             try:
                 self.syndic.tune_in()
             except KeyboardInterrupt as exp:
-                log.error('KeyboardInterrupt {0}'.format(exp))
+                logger.error('KeyboardInterrupt {0}'.format(exp))
                 logger.warn('Stopping the Salt Syndic Minion')
                 self.shutdown()
 

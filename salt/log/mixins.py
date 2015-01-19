@@ -15,7 +15,7 @@ from __future__ import absolute_import
 # Import python libs
 import sys
 import logging
-
+log = logging.getLogger(__name__)
 
 class LoggingTraceMixIn(object):
     '''

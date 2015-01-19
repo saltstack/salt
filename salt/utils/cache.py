@@ -9,6 +9,8 @@ import time
 # Import salt libs
 import salt.config
 import salt.payload
+import logging
+log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
@@ -151,7 +153,6 @@ class CacheRegex(object):
             return self.cache[pattern][1]
         except KeyError as exp:
             log.error('KeyError {0}'.format(exp))
-            pass
         if len(self.cache) > self.size:
             self.sweep()
         regex = re.compile('{0}{1}{2}'.format(

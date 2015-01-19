@@ -17,6 +17,8 @@ import jinja2
 import yaml
 import requests
 import salt.ext.six as six
+import logging
+log = logging.getLogger(__name__)
 
 # pylint: disable=import-error,no-name-in-module
 try:

@@ -12,6 +12,8 @@ try:
     yaml.Dumper = yaml.CDumper
 except Exception:
     pass
+import logging
+log = logging.getLogger(__name__)
 
 # This function is safe and needs to stay as yaml.load. The load function
 # accepts a custom loader, and every time this function is used in Salt

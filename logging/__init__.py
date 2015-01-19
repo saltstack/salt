@@ -54,10 +54,11 @@ l = L()
 class G:
     def __init__(self):
         self.emittedNoHandlerWarning= 0
-
+    
 class F:
     def __init__(self):
         self.manager = G()
+        self.loggerDict={}
 
 Logger = F()
 
@@ -78,7 +79,8 @@ class NullHandler (object):
 from handlers import *
 
 class LC(object):
-    pass
+    def _log(self, level=None, msg=None, args=None, exc_info=None, extra=None):
+        pass 
 
 def getLoggerClass():
     return LC

@@ -8,6 +8,8 @@ import threading
 
 import salt.utils
 import salt.payload
+import logging
+log = logging.getLogger(__name__)
 
 
 def running(opts):

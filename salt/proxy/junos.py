@@ -11,6 +11,9 @@ from __future__ import absolute_import
 import jnpr.junos
 import jnpr.junos.utils
 import jnpr.junos.cfg
+import logging
+log = logging.getLogger(__name__)
+
 HAS_JUNOS = True
 
 __proxyenabled__ = ['junos']

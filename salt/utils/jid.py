@@ -9,6 +9,8 @@ import os
 
 import salt.utils
 from salt.ext.six import string_types
+import logging
+log = logging.getLogger(__name__)
 
 
 def gen_jid():

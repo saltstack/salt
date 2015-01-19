@@ -27,6 +27,7 @@ import logging
 import salt.utils
 from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+log = logging.getLogger(__name__)
 
 # Import 3rd-party libs
 try:
@@ -39,7 +40,7 @@ if HAS_PIP is True:
     try:
         import pip.req
     except ImportError as exp:
-        logger.error('ImportError {0}'.format(exp))
+        log.error('ImportError {0}'.format(exp))
         HAS_PIP = False
         # Remove references to the loaded pip module above so reloading works
         import sys
@@ -47,7 +48,7 @@ if HAS_PIP is True:
         if 'pip' in sys.modules:
             del sys.modules['pip']
 
-logger = logging.getLogger(__name__)
+
 
 # Define the module's virtual name
 __virtualname__ = 'pip'
@@ -71,7 +72,7 @@ def _find_key(prefix, pip_list):
             iter(x for x in pip_list if x.lower() == prefix.lower())
         )
     except StopIteration as exp:
-        logger.error('StopIteration {0}'.format(exp))
+        log.error('StopIteration {0}'.format(exp))
         return None
     else:
         return match
@@ -107,13 +108,13 @@ def _check_pkg_version_format(pkg):
             # vcs+URL urls are not properly parsed.
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
-            logger.debug(
+            log.debug(
                 'Installed pip version: {0}'.format(pip.__version__)
             )
             install_req = pip.req.InstallRequirement.from_line(pkg)
         except AttributeError as exp:
-            logger.error('AttributeError {0}'.format(exp))
-            logger.debug('Installed pip version is lower than 1.2')
+            log.error('AttributeError {0}'.format(exp))
+            log.debug('Installed pip version is lower than 1.2')
             supported_vcs = ('git', 'svn', 'hg', 'bzr')
             if pkg.startswith(supported_vcs):
                 for vcs in supported_vcs:

@@ -5,6 +5,8 @@ from __future__ import print_function
 import sys
 
 import salt.payload
+import logging
+log = logging.getLogger(__name__)
 
 
 def trim_dict(
@@ -71,7 +73,6 @@ def trim_dict(
                         return data
             except ValueError as exp:
                 log.error('ValueError {0}'.format(exp))
-                pass
         if is_msgpacked:
             return serializer.dumps(data)
         else:

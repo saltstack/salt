@@ -12,6 +12,8 @@ import win32serviceutil
 import win32service
 import win32event
 import win32api
+import logging
+log = logging.getLogger(__name__)
 
 
 class Service(win32serviceutil.ServiceFramework):

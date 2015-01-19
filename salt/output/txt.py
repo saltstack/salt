@@ -11,6 +11,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import pprint
+import logging
+log = logging.getLogger(__name__)
 
 
 def output(data):

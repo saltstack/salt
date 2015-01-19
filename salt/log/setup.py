@@ -14,14 +14,15 @@
 '''
 
 from __future__ import absolute_import
-
+import logging
+log = logging.getLogger(__name__)
 # Import python libs
 import os
 import re
 import sys
 import types
 import socket
-import logging
+
 import logging.handlers
 import traceback
 
@@ -368,7 +369,7 @@ def setup_temp_logger(log_level='error'):
     Setup the temporary console logger
     '''
     if is_temp_logging_configured():
-        logging.getLogger(__name__).warn(
+        log.warning(
             'Temporary logging is already configured'
         )
         return
@@ -422,7 +423,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     Setup the console logger
     '''
     if is_console_configured():
-        logging.getLogger(__name__).warn('Console logging already configured')
+        log.warning('Console logging already configured')
         return
 
     # Remove the temporary logging handler
@@ -495,11 +496,11 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     '''
 
     if is_logfile_configured():
-        logging.getLogger(__name__).warn('Logfile logging already configured')
+        log.warning('Logfile logging already configured')
         return
 
     if log_path is None:
-        logging.getLogger(__name__).warn(
+        log.warning(
             'log_path setting is set to `None`. Nothing else to do'
         )
         return
@@ -600,7 +601,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             handler = WatchedFileHandler(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError) as exp:
             log.error('IO/OS Error {0}'.format(exp))
-            logging.getLogger(__name__).warning(
+            log.warning(
                 'Failed to open log file, do you have permission to write to '
                 '{0}?'.format(log_path)
             )

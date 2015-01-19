@@ -10,6 +10,9 @@ from __future__ import absolute_import
 
 # Import python libs
 import requests
+import logging
+log = logging.getLogger(__name__)
+
 HAS_REST_EXAMPLE = True
 
 __proxyenabled__ = ['rest_sample']
