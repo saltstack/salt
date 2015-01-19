@@ -46,6 +46,7 @@ import salt.engines
 import salt.fileserver
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
+import salt.transport.server
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
@@ -99,7 +100,6 @@ class SMaster(object):
         SMaster.aes = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
-        self.crypticle = self.__prep_crypticle()
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.aes'.
     # Otherwise, 'SMaster.aes' won't be copied over to the spawned process
@@ -119,12 +119,6 @@ class SMaster(object):
                 'key': self.key,
                 'crypticle': self.crypticle,
                 'aes': SMaster.aes}
-
-    def __prep_crypticle(self):
-        '''
-        Return the crypticle used for AES
-        '''
-        return salt.crypt.Crypticle(self.opts, SMaster.aes.value)
 
     def __prep_key(self):
         '''
@@ -487,6 +481,12 @@ class Master(SMaster):
             log.debug('Sleeping for two seconds to let concache rest')
             time.sleep(2)
 
+        def run_reqserver():
+            reqserv = ReqServer(
+                self.opts,
+                self.key,
+                self.master_key)
+            reqserv.run()
         log.info('Creating master request server process')
         process_manager.add_process(self.run_reqserver)
         try:
@@ -640,12 +640,11 @@ class ReqServer(object):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, crypticle, key, mkey):
+    def __init__(self, opts, key, mkey):
         '''
         Create a request server
 
         :param dict opts: The salt options dictionary
-        :crypticle salt.crypt.Crypticle crypticle: Encryption crypticle
         :key dict: The user starting the server and the AES key
         :mkey dict: The user starting the server and the RSA key
 
@@ -656,43 +655,6 @@ class ReqServer(object):
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
-        self.crypticle = crypticle
-
-    def zmq_device(self):
-        salt.utils.appendproctitle('MWorkerQueue')
-        self.context = zmq.Context(self.opts['worker_threads'])
-        # Prepare the zeromq sockets
-        self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
-        self.clients = self.context.socket(zmq.ROUTER)
-        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.clients.setsockopt(zmq.IPV4ONLY, 0)
-
-        self.workers = self.context.socket(zmq.DEALER)
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            self.w_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts.get('tcp_master_workers', 4515)
-                )
-        else:
-            self.w_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'workers.ipc')
-                )
-
-        log.info('Setting up the master communication server')
-        self.clients.bind(self.uri)
-
-        self.workers.bind(self.w_uri)
-
-        while True:
-            try:
-                zmq.device(zmq.QUEUE, self.clients, self.workers)
-            except zmq.ZMQError as exc:
-                if exc.errno == errno.EINTR:
-                    continue
-                raise exc
-            except KeyboardInterrupt:
-                log.warn('Stopping the Salt Master')
-                raise SystemExit('\nExiting on Ctrl-c')
 
     def __bind(self):
         '''
@@ -706,19 +668,18 @@ class ReqServer(object):
                 pass
         self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
+        req_channel = salt.transport.server.ReqServerChannel.factory(self.opts)
+        req_channel.pre_fork(self.process_manager)
+
         for ind in range(int(self.opts['worker_threads'])):
             self.process_manager.add_process(MWorker,
                                              args=(self.opts,
                                                    self.master_key,
                                                    self.key,
-                                                   self.crypticle,
+                                                   req_channel,
                                                    ),
                                              )
-        self.process_manager.add_process(self.zmq_device)
-
-        # start zmq device
         self.process_manager.run()
-
     def run(self):
         '''
         Start up the ReqServer
@@ -755,22 +716,21 @@ class MWorker(multiprocessing.Process):
                  opts,
                  mkey,
                  key,
-                 crypticle):
+                 req_channel):
         '''
         Create a salt master worker process
 
         :param dict opts: The salt options
         :param dict mkey: The user running the salt master and the AES key
         :param dict key: The user running the salt master and the RSA key
-        :param salt.crypt.Crypticle crypticle: Encryption crypticle
 
         :rtype: MWorker
         :return: Master worker
         '''
         multiprocessing.Process.__init__(self)
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
-        self.crypticle = crypticle
+        self.req_channel = req_channel
+
         self.mkey = mkey
         self.key = key
         self.k_mtime = 0
@@ -803,26 +763,13 @@ class MWorker(multiprocessing.Process):
         '''
         Bind to the local port
         '''
-        context = zmq.Context(1)
-        socket = context.socket(zmq.REP)
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            w_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts.get('tcp_master_workers', 4515)
-                )
-        else:
-            w_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'workers.ipc')
-                )
-        log.info('Worker binding to socket {0}'.format(w_uri))
+        self.req_channel.post_fork()  # TODO: cleaner? Maybe lazily?
         try:
-            socket.connect(w_uri)
             while True:
                 try:
-                    package = socket.recv()
-                    self._update_aes()
-                    payload = self.serial.loads(package)
-                    ret = self.serial.dumps(self._handle_payload(payload))
-                    socket.send(ret)
+                    payload = self.req_channel.recv()
+                    ret = self._handle_payload(payload)
+                    self.req_channel.send(ret)
                 # don't catch keyboard interrupts, just re-raise them
                 except KeyboardInterrupt:
                     raise
@@ -840,17 +787,11 @@ class MWorker(multiprocessing.Process):
                         continue
                     log.critical('Unexpected Error in MWorker',
                                  exc_info=True)
-                    # lets just redo the socket (since we won't know what state its in).
-                    # This protects against a single minion doing a send but not
-                    # recv and thereby causing an MWorker process to go defunct
-                    del socket
-                    socket = context.socket(zmq.REP)
-                    socket.connect(w_uri)
 
         # Changes here create a zeromq condition, check with thatch45 before
         # making any zeromq changes
         except KeyboardInterrupt:
-            socket.close()
+            del self.req_channel
 
     def _handle_payload(self, payload):
         '''
@@ -894,7 +835,7 @@ class MWorker(multiprocessing.Process):
             return False
         return getattr(self.clear_funcs, load['cmd'])(load)
 
-    def _handle_aes(self, load):
+    def _handle_aes(self, data):
         '''
         Process a command sent via an AES key
 
@@ -902,12 +843,6 @@ class MWorker(multiprocessing.Process):
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         '''
-        try:
-            data = self.crypticle.loads(load)
-        except Exception:
-            # return something not encrypted so the minions know that they aren't
-            # encrypting correctly.
-            return 'bad load'
         if 'cmd' not in data:
             log.error('Received malformed command {0}'.format(data))
             return {}
@@ -915,16 +850,6 @@ class MWorker(multiprocessing.Process):
         if data['cmd'].startswith('__'):
             return False
         return self.aes_funcs.run_func(data['cmd'], data)
-
-    def _update_aes(self):
-        '''
-        Check to see if a fresh AES key is available and update the components
-        of the worker
-        '''
-        if SMaster.aes.value != self.crypticle.key_string:
-            self.crypticle = salt.crypt.Crypticle(self.opts, SMaster.aes.value)
-            self.clear_funcs.crypticle = self.crypticle
-            self.aes_funcs.crypticle = self.crypticle
 
     def run(self):
         '''
@@ -934,24 +859,24 @@ class MWorker(multiprocessing.Process):
         self.clear_funcs = ClearFuncs(
             self.opts,
             self.key,
-            self.mkey,
-            self.crypticle)
-        self.aes_funcs = AESFuncs(self.opts, self.crypticle)
+            self.mkey)
+        self.aes_funcs = AESFuncs(self.opts, self.req_channel)
         self.__bind()
 
 
+# TODO: rename? No longer tied to "AES", just "encrypted" or "private" requests
 class AESFuncs(object):
     '''
     Set up functions that are available when the load is encrypted with AES
     '''
     # The AES Functions:
     #
-    def __init__(self, opts, crypticle):
+    def __init__(self, opts, req_channel):
         '''
         Create a new AESFuncs
 
         :param dict opts: The salt options
-        :param salt.crypt.Crypticle crypticle: Encryption crypticle
+        :param salt.transport.server.ReqServerChannel req_channel: transport
 
         :rtype: AESFuncs
         :returns: Instance for handling AES operations
@@ -959,7 +884,7 @@ class AESFuncs(object):
         self.opts = opts
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
-        self.crypticle = crypticle
+        self.req_channel = req_channel
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts['conf_file'])
@@ -1532,7 +1457,8 @@ class AESFuncs(object):
         '''
         # Don't honor private functions
         if func.startswith('__'):
-            return self.crypticle.dumps({})
+            # TODO: return some error? Seems odd to return {}
+            return self.req_channel.encrypt({})
         # Run the func
         if hasattr(self, func):
             try:
@@ -1556,7 +1482,7 @@ class AESFuncs(object):
                     func
                 )
             )
-            return self.crypticle.dumps(False)
+            return self.req_channel.encrypt(False)
         # Don't encrypt the return value for the _return func
         # (we don't care about the return value, so why encrypt it?)
         if func == '_return':
@@ -1564,28 +1490,10 @@ class AESFuncs(object):
         if func == '_pillar' and 'id' in load:
             if load.get('ver') != '2' and self.opts['pillar_version'] == 1:
                 # Authorized to return old pillar proto
-                return self.crypticle.dumps(ret)
-            # encrypt with a specific AES key
-            pubfn = os.path.join(self.opts['pki_dir'],
-                                 'minions',
-                                 load['id'])
-            key = salt.crypt.Crypticle.generate_key_string()
-            pcrypt = salt.crypt.Crypticle(
-                self.opts,
-                key)
-            try:
-                pub = RSA.load_pub_key(pubfn)
-            except RSA.RSAError:
-                return self.crypticle.dumps({})
-
-            pret = {}
-            pret['key'] = pub.public_encrypt(key, 4)
-            pret['pillar'] = pcrypt.dumps(
-                ret if ret is not False else {}
-            )
-            return pret
-        # AES Encrypt the return
-        return self.crypticle.dumps(ret)
+                return self.req_channel.encrypt(ret)
+            return self.req_channel.encrypt_private(ret, 'pillar', load['id'])
+        # Encrypt the return
+        return self.req_channel.encrypt(ret)
 
 
 class ClearFuncs(object):
@@ -1597,14 +1505,10 @@ class ClearFuncs(object):
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth
-    def __init__(self, opts, key, master_key, crypticle):
+    def __init__(self, opts, key, master_key):
         self.opts = opts
         self.key = key
         self.master_key = master_key
-        self.crypticle = crypticle
-
-        # Create the serializer
-        self.serial = salt.payload.Serial(opts)
         # Create the event manager
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         # Make a client
@@ -1631,6 +1535,7 @@ class ClearFuncs(object):
         else:
             self.cache_cli = False
 
+    # TODO: move into ReqServerChannel
     def _auth(self, load):
         '''
         Authenticate the client, use the sent public key to encrypt the AES key
@@ -2633,7 +2538,9 @@ class ClearFuncs(object):
             )
         log.debug('Published command details {0}'.format(load))
 
-        payload['load'] = self.crypticle.dumps(load)
+        # TODO: push this into publisher channel
+        crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+        payload['load'] = crypticle.dumps(load)
         if self.opts['sign_pub_messages']:
             master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
             log.debug("Signing data packet")

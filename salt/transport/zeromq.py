@@ -7,6 +7,8 @@ import threading
 import errno
 import hashlib
 
+from M2Crypto import RSA
+
 from random import randint
 
 # Import Salt Libs
@@ -19,6 +21,7 @@ import logging
 from collections import defaultdict
 
 import salt.transport.client
+import salt.transport.server
 
 import zmq
 
@@ -273,3 +276,159 @@ class ZeroMQPubChannel(salt.transport.client.PubChannel):
     @property
     def socket(self):
         return self._socket
+
+
+class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
+    def zmq_device(self):
+        '''
+        Multiprocessing target for the zmq queue device
+        '''
+        salt.utils.appendproctitle('MWorkerQueue')
+        self.context = zmq.Context(self.opts['worker_threads'])
+        # Prepare the zeromq sockets
+        self.uri = 'tcp://{interface}:{ret_port}'.format(**self.opts)
+        self.clients = self.context.socket(zmq.ROUTER)
+        if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
+            # IPv6 sockets work for both IPv6 and IPv4 addresses
+            self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        try:
+            self.clients.setsockopt(zmq.HWM, self.opts['rep_hwm'])
+        # in zmq >= 3.0, there are separate send and receive HWM settings
+        except AttributeError:
+            self.clients.setsockopt(zmq.SNDHWM, self.opts['rep_hwm'])
+            self.clients.setsockopt(zmq.RCVHWM, self.opts['rep_hwm'])
+
+        self.workers = self.context.socket(zmq.DEALER)
+        self.w_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'workers.ipc')
+        )
+
+        log.info('Setting up the master communication server')
+        self.clients.bind(self.uri)
+
+        self.workers.bind(self.w_uri)
+
+        while True:
+            try:
+                zmq.device(zmq.QUEUE, self.clients, self.workers)
+            except zmq.ZMQError as exc:
+                if exc.errno == errno.EINTR:
+                    continue
+                raise exc
+
+    def pre_fork(self, process_manager):
+        '''
+        Pre-fork we need to create the zmq router device
+        '''
+        process_manager.add_process(self.zmq_device)
+
+    def post_fork(self):
+        '''
+        After forking we need to create all of the local sockets to listen to the
+        router
+        '''
+        self.context = zmq.Context(1)
+        self._socket = self.context.socket(zmq.REP)
+        self.w_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'workers.ipc')
+            )
+        log.info('Worker binding to socket {0}'.format(self.w_uri))
+        self._socket.connect(self.w_uri)
+
+        self.serial = salt.payload.Serial(self.opts)
+        self.crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+
+    def _update_aes(self):
+        '''
+        Check to see if a fresh AES key is available and update the components
+        of the worker
+        '''
+        if self.opts['aes'].value != self.crypticle.key_string:
+            self.crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+
+
+    def _decode_payload(self, payload):
+        # we need to decrypt it
+        if payload['enc'] == 'aes':
+            self._update_aes()  # check if you need to update the aes key
+            try:
+                payload['load'] = self.crypticle.loads(payload['load'])
+            except Exception:
+                # send something back to the client so the client so they know
+                # their load was malformed
+                self.send('bad load')
+                raise
+        return payload
+
+    def recv(self, timeout=0):
+        '''
+        Get a req job, with an optional timeout (0==forever)
+        '''
+        if timeout == 0 or self._socket.poll(timeout):
+            package = self._socket.recv()
+            payload = self.serial.loads(package)
+            payload = self._decode_payload(payload)
+            return payload
+        else:
+            return None
+
+    def recv_noblock(self):
+        '''
+        Get a req job in a non-blocking manner.
+        Return load or None
+        '''
+        try:
+            package = self._socket.recv()
+            payload = self.serial.loads(package)
+            payload = self._decode_payload(payload)
+            return payload
+        except zmq.ZMQError as e:
+            # Swallow errors for bad wakeups or signals needing processing
+            if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
+                raise
+            return None
+
+    # TODO? maybe have recv() return this function, so this class isn't tied to
+    # a send/recv order
+    def send(self, payload):
+        '''
+        Send a response to a recv()'d payload
+        '''
+        self._socket.send(self.serial.dumps(payload))
+
+    def encrypt(self, payload):
+        '''
+        Regular encryption
+        '''
+        return self.crypticle.dumps(payload)
+
+    def encrypt_private(self, ret, dictkey, target):
+        '''
+        The server equivalent of ReqChannel.crypted_transfer_decode_dictentry
+        '''
+        # encrypt with a specific AES key
+        pubfn = os.path.join(self.opts['pki_dir'],
+                             'minions',
+                             target)
+        key = salt.crypt.Crypticle.generate_key_string()
+        pcrypt = salt.crypt.Crypticle(
+            self.opts,
+            key)
+        try:
+            pub = RSA.load_pub_key(pubfn)
+        except RSA.RSAError:
+            return self.crypticle.dumps({})
+
+        pret = {}
+        pret['key'] = pub.public_encrypt(key, 4)
+        pret[dictkey] = pcrypt.dumps(
+            ret if ret is not False else {}
+        )
+        return pret
+
+    @property
+    def socket(self):
+        '''
+        Return a socket (or fd) which can be used for poll mechanisms
+        '''
+        self._socket
