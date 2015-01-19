@@ -22,6 +22,8 @@ try:
     HAS_STORMPATH = True
 except ImportError:
     HAS_STORMPATH = False
+import logging
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'stormpath'

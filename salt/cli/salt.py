@@ -12,6 +12,8 @@ from salt.exceptions import (
         SaltInvocationError,
         EauthAuthenticationError
         )
+import logging
+log = logging.getLogger(__name__)
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):

@@ -1061,7 +1061,7 @@ class _BaseV4(object):
             try:
                 packed_ip = (packed_ip << 8) | self._parse_octet(oc)
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
+                log.error('ValueError {0}'.format(exp))
                 raise AddressValueError(ip_str)
         return packed_ip
 

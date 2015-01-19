@@ -16,6 +16,8 @@ import salt.output
 import salt.utils.minions
 from salt.utils import print_cli
 from salt.ext.six.moves import range
+import logging
+log = logging.getLogger(__name__)
 
 
 class Batch(object):

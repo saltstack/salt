@@ -699,11 +699,10 @@ def create(vm_):
                 data.public_ips.append(ip)
                 public = data.public_ips
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 # Note(pabelanger): Because we loop, we only want to attach the
                 # floating IP address one. So, expect failures if the IP is
                 # already attached.
-                pass
 
         result = []
         private = node['private_ips']

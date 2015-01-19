@@ -47,8 +47,7 @@ class RosterMatcher(object):
             try:
                 addrs = salt.ext.ipaddr.IPNetwork(self.tgt).iterhosts()
             except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
-                pass
+                log.error('ValueError {0}'.format(exp))
         for addr in addrs:
             addr = str(addr)
             for port in ports:
