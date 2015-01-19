@@ -25,6 +25,8 @@ from sphinx.domains import Domain, ObjType, Index
 from sphinx.directives import ObjectDescription
 from sphinx.util.nodes import make_refnode
 from sphinx.util.docfields import GroupedField, TypedField
+import logging
+log = logging.getLogger(__name__)
 
 
 class DocRef(object):
@@ -468,8 +470,8 @@ class HTTPLexer(RegexLexer):
             from pygments.lexers import get_lexer_for_mimetype
             try:
                 lexer = get_lexer_for_mimetype(content_type)
-            except ClassNotFound:
-                pass
+            except ClassNotFound as exp:
+                log.error('Class not found {0}'.format(exp))
             else:
                 for idx, token, value in lexer.get_tokens_unprocessed(content):
                     yield offset + idx, token, value

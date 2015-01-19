@@ -12,7 +12,8 @@ class L(object):
 
     def addHandler(self, X):
         pass
-
+    def isEnabledFor(self,x):
+        return True
     def error(self,x, exc_info=None , exc_info_on_loglevel=None):
         raise Exception(x)
 

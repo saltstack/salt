@@ -17,6 +17,8 @@ from sphinx.util.nodes import nested_parse_with_titles
 from sphinx.util.nodes import set_source_info
 
 from sphinx.domains import python as python_domain
+import logging
+log = logging.getLogger(__name__)
 
 import salt
 
@@ -155,7 +157,6 @@ class LiterateFormula(LiterateCoding):
                     return f.readlines()
             except IOError as exp:
                 log.error('IOError {0}'.format(exp))
-                pass
 
         raise IOError("Could not find sls file '{0}'".format(sls_path))
 
