@@ -277,6 +277,7 @@ def fstab(config='/etc/fstab'):
         for line in ifile:
             try:
                 entry = _fstab_entry.dict_from_line( line, _fstab_entry.compatibility_keys )
+		entry[ 'opts' ] = entry[ 'opts' ].split( ',' )
                 ret[ entry.pop( 'name' ) ] = entry
             except _fstab_entry.ParseError:
                 pass
