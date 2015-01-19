@@ -1,4 +1,4 @@
-from salt.transport.channel import ReqChannel
+from salt.transport.client import ReqChannel
 
 
 class LocalChannel(ReqChannel):

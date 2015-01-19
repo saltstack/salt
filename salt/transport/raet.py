@@ -16,7 +16,7 @@ import logging
 from collections import defaultdict
 
 from salt.utils import kinds
-from salt.transport.channel import ReqChannel
+from salt.transport.client import ReqChannel
 
 log = logging.getLogger(__name__)
 

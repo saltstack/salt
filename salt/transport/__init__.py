@@ -5,7 +5,7 @@ Encapsulate the different transports available to Salt.  Currently this is only 
 from __future__ import absolute_import
 
 # for backwards compatibility
-from salt.transport.channel import ReqChannel
+from salt.transport.client import ReqChannel
 
 class Channel(ReqChannel):
     @staticmethod

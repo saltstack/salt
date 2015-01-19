@@ -18,13 +18,13 @@ import salt.payload
 import logging
 from collections import defaultdict
 
-import salt.transport.channel
+import salt.transport.client
 
 import zmq
 
 log = logging.getLogger(__name__)
 
-class ZeroMQReqChannel(salt.transport.channel.ReqChannel):
+class ZeroMQReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to ZeroMQ.
 
@@ -132,7 +132,7 @@ class ZeroMQReqChannel(salt.transport.channel.ReqChannel):
             return self._crypted_transfer(load, tries, timeout)
 
 
-class ZeroMQPubChannel(salt.transport.channel.PubChannel):
+class ZeroMQPubChannel(salt.transport.client.PubChannel):
     def __init__(self,
                  opts,
                  **kwargs):
