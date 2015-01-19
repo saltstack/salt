@@ -326,7 +326,7 @@ def start():
     try:
         httpd.serve_forever()
     except KeyboardInterrupt as exp:
-        log.error('KeyboardInterrupt {0}'.format(exp))
+        logger.error('KeyboardInterrupt {0}'.format(exp))
         raise SystemExit(0)
 
 

@@ -33,7 +33,8 @@ import salt.utils
 import salt.output
 from salt.ext.six import string_types
 
-
+import logging
+log = logging.getLogger(__name__)
 class NestDisplay(object):
     '''
     Manage the nested display contents

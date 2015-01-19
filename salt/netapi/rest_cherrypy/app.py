@@ -433,7 +433,7 @@ def json_processor(entity):
     try:
         cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError as exp:
-        log.error('ValueError {0}'.format(exp))
+        logger.error('ValueError {0}'.format(exp))
         raise cherrypy.HTTPError(400, 'Invalid JSON document')
 
     cherrypy.serving.request.raw_body = body
@@ -450,7 +450,7 @@ def yaml_processor(entity):
     try:
         cherrypy.serving.request.unserialized_data = yaml.safe_load(body)
     except ValueError as exp:
-        log.error('ValueError {0}'.format(exp))
+        logger.error('ValueError {0}'.format(exp))
         raise cherrypy.HTTPError(400, 'Invalid YAML document')
 
     cherrypy.serving.request.raw_body = body
@@ -470,7 +470,7 @@ def text_processor(entity):
     try:
         cherrypy.serving.request.unserialized_data = json.loads(body)
     except ValueError as exp:
-        log.error('ValueError {0}'.format(exp))
+        logger.error('ValueError {0}'.format(exp))
         cherrypy.serving.request.unserialized_data = body
 
     cherrypy.serving.request.raw_body = body
@@ -1298,7 +1298,7 @@ class Login(LowDataAdapter):
             if perms is None:
                 raise ValueError("Eauth permission list not found.")
         except (AttributeError, IndexError, KeyError, ValueError) as exp:
-            log.error('(AttributeError, IndexError, KeyError, ValueError) {0}'.format(exp))
+            logger.error('(AttributeError, IndexError, KeyError, ValueError) {0}'.format(exp))
             logger.debug("Configuration for external_auth malformed for "
                 "eauth '{0}', and user '{1}'."
                 .format(token.get('eauth'), token.get('name')), exc_info=True)
@@ -1832,7 +1832,7 @@ class WebsocketEndpoint(object):
                             handler.send('data: {0}\n\n'.format(
                                 json.dumps(data)), False)
                     except UnicodeDecodeError as exp:
-                        log.error('UnicodeDecodeError {0}'.format(exp))
+                        logger.error('UnicodeDecodeError {0}'.format(exp))
                         logger.error(
                                 "Error: Salt event has non UTF-8 data:\n{0}"
                                 .format(data))

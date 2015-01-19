@@ -22,6 +22,8 @@ import salt.utils
 # Import third party libs
 import yaml
 import salt.ext.six as six
+import logging
+log = logging.getLogger(__name__)
 
 
 class OverState(object):
