@@ -211,7 +211,8 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = 'service {0} status'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True,
+                                       python_shell=False)
 
 
 def enable(name, **kwargs):
