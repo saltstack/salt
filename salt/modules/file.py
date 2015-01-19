@@ -2547,14 +2547,14 @@ def source_list(source, source_hash, saltenv):
                 _, senv = single.split(env_splitter)
             except ValueError as exp:
                 log.error('ValueError {0}'.format(exp))
-                continue
             else:
                 mfiles += ['{0}?saltenv={1}'.format(f, senv)
                            for f in __salt__['cp.list_master'](senv)]
                 mdirs += ['{0}?saltenv={1}'.format(d, senv)
                           for d in __salt__['cp.list_master_dirs'](senv)]
 
-        ret = None
+        ret1 = None
+        ret2 = None
         for single in source:
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
@@ -2566,18 +2566,21 @@ def source_list(source, source_hash, saltenv):
                 proto = _urlparse(single_src).scheme
                 if proto == 'salt':
                     if single_src[7:] in mfiles or single_src[7:] in mdirs:
-                        ret = (single_src, single_hash)
+                        ret1 = single_src
+                        ret2 = single_hash
                         break
                 elif proto.startswith('http') or proto == 'ftp':
                     dest = salt.utils.mkstemp()
                     fn_ = __salt__['cp.get_url'](single_src, dest)
                     os.remove(fn_)
                     if fn_:
-                        ret = (single_src, single_hash)
+                        ret1 = single_src
+                        ret2 = single_hash
                         break
             elif isinstance(single, string_types):
                 if single[7:] in mfiles or single[7:] in mdirs:
-                    ret = (single, source_hash)
+                    ret1 = single
+                    ret2 = source_hash
                     break
         if ret is None:
             # None of the list items matched
@@ -2585,7 +2588,7 @@ def source_list(source, source_hash, saltenv):
                 'none of the specified sources were found'
             )
         else:
-            return ret
+            return ret1, ret2
     else:
         return source, source_hash
 

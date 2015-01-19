@@ -31,7 +31,8 @@ class L(object):
         #for line in traceback.format_stack():
         #    print line.strip()  
         pass
-
+    LOG_LEVELS = ("DEBUG","WARN")
+    SORTED_LEVEL_NAMES = ("DEBUG","WARN")
     def warning(self,x , exc_info=None , exc_info_on_loglevel=None ):
         #print "WARN",x
         #raise Exception(x)

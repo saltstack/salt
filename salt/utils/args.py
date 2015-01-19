@@ -77,10 +77,11 @@ def parse_kwarg(string_):
     Returns the kwarg name and value, or (None, None) if the regex was not
     matched.
     '''
-    try:
-        return KWARG_REGEX.match(string_).groups()
-    except AttributeError as exp:
-        log.error('AttributeError {0}'.format(exp))
+
+    m = KWARG_REGEX.match(string_)
+    if m :
+        return m.groups()
+    else:
         return None, None
 
 
