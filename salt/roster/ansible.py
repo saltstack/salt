@@ -100,6 +100,9 @@ import salt.utils
 import subprocess
 from salt.roster import get_roster_file
 
+import logging
+log = logging.getLogger(__name__)
+
 
 CONVERSION = {
     'ansible_ssh_host': 'host',

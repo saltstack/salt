@@ -36,6 +36,8 @@ from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
 
+import logging
+log = logging.getLogger(__name__)
 
 def _sorted(mixins_or_funcs):
     return sorted(
