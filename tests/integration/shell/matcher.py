@@ -14,7 +14,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 import logging
-log = logging.getLogger(_
+log = logging.getLogger(__name__)
 
 class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     '''

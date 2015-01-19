@@ -19,7 +19,7 @@ class StreamHandler(LoggingHandler):
     pass
 
 class SysLogHandler(LoggingHandler):
-    pass
+    LOG_USER=10
 
 class WatchedFileHandler(LoggingHandler):
     def __init__(self, log_path, mode, encoding, delay):
