@@ -10,7 +10,8 @@ import os
 
 # Import salt libs
 import salt.utils
-
+import logging
+log = logging.getLogger(__name__)
 
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
@@ -73,6 +74,5 @@ def list_():
                 autoruns[full_dir].append(afile)
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
 
     return autoruns

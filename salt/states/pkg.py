@@ -39,7 +39,8 @@ from __future__ import absolute_import
 import logging
 import os
 import re
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 import salt.utils
 from salt.output import nested

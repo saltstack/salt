@@ -43,7 +43,8 @@ from __future__ import absolute_import
 # Import python libs
 import glob
 import os
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 import salt.utils
 import salt.modules.cmdmod
@@ -84,7 +85,6 @@ def _find_utmp():
             result[os.stat(utmp).st_mtime] = utmp
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
     return result[sorted(result).pop()]
 
 
@@ -113,7 +113,6 @@ def _default_runlevel():
                     runlevel = line.split(':')[1]
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
-        pass
 
     # The default runlevel can also be set via the kernel command-line.
     # Kinky.
@@ -128,7 +127,6 @@ def _default_runlevel():
                         break
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
-        pass
 
     return runlevel
 

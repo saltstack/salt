@@ -12,6 +12,8 @@ import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 
+import logging
+log = logging.getLogger(__name__)
 
 def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
@@ -81,7 +83,6 @@ def item(*args):
             ret[arg] = __pillar__[arg]
         except KeyError as exp:
             log.error('KeyError {0}'.format(exp))
-            pass
     return ret
 
 

@@ -11,7 +11,8 @@ import os
 # Import salt libs
 import salt.utils
 import salt.syspaths as syspaths
-
+import logging
+log = logging.getLogger(__name__)
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
             'mongo.host': 'salt',

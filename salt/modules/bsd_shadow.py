@@ -8,7 +8,8 @@ try:
     import pwd
 except ImportError:
     pass
-
+import logging
+log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'shadow'
 
@@ -63,7 +64,6 @@ def info(name):
             change, expire = __salt__['cmd.run_all'](cmd, python_shell=True)['stdout'].split(':')
         except ValueError as exp:
             log.error('ValueError {0}'.format(exp))
-            pass
         else:
             ret['change'] = int(change)
             ret['expire'] = int(expire)

@@ -9,7 +9,8 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import plistlib
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators

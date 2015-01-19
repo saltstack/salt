@@ -14,7 +14,8 @@ import json
 import salt.loader
 import salt.utils
 import salt.client.ssh
-
+import logging
+log = logging.getLogger(__name__)
 
 class FunctionWrapper(object):
     '''

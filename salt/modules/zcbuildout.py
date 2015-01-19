@@ -64,7 +64,7 @@ _URL_VERSIONS = {
     2: u'http://downloads.buildout.org/2/bootstrap.py',
 }
 DEFAULT_VER = 2
-_logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
@@ -757,9 +757,9 @@ def bootstrap(directory='.',
             os.chown('bootstrap.py', uid, gid)
     except (IOError, OSError) as exc:
         # don't block here, try to execute it if can pass
-        _logger.error('BUILDOUT bootstrap permissions error:'
+        log.error('BUILDOUT bootstrap permissions error:'
                       ' {0}'.format(exc),
-                  exc_info=_logger.isEnabledFor(logging.DEBUG))
+                  exc_info=log.isEnabledFor(logging.DEBUG))
     cmd = '{0} bootstrap.py {1}'.format(python, bootstrap_args)
     ret = _Popen(cmd, directory=directory, runas=runas, loglevel=loglevel,
                  env=env, use_vt=use_vt)

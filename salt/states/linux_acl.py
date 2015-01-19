@@ -27,7 +27,8 @@ Ensure a Linux ACL does not exist
 import salt.utils
 
 __virtualname__ = 'acl'
-
+import logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''

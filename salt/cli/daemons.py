@@ -260,9 +260,9 @@ class Minion(parsers.MinionOptionParser):
             if check_user(self.config['user']):
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Minion')
+            logger.warning('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
+                logger.warning('Exiting on Ctrl-c')
             else:
                 logger.error(str(exc))
         finally:
@@ -288,9 +288,9 @@ class Minion(parsers.MinionOptionParser):
                 self.minion.opts['raet_cleanup_protecteds'] = cleanup_protecteds
                 self.minion.call_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Minion')
+            logger.warning('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
+                logger.warning('Exiting on Ctrl-c')
             else:
                 logger.error(str(exc))
         finally:
@@ -395,9 +395,9 @@ class ProxyMinion(parsers.MinionOptionParser):
         try:
             self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Proxy Minion')
+            logger.warning('Stopping the Salt Proxy Minion')
             if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
+                logger.warning('Exiting on Ctrl-c')
             else:
                 logger.error(str(exc))
         finally:
@@ -481,7 +481,7 @@ class Syndic(parsers.SyndicOptionParser):
                 self.syndic.tune_in()
             except KeyboardInterrupt as exp:
                 logger.error('KeyboardInterrupt {0}'.format(exp))
-                logger.warn('Stopping the Salt Syndic Minion')
+                logger.warning('Stopping the Salt Syndic Minion')
                 self.shutdown()
 
     def shutdown(self):

@@ -10,7 +10,7 @@ also be used to coordinate between masters.
 from __future__ import absolute_import
 
 import logging
-
+log = logging.getLogger(__name__)
 try:
     from kazoo.client import KazooClient
 
@@ -163,10 +163,10 @@ def lock(path,
 
     # block waiting for lock acquisition
     if timeout:
-        logging.info('Acquiring lock {0} with timeout={1}'.format(path, timeout))
+        log.info('Acquiring lock {0} with timeout={1}'.format(path, timeout))
         SEMAPHORE_MAP[path].acquire(timeout=timeout)
     else:
-        logging.info('Acquiring lock {0} with no timeout'.format(path))
+        log.info('Acquiring lock {0} with no timeout'.format(path))
         SEMAPHORE_MAP[path].acquire()
 
     return SEMAPHORE_MAP[path].is_acquired
@@ -196,5 +196,5 @@ def unlock(path,
         del SEMAPHORE_MAP[path]
         return True
     else:
-        logging.error('Unable to find lease for path {0}'.format(path))
+        log.error('Unable to find lease for path {0}'.format(path))
         return False

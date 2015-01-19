@@ -10,7 +10,8 @@ from __future__ import absolute_import
 import os
 import tempfile
 import hashlib
-
+import logging
+log = logging.getLogger(__name__)
 # Import Salt libs
 import salt.utils
 
@@ -45,7 +46,6 @@ def mount(location, access='rw'):
         except OSError as exp:
             log.error('OSError {0}'.format(exp))
             # somehow the directory already exists
-            pass
     while True:
         if os.listdir(root):
             # Stuf is in there, don't use it

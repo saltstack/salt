@@ -42,7 +42,8 @@ import sys
 
 # Import salt libs
 from salt.ext.six import string_types
-
+import logging
+log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'buildout'
 

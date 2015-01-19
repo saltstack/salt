@@ -13,8 +13,10 @@ from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'sysctl'
-
-
+import logging
+log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
 def __virtual__():
     '''
     Only run on Darwin (OS X) systems

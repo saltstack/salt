@@ -4,7 +4,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import sys
-
+import logging
+log = logging.getLogger(__name__)
 from salt.utils import parsers, print_cli
 from salt.utils.verify import verify_files
 from salt.exceptions import (

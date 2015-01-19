@@ -13,7 +13,8 @@ from salt import utils
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
-
+import logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''

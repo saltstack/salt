@@ -11,7 +11,8 @@ from __future__ import absolute_import
 # Import python libs
 import time
 import datetime
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 

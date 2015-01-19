@@ -8,7 +8,8 @@ from __future__ import absolute_import
 
 # Import salt libs
 from salt.ext.six import string_types
-
+import logging
+log = logging.getLogger(__name__)
 __monitor__ = [
         'status',
         ]

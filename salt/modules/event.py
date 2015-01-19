@@ -14,7 +14,8 @@ import salt.utils.event
 import salt.payload
 import salt.transport
 import salt.ext.six as six
-
+import logging
+log = logging.getLogger(__name__)
 __proxyenabled__ = ['*']
 
 
@@ -45,7 +46,6 @@ def fire_master(data, tag, preload=None):
             channel.send(load)
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
         return True
 
     if preload:
@@ -64,7 +64,6 @@ def fire_master(data, tag, preload=None):
             channel.send(load)
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
         return True
     else:
         # Usually, we can send the event via the minion, which is faster

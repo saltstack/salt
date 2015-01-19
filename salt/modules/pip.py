@@ -9,7 +9,8 @@ import os
 import re
 import logging
 import shutil
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 import salt.utils
 from salt.ext.six import string_types

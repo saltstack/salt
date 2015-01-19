@@ -18,7 +18,8 @@ import logging
 import traceback
 import binascii
 from salt.ext.six.moves import zip
-
+import logging
+log = logging.getLogger(__name__)
 # Import third party libs
 try:
     from M2Crypto import RSA, EVP

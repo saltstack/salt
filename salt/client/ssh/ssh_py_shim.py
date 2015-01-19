@@ -16,7 +16,8 @@ import shutil
 import sys
 import os
 import stat
-
+import logging
+log = logging.getLogger(__name__)
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
 

@@ -11,7 +11,8 @@ import hashlib
 # Import salt libs
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
-
+import logging
+log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'random'
 

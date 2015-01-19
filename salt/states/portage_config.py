@@ -13,7 +13,8 @@ A state module to manage Portage configuration on Gentoo
                 - openssl
 '''
 from __future__ import absolute_import
-
+import logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''

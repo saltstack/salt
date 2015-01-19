@@ -12,7 +12,8 @@ import re
 
 # Import salt libs
 import salt.utils
-
+import logging
+log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'jail'
 

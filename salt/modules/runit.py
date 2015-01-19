@@ -19,7 +19,8 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import re
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 

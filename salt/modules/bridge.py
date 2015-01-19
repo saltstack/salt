@@ -7,7 +7,8 @@ from __future__ import absolute_import
 import sys
 import re
 import salt.utils
-
+import logging
+log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'list_': 'list'

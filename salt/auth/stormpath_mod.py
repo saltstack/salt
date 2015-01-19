@@ -25,7 +25,8 @@ except ImportError:
 
 # Define the module's virtual name
 __virtualname__ = 'stormpath'
-
+import logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''

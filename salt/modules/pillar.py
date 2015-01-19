@@ -15,7 +15,8 @@ import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext.six import string_types
-
+import logging
+log = logging.getLogger(__name__)
 __proxyenabled__ = ['*']
 
 
@@ -194,7 +195,7 @@ def item(*args):
             ret[arg] = pillar[arg]
         except KeyError as exp:
             log.error('KeyError {0}'.format(exp))
-            pass
+
     return ret
 
 

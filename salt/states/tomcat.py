@@ -39,7 +39,8 @@ Notes:
   Tomcat Version:
       Apache Tomcat/7.0.37
 '''
-
+import logging
+log = logging.getLogger(__name__)
 
 # Private
 def __virtual__():

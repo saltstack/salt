@@ -43,7 +43,8 @@ from salt.ext.six.moves.urllib.request import (
         install_opener as _install_opener
 )
 # pylint: enable=import-error,no-name-in-module
-
+import logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''

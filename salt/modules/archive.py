@@ -15,7 +15,8 @@ from salt.utils import \
     which as _which, which_bin as _which_bin, is_windows as _is_windows
 import salt.utils.decorators as decorators
 import salt.utils
-
+import logging
+log = logging.getLogger(__name__)
 # TODO: Check that the passed arguments are correct
 
 # Don't shadow built-in's.

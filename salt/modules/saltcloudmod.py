@@ -6,7 +6,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import json
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 import salt.utils
 HAS_CLOUD = False

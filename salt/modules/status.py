@@ -18,7 +18,8 @@ from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.utils.network import host_to_ip as _host_to_ip
 import salt.utils.event
 import salt.config
-
+import logging
+log = logging.getLogger(__name__)
 
 __opts__ = {}
 

@@ -9,6 +9,8 @@ Management of Mongodb users
 
 # Define the module's virtual name
 __virtualname__ = 'mongodb_user'
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():

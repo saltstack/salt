@@ -188,7 +188,7 @@ def _salt(fun, *args, **kw):
                     raise ValueError('Unreachable')
                 break
             except Exception as exp:
-            log.error('Exception {0}'.format(exp))
+                log.error('Exception {0}'.format(exp))
                 ping = False
                 ping_retries += 1
                 log.error('{0} unreachable, retrying'.format(target))

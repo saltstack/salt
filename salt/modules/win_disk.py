@@ -9,7 +9,8 @@ from __future__ import absolute_import
 # Import python libs
 import ctypes
 import string
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 import salt.utils
 

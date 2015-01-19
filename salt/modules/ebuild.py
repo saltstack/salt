@@ -13,7 +13,8 @@ from __future__ import absolute_import
 import copy
 import logging
 import re
-
+import logging
+log = logging.getLogger(__name__)
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
@@ -35,7 +36,6 @@ except ImportError:
             HAS_PORTAGE = True
         except ImportError as exp:
             log.error('ImportError {0}'.format(exp))
-            pass
 
 log = logging.getLogger(__name__)
 

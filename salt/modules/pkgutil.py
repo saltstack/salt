@@ -11,7 +11,8 @@ import copy
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
-
+import logging
+log = logging.getLogger(__name__)
 
 def __virtual__():
     '''

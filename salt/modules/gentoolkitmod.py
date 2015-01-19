@@ -15,7 +15,8 @@ try:
     HAS_GENTOOLKIT = True
 except ImportError:
     pass
-
+import logging
+log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'gentoolkit'
 
@@ -253,8 +254,7 @@ def _glsa_list_process_output(output):
             ret[glsa_id] = {'description': desc, 'status': status,
                             'CVEs': cves}
         except ValueError as exp:
-            log.error('ValueError {0}'.format(exp))
-            pass
+            log.error('ValueError {0}'.format(
     return ret
 
 

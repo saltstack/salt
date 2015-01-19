@@ -10,7 +10,8 @@ import shutil
 
 # Import salt libs
 import salt.utils
-
+import logging
+log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import portage

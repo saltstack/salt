@@ -20,7 +20,8 @@ Runner to provide F5 Load Balancer functionality
 from __future__ import absolute_import
 # Import salt libs
 from salt.exceptions import CommandExecutionError
-
+import logging
+log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import pycontrol.pycontrol as f5

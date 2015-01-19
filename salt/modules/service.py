@@ -7,7 +7,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-
+import logging
+log = logging.getLogger(__name__)
 __func_alias__ = {
     'reload_': 'reload'
 }

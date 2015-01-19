@@ -3,20 +3,22 @@
 Manage the password database on Solaris systems
 '''
 from __future__ import absolute_import
-
+import logging
+log = logging.getLogger(__name__)
 # Import python libs
 import os
 try:
     import spwd
     HAS_SPWD = True
 except ImportError:
+    log.error('ImportError {0}'.format(exp))
     # SmartOS joyent_20130322T181205Z does not have spwd
     HAS_SPWD = False
     try:
         import pwd
     except ImportError as exp:
         log.error('ImportError {0}'.format(exp))
-        pass  # We're most likely on a Windows machine.
+        #pass  # We're most likely on a Windows machine.
 
 # Import salt libs
 import salt.utils
