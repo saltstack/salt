@@ -1596,6 +1596,13 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             metavar='METADATA',
             help=('Pass metadata into Salt, used to search jobs.')
         )
+        self.add_option(
+            '--output-diff',
+            dest='state_output_diff',
+            action='store_true',
+            default=False,
+            help=('Report only those states that have changed')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:
@@ -2104,6 +2111,14 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Change the timeout, if applicable, for the running '
                   'command; default=60')
         )
+        self.add_option(
+            '--output-diff',
+            dest='state_output_diff',
+            action='store_true',
+            default=False,
+            help=('Report only those states that have changed')
+        )
+
 
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
