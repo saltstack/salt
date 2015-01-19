@@ -19,6 +19,7 @@ from salt.ext.six.moves import range
 import logging
 log = logging.getLogger(__name__)
 
+
 class Batch(object):
     '''
     Manage the execution of batch runs

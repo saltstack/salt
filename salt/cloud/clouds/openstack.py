@@ -704,7 +704,6 @@ def create(vm_):
                 # Note(pabelanger): Because we loop, we only want to attach the
                 # floating IP address one. So, expect failures if the IP is
                 # already attached.
-                
 
         result = []
         private = node['private_ips']
