@@ -105,34 +105,28 @@ class PubServerChannel(object):
         # switch on available ttypes
         if ttype == 'zeromq':
             import salt.transport.zeromq
-            return salt.transport.zeromq.ZeroMQPubChannel(opts, **kwargs)
+            return salt.transport.zeromq.ZeroMQPubServerChannel(opts, **kwargs)
         elif ttype == 'raet':  # TODO:
             import salt.transport.raet
-            return salt.transport.raet.RAETPubChannel(opts, **kwargs)
+            return salt.transport.raet.RAETPubServerChannel(opts, **kwargs)
         elif ttype == 'local':  # TODO:
             import salt.transport.local
-            return salt.transport.local.LocalPubChannel(opts, **kwargs)
+            return salt.transport.local.LocalPubServerChannel(opts, **kwargs)
         else:
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
-    def recv(self, timeout=0):
+    def pre_fork(self, process_manager):
         '''
-        Get a pub job, with an optional timeout (0==forever)
+        Do anything necessary pre-fork. Since this is on the master side this will
+        primarily be used to create IPC channels and create our daemon process to
+        do the actual publishing
         '''
-        raise NotImplementedError()
+        pass
 
-    def recv_noblock(self):
+    def publish(self, load):
         '''
-        Get a pub job in a non-blocking manner.
-        Return pub or None
-        '''
-        raise NotImplementedError()
-
-    @property
-    def socket(self):
-        '''
-        Return a socket (or fd) which can be used for poll mechanisms
+        Publish "load" to minions
         '''
         raise NotImplementedError()
 
