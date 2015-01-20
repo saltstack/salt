@@ -708,7 +708,6 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             for index in range(self.opts.value['worker_threads']):
                 worker_seed.append('worker{0}'.format(index + 1))
             self.workers.value = itertools.cycle(worker_seed)
-        return True
 
 
 class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
