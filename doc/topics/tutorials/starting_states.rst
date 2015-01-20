@@ -79,16 +79,13 @@ simple way.
 The first line is the ID for a set of data, and it is called the ID
 Declaration. This ID sets the name of the thing that needs to be manipulated.
 
-The second and fourth lines are the start of the State Declarations, so they
-are using the pkg and service states respectively. The pkg state manages a
-software package to be installed via the system's native package manager,
-and the service state manages a system daemon. 
+The second and third lines contain the state module function to be run, in the
+format ``<state_module>.<function>``. The ``pkg.installed`` state module
+function ensures that a software package is installed via the system's native
+package manager. The ``service.running`` state module function ensures that a
+given system daemon is running.
 
-The third and fifth lines are the function to run. This function defines what 
-state the named package and service should be in. Here, the package is to be 
-installed, and the service should be running.
-
-Finally, on line six, is the word ``require``. This is called a Requisite
+Finally, on line five, is the word ``require``. This is called a Requisite
 Statement, and it makes sure that the Apache service is only started after
 a successful installation of the apache package.
 
