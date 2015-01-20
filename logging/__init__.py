@@ -56,8 +56,8 @@ class L(object):
     def log(self,msg=None, level=None, exc_info=None , exc_info_on_loglevel=None ,*args,**kwargs):
         print "LOG",msg        
 
-    def debug(self,*args,**kwargs ):
-        #print "DEBUG",x
+    def debug(self,x=None, *args,**kwargs ):
+        print "DEBUG",x
         #for line in traceback.format_stack():
         #    print line.strip()  
         pass

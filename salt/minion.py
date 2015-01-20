@@ -1403,6 +1403,9 @@ class Minion(MinionBase):
         '''
         Return the master publish port
         '''
+        assert self.publish_port
+        assert 'master_ip' in self.opts
+        assert self.opts['master_ip']
         return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
                                           port=self.publish_port)
 
@@ -1691,6 +1694,7 @@ class Minion(MinionBase):
         self._set_reconnect_ivl()
         self._setsockopts()
 
+        log.debug('going to connect to {0}!'.format(self.master_pub))
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
         self.poller.register(self.epull_sock, zmq.POLLIN)
