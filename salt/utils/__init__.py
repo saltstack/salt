@@ -717,12 +717,9 @@ def format_call(fun,
     missing_args = []
 
     for key in kwargs:
-        try:
+        if key in data :
             kwargs[key] = data.pop(key)
-        except KeyError as exp:
-            log.error('KeyError {0}'.format(exp))
-            # Let's leave the default value in place
-            pass
+
 
     while args:
         arg = args.pop(0)

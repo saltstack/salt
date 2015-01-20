@@ -161,10 +161,10 @@ def _get_virtual():
     '''
     Return a dict of virtual package information
     '''
-    try:
+
+    if 'pkg._get_virtual' in __context__:
         return __context__['pkg._get_virtual']
-    except KeyError as exp:
-        log.error('KeyError {0}'.format(exp))
+    else:
         __context__['pkg._get_virtual'] = {}
         if HAS_APT:
             apt_cache = apt.cache.Cache()

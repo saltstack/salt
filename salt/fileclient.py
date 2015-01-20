@@ -1119,7 +1119,7 @@ class RemoteClient(Client):
 
         #try:
         path = self._check_proto(path)
-        if not path :
+        if path :
             if not os.path.isfile(path):
                 err = 'Specified file {0} is not present to generate hash'
                 log.warning(err.format(path))
@@ -1131,9 +1131,13 @@ class RemoteClient(Client):
                     path, form=hash_type)
                 ret['hash_type'] = hash_type
                 return ret
-        load = {'path': path,
-                'saltenv': saltenv,
-                'cmd': '_file_hash'}
+            load = {'path': path,
+                    'saltenv': saltenv,
+                    'cmd': '_file_hash'}
+        else:
+            log.warning("Path is none")
+            return {}
+            
         return self.channel.send(load)
 
     def list_env(self, saltenv='base', env=None):

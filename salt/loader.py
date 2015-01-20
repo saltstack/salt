@@ -1447,18 +1447,26 @@ class LazyLoader(MutableMapping):
             # if the modulename isn't in the whitelist, don't bother
             if mod_key not in self.whitelist:
                 raise KeyError
-        mod_funcs = self.loader.gen_module(mod_key,
+
+        mod_funcs = None
+
+        if mod_key:
+            mod_funcs = self.loader.gen_module(mod_key,
                                            self.functions,
                                            pack=self.pack,
                                            virtual_enable=True
                                            )
+            
         # if you loaded nothing, then we don't have it
         if mod_funcs is None:
             # if we couldn't find it, then it could be a virtual or we don't have it
             # until we have a better way, we have to load them all to know
             # TODO: maybe do a load until, with some glob match first?
             self.load_all()
-            return self._dict[key]
+            if key in self._dict:
+                return self._dict[key]
+            else:
+                return False
         elif mod_funcs is False:  # i.e., the virtual check failed
             return False
         self._dict.update(mod_funcs)
@@ -1492,7 +1500,10 @@ class LazyLoader(MutableMapping):
                 log.debug('Could not LazyLoad {0}'.format(key))
                 return None
         else:
-            return self._dict[key]
+            if key not in self._dict:
+                return None
+            else:
+                return self._dict[key]
 
     def __len__(self):
         # if not loaded,

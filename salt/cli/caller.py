@@ -188,12 +188,17 @@ class ZeroMQCaller(object):
             ret['fun_args'] = self.opts['arg']
 
         for returner in returners:
-            try:
+#            try:
                 ret['success'] = True
-                self.minion.returners['{0}.returner'.format(returner)](ret)
-            except Exception as exp:
-                log.error('Exception {0}'.format(exp))
-                pass
+                key = '{0}.returner'.format(returner)
+                if key in self.minion.returners:
+                    r = self.minion.returners[key]
+                    if r:
+                        r(ret)
+                #self.minion.returners['{0}.returner'.format(returner)](ret)
+#            except Exception as exp:
+#                log.error('Exception {0}'.format(exp))
+#                pass
 
         # return the job infos back up to the respective minion's master
 

@@ -814,10 +814,10 @@ def installed(
                                    normalize=normalize,
                                    **kwargs)
 
-    try:
+    if len(result) == 5:
         desired, targets, to_unpurge, to_reinstall, altered_files = result
-    except ValueError as exp:
-        log.error('ValueError {0}'.format(exp))
+    else:
+        log.debug('got {0}'.format(result))
         # _find_install_targets() found no targets or encountered an error
 
         # check that the hold function is available

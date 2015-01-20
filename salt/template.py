@@ -95,14 +95,17 @@ def compile_template(template,
             time.sleep(0.01)
             ret = render(input_data, saltenv, sls, **render_kwargs)
         input_data = ret
-        if log.isEnabledFor(logging.GARBAGE):  # pylint: disable=no-member
-            try:
-                log.debug('Rendered data from file: {0}:\n{1}'.format(
+        if hasattr(ret, 'read'):
+            if log.isEnabledFor(logging.GARBAGE):  # pylint: disable=no-member
+                try:
+
+                    ret.seek(0)
+                except Exception as exp:
+                    log.error('error: {0}'.format(exp))
+            else:
+                log.debug('Rendered data from something not a file: {0}:\n{1}'.format(
                     template,
-                    ret.read()))
-                ret.seek(0)
-            except Exception as exp:
-                log.error('error: {0}'.format(exp))
+                    ret))
     return ret
 
 
