@@ -962,7 +962,7 @@ class TimeoutMixIn(object):
             type=int,
             default=self.default_timeout,
             help=('Change the timeout, if applicable, for the running '
-                  'command; default=%default')
+                  'command (in seconds); default=%default')
         )
 
 
