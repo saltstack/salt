@@ -5,9 +5,24 @@ Azure Cloud Module
 
 The Azure cloud module is used to control access to Microsoft Azure
 
-Use of this module only requires the ``apikey`` parameter. Set up the cloud
-configuration at ``/etc/salt/cloud.providers`` or
-``/etc/salt/cloud.providers.d/azure.conf``:
+:depends:
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/0.9.0>`_
+:configuration:
+    Required provider parameters:
+
+    * ``apikey``
+    * ``certificate_path``
+    * ``subscription_id``
+
+    A Management Certificate (.pem and .crt files) must be created and the .pem
+    file placed on the same machine that salt-cloud is run from. Information on
+    creating the pem file to use, and uploading the associated cer file can be
+    found at:
+
+    http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
+
+Example ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/azure.conf`` configuration:
 
 .. code-block:: yaml
 
@@ -16,11 +31,6 @@ configuration at ``/etc/salt/cloud.providers`` or
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       certificate_path: /etc/salt/azure.pem
       management_host: management.core.windows.net
-
-Information on creating the pem file to use, and uploading the associated cer
-file can be found at:
-
-http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
 '''
 # pylint: disable=E0102
 
