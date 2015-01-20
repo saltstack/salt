@@ -413,7 +413,7 @@ def set_fstab(
             for line in ifile:
                 try:
                     if criteria.match(line):
-                        # Note: If ret isn't None here, 
+                        # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = 'present'
                         if entry.match(line):
@@ -436,7 +436,7 @@ def set_fstab(
         lines.append(str(entry))
         ret = 'new'
 
-    if ret != 'present': # ret in ['new', 'change']:
+    if ret != 'present':  # ret in ['new', 'change']:
         if not salt.utils.test_mode(test=test, **kwargs):
             try:
                 with salt.utils.fopen(config, 'w+') as ofile:
