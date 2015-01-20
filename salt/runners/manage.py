@@ -553,7 +553,7 @@ def bootstrap(version='develop',
         # deployment easier on existing hosts (i.e. use salt.utils.vt,
         # pass better options to ssh, etc)
         subprocess.call(['ssh',
-                        'root@' if root_user else '' + host,
+                        ('root@' if root_user else '') + host,
                         'python -c \'import urllib; '
                         'print urllib.urlopen('
                         '\'' + script + '\''
