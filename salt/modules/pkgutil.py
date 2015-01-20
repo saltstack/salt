@@ -14,6 +14,7 @@ import salt.ext.six as six
 import logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris

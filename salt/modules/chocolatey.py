@@ -93,7 +93,7 @@ def chocolatey_version():
                     return __context__['chocolatey._version']
                 except Exception as exp:
                     log.error('Exception {0}'.format(exp))
-                    pass
+
         raise CommandExecutionError('Unable to determine Chocolatey version')
 
 

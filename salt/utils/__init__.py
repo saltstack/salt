@@ -717,7 +717,7 @@ def format_call(fun,
     missing_args = []
 
     for key in kwargs:
-        if key in data :
+        if key in data:
             kwargs[key] = data.pop(key)
 
 
@@ -1146,7 +1146,6 @@ def traverse_dict_and_list(data, key, default, delimiter=DEFAULT_TARGET_DELIM):
                         break
                     except KeyError as exp:
                         log.error('KeyError {0}'.format(exp))
-                        pass
                 if not embed_match:
                     # No embedded dicts matched, return the default
                     return default
@@ -1232,7 +1231,6 @@ def is_linux():
             is_proxy = True
     except AttributeError as exp:
         log.error('AttributeError {0}'.format(exp))
-        pass
     if is_proxy:
         return False
     else:
@@ -1408,7 +1406,6 @@ def is_true(value=None):
         value = float(value)
     except (ValueError, TypeError) as exp:
         log.error('(ValueError, TypeError) {0}'.format(exp))
-        pass
 
     # Now check for truthiness
     if isinstance(value, (int, float)):
@@ -2128,18 +2125,16 @@ def get_group_list(user=None, include_default=True):
             group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
     else:
         # Try pysss.getgrouplist
         # on debian it is python-sss - Python module for the System Security Services Daemon
 
         log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
         try:
-            import pysss 
+            import pysss
             group_names = list(pysss.getgrouplist(user))
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
     if group_names is None:
         # Fall back to generic code
         # Include the user's default group to behave like
@@ -2166,7 +2161,6 @@ def get_group_list(user=None, include_default=True):
         except KeyError as exp:
             log.error('KeyError {0}'.format(exp))
             # If for some reason the user does not have a default group
-            pass
     log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
     return sorted(ugroups)
 

@@ -16,6 +16,7 @@ from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint:
 import logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load if git exists on the system

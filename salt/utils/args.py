@@ -79,7 +79,7 @@ def parse_kwarg(string_):
     '''
 
     m = KWARG_REGEX.match(string_)
-    if m :
+    if m:
         return m.groups()
     else:
         return None, None

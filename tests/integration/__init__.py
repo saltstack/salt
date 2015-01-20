@@ -647,13 +647,11 @@ class TestDaemon(object):
             self.syndic_process.join()
         except AttributeError as exp:
             log.error('AttributeError {0}'.format(exp))
-            pass
         try:
             salt.utils.process.clean_proc(self.smaster_process, wait_for_kill=50)
             self.smaster_process.join()
         except AttributeError as exp:
             log.error('AttributeError {0}'.format(exp))
-            pass
         self._exit_mockbin()
         self._exit_ssh()
 

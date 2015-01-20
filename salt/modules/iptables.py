@@ -19,6 +19,8 @@ import salt.modules.cmdmod as salt_cmd
 
 import logging
 log = logging.getLogger(__name__)
+
+
 def __virtual__():
     '''
     Only load the module if iptables is installed

@@ -164,7 +164,6 @@ def extracted(name,
             file_result = file_result[next(file_result.iterkeys())]
         except AttributeError as exp:
             log.error('AttributeError {0}'.format(exp))
-            pass
 
         try:
             if not file_result['result']:

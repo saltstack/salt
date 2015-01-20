@@ -144,7 +144,6 @@ def destroy(device):
         __salt__['file.replace'](cfg_file, 'ARRAY {0} .*'.format(device), '')
     except SaltInvocationError as exp:
         log.error('SaltInvocationError {0}'.format(exp))
-        pass
 
     if __salt__['raid.list']().get(device) is None:
         return True

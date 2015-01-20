@@ -89,4 +89,3 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
             os.remove(tgt)
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-

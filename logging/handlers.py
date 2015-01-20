@@ -1,7 +1,7 @@
 #
 
 class LoggingHandler(object):
-    def __init__(self, level):
+    def __init__(self, level=None):
         pass
 
     def setLevel(self, x):

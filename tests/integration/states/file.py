@@ -30,6 +30,7 @@ import salt.utils
 import logging
 log = logging.getLogger(__name__)
 
+
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
     '''
     Validate the file state

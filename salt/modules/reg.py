@@ -178,7 +178,6 @@ def delete_key(hkey, path, key, reflection=True):
         return True
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
-        pass
 
     try:
         _winreg.DeleteValue(handle, key)

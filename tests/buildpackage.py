@@ -279,7 +279,6 @@ def build_centos(opts):
             os.makedirs(path)
         except OSError as exp:
             log.error('OSError {0}'.format(exp))
-            pass
         if not os.path.isdir(path):
             _abort('Unable to make directory: {0}'.format(path))
 

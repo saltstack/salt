@@ -47,7 +47,6 @@ def set_pidfile(pidfile, user):
     except IOError as exp:
         log.error('IO Error {0}'.format(exp))
 
-
     log.debug(('Created pidfile: {0}').format(pidfile))
     if salt.utils.is_windows():
         return True
@@ -112,7 +111,6 @@ def clean_proc(proc, wait_for_kill=10):
         # Catch AssertionError when the proc is evaluated inside the child
         # Catch AttributeError when the process dies between proc.is_alive()
         # and proc.terminate() and turns into a NoneType
-        pass
 
 
 def os_is_running(pid):
@@ -267,7 +265,6 @@ class ProcessManager(object):
         except SystemError as exp:
             log.error('SystemError {0}'.format(exp))
             # Daemon wasn't started by systemd
-            pass
 
         while True:
             try:
@@ -321,7 +318,6 @@ class ProcessManager(object):
                     del self._process_map[pid]
                 except KeyError as exp:
                     log.error('KeyError {0}'.format(exp))
-                    pass
         # if anyone is done after
         for pid in self._process_map:
             try:
@@ -329,4 +325,3 @@ class ProcessManager(object):
             # in case the process has since decided to die, os.kill returns OSError
             except OSError as exp:
                 log.error('OSError {0}'.format(exp))
-                pass

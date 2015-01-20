@@ -17,6 +17,7 @@ import sys
 import logging
 log = logging.getLogger(__name__)
 
+
 class LoggingTraceMixIn(object):
     '''
     Simple mix-in class to add a trace method to python's logging.

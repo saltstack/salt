@@ -30,6 +30,7 @@ __virtualname__ = 'stormpath'
 import logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load if stormpath is installed

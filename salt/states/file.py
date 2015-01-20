@@ -546,7 +546,6 @@ def _set_symlink_ownership(path, user, group):
         __salt__['file.lchown'](path, user, group)
     except OSError as exp:
         log.error('OSError {0}'.format(exp))
-        pass
     return _check_symlink_ownership(path, user, group)
 
 

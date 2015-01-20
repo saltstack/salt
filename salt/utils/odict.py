@@ -123,7 +123,6 @@ except ImportError:
                     self.__map.clear()
                 except AttributeError as exp:
                     log.error('AttributeError {0}'.format(exp))
-                    pass
                 dict.clear(self)
 
             def popitem(self, last=True):

@@ -132,7 +132,6 @@ def parse_zone(zonefile=None, zone=None):
                 zone = fp_.read()
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
 
     if not zone:
         return 'Error: Zone data was not found'

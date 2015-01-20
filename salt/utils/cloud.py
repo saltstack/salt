@@ -1816,7 +1816,6 @@ def remove_sshkey(host, known_hosts=None):
                 )
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                pass
 
     if known_hosts is not None:
         log.debug(

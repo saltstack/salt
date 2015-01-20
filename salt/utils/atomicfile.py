@@ -78,7 +78,6 @@ if os.name == 'nt':  # pragma: no cover
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
 
-
     def atomic_rename(src, dst):
         # Try atomic or pseudo-atomic rename
         if _rename(src, dst):
@@ -132,7 +131,6 @@ class _AtomicWFile(object):
                 os.remove(self._tmp_filename)
             except OSError as exp:
                 log.error('OSError {0}'.format(exp))
-
 
     def __repr__(self):
         return '<{0} {1}{2}, mode {3}>'.format(

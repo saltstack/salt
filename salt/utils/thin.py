@@ -121,7 +121,6 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
                     os.remove(thintar)
                 except OSError as exp:
                     log.error('OSError {0}'.format(exp))
-                    pass
             elif fh_.read() == salt.version.__version__:
                 return thintar
     tops = [
@@ -164,14 +163,13 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
                 # Nothing else in here spits errors, and the markupsafe code
                 # doesn't bail on import failure, so I followed that lead.
                 # And of course, any other failure still S/T's.
-                pass
     for mod in [m for m in so_mods.split(',') if m]:
         try:
             locals()[mod] = __import__(mod)
             tops.append(locals()[mod].__file__)
         except ImportError as exp:
             log.error('ImportError {0}'.format(exp))
-            pass   # As per comment above
+            # spew
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
     tfp = tarfile.open(thintar, 'w:gz', dereference=True)

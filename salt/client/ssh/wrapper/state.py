@@ -314,7 +314,7 @@ def highstate(test=None, **kwargs):
     # Clean up our tar
     try:
         os.remove(trans_tar)
-    except (OSError, IOError) exp as exp:
+    except (OSError, IOError) as exp:
         log.error('(OSError, IOError) exp {0}'.format(exp))
         log.error('IO Error {0}'.format(exp))
 

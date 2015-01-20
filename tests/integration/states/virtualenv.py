@@ -24,6 +24,8 @@ import logging
 log = logging.getLogger(__name__)
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+
+
 class VirtualenvTest(integration.ModuleCase,
                      integration.SaltReturnAssertsMixIn):
     @destructiveTest

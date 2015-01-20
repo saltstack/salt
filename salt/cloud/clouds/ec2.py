@@ -1731,7 +1731,6 @@ def request_instance(vm_=None, call=None):
 
             except SaltCloudSystemExit as exp:
                 log.error('SaltCloudSystemExit {0}'.format(exp))
-                pass
             finally:
                 raise SaltCloudSystemExit(str(exc))
 
@@ -1850,7 +1849,6 @@ def query_instance(vm_=None, call=None):
             destroy(vm_['name'])
         except SaltCloudSystemExit as exp:
             log.error('SaltCloudSystemExit {0}'.format(exp))
-            pass
         finally:
             raise SaltCloudSystemExit(str(exc))
 

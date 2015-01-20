@@ -24,7 +24,6 @@ import types
 import socket
 
 import logging.handlers
-import traceback
 
 from salt.textformat import TextFormat
 from salt.ext.six import PY3
@@ -252,7 +251,6 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
         except ValueError as exp:
             log.error('ValueError {0}'.format(exp))
             # There are no registered loggers yet
-            pass
         return instance
 
     def _log(self, level, msg, args, exc_info=None, extra=None,  # pylint: disable=arguments-differ

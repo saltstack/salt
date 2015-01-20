@@ -450,7 +450,7 @@ def chown(path, user, group):
             return os.lchown(path, uid, gid)
         except OSError as exp:
             log.error('OSError {0}'.format(exp))
-            pass
+
         err += 'File not found'
     if err:
         return err
@@ -4237,7 +4237,7 @@ def open_files(by_pid=False):
         except ValueError as exp:
             log.error('ValueError {0}'.format(exp))
             # Not a valid PID, move on
-            pass
+
 
     # Then we look at the open files for each PID
     files = {}

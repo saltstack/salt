@@ -294,7 +294,6 @@ def auth_keys(user=None, config='.ssh/authorized_keys'):
             full = _get_config_file(u, config)
         except CommandExecutionError as exp:
             log.error('CommandExecutionError {0}'.format(exp))
-            pass
 
         if full and os.path.isfile(full):
             keys[u] = _validate_keys(full)
@@ -939,7 +938,6 @@ def user_keys(user=None, pubfile=None, prvfile=None):
                         keys[u][keyname] = ''.join(_fh.readlines())
                 except (IOError, OSError) as exp:
                     log.error('IO/OS Error {0}'.format(exp))
-
 
     # clean up any empty items
     _keys = {}

@@ -516,7 +516,6 @@ def in_pack(pack, name):
                 return True
         except KeyError as exp:
             log.error('KeyError {0}'.format(exp))
-            pass
     return False
 
 
@@ -766,8 +765,8 @@ class Loader(object):
             # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
             # containing the names of the proxy types that the module supports.
 
-            log.debug("Attempting to init {0}".format( mod.__name__))
-            log.debug("Attempting to init {0}".format( mod.__file__))
+            log.debug("Attempting to init mod {0}".format(mod.__name__))
+            log.debug("Attempting to init file {0}".format(mod.__file__))
 
             if not hasattr(mod, 'render') and 'proxy' in self.opts:
                 if not hasattr(mod, '__proxyenabled__'):
@@ -805,7 +804,7 @@ class Loader(object):
                             log.error('KeyError {0}'.format(exp))
 
                 else:
-                    log.debug('set attr {0} = ...'.format(pack['name'])) #, pack['value']
+                    log.debug('set attr {0} = ...'.format(pack['name']))
                     setattr(mod, pack['name'], pack['value'])
 
             # Call a module's initialization method if it exists
@@ -815,7 +814,6 @@ class Loader(object):
                 module_init(self.opts)
                 #except TypeError as exp:
                 #    log.error('TypeError {0} while trying to call module_init({1})'.format(exp, self.opts))
-
 
             # Trim the full pathname to just the module
             # this will be the short name that other salt modules and state
@@ -884,7 +882,7 @@ class Loader(object):
     def load_modules(self, initial_load=False):
         '''
         Loads all of the modules from module_dirs and returns a list of them
-        TODO : dont load the modules we 
+        TODO : dont load the modules we
         '''
 
         self.modules = []
@@ -1014,8 +1012,7 @@ class Loader(object):
                                 self.tag,
                                 name
                             )
-                            #print submodule
-                            if '__file__' in submodule.__dict__ :
+                            if '__file__' in submodule.__dict__:
                                 smfile = '{0}.py'.format(
                                     os.path.splitext(submodule.__file__)[0]
                                 )
@@ -1236,8 +1233,6 @@ class Loader(object):
                 elif virtual is True and virtualname != module_name:
                     if virtualname is not True:
                         module_name = virtualname
-        #except :
-            
         finally:
             log.debug(
                 'loaded {0}'.format(module_name),
@@ -1399,7 +1394,6 @@ class Loader(object):
                         log.error('TypeError {0}'.format(exp))
                         # Can't serialize pydsl
 
-
             except (IOError, OSError) as exp:
                 log.error('IO/OS Error {0}'.format(exp))
                 msg = 'Unable to write to grains cache file {0}'
@@ -1456,7 +1450,7 @@ class LazyLoader(MutableMapping):
                                            pack=self.pack,
                                            virtual_enable=True
                                            )
-            
+
         # if you loaded nothing, then we don't have it
         if mod_funcs is None:
             # if we couldn't find it, then it could be a virtual or we don't have it

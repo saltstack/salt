@@ -332,7 +332,6 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
         except AttributeError as exp:
             log.error('AttributeError {0}'.format(exp))
             # The pip version being used is already < 1.2
-            pass
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})

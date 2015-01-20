@@ -498,7 +498,6 @@ class Client(object):
                     ret.append(minion_mkdir)
         except TypeError as exp:
             log.error('TypeError {0}'.format(exp))
-            pass
         ret.sort()
         return ret
 
@@ -1119,7 +1118,7 @@ class RemoteClient(Client):
 
         #try:
         path = self._check_proto(path)
-        if path :
+        if path:
             if not os.path.isfile(path):
                 err = 'Specified file {0} is not present to generate hash'
                 log.warning(err.format(path))
@@ -1137,7 +1136,7 @@ class RemoteClient(Client):
         else:
             log.warning("Path is none")
             return {}
-            
+
         return self.channel.send(load)
 
     def list_env(self, saltenv='base', env=None):

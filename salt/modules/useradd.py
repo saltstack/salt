@@ -131,7 +131,6 @@ def add(name,
             except OSError as exp:
                 log.error('OSError {0}'.format(exp))
                 # /etc/usermgmt.conf not present: defaults will be used
-                pass
 
     if createhome:
         cmd.append('-m')

@@ -602,7 +602,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 os.remove(requirement)
             except OSError as exp:
                 log.error('OSError {0}'.format(exp))
-                pass
 
 
 def uninstall(pkgs=None,
@@ -741,7 +740,6 @@ def uninstall(pkgs=None,
                 os.remove(requirement)
             except OSError as exp:
                 log.error('OSError {0}'.format(exp))
-
 
 
 def freeze(bin_env=None,

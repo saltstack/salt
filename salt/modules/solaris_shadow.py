@@ -10,7 +10,7 @@ import os
 try:
     import spwd
     HAS_SPWD = True
-except ImportError:
+except ImportError as exp:
     log.error('ImportError {0}'.format(exp))
     # SmartOS joyent_20130322T181205Z does not have spwd
     HAS_SPWD = False

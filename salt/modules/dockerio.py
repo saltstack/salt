@@ -1365,7 +1365,6 @@ def get_images(name=None, quiet=False, all=True):
                 inf['Human_Size'] = _sizeof_fmt(int(inf['Size']))
             except ValueError as exp:
                 log.error('ValueError {0}'.format(exp))
-                pass
             try:
                 ts = int(inf['Created'])
                 dts = datetime.datetime.fromtimestamp(ts)
@@ -1530,7 +1529,6 @@ def inspect_image(image):
                 ] = _sizeof_fmt(int(infos[k]))
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
         _valid(status, id_=image, out=infos)
     except Exception as exp:
         log.error('Exception {0}'.format(exp))

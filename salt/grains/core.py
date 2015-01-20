@@ -192,7 +192,6 @@ def _linux_gpu_data():
             )
     except OSError as exp:
         log.error('OSError {0}'.format(exp))
-        pass
 
     gpus = []
     for gpu in devs:
@@ -236,7 +235,6 @@ def _netbsd_gpu_data():
                     gpus.append({'vendor': vendor_match.group(1), 'model': vendor_match.group(2)})
     except OSError as exp:
         log.error('OSError {0}'.format(exp))
-        pass
 
     grains = {}
     grains['num_gpus'] = len(gpus)
@@ -265,7 +263,6 @@ def _osx_gpudata():
 
     except OSError as exp:
         log.error('OSError {0}'.format(exp))
-        pass
 
     grains = {}
     grains['num_gpus'] = len(gpus)
@@ -591,15 +588,12 @@ def _virtual(osdata):
     isdir = os.path.isdir
     sysctl = salt.utils.which('sysctl')
     if osdata['kernel'] in choices:
-        if os.geteuid() == 0 :
+        if os.geteuid() == 0:
             if os.path.isdir('/proc'):
-#            try:
                 self_root = os.stat('/')
                 init_root = os.stat('/proc/1/root/.')
                 if self_root != init_root:
                     grains['virtual_subtype'] = 'chroot'
-#            except (IOError, OSError) as exp:
-#                log.error('IO/OS Error {0}'.format(exp))
 
         if os.path.isfile('/proc/1/cgroup'):
             try:

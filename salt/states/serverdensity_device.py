@@ -70,7 +70,6 @@ def _get_salt_params():
         params['privateDNS'] = all_grains['fqdn']
     except KeyError as exp:
         log.error('KeyError {0}'.format(exp))
-        pass
 
     return params
 

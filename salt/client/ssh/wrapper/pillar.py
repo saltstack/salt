@@ -15,6 +15,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import logging
 log = logging.getLogger(__name__)
 
+
 def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.14

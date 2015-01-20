@@ -31,6 +31,8 @@ import logging
 log = logging.getLogger(__name__)
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+
+
 class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_pip_installed_errors(self):

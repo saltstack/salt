@@ -368,7 +368,6 @@ def create(vm_):
             destroy(vm_['name'])
         except SaltCloudSystemExit as exp:
             log.error('SaltCloudSystemExit {0}'.format(exp))
-            pass
         finally:
             raise SaltCloudSystemExit(str(exc))
 

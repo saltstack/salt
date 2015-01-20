@@ -249,7 +249,6 @@ def get_hostnames():
         except (IOError, OSError) as exp:
             log.error('IO/OS Error {0}'.format(exp))
 
-
     # strip spaces and ignore empty strings
     hosts = []
     for name in h:

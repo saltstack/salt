@@ -70,6 +70,7 @@ from salt.ext.six import string_types
 import logging
 log = logging.getLogger(__name__)
 
+
 def output(data):
     '''
     The HighState Outputter is only meant to be used with the state.highstate

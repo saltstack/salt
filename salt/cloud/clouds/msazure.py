@@ -575,7 +575,6 @@ def create(vm_):
                 return data['url']
         except WindowsAzureMissingResourceError as exp:
             log.error('WindowsAzureMissingResourceError {0}'.format(exp))
-            pass
         time.sleep(1)
         return False
 

@@ -1169,7 +1169,6 @@ def _consolidate_repo_sources(sources):
             os.remove(file_)
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
     return sources
 
 
@@ -1354,7 +1353,6 @@ def del_repo(repo, **kwargs):
                             sources.remove(source)
                         except ValueError as exp:
                             log.error('ValueError {0}'.format(exp))
-                            pass
             sources.save()
         if deleted_from:
             ret = ''
@@ -1371,7 +1369,6 @@ def del_repo(repo, **kwargs):
                             os.remove(repo_file)
                         except OSError as exp:
                             log.error('OSError {0}'.format(exp))
-                            pass
                 ret += msg.format(repo, repo_file)
             # explicit refresh after a repo is deleted
             refresh_db()

@@ -68,7 +68,6 @@ class MasterTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                     os.kill(int(fhr.read()), signal.SIGKILL)
                 except OSError as exp:
                     log.error('OSError {0}'.format(exp))
-                    pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
             self.assertIn(

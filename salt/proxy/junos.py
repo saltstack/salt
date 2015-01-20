@@ -65,4 +65,4 @@ class Proxyconn(object):
             self.conn.close()
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
-            pass
+

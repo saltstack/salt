@@ -80,7 +80,6 @@ def _cleanup():
                 log.error('ValueError {0}'.format(exp))
                 # This can happen if two threads create a new Terminal instance
                 # It's harmless that it was already removed, so ignore.
-                pass
 # <---- Cleanup Running Instances --------------------------------------------
 
 

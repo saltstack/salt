@@ -156,7 +156,6 @@ def init():
         except TypeError as exp:
             log.error('TypeError {0}'.format(exp))
             # mountpoint not specified
-            pass
 
         hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
         repo_hash = hash_type(repo_url).hexdigest()
@@ -212,7 +211,6 @@ def init():
                     )
         except OSError as exp:
             log.error('OSError {0}'.format(exp))
-            pass
         else:
             log.info('Wrote new svnfs_remote map to {0}'.format(remote_map))
 
@@ -234,7 +232,6 @@ def purge_cache():
             remove_dirs.remove(repo['hash'])
         except ValueError as exp:
             log.error('ValueError {0}'.format(exp))
-            pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
                    if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
     if remove_dirs:
@@ -269,7 +266,6 @@ def update():
             os.remove(lk_fn)
         except (OSError, IOError) as exp:
             log.error('(OSError, IOError) {0}'.format(exp))
-            pass
 
         new_rev = _rev(repo)
         if any((x is None for x in (old_rev, new_rev))):

@@ -17,6 +17,7 @@ import salt.client.ssh
 import logging
 log = logging.getLogger(__name__)
 
+
 class FunctionWrapper(object):
     '''
     Create an object that acts like the salt function dict and makes function

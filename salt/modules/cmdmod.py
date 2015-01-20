@@ -472,7 +472,7 @@ def _run(cmd,
                 ret['pid'] = proc.pid
         finally:
             proc.close(terminate=True, kill=True)
-    if '__context__' in globals():    
+    if '__context__' in globals():
         __context__['retcode'] = ret['retcode']
     #except NameError as exp:
     #    log.error('NameError {0}'.format(exp))

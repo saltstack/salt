@@ -136,7 +136,6 @@ def _get_jinja_error_slug(tb_data):
         ][-1]
     except IndexError as exp:
         log.error('IndexError {0}'.format(exp))
-        pass
 
 
 def _get_jinja_error_message(tb_data):
@@ -148,7 +147,6 @@ def _get_jinja_error_message(tb_data):
         return u'{0}({1}):\n{3}'.format(*line)
     except IndexError as exp:
         log.error('IndexError {0}'.format(exp))
-        pass
     return None
 
 
@@ -160,7 +158,6 @@ def _get_jinja_error_line(tb_data):
         return _get_jinja_error_slug(tb_data)[1]
     except IndexError as exp:
         log.error('IndexError {0}'.format(exp))
-        pass
     return None
 
 

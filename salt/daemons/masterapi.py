@@ -234,17 +234,12 @@ def fileserver_update(fileserver):
     Update the fileserver backends, requires that a built fileserver object
     be passed in
     '''
-    #try:
+
     if not fileserver.servers:
         log.error('No fileservers loaded, the master will not be'
                   'able to serve files to minions')
         raise SaltMasterError('No fileserver backends available')
-        fileserver.update()
-    # except Exception as exc:
-    #     log.error(
-    #         'Exception {0} occurred in file server update'.format(exc),
-    #         exc_info_on_loglevel=logging.DEBUG
-    #     )
+        #fileserver.update()
 
 
 class AutoKey(object):

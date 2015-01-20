@@ -172,7 +172,6 @@ def _chkconfig_is_enabled(name, runlevel=None):
                     return True
         except IndexError as exp:
             log.error('IndexError {0}'.format(exp))
-            pass
     return False
 
 

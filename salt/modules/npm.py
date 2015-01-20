@@ -124,7 +124,6 @@ def install(pkg=None,
     except ValueError as exp:
         log.error('ValueError {0}'.format(exp))
         # Not JSON! Try to coax the json out of it!
-        pass
 
     lines = npm_output.splitlines()
     log.error(lines)

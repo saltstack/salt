@@ -336,7 +336,6 @@ class CkMinions(object):
                         minions.remove(id_)
                     except KeyError as exp:
                         log.error('KeyError {0}'.format(exp))
-                        pass
         return list(minions)
 
     def _check_compound_pillar_exact_minions(self, expr, delimiter, greedy):

@@ -39,6 +39,7 @@ from salt.utils.validate.path import is_writeable
 import logging
 log = logging.getLogger(__name__)
 
+
 def _sorted(mixins_or_funcs):
     return sorted(
         mixins_or_funcs, key=lambda mf: getattr(mf, '_mixin_prio_', 1000)

@@ -402,7 +402,6 @@ def find_interfaces(*args):
                     iflist[iface] = br
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                pass
 
     return iflist
 

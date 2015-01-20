@@ -216,7 +216,6 @@ def _expand_node(node):
         del ret['extra']['boot_disk']
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
-        pass
     zone = ret['extra']['zone']
     ret['extra']['zone'] = {}
     ret['extra']['zone'].update(zone.__dict__)

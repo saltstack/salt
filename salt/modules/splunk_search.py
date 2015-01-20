@@ -103,7 +103,7 @@ def get(name, profile="splunk"):
         search = client.saved_searches[name]
     except KeyError as exp:
         log.error('KeyError {0}'.format(exp))
-        pass
+
     return search
 
 
@@ -255,7 +255,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
         client.saved_searches.delete(name)
     except Exception as exp:
         log.error('Exception {0}'.format(exp))
-        pass
+
     search = client.saved_searches.create(name, search="nothing")
     defaults = dict(search.content)
     client.saved_searches.delete(name)

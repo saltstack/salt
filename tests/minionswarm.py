@@ -199,14 +199,12 @@ class Swarm(object):
                     os.kill(pid, signal.SIGTERM)
                 except ValueError as exp:
                     log.error('ValueError {0}'.format(exp))
-                    pass
                 if os.path.exists(pidfile):
                     os.remove(pidfile)
                 if not self.opts['no_clean']:
                     shutil.rmtree(path)
             except (OSError, IOError) as exp:
                 log.error('(OSError, IOError) {0}'.format(exp))
-                pass
 
 
 class MinionSwarm(Swarm):

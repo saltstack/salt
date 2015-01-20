@@ -346,11 +346,11 @@ class SAuth(object):
         self.creds = creds
 
         if isinstance(creds, str):
-            if creds == 'nokey' :
+            if creds == 'nokey':
                 #log.error('Authentication creds {0} not dict'.format(creds))
                 #self.crypticle = Crypticle(self.opts, creds)
                 #raise Exception('Authentication creds {0} not dict'.format(creds))
-                self.crypticle=None # no key
+                self.crypticle = None # no key
         else:
             self.crypticle = Crypticle(self.opts, creds['aes'])
 
@@ -697,8 +697,8 @@ class SAuth(object):
         )
 
         try:
-            s  = self.minion_sign_in_payload()
-            if s :
+            s = self.minion_sign_in_payload()
+            if s:
                 payload = sreq.send_auto(
                     self.minion_sign_in_payload(),
                     tries=tries,

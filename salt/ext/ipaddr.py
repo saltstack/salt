@@ -30,6 +30,8 @@ import struct
 
 # Import salt libs
 from salt.ext.six.moves import range
+import logging
+log = logging.getLogger(__name__)
 
 __version__ = 'trunk'
 

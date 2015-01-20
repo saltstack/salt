@@ -343,7 +343,7 @@ def cache_file(path, saltenv='base', env=None):
         path, saltenv = path.split(env_splitter)
     except ValueError as exp:
         log.error('ValueError {0}'.format(exp))
-        pass
+
     result = __context__['cp.fileclient'].cache_file(path, saltenv)
     if not result:
         log.error(

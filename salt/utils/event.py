@@ -276,7 +276,6 @@ class SaltEvent(object):
             log.error('AttributeError {0}'.format(exp))
             # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
             #                        CentOS5, which still uses 2.1.9)
-            pass
         self.push.connect(self.pulluri)
         self.cpush = True
 

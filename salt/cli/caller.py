@@ -128,7 +128,7 @@ class ZeroMQCaller(object):
             except NameError as exp:
                 log.error('NameError {0}'.format(exp))
                 # Don't require msgpack with local
-                pass
+
             except IOError as exp:
                 log.error('IO Error {0}'.format(exp))
                 sys.stderr.write(
@@ -188,17 +188,12 @@ class ZeroMQCaller(object):
             ret['fun_args'] = self.opts['arg']
 
         for returner in returners:
-#            try:
-                ret['success'] = True
-                key = '{0}.returner'.format(returner)
-                if key in self.minion.returners:
-                    r = self.minion.returners[key]
-                    if r:
-                        r(ret)
-                #self.minion.returners['{0}.returner'.format(returner)](ret)
-#            except Exception as exp:
-#                log.error('Exception {0}'.format(exp))
-#                pass
+            ret['success'] = True
+            key = '{0}.returner'.format(returner)
+            if key in self.minion.returners:
+                r = self.minion.returners[key]
+                if r:
+                    r(ret)
 
         # return the job infos back up to the respective minion's master
 
@@ -209,7 +204,6 @@ class ZeroMQCaller(object):
                 self.return_pub(mret)
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                pass
         # close raet channel here
         return ret
 

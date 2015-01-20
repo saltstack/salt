@@ -67,7 +67,7 @@ def run(plugins):
                     data[plugin][key] = val
                 except ValueError as exp:
                     log.error('ValueError {0}'.format(exp))
-                    pass
+
     return data
 
 

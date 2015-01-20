@@ -1311,7 +1311,6 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
             oput = self.modules.value[ret['fun']].__outputter__
         except (KeyError, AttributeError, TypeError) as exp:
             log.error('(KeyError, AttributeError, TypeError) {0}'.format(exp))
-            pass
         else:
             if isinstance(oput, str):
                 ret['out'] = oput

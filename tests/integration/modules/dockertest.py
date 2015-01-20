@@ -70,7 +70,6 @@ class DockerTest(integration.ModuleCase):
                     break
             except KeyError as exp:
                 log.error('KeyError {0}'.format(exp))
-                pass
         self.assertTrue(foundit, 'Could not find created image.')
 
     def test_create_container(self):

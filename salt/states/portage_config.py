@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load if the portage_config module is available in __salt__

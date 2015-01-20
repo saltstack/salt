@@ -12,6 +12,8 @@ except ImportError:
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _dscl, _flush_dscl_cache
+import logging
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'group'

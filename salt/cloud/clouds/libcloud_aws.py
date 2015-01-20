@@ -99,7 +99,6 @@ def __virtual__():
         return False
     except ImportError as exp:
         log.error('ImportError {0}'.format(exp))
-        pass
 
     if get_configured_provider() is False:
         return False
@@ -409,7 +408,6 @@ def create(vm_):
             destroy(vm_['name'])
         except SaltCloudSystemExit as exp:
             log.error('SaltCloudSystemExit {0}'.format(exp))
-            pass
         finally:
             raise SaltCloudSystemExit(str(exc))
 

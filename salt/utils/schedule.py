@@ -939,4 +939,4 @@ def clean_proc_dir(opts):
                         os.unlink(fn_)
                     except OSError as exp:
                         log.error('OSError {0}'.format(exp))
-                        pass
+

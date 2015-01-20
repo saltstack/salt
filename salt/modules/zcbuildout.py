@@ -438,7 +438,6 @@ def _get_buildout_ver(directory='.'):
             buildoutver = 1
     except (OSError, IOError) as exp:
         log.error('(OSError, IOError) {0}'.format(exp))
-        pass
     return buildoutver
 
 

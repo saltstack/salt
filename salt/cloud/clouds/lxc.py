@@ -250,7 +250,6 @@ def _salt(fun, *args, **kw):
             raise
         except TypeError as exp:
             log.error('TypeError {0}'.format(exp))
-            pass
         if cache:
             __CACHED_CALLS[cache_key] = ret
     elif cache and cache_key in __CACHED_CALLS:

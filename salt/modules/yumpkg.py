@@ -945,7 +945,6 @@ def install(name=None,
                 namepart, archpart = pkgname.rsplit('.', 1)
             except ValueError as exp:
                 log.error('ValueError {0}'.format(exp))
-                pass
             else:
                 if archpart in __ARCHES:
                     arch = '.' + archpart
@@ -1443,7 +1442,6 @@ def group_list():
                 name, lang = re.match(r'(.+) \[(.+)\]', line).groups()
             except AttributeError as exp:
                 log.error('AttributeError {0}'.format(exp))
-                pass
             else:
                 ret[key][line] = {'name': name, 'language': lang}
     return ret

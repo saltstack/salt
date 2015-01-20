@@ -79,7 +79,6 @@ def latest_version(*names, **kwargs):
                 ret[name] = version_num
         except (ValueError, IndexError) as exp:
             log.error('(ValueError, IndexError) {0}'.format(exp))
-            pass
 
     pkgs = {}
 

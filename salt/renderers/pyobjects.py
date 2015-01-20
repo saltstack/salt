@@ -368,7 +368,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
         })
     except NameError as exp:
         log.error('NameError {0}'.format(exp))
-        pass
 
     # if salt_data is not True then we just return the global scope we've
     # built instead of returning salt data from the registry

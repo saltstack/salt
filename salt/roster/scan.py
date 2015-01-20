@@ -9,6 +9,8 @@ import socket
 
 # Import salt libs
 import salt.ext.ipaddr
+import logging
+log = logging.getLogger(__name__)
 
 
 def targets(tgt, tgt_type='glob', **kwargs):

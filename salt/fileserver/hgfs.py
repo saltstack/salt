@@ -234,7 +234,6 @@ def init():
         except TypeError as exp:
             log.error('TypeError {0}'.format(exp))
             # mountpoint not specified
-            pass
 
         hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
         repo_hash = hash_type(repo_url).hexdigest()
@@ -284,7 +283,6 @@ def init():
                     fp_.write('{0} = {1}\n'.format(repo['hash'], repo['url']))
         except OSError as exp:
             log.error('OSError {0}'.format(exp))
-            pass
         else:
             log.info('Wrote new hgfs_remote map to {0}'.format(remote_map))
 
@@ -306,7 +304,6 @@ def purge_cache():
             remove_dirs.remove(repo['hash'])
         except ValueError as exp:
             log.error('ValueError {0}'.format(exp))
-            pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
                    if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
     if remove_dirs:
@@ -378,7 +375,6 @@ def update():
     except (IOError, OSError) as exp:
         log.error('IO/OS Error {0}'.format(exp))
         # Hash file won't exist if no files have yet been served up
-
 
 
 def _env_is_exposed(env):
@@ -501,14 +497,12 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                 os.remove(filename)
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                pass
         with salt.utils.fopen(blobshadest, 'w+') as fp_:
             fp_.write(ref[2])
         try:
             os.remove(lk_fn)
         except (OSError, IOError) as exp:
             log.error('(OSError, IOError) {0}'.format(exp))
-            pass
         fnd['rel'] = path
         fnd['path'] = dest
         repo['repo'].close()

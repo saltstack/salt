@@ -180,7 +180,6 @@ def verify_files(files, user):
                 os.chown(fn_, uid, -1)
             except OSError as exp:
                 log.error('OSError chown of {0} to uid {1} ({2}) failed with error {3}'.format(fn_, uid, user, exp))
-                pass
     return True
 
 

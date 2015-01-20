@@ -240,7 +240,7 @@ class Pillar(object):
                             )
                         )
                     else:
-                        log.debug("no template found {0}".format( self.opts['state_top']))
+                        log.debug("no template found {0}".format(self.opts['state_top']))
         # except Exception as exc:
         #     log.error('Exception {0}'.format(exc))
         #     errors.append(

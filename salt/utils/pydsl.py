@@ -316,7 +316,6 @@ class StateDeclaration(object):
                     sls.funcs.remove(m._func)
                 except ValueError as exp:
                     log.error('ValueError {0}'.format(exp))
-                    pass
 
         result = HighState.get_active().state.functions['state.high'](
             {self._id: self._repr()}

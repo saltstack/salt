@@ -514,7 +514,7 @@ def request_instance(vm_=None, call=None):
                     )
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                if str(exp).startswith('404'):                    
+                if str(exp).startswith('404'):
                     pass
                 else:
                     raise

@@ -402,7 +402,6 @@ def mod_repo(repo, **kwargs):
         except Exception as exp:
             log.error('Exception {0}'.format(exp))
             # No XML out available, but it is still unknown the state of the result.
-            pass
 
         if doc:
             msg_nodes = doc.getElementsByTagName('message')

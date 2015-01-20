@@ -72,7 +72,6 @@ class GitFSTest(integration.ModuleCase):
         except OSError as exp:
             log.error('OSError {0}'.format(exp))
             # We probably caught an error because files already exist. Ignore
-            pass
 
         try:
             repo = git.Repo(self.tmp_repo_dir)

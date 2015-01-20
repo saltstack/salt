@@ -46,6 +46,7 @@ from salt.ext.six.moves.urllib.request import (
 import logging
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Always load
@@ -226,7 +227,6 @@ def workers(profile='default'):
             )
         except KeyError as exp:
             log.error('KeyError {0}'.format(exp))
-            pass
 
     worker_list = list(set(worker_list))
 

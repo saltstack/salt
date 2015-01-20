@@ -13,6 +13,7 @@ from salt.ext.six import string_types
 import logging
 log = logging.getLogger(__name__)
 
+
 def mac(addr):
     '''
     Validates a mac address

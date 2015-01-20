@@ -145,7 +145,7 @@ def send(func, *args, **kwargs):
         except IndexError as exp:
             log.error('IndexError {0}'.format(exp))
             # Safe error, arg may be in kwargs
-            pass
+
     f_call = salt.utils.format_call(__salt__[mine_func], func_data)
     for arg in args:
         if arg not in f_call['args']:

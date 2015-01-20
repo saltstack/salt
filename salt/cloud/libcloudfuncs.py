@@ -228,7 +228,6 @@ def avail_sizes(conn=None, call=None):
                 attr_value = getattr(size, attr)
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                pass
 
             if isinstance(attr_value, string_types):
                 attr_value = attr_value.encode(

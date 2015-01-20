@@ -575,7 +575,6 @@ def deploy_war(war,
             __salt__['file.set_mode'](cached, '0644')
         except KeyError as exp:
             log.error('KeyError {0}'.format(exp))
-            pass
     else:
         tfile = war
 

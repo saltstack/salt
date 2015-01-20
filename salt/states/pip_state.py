@@ -49,7 +49,6 @@ if HAS_PIP is True:
             del sys.modules['pip']
 
 
-
 # Define the module's virtual name
 __virtualname__ = 'pip'
 

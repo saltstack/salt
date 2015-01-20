@@ -131,7 +131,6 @@ class RAETEvent(object):
                 self.connected = True
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                pass
 
     def connect_pull(self, timeout=1000):
         '''
@@ -246,7 +245,6 @@ class RAETEvent(object):
                                        'job'))
                 except Exception as exp:
                     log.error('Exception {0}'.format(exp))
-                    pass
 
     def destroy(self):
         if hasattr(self, 'stack'):
@@ -283,4 +281,3 @@ class PresenceEvent(MasterEvent):
                 self.connected = True
             except Exception as exp:
                 log.error('Exception {0}'.format(exp))
-                pass
