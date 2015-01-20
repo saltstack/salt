@@ -139,10 +139,6 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):  # pyl
             for group in filtered_groups:
                 # a group in EC2-Classic will have vpc_id set to None
                 if group.vpc_id is None:
-                    log.debug('Found EC2-Classic group: {0}'.format(group))
-                    return group
-                else:
-                    log.debug('Found EC2-VPC group: {0}'.format(group))
                     return group
             return None
         elif vpc_id:
