@@ -31,6 +31,7 @@ def find_file(path, saltenv='base', env=None, **kwargs):
         # Backwards compatibility
         saltenv = env
 
+    path = os.path.normpath(path)
     fnd = {'path': '',
            'rel': ''}
     if os.path.isabs(path):
@@ -87,8 +88,7 @@ def serve_file(load, fnd):
         return ret
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
-
-    with salt.utils.fopen(fnd['path'], 'rb') as fp_:
+    with salt.utils.fopen(os.path.normpath(fnd['path']), 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
         if gzip and data:
@@ -267,6 +267,8 @@ def _file_lists(load, form):
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
                 dir_rel_fn = os.path.relpath(root, path)
+                if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
+                    dir_rel_fn = dir_rel_fn.replace('\\','/')
                 ret['dirs'].append(dir_rel_fn)
                 if len(dirs) == 0 and len(files) == 0:
                     if not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
@@ -282,6 +284,8 @@ def _file_lists(load, form):
                                 path
                             )
                     if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
+                        if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
+                            rel_fn = rel_fn.replace('\\','/')
                         ret['files'].append(rel_fn)
         if save_cache:
             salt.fileserver.write_file_list_cache(
