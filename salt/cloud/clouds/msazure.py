@@ -410,8 +410,16 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
-    return nodes[name]
+    # Find under which cloud service the name is listed, if any
+    service_name = None
+    for service in nodes:
+        if name in nodes[service]["role_instance_list"]:
+            service_name = service
+            break
+    if service_name is None:
+        return {}
+    salt.utils.cloud.cache_node(nodes[service_name], __active_provider_name__, __opts__)
+    return nodes[service_name]
 
 
 def show_service(kwargs=None, conn=None, call=None):
@@ -601,7 +609,7 @@ def create(vm_):
         '''
         try:
             conn.get_role(service_name, service_name, vm_["name"])
-            data = show_instance(service_name, call='action')
+            data = show_instance(vm_["name"], call='action')
             if 'url' in data and data['url'] != str(''):
                 return data['url']
         except WindowsAzureMissingResourceError:
