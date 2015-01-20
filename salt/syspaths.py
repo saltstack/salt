@@ -94,7 +94,7 @@ if BASE_FILE_ROOTS_DIR is None:
     BASE_FILE_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt')
 
 BASE_PILLAR_ROOTS_DIR = __generated_syspaths.BASE_PILLAR_ROOTS_DIR
-if BASE_FILE_ROOTS_DIR is None:
+if BASE_PILLAR_ROOTS_DIR is None:
     BASE_PILLAR_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'pillar')
 
 BASE_MASTER_ROOTS_DIR = __generated_syspaths.BASE_MASTER_ROOTS_DIR
