@@ -2528,9 +2528,11 @@ def source_list(source, source_hash, saltenv):
     '''
     # get the master file list
     if isinstance(source, list):
+        log.debug("Source: {0}".format(source))
         mfiles = __salt__['cp.list_master'](saltenv)
         mdirs = __salt__['cp.list_master_dirs'](saltenv)
         for single in source:
+            log.debug("Check {0}".format(single))
             if isinstance(single, dict):
                 single = next(iter(single))
 
@@ -2543,15 +2545,18 @@ def source_list(source, source_hash, saltenv):
                     'removed in Salt Boron.'
                 )
                 env_splitter = '?env='
-            try:
-                _, senv = single.split(env_splitter)
-            except ValueError as exp:
-                log.error('ValueError {0}'.format(exp))
-            else:
-                mfiles += ['{0}?saltenv={1}'.format(f, senv)
-                           for f in __salt__['cp.list_master'](senv)]
-                mdirs += ['{0}?saltenv={1}'.format(d, senv)
-                          for d in __salt__['cp.list_master_dirs'](senv)]
+
+                val = single.split(env_splitter)
+                if len(val) == 2:
+                    _, senv = val
+                    log.debug("_ {0} send {1}".format(_, senv))
+
+                    mfiles += ['{0}?saltenv={1}'.format(f, senv)
+                               for f in __salt__['cp.list_master'](senv)]
+                    mdirs += ['{0}?saltenv={1}'.format(d, senv)
+                              for d in __salt__['cp.list_master_dirs'](senv)]
+                    log.debug("mfiles {0}".format(mfiles))
+                    log.debug("mdirs {0}".format(mdirs))
 
         ret1 = None
         ret2 = None
@@ -2582,7 +2587,7 @@ def source_list(source, source_hash, saltenv):
                     ret1 = single
                     ret2 = source_hash
                     break
-        if ret is None:
+        if ret1 is None:
             # None of the list items matched
             raise CommandExecutionError(
                 'none of the specified sources were found'

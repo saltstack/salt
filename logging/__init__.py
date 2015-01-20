@@ -17,6 +17,11 @@ class L(object):
     def error(self,x, exc_info=None , exc_info_on_loglevel=None):
         raise Exception(x)
 
+    def setup_temp_logger(
+            level=None
+        ):
+        pass
+
     def log(self,x, exc_info=None , exc_info_on_loglevel=None):
         print "LOG",x        
 
@@ -27,7 +32,7 @@ class L(object):
         raise Exception(x)
 
     def debug(self,x, exc_info=None , exc_info_on_loglevel=None  ):
-        #print "DEBUG",x
+        print "DEBUG",x
         #for line in traceback.format_stack():
         #    print line.strip()  
         pass
