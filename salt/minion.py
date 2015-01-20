@@ -1432,7 +1432,7 @@ class Minion(MinionBase):
             if isinstance(auth.creds, dict):
                 self.publish_port = auth.creds['publish_port']
             else:
-                self.publish_port = None
+                self.publish_port = 4505 # default
 
     def module_refresh(self, force_refresh=False):
         '''

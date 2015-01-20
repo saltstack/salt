@@ -288,18 +288,22 @@ class ZeroMQChannel(Channel):
         minion state execution call
         '''
         def _do_transfer():
-            data = self.sreq.send(
-                self.crypt,
-                self.auth.crypticle.dumps(load),
-                tries,
-                timeout)
-            # we may not have always data
-            # as for example for saltcall ret submission, this is a blind
-            # communication, we do not subscribe to return events, we just
-            # upload the results to the master
-            if data:
-                data = self.auth.crypticle.loads(data)
-            return data
+            if (self.auth.crypticle):
+                loaded = self.auth.crypticle.dumps(load)
+                data = self.sreq.send(
+                    self.crypt,
+                    loaded,
+                    tries,
+                    timeout)
+                # we may not have always data
+                # as for example for saltcall ret submission, this is a blind
+                # communication, we do not subscribe to return events, we just
+                # upload the results to the master
+                if data:
+                    data = self.auth.crypticle.loads(data)
+                return data
+            else:
+                return None
         try:
             return _do_transfer()
         except salt.crypt.AuthenticationError:
