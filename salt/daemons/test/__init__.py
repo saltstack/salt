@@ -9,6 +9,8 @@ from salt.daemons import test
 test.run()
 
 '''
+# pylint: skip-file
+# pylint: disable=C0103
 
 import sys
 if sys.version_info < (2, 7):
