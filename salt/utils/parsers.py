@@ -137,9 +137,9 @@ class OptionParser(optparse.OptionParser):
         # Let's get some proper sys.stderr logging as soon as possible!!!
         # This logging handler will be removed once the proper console or
         # logfile logging is setup.
-        log.setup_temp_logger(
-            getattr(self.options, 'log_level', 'error')
-        )
+        #log.setup_temp_logger(
+        #    getattr(self.options, 'log_level', 'error')
+        #)
 
         # Gather and run the process_<option> functions in the proper order
         process_option_funcs = []

@@ -135,17 +135,24 @@ class ZeroMQCaller(object):
                     'Cannot write to process directory. '
                     'Do you have permissions to '
                     'write to {0} ?\n'.format(proc_fn))
+            log.debug('function: {0}\n'.format(fun))
             func = self.minion.functions[fun]
+            log.debug('function: {0}\n'.format(func))
             try:
+                log.debug('arguments1: {0}\n'.format(args))
+                log.debug('argumentskw: {0}\n'.format(kwargs))
                 ret['return'] = func(*args, **kwargs)
             except TypeError as exc:
-                trace = traceback.format_exc()
-                sys.stderr.write('Passed invalid arguments: {0}\n'.format(exc))
-                active_level = LOG_LEVELS.get(
-                    self.opts['log_level'].lower(), logging.ERROR)
-                if active_level <= logging.DEBUG:
-                    sys.stderr.write(trace)
-                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                #import traceback
+                #traceback.print_exc()
+                log.error('Passed invalid arguments: {0}\n'.format(exc))
+            #     trace = traceback.format_exc()
+            #     sys.stderr.write('Passed invalid arguments: {0}\n'.format(exc))
+            #     active_level = LOG_LEVELS.get(
+            #         self.opts['log_level'].lower(), logging.ERROR)
+            #     if active_level <= logging.DEBUG:
+            #         sys.stderr.write(trace)
+            #     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
                 ret['retcode'] = sys.modules[
                     func.__module__].__context__.get('retcode', 0)

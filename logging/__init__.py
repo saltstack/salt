@@ -1,8 +1,17 @@
-#
+import traceback
+import sys
+#def myexceptions(type, value, tb, pylibdir=None, nlev=None):
+#    traceback.print_exception(type, value, tb, nlev)
+import inspect
+
+#sys.excepthook=myexceptions
+import sys
+import traceback
+
 
 def error(x):
     raise x
-import traceback
+
 class L(object):
     def __init__(self):
         self.handlers=[]
@@ -14,43 +23,59 @@ class L(object):
         pass
     def isEnabledFor(self,x):
         return True
-    def error(self,x, exc_info=None , exc_info_on_loglevel=None):
+
+
+    def critical(self,x , exc_info=None , exc_info_on_loglevel=None ,*args,**kwargs ):
+        print(traceback.format_exc())
         raise Exception(x)
 
+    def exception(self,x , exc_info=None , exc_info_on_loglevel=None ,*args,**kwargs ):
+        print(traceback.format_exc())
+        raise Exception(x)
+
+    def error(self,x, exc_info=None , exc_info_on_loglevel=None,*args,**kwargs):
+        print(traceback.format_exc())
+        raise Exception(x)
+
+    def setup_extended_logging(self,*args,**kwargs):
+        pass
+
+    def setup_console_logger(self,*args,**kwargs):
+        pass
+
+    def setup_logfile_logger(self,*args,**kwargs):
+        pass
+
     def setup_temp_logger(
-            level=None
+            level=None,
+            *args,
+            **kwargs
         ):
         pass
 
-    def log(self,x, exc_info=None , exc_info_on_loglevel=None):
+    def log(self,x, exc_info=None , exc_info_on_loglevel=None ,*args,**kwargs):
         print "LOG",x        
 
-    def critical(self,x , exc_info=None , exc_info_on_loglevel=None  ):
-        raise Exception(x)
-
-    def exception(self,x , exc_info=None , exc_info_on_loglevel=None  ):
-        raise Exception(x)
-
-    def debug(self,x, exc_info=None , exc_info_on_loglevel=None  ):
-        print "DEBUG",x
+    def debug(self,x, exc_info=None , exc_info_on_loglevel=None ,*args,**kwargs ):
+        #print "DEBUG",x
         #for line in traceback.format_stack():
         #    print line.strip()  
         pass
-    LOG_LEVELS = ("DEBUG","WARN")
+    LOG_LEVELS = ("DEBUG","WARN","quiet",'error')
     SORTED_LEVEL_NAMES = ("DEBUG","WARN")
-    def warning(self,x , exc_info=None , exc_info_on_loglevel=None ):
+    def warning(self,x , exc_info=None , exc_info_on_loglevel=None,*args,**kwargs ):
         #print "WARN",x
         #raise Exception(x)
         #for line in traceback.format_stack():
         #    print line.strip()  
         pass
 
-    def info(self,x , exc_info=None , exc_info_on_loglevel=None ):
+    def info(self,x , exc_info=None , exc_info_on_loglevel=None ,*args,**kwargs):
         #print "INFO",x
         #raise Exception(x)
         pass
 
-    def trace(self,x , exc_info=None , exc_info_on_loglevel=None  ):
+    def trace(self,x , exc_info=None , exc_info_on_loglevel=None ,*args,**kwargs ):
         #print "TRACE",x
         #for line in traceback.format_stack():
         #    print line.strip()  
@@ -76,6 +101,9 @@ def handlers():
 
 class Handler (object):
     def __init__(self, level=0):
+        pass
+
+    def setFormatter(self,x):
         pass
 
 class NullHandler (object):

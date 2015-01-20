@@ -11,6 +11,14 @@ logging.error=myerror
 print logging.error
 #logging.exception
 
+import sys
+old_sys_exit = sys.exit
+def new_sys_exit (value) : 
+    print "in sys exit %s" % value
+    #old_sys_exit(value)
+    raise Exception("exit!")
+sys.exit = new_sys_exit
+
 from salt.scripts import salt_call
 
 
