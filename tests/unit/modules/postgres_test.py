@@ -232,7 +232,7 @@ class PostgresTestCase(TestCase):
         )
         self.assertTrue(re.match(
             '.*'
-            '(\'|\")ALTER.* "testgroup" .* UNENCRYPTED PASSWORD',
+            '(\'|\")ALTER.* (\\\\)?"testgroup(\\\\)?" .* UNENCRYPTED PASSWORD',
             postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql',
@@ -263,7 +263,7 @@ class PostgresTestCase(TestCase):
             '/usr/bin/pgsql --no-align --no-readline --no-password '
             '--username testuser'
             ' --host testhost --port testport'
-            ' --dbname maint_test -c (\'|\")CREATE ROLE "testuser"',
+            ' --dbname maint_test -c (\'|\")CREATE ROLE (\\\\)?"testuser(\\\\)?"',
             call))
 
         for i in (
@@ -394,10 +394,10 @@ class PostgresTestCase(TestCase):
                 '/usr/bin/pgsql --no-align --no-readline --no-password '
                 '--username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c [\'"]{0,1}ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
+                '-c [\'"]{0,1}ALTER ROLE (\\\\)?"test_username(\\\\)?" WITH  INHERIT NOCREATEDB '
                 'NOCREATEROLE NOREPLICATION LOGIN '
                 'UNENCRYPTED PASSWORD [\'"]{0,5}test_role_pass[\'"]{0,5};'
-                ' GRANT "test_groups" TO "test_username"[\'"]{0,1}',
+                ' GRANT (\\\\)?"test_groups(\\\\)?" TO (\\\\)?"test_username(\\\\)?"[\'"]{0,1}',
                 call_output)
         )
 
@@ -498,11 +498,11 @@ class PostgresTestCase(TestCase):
                 '/usr/bin/pgsql --no-align --no-readline --no-password '
                 '--username test_user '
                 '--host test_host --port test_port --dbname test_maint '
-                '-c [\'"]{0,1}ALTER ROLE "test_username" WITH  INHERIT NOCREATEDB '
+                '-c [\'"]{0,1}ALTER ROLE (\\\\)?"test_username(\\\\)?" WITH  INHERIT NOCREATEDB '
                 'CREATEROLE NOREPLICATION LOGIN '
                 'ENCRYPTED PASSWORD '
                 '[\'"]{0,5}md531c27e68d3771c392b52102c01be1da1[\'"]{0,5}'
-                '; GRANT "test_groups" TO "test_username"[\'"]{0,1}',
+                '; GRANT (\\\\)?"test_groups(\\\\)?" TO (\\\\)?"test_username(\\\\)?"[\'"]{0,1}',
                 call_output)
         )
 

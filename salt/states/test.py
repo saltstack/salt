@@ -228,6 +228,32 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     return ret
 
 
+def show_notification(name, text=None, **kwargs):
+    '''
+    Simple notification using text argument.
+
+    .. versionadded:: Beryllium
+
+    name
+        A unique string.
+
+    text
+        Text to return in the comment.
+    '''
+
+    if not text:
+        raise SaltInvocationError('Missing required argument text.')
+
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': text
+    }
+
+    return ret
+
+
 def mod_watch(name, sfun=None, **kwargs):
     ''''
     Call this function via a watch statement

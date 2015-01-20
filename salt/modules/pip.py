@@ -510,7 +510,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if pre_releases:
         # Check the locally installed pip version
         pip_version_cmd = '{0} --version'.format(_get_pip_bin(bin_env))
-        output = __salt__['cmd.run_all'](pip_version_cmd, use_vt=use_vt).get('stdout', '')
+        output = __salt__['cmd.run_all'](pip_version_cmd,
+                                         use_vt=use_vt,
+                                         python_shell=False).get('stdout', '')
         pip_version = output.split()[1]
 
         # From pip v1.4 the --pre flag is available
@@ -590,7 +592,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-        return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+        return __salt__['cmd.run_all'](' '.join(cmd), python_shell=False, **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
             try:
@@ -720,7 +722,7 @@ def uninstall(pkgs=None,
                             pass
         cmd.extend(pkgs)
 
-    cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+    cmd_kwargs = dict(python_shell=False, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -768,7 +770,7 @@ def freeze(bin_env=None,
     user = _get_user(user, runas)
 
     cmd = [_get_pip_bin(bin_env), 'freeze']
-    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -802,7 +804,7 @@ def list_(prefix=None,
 
     user = _get_user(user, runas)
 
-    cmd_kwargs = dict(runas=user, cwd=cwd)
+    cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -858,7 +860,7 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
+    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:

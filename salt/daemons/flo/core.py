@@ -708,6 +708,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             for index in range(self.opts.value['worker_threads']):
                 worker_seed.append('worker{0}'.format(index + 1))
             self.workers.value = itertools.cycle(worker_seed)
+        return True
 
 
 class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
@@ -880,9 +881,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                                             self.lane_stack.value.local.name,
                                             msg))
 
-        if d_estate is None:
-            pass
-        elif d_estate != self.road_stack.value.local.name:
+        if d_estate is not None and d_estate != self.road_stack.value.local.name:
             log.error(
                     'Road Router Received message for wrong estate: {0}'.format(d_estate))
             return
@@ -1034,7 +1033,6 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         return list(set(minions) &
                     set((name.rstrip(suffix) for name in self.availables.value)))
 
-
     def action(self):
         '''
         Process the messages!
@@ -1119,8 +1117,10 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'presence_req': '.salt.presence.event_req',
                'lane_stack': '.salt.lane.manor.stack',
-               'aliveds': '.salt.var.presence.aliveds', # odict
-               'availables': '.salt.var.presence.availables', # set
+               'alloweds': '.salt.var.presence.alloweds',  # odict
+               'aliveds': '.salt.var.presence.aliveds',  # odict
+               'reapeds': '.salt.var.presence.reapeds',  # odict
+               'availables': '.salt.var.presence.availables',  # set
               }
 
     def _send_presence(self, msg):
@@ -1132,15 +1132,39 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
         if y_name not in self.lane_stack.value.nameRemotes:  # subscriber not a remote
             pass  # drop msg don't answer
         else:
+            if 'data' in msg and 'state' in msg['data']:
+                state = msg['data']['state']
+            else:
+                state = None
+
             # create answer message
-            present = odict()
-            for name in self.availables.value:
-                minion = self.aliveds.value[name]
-                present[name] = minion.ha[0] if minion else None
-            data = {'present': present}
+            if state in [None, 'available', 'present']:
+                present = odict()
+                for name in self.availables.value:
+                    minion = self.aliveds.value.get(name, None)
+                    present[name] = minion.ha[0] if minion else None
+                data = {'present': present}
+            else:
+                # TODO: update to really return joineds
+                states = {'joined': self.alloweds,
+                          'allowed': self.alloweds,
+                          'alived': self.aliveds,
+                          'reaped': self.reapeds}
+                try:
+                    minions = states[state].value
+                except KeyError:
+                    # error: wrong/unknown state requested
+                    log.error('Lane Router Received invalid message: {0}'.format(msg))
+                    return
+
+                result = odict()
+                for name in minions:
+                    result[name] = minions[name].ha[0]
+                data = {state: result}
+
             tag = tagify('present', 'presence')
             route = {'dst': (None, None, 'event_fire'),
-                    'src': (None, self.lane_stack.value.local.name, None)}
+                     'src': (None, self.lane_stack.value.local.name, None)}
             msg = {'route': route, 'tag': tag, 'data': data}
             self.lane_stack.value.transmit(msg,
                                            self.lane_stack.value.fetchUidByName(y_name))

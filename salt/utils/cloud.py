@@ -303,13 +303,6 @@ def bootstrap(vm_, opts):
         if stat.S_ISSOCK(os.stat(os.environ['SSH_AUTH_SOCK']).st_mode):
             has_ssh_agent = True
 
-    if key_filename is None and salt.utils.which('sshpass') is None and has_ssh_agent is False:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
-        )
-
     if key_filename is None and ('password' not in vm_ or not vm_['password']) and has_ssh_agent is False:
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
@@ -2611,10 +2604,12 @@ def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=No
         f_result = fun(kwargs, call=fun_call)
         r_set = {}
         for d in f_result:
-            for k, v in d.items():
-                r_set[k] = v
-        result = r_set.get('item')
-        status = _unwrap_dict(result, argument_being_watched)
+            if isinstance(d, list):
+                d0 = d[0]
+                if isinstance(d0, dict):
+                    for k, v in d0.items():
+                        r_set[k] = v
+        status = _unwrap_dict(r_set, argument_being_watched)
         log.debug('Function: {0}, Watched arg: {1}, Response: {2}'.format(str(fun).split(' ')[1],
                                                                           argument_being_watched,
                                                                           status))

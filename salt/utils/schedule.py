@@ -144,8 +144,26 @@ scheduler to skip this first run and wait until the next scheduled run.
         kwargs:
           test: True
 
-The scheduler also supports scheduling jobs using a cron like format.  This requires the
-python-croniter library.
+The scheduler also supports scheduling jobs using a cron like format.
+This requires the python-croniter library.
+
+    ... versionadded:: Beryllium
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 15
+        until: '12/31/2015 11:59pm'
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+Using the until argument, the Salt scheduler allows you to specify
+an end time for a scheduled job.  If this argument is specified, jobs
+will not run once the specified time has passed.  Time should be specified
+in a format support by the dateutil library.
+This requires the python-dateutil library.
 
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
@@ -218,6 +236,7 @@ except ImportError:
 
 # Import Salt libs
 import salt.utils
+import salt.utils.jid
 import salt.utils.process
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running
@@ -405,7 +424,7 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'schedule': data['name'],
-               'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+               'jid': salt.utils.jid.gen_jid()}
 
         if 'metadata' in data:
             if isinstance(data['metadata'], dict):
@@ -579,6 +598,19 @@ class Schedule(object):
             now = int(time.time())
             time_conflict = False
 
+            if 'until' in data:
+                if not _WHEN_SUPPORTED:
+                    log.error('Missing python-dateutil.'
+                              'Ignoring until.')
+                else:
+                    until__ = dateutil_parser.parse(data['until'])
+                    until = int(time.mktime(until__.timetuple()))
+
+                    if until <= now:
+                        log.debug('Until time has passed '
+                                  'skipping job: {0}.'.format(data['name']))
+                        continue
+
             for item in ['seconds', 'minutes', 'hours', 'days']:
                 if item in data and 'when' in data:
                     time_conflict = True
@@ -645,7 +677,7 @@ class Schedule(object):
                                 log.error('Invalid date string {0}.'
                                           'Ignoring job {1}.'.format(i, job))
                                 continue
-                        when = int(when__.strftime('%s'))
+                        when = int(time.mktime(when__.timetuple()))
                         if when >= now:
                             _when.append(when)
                     _when.sort()
@@ -710,7 +742,7 @@ class Schedule(object):
                         except ValueError:
                             log.error('Invalid date string. Ignoring')
                             continue
-                    when = int(when__.strftime('%s'))
+                    when = int(time.mktime(when__.timetuple()))
                     now = int(time.time())
                     seconds = when - now
 
@@ -735,7 +767,7 @@ class Schedule(object):
                     log.error('Missing python-croniter. Ignoring job {0}'.format(job))
                     continue
 
-                now = int(datetime.datetime.now().strftime('%s'))
+                now = int(time.mktime(datetime.datetime.now().timetuple()))
                 try:
                     cron = int(croniter.croniter(data['cron'], now).get_next())
                 except (ValueError, KeyError):
@@ -808,12 +840,12 @@ class Schedule(object):
                     else:
                         if isinstance(data['range'], dict):
                             try:
-                                start = int(dateutil_parser.parse(data['range']['start']).strftime('%s'))
+                                start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
                             except ValueError:
                                 log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
                                 continue
                             try:
-                                end = int(dateutil_parser.parse(data['range']['end']).strftime('%s'))
+                                end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
                             except ValueError:
                                 log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
                                 continue
@@ -901,7 +933,9 @@ def clean_proc_dir(opts):
         with salt.utils.fopen(fn_, 'rb') as fp_:
             job = None
             try:
-                job = salt.payload.Serial(opts).load(fp_)
+                job_data = fp_.read()
+                if job_data:
+                    job = salt.payload.Serial(opts).load(fp_)
             except Exception:  # It's corrupted
                 try:
                     os.unlink(fn_)

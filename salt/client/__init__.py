@@ -30,6 +30,7 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.config
+import salt.minion
 import salt.payload
 import salt.transport
 import salt.loader
@@ -1450,7 +1451,7 @@ class LocalClient(object):
         # When running tests, if self.events is not destroyed, we leak 2
         # threads per test case which uses self.client
         if hasattr(self, 'event'):
-            # The call bellow will take care of calling 'self.event.destroy()'
+            # The call below will take care of calling 'self.event.destroy()'
             del self.event
 
 

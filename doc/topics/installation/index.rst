@@ -96,7 +96,7 @@ Optional Dependencies
 .. _`Python 2.6`: http://python.org/download/
 .. _`ZeroMQ`: http://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/0.1.12
+.. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
 .. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
 .. _`YAML`: http://pyyaml.org/

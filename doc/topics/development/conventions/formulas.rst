@@ -16,7 +16,7 @@ https://github.com/saltstack-formulas
 
 As a simple example, to install the popular Apache web server (using the normal
 defaults for the underlying distro) simply include the
-:formula:`apache-formula` from a top file:
+:formula_url:`apache-formula` from a top file:
 
 .. code-block:: yaml
 
@@ -107,7 +107,7 @@ Formula may be included in an existing ``sls`` file. This is often useful when
 a state you are writing needs to ``require`` or ``extend`` a state defined in
 the formula.
 
-Here is an example of a state that uses the :formula:`epel-formula` in a
+Here is an example of a state that uses the :formula_url:`epel-formula` in a
 ``require`` declaration which directs Salt to not install the ``python26``
 package until after the EPEL repository has also been installed:
 
@@ -129,7 +129,7 @@ referenced from other state files. It is usually cleanest to include these
 Formula directly from a Top File.
 
 For example the easiest way to set up an OpenStack deployment on a single
-machine is to include the :formula:`openstack-standalone-formula` directly from
+machine is to include the :formula_url:`openstack-standalone-formula` directly from
 a :file:`top.sls` file:
 
 .. code-block:: yaml
@@ -172,7 +172,7 @@ normal state mechanisms. Formula can be required from other States with
 :ref:`requisites-require` declarations, they can be modified using ``extend``,
 they can made to watch other states with :ref:`requisites-watch-in`.
 
-The following example uses the stock :formula:`apache-formula` alongside a
+The following example uses the stock :formula_url:`apache-formula` alongside a
 custom state to create a vhost on a Debian/Ubuntu system and to reload the
 Apache service whenever the vhost is changed.
 
@@ -1034,7 +1034,7 @@ without also including undesirable or unintended side-effects.
 
 The following is a best-practice example for a reusable Apache formula. (This
 skips platform-specific options for brevity. See the full
-:formula:`apache-formula` for more.)
+:formula_url:`apache-formula` for more.)
 
 .. code-block:: yaml
 
@@ -1199,9 +1199,9 @@ A basic Formula repository should have the following layout:
     |-- README.rst
     `-- VERSION
 
-.. seealso:: :formula:`template-formula`
+.. seealso:: :formula_url:`template-formula`
 
-    The :formula:`template-formula` repository has a pre-built layout that
+    The :formula_url:`template-formula` repository has a pre-built layout that
     serves as the basic structure for a new formula repository. Just copy the
     files from there and edit them.
 

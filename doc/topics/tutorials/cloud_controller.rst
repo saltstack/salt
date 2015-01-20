@@ -157,6 +157,8 @@ Virtual Machine generation applications are available for many platforms:
 vm-builder:
   https://wiki.debian.org/VMBuilder
 
+  .. seealso:: :formula_url:`vmbuilder-formula`
+
 Once virtual machine images are available, the easiest way to make them
 available to Salt Virt is to place them in the Salt file server. Just copy an
 image into ``/srv/salt`` and it can now be used by Salt Virt.

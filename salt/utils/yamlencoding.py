@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import io
 import yaml
-import six
+import salt.ext.six as six
 
 
 def yaml_dquote(text):

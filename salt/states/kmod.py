@@ -46,7 +46,7 @@ def present(name, persist=False):
         mods_set = mods
     if name in mods_set:
         ret['comment'] = ('Kernel module {0} is already present'
-                              .format(name))
+                          .format(name))
         return ret
     # Module is not loaded, verify availability
     if __opts__['test']:
@@ -58,7 +58,12 @@ def present(name, persist=False):
         ret['result'] = False
         return ret
     for mod in __salt__['kmod.load'](name, persist):
-        ret['changes'][mod] = 'loaded'
+        if not mod:
+            # It's compiled into the kernel
+            ret['comment'] = 'Kernel module {0} is compiled in'.format(name)
+            return ret
+        else:
+            ret['changes'][mod] = 'loaded'
     if not ret['changes']:
         ret['result'] = False
         ret['comment'] = 'Failed to load kernel module {0}'.format(name)

@@ -72,25 +72,3 @@ def execution():
     ret = dict(list(i))
 
     return ret
-
-
-# Still need to modify some of the backend for auth checks to make this work
-def __list_functions(user=None):
-    '''
-    List all of the functions, optionally pass in a user to evaluate
-    permissions on
-    '''
-    client = salt.client.get_local_client(__opts__['conf_file'])
-    funcs = {}
-    gener = client.cmd_iter(
-            '*',
-            'sys.list_functions',
-            timeout=__opts__['timeout'])
-    for ret in gener:
-        funcs.update(ret)
-    if not user:
-        __progress__(funcs)
-        return funcs
-    for _, val in __opts__['external_auth'].items():
-        if user in val:
-            pass

@@ -41,6 +41,15 @@ add additional lines, like so:
       - git: master git://gitserver/git-pillar.git
       - git: dev git://gitserver/git-pillar.git
 
+To remap a specific branch to a specific environment separate the branch name
+and the environment name with a colon:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: develop:dev git://gitserver/git-pillar.git
+      - git: master:prod git://gitserver/git-pillar.git
+
 In this case, the ``dev`` branch would need its own ``top.sls`` with a ``dev``
 section in it, like this:
 
@@ -260,7 +269,7 @@ def ext_pillar(minion_id,
         return
     # split the branch, repo name and optional extra (key=val) parameters.
     options = repo_string.strip().split()
-    branch = options[0]
+    branch_env = options[0]
     repo_location = options[1]
     root = ''
 
@@ -276,11 +285,16 @@ def ext_pillar(minion_id,
         else:
             log.warning('Unrecognized extra parameter: {0}'.format(key))
 
+    # environment is "different" from the branch
+    branch, _, environment = branch_env.partition(':')
+    if environment == '':
+        if branch == 'master':
+            environment = 'base'
+        else:
+            environment = branch
+
     gitpil = GitPillar(branch, repo_location, __opts__)
     branch = gitpil.branch
-
-    # environment is "different" from the branch
-    branch = (branch == 'master' and 'base' or branch)
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
@@ -301,7 +315,7 @@ def ext_pillar(minion_id,
 
     opts = deepcopy(__opts__)
 
-    opts['pillar_roots'][branch] = [pillar_dir]
+    opts['pillar_roots'][environment] = [pillar_dir]
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 

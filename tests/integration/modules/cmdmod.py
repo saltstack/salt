@@ -43,8 +43,7 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function('cmd.run',
                               ['echo $SHELL',
-                               'shell={0}'.format(shell)]).rstrip(),
-            shell)
+                               'shell={0}'.format(shell)], python_shell=True).rstrip(), shell)
 
     @patch('pwd.getpwnam')
     @patch('subprocess.Popen')
@@ -104,7 +103,7 @@ class CMDModuleTest(integration.ModuleCase):
 
         self.assertEqual(self.run_function('cmd.run_stderr',
                                            ['echo "cheese" 1>&2',
-                                            'shell={0}'.format(shell)]
+                                            'shell={0}'.format(shell)], python_shell=True
                                            ).rstrip(),
                          'cheese')
 
@@ -120,7 +119,7 @@ class CMDModuleTest(integration.ModuleCase):
             shell = '/bin/bash'
 
         ret = self.run_function('cmd.run_all', ['echo "cheese" 1>&2',
-                                                'shell={0}'.format(shell)])
+                                                'shell={0}'.format(shell)], python_shell=True)
         self.assertTrue('pid' in ret)
         self.assertTrue('retcode' in ret)
         self.assertTrue('stdout' in ret)
@@ -135,8 +134,8 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.retcode
         '''
-        self.assertEqual(self.run_function('cmd.retcode', ['exit 0']), 0)
-        self.assertEqual(self.run_function('cmd.retcode', ['exit 1']), 1)
+        self.assertEqual(self.run_function('cmd.retcode', ['exit 0'], python_shell=True), 0)
+        self.assertEqual(self.run_function('cmd.retcode', ['exit 1'], python_shell=True), 1)
 
     @skip_if_binaries_missing(['which'])
     def test_which(self):
@@ -200,9 +199,11 @@ sys.stdout.write('cheese')
         '''
         cmd.run trigger timeout
         '''
+        out = self.run_function('cmd.run', ['sleep 2 && echo hello', 'timeout=1'])
+
         self.assertTrue(
             'Timed out' in self.run_function(
-                'cmd.run', ['sleep 2 && echo hello', 'timeout=1']))
+                'cmd.run', ['sleep 2 && echo hello', 'timeout=1'], python_shell=True))
 
     def test_timeout_success(self):
         '''
@@ -210,7 +211,7 @@ sys.stdout.write('cheese')
         '''
         self.assertTrue(
             'hello' == self.run_function(
-                'cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
+                'cmd.run', ['sleep 1 && echo hello', 'timeout=2'], python_shell=True))
 
     def test_run_cwd_doesnt_exist_issue_7154(self):
         '''

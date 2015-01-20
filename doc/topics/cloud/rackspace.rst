@@ -170,3 +170,33 @@ configuration please add:
       size: 512 MB Standard
       image: FreeBSD 9.0
       force_first_gen: True
+
+Private Subnets
+--------------------------------
+By default salt-cloud will not add Rackspace private networks to new servers.   To enable 
+a private network to a server instantiated by salt cloud, add the following section 
+to the provider file (typically  ``/etc/salt/cloud.providers.d/rackspace.conf``)
+
+.. code-block:: yaml
+
+    networks:
+      - fixed:
+        # This is the private network
+        - private-network-id
+        # This is Rackspace's "PublicNet"
+        - 00000000-0000-0000-0000-000000000000
+        # This is Rackspace's "ServiceNet"
+        - 11111111-1111-1111-1111-111111111111
+
+To get the Rackspace private network ID, go to Networking, Networks and hover over the private network name.
+
+The order of the networks in the above code block does not map to the order of the 
+ethernet devices on newly created servers.   Public IP will always be first ( eth0 )
+followed by servicenet ( eth1 ) and then private networks.
+
+Enabling the private network per above gives the option of using the private subnet for
+all master-minion communication, including the bootstrap install of salt-minion.  To 
+enable the minion to use the private subnet, update the master: line in the minion: 
+section of the providers file.  To configure the master to only listen on the private 
+subnet IP, update the interface: line in the /etc/salt/master file to be the private 
+subnet IP of the salt master.

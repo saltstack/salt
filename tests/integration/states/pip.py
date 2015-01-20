@@ -18,6 +18,7 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
+    requires_system_grains,
     with_system_user
 )
 ensure_in_syspath('../../')
@@ -63,7 +64,12 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
-    def test_pip_installed_weird_install(self):
+    @requires_system_grains
+    def test_pip_installed_weird_install(self, grains=None):
+        # First, check to see if this is running on CentOS 5. If so, skip this test.
+        if grains['os'] in ('CentOS',) and grains['osrelease_info'][0] in (5,):
+            self.skipTest('This test does not run reliably on CentOS 5')
+
         ographite = '/opt/graphite'
         if os.path.isdir(ographite):
             self.skipTest(
@@ -390,7 +396,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             reqf.write('pep8\n')
 
         try:
-            ret = self.run_function('virtualenv.create', [venv_dir])
+            self.run_function('virtualenv.create', [venv_dir])
 
             # The requirements file should not be found the base environment
             ret = self.run_state(
@@ -421,8 +427,8 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
+                'Requirements were already installed.',
+                ret
             )
         finally:
             if os.path.isdir(venv_dir):

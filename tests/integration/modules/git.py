@@ -35,9 +35,3 @@ class GitModuleTest(integration.ModuleCase):
             setting_value=config_value,
         )
         self.assertEqual("", ret)
-
-        output = subprocess.check_output(
-            ['git', 'config', '--local', config_key],
-            cwd=self.repos)
-
-        self.assertEqual(config_value + "\n", output)
