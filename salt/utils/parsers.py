@@ -1638,10 +1638,10 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                 log.error('IndexError {0}'.format(exp))
                 self.exit(42, '\nCannot execute command without defining a target.\n\n')
         else:
-            try:
+
+            if len(self.args)> 1:
                 self.config['tgt'] = self.args[0]
-            except IndexError as exp:
-                log.error('IndexError {0}'.format(exp))
+            else:
                 self.exit(42, '\nCannot execute command without defining a target.\n\n')
         # Detect compound command and set up the data for it
         if self.args:

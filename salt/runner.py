@@ -128,8 +128,11 @@ class Runner(RunnerClient):
         if self.opts.get('doc', False):
             self.print_docs()
         else:
-            try:
-                low = {'fun': self.opts['fun']}
+            low = {'fun': self.opts['fun']}
+
+            fun = low['fun']
+            
+            if low['fun'] in self.functions:
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
                     salt.utils.args.parse_input(self.opts['arg']),
@@ -153,10 +156,10 @@ class Runner(RunnerClient):
                     if suffix == 'ret':
                         ret = event['return']
 
-            except salt.exceptions.SaltException as exc:
-                ret = str(exc)
-                if not self.opts.get('quiet', False):
-                    print(ret)
-                return ret
-            log.debug('Runner return: {0}'.format(ret))
+            # except salt.exceptions.SaltException as exc:
+            #     ret = str(exc)
+            #     if not self.opts.get('quiet', False):
+            #         print(ret)
+            #     return ret
+            # log.debug('Runner return: {0}'.format(ret))
             return ret

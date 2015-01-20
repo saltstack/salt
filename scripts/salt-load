@@ -268,7 +268,8 @@ def check():
             except Exception as exp:
                 print "Error,", exp
                 newbad.append(x)
-                good.remove(x)
+                if x in good:
+                    good.remove(x)
 
     print "newbad = {0}".format(newbad)
     print "good = {0}".format(good)
