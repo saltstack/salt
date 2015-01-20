@@ -238,7 +238,8 @@ class _fstab_entry(object):
 
     def pick(self, keys):
         '''returns an instance with just those keys'''
-        return self.__class__(**dict(map(lambda key: (key, self.criteria[key]), keys)))
+        subset = dict(map(lambda key: (key, self.criteria[key]), keys))
+        return self.__class__(**subset)
 
     def __init__(self, **criteria):
         '''Store non-empty, non-null values to use as filter'''
@@ -276,7 +277,10 @@ def fstab(config='/etc/fstab'):
     with salt.utils.fopen(config) as ifile:
         for line in ifile:
             try:
-                entry = _fstab_entry.dict_from_line(line, _fstab_entry.compatibility_keys)
+                entry = _fstab_entry.dict_from_line(
+                    line,
+                    _fstab_entry.compatibility_keys)
+
                 entry['opts'] = entry['opts'].split(',')
                 ret[entry.pop('name')] = entry
             except _fstab_entry.ParseError:
@@ -297,9 +301,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
     '''
     modified = False
 
-    criteria = _fstab_entry(
-        name = name, 
-        device = device)
+    criteria = _fstab_entry(name=name, device=device)
 
     lines = []
     try:
@@ -340,7 +342,7 @@ def set_fstab(
         pass_num=0,
         config='/etc/fstab',
         test=False,
-        match_on = 'auto',
+        match_on='auto',
         **kwargs):
     '''
     Verify that this mount is represented in the fstab, change the mount
@@ -368,10 +370,22 @@ def set_fstab(
     if isinstance(match_on, list):
         pass
     elif not isinstance(match_on, string_types):
-        raise CommandExecutionError('match_on must be a string or list of strings')
+        msg = 'match_on must be a string or list of strings'
+        raise CommandExecutionError(msg)
     elif match_on == 'auto':
-        # Try to guess right criteria for auto....missing some special fstypes here
-        if fstype in frozenset(['tmpfs', 'sysfs', 'proc', 'fusectl', 'debugfs', 'securityfs', 'devtmpfs', 'cgroup']):
+        # Try to guess right criteria for auto....
+        # NOTE: missing some special fstypes here
+        specialFSes = frozenset([
+            'tmpfs',
+            'sysfs',
+            'proc',
+            'fusectl',
+            'debugfs',
+            'securityfs',
+            'devtmpfs',
+            'cgroup'])
+
+        if fstype in specialFSes:
             match_on = ['name']
         else:
             match_on = ['device']
@@ -384,8 +398,11 @@ def set_fstab(
         criteria = entry.pick(match_on)
 
     except KeyError:
-        invalid_keys = filter(lambda key: key not in _fstab_entry.fstab_keys, match_on)
-        raise CommandExecutionError('Unrecognized keys in match_on: "{0}"'.format(invalid_keys))
+        filterFn = lambda key: key not in _fstab_entry.fstab_keys
+        invalid_keys = filter(filterFn, match_on)
+
+        msg = 'Unrecognized keys in match_on: "{0}"'.format(invalid_keys)
+        raise CommandExecutionError(msg)
 
     # parse file, use ret to cache status
     if not os.path.isfile(config):
@@ -396,7 +413,8 @@ def set_fstab(
             for line in ifile:
                 try:
                     if criteria.match(line):
-                        # Note: If ret isn't None here, we've matched multiple lines
+                        # Note: If ret isn't None here, 
+                        # we've matched multiple lines
                         ret = 'present'
                         if entry.match(line):
                             lines.append(line)
@@ -404,15 +422,14 @@ def set_fstab(
                             ret = 'change'
                             lines.append(str(entry))
                     else:
-                       lines.append(line)
+                        lines.append(line)
 
                 except _fstab_entry.ParseError:
-                    lines.append(line)                        
+                    lines.append(line)
 
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
         raise CommandExecutionError(msg.format(config, str(exc)))
-
 
     # add line if not present or changed
     if ret is None:
