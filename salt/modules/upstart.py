@@ -406,8 +406,10 @@ def status(name, sig=None):
         return bool(__salt__['status.pid'](sig))
     cmd = 'service {0} status'.format(name)
     if _service_is_upstart(name):
-        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
-    return not bool(__salt__['cmd.retcode'](cmd, python_shell=False))
+        return 'start/running' in __salt__['cmd.run'](cmd, ignore_retcode=True,
+                                                      python_shell=False)
+    return not bool(__salt__['cmd.retcode'](cmd, ignore_retcode=True,
+                                            python_shell=False))
 
 
 def _get_service_exec():
