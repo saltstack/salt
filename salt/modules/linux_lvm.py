@@ -263,11 +263,11 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **
     .. code-block:: bash
 
         salt '*' lvm.lvcreate new_volume_name vg_name size=10G
-        salt '*' lvm.lvcreate new_volume_name vg_name extents=100 /dev/sdb
+        salt '*' lvm.lvcreate new_volume_name vg_name extents=100 pv=/dev/sdb
         salt '*' lvm.lvcreate new_snapshot    vg_name snapshot=volume_name size=3G
     '''
     if size and extents:
-        return 'Error: Please specify only size or extents'
+        return 'Error: Please specify only one of size or extents'
 
     valid = ('activate', 'chunksize', 'contiguous', 'discards', 'stripes',
              'stripesize', 'minor', 'persistent', 'mirrors', 'noudevsync',
@@ -275,34 +275,33 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **
              'readahead', 'regionsize', 'thin', 'thinpool', 'type', 'virtualsize',
              'zero',)
     no_parameter = ('noudevsync', 'ignoremonitoring', )
-    extra_arguments = ' '.join([
-        '--{0}'.format(k) if k in no_parameter else '--{0} {1}'.format(k, v)
-        for k, v in kwargs.iteritems() if k in valid
-    ])
+
+    extra_arguments = []
+    if kwargs:
+        for k, v in kwargs.iteritems():
+            if k in no_parameter:
+                extra_arguments.append('--{0}'.format(k))
+            elif k in valid:
+                extra_arguments.extend(['--{0}'.format(k), '{0}'.format(v)])
+
+    cmd = [salt.utils.which('lvcreate'), '-n', lvname]
 
     if snapshot:
-        _snapshot = '-s ' + vgname + '/' + snapshot
+        cmd.extend(['-s', vgname + '/' + snapshot])
+    else:
+        cmd.append(vgname)
 
     if size:
-        if snapshot:
-            cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(
-                lvname, _snapshot, size, pv
-            )
-        else:
-            cmd = 'lvcreate -n {0} {1} -L {2} {3}'.format(
-                lvname, vgname, size, pv
-            )
+        cmd.extend(['-L', '{0}'.format(size)])
     elif extents:
-        if snapshot:
-            cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(
-                lvname, _snapshot, extents, pv
-            )
-        else:
-            cmd = 'lvcreate -n {0} {1} -l {2} {3}'.format(
-                lvname, vgname, extents, pv
-            )
+        cmd.extend(['-l', '{0}'.format(extents)])
     else:
         return 'Error: Either size or extents must be specified'
+
+    if pv:
+        cmd.append(pv)
+    if extra_arguments:
+        cmd.extend(extra_arguments)
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
