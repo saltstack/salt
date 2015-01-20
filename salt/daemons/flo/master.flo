@@ -15,6 +15,7 @@ framer masterudpstack be active first setup
     frame zmqstart
         # Start the zmq ret port if configured
         let me if .salt.etc.zmq_behavior
+        do salt zmq setup at enter
         bid start zmqret
         go spawnmaint
 
@@ -72,8 +73,20 @@ framer events be inactive first start
 # Presence framer
 framer presence be inactive first start
     frame start
+       go multiheaded
+       go raet
+
+    frame raet
+       do salt raet presenter
+
+    frame multiheaded
+        let me if .salt.etc.zmq_behavior
+        do salt zmq crypticle setup at enter
         do salt zmq publisher
         do salt raet presenter
+
+
+
 
 # Publisher framer
 framer publish be inactive first start

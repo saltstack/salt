@@ -28,6 +28,7 @@ from salt.ext.six import string_types
 from salt.log import LOG_LEVELS
 from salt.utils import print_cli
 from salt.utils import kinds
+from salt.cli import daemons
 
 log = logging.getLogger(__name__)
 
@@ -293,7 +294,7 @@ class RAETCaller(ZeroMQCaller):
         super(RAETCaller, self).__init__(opts)
 
     def minion_run(self, cleanup_protecteds):
-        minion = salt.Minion()  # daemonizes here
+        minion = daemons.Minion()  # daemonizes here
         minion.call(cleanup_protecteds=cleanup_protecteds)  # caller minion.call_in uses caller.flo
 
     def run(self):

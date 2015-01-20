@@ -26,6 +26,29 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+class SaltZmqSetup(ioflo.base.deeding.Deed):
+    '''
+    do salt zmq setup at enter
+
+    Setup shares
+    .salt.var.zmq.master_key
+    .salt.var.zmq.aet share
+
+    This behavior must be run before any other zmq related
+    '''
+    Ioinits = {'opts': '.salt.opts',
+           'mkey': '.salt.var.zmq.master_key',
+           'aes': '.salt.var.zmq.aes'}
+
+    def action(self):
+        '''
+        Assign master key to .salt.var.zmq.master_key
+        Copy opts['aes'] to .salt.var.zmq.aes
+        '''
+        self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
+        self.aes.value = self.opts.value['aes']
+
+
 class SaltZmqRetFork(ioflo.base.deeding.Deed):
     '''
     Create the forked process for the ZeroMQ Ret Port
@@ -38,8 +61,8 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
         '''
         Init the cryptographic keys
         '''
-        self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
-        self.aes.value = self.opts.value['aes']
+        #self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
+        #self.aes.value = self.opts.value['aes']
 
     def action(self):
         '''
@@ -83,10 +106,38 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
                     continue
                 raise exc
 
+class SaltZmqCrypticleSetup(ioflo.base.deeding.Deed):
+    '''
+    Setup the crypticle for the salt zmq publisher behavior
+
+    do salt zmq crypticle setup at enter
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'aes': '.salt.var.zmq.aes',
+               'crypticle': '.salt.var.zmq.crypticle'}
+
+    def action(self):
+        '''
+        Initializes zmq
+        Put here so only runs initialization if we want multi-headed master
+
+        '''
+        self.crypticle.value = salt.crypt.Crypticle(
+                                                    self.opts.value,
+                                                    self.opts.value.get('aes'))
+
 
 class SaltZmqPublisher(ioflo.base.deeding.Deed):
     '''
     The zeromq publisher
+
+    do salt zmq publisher
+
+    Must run the deed
+
+    do salt zmq publisher setup
+
+    before this deed
     '''
     Ioinits = {'opts': '.salt.opts',
                'publish': '.salt.var.publish',
@@ -99,9 +150,9 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
         Set up tracking value(s)
         '''
         self.created = False
-        self.crypticle.value = salt.crypt.Crypticle(
-                self.opts.value,
-                self.opts.value['aes'])
+        #self.crypticle.value = salt.crypt.Crypticle(
+                #self.opts.value,
+                #self.opts.value.get('aes', ''))
         self.serial = salt.payload.Serial(self.opts.value)
 
     def action(self):

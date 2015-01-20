@@ -2,7 +2,8 @@
 '''
 Test behaviors used by test plans
 '''
-# pylint: disable=W0232
+# pylint: skip-file
+# pylint: disable=C0103
 
 import os
 import stat
