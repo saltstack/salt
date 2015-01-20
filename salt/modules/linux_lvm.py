@@ -304,7 +304,7 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **
 
     extra_arguments = []
     if kwargs:
-        for k, v in kwargs.iteritems():
+        for k, v in six.iteritems(kwargs):
             if k in no_parameter:
                 extra_arguments.append('--{0}'.format(k))
             elif k in valid:
