@@ -54,7 +54,7 @@ class L(object):
         pass
 
     def log(self,msg=None, level=None, exc_info=None , exc_info_on_loglevel=None ,*args,**kwargs):
-        print "LOG",x        
+        print "LOG",msg        
 
     def debug(self,*args,**kwargs ):
         #print "DEBUG",x
