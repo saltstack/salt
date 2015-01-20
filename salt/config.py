@@ -23,6 +23,7 @@ try:
 except Exception:
     pass
 
+
 # Import salt libs
 import salt.utils
 import salt.utils.network
