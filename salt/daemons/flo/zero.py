@@ -240,5 +240,3 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
             self.created = True
             log.info('Started ZMQ worker')
         self.worker.handle_request()
-
-
