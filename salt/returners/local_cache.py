@@ -137,7 +137,7 @@ def returner(load):
     hn_dir = os.path.join(jid_dir, load['id'])
 
     try:
-        os.mkdir(hn_dir)
+        os.makedirs(hn_dir)
     except OSError as err:
         if err.errno == errno.EEXIST:
             # Minion has already returned this jid and it should be dropped
