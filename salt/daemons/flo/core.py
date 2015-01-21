@@ -295,11 +295,6 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                     masters='masters',
                     opts='.salt.opts')
 
-    def _prepare(self):
-        #self.masters = daemons.extract_masters(self.opts.value)
-        # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
-        pass
-
     def action(self, **kwa):
         '''
         Join with all masters
