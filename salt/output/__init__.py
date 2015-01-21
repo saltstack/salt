@@ -50,6 +50,7 @@ def try_printout(data, out, opts):
         try:
             return get_printout('nested', opts)(data).rstrip()
         except (KeyError, AttributeError):
+            log.error('Nested output failed: ', exec_info=True)
             return get_printout('raw', opts)(data).rstrip()
 
 
@@ -155,8 +156,8 @@ def get_printout(out, opts=None, **kwargs):
             opts['color'] = True
 
     outputters = salt.loader.outputters(opts)
-    # TODO: raise an exception? This means if you do --out foobar you get nested
     if out not in outputters:
+        log.error('Invalid outputter {0} specified, fall back to nested'.format(out))
         return outputters['nested']
     return outputters[out]
 
