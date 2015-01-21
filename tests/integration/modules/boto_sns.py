@@ -2,14 +2,20 @@
 '''
 Validate the boto_sns module
 '''
+
+# Import Python libs
+from __future__ import absolute_import
 import re
 
+# Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
+# Import Salt libs
 import integration
 
+# Import 3rd-party libs
 NO_BOTO_MODULE = True
 BOTO_NOT_CONFIGURED = True
 try:
@@ -62,8 +68,8 @@ class BotoSNSTest(integration.ModuleCase):
         self.assertSaltModuleTrueReturn(ret)
 
         ret = self.run_function('boto_sns.get_all_topics')
-        self.assertIn(self.topic_name, ret.keys())
-        self.assertIn(self._get_arn(self.topic_name), ret.values())
+        self.assertIn(self.topic_name, list(ret.keys()))
+        self.assertIn(self._get_arn(self.topic_name), list(ret.values()))
 
     def test_delete_non_existing(self):
         ret = self.run_function('boto_sns.delete', [self.topic_name])
@@ -75,8 +81,8 @@ class BotoSNSTest(integration.ModuleCase):
         self.assertSaltModuleTrueReturn(ret)
 
         ret = self.run_function('boto_sns.get_all_topics')
-        self.assertNotIn(self.topic_name, ret.keys())
-        self.assertNotIn(self._get_arn(self.topic_name), ret.values())
+        self.assertNotIn(self.topic_name, list(ret.keys()))
+        self.assertNotIn(self._get_arn(self.topic_name), list(ret.values()))
 
     def test_get_all_topics(self):
         self.topic_names.append(self.topic_name + '-2')
@@ -86,8 +92,8 @@ class BotoSNSTest(integration.ModuleCase):
         ret = self.run_function('boto_sns.get_all_topics')
 
         for topic in self.topic_names:
-            self.assertIn(topic, ret.keys())
-            self.assertIn(self._get_arn(topic), ret.values())
+            self.assertIn(topic, list(ret.keys()))
+            self.assertIn(self._get_arn(topic), list(ret.values()))
 
     def test_subscribe_and_get_all_subscriptions_by_topic(self):
         topic_name = self.topic_name
