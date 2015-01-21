@@ -81,11 +81,20 @@ def query(url,
           opts=None,
           requests_lib=None,
           ca_bundle=None,
+          verify_ssl=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
     '''
     ret = {}
+
+    if opts is None:
+        if node == 'master':
+            opts = salt.config.master_config('/etc/salt/master')
+        elif node == 'minion':
+            opts = salt.config.master_config('/etc/salt/minion')
+        else:
+            opts = {}
 
     if requests_lib is None:
         requests_lib = opts.get('requests_lib', False)
@@ -100,16 +109,11 @@ def query(url,
         requests_log = logging.getLogger('requests')
         requests_log.setLevel(logging.WARNING)
 
+    if verify_ssl is None:
+        verify_ssl = opts.get('verify_ssl', True)
+
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
-
-    if opts is None:
-        if node == 'master':
-            opts = salt.config.master_config('/etc/salt/master')
-        elif node == 'minion':
-            opts = salt.config.master_config('/etc/salt/minion')
-        else:
-            opts = {}
 
     if data_file is not None:
         data = _render(
@@ -163,6 +167,7 @@ def query(url,
         sess.headers.update(header_dict)
         log.trace('Request Headers: {0}'.format(sess.headers))
         sess_cookies = sess.cookies
+        sess.verify = verify_ssl
     else:
         sess_cookies = None
 
@@ -196,8 +201,11 @@ def query(url,
 
         if url.startswith('https') or port == 443:
             if not HAS_MATCHHOSTNAME:
-                log.warn(('match_hostname() not available, SSL hostname '
-                         'checking not available. THIS CONNECTION MAY NOT BE SECURE!'))
+                log.warn(('match_hostname() not available, SSL hostname checking'
+                         'not available. THIS CONNECTION MAY NOT BE SECURE!'))
+            elif verify_ssl is False:
+                log.warn(('SSL certificate verification has been explicitly '
+                         'disabled. THIS CONNECTION MAY NOT BE SECURE!'))
             else:
                 hostname = request.get_host()
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
