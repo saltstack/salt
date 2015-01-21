@@ -101,6 +101,7 @@ import logging
 # Import salt libs
 import salt.returners
 import salt.utils.jid
+import salt.exceptions
 
 # Import third party libs
 try:
@@ -155,11 +156,14 @@ def _get_serv(ret=None, commit=False):
     Return a mysql cursor
     '''
     _options = _get_options(ret)
-    conn = MySQLdb.connect(host=_options.get('host'),
-                           user=_options.get('user'),
-                           passwd=_options.get('pass'),
-                           db=_options.get('db'),
-                           port=_options.get('port'))
+    try:
+        conn = MySQLdb.connect(host=_options.get('host'),
+                               user=_options.get('user'),
+                               passwd=_options.get('pass'),
+                               db=_options.get('db'),
+                               port=_options.get('port'))
+    except MySQLdb.connections.OperationalError as exc:
+        raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
     cursor = conn.cursor()
     try:
         yield cursor
@@ -181,16 +185,19 @@ def returner(ret):
     '''
     Return data to a mysql server
     '''
-    with _get_serv(ret, commit=True) as cur:
-        sql = '''INSERT INTO `salt_returns`
-                (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
-                VALUES (%s, %s, %s, %s, %s, %s)'''
+    try:
+        with _get_serv(ret, commit=True) as cur:
+            sql = '''INSERT INTO `salt_returns`
+                    (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
+                    VALUES (%s, %s, %s, %s, %s, %s)'''
 
-        cur.execute(sql, (ret['fun'], ret['jid'],
-                          json.dumps(ret['return']),
-                          ret['id'],
-                          ret['success'],
-                          json.dumps(ret)))
+            cur.execute(sql, (ret['fun'], ret['jid'],
+                              json.dumps(ret['return']),
+                              ret['id'],
+                              ret['success'],
+                              json.dumps(ret)))
+    except salt.exceptions.SaltMasterError:
+        log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
 
 
 def event_return(events):
