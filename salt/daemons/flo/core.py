@@ -127,7 +127,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'prihex': None}},
             }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Assign class defaults
         '''
@@ -138,7 +138,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         '''
         enter action
         should only run once to setup road stack.
-        moved from postinitio so can do clean up before stack is initialized
+        moved from _prepare so can do clean up before stack is initialized
 
         do salt raet road stack setup at enter
         '''
@@ -233,7 +233,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                     stack='stack',
                     opts='.salt.opts')
 
-    def postinitio(self):
+    def _prepare(self):
         self.masters = daemons.extract_masters(self.opts.value)
         # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
 
@@ -496,7 +496,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                'module_refresh': '.salt.var.module_refresh',
                'returners': '.salt.loader.returners'}
 
-    def postinitio(self):
+    def _prepare(self):
         self._load_modules()
 
     def action(self):
@@ -612,7 +612,7 @@ class SaltSchedule(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Map opts and make the schedule object
         '''
@@ -656,7 +656,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                           'ival': {'lanename': 'master'}},
             }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Set up required objects and queues
         '''
@@ -1241,7 +1241,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                'executors': '.salt.track.executors',
                'road_stack': '.salt.road.manor.stack', }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Map opts for convenience
         '''
