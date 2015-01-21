@@ -31,19 +31,6 @@ associated with that vm. An example profile might look like:
         image: centos-6
         location: us-east-1
 
-This driver can also be used with the Joyent SmartDataCenter project. More
-details can be found at:
-
-.. _`SmartDataCenter`: https://github.com/joyent/sdc
-
-This requires that an api_host_suffix is set. The default value for this is
-`.api.joyentcloud.com`. All characters, including the leading `.`, should be
-included:
-
-.. code-block:: yaml
-
-      api_host_suffix: .api.myhostname.com
-
 :depends: requests
 '''
 from __future__ import absolute_import
@@ -1001,13 +988,13 @@ def delete_key(kwargs=None, call=None):
     return data
 
 
-def get_location_path(location=DEFAULT_LOCATION, api_host_suffix=JOYENT_API_HOST_SUFFIX):
+def get_location_path(location=DEFAULT_LOCATION):
     '''
     create url from location variable
     :param location: joyent data center location
     :return: url
     '''
-    return 'https://{0}{1}'.format(location, api_host_suffix)
+    return 'https://{0}{1}'.format(location, JOYENT_API_HOST_SUFFIX)
 
 
 def query(action=None, command=None, args=None, method='GET', location=None,
@@ -1027,12 +1014,7 @@ def query(action=None, command=None, args=None, method='GET', location=None,
     if not location:
         location = get_location()
 
-    api_host_suffix = config.get_cloud_config_value(
-        'api_host_suffix', get_configured_provider(), __opts__,
-        search_global=False, default=JOYENT_API_HOST_SUFFIX
-    )
-
-    path = get_location_path(location=location, api_host_suffix=api_host_suffix)
+    path = get_location_path(location=location)
 
     if action:
         path += action

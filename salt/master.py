@@ -2538,7 +2538,7 @@ class ClearFuncs(object):
         }
 
 
-class FloMWorker(salt.master.MWorker):
+class FloMWorker(MWorker):
     '''
     Change the run and bind to be ioflo friendly
     '''
@@ -2547,7 +2547,7 @@ class FloMWorker(salt.master.MWorker):
                  mkey,
                  key,
                  crypticle):
-        salt.master.MWorker.__init__(self, opts, mkey, key, crypticle)
+        MWorker.__init__(self, opts, mkey, key, crypticle)
 
     def setup(self):
         '''

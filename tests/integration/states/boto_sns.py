@@ -70,7 +70,7 @@ class BotoSNSTest(integration.ModuleCase,
         self.assertInSaltComment(
             'AWS SNS topic my-state-test-topic is set to be created.', ret)
         self.assertSaltStateChangesEqual(ret, {})
-        ret = self.run_function('boto_sns.exists',  name='my-state-test-topic')
+        ret = self.run_function('boto_sns.exists', name='my-state-test-topic')
         self.assertFalse(ret)
 
     def test_absent_not_exist(self):

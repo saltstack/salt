@@ -4,11 +4,11 @@ Starting or restarting of services and daemons
 ==============================================
 
 Services are defined as system daemons typically started with system init or
-rc scripts.  Services can be defined as running or dead. 
+rc scripts.  Services can be defined as running or dead.
 
 .. note::
-    The current status of a service is determined by the return code of the init/rc 
-    script status command. A status return code of 0 it is considered running.  Any 
+    The current status of a service is determined by the return code of the init/rc
+    script status command. A status return code of 0 it is considered running.  Any
     other return code is considered dead.
 
 .. code-block:: yaml

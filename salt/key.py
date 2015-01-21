@@ -436,7 +436,9 @@ class MultiKeyCLI(KeyCLI):
     '''
     def __init__(self, opts):
         opts['__multi_key'] = True
-        self.opts = opts
+        super(MultiKeyCLI, self).__init__(opts)
+        # Remove the key attribute set in KeyCLI.__init__
+        delattr(self, 'key')
         zopts = copy.copy(opts)
         ropts = copy.copy(opts)
         self.keys = {}
