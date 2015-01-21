@@ -2,14 +2,20 @@
 """
 Tests for the boto_sns state
 """
+
+# Import Python libs
+from __future__ import absolute_import
 import re
 
+# Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
+# Import Salt libs
 import integration
 
+# Import 3rd-party libs
 NO_BOTO_MODULE = True
 BOTO_NOT_CONFIGURED = True
 try:
