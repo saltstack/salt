@@ -90,11 +90,16 @@ def query(url,
 
     if opts is None:
         if node == 'master':
-            opts = salt.config.master_config('/etc/salt/master')
+            opts = salt.config.master_config(
+                os.path.join(syspaths.CONFIG_DIR, 'master')
+            )
         elif node == 'minion':
-            opts = salt.config.master_config('/etc/salt/minion')
+            opts = salt.config.master_config(
+                os.path.join(syspaths.CONFIG_DIR, 'minion')
+            )
         else:
             opts = {}
+
 
     if requests_lib is None:
         requests_lib = opts.get('requests_lib', False)
