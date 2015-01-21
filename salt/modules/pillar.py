@@ -171,7 +171,7 @@ def ls(*args):
         salt '*' pillar.ls
     '''
 
-    return items(*args).keys()
+    return list(items(*args).keys())
 
 
 def item(*args):
