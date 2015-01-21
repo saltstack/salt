@@ -285,7 +285,8 @@ def bootstrap(vm_, opts):
     Windows) to install Salt. It will make the decision on its own as to which
     deploy function to call.
     '''
-    if salt.config.get_cloud_config_value('deploy', vm_, opts) is False:
+    if salt.config.get_cloud_config_value('deploy', vm_, opts) is False \
+            and not salt.config.get_cloud_config_value('inline_script', vm_, opts):
         return {
             'Error': {
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
@@ -450,22 +451,34 @@ def bootstrap(vm_, opts):
     deployed = False
     inline_script_deployed = False
 
-    if win_installer:
-        deployed = deploy_windows(**deploy_kwargs)
-    else:
-        deployed = deploy_script(**deploy_kwargs)
+    if salt.config.get_cloud_config_value('inline_script', vm_, opts) \
+            and salt.config.get_cloud_config_value('deploy', vm_, opts) is False:
 
-    if inline_script_code:
-        inline_script_deployed = run_inline_script(**inline_script_kwargs)
-        if inline_script_deployed is not False:
-            log.info('Inline script(s) ha(s|ve) run on {0}'.format(vm_['name']))
-
-    if deployed is not False:
-        ret['deployed'] = True
-        if deployed is not True:
-            ret.update(deployed)
-        log.info('Salt installed on {0}'.format(vm_['name']))
+        if inline_script_code:
+            inline_script_deployed = run_inline_script(**inline_script_kwargs)
+            if inline_script_deployed is not False:
+                log.info('Inline script(s) ha(s|ve) run on {0}'.format(vm_['name']))
+        ret['deployed'] = False
         return ret
+
+    else:
+
+        if win_installer:
+            deployed = deploy_windows(**deploy_kwargs)
+        else:
+            deployed = deploy_script(**deploy_kwargs)
+
+        if inline_script_code:
+            inline_script_deployed = run_inline_script(**inline_script_kwargs)
+            if inline_script_deployed is not False:
+                log.info('Inline script(s) ha(s|ve) run on {0}'.format(vm_['name']))
+
+        if deployed is not False:
+            ret['deployed'] = True
+            if deployed is not True:
+                ret.update(deployed)
+            log.info('Salt installed on {0}'.format(vm_['name']))
+            return ret
 
     log.error('Failed to start Salt on host {0}'.format(vm_['name']))
     return {
