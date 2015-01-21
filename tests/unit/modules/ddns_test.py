@@ -29,6 +29,9 @@ ddns.__grains__ = {}
 ddns.__salt__ = {}
 
 
+@skipIf(True, 'mocking dnspython without depending on it being installed'
+        'requires more effort than unit testing the ddns module may be worth'
+        'at this point.  An integration test would be easy though.')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DDNSTestCase(TestCase):
     '''
