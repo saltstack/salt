@@ -2119,7 +2119,6 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             help=('Report only those states that have changed')
         )
 
-
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
