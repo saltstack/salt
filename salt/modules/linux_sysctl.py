@@ -13,7 +13,7 @@ import salt.utils
 from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
 from salt.modules.systemd import _sd_booted
-from string import maketrans
+import string
 
 log = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ def assign(name, value):
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
     value = str(value)
-    sysctl_file = '/proc/sys/{0}'.format(name.translate(maketrans('./', '/.')))
+    sysctl_file = '/proc/sys/{0}'.format(name.translate(string.maketrans('./', '/.')))
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
