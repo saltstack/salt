@@ -268,7 +268,7 @@ def _file_lists(load, form):
                     followlinks=__opts__['fileserver_followsymlinks']):
                 dir_rel_fn = os.path.relpath(root, path)
                 if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
-                    dir_rel_fn = dir_rel_fn.replace('\\','/')
+                    dir_rel_fn = dir_rel_fn.replace('\\', '/')
                 ret['dirs'].append(dir_rel_fn)
                 if len(dirs) == 0 and len(files) == 0:
                     if not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
@@ -285,7 +285,7 @@ def _file_lists(load, form):
                             )
                     if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
                         if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
-                            rel_fn = rel_fn.replace('\\','/')
+                            rel_fn = rel_fn.replace('\\', '/')
                         ret['files'].append(rel_fn)
         if save_cache:
             salt.fileserver.write_file_list_cache(
