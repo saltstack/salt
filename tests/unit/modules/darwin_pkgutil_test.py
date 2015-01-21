@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
+
+# Import salt module
 from salt.modules import darwin_pkgutil
 
+# Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
