@@ -423,7 +423,7 @@ def function(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(
                         {minion: failure},
-                        'highstate',
+                        'raw',
                         __opts__,
                         ).splitlines()
                     )
