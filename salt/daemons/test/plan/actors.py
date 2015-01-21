@@ -2,7 +2,8 @@
 '''
 Test behaviors used by test plans
 '''
-# pylint: disable=W0232
+# pylint: skip-file
+# pylint: disable=C0103
 
 import os
 import stat
@@ -96,7 +97,6 @@ class PresenterTestOptsSetup(ioflo.base.deeding.Deed):
             open_mode=True,
             auto_accept=True,
             )
-        return True
 
 
 def serviceStacks(stacks, duration=1.0):
@@ -162,7 +162,6 @@ class PresenterTestSetup(ioflo.base.deeding.Deed):
         msg = {'route': route}
         stack.transmit(msg, stack.nameRemotes[ryn].uid)
         serviceStacks([stack, self.lane_stack.value])
-        return True
 
 
 class PresenterTestCleanup(ioflo.base.deeding.Deed):

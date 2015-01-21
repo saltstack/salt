@@ -30,6 +30,8 @@ the following syntax is used:
     include:
       - dev: http
 
+.. include:: /_incl/sls_filename_cant_contain_period.rst
+
 Relative Include
 ================
 
