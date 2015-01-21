@@ -944,7 +944,8 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'road_stack': '.salt.road.manor.stack',
                'master_estate_name': '.salt.track.master_estate_name',
                'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
-                          'ival': deque()}, }
+                          'ival': deque()},
+               'clustered': '.salt.road.manor.cluster.clustered',}
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
@@ -1075,7 +1076,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                           "remote_cmd. Requeuing".format())
                 self.laters.value.append((msg, sender))
                 return
-            d_estate = self._get_master_estate_name()
+            d_estate = self._get_master_estate_name(clustered=self.clustered.value)
             if not d_estate:
                 log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
                           "Unable to route. Requeuing".format())
@@ -1087,11 +1088,13 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
 
-    def _get_master_estate_name(self):
+    def _get_master_estate_name(self, clustered=False):
         '''
         Assign and return the name of the estate for the default master or empty if none
         If the default master is no longer available then selects one of the available
         masters
+
+        If clustered is True then use load balancing algorithm to select master
         '''
         opts = self.opts.value
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
