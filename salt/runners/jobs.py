@@ -47,7 +47,7 @@ def active(outputter=None, display_progress=False):
             continue
         for job in data:
             if not job['jid'] in ret:
-                ret[job['jid']] = _format_job_instance(job)
+                ret[job['jid']] = _format_jid_instance(job['jid'], job)
                 ret[job['jid']].update({'Running': [{minion: job.get('pid', None)}], 'Returned': []})
             else:
                 ret[job['jid']]['Running'].append({minion: job['pid']})
