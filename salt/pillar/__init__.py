@@ -312,7 +312,7 @@ class Pillar(object):
                             if isinstance(comp, six.string_types):
                                 states[comp] = True
                         if ignore_missing:
-                            self.ignored_pillars[saltenv] = states.keys()
+                            self.ignored_pillars[saltenv] = list(states.keys())
                         top[saltenv][tgt] = matches
                         top[saltenv][tgt].extend(states)
         return self.sort_top_targets(top, orders)
