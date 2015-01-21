@@ -45,6 +45,7 @@ framer bootstrap be inactive first join
     frame join
         print Joining...
         enter
+            do salt raet road minion master setup per inode ".salt.road.manor."
             do salt raet road stack joiner per inode ".salt.road.manor."
         recur
             do salt raet road stack joined per inode ".salt.road.manor."

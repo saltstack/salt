@@ -102,6 +102,50 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                     raise
 
 
+class SaltRaetRoadMinionClusterSetup(ioflo.base.deeding.Deed):
+    '''
+    Setups shares for master cluster
+
+    FloScript:
+
+    do salt raet road minion cluster setup at enter
+
+    '''
+    Ioinits = odict(
+        inode='.salt.road.manor.',
+        masters='cluster.masters',
+        opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Generate list of masters
+        '''
+        self.masters.value = daemons.extract_masters(self.opts.value,
+                                                     'cluster_masters')
+
+
+class SaltRaetRoadMasterClusterSetup(ioflo.base.deeding.Deed):
+    '''
+    Setups shares for master cluster
+
+    FloScript:
+
+    do salt raet road master cluster setup at enter
+
+    '''
+    Ioinits = odict(
+        inode='.salt.road.manor.',
+        masters='cluster.masters',
+        opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Generate list of masters
+        '''
+        self.masters.value = daemons.extract_masters(self.opts.value,
+                                                     'cluster_masters',
+                                                     'raet_port')
+
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -220,6 +264,23 @@ class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
             self.stack.value.server.close()
 
 
+class SaltRaetRoadMinionMasterSetup(ioflo.base.deeding.Deed):
+    '''
+    Sets up list of masters for minoin
+
+    FloScript:
+
+    do salt raet road minion master setup at enter
+
+    '''
+    Ioinits = odict(
+        inode=".salt.road.manor.",
+        masters='masters',
+        opts='.salt.opts')
+
+    def action(self):
+        self.masters.value = daemons.extract_masters(self.opts.value)
+
 class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
     '''
     Initiates join transaction with master
@@ -231,11 +292,13 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
     Ioinits = odict(
                     inode=".salt.road.manor.",
                     stack='stack',
+                    masters='masters',
                     opts='.salt.opts')
 
     def _prepare(self):
-        self.masters = daemons.extract_masters(self.opts.value)
+        #self.masters = daemons.extract_masters(self.opts.value)
         # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
+        pass
 
     def action(self, **kwa):
         '''
@@ -253,7 +316,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
 
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
-                for master in self.masters:
+                for master in self.masters.value:
                     mha = master['external']
                     stack.addRemote(RemoteEstate(stack=stack,
                                                  fuid=0,  # vacuous join
