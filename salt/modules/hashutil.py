@@ -6,6 +6,7 @@ from __future__ import absolute_import
 import base64
 import hashlib
 import hmac
+import StringIO
 
 
 def base64_encodestring(instr):
@@ -23,6 +24,27 @@ def base64_encodestring(instr):
     return base64.encodestring(instr)
 
 
+def base64_encodefile(fname):
+    '''
+    Read a file from the file system and return as a base64 encoded string
+
+    .. versionadded:: 2015.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.base64_encodefile /path/to/binary_file
+    '''
+    encoded_f = StringIO.StringIO()
+
+    with open(fname, 'rb') as f:
+        base64.encode(f, encoded_f)
+
+    encoded_f.seek(0)
+    return encoded_f.read()
+
+
 def base64_decodestring(instr):
     '''
     Decode a base64-encoded string
@@ -33,9 +55,30 @@ def base64_decodestring(instr):
 
     .. code-block:: bash
 
-        salt '*' hashutil.base64_decodestring 'Z2V0IHNhbHRlZA==\\n'
+        salt '*' hashutil.base64_decodestring instr='Z2V0IHNhbHRlZAo='
+
     '''
     return base64.decodestring(instr)
+
+
+def base64_decodefile(instr, outfile):
+    r'''
+    Decode a base64-encoded string and write the result to a file
+
+    .. versionadded:: 2015.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.base64_decodefile instr='Z2V0IHNhbHRlZAo=' outfile='/path/to/binary_file'
+    '''
+    encoded_f = StringIO.StringIO(instr)
+
+    with open(outfile, 'wb') as f:
+        base64.decode(encoded_f, f)
+
+    return True
 
 
 def md5_digest(instr):
