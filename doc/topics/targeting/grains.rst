@@ -205,15 +205,15 @@ defining custom grains, there is an order of precedence which should be kept in
 mind when defining them. The order of evaluation is as follows:
 
 1. Core grains.
-2. Custom grains in ``/etc/salt/grains``.
-3. Custom grains in ``/etc/salt/minion``.
-4. Custom grain modules in ``_grains`` directory, synced to minions.
+2. Custom grain modules in ``_grains`` directory, synced to minions.
+3. Custom grains in ``/etc/salt/grains``.
+4. Custom grains in ``/etc/salt/minion``.
 
 Each successive evaluation overrides the previous ones, so any grains defined
-in ``/etc/salt/grains`` that have the same name as a core grain will override
-that core grain. Similarly, ``/etc/salt/minion`` overrides both core grains and
-grains set in ``/etc/salt/grains``, and custom grain modules will override
-*any* grains of the same name.
+by custom grains modules synced to minions that have the same name as a core
+grain will override that core grain. Similarly, grains from
+``/etc/salt/grains`` override both core grains and custom grain modules, and
+grains in ``/etc/salt/minion`` will override *any* grains of the same name.
 
 
 Examples of Grains
