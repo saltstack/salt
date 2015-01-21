@@ -20,8 +20,9 @@ try:
     import salt.master
     import salt.crypt
     import salt.daemons.masterapi
+    HAS_ZMQ = True
 except ImportError:
-    pass
+    HAS_ZMQ = False
 
 log = logging.getLogger(__name__)
 
@@ -150,9 +151,6 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
         Set up tracking value(s)
         '''
         self.created = False
-        #self.crypticle.value = salt.crypt.Crypticle(
-                #self.opts.value,
-                #self.opts.value.get('aes', ''))
         self.serial = salt.payload.Serial(self.opts.value)
 
     def action(self):
@@ -244,59 +242,59 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
         self.worker.handle_request()
 
 
+if HAS_ZMQ:
+    class FloMWorker(salt.master.MWorker):
+        '''
+        Change the run and bind to be ioflo friendly
+        '''
+        def __init__(self,
+                     opts,
+                     mkey,
+                     key,
+                     crypticle):
+            salt.master.MWorker.__init__(self, opts, mkey, key, crypticle)
 
-class FloMWorker(salt.master.MWorker):
-    '''
-    Change the run and bind to be ioflo friendly
-    '''
-    def __init__(self,
-                 opts,
-                 mkey,
-                 key,
-                 crypticle):
-        salt.master.MWorker.__init__(self, opts, mkey, key, crypticle)
-
-    def setup(self):
-        '''
-        Prepare the needed objects and socket for iteration within ioflo
-        '''
-        salt.utils.appendproctitle(self.__class__.__name__)
-        self.clear_funcs = salt.master.ClearFuncs(
-                self.opts,
-                self.key,
-                self.mkey,
-                self.crypticle)
-        self.aes_funcs = salt.master.AESFuncs(self.opts, self.crypticle)
-        self.context = zmq.Context(1)
-        self.socket = self.context.socket(zmq.REP)
-        self.w_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'workers.ipc')
-                )
-        log.info('ZMQ Worker binding to socket {0}'.format(self.w_uri))
-        self.poller = zmq.Poller()
-        self.poller.register(self.socket, zmq.POLLIN)
-        self.socket.connect(self.w_uri)
-
-    def handle_request(self):
-        '''
-        Handle a single request
-        '''
-        try:
-            polled = self.poller.poll(1)
-            if polled:
-                package = self.socket.recv()
-                self._update_aes()
-                payload = self.serial.loads(package)
-                ret = self.serial.dumps(self._handle_payload(payload))
-                self.socket.send(ret)
-        except KeyboardInterrupt:
-            raise
-        except Exception as exc:
-            # Properly handle EINTR from SIGUSR1
-            if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
-                return
-            log.critical('Unexpected Error in Mworker',
-                    exc_info=True)
-            del self.socket
+        def setup(self):
+            '''
+            Prepare the needed objects and socket for iteration within ioflo
+            '''
+            salt.utils.appendproctitle(self.__class__.__name__)
+            self.clear_funcs = salt.master.ClearFuncs(
+                    self.opts,
+                    self.key,
+                    self.mkey,
+                    self.crypticle)
+            self.aes_funcs = salt.master.AESFuncs(self.opts, self.crypticle)
+            self.context = zmq.Context(1)
             self.socket = self.context.socket(zmq.REP)
+            self.w_uri = 'ipc://{0}'.format(
+                    os.path.join(self.opts['sock_dir'], 'workers.ipc')
+                    )
+            log.info('ZMQ Worker binding to socket {0}'.format(self.w_uri))
+            self.poller = zmq.Poller()
+            self.poller.register(self.socket, zmq.POLLIN)
             self.socket.connect(self.w_uri)
+
+        def handle_request(self):
+            '''
+            Handle a single request
+            '''
+            try:
+                polled = self.poller.poll(1)
+                if polled:
+                    package = self.socket.recv()
+                    self._update_aes()
+                    payload = self.serial.loads(package)
+                    ret = self.serial.dumps(self._handle_payload(payload))
+                    self.socket.send(ret)
+            except KeyboardInterrupt:
+                raise
+            except Exception as exc:
+                # Properly handle EINTR from SIGUSR1
+                if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
+                    return
+                log.critical('Unexpected Error in Mworker',
+                        exc_info=True)
+                del self.socket
+                self.socket = self.context.socket(zmq.REP)
+                self.socket.connect(self.w_uri)
