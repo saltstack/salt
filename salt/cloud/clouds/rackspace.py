@@ -31,11 +31,9 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # The Rackspace user's apikey
       apikey: 901d3f579h23c8v73q9
 '''
-from __future__ import absolute_import
-
-# The import section is mostly libcloud boilerplate
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import socket
@@ -251,7 +249,6 @@ def create(vm_):
             )
             # Trigger a failure in the wait for IP function
             return False
-
 
         if not running:
             # Still not running, trigger another iteration

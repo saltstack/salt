@@ -4,9 +4,8 @@ IoFlo behaviors for running a ZeroMQ based master
 '''
 # pylint: disable=W0232
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import hashlib
@@ -105,6 +104,7 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
                 if exc.errno == errno.EINTR:
                     continue
                 raise exc
+
 
 class SaltZmqCrypticleSetup(ioflo.base.deeding.Deed):
     '''
@@ -242,7 +242,6 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
             self.created = True
             log.info('Started ZMQ worker')
         self.worker.handle_request()
-
 
 
 class FloMWorker(salt.master.MWorker):
