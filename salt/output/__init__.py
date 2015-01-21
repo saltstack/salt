@@ -37,6 +37,23 @@ STATIC = (
 )
 
 
+def try_printout(data, out, opts):
+    '''
+    Safely get the string to print out, try the configured outputter, then
+    fall back to nested and then to raw
+    '''
+    try:
+        return get_printout(out, opts)(data).rstrip()
+    except (KeyError, AttributeError):
+        log.debug(traceback.format_exc())
+        opts.pop('output', None)
+        try:
+            return get_printout('nested', opts)(data).rstrip()
+        except (KeyError, AttributeError):
+            log.error('Nested output failed: ', exec_info=True)
+            return get_printout('raw', opts)(data).rstrip()
+
+
 def get_progress(opts, out, progress):
     '''
     Get the progress bar from the given outputter
@@ -74,12 +91,7 @@ def display_output(data, out=None, opts=None):
     '''
     if opts is None:
         opts = {}
-    try:
-        display_data = get_printout(out, opts)(data).rstrip()
-    except (KeyError, AttributeError):
-        log.debug(traceback.format_exc())
-        opts.pop('output', None)
-        display_data = get_printout('nested', opts)(data).rstrip()
+    display_data = try_printout(data, out, opts)
 
     output_filename = opts.get('output_file', None)
     log.trace('data = {0}'.format(data))
@@ -144,8 +156,8 @@ def get_printout(out, opts=None, **kwargs):
             opts['color'] = True
 
     outputters = salt.loader.outputters(opts)
-    # TODO: raise an exception? This means if you do --out foobar you get nested
     if out not in outputters:
+        log.error('Invalid outputter {0} specified, fall back to nested'.format(out))
         return outputters['nested']
     return outputters[out]
 
@@ -154,7 +166,7 @@ def out_format(data, out, opts=None):
     '''
     Return the formatted outputter string for the passed data
     '''
-    return get_printout(out, opts)(data).rstrip()
+    return try_printout(data, out, opts)
 
 
 def strip_esc_sequence(txt):
