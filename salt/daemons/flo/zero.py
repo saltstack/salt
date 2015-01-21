@@ -57,13 +57,6 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
                'mkey': '.salt.var.zmq.master_key',
                'aes': '.salt.var.zmq.aes'}
 
-    def postinitio(self):
-        '''
-        Init the cryptographic keys
-        '''
-        #self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
-        #self.aes.value = self.opts.value['aes']
-
     def action(self):
         '''
         Create the ZMQ Ret Port process fork
@@ -145,7 +138,7 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
                'aes': '.salt.var.zmq.aes',
                'crypticle': '.salt.var.zmq.crypticle'}
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Set up tracking value(s)
         '''
@@ -220,7 +213,7 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
                'key': '.salt.access_keys',
                'aes': '.salt.var.zmq.aes'}
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Create the initial seting value for the worker
         '''
