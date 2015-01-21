@@ -105,8 +105,6 @@ from salt.exceptions import (
     SaltInvocationError
 )
 
-# Import third party libs
-import yaml
 
 log = logging.getLogger(__name__)
 _empty = object()
@@ -137,6 +135,8 @@ def get_color_theme(theme):
     '''
     Return the color theme to use
     '''
+    # Keep the heavy lifting out of the module space
+    import yaml
     if not os.path.isfile(theme):
         log.warning('The named theme {0} if not available'.format(theme))
     try:
