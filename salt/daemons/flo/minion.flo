@@ -41,11 +41,30 @@ framer inbound be inactive first start
         do salt raet road stack service rx
         do salt raet lane stack service rx
 
-framer bootstrap be inactive first join
+framer bootstrap be inactive first setup
+
+    frame setup
+        enter
+            do salt raet road clustered per inode ".salt.road.manor."
+        go clustermaster
+        go multimaster
+
+    frame clustermaster
+        let if salt.road.manor.cluster.clustered
+        print Setting Up Master Cluster ....
+        enter
+            do salt raet road cluster minion setup per inode ".salt.road.manor."
+        go multimaster
+
+    frame multimaster
+        print Setting Up Master or MultiMaster
+        enter
+            do salt raet road master setup per inode ".salt.road.manor."
+        go join
+
     frame join
         print Joining...
         enter
-            do salt raet road minion master setup per inode ".salt.road.manor."
             do salt raet road stack joiner per inode ".salt.road.manor."
         recur
             do salt raet road stack joined per inode ".salt.road.manor."
