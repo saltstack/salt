@@ -170,6 +170,7 @@ class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
             for remote in self.stack.value.remotes.values():
                 self.loads.value[remote.name] = odict(load=0.0, expire=self.store.stamp)
 
+
 class SaltRaetRoadClusterMasterSetup(ioflo.base.deeding.Deed):
     '''
     Setups shares for master cluster
