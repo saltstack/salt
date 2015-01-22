@@ -542,6 +542,12 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 or installer.startswith('http:') \
                 or installer.startswith('https:') \
                 or installer.startswith('ftp:'):
+
+            cache_dir = pkginfo[version_num].get('cache_dir')
+            if cache_dir and installer.startswith('salt:'):
+                path, _ = os.path.split(installer)
+                cached_dir = __salt__['cp.cache_dir'](path, saltenv, False, None, 'E@init.sls$')
+
             cached_pkg = __salt__['cp.is_cached'](installer, saltenv)
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
@@ -553,6 +559,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             cached_pkg = installer
 
         cached_pkg = cached_pkg.replace('/', '\\')
+        cache_path, _ = os.path.split(cached_pkg)
         msiexec = pkginfo[version_num].get('msiexec')
         install_flags = '{0} {1}'.format(pkginfo[version_num]['install_flags'], options and options.get('extra_install_flags') or "")
 
@@ -562,7 +569,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cmd.append(cached_pkg)
         cmd.extend(install_flags.split())
 
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        __salt__['cmd.run'](cmd, cache_path, output_loglevel='trace', python_shell=False)
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
