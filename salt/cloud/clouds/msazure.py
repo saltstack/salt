@@ -47,6 +47,7 @@ import time
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+from salt.modules.boto_route53 import _wait_for_sync
 
 
 # Import python libs
@@ -784,6 +785,21 @@ def create(vm_):
     return ret
 
 
+#Helper function for azure tests
+def _wait_for_async(self, request_id):
+    count = 0
+    result = self.sms.get_operation_status(request_id)
+    while result.status == 'InProgress':
+        count = count + 1
+        if count > 120:
+            raise ValueError('Timed out waiting for async operation to complete.')
+        time.sleep(5)
+        result = self.sms.get_operation_status(request_id)
+
+    if result.status != 'Succeeded':
+        raise ValueError('Asynchronous operation did not succeed.')
+
+
 def destroy(name, conn=None, call=None, kwargs=None):
     '''
     Destroy a VM
@@ -805,14 +821,16 @@ def destroy(name, conn=None, call=None, kwargs=None):
     if kwargs is None:
         kwargs = {}
 
-    service_name = kwargs.get('service_name', name)
+    instance_data = show_instance(name)
+    service_name = instance_data['deployment']['name']
 
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    del_vm = conn.delete_deployment(service_name=service_name,
-                                    deployment_name=service_name)
-    del_service = conn.delete_hosted_service
+    request_id = conn.delete_role_instances(service_name,
+                                            service_name,
+                                            [name])
+    _wait_for_async(request_id)
     ret[name] = {
         'request_id': del_vm.request_id,
     }
