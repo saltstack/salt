@@ -145,7 +145,9 @@ def present(
                 ret['result'] = None
                 continue
 
-            created = __salt__['boto_sns.subscribe'](name, subscription['protocol'], subscription['endpoint'])
+            created = __salt__['boto_sns.subscribe'](
+                name, subscription['protocol'], subscription['endpoint'],
+                region=region, key=key, keyid=keyid, profile=profile)
             if created:
                 msg = ' AWS SNS subscription {0}:{1} set on topic {2}.'\
                       .format(subscription['protocol'],
