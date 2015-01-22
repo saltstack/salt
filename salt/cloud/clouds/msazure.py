@@ -821,7 +821,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
     if kwargs is None:
         kwargs = {}
 
-    instance_data = show_instance(name)
+    instance_data = show_instance(name, call='action')
     service_name = instance_data['deployment']['name']
 
     ret = {}
