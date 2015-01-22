@@ -815,7 +815,8 @@ def destroy(name, conn=None, call=None, kwargs=None):
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    del_vm = conn.delete_deployment(service_name=service_name, deployment_name=name)
+    del_vm = conn.delete_deployment(service_name=service_name,
+                                    deployment_name=service_name)
     del_service = conn.delete_hosted_service
     ret[name] = {
         'request_id': del_vm.request_id,
