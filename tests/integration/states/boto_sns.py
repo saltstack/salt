@@ -47,7 +47,7 @@ class BotoSNSTest(integration.ModuleCase,
     def tearDown(self):
         self.run_function('boto_sns.delete', name=self.topic_name)
 
-    def test_present_not_exist(self):
+    def test_present_new_topic_no_subscriptions(self):
         ret = self.run_state('boto_sns.present',
                              name=self.topic_name)
         self.assertSaltTrueReturn(ret)
@@ -59,74 +59,7 @@ class BotoSNSTest(integration.ModuleCase,
         self.assertSaltStateChangesEqual(ret,
             {'old': None, 'new': {'topic': self.topic_name, 'subscriptions': []}})
 
-    def test_present_already_exist(self):
-        self.run_state('boto_sns.present',
-                       name=self.topic_name)
-        ret = self.run_state('boto_sns.present',
-                             name=self.topic_name)
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(self.topic_name, ret, 'name')
-        self.assertInSaltComment(
-            'AWS SNS topic {0} present.'.format(self.topic_name),
-            ret
-        )
-        self.assertSaltStateChangesEqual(ret, {})
-
-    def test_present_test_mode(self):
-        ret = self.run_state('boto_sns.present',
-                             name=self.topic_name,
-                             test=True)
-        self.assertSaltNoneReturn(ret)
-        self.assertInSaltReturn(self.topic_name, ret, 'name')
-        self.assertInSaltComment(
-            'AWS SNS topic {0} is set to be created.'.format(self.topic_name),
-            ret
-        )
-        self.assertSaltStateChangesEqual(ret, {})
-        ret = self.run_function('boto_sns.exists', name=self.topic_name)
-        self.assertFalse(ret)
-
-    def test_absent_not_exist(self):
-        ret = self.run_state('boto_sns.absent',
-                             name=self.topic_name)
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(self.topic_name, ret, 'name')
-        self.assertInSaltComment(
-            'AWS SNS topic {0} does not exist.'.format(self.topic_name),
-            ret
-        )
-        self.assertSaltStateChangesEqual(ret, {})
-
-    def test_absent_already_exists(self):
-        self.run_state('boto_sns.present',
-                       name=self.topic_name)
-        ret = self.run_state('boto_sns.absent',
-                             name=self.topic_name)
-        self.assertSaltTrueReturn(ret)
-        self.assertInSaltReturn(self.topic_name, ret, 'name')
-        self.assertInSaltComment(
-            'AWS SNS topic {0} does not exist.'.format(self.topic_name),
-            ret
-        )
-        self.assertSaltStateChangesEqual(
-            ret, {'new': None, 'old': {'topic': self.topic_name}})
-
-    def test_absent_test_mode(self):
-        self.run_state('boto_sns.present', name=self.topic_name)
-        ret = self.run_state('boto_sns.absent',
-                             name=self.topic_name,
-                             test=True)
-        self.assertSaltNoneReturn(ret)
-        self.assertInSaltReturn(self.topic_name, ret, 'name')
-        self.assertInSaltComment(
-            'AWS SNS topic {0} is set to be removed.'.format(self.topic_name),
-            ret
-        )
-        self.assertSaltStateChangesEqual(ret, {})
-        ret = self.run_function('boto_sns.exists', name=self.topic_name)
-        self.assertTrue(ret)
-
-    def test_present_create_topic_with_subscriptions(self):
+    def test_present_new_topic_with_subscriptions(self):
         ret = self.run_state(
             'boto_sns.present',
             name=self.topic_name,
@@ -166,7 +99,6 @@ class BotoSNSTest(integration.ModuleCase,
             .format(self.topic_name),
             ret
         )
-
         self.assertSubscriptionInTopic({
             'Protocol': 'https',
             'Endpoint': 'https://www.example.com/sns/endpoint'
@@ -176,7 +108,41 @@ class BotoSNSTest(integration.ModuleCase,
             'Endpoint': 'https://www.example.com/sns/endpoint-2'
         }, self.topic_name)
 
-    def test_present_add_subscription_to_existing_topic_no_subscription(self):
+    def test_present_is_idempotent(self):
+        self.run_state(
+            'boto_sns.present',
+            name=self.topic_name,
+            subscriptions=[
+                {'protocol': 'https',
+                 'endpoint': 'https://www.example.com/sns/endpoint'
+                }
+            ]
+        )
+
+        ret = self.run_state(
+            'boto_sns.present',
+            name=self.topic_name,
+            subscriptions=[
+                {'protocol': 'https',
+                 'endpoint': 'https://www.example.com/sns/endpoint'
+                }
+            ]
+        )
+
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltReturn(self.topic_name, ret, 'name')
+        self.assertInSaltComment(
+            'AWS SNS topic {0} present.'.format(self.topic_name),
+            ret
+        )
+        self.assertInSaltComment(
+            'AWS SNS subscription https:https://www.example.com/sns/endpoint already set on topic {0}.'
+            .format(self.topic_name),
+            ret
+        )
+        self.assertSaltStateChangesEqual(ret, {})
+
+    def test_present_add_subscription_to_existing_topic_with_no_subscription(self):
         self.run_state('boto_sns.present', name=self.topic_name)
         ret = self.run_state(
             'boto_sns.present',
@@ -210,7 +176,7 @@ class BotoSNSTest(integration.ModuleCase,
             'Endpoint': 'https://www.example.com/sns/endpoint'
         }, self.topic_name)
 
-    def test_present_existing_subscriptions_add_subscription(self):
+    def test_present_add_new_subscription_to_existing_topic_with_subscriptions(self):
         self.run_state(
             'boto_sns.present',
             name=self.topic_name,
@@ -257,7 +223,21 @@ class BotoSNSTest(integration.ModuleCase,
             'Endpoint': 'https://www.example.com/sns/endpoint-2'
         }, self.topic_name)
 
-    def test_present_subscriptions_test_mode(self):
+    def test_present_test_mode_no_subscriptions(self):
+        ret = self.run_state('boto_sns.present',
+                             name=self.topic_name,
+                             test=True)
+        self.assertSaltNoneReturn(ret)
+        self.assertInSaltReturn(self.topic_name, ret, 'name')
+        self.assertInSaltComment(
+            'AWS SNS topic {0} is set to be created.'.format(self.topic_name),
+            ret
+        )
+        self.assertSaltStateChangesEqual(ret, {})
+        ret = self.run_function('boto_sns.exists', name=self.topic_name)
+        self.assertFalse(ret)
+
+    def test_present_test_mode_with_subscriptions(self):
         self.run_state('boto_sns.present', name=self.topic_name)
         ret = self.run_state(
             'boto_sns.present',
@@ -281,6 +261,46 @@ class BotoSNSTest(integration.ModuleCase,
             name=self.topic_name
         )
         self.assertEqual([], ret)
+
+    def test_absent_not_exist(self):
+        ret = self.run_state('boto_sns.absent',
+                             name=self.topic_name)
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltReturn(self.topic_name, ret, 'name')
+        self.assertInSaltComment(
+            'AWS SNS topic {0} does not exist.'.format(self.topic_name),
+            ret
+        )
+        self.assertSaltStateChangesEqual(ret, {})
+
+    def test_absent_already_exists(self):
+        self.run_state('boto_sns.present',
+                       name=self.topic_name)
+        ret = self.run_state('boto_sns.absent',
+                             name=self.topic_name)
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltReturn(self.topic_name, ret, 'name')
+        self.assertInSaltComment(
+            'AWS SNS topic {0} does not exist.'.format(self.topic_name),
+            ret
+        )
+        self.assertSaltStateChangesEqual(
+            ret, {'new': None, 'old': {'topic': self.topic_name}})
+
+    def test_absent_test_mode(self):
+        self.run_state('boto_sns.present', name=self.topic_name)
+        ret = self.run_state('boto_sns.absent',
+                             name=self.topic_name,
+                             test=True)
+        self.assertSaltNoneReturn(ret)
+        self.assertInSaltReturn(self.topic_name, ret, 'name')
+        self.assertInSaltComment(
+            'AWS SNS topic {0} is set to be removed.'.format(self.topic_name),
+            ret
+        )
+        self.assertSaltStateChangesEqual(ret, {})
+        ret = self.run_function('boto_sns.exists', name=self.topic_name)
+        self.assertTrue(ret)
 
     def assertSubscriptionInTopic(self, subscription, topic_name):
         ret = self.run_function(
