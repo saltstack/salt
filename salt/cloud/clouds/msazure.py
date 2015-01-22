@@ -284,7 +284,6 @@ def list_nodes_full(conn=None, call=None):
             del deploy_dict_no_role_info['role_instance_list']
             roles = deploy_dict['role_list']
             for role in roles:
-                log.debug(pprint.pformat(role))
                 role_instances = deploy_dict['role_instance_list']
                 ret[role] = roles[role]
                 ret[role].update(role_instances[role])
@@ -827,12 +826,10 @@ def destroy(name, conn=None, call=None, kwargs=None):
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    request_id = conn.delete_role_instances(service_name,
-                                            service_name,
-                                            [name])
+    request_id = conn.delete_role(service_name, service_name, name)
     _wait_for_async(request_id)
     ret[name] = {
-        'request_id': del_vm.request_id,
+        'request_id': request_id,
     }
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
