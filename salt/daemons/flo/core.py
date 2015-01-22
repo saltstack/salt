@@ -102,7 +102,6 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                     raise
 
 
-
 class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
     '''
     Updates value of share .salt.road.manor.cluster.clustered
@@ -125,32 +124,65 @@ class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
         self.clustered.update(value=self.opts.value.get('cluster_mode', False))
 
 
-class SaltRaetRoadClusterMinionSetup(ioflo.base.deeding.Deed):
+class SaltRaetRoadUsherMinionSetup(ioflo.base.deeding.Deed):
     '''
-    Setups shares for master cluster
+    Set up .ushers which is initial list of masters to bootstrap
+    into road
 
     FloScript:
 
-    do salt raet road cluster minion setup at enter
+    do salt raet road usher minion setup at enter
 
     '''
     Ioinits = odict(
-        inode='.salt.road.manor.',
-        masters='masters',
-        loads=odict(ipath='cluster.loads', ival=odict()),
-        opts='.salt.opts',)
+        inode=".salt.road.manor.",
+        ushers='ushers',
+        opts='.salt.opts')
 
-    def action(self, **kwa):
+    def action(self):
         '''
-        Generate list of masters
+        Assign .ushers by parsing opts
         '''
-        self.masters.value = daemons.extract_masters(self.opts.value,
-                                                     'cluster_masters')
+        masters = 'master'
+        port = None
+        if self.opts.value.get('cluster_mode', False):
+            masters = 'cluster_masters'
+
+        self.ushers.value = daemons.extract_masters(self.opts.value,
+                                                    masters=masters,
+                                                    port=port)
+
+
+class SaltRaetRoadUsherMasterSetup(ioflo.base.deeding.Deed):
+    '''
+    Set up .ushers which is initial list of masters to bootstrap
+    into road
+
+    FloScript:
+
+    do salt raet road usher master setup at enter
+
+    '''
+    Ioinits = odict(
+        inode=".salt.road.manor.",
+        ushers='ushers',
+        opts='.salt.opts')
+
+    def action(self):
+        '''
+        Assign .ushers by parsing opts
+        '''
+        masters = 'cluster_masters'
+        port = 'raet_port'
+
+        self.ushers.value = daemons.extract_masters(self.opts.value,
+                                                    masters=masters,
+                                                    port=port)
 
 
 class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
     '''
-    Sets up cluster.loads for load balancing
+    Sets up cluster.masters for load balancing
 
     FloScript:
 
@@ -159,7 +191,7 @@ class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
     '''
     Ioinits = odict(
         inode='.salt.road.manor.',
-        loads='cluster.loads',
+        masters={'ipath': 'cluster.masters', 'ival': odict()},
         stack='stack',
         opts='.salt.opts',)
 
@@ -169,50 +201,8 @@ class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
         '''
         if self.opts.value.get('cluster_mode'):
             for remote in self.stack.value.remotes.values():
-                self.loads.value[remote.name] = odict(load=0.0, expire=self.store.stamp)
-
-class SaltRaetRoadClusterMasterSetup(ioflo.base.deeding.Deed):
-    '''
-    Setups shares for master cluster
-
-    FloScript:
-
-    do salt raet road cluster master setup at enter
-
-    '''
-    Ioinits = odict(
-        inode='.salt.road.manor.',
-        masters='masters',
-        opts='.salt.opts',)
-
-    def action(self, **kwa):
-        '''
-        Generate list of masters
-        '''
-        self.masters.value = daemons.extract_masters(self.opts.value,
-                                                     'cluster_masters',
-                                                     'raet_port')
-
-
-class SaltRaetRoadMasterSetup(ioflo.base.deeding.Deed):
-    '''
-    Sets up list of masters for minoin
-
-    FloScript:
-
-    do salt raet road master setup at enter
-
-    '''
-    Ioinits = odict(
-        inode=".salt.road.manor.",
-        masters='masters',
-        opts='.salt.opts')
-
-    def action(self):
-        '''
-        Assign .masters by parsing opts
-        '''
-        self.masters.value = daemons.extract_masters(self.opts.value)
+                if remote.kind == kinds.applKinds.master:
+                    self.masters.value[remote.name] = odict(load=0.0, expire=self.store.stamp)
 
 
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
@@ -341,13 +331,13 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
 
     assumes that prior the following has been run to setup .masters
 
-    do salt raet road master setup
+    do salt raet road usher minion setup
 
     '''
     Ioinits = odict(
                     inode=".salt.road.manor.",
                     stack='stack',
-                    masters='masters',
+                    ushers='ushers',
                     opts='.salt.opts')
 
     def action(self, **kwa):
@@ -366,7 +356,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
 
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
-                for master in self.masters.value:
+                for master in self.ushers.value:
                     mha = master['external']
                     stack.addRemote(RemoteEstate(stack=stack,
                                                  fuid=0,  # vacuous join
