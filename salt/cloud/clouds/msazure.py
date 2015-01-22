@@ -35,8 +35,6 @@ Example ``/etc/salt/cloud.providers`` or
 # pylint: disable=E0102
 
 from __future__ import absolute_import
-
-# Import python libs
 from __future__ import absolute_import
 
 import copy
@@ -46,10 +44,11 @@ import time
 
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
-import salt.utils.cloud
 from salt.modules.boto_route53 import _wait_for_sync
+import salt.utils.cloud
 
 
+# Import python libs
 # Import python libs
 # Import salt cloud libs
 # Import azure libs
@@ -58,7 +57,8 @@ try:
     import azure
     import azure.servicemanagement
     from azure import (WindowsAzureConflictError,
-                       WindowsAzureMissingResourceError)
+                       WindowsAzureMissingResourceError,
+                       WindowsAzureError)
     HAS_LIBS = True
 except ImportError:
     pass
@@ -785,7 +785,7 @@ def create(vm_):
 
 
 #Helper function for azure tests
-def _wait_for_async(self, request_id):
+def _wait_for_async(request_id):
     count = 0
     result = self.sms.get_operation_status(request_id)
     while result.status == 'InProgress':
@@ -826,10 +826,13 @@ def destroy(name, conn=None, call=None, kwargs=None):
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    request_id = conn.delete_role(service_name, service_name, name)
-    _wait_for_async(request_id)
+    try:
+        result = conn.delete_role(service_name, service_name, name)
+    except WindowsAzureError:
+        result = conn.delete_deployment(service_name, service_name)
+    _wait_for_async(result.request_id)
     ret[name] = {
-        'request_id': request_id,
+        'request_id': result.request_id,
     }
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
