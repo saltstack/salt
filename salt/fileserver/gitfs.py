@@ -170,8 +170,8 @@ def _verify_gitpython(quiet=False):
 
 def _verify_pygit2(quiet=False):
     '''
-    Check if pygit2/libgit2 are available and at a compatible version. Both
-    must be at least 0.21.0.
+    Check if pygit2/libgit2 are available and at a compatible version. Pygit2
+    must be at least 0.20.3 and libgit2 must be at least 0.20.0.
     '''
     if not HAS_PYGIT2:
         log.error(
@@ -229,14 +229,37 @@ def _verify_dulwich(quiet=False):
     '''
     if not HAS_DULWICH:
         log.error(
-            'Git fileserver backend is enabled in master config file, but '
-            'could not be loaded, is Dulwich installed?'
+            'Git fileserver backend is enabled in the master config file, but '
+            'could not be loaded. Is Dulwich installed?'
         )
         if HAS_GITPYTHON and not quiet:
             log.error(_RECOMMEND_GITPYTHON)
         if HAS_PYGIT2 and not quiet:
             log.error(_RECOMMEND_PYGIT2)
         return False
+
+    dulwich_ver = distutils.version.LooseVersion(dulwich.__version__)
+    dulwich_minver_str = '0.9.4'
+    dulwich_minver = distutils.version.LooseVersion(dulwich_minver_str)
+
+    errors = []
+
+    if dulwich_ver < dulwich_minver:
+        errors.append(
+            'Git fileserver backend is enabled in the master config file, but '
+            'the installed version of Dulwich is earlier than {0}. Version {1} '
+            'detected.'.format(dulwich_minver_str, dulwich.__version__)
+        )
+        
+        if HAS_PYGIT2 and not quiet:
+            errors.append(_RECOMMEND_PYGIT2)
+        if HAS_GITPYTHON and not quiet:
+            errors.append(_RECOMMEND_GITPYTHON)
+
+        for error in errors:
+            log.error(error)
+        return False
+
     log.info('dulwich gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'dulwich'
     return True
