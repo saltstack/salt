@@ -119,12 +119,12 @@ framer bootstrap be inactive first setup
 # Router framer
 framer uxdrouter be inactive first start
     frame start
-        do salt raet router
+        do salt raet router master
 
 # Event bus framer
 framer events be inactive first start
     frame start
-        do salt raet eventer
+        do salt raet eventer master
 
 # Presence framer
 framer presence be inactive first start

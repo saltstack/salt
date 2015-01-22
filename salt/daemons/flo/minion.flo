@@ -107,7 +107,7 @@ framer bootstrap be inactive first setup
     frame router
         # start the manager framer
         bid start manager #start alive presence from minion side
-        do salt raet router
+        do salt raet router minion
         go pillar if .salt.var.pillar_refresh
         go loading if .salt.var.module_refresh
 

@@ -103,8 +103,7 @@ framer bootstrap be inactive first setup
         go router
 
     frame router
-        do salt raet router
-
+        do salt raet router minion
 
     frame abort
         bid stop all

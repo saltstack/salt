@@ -937,11 +937,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
     '''
     Routes the communication in and out of Road and Lane connections
 
-    This is the initial static salt router, we want to create a dynamic
-    router that takes a map that defines where packets are send
-    FloScript:
-
-    do salt raet router
+    This is a base class
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -961,61 +957,15 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
                           'ival': deque()}}
 
-    def _process_udp_rxmsg(self, msg, sender):
+    def _process_road_rxmsg(self, msg, sender):
         '''
         Send to the right queue
         msg is the message body dict
         sender is the unique name of the remote estate that sent the message
         '''
-        try:
-            s_estate, s_yard, s_share = msg['route']['src']
-            d_estate, d_yard, d_share = msg['route']['dst']
-        except (ValueError, IndexError):
-            log.error('Received invalid message: {0}'.format(msg))
-            return
+        pass
 
-        if s_estate is None:  # drop
-            return
-
-        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg= {3}\n".format(
-                                            self.opts.value['id'],
-                                            self.road_stack.value.local.name,
-                                            self.lane_stack.value.local.name,
-                                            msg))
-
-        if d_estate is not None and d_estate != self.road_stack.value.local.name:
-            log.error(
-                    'Road Router Received message for wrong estate: {0}'.format(d_estate))
-            return
-
-        if d_yard is not None:
-            # Meant for another yard, send it off!
-            if d_yard in self.lane_stack.value.nameRemotes:
-                self.lane_stack.value.transmit(msg,
-                        self.lane_stack.value.nameRemotes[d_yard].uid)
-                return
-            return
-        if d_share is None:
-            # No queue destination!
-            log.error('Received message without share: {0}'.format(msg))
-            return
-        elif d_share == 'local_cmd':
-            # Refuse local commands over the wire
-            log.error('Received local command remotely! Ignoring: {0}'.format(msg))
-            return
-        elif d_share == 'remote_cmd':
-            # Send it to a remote worker
-            if 'load' in msg:
-                role = self.road_stack.value.nameRemotes[sender].role
-                msg['load']['id'] = role  # sender # should this be role XXXX
-                self.lane_stack.value.transmit(msg,
-                        self.lane_stack.value.fetchUidByName(next(self.workers.value)))
-        elif d_share == 'fun':
-            if self.road_stack.value.kind == kinds.applKinds.minion:
-                self.fun.value.append(msg)
-
-    def _process_uxd_rxmsg(self, msg, sender):
+    def _process_lane_rxmsg(self, msg, sender):
         '''
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
@@ -1023,84 +973,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         msg is message body dict
         sender is unique name  of remote that sent the message
         '''
-        try:
-            s_estate, s_yard, s_share = msg['route']['src']
-            d_estate, d_yard, d_share = msg['route']['dst']
-        except (ValueError, IndexError):
-            log.error('Lane Router Received invalid message: {0}'.format(msg))
-            return
-
-        if s_yard is None:
-            return  # drop message
-
-        if s_estate is None:  # substitute local estate
-            s_estate = self.road_stack.value.local.name
-            msg['route']['src'] = (s_estate, s_yard, s_share)
-
-        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
-                  "   msg={3}\n".format(
-                                        self.opts.value['id'],
-                                        self.road_stack.value.local.name,
-                                        self.lane_stack.value.local.name,
-                                        msg))
-
-        if d_estate is None:
-            pass
-        elif d_estate != self.road_stack.value.local.name:
-            # Forward to the correct estate
-            if d_estate in self.road_stack.value.nameRemotes:
-                self.road_stack.value.message(msg,
-                        self.road_stack.value.nameRemotes[d_estate].uid)
-            return
-
-        if d_share == 'pub_ret':
-            # only publish to available minions
-            msg['return']['ret']['minions'] = self._availablize(msg['return']['ret']['minions'])
-            if msg.get('__worker_verify') == self.worker_verify.value:
-                self.publish.value.append(msg)
-
-        if d_yard is None:
-            pass
-        elif d_yard != self.lane_stack.value.local.name:
-            # Meant for another yard, send it off!
-            if d_yard in self.lane_stack.value.nameRemotes:
-                self.lane_stack.value.transmit(msg,
-                        self.lane_stack.value.nameRemotes[d_yard].uid)
-                return
-            return
-        if d_share is None:
-            # No queue destination!
-            log.error('Lane Router Received message without share: {0}'.format(msg))
-            return
-        elif d_share == 'local_cmd':
-            self.lane_stack.value.transmit(msg,
-                    self.lane_stack.value.fetchUidByName(next(self.workers.value)))
-        elif d_share == 'event_req':
-            self.event_req.value.append(msg)
-            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
-        elif d_share == 'event_fire':
-            self.event.value.append(msg)
-            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
-        elif d_share == 'presence_req':
-            self.presence_req.value.append(msg)
-            #log.debug("\n**** Presence Request \n {0}\n".format(msg))
-        elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
-            if not self.road_stack.value.remotes:
-                log.error("**** Lane Router: Missing joined master. Unable to route "
-                          "remote_cmd. Requeuing".format())
-                self.laters.value.append((msg, sender))
-                return
-            d_estate = self._get_master_estate_name(clustered=self.opts.get('cluster_mode', False))
-            if not d_estate:
-                log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
-                          "Unable to route. Requeuing".format())
-                self.laters.value.append((msg, sender))
-                return
-            msg['route']['dst'] = (d_estate, d_yard, d_share)
-            log.debug("**** Lane Router: Missing destination estate for 'remote_cmd'. "
-                    "Using default route={0}.".format(msg['route']['dst']))
-            self.road_stack.value.message(msg,
-                    self.road_stack.value.nameRemotes[d_estate].uid)
+        pass
 
     def _get_master_estate_name(self, clustered=False):
         '''
@@ -1144,13 +1017,276 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         '''
         while self.road_stack.value.rxMsgs:
             msg, sender = self.road_stack.value.rxMsgs.popleft()
-            self._process_udp_rxmsg(msg=msg, sender=sender)
+            self._process_road_rxmsg(msg=msg, sender=sender)
         while self.laters.value:  # process requeued LaneMsgs
             msg, sender = self.laters.value.popleft()
             self.lane_stack.value.rxMsgs.append((msg, sender))
         while self.lane_stack.value.rxMsgs:
             msg, sender = self.lane_stack.value.rxMsgs.popleft()
-            self._process_uxd_rxmsg(msg=msg, sender=sender)
+            self._process_lane_rxmsg(msg=msg, sender=sender)
+
+
+class SaltRaetRouterMaster(SaltRaetRouter):
+    '''
+    Routes the communication in and out of Road and Lane connections
+    Specific to Master
+
+    do salt raet router master
+
+    '''
+    def _process_road_rxmsg(self, msg, sender):
+        '''
+        Send to the right queue
+        msg is the message body dict
+        sender is the unique name of the remote estate that sent the message
+        '''
+        try:
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
+        except (ValueError, IndexError):
+            log.error('Received invalid message: {0}'.format(msg))
+            return
+
+        if s_estate is None:  # drop
+            return
+
+        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
+                  "   msg= {3}\n".format(
+                      self.opts.value['id'],
+                      self.road_stack.value.local.name,
+                      self.lane_stack.value.local.name,
+                      msg))
+
+        if d_estate is not None and d_estate != self.road_stack.value.local.name:
+            log.error(
+                'Road Router Received message for wrong estate: {0}'.format(d_estate))
+            return
+
+        if d_yard is not None:
+            # Meant for another yard, send it off!
+            if d_yard in self.lane_stack.value.nameRemotes:
+                self.lane_stack.value.transmit(msg,
+                                               self.lane_stack.value.nameRemotes[d_yard].uid)
+            return
+        if d_share is None:
+            # No queue destination!
+            log.error('Received message without share: {0}'.format(msg))
+            return
+        elif d_share == 'event_fire':  # rebroadcast events from other masters
+            self.event.value.append(msg)
+            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+            return
+        elif d_share == 'local_cmd':
+            # Refuse local commands over the wire
+            log.error('Received local command remotely! Ignoring: {0}'.format(msg))
+            return
+        elif d_share == 'remote_cmd':
+            # Send it to a remote worker
+            if 'load' in msg:
+                role = self.road_stack.value.nameRemotes[sender].role
+                msg['load']['id'] = role  # sender # should this be role XXXX
+                self.lane_stack.value.transmit(msg,
+                                               self.lane_stack.value.fetchUidByName(next(self.workers.value)))
+
+
+    def _process_lane_rxmsg(self, msg, sender):
+        '''
+        Send uxd messages tot he right queue or forward them to the correct
+        yard etc.
+
+        msg is message body dict
+        sender is unique name  of remote that sent the message
+        '''
+        try:
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
+        except (ValueError, IndexError):
+            log.error('Lane Router Received invalid message: {0}'.format(msg))
+            return
+
+        if s_yard is None:
+            return  # drop message
+
+        if s_estate is None:  # substitute local estate
+            s_estate = self.road_stack.value.local.name
+            msg['route']['src'] = (s_estate, s_yard, s_share)
+
+        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
+                  "   msg={3}\n".format(
+                      self.opts.value['id'],
+                      self.road_stack.value.local.name,
+                      self.lane_stack.value.local.name,
+                      msg))
+
+        if d_estate is None:
+            pass
+        elif d_estate != self.road_stack.value.local.name:
+            # Forward to the correct estate
+            if d_estate in self.road_stack.value.nameRemotes:
+                self.road_stack.value.message(msg,
+                                              self.road_stack.value.nameRemotes[d_estate].uid)
+            return
+
+        if d_share == 'pub_ret':
+            # only publish to available minions
+            msg['return']['ret']['minions'] = self._availablize(msg['return']['ret']['minions'])
+            if msg.get('__worker_verify') == self.worker_verify.value:
+                self.publish.value.append(msg)
+
+        if d_yard is None:
+            pass
+        elif d_yard != self.lane_stack.value.local.name:
+            # Meant for another yard, send it off!
+            if d_yard in self.lane_stack.value.nameRemotes:
+                self.lane_stack.value.transmit(msg,
+                                               self.lane_stack.value.nameRemotes[d_yard].uid)
+            return
+        if d_share is None:
+            # No queue destination!
+            log.error('Lane Router Received message without share: {0}'.format(msg))
+            return
+        elif d_share == 'local_cmd':
+            self.lane_stack.value.transmit(msg,
+                                           self.lane_stack.value.fetchUidByName(next(self.workers.value)))
+        elif d_share == 'event_req':
+            self.event_req.value.append(msg)
+            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
+        elif d_share == 'event_fire':
+            self.event.value.append(msg)
+            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+        elif d_share == 'presence_req':
+            self.presence_req.value.append(msg)
+            #log.debug("\n**** Presence Request \n {0}\n".format(msg))
+
+
+class SaltRaetRouterMinion(SaltRaetRouter):
+    '''
+    Routes the communication in and out of Road and Lane connections
+    Specific to Minions
+
+    do salt raet router minion
+
+    '''
+    def _process_road_rxmsg(self, msg, sender):
+        '''
+        Send to the right queue
+        msg is the message body dict
+        sender is the unique name of the remote estate that sent the message
+        '''
+        try:
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
+        except (ValueError, IndexError):
+            log.error('Received invalid message: {0}'.format(msg))
+            return
+
+        if s_estate is None:  # drop
+            return
+
+        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
+                  "   msg= {3}\n".format(
+                      self.opts.value['id'],
+                      self.road_stack.value.local.name,
+                      self.lane_stack.value.local.name,
+                      msg))
+
+        if d_estate is not None and d_estate != self.road_stack.value.local.name:
+            log.error(
+                'Road Router Received message for wrong estate: {0}'.format(d_estate))
+            return
+
+        if d_yard is not None:
+            # Meant for another yard, send it off!
+            if d_yard in self.lane_stack.value.nameRemotes:
+                self.lane_stack.value.transmit(msg,
+                                               self.lane_stack.value.nameRemotes[d_yard].uid)
+                return
+            return
+        if d_share is None:
+            # No queue destination!
+            log.error('Received message without share: {0}'.format(msg))
+            return
+
+        elif d_share == 'fun':
+            if self.road_stack.value.kind == kinds.applKinds.minion:
+                self.fun.value.append(msg)
+
+    def _process_lane_rxmsg(self, msg, sender):
+        '''
+        Send uxd messages tot he right queue or forward them to the correct
+        yard etc.
+
+        msg is message body dict
+        sender is unique name  of remote that sent the message
+        '''
+        try:
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
+        except (ValueError, IndexError):
+            log.error('Lane Router Received invalid message: {0}'.format(msg))
+            return
+
+        if s_yard is None:
+            return  # drop message
+
+        if s_estate is None:  # substitute local estate
+            s_estate = self.road_stack.value.local.name
+            msg['route']['src'] = (s_estate, s_yard, s_share)
+
+        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
+                  "   msg={3}\n".format(
+                      self.opts.value['id'],
+                      self.road_stack.value.local.name,
+                      self.lane_stack.value.local.name,
+                      msg))
+
+        if d_estate is None:
+            pass
+        elif d_estate != self.road_stack.value.local.name:
+            # Forward to the correct estate
+            if d_estate in self.road_stack.value.nameRemotes:
+                self.road_stack.value.message(msg,
+                                              self.road_stack.value.nameRemotes[d_estate].uid)
+            return
+
+        if d_yard is None:
+            pass
+        elif d_yard != self.lane_stack.value.local.name:
+            # Meant for another yard, send it off!
+            if d_yard in self.lane_stack.value.nameRemotes:
+                self.lane_stack.value.transmit(msg,
+                                               self.lane_stack.value.nameRemotes[d_yard].uid)
+                return
+            return
+        if d_share is None:
+            # No queue destination!
+            log.error('Lane Router Received message without share: {0}'.format(msg))
+            return
+
+        elif d_share == 'event_req':
+            self.event_req.value.append(msg)
+            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
+        elif d_share == 'event_fire':
+            self.event.value.append(msg)
+            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+
+        elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
+            if not self.road_stack.value.remotes:
+                log.error("**** Lane Router: Missing joined master. Unable to route "
+                          "remote_cmd. Requeuing".format())
+                self.laters.value.append((msg, sender))
+                return
+            d_estate = self._get_master_estate_name(clustered=self.opts.get('cluster_mode', False))
+            if not d_estate:
+                log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
+                          "Unable to route. Requeuing".format())
+                self.laters.value.append((msg, sender))
+                return
+            msg['route']['dst'] = (d_estate, d_yard, d_share)
+            log.debug("**** Lane Router: Missing destination estate for 'remote_cmd'. "
+                      "Using default route={0}.".format(msg['route']['dst']))
+            self.road_stack.value.message(msg,
+                                          self.road_stack.value.nameRemotes[d_estate].uid)
 
 
 class SaltRaetEventer(ioflo.base.deeding.Deed):
@@ -1167,7 +1303,9 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
                'event_req': '.salt.event.event_req',
                'module_refresh': '.salt.var.module_refresh',
                'pillar_refresh': '.salt.var.pillar_refresh',
-               'lane_stack': '.salt.lane.manor.stack'}
+               'lane_stack': '.salt.lane.manor.stack',
+               'road_stack': '.salt.road.manor.stack',
+               'availables': '.salt.var.presence.availables',}
 
     def _register_event_yard(self, msg):
         '''
@@ -1180,6 +1318,8 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
         Forward an event message to all subscribed yards
         Event message has a route
         '''
+        import wingdbstub
+
         rm_ = []
         if msg.get('tag') == 'pillar_refresh':
             self.pillar_refresh.value = True
@@ -1209,6 +1349,34 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
             self._forward_event(
                     self.event.value.popleft()
                     )
+
+
+class SaltRaetEventerMaster(SaltRaetEventer):
+    '''
+    Fire events!
+    FloScript:
+
+    do salt raet eventer master
+
+    '''
+    def _forward_event(self, msg):
+        '''
+        Forward an event message to all subscribed yards
+        Event message has a route
+        Also rebroadcast to all masters in cluster
+        '''
+        super(SaltRaetEventerMaster, self)._forward_event(msg)
+        if self.opts.value.get('cluster_mode'):
+            if msg.get('origin') is None:
+                masters = (self.availables.value &
+                           set((remote.name for remote in self.road_stack.value.remotes.values()
+                                if remote.kind == kinds.applKinds.master)))
+                for remote in masters:
+                    msg['origin'] = self.road_stack.value.name
+                    s_estate, s_yard, s_share = msg['route']['src']
+                    msg['route']['src'] = (self.road_stack.value.name, s_yard, s_share)
+                    msg['route']['dst'] = (remote.name, None, 'event_fire')
+                    self.road_stack.value.message(msg, remote.uid)
 
 
 class SaltRaetPresenter(ioflo.base.deeding.Deed):
