@@ -176,7 +176,9 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
     '''
     if name.startswith('arn:aws:sns:'):
         return name
-    account_id = __salt__['boto_iam.get_account_id']()
+    account_id = __salt__['boto_iam.get_account_id'](
+        region=region, key=key, keyid=keyid, profile=profile
+    )
     return 'arn:aws:sns:{0}:{1}:{2}'.format(_get_region(region), account_id,
                                             name)
 
