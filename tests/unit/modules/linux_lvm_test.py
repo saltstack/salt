@@ -189,7 +189,7 @@ class LinuxLVMTestCase(TestCase):
                          'Error: Please specify only one of size or extents')
 
         self.assertEqual(linux_lvm.lvcreate(None, None, None, None),
-                         'Error: Please specify only one of size or extents')
+                         'Error: Either size or extents must be specified')
 
         mock = MagicMock(return_value='A\nB')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
