@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import __builtin__
 import collections
 import logging
+import traceback
 import time
 import multiprocessing
 
@@ -235,13 +236,10 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except Exception as exc:
-            data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
-                            self.client,
-                            fun,
-                            exc.__class__.__name__,
-                            exc,
-                            )
+        except Exception:
+            trace = traceback.format_exc()
+            data['return'] = 'Exception occurred in {0} {1}:\n{2}'.format(
+                self.client, fun, trace)
             data['success'] = False
 
         event.fire_event(data, tagify('ret', base=tag))
