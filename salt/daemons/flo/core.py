@@ -322,6 +322,7 @@ class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
         if self.stack.value and isinstance(self.stack.value, RoadStack):
             self.stack.value.server.close()
 
+
 class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
     '''
     Initiates join transaction with master(s)

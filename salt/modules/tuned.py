@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 :maintainer:    Syed Ali <alicsyed@gmail.com>
 :maturity:      new
@@ -13,6 +14,7 @@ __func_alias__ = {
 }
 
 __virtualname__ = 'tuned'
+
 
 def __virtual__():
     '''
