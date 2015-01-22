@@ -36,7 +36,7 @@ details can be found at:
 
 .. _`SmartDataCenter`: https://github.com/joyent/sdc
 
-This requires that an api_host_suffix is set. The default value for this is
+Using SDC requires that an api_host_suffix is set. The default value for this is
 `.api.joyentcloud.com`. All characters, including the leading `.`, should be
 included:
 
@@ -175,17 +175,9 @@ def create(vm_):
 
         salt-cloud -p profile_name vm_name
     '''
-    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
-    if deploy is True and key_filename is None and \
-            salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'private_key\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
-        )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -839,15 +831,41 @@ def list_nodes_select(call=None):
     )
 
 
+def _get_proto():
+    '''
+    Checks configuration to see whether the user has SSL turned on. Default is:
+
+    .. code-block:: yaml
+
+        use_ssl: True
+    '''
+    use_ssl = config.get_cloud_config_value(
+        'use_ssl',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=True
+    )
+    if use_ssl is True:
+        return 'https'
+    return 'http'
+
+
 def avail_images(call=None):
     '''
-    get list of available images
+    Get list of available images
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud --list-images
+
+    Can use a custom URL for images. Default is:
+
+    .. code-block:: yaml
+
+        image_url: images.joyent.com/image
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -855,7 +873,17 @@ def avail_images(call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    img_url = 'https://images.joyent.com/images'
+    img_url = config.get_cloud_config_value(
+        'image_url',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='images.joyent.com/images'
+    )
+
+    if not img_url.startswith('http://') and not img_url.startswith('https://'):
+        img_url = '{0}://{1}'.format(_get_proto(), img_url)
+
     result = requests.get(img_url)
     content = result.text
 
@@ -1015,7 +1043,7 @@ def get_location_path(location=DEFAULT_LOCATION, api_host_suffix=JOYENT_API_HOST
     :param location: joyent data center location
     :return: url
     '''
-    return 'https://{0}{1}'.format(location, api_host_suffix)
+    return '{0}://{1}{2}'.format(_get_proto(), location, api_host_suffix)
 
 
 def query(action=None, command=None, args=None, method='GET', location=None,
@@ -1030,6 +1058,11 @@ def query(action=None, command=None, args=None, method='GET', location=None,
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__,
         search_global=False
+    )
+
+    verify_ssl = config.get_cloud_config_value(
+        'verify_ssl', get_configured_provider(), __opts__,
+        search_global=False, default=True
     )
 
     if not location:
@@ -1067,7 +1100,14 @@ def query(action=None, command=None, args=None, method='GET', location=None,
     return_content = None
     try:
 
-        result = requests.request(method, path, params=args, headers=headers, data=data)
+        result = requests.request(
+            method,
+            path,
+            params=args,
+            headers=headers,
+            data=data,
+            verify=verify_ssl,
+        )
         log.debug(
             'Joyent Response Status Code: {0}'.format(
                 result.status_code

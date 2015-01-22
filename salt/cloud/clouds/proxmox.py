@@ -478,12 +478,6 @@ def create(vm_):
         salt-cloud -p proxmox-ubuntu vmhostname
     '''
     ret = {}
-    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
-    if deploy is True and salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'sshpass\' binary is not '
-            'present on the system.'
-        )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -648,7 +642,6 @@ def create(vm_):
             transport=__opts__['transport']
         )
 
-        deployed = False
         if win_installer:
             deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:
