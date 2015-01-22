@@ -278,24 +278,29 @@ def list_nodes_full(conn=None, call=None):
     for service in services:
         for deployment in services[service]['deployments']:
             deploy_dict = services[service]['deployments'][deployment]
-            ret[deployment] = deploy_dict
-            ret[deployment]['id'] = deployment
-            ret[deployment]['hosted_service'] = service
-            ret[deployment]['state'] = ret[deployment]['status']
-            ret[deployment]['private_ips'] = []
-            ret[deployment]['public_ips'] = []
-            role_instances = deploy_dict['role_instance_list']
-            for role_instance in role_instances:
-                ip_address = role_instances[role_instance]['ip_address']
-                if ip_address:
-                    if salt.utils.cloud.is_public_ip(ip_address):
-                        ret[deployment]['public_ips'].append(ip_address)
-                    else:
-                        ret[deployment]['private_ips'].append(ip_address)
-                ret[deployment]['size'] = role_instances[role_instance]['instance_size']
+            deploy_dict_no_role_info = copy.deepcopy(deploy_dict)
+            del deploy_dict_no_role_info['role_list']
+            del deploy_dict_no_role_info['role_instance_list']
             roles = deploy_dict['role_list']
             for role in roles:
-                ret[deployment]['image'] = roles[role]['role_info']['os_virtual_hard_disk']['source_image_name']
+                log.debug(pprint.pformat(role))
+                role_instances = deploy_dict['role_instance_list']
+                ret[role] = roles[role]
+                ret[role].update(role_instances[role])
+                ret[role]['id'] = role
+                ret[role]['hosted_service'] = service
+                ret[role]['state'] = role_instances[role]['power_state']
+                ret[role]['private_ips'] = []
+                ret[role]['public_ips'] = []
+                ret[role]['deployment'] = deploy_dict_no_role_info
+                ip_address = role_instances[role]['ip_address']
+                if ip_address:
+                    if salt.utils.cloud.is_public_ip(ip_address):
+                        ret[role]['public_ips'].append(ip_address)
+                    else:
+                        ret[role]['private_ips'].append(ip_address)
+                ret[role]['size'] = role_instances[role]['instance_size']
+                ret[role]['image'] = roles[role]['role_info']['os_virtual_hard_disk']['source_image_name']
     return ret
 
 
