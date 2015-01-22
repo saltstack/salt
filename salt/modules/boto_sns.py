@@ -68,8 +68,7 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
     '''
     cache_key = _cache_get_key()
     try:
-        ret = __context__[cache_key]
-        return ret
+        return __context__[cache_key]
     except KeyError:
         pass
 
