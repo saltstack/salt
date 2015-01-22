@@ -136,7 +136,8 @@ class SaltRaetRoadClusterMinionSetup(ioflo.base.deeding.Deed):
     '''
     Ioinits = odict(
         inode='.salt.road.manor.',
-        masters='cluster.masters',
+        masters='masters',
+        loads=odict(ipath='cluster.loads', ival=odict()),
         opts='.salt.opts',)
 
     def action(self, **kwa):
@@ -146,6 +147,29 @@ class SaltRaetRoadClusterMinionSetup(ioflo.base.deeding.Deed):
         self.masters.value = daemons.extract_masters(self.opts.value,
                                                      'cluster_masters')
 
+
+class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
+    '''
+    Sets up cluster.loads for load balancing
+
+    FloScript:
+
+    do salt raet road cluster load setup at enter
+
+    '''
+    Ioinits = odict(
+        inode='.salt.road.manor.',
+        loads='cluster.loads',
+        stack='stack',
+        opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Populate loads from masters in stack.remotes
+        '''
+        if self.opts.value.get('cluster_mode'):
+            for remote in self.stack.value.remotes.values():
+                self.loads.value[remote.name] = odict(load=0.0, expire=self.store.stamp)
 
 class SaltRaetRoadClusterMasterSetup(ioflo.base.deeding.Deed):
     '''
@@ -158,7 +182,7 @@ class SaltRaetRoadClusterMasterSetup(ioflo.base.deeding.Deed):
     '''
     Ioinits = odict(
         inode='.salt.road.manor.',
-        masters='cluster.masters',
+        masters='masters',
         opts='.salt.opts',)
 
     def action(self, **kwa):
@@ -944,7 +968,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'road_stack': '.salt.road.manor.stack',
                'master_estate_name': '.salt.track.master_estate_name',
                'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
-                          'ival': deque()}, }
+                          'ival': deque()}}
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
@@ -1075,7 +1099,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                           "remote_cmd. Requeuing".format())
                 self.laters.value.append((msg, sender))
                 return
-            d_estate = self._get_master_estate_name()
+            d_estate = self._get_master_estate_name(clustered=self.opts.get('cluster_mode', False))
             if not d_estate:
                 log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
                           "Unable to route. Requeuing".format())
@@ -1087,11 +1111,13 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
 
-    def _get_master_estate_name(self):
+    def _get_master_estate_name(self, clustered=False):
         '''
         Assign and return the name of the estate for the default master or empty if none
         If the default master is no longer available then selects one of the available
         masters
+
+        If clustered is True then use load balancing algorithm to select master
         '''
         opts = self.opts.value
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
