@@ -86,7 +86,7 @@ framer bootstrap be inactive first setup
             do salt raet road stack rejected per inode ".salt.road.manor."
 
         go next if joined in .salt.road.manor.status
-        go abort if rejected in .salt.road.manor.status
+        #go abort if rejected in .salt.road.manor.status
 
     frame joined
         print Joined

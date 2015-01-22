@@ -392,8 +392,8 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         joined = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    joined = any([remote.joined for remote in stack.remotes.values()])
+                joined = any([remote.joined for remote in stack.remotes.values()
+                              if remote.kind == kinds.applKinds.master])
         self.status.update(joined=joined)
 
 
@@ -423,9 +423,9 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
                     rejected = all([remote.acceptance == raeting.acceptances.rejected
-                                    for remote in stack.remotes.values()])
+                                    for remote in stack.remotes.values()
+                                    if remote.kind == kinds.applKinds.master])
             else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
