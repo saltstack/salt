@@ -10,9 +10,66 @@ import hashlib
 import hmac
 import StringIO
 
-# Import third-party libs
-import salt.utils
+# Import Salt libs
+import salt.exceptions
 import salt.ext.six as six
+import salt.utils
+
+def digest(instr, checksum='md5'):
+    '''
+    Return a checksum digest for a string
+
+    instr
+        A string
+    checksum : ``md5``
+        The hashing algorithm to use to generate checksums. Valid options: md5,
+        sha256, sha512.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.digest 'get salted'
+    '''
+    hashing_funcs = {
+        'md5': __salt__['hashutil.md5_digest'],
+        'sha256': __salt__['hashutil.sha256_digest'],
+        'sha512': __salt__['hashutil.sha512_digest'],
+    }
+    hash_func = hashing_funcs.get(checksum)
+
+    if hash_func is None:
+        raise salt.exceptions.CommandExecutionError(
+                "Hash func '{0}' is not supported.".format(checksum))
+
+    return hash_func(instr)
+
+
+def digest_file(infile, checksum='md5'):
+    '''
+    Return a checksum digest for a file
+
+    infile
+        A file path
+    checksum : ``md5``
+        The hashing algorithm to use to generate checksums. Wraps the
+        :py:func:`hashutil.digest <salt.modules.hashutil.digest>` execution
+        function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.digest_file /path/to/file
+    '''
+    if not __salt__['file.file_exists'](infile):
+        raise salt.exceptions.CommandExecutionError(
+                "File path '{0}' not found.".format(infile))
+
+    with open(infile, 'rb') as f:
+        file_hash = __salt__['hashutil.digest'](f.read(), checksum)
+
+    return file_hash
 
 
 def base64_b64encode(instr):
