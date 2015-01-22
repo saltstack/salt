@@ -60,9 +60,11 @@ def _active_mountinfo(ret):
             _sep = comps.index('-')
             device_name = comps[_sep + 2]
             device_uuid = None
+            device_label = None
             if device_name:
                 device_uuid = blkid_info.get(device_name, {}).get('UUID')
                 device_uuid = device_uuid and device_uuid.lower()
+                device_label = blkid_info.get(device_name, {}).get('LABEL')
             ret[comps[4]] = {'mountid': comps[0],
                              'parentid': comps[1],
                              'major': device[0],
@@ -73,7 +75,8 @@ def _active_mountinfo(ret):
                              'device': device_name,
                              'alt_device': _list.get(comps[4], None),
                              'superopts': comps[_sep + 3].split(','),
-                             'device_uuid': device_uuid}
+                             'device_uuid': device_uuid,
+                             'device_label': device_label}
     return ret
 
 
