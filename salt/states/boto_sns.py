@@ -134,6 +134,9 @@ def present(
     _subscriptions = __salt__['boto_sns.get_all_subscriptions_by_topic'](
         name, region=region, key=key, keyid=keyid, profile=profile
     )
+    _subscriptions = [{'protocol': s['Protocol'],
+                       'endpoint': s['Endpoint']}
+                      for s in _subscriptions]
     for subscription in subscriptions:
         if subscription not in _subscriptions:
             if __opts__['test']:
@@ -163,6 +166,12 @@ def present(
             else:
                 ret['result'] = False
                 return ret
+        else:
+            msg = ' AWS SNS subscription {0}:{1} already set on topic {2}.'\
+                      .format(subscription['protocol'],
+                              subscription['endpoint'],
+                              name)
+            ret['comment'] += msg
     return ret
 
 
