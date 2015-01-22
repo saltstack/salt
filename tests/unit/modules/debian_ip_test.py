@@ -148,7 +148,8 @@ class DebianIpTestCase(TestCase):
         '''
         Test if it return the contents of an interface script
         '''
-        self.assertListEqual(debian_ip.get_interface('eth0'), [])
+        with patch.object(debian_ip, '_parse_interfaces', MagicMock(return_value={})):
+            self.assertListEqual(debian_ip.get_interface('eth0'), [])
 
         self.assertListEqual(debian_ip.get_interface('lo'),
                              [u'auto lo\n', u'iface lo inet loopback\n', u'\n'])
