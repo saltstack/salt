@@ -100,7 +100,6 @@ def query(url,
         else:
             opts = {}
 
-
     if requests_lib is None:
         requests_lib = opts.get('requests_lib', False)
 
