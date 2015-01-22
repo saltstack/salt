@@ -43,6 +43,7 @@ AUTH_INTERNAL_KEYWORDS = frozenset([
     'match'
 ])
 
+
 class LoadAuth(object):
     '''
     Wrap the authentication system to handle peripheral components
