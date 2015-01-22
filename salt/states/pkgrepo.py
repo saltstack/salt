@@ -250,10 +250,10 @@ def managed(name, **kwargs):
 
     # aptpkg supports "disabled", yumpkg supports "enabled"
     # lets just provide both to everyone.
-    if 'enabled' in kwargs and not 'disabled' in kwargs:
+    if 'enabled' in kwargs and 'disabled' not in kwargs:
         kw_enabled = kwargs['enabled'] in (['true', 'True', 'TRUE', True, 1])
         kwargs['disabled'] = not kw_enabled
-    if 'disabled' in kwargs and not 'enabled' in kwargs:
+    if 'disabled' in kwargs and 'enabled' not in kwargs:
         kw_disabled = kwargs['disabled'] in (['true', 'True', 'TRUE', True, 1])
         kwargs['enabled'] = not kw_disabled
 
