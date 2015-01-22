@@ -54,7 +54,7 @@ framer bootstrap be inactive first setup
         print Setting Up Master Cluster ....
         enter
             do salt raet road cluster minion setup per inode ".salt.road.manor."
-        go multimaster
+        go join
 
     frame multimaster
         print Setting Up Master or MultiMaster
@@ -91,6 +91,11 @@ framer bootstrap be inactive first setup
     frame allowed
         print Allowed
         go next if elapsed >= 0.5
+
+    frame balancing
+        print Balancing Setup
+        do salt raet road cluster load setup
+        go next
 
     frame pillar
         print Pillaring
