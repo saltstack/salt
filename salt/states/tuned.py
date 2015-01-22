@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 :maintainer:    Syed Ali <alicsyed@gmail.com>
 :maturity:      new
@@ -6,6 +7,7 @@
 '''
 
 import salt.exceptions
+
 
 def profile(name):
     '''

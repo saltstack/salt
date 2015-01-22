@@ -544,8 +544,6 @@ DEFAULT_MASTER_OPTS = {
     'log_granular_levels': {},
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
-    'cluster_masters': [],
-    'cluster_mode': 'paranoid',
     'range_server': 'range:80',
     'reactor': [],
     'reactor_refresh_interval': 60,
