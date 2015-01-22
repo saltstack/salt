@@ -346,7 +346,6 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            # minion should default
             refresh = (self.opts.value.get('raet_clear_remotes', True) or
                        not stack.remotes)
 
@@ -363,7 +362,8 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                  sid=0,  # always 0 for join
                                                  ha=mha))
             for remote in stack.remotes.values():
-                stack.join(uid=remote.uid, timeout=0.0)
+                if remote.kind == kinds.applKinds.master:
+                    stack.join(uid=remote.uid, timeout=0.0)
 
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
