@@ -450,8 +450,9 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.allow(timeout=0.0)
-        return None
+            for remote in stack.remotes.values():
+                if remote.kind == kinds.applKinds.master:
+                    stack.allow(uid=remote.uid, timeout=0.0)
 
 
 class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
@@ -480,8 +481,8 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         allowed = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    allowed = any([remote.allowed for remote in stack.remotes.values()])
+                allowed = any([remote.allowed for remote in stack.remotes.values()
+                               if remote.kind == kinds.applKinds.master])
         self.status.update(allowed=allowed)
 
 
