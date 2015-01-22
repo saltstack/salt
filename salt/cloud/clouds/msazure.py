@@ -35,8 +35,6 @@ Example ``/etc/salt/cloud.providers`` or
 # pylint: disable=E0102
 
 from __future__ import absolute_import
-
-# Import python libs
 from __future__ import absolute_import
 
 import copy
@@ -46,9 +44,11 @@ import time
 
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
+from salt.modules.boto_route53 import _wait_for_sync
 import salt.utils.cloud
 
 
+# Import python libs
 # Import python libs
 # Import salt cloud libs
 # Import azure libs
@@ -57,7 +57,8 @@ try:
     import azure
     import azure.servicemanagement
     from azure import (WindowsAzureConflictError,
-                       WindowsAzureMissingResourceError)
+                       WindowsAzureMissingResourceError,
+                       WindowsAzureError)
     HAS_LIBS = True
 except ImportError:
     pass
@@ -278,24 +279,34 @@ def list_nodes_full(conn=None, call=None):
     for service in services:
         for deployment in services[service]['deployments']:
             deploy_dict = services[service]['deployments'][deployment]
-            ret[deployment] = deploy_dict
-            ret[deployment]['id'] = deployment
-            ret[deployment]['hosted_service'] = service
-            ret[deployment]['state'] = ret[deployment]['status']
-            ret[deployment]['private_ips'] = []
-            ret[deployment]['public_ips'] = []
-            role_instances = deploy_dict['role_instance_list']
-            for role_instance in role_instances:
-                ip_address = role_instances[role_instance]['ip_address']
-                if ip_address:
-                    if salt.utils.cloud.is_public_ip(ip_address):
-                        ret[deployment]['public_ips'].append(ip_address)
-                    else:
-                        ret[deployment]['private_ips'].append(ip_address)
-                ret[deployment]['size'] = role_instances[role_instance]['instance_size']
+            deploy_dict_no_role_info = copy.deepcopy(deploy_dict)
+            del deploy_dict_no_role_info['role_list']
+            del deploy_dict_no_role_info['role_instance_list']
             roles = deploy_dict['role_list']
             for role in roles:
-                ret[deployment]['image'] = roles[role]['role_info']['os_virtual_hard_disk']['source_image_name']
+                role_instances = deploy_dict['role_instance_list']
+                ret[role] = roles[role]
+                ret[role].update(role_instances[role])
+                ret[role]['id'] = role
+                ret[role]['hosted_service'] = service
+                if role_instances[role]['power_state'] == "Started":
+                    ret[role]['state'] = 'running'
+                elif role_instances[role]['power_state'] == "Stopped":
+                    ret[role]['state'] = 'stopped'
+                else:
+                    ret[role]['state'] = 'pending'
+                ret[role]['private_ips'] = []
+                ret[role]['public_ips'] = []
+                ret[role]['deployment'] = deploy_dict_no_role_info
+                ret[role]['url'] = deploy_dict['url']
+                ip_address = role_instances[role]['ip_address']
+                if ip_address:
+                    if salt.utils.cloud.is_public_ip(ip_address):
+                        ret[role]['public_ips'].append(ip_address)
+                    else:
+                        ret[role]['private_ips'].append(ip_address)
+                ret[role]['size'] = role_instances[role]['instance_size']
+                ret[role]['image'] = roles[role]['role_info']['os_virtual_hard_disk']['source_image_name']
     return ret
 
 
@@ -421,15 +432,10 @@ def show_instance(name, call=None):
 
     nodes = list_nodes_full()
     # Find under which cloud service the name is listed, if any
-    service_name = None
-    for service in nodes:
-        if name in nodes[service]["role_instance_list"]:
-            service_name = service
-            break
-    if service_name is None:
+    if name not in nodes:
         return {}
-    salt.utils.cloud.cache_node(nodes[service_name], __active_provider_name__, __opts__)
-    return nodes[service_name]
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
+    return nodes[name]
 
 
 def show_service(kwargs=None, conn=None, call=None):
@@ -779,6 +785,21 @@ def create(vm_):
     return ret
 
 
+#Helper function for azure tests
+def _wait_for_async(conn, request_id):
+    count = 0
+    result = conn.get_operation_status(request_id)
+    while result.status == 'InProgress':
+        count = count + 1
+        if count > 120:
+            raise ValueError('Timed out waiting for async operation to complete.')
+        time.sleep(5)
+        result = conn.get_operation_status(request_id)
+
+    if result.status != 'Succeeded':
+        raise ValueError('Asynchronous operation did not succeed.')
+
+
 def destroy(name, conn=None, call=None, kwargs=None):
     '''
     Destroy a VM
@@ -800,15 +821,19 @@ def destroy(name, conn=None, call=None, kwargs=None):
     if kwargs is None:
         kwargs = {}
 
-    service_name = kwargs.get('service_name', name)
+    instance_data = show_instance(name, call='action')
+    service_name = instance_data['deployment']['name']
 
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    del_vm = conn.delete_deployment(service_name=service_name, deployment_name=name)
-    del_service = conn.delete_hosted_service
+    try:
+        result = conn.delete_role(service_name, service_name, name)
+    except WindowsAzureError:
+        result = conn.delete_deployment(service_name, service_name)
+    _wait_for_async(conn, result.request_id)
     ret[name] = {
-        'request_id': del_vm.request_id,
+        'request_id': result.request_id,
     }
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
