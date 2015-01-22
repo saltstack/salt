@@ -103,9 +103,7 @@ install GitPython`` (or ``easy_install GitPython``) as root.
 Dulwich
 -------
 
-Dulwich does not, at this time, have a limitation on the supported version,
-however support for Dulwich is new and it is possible that incompatibilities
-with old versions will be found.
+Dulwich 0.9.4 or newer is required to use Dulwich as backend for gitfs.
 
 Dulwich is available in EPEL, and can be easily installed on the master using
 yum:
