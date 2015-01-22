@@ -236,7 +236,7 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except Exception:
+        except (Exception, SystemExit):
             trace = traceback.format_exc()
             data['return'] = 'Exception occurred in {0} {1}:\n{2}'.format(
                 self.client, fun, trace)
