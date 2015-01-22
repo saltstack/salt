@@ -191,10 +191,16 @@ def returner(ret):
                     (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
                     VALUES (%s, %s, %s, %s, %s, %s)'''
 
-            cur.execute(sql, (ret['fun'], ret['jid'],
+            success = 'None'
+            if 'success' in ret:
+                success = ret['success']
+            fun = 'None'
+            if 'fun' in ret:
+                fun = ret['fun']
+            cur.execute(sql, (fun, ret['jid'],
                               json.dumps(ret['return']),
                               ret['id'],
-                              ret['success'],
+                              success,
                               json.dumps(ret)))
     except salt.exceptions.SaltMasterError:
         log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
@@ -222,11 +228,11 @@ def save_load(jid, load):
     '''
     with _get_serv(commit=True) as cur:
 
-        sql = '''INSERT INTO `jids`
-               (`jid`, `load`)
-                VALUES (%s, %s)'''
+        sql = '''INSERT INTO `jids` (`jid`, `load`)
+                SELECT %s, %s FROM DUAL
+                WHERE NOT EXISTS (SELECT `jid` FROM `jids` where `jid`=%s)'''
 
-        cur.execute(sql, (jid, json.dumps(load)))
+        cur.execute(sql, (jid, json.dumps(load), jid))
 
 
 def get_load(jid):
