@@ -289,7 +289,12 @@ def list_nodes_full(conn=None, call=None):
                 ret[role].update(role_instances[role])
                 ret[role]['id'] = role
                 ret[role]['hosted_service'] = service
-                ret[role]['state'] = role_instances[role]['power_state']
+                if role_instances[role]['power_state'] == "Started":
+                    ret[role]['state'] = 'running'
+                elif role_instances[role]['power_state'] == "Stopped":
+                    ret[role]['state'] = 'stopped'
+                else:
+                    ret[role]['state'] = 'pending'
                 ret[role]['private_ips'] = []
                 ret[role]['public_ips'] = []
                 ret[role]['deployment'] = deploy_dict_no_role_info
