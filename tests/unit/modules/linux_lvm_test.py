@@ -186,7 +186,7 @@ class LinuxLVMTestCase(TestCase):
         for which physical volume to be used
         '''
         self.assertEqual(linux_lvm.lvcreate(None, None, 1, 1),
-                         'Error: Please specify only size or extents')
+                         'Error: Please specify only one of size or extents')
 
         self.assertEqual(linux_lvm.lvcreate(None, None, None, None),
                          'Error: Either size or extents must be specified')
