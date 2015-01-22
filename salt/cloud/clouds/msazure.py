@@ -785,15 +785,15 @@ def create(vm_):
 
 
 #Helper function for azure tests
-def _wait_for_async(request_id):
+def _wait_for_async(conn, request_id):
     count = 0
-    result = self.sms.get_operation_status(request_id)
+    result = conn.get_operation_status(request_id)
     while result.status == 'InProgress':
         count = count + 1
         if count > 120:
             raise ValueError('Timed out waiting for async operation to complete.')
         time.sleep(5)
-        result = self.sms.get_operation_status(request_id)
+        result = conn.get_operation_status(request_id)
 
     if result.status != 'Succeeded':
         raise ValueError('Asynchronous operation did not succeed.')
@@ -830,7 +830,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
         result = conn.delete_role(service_name, service_name, name)
     except WindowsAzureError:
         result = conn.delete_deployment(service_name, service_name)
-    _wait_for_async(result.request_id)
+    _wait_for_async(conn, result.request_id)
     ret[name] = {
         'request_id': result.request_id,
     }
