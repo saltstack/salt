@@ -17,21 +17,23 @@ class SaltKey(parsers.SaltKeyOptionParser):
         '''
         Execute salt-key
         '''
-
         import salt.key
         self.parse_args()
+        multi = False
+        if self.config.get('zmq_behavior') and self.config.get('transport') == 'raet':
+            multi = True
 
         if self.config['verify_env']:
             verify_env_dirs = []
             if not self.config['gen_keys']:
-                if self.config['transport'] == 'raet':
+                if self.config['transport'] == 'raet' or multi:
                     verify_env_dirs.extend([
                         self.config['pki_dir'],
                         os.path.join(self.config['pki_dir'], 'accepted'),
                         os.path.join(self.config['pki_dir'], 'pending'),
                         os.path.join(self.config['pki_dir'], 'rejected'),
                     ])
-                elif self.config['transport'] == 'zeromq':
+                if self.config['transport'] == 'zeromq' or multi:
                     verify_env_dirs.extend([
                         self.config['pki_dir'],
                         os.path.join(self.config['pki_dir'], 'minions'),
@@ -56,6 +58,9 @@ class SaltKey(parsers.SaltKeyOptionParser):
 
         self.setup_logfile_logger()
 
-        key = salt.key.KeyCLI(self.config)
+        if multi:
+            key = salt.key.MultiKeyCLI(self.config)
+        else:
+            key = salt.key.KeyCLI(self.config)
         if check_user(self.config['user']):
             key.run()

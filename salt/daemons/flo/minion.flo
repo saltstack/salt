@@ -41,7 +41,27 @@ framer inbound be inactive first start
         do salt raet road stack service rx
         do salt raet lane stack service rx
 
-framer bootstrap be inactive first join
+framer bootstrap be inactive first setup
+
+    frame setup
+        enter
+            do salt raet road clustered per inode ".salt.road.manor."
+        go clustermaster
+        go multimaster
+
+    frame clustermaster
+        let if salt.road.manor.cluster.clustered
+        print Setting Up Master Cluster ....
+        enter
+            do salt raet road cluster minion setup per inode ".salt.road.manor."
+        go join
+
+    frame multimaster
+        print Setting Up Master or MultiMaster
+        enter
+            do salt raet road master setup per inode ".salt.road.manor."
+        go join
+
     frame join
         print Joining...
         enter
@@ -71,6 +91,11 @@ framer bootstrap be inactive first join
     frame allowed
         print Allowed
         go next if elapsed >= 0.5
+
+    frame balancing
+        print Balancing Setup
+        do salt raet road cluster load setup
+        go next
 
     frame pillar
         print Pillaring

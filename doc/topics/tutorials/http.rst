@@ -2,8 +2,8 @@ HTTP Modules
 ============
 
 This tutorial demonstrates using the various HTTP modules available in Salt.
-These modules wrap the Python ``requests`` library, extending it in a manner
-that is more consistent with Salt workflows.
+These modules wrap the Python ``urllib2`` and ``requests`` libraries, extending
+them in a manner that is more consistent with Salt workflows.
 
 The ``salt.utils.http`` Library
 -------------------------------
@@ -23,12 +23,27 @@ This library can be imported with:
 
     import salt.utils.http
 
+Configuring Libraries
+~~~~~~~~~~~~~~~~~~~~~
+
+This library can make use of either ``urllib2``, which ships with Python, or
+``requests``, which can be installed separately. By default, ``urllib2`` will
+be used. In order to switch to ``requests``, set the following variable:
+
+.. code-block:: yaml
+
+    requests_lib: True
+
+This can be set in the master or minion configuration file, or passed as an
+option directly to any ``http.query()`` functions.
+
+
 ``salt.utils.http.query()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This function forms a basic query, but with some add-ons not present in the
-``requests`` library. Not all functionality currently available in ``requests``
-has been added, but can be in future iterations.
+``urllib2`` and ``requests`` libraries. Not all functionality currently
+available in these libraries has been added, but can be in future iterations.
 
 A basic query can be performed by calling this function with no more than a
 single URL:
@@ -259,6 +274,36 @@ as required. However, each must individually be turned on.
 
 The return from these will be found in the return dict as ``status``,
 ``headers`` and ``text``, respectively.
+
+CA Bundles
+~~~~~~~~~~
+The ``requests`` library has its own method of detecting which CA (certficate
+authority) bundle file to use. Usually this is implemented by the packager for
+the specific operating system distribution that you are using. However,
+``urllib2`` requires a little more work under the hood. By default, Salt will
+try to auto-detect the location of this file. However, if it is not in an
+expected location, or a different path needs to be specified, it may be done so
+using the ``ca_bundle`` variable.
+
+.. code-block:: python
+
+    salt.utils.http.query(
+        'https://example.com',
+        ca_bundle='/path/to/ca_bundle.pem',
+    )
+
+SSL Verification
+~~~~~~~~~~~~~~~~
+
+By default, this function will verify SSL certificates. However, for testing or
+debugging purposes, SSL verification can be turned off.
+
+.. code-block:: python
+
+    salt.utils.http.query(
+        'https://example.com',
+        ssl_verify=False,
+    )
 
 Test Mode
 ~~~~~~~~~

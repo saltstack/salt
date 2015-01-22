@@ -89,8 +89,6 @@ class RemotePillar(object):
             load['ext'] = self.ext
         ret_pillar = self.channel.crypted_transfer_decode_dictentry(load,
                                                                     dictkey='pillar',
-                                                                    tries=3,
-                                                                    timeout=7200,
                                                                     )
 
         if not isinstance(ret_pillar, dict):
@@ -237,6 +235,8 @@ class Pillar(object):
             errors.append(
                     ('Rendering Primary Top file failed, render error:\n{0}'
                         .format(exc)))
+            log.error('Pillar rendering failed for minion {0}: '.format(self.opts['id']),
+                    exc_info=True)
 
         # Search initial top files for includes
         for saltenv, ctops in tops.items():

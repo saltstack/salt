@@ -860,11 +860,14 @@ class LocalClient(object):
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-            log.warning('jid does not exist')
-            yield {}
-            # stop the iteration, since the jid is invalid
-            raise StopIteration()
+        try:
+            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
+                log.warning('jid does not exist')
+                yield {}
+                # stop the iteration, since the jid is invalid
+                raise StopIteration()
+        except salt.exceptions.SaltMasterError as exc:
+            log.warning('Returner unavailable: {exc}'.format(exc=exc))
         # Wait for the hosts to check in
         syndic_wait = 0
         last_time = False

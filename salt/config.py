@@ -23,6 +23,7 @@ try:
 except Exception:
     pass
 
+
 # Import salt libs
 import salt.utils
 import salt.utils.network
@@ -266,6 +267,8 @@ VALID_OPTS = {
     'raet_mutable': bool,
     'raet_main': bool,
     'raet_clear_remotes': bool,
+    'cluster_mode': bool,
+    'cluster_masters': list,
     'sqlite_queue_dir': str,
     'queue_dirs': list,
     'ping_interval': int,
@@ -422,6 +425,8 @@ DEFAULT_MINION_OPTS = {
     'raet_mutable': False,
     'raet_main': False,
     'raet_clear_remotes': True,
+    'cluster_mode': False,
+    'cluster_masters': [],
     'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
@@ -539,8 +544,6 @@ DEFAULT_MASTER_OPTS = {
     'log_granular_levels': {},
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
-    'cluster_masters': [],
-    'cluster_mode': 'paranoid',
     'range_server': 'range:80',
     'reactor': [],
     'reactor_refresh_interval': 60,
@@ -600,6 +603,8 @@ DEFAULT_MASTER_OPTS = {
     'raet_mutable': False,
     'raet_main': True,
     'raet_clear_remotes': False,
+    'cluster_mode': False,
+    'cluster_masters': [],
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
@@ -2035,7 +2040,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
-    if opts.get('transport') == 'raet' and 'aes' in opts:
+    if opts.get('transport') == 'raet' and not opts.get('zmq_behavior') and 'aes' in opts:
         opts.pop('aes')
     return opts
 

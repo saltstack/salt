@@ -181,11 +181,11 @@ def rm_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            newline = '{0}\t'.format(comps[0])
+            newline = '{0}\t\t'.format(comps[0])
             for existing in comps[1:]:
                 if existing == alias:
                     continue
-                newline += '\t{0}'.format(existing)
+                newline += ' {0}'.format(existing)
             if newline.strip() == ip:
                 # No aliases exist for the line, make it empty
                 lines[ind] = ''
@@ -237,14 +237,14 @@ def _write_hosts(hosts):
             else:
                 line = '{0}\t\t{1}'.format(
                     ip,
-                    '\t\t'.join(aliases)
+                    ' '.join(aliases)
                     )
         lines.append(line)
 
     hfn = __get_hosts_filename()
     with salt.utils.fopen(hfn, 'w+') as ofile:
-        ofile.write(
-            '\n'.join(
-                [l.strip() for l in lines if l.strip()]
-            )
-        )
+        for line in lines:
+            if line.strip():
+                # /etc/hosts needs to end with EOL so that some utils that read
+                # it do not break
+                ofile.write('{0}\n'.format(line.strip()))

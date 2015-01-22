@@ -102,6 +102,119 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                     raise
 
 
+class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
+    '''
+    Updates value of share .salt.road.manor.cluster.clustered
+    Twith opts['cluster_mode']
+
+    FloScript:
+
+    do salt raet road clustered
+    go next if .salt.road.manor.cluster.clustered
+
+    '''
+    Ioinits = odict(inode=".salt.road.manor.",
+                    clustered=odict(ipath='cluster.clustered', ival=False),
+                    opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Update .cluster.clustered share from opts
+        '''
+        self.clustered.update(value=self.opts.value.get('cluster_mode', False))
+
+
+class SaltRaetRoadClusterMinionSetup(ioflo.base.deeding.Deed):
+    '''
+    Setups shares for master cluster
+
+    FloScript:
+
+    do salt raet road cluster minion setup at enter
+
+    '''
+    Ioinits = odict(
+        inode='.salt.road.manor.',
+        masters='masters',
+        loads=odict(ipath='cluster.loads', ival=odict()),
+        opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Generate list of masters
+        '''
+        self.masters.value = daemons.extract_masters(self.opts.value,
+                                                     'cluster_masters')
+
+
+class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
+    '''
+    Sets up cluster.loads for load balancing
+
+    FloScript:
+
+    do salt raet road cluster load setup at enter
+
+    '''
+    Ioinits = odict(
+        inode='.salt.road.manor.',
+        loads='cluster.loads',
+        stack='stack',
+        opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Populate loads from masters in stack.remotes
+        '''
+        if self.opts.value.get('cluster_mode'):
+            for remote in self.stack.value.remotes.values():
+                self.loads.value[remote.name] = odict(load=0.0, expire=self.store.stamp)
+
+
+class SaltRaetRoadClusterMasterSetup(ioflo.base.deeding.Deed):
+    '''
+    Setups shares for master cluster
+
+    FloScript:
+
+    do salt raet road cluster master setup at enter
+
+    '''
+    Ioinits = odict(
+        inode='.salt.road.manor.',
+        masters='masters',
+        opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Generate list of masters
+        '''
+        self.masters.value = daemons.extract_masters(self.opts.value,
+                                                     'cluster_masters',
+                                                     'raet_port')
+
+
+class SaltRaetRoadMasterSetup(ioflo.base.deeding.Deed):
+    '''
+    Sets up list of masters for minoin
+
+    FloScript:
+
+    do salt raet road master setup at enter
+
+    '''
+    Ioinits = odict(
+        inode=".salt.road.manor.",
+        masters='masters',
+        opts='.salt.opts')
+
+    def action(self):
+        '''
+        Assign .masters by parsing opts
+        '''
+        self.masters.value = daemons.extract_masters(self.opts.value)
+
+
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -127,7 +240,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'prihex': None}},
             }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Assign class defaults
         '''
@@ -138,7 +251,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         '''
         enter action
         should only run once to setup road stack.
-        moved from postinitio so can do clean up before stack is initialized
+        moved from _prepare so can do clean up before stack is initialized
 
         do salt raet road stack setup at enter
         '''
@@ -222,20 +335,21 @@ class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
 
 class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
     '''
-    Initiates join transaction with master
+    Initiates join transaction with master(s)
     FloScript:
 
     do salt raet road stack joiner at enter
+
+    assumes that prior the following has been run to setup .masters
+
+    do salt raet road master setup
 
     '''
     Ioinits = odict(
                     inode=".salt.road.manor.",
                     stack='stack',
+                    masters='masters',
                     opts='.salt.opts')
-
-    def postinitio(self):
-        self.masters = daemons.extract_masters(self.opts.value)
-        # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
 
     def action(self, **kwa):
         '''
@@ -253,7 +367,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
 
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
-                for master in self.masters:
+                for master in self.masters.value:
                     mha = master['external']
                     stack.addRemote(RemoteEstate(stack=stack,
                                                  fuid=0,  # vacuous join
@@ -496,7 +610,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                'module_refresh': '.salt.var.module_refresh',
                'returners': '.salt.loader.returners'}
 
-    def postinitio(self):
+    def _prepare(self):
         self._load_modules()
 
     def action(self):
@@ -612,7 +726,7 @@ class SaltSchedule(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Map opts and make the schedule object
         '''
@@ -656,7 +770,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                           'ival': {'lanename': 'master'}},
             }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Set up required objects and queues
         '''
@@ -855,7 +969,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'road_stack': '.salt.road.manor.stack',
                'master_estate_name': '.salt.track.master_estate_name',
                'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
-                          'ival': deque()}, }
+                          'ival': deque()}}
 
     def _process_udp_rxmsg(self, msg, sender):
         '''
@@ -986,7 +1100,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                           "remote_cmd. Requeuing".format())
                 self.laters.value.append((msg, sender))
                 return
-            d_estate = self._get_master_estate_name()
+            d_estate = self._get_master_estate_name(clustered=self.opts.get('cluster_mode', False))
             if not d_estate:
                 log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
                           "Unable to route. Requeuing".format())
@@ -998,11 +1112,13 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             self.road_stack.value.message(msg,
                     self.road_stack.value.nameRemotes[d_estate].uid)
 
-    def _get_master_estate_name(self):
+    def _get_master_estate_name(self, clustered=False):
         '''
         Assign and return the name of the estate for the default master or empty if none
         If the default master is no longer available then selects one of the available
         masters
+
+        If clustered is True then use load balancing algorithm to select master
         '''
         opts = self.opts.value
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
@@ -1140,7 +1256,7 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
             if state in [None, 'available', 'present']:
                 present = odict()
                 for name in self.availables.value:
-                    minion = self.aliveds.value[name]
+                    minion = self.aliveds.value.get(name, None)
                     present[name] = minion.ha[0] if minion else None
                 data = {'present': present}
             else:
@@ -1241,7 +1357,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                'executors': '.salt.track.executors',
                'road_stack': '.salt.road.manor.stack', }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Map opts for convenience
         '''
