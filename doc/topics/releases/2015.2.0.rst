@@ -21,10 +21,10 @@ Deprecations
   functions: ``install``, ``uninstall``, ``freeze``, ``list_``, ``list_upgrades``,
   ``upgrade_available``, ``upgrade``. Please migrate to ``user``.
 
-- Removed ``runas`` parameter from thge following ``pip`` state module
+- Removed ``runas`` parameter from the following ``pip`` state module
   functions: ``installed``, ``removed``, ``uptodate`` . Please migrate to ``user``.
 
-- Removed ``quiet`` option from all functions in ``cmdmod`` exectution module.
+- Removed ``quiet`` option from all functions in ``cmdmod`` execution module.
   Please use ``output_loglevel=quiet`` instead.
 
 - Removed ``parameter`` argument from ``eselect.set_`` state. Please migrate to 
