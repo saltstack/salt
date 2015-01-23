@@ -240,6 +240,12 @@ class SyncClientMixin(object):
         event.fire_event(data, tagify('ret', base=tag))
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
+        #
+        # The process ends and the zmq linger appears NOT to be respected. As
+        # a result, at time the del event kills the socket before the above
+        # fire_event can finish. There may be a better way to wait for the event
+        # to fire but for now we will insert a small delay.
+        time.sleep(0.25)
         del event
         return data['return']
 
@@ -271,7 +277,7 @@ class AsyncClientMixin(object):
         Run this method in a multiprocess target to execute the function in a
         multiprocess and fire the return data on the event bus
         '''
-        salt.utils.daemonize()
+        salt.utils.daemonize(redirect_out=False)
 
         # pack a few things into low
         low['__jid__'] = jid
