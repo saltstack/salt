@@ -26,8 +26,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 expected_cmd,
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -57,8 +57,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -72,8 +72,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -98,8 +98,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -113,8 +113,8 @@ class PipTestCase(TestCase):
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker '
                 '--editable=git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -127,8 +127,8 @@ class PipTestCase(TestCase):
                 'pip install \'pep8\' '
                 '--editable=git+https://github.com/jek/blinker.git#egg=Blinker',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -150,8 +150,8 @@ class PipTestCase(TestCase):
                 '--mirrors=http://c.pypi.python.org '
                 '--mirrors=http://pypi.crate.io',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -166,8 +166,8 @@ class PipTestCase(TestCase):
                 '--mirrors=http://c.pypi.python.org '
                 '--mirrors=http://pypi.crate.io',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -180,8 +180,8 @@ class PipTestCase(TestCase):
                 'pip install --use-mirrors '
                 '--mirrors=http://g.pypi.python.org',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -203,8 +203,8 @@ class PipTestCase(TestCase):
                 '--find-links=http://c.pypi.python.org '
                 '--find-links=http://pypi.crate.io \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -219,8 +219,8 @@ class PipTestCase(TestCase):
                 '--find-links=http://c.pypi.python.org '
                 '--find-links=http://pypi.crate.io \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -232,8 +232,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --find-links=http://g.pypi.python.org \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -264,8 +264,8 @@ class PipTestCase(TestCase):
                 '--find-links=http://c.pypi.python.org '
                 '--find-links=https://pypi.crate.io \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -304,8 +304,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 expected_cmd,
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -326,8 +326,8 @@ class PipTestCase(TestCase):
                 '\'mock\'',
                 env={'VIRTUAL_ENV': '/test_env'},
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -340,8 +340,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --log=/tmp/pip-install.log \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -365,8 +365,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --timeout=10 \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -378,8 +378,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --timeout=10 \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -401,8 +401,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --index-url=\'http://foo.tld\' \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -414,8 +414,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --extra-index-url=\'http://foo.tld\' \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -427,8 +427,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --no-index \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -440,8 +440,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --build=/tmp/foo \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -453,8 +453,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --target=/tmp/foo \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -466,8 +466,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --download=/tmp/foo \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -479,8 +479,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --no-download \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -492,8 +492,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --download-cache=/tmp/foo \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -505,8 +505,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --source=/tmp/foo \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -519,7 +519,7 @@ class PipTestCase(TestCase):
                 mock.assert_called_once_with(
                     'pip install --exists-action={0} \'pep8\''.format(action),
                     saltenv='base',
-                    user=None,
+                    runas=None,
                     cwd=None,
                     use_vt=False,
                     python_shell=False,
@@ -550,8 +550,8 @@ class PipTestCase(TestCase):
                 '--install-option=\'--exec-prefix=/foo/bar\' '
                 '--install-option=\'--install-scripts=/foo/bar/bin\' \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -565,8 +565,8 @@ class PipTestCase(TestCase):
                 '--install-option=\'--exec-prefix=/foo/bar\' '
                 '--install-option=\'--install-scripts=/foo/bar/bin\' \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -579,8 +579,8 @@ class PipTestCase(TestCase):
                 'pip install --install-option=\'--exec-prefix=/foo/bar\' '
                 '\'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -600,8 +600,8 @@ class PipTestCase(TestCase):
                 '--global-option=\'--quiet\' '
                 '--global-option=\'--no-user-cfg\' \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -615,8 +615,8 @@ class PipTestCase(TestCase):
                 '--global-option=\'--quiet\' '
                 '--global-option=\'--no-user-cfg\' \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -628,8 +628,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --global-option=\'--quiet\' \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -641,8 +641,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --upgrade \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -654,8 +654,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --force-reinstall \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -667,8 +667,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --ignore-installed \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -680,8 +680,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --no-deps \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -693,8 +693,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --no-install \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -707,8 +707,8 @@ class PipTestCase(TestCase):
                 'pip install '
                 '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -731,8 +731,8 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-1\' '
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -749,8 +749,8 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-1\' '
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -763,8 +763,8 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip install --requirement=\'my_cached_reqs-1\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -787,6 +787,7 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-1\' '
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
@@ -804,6 +805,7 @@ class PipTestCase(TestCase):
                 '--requirement=\'my_cached_reqs-1\' '
                 '--requirement=\'my_cached_reqs-2\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
@@ -817,6 +819,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip uninstall -y --requirement=\'my_cached_reqs-1\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
@@ -832,6 +835,7 @@ class PipTestCase(TestCase):
                 'pip uninstall -y '
                 '--proxy=\'salt-user:salt-passwd@salt-proxy:3128\' pep8',
                 saltenv='base',
+                runas=None,
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
@@ -845,6 +849,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip uninstall -y --log=/tmp/pip-install.log pep8',
                 saltenv='base',
+                runas=None,
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
@@ -869,6 +874,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip uninstall -y --timeout=10 pep8',
                 saltenv='base',
+                runas=None,
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
@@ -881,6 +887,7 @@ class PipTestCase(TestCase):
             mock.assert_called_once_with(
                 'pip uninstall -y --timeout=10 pep8',
                 saltenv='base',
+                runas=None,
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
@@ -914,6 +921,7 @@ class PipTestCase(TestCase):
             ret = pip.freeze()
             mock.assert_called_once_with(
                 'pip freeze',
+                runas=None,
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
@@ -1012,8 +1020,8 @@ class PipTestCase(TestCase):
             mock.assert_called_with(
                 'pip install \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )
@@ -1029,8 +1037,8 @@ class PipTestCase(TestCase):
             mock.assert_called_with(
                 'pip install --pre \'pep8\'',
                 saltenv='base',
+                runas=None,
                 cwd=None,
-                user=None,
                 use_vt=False,
                 python_shell=False,
             )

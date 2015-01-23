@@ -829,7 +829,7 @@ def list_upgrades(bin_env=None,
     pip_bin = _get_pip_bin(bin_env)
     cmd = [pip_bin, "list", "--outdated"]
 
-    cmd_kwargs = dict(cwd=cwd)
+    cmd_kwargs = dict(cwd=cwd, runas=user)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
