@@ -231,12 +231,10 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except (Exception, SystemExit) as exc:
-            data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                            self.client,
-                            fun,
-                            traceback.format_exc(),
-                            )
+        except (Exception, SystemExit):
+            trace = traceback.format_exc()
+            data['return'] = 'Exception occurred in {0} {1}:\n{2}'.format(
+                self.client, fun, trace)
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
