@@ -784,6 +784,12 @@ def installed(
 
 
     '''
+    if isinstance(pkgs, list) and len(pkgs) == 0:
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': 'No packages to install provided'}
+
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
     refresh = bool(
