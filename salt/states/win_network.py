@@ -94,7 +94,7 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     errors = []
     # Validate DNS configuration
     if not dns_proto:
-        pass # user does not want dns
+        pass  # user does not want dns
     elif dns_proto == 'dhcp':
         if dns_servers is not None:
             errors.append(
