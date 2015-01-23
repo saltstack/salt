@@ -1318,8 +1318,6 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
         Forward an event message to all subscribed yards
         Event message has a route
         '''
-        import wingdbstub
-
         rm_ = []
         if msg.get('tag') == 'pillar_refresh':
             self.pillar_refresh.value = True
