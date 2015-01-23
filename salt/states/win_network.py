@@ -93,7 +93,9 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     '''
     errors = []
     # Validate DNS configuration
-    if dns_proto == 'dhcp':
+    if not dns_proto:
+        pass # user does not want dns
+    elif dns_proto == 'dhcp':
         if dns_servers is not None:
             errors.append(
                 'The dns_servers param cannot be set if unless dns_proto is '
@@ -212,7 +214,7 @@ def managed(name,
     dns_proto : None
         Set to ``static`` and use the ``dns_servers`` parameter to provide a
         list of DNS nameservers. set to ``dhcp`` to use DHCP to get the DNS
-        servers.
+        servers, or set to ``None`` to disable DNS configuration.
 
     dns_servers : None
         A list of static DNS servers.
