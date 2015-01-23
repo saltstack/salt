@@ -73,7 +73,7 @@ time, for example:
 
 .. code-block:: bash
 
-    python setup.py install --salt-transport=raet
+    python setup.py --salt-transport=raet install
 
 This way, only the required dependencies are pulled by the setup script if need
 be.
