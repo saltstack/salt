@@ -20,7 +20,7 @@ import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
-
+exit(1)
 def echo(text):
     '''
     Return a string - used for testing the connection
