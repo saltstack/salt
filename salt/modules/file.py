@@ -2982,7 +2982,7 @@ def check_managed_changes(
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, saltenv, template, contents)
     __clean_tmp(sfn)
-    return changes
+    return None if changes else True, changes
 
 
 def check_file_meta(

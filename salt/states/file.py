@@ -1355,8 +1355,7 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            ret['result'] = None
-            ret['changes'] = __salt__['file.check_managed_changes'](
+            ret['result'], ret['changes'] = __salt__['file.check_managed_changes'](
                 name,
                 source,
                 source_hash,
