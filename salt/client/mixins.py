@@ -9,6 +9,7 @@ import collections
 import logging
 import time
 import multiprocessing
+import weakref
 
 import salt.exceptions
 import salt.utils
@@ -181,25 +182,21 @@ class SyncClientMixin(object):
                 self.opts['transport'],
                 opts=self.opts,
                 listen=False)
-        event.fire_event(data, tagify('new', base=tag))
 
+        namespaced_event = salt.utils.event.NamespacedEvent(event,
+                                                            tag,
+                                                            print_func=self.print_async_event if hasattr(self, 'print_async_event') else None)
         # TODO: document these, and test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
                         '__tag__': tag,
-                        '__jid_event__': salt.utils.event.NamespacedEvent(event, tag),
+                        # weak ref to avoid the Exception in interpreter teardown
+                        # of event
+                        '__jid_event__': weakref.proxy(namespaced_event),
                         }
 
-        def over_print(output):
-            '''
-            Print and duplicate the print to an event
-            '''
-            print_event = {'data': output,
-                           'outputter': 'pprint'}
-            func_globals['__jid_event__'].fire_event(print_event, 'print')
-            __builtin__.print(output)  # and do the old style printout
-        func_globals['print'] = over_print
+        func_globals['__jid_event__'].fire_event(data, 'new')
 
         # Inject some useful globals to *all* the funciton's global namespace
         # only once per module-- not per func
@@ -254,10 +251,11 @@ class SyncClientMixin(object):
                             )
             data['success'] = False
 
-        event.fire_event(data, tagify('ret', base=tag))
+        namespaced_event.fire_event(data, 'ret')
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         del event
+        del namespaced_event
         return data['return']
 
     def get_docs(self, arg=None):
@@ -296,7 +294,7 @@ class AsyncClientMixin(object):
         low['__user__'] = user
         low['__tag__'] = tag
 
-        self.low(fun, low)
+        return self.low(fun, low)
 
     def cmd_async(self, low):
         '''
@@ -349,7 +347,7 @@ class AsyncClientMixin(object):
         # more general, since this will get *really* messy as
         # people use more events that don't quite fit into this mold
         if suffix == 'ret':  # for "ret" just print out return
-            salt.output.display_output(event['return'], '', self.opts)
+            salt.output.display_output(event['return'], None, self.opts)
         elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
             print(self.outputters[event['outputter']](event['data']))
         # otherwise fall back on basic printing

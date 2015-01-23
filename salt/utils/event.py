@@ -520,11 +520,14 @@ class NamespacedEvent(object):
     '''
     A wrapper for sending events within a specific base namespace
     '''
-    def __init__(self, event, base):
+    def __init__(self, event, base, print_func=None):
         self.event = event
         self.base = base
+        self.print_func = print_func
 
     def fire_event(self, data, tag):
+        if self.print_func is not None:
+            self.print_func(tag, data)
         self.event.fire_event(data, tagify(tag, base=self.base))
 
 
