@@ -8,6 +8,7 @@ import __builtin__
 import collections
 import logging
 import time
+import traceback
 import multiprocessing
 import weakref
 
@@ -242,12 +243,11 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except Exception as exc:
-            data['return'] = 'Exception occurred in {0} {1}: {2}: {3}'.format(
+        except (Exception, SystemExit) as exc:
+            data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
                             self.client,
                             fun,
-                            exc.__class__.__name__,
-                            exc,
+                            traceback.format_exc(),
                             )
             data['success'] = False
 
