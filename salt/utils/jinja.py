@@ -64,7 +64,7 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
-        if self.opts.get('__pillar', False):
+        if opts['file_roots'] is opts['pillar_roots']:
             self.searchpath = opts['file_roots'][saltenv]
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
