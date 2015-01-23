@@ -35,6 +35,11 @@ OPTS['grains'] = salt.loader.grains(OPTS)
 
 
 class PyDSLRendererTestCase(TestCase):
+    '''
+    WARNING: If tests in here are flaky, they may need
+    to be moved to their own class. Sharing HighState, especially
+    through setUp/tearDown can create dangerous race conditions!
+    '''
 
     def setUp(self):
         self.HIGHSTATE = HighState(OPTS)
@@ -298,98 +303,6 @@ class PyDSLRendererTestCase(TestCase):
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
-    def test_rendering_includes(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
-        if not os.path.isdir(dirpath):
-            self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
-                    dirpath
-                )
-            )
-        output = os.path.join(dirpath, 'output')
-        try:
-            write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
-                #!pydsl|stateconf -ps
-
-                include('xxx')
-                yyy = include('yyy')
-
-                # ensure states in xxx are run first, then those in yyy and then those in aaa last.
-                extend(state('yyy::start').stateconf.require(stateconf='xxx::goal'))
-                extend(state('.start').stateconf.require(stateconf='yyy::goal'))
-
-                extend(state('yyy::Y2').cmd.run('echo Y2 extended >> {0}'))
-
-                __pydsl__.set(ordered=True)
-
-                yyy.hello('red', 1)
-                yyy.hello('green', 2)
-                yyy.hello('blue', 3)
-                '''.format(output)))
-
-            write_to(os.path.join(dirpath, 'xxx.sls'), textwrap.dedent('''\
-                #!stateconf -os yaml . jinja
-
-                include:
-                  - yyy
-
-                extend:
-                  yyy::start:
-                    stateconf.set:
-                      - require:
-                        - stateconf: .goal
-
-                  yyy::Y1:
-                    cmd.run:
-                      - name: 'echo Y1 extended >> {0}'
-
-                .X1:
-                  cmd.run:
-                    - name: echo X1 >> {1}
-                    - cwd: /
-                .X2:
-                  cmd.run:
-                    - name: echo X2 >> {2}
-                    - cwd: /
-                .X3:
-                  cmd.run:
-                    - name: echo X3 >> {3}
-                    - cwd: /
-
-                '''.format(output, output, output, output)))
-
-            write_to(os.path.join(dirpath, 'yyy.sls'), textwrap.dedent('''\
-                #!pydsl|stateconf -ps
-
-                include('xxx')
-                __pydsl__.set(ordered=True)
-
-                state('.Y1').cmd.run('echo Y1 >> {0}', cwd='/')
-                state('.Y2').cmd.run('echo Y2 >> {1}', cwd='/')
-                state('.Y3').cmd.run('echo Y3 >> {2}', cwd='/')
-
-                def hello(color, number):
-                    state(color).cmd.run('echo hello '+color+' '+str(number)+' >> {3}', cwd='/')
-                '''.format(output, output, output, output)))
-
-            state_highstate({'base': ['aaa']}, dirpath)
-            expected = textwrap.dedent('''\
-                X1
-                X2
-                X3
-                Y1 extended
-                Y2 extended
-                Y3
-                hello red 1
-                hello green 2
-                hello blue 3
-                ''')
-
-            with salt.utils.fopen(output, 'r') as f:
-                self.assertEqual(sorted(f.read()), sorted(expected))
-
-        finally:
-            shutil.rmtree(dirpath, ignore_errors=True)
 
     def test_compile_time_state_execution(self):
         if not sys.stdin.isatty():
@@ -489,6 +402,109 @@ class PyDSLRendererTestCase(TestCase):
                 '''))
             state_highstate({'base': ['b']}, dirpath)
             state_highstate({'base': ['c', 'd']}, dirpath)
+        finally:
+            shutil.rmtree(dirpath, ignore_errors=True)
+
+
+class PyDSLRendererSandboxTestCase(TestCase):
+    '''
+    Multiple instantions of HighState across multiple tests will
+    cause major problems because the class var that controls the
+    highstate stack will be clobbered. The easiest solution is to
+    break these tests into their own classes, where possible. This
+    avoids the setUp/tearDown routines which can cause flaky tests.
+    '''
+
+    def test_rendering_includes(self):
+        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        if not os.path.isdir(dirpath):
+            self.skipTest(
+                'The temporary directory {0!r} was not created'.format(
+                    dirpath
+                )
+            )
+        output = os.path.join(dirpath, 'output')
+        try:
+            write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
+                #!pydsl|stateconf -ps
+
+                include('xxx')
+                yyy = include('yyy')
+
+                # ensure states in xxx are run first, then those in yyy and then those in aaa last.
+                extend(state('yyy::start').stateconf.require(stateconf='xxx::goal'))
+                extend(state('.start').stateconf.require(stateconf='yyy::goal'))
+
+                extend(state('yyy::Y2').cmd.run('echo Y2 extended >> {0}'))
+
+                __pydsl__.set(ordered=True)
+
+                yyy.hello('red', 1)
+                yyy.hello('green', 2)
+                yyy.hello('blue', 3)
+                '''.format(output)))
+
+            write_to(os.path.join(dirpath, 'xxx.sls'), textwrap.dedent('''\
+                #!stateconf -os yaml . jinja
+
+                include:
+                  - yyy
+
+                extend:
+                  yyy::start:
+                    stateconf.set:
+                      - require:
+                        - stateconf: .goal
+
+                  yyy::Y1:
+                    cmd.run:
+                      - name: 'echo Y1 extended >> {0}'
+
+                .X1:
+                  cmd.run:
+                    - name: echo X1 >> {1}
+                    - cwd: /
+                .X2:
+                  cmd.run:
+                    - name: echo X2 >> {2}
+                    - cwd: /
+                .X3:
+                  cmd.run:
+                    - name: echo X3 >> {3}
+                    - cwd: /
+
+                '''.format(output, output, output, output)))
+
+            write_to(os.path.join(dirpath, 'yyy.sls'), textwrap.dedent('''\
+                #!pydsl|stateconf -ps
+
+                include('xxx')
+                __pydsl__.set(ordered=True)
+
+                state('.Y1').cmd.run('echo Y1 >> {0}', cwd='/')
+                state('.Y2').cmd.run('echo Y2 >> {1}', cwd='/')
+                state('.Y3').cmd.run('echo Y3 >> {2}', cwd='/')
+
+                def hello(color, number):
+                    state(color).cmd.run('echo hello '+color+' '+str(number)+' >> {3}', cwd='/')
+                '''.format(output, output, output, output)))
+
+            state_highstate({'base': ['aaa']}, dirpath)
+            expected = textwrap.dedent('''\
+                X1
+                X2
+                X3
+                Y1 extended
+                Y2 extended
+                Y3
+                hello red 1
+                hello green 2
+                hello blue 3
+                ''')
+
+            with salt.utils.fopen(output, 'r') as f:
+                self.assertEqual(sorted(f.read()), sorted(expected))
+
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
