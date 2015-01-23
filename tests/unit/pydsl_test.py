@@ -303,7 +303,6 @@ class PyDSLRendererTestCase(TestCase):
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
-
     def test_compile_time_state_execution(self):
         if not sys.stdin.isatty():
             self.skipTest('Not attached to a TTY')
