@@ -4,12 +4,11 @@ A collection of mixins useful for the various *Client interfaces
 '''
 from __future__ import print_function
 from __future__ import absolute_import
-import __builtin__
 import collections
 import logging
 import traceback
-import time
 import multiprocessing
+import weakref
 
 import salt.exceptions
 import salt.utils
@@ -172,25 +171,21 @@ class SyncClientMixin(object):
                 self.opts['transport'],
                 opts=self.opts,
                 listen=False)
-        event.fire_event(data, tagify('new', base=tag))
 
+        namespaced_event = salt.utils.event.NamespacedEvent(event,
+                                                            tag,
+                                                            print_func=self.print_async_event if hasattr(self, 'print_async_event') else None)
         # TODO: document these, and test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
                         '__tag__': tag,
-                        '__jid_event__': salt.utils.event.NamespacedEvent(event, tag),
+                        # weak ref to avoid the Exception in interpreter teardown
+                        # of event
+                        '__jid_event__': weakref.proxy(namespaced_event),
                         }
 
-        def over_print(output):
-            '''
-            Print and duplicate the print to an event
-            '''
-            print_event = {'data': output,
-                           'outputter': 'pprint'}
-            func_globals['__jid_event__'].fire_event(print_event, 'print')
-            __builtin__.print(output)  # and do the old style printout
-        func_globals['print'] = over_print
+        func_globals['__jid_event__'].fire_event(data, 'new')
 
         # Inject some useful globals to *all* the funciton's global namespace
         # only once per module-- not per func
@@ -236,22 +231,19 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except (Exception, SystemExit):
-            trace = traceback.format_exc()
-            data['return'] = 'Exception occurred in {0} {1}:\n{2}'.format(
-                self.client, fun, trace)
+        except (Exception, SystemExit) as exc:
+            data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
+                            self.client,
+                            fun,
+                            traceback.format_exc(),
+                            )
             data['success'] = False
 
-        event.fire_event(data, tagify('ret', base=tag))
+        namespaced_event.fire_event(data, 'ret')
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
-        #
-        # The process ends and the zmq linger appears NOT to be respected. As
-        # a result, at time the del event kills the socket before the above
-        # fire_event can finish. There may be a better way to wait for the event
-        # to fire but for now we will insert a small delay.
-        time.sleep(0.25)
         del event
+        del namespaced_event
         return data['return']
 
     def get_docs(self, arg=None):
@@ -283,14 +275,14 @@ class AsyncClientMixin(object):
         multiprocess and fire the return data on the event bus
         '''
         if daemonize:
-            salt.utils.daemonize(redirect_out=False)
+            salt.utils.daemonize()
 
         # pack a few things into low
         low['__jid__'] = jid
         low['__user__'] = user
         low['__tag__'] = tag
 
-        self.low(fun, low)
+        return self.low(fun, low)
 
     def cmd_async(self, low):
         '''
@@ -343,7 +335,7 @@ class AsyncClientMixin(object):
         # more general, since this will get *really* messy as
         # people use more events that don't quite fit into this mold
         if suffix == 'ret':  # for "ret" just print out return
-            salt.output.display_output(event['return'], '', self.opts)
+            salt.output.display_output(event['return'], None, self.opts)
         elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
             print(self.outputters[event['outputter']](event['data']))
         # otherwise fall back on basic printing
@@ -351,40 +343,3 @@ class AsyncClientMixin(object):
             event.pop('_stamp')  # remove the timestamp before printing
             print('{tag}: {event}'.format(tag=suffix,
                                           event=event))
-
-    def get_async_returns(self, tag, timeout=None, event=None):
-        '''
-        Yield all events from a given tag until "ret" is received or timeout is
-        reached.
-        '''
-        if timeout is None:
-            timeout = self.opts['timeout'] * 2
-
-        if event is None:
-            event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
-        timeout_at = time.time() + timeout
-        last_progress_timestamp = time.time()
-        basetag_depth = tag.count('/') + 1
-
-        # no need to have a sleep, get_event has one inside
-        while True:
-            raw = event.get_event(timeout, tag=tag, full=True)
-            # If we saw no events in the event bus timeout
-            # OR
-            # we have reached the total timeout
-            # AND
-            # have not seen any progress events for the length of the timeout.
-            now = time.time()
-            if raw is None and (now > timeout_at and
-                                now - last_progress_timestamp > timeout):
-                # Timeout reached
-                break
-            try:
-                tag_parts = raw['tag'].split('/')
-                suffix = '/'.join(tag_parts[basetag_depth:])
-                last_progress_timestamp = now
-                yield suffix, raw['data']
-                if tag_parts[3] == 'ret':
-                    raise StopIteration()  # we are done, we got return
-            except (IndexError, KeyError):
-                continue
