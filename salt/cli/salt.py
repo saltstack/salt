@@ -6,7 +6,6 @@ import os
 import sys
 
 from salt.utils import parsers, print_cli
-from salt.utils.verify import verify_files
 from salt.exceptions import (
         SaltClientError,
         SaltInvocationError,
@@ -26,16 +25,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         import salt.auth
         import salt.client
         self.parse_args()
-
-        if self.config['verify_env']:
-            if not self.config['log_file'].startswith(('tcp://',
-                                                       'udp://',
-                                                       'file://')):
-                # Logfile is not using Syslog, verify
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user']
-                )
 
         # Setup file logging!
         self.setup_logfile_logger()
