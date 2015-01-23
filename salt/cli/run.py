@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import os
 
 from salt.utils import parsers
-from salt.utils.verify import check_user, verify_env, verify_files
+from salt.utils.verify import check_user
 from salt.exceptions import SaltClientError
 
 
@@ -20,24 +20,6 @@ class SaltRun(parsers.SaltRunOptionParser):
         '''
         import salt.runner
         self.parse_args()
-
-        if self.config['verify_env']:
-            verify_env([
-                    self.config['pki_dir'],
-                    self.config['cachedir'],
-                ],
-                self.config['user'],
-                permissive=self.config['permissive_pki_access'],
-                pki_dir=self.config['pki_dir'],
-            )
-            if not self.config['log_file'].startswith(('tcp://',
-                                                       'udp://',
-                                                       'file://')):
-                # Logfile is not using Syslog, verify
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user']
-                )
 
         # Setup file logging!
         self.setup_logfile_logger()
