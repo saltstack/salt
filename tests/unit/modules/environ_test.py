@@ -34,11 +34,11 @@ class EnvironTestCase(TestCase):
         on success.
         '''
         mock = MagicMock(return_value=None)
-        with patch.object(os.environ, 'pop', mock):
+        with patch.dict(os.environ, {}):
             self.assertEqual(environ.setval('key', False, True), None)
 
         mock = MagicMock(side_effect=Exception())
-        with patch.object(os.environ, 'pop', mock):
+        with patch.dict(os.environ, {}):
             self.assertFalse(environ.setval('key', False, True))
 
         mock_environ = {}
