@@ -4,7 +4,12 @@ Starting or restarting of services and daemons
 ==============================================
 
 Services are defined as system daemons typically started with system init or
-rc scripts, services can be defined as running or dead.
+rc scripts.  Services can be defined as running or dead.
+
+.. note::
+    The current status of a service is determined by the return code of the init/rc
+    script status command. A status return code of 0 it is considered running.  Any
+    other return code is considered dead.
 
 .. code-block:: yaml
 
@@ -38,6 +43,8 @@ service, then set the reload value to True:
     :doc:`Requisites </ref/states/requisites>` documentation.
 
 '''
+
+import time
 
 
 def __virtual__():
@@ -254,7 +261,7 @@ def _available(name, ret):
     return avail
 
 
-def running(name, enable=None, sig=None, **kwargs):
+def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     '''
     Verify that the service is running
 
@@ -268,6 +275,14 @@ def running(name, enable=None, sig=None, **kwargs):
 
     sig
         The string to search for when looking for the service process with ps
+
+    init_delay
+        Some services may not be truly available for a short period after their
+        startup script indicates to the system that they are. Provide an 'init_delay'
+        to specify that this state should wait an additional given number of seconds
+        after a service has started before returning. Useful for requisite states
+        wherein a dependent state might assume a service has started but is not yet
+        fully initialized.
     '''
     ret = {'name': name,
            'changes': {},
@@ -310,6 +325,9 @@ def running(name, enable=None, sig=None, **kwargs):
             ret['comment'] = 'Service {0} failed to start'.format(name)
             return ret
 
+    if init_delay:
+        time.sleep(init_delay)
+
     if enable is True:
         return _enable(name, True, **kwargs)
     elif enable is False:
@@ -317,6 +335,8 @@ def running(name, enable=None, sig=None, **kwargs):
     else:
         ret['changes'] = changes
         ret['comment'] = 'Started Service {0}'.format(name)
+        if init_delay:
+            ret['changes'] = '{0}\nDelayed return for {1} seconds'.format(ret['commant'], init_delay)
         return ret
 
 

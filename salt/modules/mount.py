@@ -60,15 +60,17 @@ def _active_mountinfo(ret):
             device = comps[2].split(':')
             # each line can have any number of
             # optional parameters, we use the
-            # location of the seperator field to
+            # location of the separator field to
             # determine the location of the elements
             # after it.
             _sep = comps.index('-')
             device_name = comps[_sep + 2]
             device_uuid = None
+            device_label = None
             if device_name:
                 device_uuid = blkid_info.get(device_name, {}).get('UUID')
                 device_uuid = device_uuid and device_uuid.lower()
+                device_label = blkid_info.get(device_name, {}).get('LABEL')
             ret[comps[4]] = {'mountid': comps[0],
                              'parentid': comps[1],
                              'major': device[0],
@@ -79,7 +81,8 @@ def _active_mountinfo(ret):
                              'device': device_name,
                              'alt_device': _list.get(comps[4], None),
                              'superopts': comps[_sep + 3].split(','),
-                             'device_uuid': device_uuid}
+                             'device_uuid': device_uuid,
+                             'device_label': device_label}
     return ret
 
 
@@ -188,6 +191,79 @@ def active(extended=False):
     return ret
 
 
+class _fstab_entry(object):
+    '''
+    Utility class for manipulating fstab entries. Primarily we're parsing,
+    formating, and comparing lines. Parsing emits dicts expected from
+    fstab() or raises a ValueError.
+
+    Note: We'll probably want to use os.normpath and os.normcase on 'name'
+    '''
+
+    class ParseError(ValueError):
+        '''Error raised when a line isn't parsible as an fstab entry'''
+
+    fstab_keys = ('device', 'name', 'fstype', 'opts', 'dump', 'pass_num')
+
+    # preserve data format
+    compatibility_keys = ('device', 'name', 'fstype', 'opts', 'dump', 'pass')
+
+    fstab_format = '{device}\t\t{name}\t{fstype}\t{opts}\t{dump} {pass_num}\n'
+
+    @classmethod
+    def dict_from_line(cls, line, keys=fstab_keys):
+        if len(keys) != 6:
+            raise ValueError('Invalid key array: {0}'.format(keys))
+        if line.startswith('#'):
+            raise cls.ParseError("Comment!")
+
+        comps = line.split()
+        if len(comps) != 6:
+            raise cls.ParseError("Invalid Entry!")
+
+        return dict(zip(keys, comps))
+
+    @classmethod
+    def from_line(cls, *args, **kwargs):
+        return cls(** cls.dict_from_line(*args, **kwargs))
+
+    @classmethod
+    def dict_to_line(cls, entry):
+        return cls.fstab_format.format(**entry)
+
+    def __str__(self):
+        '''string value, only works for full repr'''
+        return self.dict_to_line(self.criteria)
+
+    def __repr__(self):
+        '''always works'''
+        return str(self.criteria)
+
+    def pick(self, keys):
+        '''returns an instance with just those keys'''
+        subset = dict(map(lambda key: (key, self.criteria[key]), keys))
+        return self.__class__(**subset)
+
+    def __init__(self, **criteria):
+        '''Store non-empty, non-null values to use as filter'''
+        items = filter(lambda (key, value): value is not None, criteria.items())
+        items = map(lambda (key, value): (key, str(value)), items)
+        self.criteria = dict(items)
+
+    @staticmethod
+    def norm_path(path):
+        '''Resolve equivalent paths equivalently'''
+        return os.path.normcase(os.path.normpath(path))
+
+    def match(self, line):
+        '''compare potentially partial criteria against line'''
+        entry = self.dict_from_line(line)
+        for key, value in self.criteria.items():
+            if entry[key] != value:
+                return False
+        return True
+
+
 def fstab(config='/etc/fstab'):
     '''
     List the contents of the fstab
@@ -203,21 +279,16 @@ def fstab(config='/etc/fstab'):
         return ret
     with salt.utils.fopen(config) as ifile:
         for line in ifile:
-            if line.startswith('#'):
-                # Commented
-                continue
-            if not line.strip():
-                # Blank line
-                continue
-            comps = line.split()
-            if len(comps) != 6:
-                # Invalid entry
-                continue
-            ret[comps[1]] = {'device': comps[0],
-                             'fstype': comps[2],
-                             'opts': comps[3].split(','),
-                             'dump': comps[4],
-                             'pass': comps[5]}
+            try:
+                entry = _fstab_entry.dict_from_line(
+                    line,
+                    _fstab_entry.compatibility_keys)
+
+                entry['opts'] = entry['opts'].split(',')
+                ret[entry.pop('name')] = entry
+            except _fstab_entry.ParseError:
+                pass
+
     return ret
 
 
@@ -231,45 +302,37 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
         salt '*' mount.rm_fstab /mnt/foo
     '''
-    contents = fstab(config)
-    if name not in contents:
-        return True
-    # The entry is present, get rid of it
+    modified = False
+
+    criteria = _fstab_entry(name=name, device=device)
+
     lines = []
     try:
         with salt.utils.fopen(config, 'r') as ifile:
             for line in ifile:
-                if line.startswith('#'):
-                    # Commented
+                try:
+                    if criteria.match(line):
+                        modified = True
+                    else:
+                        lines.append(line)
+
+                except _fstab_entry.ParseError:
                     lines.append(line)
-                    continue
-                if not line.strip():
-                    # Blank line
-                    lines.append(line)
-                    continue
-                comps = line.split()
-                if len(comps) != 6:
-                    # Invalid entry
-                    lines.append(line)
-                    continue
-                comps = line.split()
-                if device:
-                    if comps[1] == name and comps[0] == device:
-                        continue
-                else:
-                    if comps[1] == name:
-                        continue
-                lines.append(line)
+
     except (IOError, OSError) as exc:
         msg = "Couldn't read from {0}: {1}"
         raise CommandExecutionError(msg.format(config, str(exc)))
 
-    try:
-        with salt.utils.fopen(config, 'w+') as ofile:
-            ofile.writelines(lines)
-    except (IOError, OSError) as exc:
-        msg = "Couldn't write to {0}: {1}"
-        raise CommandExecutionError(msg.format(config, str(exc)))
+    if modified:
+        try:
+            with salt.utils.fopen(config, 'w+') as ofile:
+                ofile.writelines(lines)
+        except (IOError, OSError) as exc:
+            msg = "Couldn't write to {0}: {1}"
+            raise CommandExecutionError(msg.format(config, str(exc)))
+
+    # Note: not clear why we always return 'True'
+    # --just copying previous behavior at this point...
     return True
 
 
@@ -282,6 +345,7 @@ def set_fstab(
         pass_num=0,
         config='/etc/fstab',
         test=False,
+        match_on='auto',
         **kwargs):
     '''
     Verify that this mount is represented in the fstab, change the mount
@@ -293,66 +357,89 @@ def set_fstab(
 
         salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
+
     # Fix the opts type if it is a list
     if isinstance(opts, list):
         opts = ','.join(opts)
-    lines = []
-    change = False
-    present = False
 
+    # preserve arguments for updating
+    entry_args = dict(vars())
+    map(entry_args.pop, ['test', 'config', 'match_on', 'kwargs'])
+
+    lines = []
+    ret = None
+
+    # Transform match_on into list--items will be checked later
+    if isinstance(match_on, list):
+        pass
+    elif not isinstance(match_on, string_types):
+        msg = 'match_on must be a string or list of strings'
+        raise CommandExecutionError(msg)
+    elif match_on == 'auto':
+        # Try to guess right criteria for auto....
+        # NOTE: missing some special fstypes here
+        specialFSes = frozenset([
+            'tmpfs',
+            'sysfs',
+            'proc',
+            'fusectl',
+            'debugfs',
+            'securityfs',
+            'devtmpfs',
+            'cgroup'])
+
+        if fstype in specialFSes:
+            match_on = ['name']
+        else:
+            match_on = ['device']
+    else:
+        match_on = [match_on]
+
+    # generate entry and criteria objects, handle invalid keys in match_on
+    entry = _fstab_entry(**entry_args)
+    try:
+        criteria = entry.pick(match_on)
+
+    except KeyError:
+        filterFn = lambda key: key not in _fstab_entry.fstab_keys
+        invalid_keys = filter(filterFn, match_on)
+
+        msg = 'Unrecognized keys in match_on: "{0}"'.format(invalid_keys)
+        raise CommandExecutionError(msg)
+
+    # parse file, use ret to cache status
     if not os.path.isfile(config):
         raise CommandExecutionError('Bad config file "{0}"'.format(config))
 
     try:
         with salt.utils.fopen(config, 'r') as ifile:
             for line in ifile:
-                if line.startswith('#'):
-                    # Commented
+                try:
+                    if criteria.match(line):
+                        # Note: If ret isn't None here,
+                        # we've matched multiple lines
+                        ret = 'present'
+                        if entry.match(line):
+                            lines.append(line)
+                        else:
+                            ret = 'change'
+                            lines.append(str(entry))
+                    else:
+                        lines.append(line)
+
+                except _fstab_entry.ParseError:
                     lines.append(line)
-                    continue
-                if not line.strip():
-                    # Blank line
-                    lines.append(line)
-                    continue
-                comps = line.split()
-                if len(comps) != 6:
-                    # Invalid entry
-                    lines.append(line)
-                    continue
-                if comps[1] == name and comps[0] == device:
-                    # check to see if there are changes
-                    # and fix them if there are any
-                    present = True
-                    if comps[2] != fstype:
-                        change = True
-                        comps[2] = fstype
-                    if comps[3] != opts:
-                        change = True
-                        comps[3] = opts
-                    if comps[4] != str(dump):
-                        change = True
-                        comps[4] = str(dump)
-                    if comps[5] != str(pass_num):
-                        change = True
-                        comps[5] = str(pass_num)
-                    if change:
-                        log.debug(
-                            'fstab entry for mount point {0} needs to be '
-                            'updated'.format(name)
-                        )
-                        newline = (
-                            '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(
-                                device, name, fstype, opts, dump, pass_num
-                            )
-                        )
-                        lines.append(newline)
-                else:
-                    lines.append(line)
+
     except (IOError, OSError) as exc:
         msg = 'Couldn\'t read from {0}: {1}'
         raise CommandExecutionError(msg.format(config, str(exc)))
 
-    if change:
+    # add line if not present or changed
+    if ret is None:
+        lines.append(str(entry))
+        ret = 'new'
+
+    if ret != 'present':  # ret in ['new', 'change']:
         if not salt.utils.test_mode(test=test, **kwargs):
             try:
                 with salt.utils.fopen(config, 'w+') as ofile:
@@ -362,33 +449,7 @@ def set_fstab(
                 msg = 'File not writable {0}'
                 raise CommandExecutionError(msg.format(config))
 
-        return 'change'
-
-    if not change:
-        if present:
-            # The right entry is already here
-            return 'present'
-        else:
-            if not salt.utils.test_mode(test=test, **kwargs):
-                # The entry is new, add it to the end of the fstab
-                newline = '{0}\t\t{1}\t{2}\t{3}\t{4} {5}\n'.format(device,
-                                                                   name,
-                                                                   fstype,
-                                                                   opts,
-                                                                   dump,
-                                                                   pass_num)
-                lines.append(newline)
-                try:
-                    with salt.utils.fopen(config, 'w+') as ofile:
-                        # The line was changed, commit it!
-                        ofile.writelines(lines)
-                except (IOError, OSError):
-                    raise CommandExecutionError(
-                        'File not writable {0}'.format(
-                            config
-                        )
-                    )
-    return 'new'
+    return ret
 
 
 def rm_automaster(name, device, config='/etc/auto_salt'):
@@ -521,11 +582,11 @@ def set_automaster(
                         log.debug(
                             'auto_master entry for mount point {0} needs to be '
                             'updated'.format(name)
-                        )
+                       )
                         newline = (
                             '{0}\t{1}\t{2}\n'.format(
                                 name, type_opts, device_fmt)
-                        )
+                       )
                         lines.append(newline)
                 else:
                     lines.append(line)
@@ -555,7 +616,7 @@ def set_automaster(
                 newline = (
                     '{0}\t{1}\t{2}\n'.format(
                         name, type_opts, device_fmt)
-                )
+               )
                 lines.append(newline)
                 try:
                     with salt.utils.fopen(config, 'w+') as ofile:
@@ -565,8 +626,8 @@ def set_automaster(
                     raise CommandExecutionError(
                         'File not writable {0}'.format(
                             config
-                        )
-                    )
+                       )
+                   )
     return 'new'
 
 

@@ -143,7 +143,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
     rule = ''
     proto = False
-    bang_not_pat = re.compile(r'[!|not]\s?')
+    bang_not_pat = re.compile(r'(!|not)\s?')
 
     if 'if' in kwargs:
         if kwargs['if'].startswith('!') or kwargs['if'].startswith('not'):
@@ -296,6 +296,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     if 'set-mark' in kwargs:
         after_jump.append('--set-mark {0} '.format(kwargs['set-mark']))
         del kwargs['set-mark']
+
+    if 'set-xmark' in kwargs:
+        after_jump.append('--set-xmark {0} '.format(kwargs['set-xmark']))
+        del kwargs['set-xmark']
 
     for item in kwargs:
         if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):

@@ -13,6 +13,7 @@ import shutil
 import fnmatch
 import hashlib
 import json
+import copy
 import logging
 from salt.ext.six.moves import input
 
@@ -427,6 +428,71 @@ class KeyCLI(object):
             self.finger_all()
         else:
             self.list_all()
+
+
+class MultiKeyCLI(KeyCLI):
+    '''
+    Manage multiple key backends from the CLI
+    '''
+    def __init__(self, opts):
+        opts['__multi_key'] = True
+        super(MultiKeyCLI, self).__init__(opts)
+        # Remove the key attribute set in KeyCLI.__init__
+        delattr(self, 'key')
+        zopts = copy.copy(opts)
+        ropts = copy.copy(opts)
+        self.keys = {}
+        zopts['transport'] = 'zeromq'
+        self.keys['ZMQ Keys'] = KeyCLI(zopts)
+        ropts['transport'] = 'raet'
+        self.keys['RAET Keys'] = KeyCLI(ropts)
+
+    def _call_all(self, fun, *args):
+        '''
+        Call the given function on all backend keys
+        '''
+        for kback in self.keys:
+            print(kback)
+            getattr(self.keys[kback], fun)(*args)
+
+    def list_status(self, status):
+        self._call_all('list_status', status)
+
+    def list_all(self):
+        self._call_all('list_all')
+
+    def accept(self, match, include_rejected=False):
+        self._call_all('accept', match, include_rejected)
+
+    def accept_all(self, include_rejected=False):
+        self._call_all('accept_all', include_rejected)
+
+    def delete(self, match):
+        self._call_all('delete', match)
+
+    def delete_all(self):
+        self._call_all('delete_all')
+
+    def reject(self, match, include_accepted=False):
+        self._call_all('reject', match, include_accepted)
+
+    def reject_all(self, include_accepted=False):
+        self._call_all('reject_all', include_accepted)
+
+    def print_key(self, match):
+        self._call_all('print_key', match)
+
+    def print_all(self):
+        self._call_all('print_all')
+
+    def finger(self, match):
+        self._call_all('finger', match)
+
+    def finger_all(self):
+        self._call_all('finger_all')
+
+    def prep_signature(self):
+        self._call_all('prep_signature')
 
 
 class Key(object):

@@ -962,7 +962,7 @@ class TimeoutMixIn(object):
             type=int,
             default=self.default_timeout,
             help=('Change the timeout, if applicable, for the running '
-                  'command; default=%default')
+                  'command (in seconds); default=%default')
         )
 
 
@@ -1596,6 +1596,13 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             metavar='METADATA',
             help=('Pass metadata into Salt, used to search jobs.')
         )
+        self.add_option(
+            '--output-diff',
+            dest='state_output_diff',
+            action='store_true',
+            default=False,
+            help=('Report only those states that have changed')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:
@@ -2103,6 +2110,13 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             type=int,
             help=('Change the timeout, if applicable, for the running '
                   'command; default=60')
+        )
+        self.add_option(
+            '--output-diff',
+            dest='state_output_diff',
+            action='store_true',
+            default=False,
+            help=('Report only those states that have changed')
         )
 
     def _mixin_after_parsed(self):

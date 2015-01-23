@@ -7,13 +7,9 @@ A module to wrap (non-Windows) archive calls
 from __future__ import absolute_import
 import os
 
-
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.ext.six import string_types
-from salt.utils import \
-    which as _which, which_bin as _which_bin, is_windows as _is_windows
-import salt.utils.decorators as decorators
+from salt.ext.six import string_types, integer_types
 import salt.utils
 
 # TODO: Check that the passed arguments are correct
@@ -33,17 +29,18 @@ except ImportError:
 
 
 def __virtual__():
-    if _is_windows():
+    if salt.utils.is_windows():
         return HAS_ZIPFILE
     commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
     # If none of the above commands are in $PATH this module is a no-go
-    if not any(_which(cmd) for cmd in commands):
+    if not any(salt.utils.which(cmd) for cmd in commands):
         return False
     return True
 
 
-@decorators.which('tar')
-def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runas=None):
+@salt.utils.decorators.which('tar')
+def tar(options, tarfile, sources=None, dest=None,
+        cwd=None, template=None, runas=None):
     '''
     .. note::
 
@@ -64,7 +61,7 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
 
     sources
         Comma delimited list of files to **pack** into the tarfile. Can also be
-        passed as a python list.
+        passed as a Python list.
 
     dest
         The destination directory into which to **unpack** the tarfile
@@ -114,7 +111,7 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
                                python_shell=False).splitlines()
 
 
-@decorators.which('gzip')
+@salt.utils.decorators.which('gzip')
 def gzip(sourcefile, template=None, runas=None):
     '''
     Uses the gzip command to create gzip files
@@ -141,7 +138,7 @@ def gzip(sourcefile, template=None, runas=None):
                                python_shell=False).splitlines()
 
 
-@decorators.which('gunzip')
+@salt.utils.decorators.which('gunzip')
 def gunzip(gzipfile, template=None, runas=None):
     '''
     Uses the gunzip command to unpack gzip files
@@ -168,18 +165,90 @@ def gunzip(gzipfile, template=None, runas=None):
                                python_shell=False).splitlines()
 
 
-@decorators.which('zip')
-def cmd_zip_(zip_file, sources, template=None,
-             cwd=None, recurse=False, runas=None):
+@salt.utils.decorators.which('zip')
+def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
     '''
-    Uses the zip command to create zip files
+    .. versionadded:: 2015.2.0
+        In versions 2014.7.x and earlier, this function was known as
+        ``archive.zip``.
+
+    Uses the ``zip`` command to create zip files. This command is part of the
+    `Info-ZIP`_ suite of tools, and is typically packaged as simply ``zip``.
+
+    .. _`Info-ZIP`: http://www.info-zip.org/
 
     zip_file
         Path of zip file to be created
 
     sources
         Comma-separated list of sources to include in the zip file. Sources can
-        also be passed in a python list.
+        also be passed in a Python list.
+
+    template : None
+        Can be set to 'jinja' or another supported template engine to render
+        the command arguments before execution:
+
+        .. code-block:: bash
+
+            salt '*' archive.cmd_zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
+
+    cwd : None
+        Use this argument along with relative paths in ``sources`` to create
+        zip files which do not contain the leading directories. If not
+        specified, the zip file will be created as if the cwd was ``/``, and
+        creating a zip file of ``/foo/bar/baz.txt`` will contain the parent
+        directories ``foo`` and ``bar``. To create a zip file containing just
+        ``baz.txt``, the following command would be used:
+
+        .. code-block:: bash
+
+            salt '*' archive.cmd_zip /tmp/baz.zip baz.txt cwd=/foo/bar
+
+        .. versionadded:: 2014.7.1
+
+    runas : None
+        Create the zip file as the specified user. Defaults to the user under
+        which the minion is running.
+
+        .. versionadded:: 2015.2.0
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' archive.cmd_zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
+    '''
+    if isinstance(sources, string_types):
+        sources = [s.strip() for s in sources.split(',')]
+    cmd = ['zip', '-r']
+    cmd.append('{0}'.format(zip_file))
+    cmd.extend(sources)
+    return __salt__['cmd.run'](cmd,
+                               cwd=cwd,
+                               template=template,
+                               runas=runas,
+                               python_shell=False).splitlines()
+
+
+@salt.utils.decorators.depends('zipfile', fallback_function=cmd_zip)
+def zip_(zip_file, sources, template=None, cwd=None, runas=None):
+    '''
+    Uses the ``zipfile`` Python module to create zip files
+
+    .. versionchanged:: 2015.2.0
+        This function was rewritten to use Python's native zip file support.
+        The old functionality has been preserved in the new function
+        :mod:`archive.cmd_zip <salt.modules.archive.cmd_zip>`. For versions
+        2014.7.x and earlier, see the :mod:`archive.cmd_zip
+        <salt.modules.archive.cmd_zip>` documentation.
+
+    zip_file
+        Path of zip file to be created
+
+    sources
+        Comma-separated list of sources to include in the zip file. Sources can
+        also be passed in a Python list.
 
     template : None
         Can be set to 'jinja' or another supported template engine to render
@@ -190,20 +259,21 @@ def cmd_zip_(zip_file, sources, template=None,
             salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
 
     cwd : None
-        Run the zip command from the specified directory. Use this argument
-        along with relative file paths to create zip files which do not
-        contain the leading directories. If not specified, this will default
-        to the home directory of the user under which the salt minion process
-        is running.
+        Use this argument along with relative paths in ``sources`` to create
+        zip files which do not contain the leading directories. If not
+        specified, the zip file will be created as if the cwd was ``/``, and
+        creating a zip file of ``/foo/bar/baz.txt`` will contain the parent
+        directories ``foo`` and ``bar``. To create a zip file containing just
+        ``baz.txt``, the following command would be used:
 
-        .. versionadded:: 2014.7.1
+        .. code-block:: bash
 
-    recurse : False
-        Recursively include contents of sources which are directories. Combine
-        this with the ``cwd`` argument and use relative paths for the sources
-        to create a zip file which does not contain the leading directories.
+            salt '*' archive.zip /tmp/baz.zip baz.txt cwd=/foo/bar
 
-        .. versionadded:: 2014.7.1
+    runas : None
+        Create the zip file as the specified user. Defaults to the user under
+        which the minion is running.
+
 
     CLI Example:
 
@@ -211,69 +281,106 @@ def cmd_zip_(zip_file, sources, template=None,
 
         salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
     '''
-    if isinstance(sources, string_types):
-        sources = [s.strip() for s in sources.split(',')]
-    cmd = ['zip']
-    if recurse:
-        cmd.append('-r')
-    cmd.append('{0}'.format(zip_file))
-    cmd.extend(sources)
-    return __salt__['cmd.run'](cmd,
-                               cwd=cwd,
-                               template=template,
-                               runas=runas,
-                               python_shell=False).splitlines()
+    if runas:
+        euid = os.geteuid()
+        egid = os.getegid()
+        uinfo = __salt__['user.info'](runas)
+        if not uinfo:
+            raise SaltInvocationError(
+                'User \'{0}\' does not exist'.format(runas)
+            )
 
-
-@decorators.depends('zipfile', fallback_function=cmd_zip_)
-def zip_(archive, sources, template=None, runas=None):
-    '''
-    Uses the zipfile module to create zip files
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' archive.zip /tmp/zipfile.zip /tmp/sourcefile1,/tmp/sourcefile2
-
-    The template arg can be set to 'jinja' or another supported template
-    engine to render the command arguments before execution.
-
-    For example:
-
-    .. code-block:: bash
-
-        salt '*' archive.zip template=jinja /tmp/zipfile.zip /tmp/sourcefile1,/tmp/{{grains.id}}.txt
-
-    '''
-    (archive, sources) = _render_filenames(archive, sources, None, template)
+    zip_file, sources = _render_filenames(zip_file, sources, None, template)
 
     if isinstance(sources, string_types):
-        sources = [s.strip() for s in sources.split(',')]
+        sources = [x.strip() for x in sources.split(',')]
+    elif isinstance(sources, (float, integer_types)):
+        sources = [str(sources)]
 
-    archived_files = []
-    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
+    if not cwd:
         for src in sources:
-            if os.path.exists(src):
-                if os.path.isdir(src):
-                    rel_root = os.path.abspath(os.path.join(src, os.pardir))
-                    for dir_name, sub_dirs, files in os.walk(src):
-                        for filename in files:
-                            abs_name = os.path.abspath(os.path.join(dir_name, filename))
-                            arc_name = os.path.join(os.path.relpath(dir_name, rel_root), filename)
-                            archived_files.append(arc_name)
-                            zf.write(abs_name, arc_name)
-                else:
-                    archived_files.append(src)
-                    zf.write(src)
+            if not os.path.isabs(src):
+                raise SaltInvocationError(
+                    'Relative paths require the \'cwd\' parameter'
+                )
+    else:
+        def _bad_cwd():
+            raise SaltInvocationError('cwd must be absolute')
+        try:
+            if not os.path.isabs(cwd):
+                _bad_cwd()
+        except AttributeError:
+            _bad_cwd()
+
+    if runas and (euid != uinfo['uid'] or egid != uinfo['gid']):
+        # Change the egid first, as changing it after the euid will fail
+        # if the runas user is non-privileged.
+        os.setegid(uinfo['gid'])
+        os.seteuid(uinfo['uid'])
+
+    try:
+        exc = None
+        archived_files = []
+        with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zfile:
+            for src in sources:
+                if cwd:
+                    src = os.path.join(cwd, src)
+                if os.path.exists(src):
+                    if os.path.isabs(src):
+                        rel_root = '/'
+                    else:
+                        rel_root = cwd if cwd is not None else '/'
+                    if os.path.isdir(src):
+                        for dir_name, sub_dirs, files in os.walk(src):
+                            if cwd and dir_name.startswith(cwd):
+                                arc_dir = salt.utils.relpath(dir_name, cwd)
+                            else:
+                                arc_dir = salt.utils.relpath(dir_name,
+                                                             rel_root)
+                            if arc_dir:
+                                archived_files.append(arc_dir + '/')
+                                zfile.write(dir_name, arc_dir)
+                            for filename in files:
+                                abs_name = os.path.join(dir_name, filename)
+                                arc_name = os.path.join(arc_dir, filename)
+                                archived_files.append(arc_name)
+                                zfile.write(abs_name, arc_name)
+                    else:
+                        if cwd and src.startswith(cwd):
+                            arc_name = salt.utils.relpath(src, cwd)
+                        else:
+                            arc_name = salt.utils.relpath(src, rel_root)
+                        archived_files.append(arc_name)
+                        zfile.write(src, arc_name)
+    except Exception as exc:
+        pass
+    finally:
+        # Restore the euid/egid
+        if runas:
+            os.seteuid(euid)
+            os.setegid(egid)
+        if exc is not None:
+            # Wait to raise the exception until euid/egid are restored to avoid
+            # permission errors in writing to minion log.
+            raise CommandExecutionError(
+                'Exception encountered creating zipfile: {0}'.format(exc)
+            )
 
     return archived_files
 
 
-@decorators.which('unzip')
-def cmd_unzip_(zip_file, dest, excludes=None, template=None, options=None, runas=None):
+@salt.utils.decorators.which('unzip')
+def cmd_unzip(zip_file, dest, excludes=None,
+              template=None, options=None, runas=None):
     '''
-    Uses the unzip command to unpack zip files
+    .. versionadded:: 2015.2.0
+        In versions 2014.7.x and earlier, this function was known as
+        ``archive.unzip``.
+
+    Uses the ``unzip`` command to unpack zip files. This command is part of the
+    `Info-ZIP`_ suite of tools, and is typically packaged as simply ``unzip``.
+
+    .. _`Info-ZIP`: http://www.info-zip.org/
 
     zip_file
         Path of zip file to be unpacked
@@ -281,8 +388,9 @@ def cmd_unzip_(zip_file, dest, excludes=None, template=None, options=None, runas
     dest
         The destination directory into which the file should be unpacked
 
-    options : None
-        Options to pass to the ``unzip`` binary
+    excludes : None
+        Comma-separated list of files not to unpack. Can also be passed in a
+        Python list.
 
     template : None
         Can be set to 'jinja' or another supported template engine to render
@@ -290,16 +398,31 @@ def cmd_unzip_(zip_file, dest, excludes=None, template=None, options=None, runas
 
         .. code-block:: bash
 
-            salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
+            salt '*' archive.cmd_unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
+
+    options : None
+        Additional command-line options to pass to the ``unzip`` binary.
+
+    runas : None
+        Unpack the zip file as the specified user. Defaults to the user under
+        which the minion is running.
+
+        .. versionadded:: 2015.2.0
+
+    options : None
+        Additional command-line options to pass to the ``unzip`` binary.
+
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
+        salt '*' archive.cmd_unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     '''
     if isinstance(excludes, string_types):
-        excludes = [entry.strip() for entry in excludes.split(',')]
+        excludes = [x.strip() for x in excludes.split(',')]
+    elif isinstance(excludes, (float, integer_types)):
+        excludes = [str(excludes)]
 
     cmd = ['unzip']
     if options:
@@ -318,50 +441,106 @@ def cmd_unzip_(zip_file, dest, excludes=None, template=None, options=None, runas
         cmd.extend(excludes)
     return __salt__['cmd.run'](cmd,
                                template=template,
+                               runas=runas,
                                python_shell=False).splitlines()
 
 
-@decorators.depends('zipfile', fallback_function=cmd_unzip_)
-def unzip(archive, dest, excludes=None, template=None, options=None, runas=None):
+@salt.utils.decorators.depends('zipfile', fallback_function=cmd_unzip)
+def unzip(zip_file, dest, excludes=None, template=None, runas=None):
     '''
-    Uses the zipfile module to unpack zip files
+    Uses the ``zipfile`` Python module to unpack zip files
 
-    options:
-        Options to pass to the ``unzip`` binary.
+    .. versionchanged:: 2015.2.0
+        This function was rewritten to use Python's native zip file support.
+        The old functionality has been preserved in the new function
+        :mod:`archive.cmd_unzip <salt.modules.archive.cmd_unzip>`. For versions
+        2014.7.x and earlier, see the :mod:`archive.cmd_zip
+        <salt.modules.archive.cmd_zip>` documentation.
+
+    zip_file
+        Path of zip file to be unpacked
+
+    dest
+        The destination directory into which the file should be unpacked
+
+    excludes : None
+        Comma-separated list of files not to unpack. Can also be passed in a
+        Python list.
+
+    template : None
+        Can be set to 'jinja' or another supported template engine to render
+        the command arguments before execution:
+
+        .. code-block:: bash
+
+            salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
+
+    runas : None
+        Unpack the zip file as the specified user. Defaults to the user under
+        which the minion is running.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
-
-    The template arg can be set to 'jinja' or another supported template
-    engine to render the command arguments before execution.
-
-    For example:
-
-    .. code-block:: bash
-
-        salt '*' archive.unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
-
     '''
-    (archive, dest) = _render_filenames(archive, dest, None, template)
-    with zipfile.ZipFile(archive) as zf:
-        files = zf.namelist()
-        if excludes is None:
-            zf.extractall(dest)
-            return files
+    if runas:
+        euid = os.geteuid()
+        egid = os.getegid()
+        uinfo = __salt__['user.info'](runas)
+        if not uinfo:
+            raise SaltInvocationError(
+                'User \'{0}\' does not exist'.format(runas)
+            )
 
-        if not isinstance(excludes, list):
-            excludes = excludes.split(",")
-        cleaned_files = [x for x in files if x not in excludes]
-        for f in cleaned_files:
-            if f not in excludes:
-                zf.extract(f, dest)
-        return cleaned_files
+    zip_file, dest = _render_filenames(zip_file, dest, None, template)
+
+    if runas and (euid != uinfo['uid'] or egid != uinfo['gid']):
+        # Change the egid first, as changing it after the euid will fail
+        # if the runas user is non-privileged.
+        os.setegid(uinfo['gid'])
+        os.seteuid(uinfo['uid'])
+
+    try:
+        exc = None
+        # Define cleaned_files here so that an exception will not prevent this
+        # variable from being defined and cause a NameError in the return
+        # statement at the end of the function.
+        cleaned_files = []
+        with zipfile.ZipFile(zip_file) as zfile:
+            files = zfile.namelist()
+            if excludes is None:
+                zfile.extractall(dest)
+                return files
+
+            if isinstance(excludes, string_types):
+                excludes = [x.strip() for x in excludes.split(',')]
+            elif isinstance(excludes, (float, integer_types)):
+                excludes = [str(excludes)]
+
+            cleaned_files.extend([x for x in files if x not in excludes])
+            for target in cleaned_files:
+                if target not in excludes:
+                    zfile.extract(target, dest)
+    except Exception as exc:
+        pass
+    finally:
+        # Restore the euid/egid
+        if runas:
+            os.seteuid(euid)
+            os.setegid(egid)
+        if exc is not None:
+            # Wait to raise the exception until euid/egid are restored to avoid
+            # permission errors in writing to minion log.
+            raise CommandExecutionError(
+                'Exception encountered unpacking zipfile: {0}'.format(exc)
+            )
+
+    return cleaned_files
 
 
-@decorators.which('rar')
+@salt.utils.decorators.which('rar')
 def rar(rarfile, sources, template=None, cwd=None, runas=None):
     '''
     Uses `rar for Linux`_ to create rar files
@@ -373,7 +552,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
 
     sources
         Comma-separated list of sources to include in the rar file. Sources can
-        also be passed in a python list.
+        also be passed in a Python list.
 
     cwd : None
         Run the rar command from the specified directory. Use this argument
@@ -409,7 +588,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
                                python_shell=False).splitlines()
 
 
-@decorators.which_bin(('unrar', 'rar'))
+@salt.utils.decorators.which_bin(('unrar', 'rar'))
 def unrar(rarfile, dest, excludes=None, template=None, runas=None):
     '''
     Uses `rar for Linux`_ to unpack rar files
@@ -440,7 +619,8 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None):
     if isinstance(excludes, string_types):
         excludes = [entry.strip() for entry in excludes.split(',')]
 
-    cmd = [_which_bin(('unrar', 'rar')), 'x', '-idp', '{0}'.format(rarfile)]
+    cmd = [salt.utils.which_bin(('unrar', 'rar')),
+           'x', '-idp', '{0}'.format(rarfile)]
     if excludes is not None:
         for exclude in excludes:
             cmd.extend(['-x', '{0}'.format(exclude)])

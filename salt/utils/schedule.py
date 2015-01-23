@@ -144,8 +144,26 @@ scheduler to skip this first run and wait until the next scheduled run.
         kwargs:
           test: True
 
-The scheduler also supports scheduling jobs using a cron like format.  This requires the
-python-croniter library.
+The scheduler also supports scheduling jobs using a cron like format.
+This requires the python-croniter library.
+
+    ... versionadded:: Beryllium
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 15
+        until: '12/31/2015 11:59pm'
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+Using the until argument, the Salt scheduler allows you to specify
+an end time for a scheduled job.  If this argument is specified, jobs
+will not run once the specified time has passed.  Time should be specified
+in a format support by the dateutil library.
+This requires the python-dateutil library.
 
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
@@ -579,6 +597,19 @@ class Schedule(object):
             cron = 0
             now = int(time.time())
             time_conflict = False
+
+            if 'until' in data:
+                if not _WHEN_SUPPORTED:
+                    log.error('Missing python-dateutil.'
+                              'Ignoring until.')
+                else:
+                    until__ = dateutil_parser.parse(data['until'])
+                    until = int(time.mktime(until__.timetuple()))
+
+                    if until <= now:
+                        log.debug('Until time has passed '
+                                  'skipping job: {0}.'.format(data['name']))
+                        continue
 
             for item in ['seconds', 'minutes', 'hours', 'days']:
                 if item in data and 'when' in data:

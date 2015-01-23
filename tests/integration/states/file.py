@@ -810,7 +810,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         The tested file contains a line already matching the replacement (no change needed)
         The tested file's content shouldn't change at all
         The tested file's mtime shouldn't change at all
-        No backup file should be created, although backup=False isn't explicitely defined
+        No backup file should be created, although backup=False isn't explicitly defined
         '''
         test_name = 'test_replace_issue_18841_omit_backup'
         path_in = os.path.join(

@@ -5,9 +5,24 @@ Azure Cloud Module
 
 The Azure cloud module is used to control access to Microsoft Azure
 
-Use of this module only requires the ``apikey`` parameter. Set up the cloud
-configuration at ``/etc/salt/cloud.providers`` or
-``/etc/salt/cloud.providers.d/azure.conf``:
+:depends:
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/0.9.0>`_
+:configuration:
+    Required provider parameters:
+
+    * ``apikey``
+    * ``certificate_path``
+    * ``subscription_id``
+
+    A Management Certificate (.pem and .crt files) must be created and the .pem
+    file placed on the same machine that salt-cloud is run from. Information on
+    creating the pem file to use, and uploading the associated cer file can be
+    found at:
+
+    http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
+
+Example ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/azure.conf`` configuration:
 
 .. code-block:: yaml
 
@@ -16,29 +31,24 @@ configuration at ``/etc/salt/cloud.providers`` or
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       certificate_path: /etc/salt/azure.pem
       management_host: management.core.windows.net
-
-Information on creating the pem file to use, and uploading the associated cer
-file can be found at:
-
-http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
 '''
 # pylint: disable=E0102
 
 from __future__ import absolute_import
 
+# Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import pprint
 import time
 
+# Import salt cloud libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 import yaml
 
-
-# Import python libs
-# Import salt cloud libs
 # Import azure libs
 HAS_LIBS = False
 try:
@@ -408,8 +418,47 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
-    return nodes[name]
+    # Find under which cloud service the name is listed, if any
+    service_name = None
+    for service in nodes:
+        if name in nodes[service]["role_instance_list"]:
+            service_name = service
+            break
+    if service_name is None:
+        return {}
+    salt.utils.cloud.cache_node(nodes[service_name], __active_provider_name__, __opts__)
+    return nodes[service_name]
+
+
+def show_service(kwargs=None, conn=None, call=None):
+    '''
+    Show the details from the provider concerning an instance
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_service function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    services = conn.list_hosted_services()
+    for service in services:
+        if kwargs['service_name'] != service.service_name:
+            continue
+        props = service.hosted_service_properties
+        ret = {
+            'affinity_group': props.affinity_group,
+            'date_created': props.date_created,
+            'date_last_modified': props.date_last_modified,
+            'description': props.description,
+            'extended_properties': props.extended_properties,
+            'label': props.label,
+            'location': props.location,
+            'status': props.status,
+        }
+        return ret
+    return None
 
 
 def create(vm_):
@@ -568,7 +617,7 @@ def create(vm_):
         '''
         try:
             conn.get_role(service_name, service_name, vm_["name"])
-            data = show_instance(service_name, call='action')
+            data = show_instance(vm_["name"], call='action')
             if 'url' in data and data['url'] != str(''):
                 return data['url']
         except WindowsAzureMissingResourceError:

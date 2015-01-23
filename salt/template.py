@@ -79,7 +79,7 @@ def compile_template(template,
         try:
             input_data.seek(0)
         except Exception as exp:
-            log.error('error: {0}:\n{1}'.format(exp))
+            log.error('error: {0}'.format(exp))
 
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
@@ -100,11 +100,14 @@ def compile_template(template,
                     ret.seek(0)
                 log.debug('Rendered data from file: {0}:\n{1}'.format(
                     template,
-                    odata))
-                #ret.read()))
-                # makina hotfix
-            except Exception as exp:
-                log.error('error: {0}'.format(exp))
+                    ret.read()))
+                ret.seek(0)
+            except Exception:
+                # ret is not a StringIO, which means it was rendered using
+                # yaml, mako, or another engine which renders to a data
+                # structure. We don't want to log this, so ignore this
+                # exception.
+                pass
     return ret
 
 

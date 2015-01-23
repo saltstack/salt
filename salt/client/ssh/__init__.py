@@ -620,23 +620,9 @@ class Single(object):
         Return the function name and the arg list
         '''
         fun = self.argv[0] if self.argv else ''
-        args = []
-        kws = {}
-        for arg in self.argv[1:]:
-            # FIXME - there is a bug here that will steal a non-keyword argument.
-            # example:
-            #
-            # .. code-block:: bash
-            #
-            #     salt-ssh '*' cmd.run_all 'n=$((RANDOM%8)); exit $n'
-            #
-            # The 'n=' appears to be a keyword argument, but it is
-            # simply the argument!
-            if re.match(r'\w+=', arg):
-                (key, val) = arg.split('=', 1)
-                kws[key] = val
-            else:
-                args.append(arg)
+        parsed = salt.utils.args.parse_input(self.argv[1:], condition=False)
+        args = parsed[0]
+        kws = parsed[1]
         return fun, args, kws
 
     def _escape_arg(self, arg):
@@ -877,23 +863,6 @@ ARGS = {9}\n'''.format(self.minion_config,
         )
 
         return cmd
-
-    def cmd(self):
-        '''
-        Prepare the pre-check command to send to the subsystem
-        '''
-        if self.fun.startswith('state.highstate'):
-            self.highstate_seed()
-        elif self.fun.startswith('state.sls'):
-            args, kwargs = salt.minion.load_args_and_kwargs(
-                self.sls_seed,
-                salt.utils.args.parse_input(self.args)
-            )
-            self.sls_seed(*args, **kwargs)
-        cmd_str = self._cmd_str()
-
-        for stdout, stderr, retcode in self.shell.exec_nb_cmd(cmd_str):
-            yield stdout, stderr, retcode
 
     def shim_cmd(self, cmd_str):
         '''

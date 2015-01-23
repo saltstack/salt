@@ -289,39 +289,45 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **
     .. code-block:: bash
 
         salt '*' lvm.lvcreate new_volume_name vg_name size=10G
-        salt '*' lvm.lvcreate new_volume_name vg_name extents=100 /dev/sdb
+        salt '*' lvm.lvcreate new_volume_name vg_name extents=100 pv=/dev/sdb
         salt '*' lvm.lvcreate new_snapshot    vg_name snapshot=volume_name size=3G
     '''
     if size and extents:
-        return 'Error: Please specify only size or extents'
+        return 'Error: Please specify only one of size or extents'
 
     valid = ('activate', 'chunksize', 'contiguous', 'discards', 'stripes',
              'stripesize', 'minor', 'persistent', 'mirrors', 'noudevsync',
              'monitor', 'ignoremonitoring', 'permission', 'poolmetadatasize',
              'readahead', 'regionsize', 'thin', 'thinpool', 'type',
              'virtualsize', 'zero')
-    no_parameter = ('noudevsync', 'ignoremonitoring')
-    extra_arguments = [
-        '--{0}'.format(k) if k in no_parameter else '--{0} {1}'.format(k, v)
-        for k, v in six.iteritems(kwargs) if k in valid
-    ]
+    no_parameter = ('noudevsync', 'ignoremonitoring', )
 
-    cmd = ['lvcreate', '-n', lvname]
+    extra_arguments = []
+    if kwargs:
+        for k, v in six.iteritems(kwargs):
+            if k in no_parameter:
+                extra_arguments.append('--{0}'.format(k))
+            elif k in valid:
+                extra_arguments.extend(['--{0}'.format(k), '{0}'.format(v)])
+
+    cmd = [salt.utils.which('lvcreate'), '-n', lvname]
 
     if snapshot:
-        cmd += ['-s', '{0}/{1}'.format(vgname, snapshot)]
+        cmd.extend(['-s', '{0}/{1}'.format(vgname, snapshot)])
     else:
         cmd.append(vgname)
 
     if size:
-        cmd += ['-L', size]
+        cmd.extend(['-L', '{0}'.format(size)])
     elif extents:
-        cmd += ['-l', extents]
+        cmd.extend(['-l', '{0}'.format(extents)])
     else:
         return 'Error: Either size or extents must be specified'
 
-    cmd.append(pv)
-    cmd += extra_arguments
+    if pv:
+        cmd.append(pv)
+    if extra_arguments:
+        cmd.extend(extra_arguments)
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)
