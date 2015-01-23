@@ -108,7 +108,6 @@ class Runner(RunnerClient):
         super(Runner, self).__init__(opts)
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
     def print_docs(self):
         '''
@@ -149,30 +148,15 @@ class Runner(RunnerClient):
                              'This execution is running under tag {tag}'.format(**async_pub))
                     return async_pub['jid']  # return the jid
 
-                # otherwise run it in a thread, so you can stop it *and* so we
-                # can see raw "print" (the builtin)
+                # otherwise run it in the main process
                 async_pub = self._gen_async_pub()
-                t = threading.Thread(target=self._proc_function,
-                                     args=(self.opts['fun'],
+                ret = self._proc_function(self.opts['fun'],
                                            low,
                                            user,
                                            async_pub['tag'],
                                            async_pub['jid'],
                                            False,  # Don't daemonize
-                                           ))
-                # Daemon thread, so if someone throws a keyboard exception
-                # we will stop execution in the thread
-                t.daemon = True
-                t.start()
-
-                # output rets if you have some
-                for suffix, event in self.get_async_returns(async_pub['tag'], event=self.event):
-                    if not self.opts.get('quiet', False):
-                        self.print_async_event(suffix, event)
-                    if suffix == 'ret':
-                        ret = event['return']
-                t.join()
-
+                                           )
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 if not self.opts.get('quiet', False):
