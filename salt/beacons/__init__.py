@@ -2,10 +2,9 @@
 '''
 This package contains the loader modules for the salt streams system
 '''
-
 # Import salt libs
 import salt.loader
-import salt.utils.odict
+
 
 class Beacon(object):
     '''
@@ -28,9 +27,14 @@ class Beacon(object):
                     - /etc/fstab
                     - /var/cache/foo/*
         '''
-        ret = salt.utils.odict.OrderedDict()
+        ret = []
         for mod in config:
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
-                ret[mod] = self.beacons[fun_str](config[mod])
+                tag = 'salt/beacon/{0}/{1}/'.format(self.opts['id'], mod)
+                raw = self.beacons[fun_str](config[mod])
+                for data in raw:
+                    if 'tag' in data:
+                        tag += data.pop('tag')
+                    ret.append({'tag': tag, 'data': data})
         return ret
