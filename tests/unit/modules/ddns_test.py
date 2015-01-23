@@ -3,6 +3,13 @@
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
 
+
+# Import python libs
+import dns.query
+import dns.tsigkeyring
+import json
+
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
@@ -16,22 +23,11 @@ from salttesting.mock import (
 # Import Salt Libs
 from salt.modules import ddns
 
-try:
-    import dns.query
-    import dns.tsigkeyring
-    dns_support = True
-except ImportError as e:
-    dns_support = False
-
-import json
 # Globals
 ddns.__grains__ = {}
 ddns.__salt__ = {}
 
 
-@skipIf(True, 'mocking dnspython without depending on it being installed'
-        'requires more effort than unit testing the ddns module may be worth'
-        'at this point.  An integration test would be easy though.')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DDNSTestCase(TestCase):
     '''
