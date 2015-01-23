@@ -1307,7 +1307,6 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            ret['result'] = None
             ret['changes'] = __salt__['file.check_managed_changes'](
                 name,
                 source,
@@ -1322,6 +1321,10 @@ def managed(name,
                 contents,
                 **kwargs
             )
+            if not ret['changes']:
+                ret['result'] = True
+            else:
+                ret['result'] = None
 
             if ret['changes']:
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
