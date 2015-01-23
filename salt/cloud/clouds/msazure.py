@@ -37,20 +37,17 @@ Example ``/etc/salt/cloud.providers`` or
 from __future__ import absolute_import
 from __future__ import absolute_import
 
+# Import python libs
 import copy
 import logging
 import pprint
 import time
 
+# Import salt libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
-from salt.modules.boto_route53 import _wait_for_sync
 import salt.utils.cloud
 
-
-# Import python libs
-# Import python libs
-# Import salt cloud libs
 # Import azure libs
 HAS_LIBS = False
 try:
