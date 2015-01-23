@@ -250,7 +250,7 @@ def _verify_dulwich(quiet=False):
             'the installed version of Dulwich is earlier than {0}. Version {1} '
             'detected.'.format(dulwich_minver_str, dulwich.__version__)
         )
-        
+
         if HAS_PYGIT2 and not quiet:
             errors.append(_RECOMMEND_PYGIT2)
         if HAS_GITPYTHON and not quiet:
