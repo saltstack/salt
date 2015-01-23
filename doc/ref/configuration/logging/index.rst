@@ -163,7 +163,7 @@ at the ``debug`` level:
 .. code-block:: yaml
 
   log_granular_levels:
-    'salt': 'warning',
+    'salt': 'warning'
     'salt.modules': 'debug'
 
 
