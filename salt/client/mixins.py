@@ -7,7 +7,6 @@ from __future__ import absolute_import
 import collections
 import logging
 import traceback
-import time
 import multiprocessing
 import weakref
 
