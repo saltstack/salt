@@ -334,7 +334,7 @@ def bootstrap(vm_, opts):
     )
 
     # NOTE: deploy_kwargs is also used to pass inline_script variable content
-    # to run_inline_script function
+    #       to run_inline_script function
     deploy_kwargs = {
         'opts': opts,
         'host': vm_['ssh_host'],
