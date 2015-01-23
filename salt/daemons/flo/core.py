@@ -424,9 +424,9 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                    rejected = all([remote.acceptance == raeting.acceptances.rejected
-                                    for remote in stack.remotes.values()
-                                    if remote.kind == kinds.applKinds.master])
+                rejected = all([remote.acceptance == raeting.acceptances.rejected
+                                for remote in stack.remotes.values()
+                                if remote.kind == kinds.applKinds.master])
             else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
@@ -1089,7 +1089,6 @@ class SaltRaetRouterMaster(SaltRaetRouter):
                 self.lane_stack.value.transmit(msg,
                                                self.lane_stack.value.fetchUidByName(next(self.workers.value)))
 
-
     def _process_lane_rxmsg(self, msg, sender):
         '''
         Send uxd messages tot he right queue or forward them to the correct
@@ -1306,7 +1305,7 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
                'pillar_refresh': '.salt.var.pillar_refresh',
                'lane_stack': '.salt.lane.manor.stack',
                'road_stack': '.salt.road.manor.stack',
-               'availables': '.salt.var.presence.availables',}
+               'availables': '.salt.var.presence.availables', }
 
     def _register_event_yard(self, msg):
         '''
