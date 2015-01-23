@@ -356,7 +356,7 @@ class PyDSLRendererTestCase(TestCase):
                 '''))
             write_to(os.path.join(dirpath, 'bbb.sls'), textwrap.dedent(
                 '''
-                # {{ salt['state.sls']('ccc')
+                # {{ salt['state.sls']('ccc') }}
                 test:
                   cmd.run:
                     - name: echo bbbbbbb
@@ -406,14 +406,7 @@ class PyDSLRendererTestCase(TestCase):
             shutil.rmtree(dirpath, ignore_errors=True)
 
 
-class PyDSLRendererSandboxTestCase(TestCase):
-    '''
-    Multiple instantions of HighState across multiple tests will
-    cause major problems because the class var that controls the
-    highstate stack will be clobbered. The easiest solution is to
-    break these tests into their own classes, where possible. This
-    avoids the setUp/tearDown routines which can cause flaky tests.
-    '''
+class PyDSLRendererIncludeTestCase(TestCase):
 
     def test_rendering_includes(self):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
