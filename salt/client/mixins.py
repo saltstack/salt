@@ -350,6 +350,7 @@ class AsyncClientMixin(object):
             print(self.outputters[event['outputter']](event['data']))
         # otherwise fall back on basic printing
         else:
-            event.pop('_stamp')  # remove the timestamp before printing
+            if '_stamp' in event:
+                event.pop('_stamp')  # remove the timestamp before printing
             print('{tag}: {event}'.format(tag=suffix,
                                           event=event))
