@@ -1201,6 +1201,43 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
                     )
 
 
+class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
+    '''
+    Create the Beacon subsystem
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'beacon': '.salt.beacon'}
+
+    def action(self):
+        '''
+        Run the beacons
+        '''
+        self.beacon.value = salt.beacons.Beacon(self.opts.value)
+
+
+class SaltRaetBeacon(ioflo.base.deeding.Deed):
+    '''
+    Run the beacons
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'modules': '.salt.loader.modules',
+               'master_events': '.salt.var.master_events',
+               'beacon': '.salt.beacon'}
+
+    def action(self):
+        '''
+        Run the beacons
+        '''
+        if 'config.merge' in self.modules.value:
+            b_conf = self.modules.value['config.merge']('beacons')
+            if b_conf:
+                try:
+                    self.master_events.deck.extend(self.beacons.process(b_conf))
+                except Exception:
+                    log.error('Error in the beacon system: ', exec_info=True)
+        return []
+
+
 class SaltRaetNixJobber(ioflo.base.deeding.Deed):
     '''
     Execute a function call job on a minion on a *nix based system
