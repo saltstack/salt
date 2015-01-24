@@ -204,7 +204,7 @@ class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
         Populate loads from masters in stack.remotes
         '''
         if self.opts.value.get('cluster_mode'):
-            for remote in self.stack.value.remotes.values():
+            for remote in six.itervalues(self.stack.value.remotes):
                 if remote.kind == kinds.applKinds.master:
                     self.masters.value[remote.name] = odict(load=0.0, expire=self.store.stamp)
 
@@ -466,7 +466,7 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            for remote in stack.remotes.values():
+            for remote in six.itervalues(stack.remotes):
                 if remote.kind == kinds.applKinds.master:
                     stack.allow(uid=remote.uid, timeout=0.0)
 
@@ -1003,7 +1003,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
         if not master or not master.alived:  # select a different master
             available_masters = [remote for remote in
-                                 self.road_stack.value.remotes.values()
+                                 six.Iterator(self.road_stack.value.remotes)
                                                        if remote.alived]
             if available_masters:
                 random_master = opts.get('random_master')
