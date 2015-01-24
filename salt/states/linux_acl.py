@@ -59,7 +59,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
 
     if _current_perms[name].get(acl_type, None):
         try:
-            user = [i for i in _current_perms[name][acl_type] if i.keys()[0] == acl_name].pop()
+            user = [i for i in _current_perms[name][acl_type] if next(six.iterkeys(i)) == acl_name].pop()
         except (AttributeError, IndexError):
             user = None
 
