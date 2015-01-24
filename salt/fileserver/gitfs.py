@@ -1220,7 +1220,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                         # this path's object ID will be the target of the
                         # symlink. Follow the symlink and set repo_path to the
                         # location indicated in the blob data.
-                        stream = StringIO()
+                        stream = six.StringIO()
                         file_blob.stream_data(stream)
                         stream.seek(0)
                         link_tgt = stream.read()
@@ -1522,7 +1522,7 @@ def _file_list_gitpython(repo, tgt_env):
         file_path = add_mountpoint(relpath(file_blob.path))
         files.add(file_path)
         if stat.S_ISLNK(file_blob.mode):
-            stream = StringIO()
+            stream = six.StringIO()
             file_blob.stream_data(stream)
             stream.seek(0)
             link_tgt = stream.read()
@@ -1577,7 +1577,7 @@ def _file_list_pygit2(repo, tgt_env):
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
         files.add(add_mountpoint(relpath(repo_path)))
-    for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
+    for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
         symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
     return files, symlinks
 
@@ -1620,7 +1620,7 @@ def _file_list_dulwich(repo, tgt_env):
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
         files.add(add_mountpoint(relpath(repo_path)))
-    for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
+    for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
         symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
     return files, symlinks
 
@@ -1797,5 +1797,5 @@ def symlink_list(load):
         prefix = ''
     symlinks = _file_lists(load, 'symlinks')
     return dict([(key, val)
-                 for key, val in symlinks.iteritems()
+                 for key, val in six.iteritems(symlinks)
                  if key.startswith(prefix)])
