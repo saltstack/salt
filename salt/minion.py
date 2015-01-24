@@ -579,20 +579,6 @@ class MultiMinion(MinionBase):
                 # have the Minion class run anything it has to run
                 next(minion['generator'])
 
-                # If a minion instance receives event, handle the event on all
-                # instances
-                if package:
-                    try:
-                        for master in masters:
-                            minions[master].handle_event(package)
-                    except Exception:
-                        pass
-                    finally:
-                        package = None
-
-                # have the Minion class run anything it has to run
-                next(minion['generator'])
-
 
 class Minion(MinionBase):
     '''
