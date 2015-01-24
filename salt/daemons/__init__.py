@@ -41,7 +41,7 @@ def is_non_string_sequence(obj):
     return not isinstance(obj, six.string_types) and isinstance(obj, Sequence)
 
 
-def extract_masters(opts, masters='master', port=None):
+def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
     '''
     Parses opts and generates a list of master (host,port) addresses.
     By default looks for list of masters in opts['master'] and uses
@@ -151,12 +151,13 @@ def extract_masters(opts, masters='master', port=None):
         log.error(emsg + '\n')
         raise ValueError(emsg)
 
-    entries = opts.get(masters)
+    entries = opts.get(masters, [])
 
     if not entries:
         emsg = "Invalid or missing opts['{0}'].".format(masters)
         log.error(emsg + '\n')
-        raise ValueError(emsg)
+        if raise_if_empty:
+            raise ValueError(emsg)
 
     hostages = []
     # extract candidate hostage (hostname dict) from entries

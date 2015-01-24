@@ -177,7 +177,8 @@ class SaltRaetRoadUsherMasterSetup(ioflo.base.deeding.Deed):
 
         self.ushers.value = daemons.extract_masters(self.opts.value,
                                                     masters=masters,
-                                                    port=port)
+                                                    port=port,
+                                                    raise_if_empty=False)
 
 
 class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
@@ -347,13 +348,23 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            refresh = (self.opts.value.get('raet_clear_remotes', True) or
+            refresh_masters = (self.opts.value.get('raet_clear_remote_masters',
+                                       True) or not stack.remotes)
+
+            refresh_all = (self.opts.value.get('raet_clear_remotes', True) or
                        not stack.remotes)
 
-            if refresh:
+            if refresh_masters:  # clear all remote masters
+                for remote in stack.remotes.values():
+                    if remote.kind == kinds.applKinds.master:
+                        stack.removeRemote(remote, clear=True)
+
+            if refresh_all:  # clear all remotes
                 for remote in stack.remotes.values():
                     stack.removeRemote(remote, clear=True)
 
+
+            if refresh_all or refresh_masters:
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
                 for master in self.ushers.value:
@@ -361,7 +372,9 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                     stack.addRemote(RemoteEstate(stack=stack,
                                                  fuid=0,  # vacuous join
                                                  sid=0,  # always 0 for join
-                                                 ha=mha))
+                                                 ha=mha,
+                                                 kind=kinds.applKinds.master))
+
             for remote in stack.remotes.values():
                 if remote.kind == kinds.applKinds.master:
                     stack.join(uid=remote.uid, timeout=0.0)
@@ -1369,7 +1382,8 @@ class SaltRaetEventerMaster(SaltRaetEventer):
                 masters = (self.availables.value &
                            set((remote.name for remote in self.road_stack.value.remotes.values()
                                 if remote.kind == kinds.applKinds.master)))
-                for remote in masters:
+                for name in masters:
+                    remote = self.road_stack.value.nameRemotes[name]
                     msg['origin'] = self.road_stack.value.name
                     s_estate, s_yard, s_share = msg['route']['src']
                     msg['route']['src'] = (self.road_stack.value.name, s_yard, s_share)
