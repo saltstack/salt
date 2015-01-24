@@ -111,7 +111,7 @@ class EnvironTestCase(TestCase):
         '''
         Return a dict of the entire environment set for the salt process
         '''
-        self.assertTrue(environ.items())
+        self.assertNotEqual(list(environ.items()), [])
 
 
 if __name__ == '__main__':
