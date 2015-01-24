@@ -652,10 +652,18 @@ class Loader(object):
                 exc_info=True
             )
             return mod
-        except Exception:
+        except Exception as error:
             log.error(
                 'Failed to import {0} {1}, this is due most likely to a '
                 'syntax error:\n'.format(
+                    self.tag, name
+                ),
+                exc_info=True
+            )
+            return mod
+        except SystemExit as error:
+            log.error(
+                'Failed to import {0} {1} as the module called exit()\n'.format(
                     self.tag, name
                 ),
                 exc_info=True
@@ -1010,6 +1018,13 @@ class Loader(object):
                         'Failed to import {0} {1}, this is due most likely to a '
                         'syntax error. The exception is {2}. Traceback raised:\n'.format(
                             self.tag, name, error
+                        ),
+                        exc_info=True
+                    )
+                except SystemExit as error:
+                    log.warning(
+                        'Failed to import {0} {1} as the module called exit()\n'.format(
+                            self.tag, name
                         ),
                         exc_info=True
                     )
