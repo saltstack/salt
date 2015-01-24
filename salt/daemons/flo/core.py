@@ -177,7 +177,8 @@ class SaltRaetRoadUsherMasterSetup(ioflo.base.deeding.Deed):
 
         self.ushers.value = daemons.extract_masters(self.opts.value,
                                                     masters=masters,
-                                                    port=port)
+                                                    port=port,
+                                                    raise_if_empty=False)
 
 
 class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
