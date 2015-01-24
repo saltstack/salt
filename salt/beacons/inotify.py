@@ -6,12 +6,14 @@ import collections
 # Import third party libs
 import pyinotify
 
+DEFAULT_MASK = pyinotify.IN_CREATE | pyinotify.IN_DELETE | pyinotify.IN_MODIFY
+
 
 def _enqueue(revent):
     '''
     Enqueue the event
     '''
-    __context__['inotify.queue'].append(revent)
+    __context__['inotify.que'].append(revent)
 
 
 def _get_notifier():
@@ -20,7 +22,7 @@ def _get_notifier():
     '''
     if 'inotify.notifier' in __context__:
         return __context__['inotify.notifier']
-    __context__['inotify.queue'] = collections.dequeue()
+    __context__['inotify.que'] = collections.deque()
     wm = pyinotify.WatchManager()
     __context__['inotify.notifier'] = pyinotify.Notifier(wm, _enqueue)
     return __context__['inotify.notifier']
@@ -38,9 +40,10 @@ def beacon(config):
     # return original data
     if notifier.check_events(1):
         notifier.read_events()
-        while __context__['inotify.queue']:
+        notifier.process_events()
+        while __context__['inotify.que']:
             sub = {}
-            event = __context__['inotify.queue'].popleft()
+            event = __context__['inotify.que'].popleft()
             sub['tag'] = event.path
             sub['path'] = event.pathname
             sub['change'] = event.maskname
@@ -56,9 +59,14 @@ def beacon(config):
             if path == wm.watches[wd].path:
                 wm.rm_watch(wd)
     for path in config:
-        mask = config[path].get('mask', pyinotify.ALL_EVENTS)
-        rec = config[path].get('rec', False)
-        auto_add = config[path].get('auto_add', False)
+        if isinstance(config[path], dict):
+            mask = config[path].get('mask', DEFAULT_MASK)
+            rec = config[path].get('rec', False)
+            auto_add = config[path].get('auto_add', False)
+        else:
+            mask = DEFAULT_MASK
+            rec = False
+            auto_add = False
         # TODO: make the config handle more options
         if not path in current:
             wm.add_watch(
