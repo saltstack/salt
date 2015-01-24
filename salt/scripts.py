@@ -115,15 +115,6 @@ def salt_minion():
         minion.start()
         return
 
-    if '-d' in sys.argv or '--daemon' in sys.argv:
-        # disable daemonize on sub processes
-        if '-d' in sys.argv:
-            sys.argv.remove('-d')
-        if '--daemon' in sys.argv:
-            sys.argv.remove('--daemon')
-        # daemonize current process
-        salt.utils.daemonize()
-
     # keep one minion subprocess running
     while True:
         try:
