@@ -3918,14 +3918,14 @@ def serialize(name,
 
     if len([_f for _f in [dataset, dataset_pillar] if _f]) > 1:
         return _error(
-            ret, 'Only one of dataset and dataset_pillar is permitted')
+            ret, 'Only one of \'dataset\' and \'dataset_pillar\' is permitted')
 
     if dataset_pillar:
         dataset = __salt__['pillar.get'](dataset_pillar)
 
     if dataset is None:
         return _error(
-            ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined.')
+            ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
 
     if merge_if_exists:
         if os.path.isfile(name):
