@@ -333,10 +333,8 @@ def bootstrap(vm_, opts):
         'ssh_username', vm_, opts, default='root'
     )
 
-    '''
-    NOTE: deploy_kwargs is also used to pass inline_script variable content
-          to run_inline_script function
-    '''
+    # NOTE: deploy_kwargs is also used to pass inline_script variable content
+    # to run_inline_script function
     deploy_kwargs = {
         'opts': opts,
         'host': vm_['ssh_host'],
