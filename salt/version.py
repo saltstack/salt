@@ -350,7 +350,7 @@ class SaltStackVersion(object):
     def __str__(self):
         return self.string
 
-    def __cmp__(self, other):
+    def __compare__(self, other, method):
         if not isinstance(other, SaltStackVersion):
             if isinstance(other, string_types):
                 other = SaltStackVersion.parse(other)
@@ -365,18 +365,36 @@ class SaltStackVersion(object):
 
         if (self.rc and other.rc) or (not self.rc and not other.rc):
             # Both have rc information, regular compare is ok
-            return cmp(self.noc_info, other.noc_info)
+            return method(self.noc_info, other.noc_info)
 
         # RC's are always lower versions than non RC's
         if self.rc > 0 and other.rc <= 0:
             noc_info = list(self.noc_info)
             noc_info[3] = -1
-            return cmp(tuple(noc_info), other.noc_info)
+            return method(tuple(noc_info), other.noc_info)
 
         if self.rc <= 0 and other.rc > 0:
             other_noc_info = list(other.noc_info)
             other_noc_info[3] = -1
-            return cmp(self.noc_info, tuple(other_noc_info))
+            return method(self.noc_info, tuple(other_noc_info))
+
+    def __lt__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self < _other)
+
+    def __le__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self <= _other)
+
+    def __eq__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self == _other)
+
+    def __ne__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self != _other)
+
+    def __ge__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self >= _other)
+
+    def __gt__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self > _other)
 
     def __repr__(self):
         parts = []
