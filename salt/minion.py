@@ -1782,7 +1782,10 @@ class Minion(MinionBase):
                     exc_info=True
                 )
             # Process Beacons
-            beacons = self.process_beacons(self.functions)
+            try:
+                beacons = self.process_beacons(self.functions)
+            except Exception:
+                log.critical('The beacon errored: ', exec_info=True)
             if beacons:
                 self._fire_master(events=beacons)
 
