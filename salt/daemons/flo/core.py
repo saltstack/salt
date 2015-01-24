@@ -1238,6 +1238,30 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
         return []
 
 
+class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
+    '''
+    Take the events off the master event que and send them to the master to
+    be fired
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'road_stack': '.salt.road.manor.stack',
+               'master_events': '.salt.var.master_events',}
+
+    def action(self):
+        events = []
+        for master in self.road_stack.value.remotes:
+            master_uid = master.uid
+        while self.master_events.deck:
+            events.append(self.master_events.deck.popleft())
+        route = {'src': (self.road_stack.value.local.name, None, None),
+                 'dst': (next(six.itervalues(self.road_stack.value.remotes)).name, None, 'remote_cmd')}
+        load = {'id': self.opts['id'],
+                'events': self.master_events.deck,
+                'cmd': '_minion_event'}
+        self.road_stack.value.transmit({'route': route, 'load': load},
+                                       uid=master_uid)
+
+
 class SaltRaetNixJobber(ioflo.base.deeding.Deed):
     '''
     Execute a function call job on a minion on a *nix based system
