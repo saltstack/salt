@@ -1234,7 +1234,7 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
                 try:
                     self.master_events.deck.extend(self.beacons.process(b_conf))
                 except Exception:
-                    log.error('Error in the beacon system: ', exec_info=True)
+                    log.error('Error in the beacon system: ', exc_info=True)
         return []
 
 
