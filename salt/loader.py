@@ -114,6 +114,47 @@ def _create_loader(
         mod_type_check=mod_type_check
     )
 
+def _module_dirs(
+        opts,
+        ext_type,
+        tag,
+        int_type=None,
+        ext_dirs=True,
+        ext_type_dirs=None,
+        base_path=None,
+        loaded_base_name=None,
+        mod_type_check=None):
+    sys_types = os.path.join(SALT_BASE_PATH, int_type or ext_type)
+    ext_types = os.path.join(opts['extension_modules'], ext_type)
+
+    ext_type_types = []
+    if ext_dirs:
+        if ext_type_dirs is None:
+            ext_type_dirs = '{0}_dirs'.format(tag)
+        if ext_type_dirs in opts:
+            ext_type_types.extend(opts[ext_type_dirs])
+
+    cli_module_dirs = []
+    # The dirs can be any module dir, or a in-tree _{ext_type} dir
+    for _dir in opts.get('module_dirs', []):
+        # Prepend to the list to match cli argument ordering
+        maybe_dir = os.path.join(_dir, ext_type)
+        if os.path.isdir(maybe_dir):
+            cli_module_dirs.insert(0, maybe_dir)
+            continue
+
+        maybe_dir = os.path.join(_dir, '_{0}'.format(ext_type))
+        if os.path.isdir(maybe_dir):
+            cli_module_dirs.insert(0, maybe_dir)
+
+    if loaded_base_name is None:
+        loaded_base_name = LOADED_BASE_NAME
+
+    if mod_type_check is None:
+        mod_type_check = _mod_type
+
+    return cli_module_dirs + ext_type_types + [ext_types, sys_types]
+
 
 def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False):
     '''
@@ -133,13 +174,28 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
         __salt__ = salt.loader.minion_mods(__opts__)
         __salt__['test.ping']()
     '''
-    load = _create_loader(opts, 'modules', 'module')
     if context is None:
         context = {}
-    pack = {'name': '__context__',
-            'value': context}
+    pack = [{'name': '__context__',
+             'value': context},
+            {'name': '__pillar__',
+             'value': opts.get('pillar', {})},
+            ]
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
+    return NewLazyLoader(_module_dirs(opts, 'modules', 'module'),
+                         opts,
+                         tag='modules',
+                         loaded_base_name='module',
+                         pack=pack,
+                         whitelist=whitelist,
+                         )
+    # TODO: depends??
+    load = _create_loader(opts, 'modules', 'module')
+
+    pack = {'name': '__context__',
+            'value': context}
+
     functions = load.gen_functions(
         pack,
         whitelist=whitelist,
@@ -183,14 +239,15 @@ def returners(opts, functions, whitelist=None):
     '''
     Returns the returner modules
     '''
-    load = _create_loader(opts, 'returners', 'returner')
     pack = {'name': '__salt__',
             'value': functions}
-    return LazyLoader(load,
-                      functions,
-                      pack,
-                      whitelist=whitelist,
-                      )
+    return NewLazyLoader(_module_dirs(opts, 'returners', 'returner'),
+                         opts,
+                         tag='returners',
+                         loaded_base_name='returner',
+                         pack=pack,
+                         whitelist=whitelist,
+                         )
 
 
 def utils(opts, whitelist=None):
@@ -280,9 +337,15 @@ def states(opts, functions, whitelist=None):
         __opts__ = salt.config.minion_config('/etc/salt/minion')
         statemods = salt.loader.states(__opts__, None)
     '''
-    load = _create_loader(opts, 'states', 'states')
     pack = {'name': '__salt__',
             'value': functions}
+    return NewLazyLoader(_module_dirs(opts, 'states', 'states'),
+                         opts,
+                         tag='states',
+                         loaded_base_name='states',
+                         pack=pack,
+                         whitelist=whitelist,
+                         )
     return load.gen_functions(pack, whitelist=whitelist)
 
 
@@ -407,6 +470,7 @@ def grains(opts, force_refresh=False):
             opts['grains'] = {}
     else:
         opts['grains'] = {}
+
     load = _create_loader(opts, 'grains', 'grain', ext_type_dirs='grains_dirs')
     grains_info = load.gen_grains(force_refresh)
     grains_info.update(opts['grains'])
@@ -431,6 +495,11 @@ def runner(opts):
     load = _create_loader(
         opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
     )
+    return NewLazyLoader(_module_dirs(opts, 'runners', 'runner'),
+                     opts,
+                     tag='runners',
+                     loaded_base_name='runner',
+                     )
     return load.gen_functions()
 
 
@@ -532,6 +601,482 @@ def in_pack(pack, name):
         except KeyError:
             pass
     return False
+
+import salt.utils.lazy
+class NewLazyLoader(salt.utils.lazy.LazyDict):
+    '''
+    Used to load in arbitrary modules from a directory.
+
+    Goals here:
+        - lazy loading
+        - minimize disk usage
+        - singletons (per type of course)
+    '''
+    # This class is only a singleton per minion/master pair
+    instances = {}
+
+    def __new__(cls,
+                module_dirs,
+                opts=None,
+                tag='module',
+                loaded_base_name=None,
+                mod_type_check=None,
+                pack=None,
+                whitelist=None,
+                ):
+        '''
+        Only create one instance of NewLazyLoader per __key()
+        '''
+        key = cls.__key(tag)
+        if key not in NewLazyLoader.instances:
+            log.debug('Initializing new NewLazyLoader for {0}'.format(key))
+            NewLazyLoader.instances[key] = object.__new__(cls)
+            NewLazyLoader.instances[key].__singleton_init__(module_dirs,
+                                                            opts=opts,
+                                                            tag=tag,
+                                                            loaded_base_name=loaded_base_name,
+                                                            mod_type_check=mod_type_check,
+                                                            pack=pack,
+                                                            whitelist=whitelist,)
+        else:
+            log.debug('Re-using NewLazyLoader for {0}'.format(key))
+        return NewLazyLoader.instances[key]
+
+    @classmethod
+    def __key(cls,
+              tag='module',
+              ):
+        return (tag,
+                )
+
+    # has to remain empty for singletons, since __init__ will *always* be called
+    def __init__(self,
+                 module_dirs,
+                 opts=None,
+                 tag='module',
+                 loaded_base_name=None,
+                 mod_type_check=None,
+                 pack=None,
+                 whitelist=None,
+                 ):
+        pass
+
+    # an init for the singleton instance to call
+    def __singleton_init__(self,
+                 module_dirs,
+                 opts=None,
+                 tag='module',
+                 loaded_base_name=None,
+                 mod_type_check=None,
+                 pack=None,
+                 whitelist=None,
+                 ):
+        super(NewLazyLoader, self).__init__()  # init the lazy loader
+
+        self.module_dirs = module_dirs
+        if opts is None:
+            opts = {}
+        self.tag = tag
+        if 'grains' in opts:
+            self.grains = opts['grains']
+        else:
+            self.grains = {}
+        if 'pillar' in opts:
+            self.pillar = opts['pillar']
+        else:
+            self.pillar = {}
+        self.opts = self.__prep_mod_opts(opts)
+        self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
+        self.mod_type_check = mod_type_check or _mod_type
+        if self.opts.get('grains_cache', False):
+            self.serial = salt.payload.Serial(self.opts)
+
+        self.pack = pack
+        if self.tag == 'modules':
+            self.pack.append({'name': '__salt__', 'value': self})
+        self.whitelist = whitelist
+
+        # names of modules that we don't have (errors, __virtual__, etc.)
+        self.missing_modules = []
+        # create mapping of filename (without suffix) to path (TODO: need the path??)
+        self.file_mapping = {}
+        self.loaded_files = []  # TODO: just remove them from file_mapping?
+        for mod_dir in self.module_dirs:
+            try:
+                for filename in os.listdir(mod_dir):
+                    f_noext = filename.rsplit('.', 1)[0]
+                    if f_noext not in self.file_mapping:
+                        self.file_mapping[f_noext] = os.path.join(mod_dir, filename)
+            except OSError:
+                continue
+
+        # create all of the import namespaces
+        if loaded_base_name is None:
+            loaded_base_name = LOADED_BASE_NAME
+
+        if mod_type_check is None:
+            mod_type_check = _mod_type
+
+        _generate_module('{0}.int'.format(loaded_base_name))
+        _generate_module('{0}.int.{1}'.format(loaded_base_name, tag))
+        _generate_module('{0}.ext'.format(loaded_base_name))
+        _generate_module('{0}.ext.{1}'.format(loaded_base_name, tag))
+
+    def clear(self):
+        '''
+        Clear the dict
+        '''
+        super(NewLazyLoader, self).clear()  # clear the lazy loader
+        self.loaded_files = []
+        self.missing_modules = []
+
+    def __prep_mod_opts(self, opts):
+        '''
+        Strip out of the opts any logger instance
+        '''
+        mod_opts = {}
+        for key, val in opts.items():
+            if key in ('logger', 'grains'):
+                continue
+            mod_opts[key] = val
+        return mod_opts
+
+    def _iter_files(self, mod_name):
+        '''
+        Iterate over all file_mapping files in order of closeness to mod_name
+        '''
+        # do we have an exact match?
+        if mod_name in self.file_mapping:
+            yield mod_name, self.file_mapping[mod_name]
+
+        # do we have a partial match?
+        for k, v in self.file_mapping.iteritems():
+            if mod_name in k:
+                yield k, v
+
+        # anyone else? Bueller?
+        for k, v in self.file_mapping.iteritems():
+            if mod_name not in k:
+                yield k, v
+
+    def _load_module(self, name):
+        mod = None
+        self.loaded_files.append(name)
+        try:
+            try:
+                # TODO: don't do a find? We already know...
+                fn_, path, desc = imp.find_module(name, self.module_dirs)
+                mod = imp.load_module(
+                    '{0}.{1}.{2}.{3}'.format(
+                        self.loaded_base_name,
+                        self.mod_type_check(path),
+                        self.tag,
+                        name
+                    ), fn_, path, desc)
+            except ImportError:
+                # TODO: handle cpython modules
+                return mod
+        except ImportError:
+            log.debug(
+                'Failed to import {0} {1}:\n'.format(
+                    self.tag, name
+                ),
+                exc_info=True
+            )
+            return mod
+        except Exception as error:
+            log.error(
+                'Failed to import {0} {1}, this is due most likely to a '
+                'syntax error:\n'.format(
+                    self.tag, name
+                ),
+                exc_info=True
+            )
+            return mod
+        except SystemExit as error:
+            log.error(
+                'Failed to import {0} {1} as the module called exit()\n'.format(
+                    self.tag, name
+                ),
+                exc_info=True
+            )
+            return mod
+
+        if hasattr(mod, '__opts__'):
+            mod.__opts__.update(self.opts)
+        else:
+            mod.__opts__ = self.opts
+
+        mod.__grains__ = self.grains
+
+        # pack whatever other globals we were asked to
+        if self.pack:
+            if isinstance(self.pack, list):
+                for chunk in self.pack:
+                    try:
+                        setattr(mod, chunk['name'], chunk['value'])
+                    except KeyError:
+                        pass
+            else:
+                setattr(mod, self.pack['name'], self.pack['value'])
+
+        # Call a module's initialization method if it exists
+        module_init = getattr(mod, '__init__', None)
+        if inspect.isfunction(module_init):
+            try:
+                module_init(self.opts)
+            except TypeError:
+                pass
+        funcs = {}
+        module_name = mod.__name__.rsplit('.', 1)[-1]
+
+        # TODO: change comment
+        # if virtual modules are enabled, we need to look for the
+        # __virtual__() function inside that module and run it.
+        (virtual_ret, module_name, _) = self.process_virtual(
+                                                            mod,
+                                                            module_name)
+
+        # if process_virtual returned a non-True value then we are
+        # supposed to not process this module
+        if virtual_ret is not True:
+            self.missing_modules.append(module_name)
+            self.missing_modules.append(name)
+            # If a module has information about why it could not be loaded, record it
+            return False  # TODO Support virtual_errors here
+
+                # update our module name to reflect the virtual name
+        if getattr(mod, '__load__', False) is not False:
+            log.info(
+                'The functions from module {0!r} are being loaded from the '
+                'provided __load__ attribute'.format(
+                    module_name
+                )
+            )
+        for attr in getattr(mod, '__load__', dir(mod)):
+            if attr.startswith('_'):
+                # private functions are skipped
+                continue
+            func = getattr(mod, attr)
+            if not inspect.isfunction(func):
+                # Not a function!? Skip it!!!
+                continue
+            # Let's get the function name.
+            # If the module has the __func_alias__ attribute, it must be a
+            # dictionary mapping in the form of(key -> value):
+            #   <real-func-name> -> <desired-func-name>
+            #
+            # It default's of course to the found callable attribute name
+            # if no alias is defined.
+            funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+            funcs['{0}.{1}'.format(module_name, funcname)] = func
+            self._apply_outputter(func, mod)
+        # TODO: verify context??
+        try:
+            context = sys.modules[
+                self._dict[next(self._dict.iterkeys())].__module__
+            ].__context__
+        except (AttributeError, StopIteration):
+            context = {}
+        mod.__context__ = context
+        self._dict.update(funcs)
+        return True
+
+    def _load(self, key):
+        '''
+        Load a single item if you have it
+        '''
+        # if the key doesn't have a '.' then it isn't valid for this mod dict
+        if '.' not in key:
+            raise KeyError
+        mod_name, func_name = key.split('.', 1)
+        if mod_name in self.missing_modules:
+            return True
+        if self.whitelist:
+            # if the modulename isn't in the whitelist, don't bother
+            if mod_name not in self.whitelist:
+                raise KeyError
+
+        for name, fpath in self._iter_files(mod_name):
+            if name in self.loaded_files:
+                continue
+            # if we got what we wanted, we are done
+            if self._load_module(name) and key in self._dict:
+                return True
+        return False
+
+
+    def _load_all(self):
+        '''
+        Load all of them
+        '''
+        for name, fpath in self.file_mapping.iteritems():
+            if name in self.loaded_files or name in self.missing_modules:
+                continue
+            self._load_module(name)
+
+        self.loaded = True
+
+    def _apply_outputter(self, func, mod):
+        '''
+        Apply the __outputter__ variable to the functions
+        '''
+        if hasattr(mod, '__outputter__'):
+            outp = mod.__outputter__
+            if func.__name__ in outp:
+                func.__outputter__ = outp[func.__name__]
+
+    def process_virtual(self, mod, module_name):
+        '''
+        Given a loaded module and its default name determine its virtual name
+
+        This function returns a tuple. The first value will be either True or
+        False and will indicate if the module should be loaded or not (i.e. if
+        it threw and exception while processing its __virtual__ function). The
+        second value is the determined virtual name, which may be the same as
+        the value provided.
+
+        The default name can be calculated as follows::
+
+            module_name = mod.__name__.rsplit('.', 1)[-1]
+        '''
+
+        # The __virtual__ function will return either a True or False value.
+        # If it returns a True value it can also set a module level attribute
+        # named __virtualname__ with the name that the module should be
+        # referred to as.
+        #
+        # This allows us to have things like the pkg module working on all
+        # platforms under the name 'pkg'. It also allows for modules like
+        # augeas_cfg to be referred to as 'augeas', which would otherwise have
+        # namespace collisions. And finally it allows modules to return False
+        # if they are not intended to run on the given platform or are missing
+        # dependencies.
+        try:
+            error_reasons = []
+            if hasattr(mod, '__virtual__') and inspect.isfunction(mod.__virtual__):
+                if self.opts.get('virtual_timer', False):
+                    start = time.time()
+                    virtual = mod.__virtual__()
+                    if isinstance(virtual, tuple):
+                        error_reasons = virtual[1]
+                        virtual = virtual[0]
+                    end = time.time() - start
+                    msg = 'Virtual function took {0} seconds for {1}'.format(
+                            end, module_name)
+                    log.warning(msg)
+                else:
+                    virtual = mod.__virtual__()
+                    if isinstance(virtual, tuple):
+                        error_reasons = virtual[1]
+                        virtual = virtual[0]
+                # Get the module's virtual name
+                virtualname = getattr(mod, '__virtualname__', virtual)
+                if not virtual:
+                    # if __virtual__() evaluates to False then the module
+                    # wasn't meant for this platform or it's not supposed to
+                    # load for some other reason.
+
+                    # Some modules might accidentally return None and are
+                    # improperly loaded
+                    if virtual is None:
+                        log.warning(
+                            '{0}.__virtual__() is wrongly returning `None`. '
+                            'It should either return `True`, `False` or a new '
+                            'name. If you\'re the developer of the module '
+                            '{1!r}, please fix this.'.format(
+                                mod.__name__,
+                                module_name
+                            )
+                        )
+
+                    return (False, module_name, error_reasons)
+
+                # At this point, __virtual__ did not return a
+                # boolean value, let's check for deprecated usage
+                # or module renames
+                if virtual is not True and module_name == virtual:
+                    # The module was not renamed, it should
+                    # have returned True instead
+                    #salt.utils.warn_until(
+                    #    'Helium',
+                    #    'The {0!r} module is NOT renaming itself and is '
+                    #    'returning a string. In this case the __virtual__() '
+                    #    'function should simply return `True`. This usage will '
+                    #    'become an error in Salt Helium'.format(
+                    #        mod.__name__,
+                    #    )
+                    #)
+                    pass
+
+                elif virtual is not True and module_name != virtual:
+                    # The module is renaming itself. Updating the module name
+                    # with the new name
+                    log.trace('Loaded {0} as virtual {1}'.format(
+                        module_name, virtual
+                    ))
+
+                    if not hasattr(mod, '__virtualname__'):
+                        '''
+                        salt.utils.warn_until(
+                            'Hydrogen',
+                            'The {0!r} module is renaming itself in it\'s '
+                            '__virtual__() function ({1} => {2}). Please '
+                            'set it\'s virtual name as the '
+                            '\'__virtualname__\' module attribute. '
+                            'Example: "__virtualname__ = {2!r}"'.format(
+                                mod.__name__,
+                                module_name,
+                                virtual
+                            )
+                        )
+                        '''
+
+                    if virtualname != virtual:
+                        # The __virtualname__ attribute does not match what's
+                        # being returned by the __virtual__() function. This
+                        # should be considered an error.
+                        log.error(
+                            'The module {0!r} is showing some bad usage. It\'s '
+                            '__virtualname__ attribute is set to {1!r} yet the '
+                            '__virtual__() function is returning {2!r}. These '
+                            'values should match!'.format(
+                                mod.__name__,
+                                virtualname,
+                                virtual
+                            )
+                        )
+
+                    module_name = virtualname
+
+                # If the __virtual__ function returns True and __virtualname__ is set then use it
+                elif virtual is True and virtualname != module_name:
+                    if virtualname is not True:
+                        module_name = virtualname
+
+        except KeyError:
+            # Key errors come out of the virtual function when passing
+            # in incomplete grains sets, these can be safely ignored
+            # and logged to debug, still, it includes the traceback to
+            # help debugging.
+            log.debug(
+                'KeyError when loading {0}'.format(module_name),
+                exc_info=True
+            )
+
+        except Exception:
+            # If the module throws an exception during __virtual__()
+            # then log the information and continue to the next.
+            log.error(
+                'Failed to read the virtual function for '
+                '{0}: {1}'.format(
+                    self.tag, module_name
+                ),
+                exc_info=True
+            )
+            return (False, module_name, error_reasons)
+
+        return (True, module_name, [])
 
 
 class Loader(object):
@@ -751,8 +1296,6 @@ class Loader(object):
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
             funcs['{0}.{1}'.format(module_name, funcname)] = func
             self._apply_outputter(func, mod)
-        if not hasattr(mod, '__salt__'):
-            mod.__salt__ = functions
         try:
             context = sys.modules[
                 functions[next(iter(functions.keys()))].__module__
