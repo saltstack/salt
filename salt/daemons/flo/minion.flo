@@ -31,8 +31,8 @@ framer minionudpstack be active first setup
         # Start the functionmanage framer
         bid start functionmanager
         # Start the Beacon system
-        bid start beacon
         bid start masterevents
+        bid start beacon
         # Start the outbound framer
         bid start outbound
         # Start the scheduler
