@@ -34,4 +34,4 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     Parse varstack data and return the result
     '''
     vs = varstack.Varstack(config_filename=conf)
-    return vs.evaluate(__grains__)
+    return vs.evaluate(__grains__, salt=__salt__)
