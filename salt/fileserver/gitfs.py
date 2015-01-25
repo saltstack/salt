@@ -238,7 +238,14 @@ def _verify_dulwich(quiet=False):
             log.error(_RECOMMEND_PYGIT2)
         return False
 
-    dulwich_ver = distutils.version.LooseVersion(dulwich.__version__)
+    # Get version of dulwich and convert it from a tuple of ints to a string
+    version = []
+    dulwich_version = dulwich.__version__
+    for ver_num in dulwich_version:
+        version.append(str(ver_num))
+    version_str = '.'.join(version)
+
+    dulwich_ver = distutils.version.LooseVersion(version_str)
     dulwich_minver_str = '0.9.4'
     dulwich_minver = distutils.version.LooseVersion(dulwich_minver_str)
 
