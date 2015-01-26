@@ -14,10 +14,10 @@ init-hook="
 # Pickle collected data for later comparisons.
 persistent=no
 
-load-plugins=salttesting.pylintplugins.pep8,
-  salttesting.pylintplugins.pep263,
-  salttesting.pylintplugins.strings,
-  salttesting.pylintplugins.fileperms
+load-plugins=saltpylint.pep8,
+  saltpylint.pep263,
+  saltpylint.strings,
+  saltpylint.fileperms
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
