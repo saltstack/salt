@@ -2009,11 +2009,13 @@ class State(object):
             )
             try:
                 os.remove(accum_data_path)
-                log.debug('Deleted accumulator data file %s',
-                          accum_data_path)
+                log.debug('Deleted accumulator data file {0}'.format(
+                    accum_data_path)
+                )
             except OSError:
-                log.debug('File %s does not exist, no need to cleanup.',
-                          accum_data_path)
+                log.debug('File {0} does not exist, no need to cleanup.'.format(
+                    accum_data_path)
+                )
         _cleanup_accumulator_data()
 
         return ret
