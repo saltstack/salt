@@ -10,11 +10,6 @@ wrapper. The base supported wrapper type is
 `cgroups <https://en.wikipedia.org/wiki/Cgroups>`_, and the
 `Linux Kernel <https://en.wikipedia.org/wiki/Linux_kernel>`_.
 
-.. warning::
-
-    This state module is beta. The API is subject to change. No promise
-    as to performance or functionality is yet present.
-
 .. note::
 
     This state module requires
