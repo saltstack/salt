@@ -1,7 +1,4 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-__docformat__ = 'restructuredtext en'
-
 import logging
 import salt.minion
 import salt.utils.verify
