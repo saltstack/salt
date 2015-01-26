@@ -370,8 +370,8 @@ def nproc():
         'Linux': 'nproc',
         'FreeBSD': 'sysctl -n hw.ncpu',
     }
-    data = __salt__['cmd.run'](cmd[__grains__['kernel']])
     try:
+        data = __salt__['cmd.run'](cmd[__grains__['kernel']])
         ret = int(data.strip())
     except Exception:
         return 0
