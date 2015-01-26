@@ -572,6 +572,7 @@ class State(object):
         self.pre = {}
         self.__run_num = 0
         self.jid = jid
+        self.instance_id = str(id(self))
 
     def _gather_pillar(self):
         '''
@@ -1504,6 +1505,7 @@ class State(object):
             # state module to change these at runtime.
             '__low__': immutabletypes.freeze(low),
             '__running__': immutabletypes.freeze(running) if running else {},
+            '__instance_id__': self.instance_id,
             '__lowstate__': immutabletypes.freeze(chunks) if chunks else {}
         }
 
@@ -2043,6 +2045,21 @@ class State(object):
             return errors
         ret = dict(list(disabled.items()) + list(self.call_chunks(chunks).items()))
         ret = self.call_listen(chunks, ret)
+
+        def _cleanup_accumulator_data():
+            accum_data_path = os.path.join(
+                salt.utils.get_accumulator_dir(self.opts['cachedir']),
+                self.instance_id
+            )
+            try:
+                os.remove(accum_data_path)
+                log.debug('Deleted accumulator data file %s',
+                          accum_data_path)
+            except OSError:
+                log.debug('File %s does not exist, no need to cleanup.',
+                          accum_data_path)
+        _cleanup_accumulator_data()
+
         return ret
 
     def render_template(self, high, template):
