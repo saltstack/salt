@@ -1324,7 +1324,7 @@ def managed(name,
 
     if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
         return _error(
-            ret, 'Only one of contents, contents_pillar and contents_grains is permitted')
+            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
 
     # If contents_pillar was used, get the pillar data
     if contents_pillar:
