@@ -560,7 +560,8 @@ def version():
     'FreeBSD': lambda : __salt__['cmd.run']('sysctl -n kern.version'),
     }
 
-    return get_version[__grains__['kernel']]()
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def master(master_ip=None, connected=True):
