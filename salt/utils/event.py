@@ -168,6 +168,9 @@ class SaltEvent(object):
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.subscribe()
         self.pending_events = []
+        # since ZMQ connect()  has no gaurantees about the socket actually being
+        # connected this is a hack to attempt to do so.
+        self.get_event(wait=1)
 
     def __load_uri(self, sock_dir, node):
         '''
