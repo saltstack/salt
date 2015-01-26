@@ -4,6 +4,7 @@ __docformat__ = 'restructuredtext en'
 
 import logging
 import salt.utils.verify
+import salt.utils.jid
 from salt.utils.event import tagify
 
 
@@ -30,6 +31,10 @@ def store_job(opts, load, event=None, mminion=None):
         # save the load, since we don't have it
         saveload_fstr = '{0}.save_load'.format(opts['master_job_cache'])
         mminion.returners[saveload_fstr](load['jid'], load)
+    elif salt.utils.jid.is_jid(load['jid']):
+        # Store the jid
+        jidstore_fstr = '{0}.prep_jid'.format(opts['master_job_cache'])
+        mminion.returners[jidstore_fstr](passed_jid=load['jid'])
     if event:
         # If the return data is invalid, just ignore it
         log.info('Got return from {id} for job {jid}'.format(**load))
