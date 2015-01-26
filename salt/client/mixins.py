@@ -14,6 +14,7 @@ import salt.exceptions
 import salt.utils
 import salt.utils.event
 import salt.utils.jid
+import salt.utils.job
 import salt.transport
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
@@ -253,6 +254,10 @@ class SyncClientMixin(object):
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
+        salt.utils.job.store_job(
+            self.opts,
+            {'id': self.opts['id'], 'jid': data['jid'], 'return': data},
+            event=None)
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         del event
