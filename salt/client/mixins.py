@@ -11,6 +11,7 @@ import multiprocessing
 import weakref
 
 import salt.exceptions
+import salt.minion
 import salt.utils
 import salt.utils.event
 import salt.utils.jid
@@ -175,6 +176,10 @@ class SyncClientMixin(object):
         '''
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
         tag = low.get('__tag__', tagify(jid, prefix=self.tag_prefix))
+        # this is not neccessary, but the cosmectic is to display
+        # the result after the module loading even with
+        # a hight debug level
+        mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         data = {'fun': '{0}.{1}'.format(self.client, fun),
                 'jid': jid,
                 'user': low.get('__user__', 'UNKNOWN'),
@@ -258,7 +263,7 @@ class SyncClientMixin(object):
             self.opts,
             {'id': self.opts['id'], 'tgt': self.opts['id'],
              'jid': data['jid'], 'return': data},
-            event=None)
+            event=None, mminion=mminion)
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         del event
