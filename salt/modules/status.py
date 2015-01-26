@@ -366,7 +366,7 @@ def nproc():
 
         salt '*' status.nproc
     '''
-    return __grains__.get('num_cpus',0)
+    return __grains__.get('num_cpus', 0)
 
 
 def netstats():
