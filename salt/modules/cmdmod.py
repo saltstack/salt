@@ -393,7 +393,7 @@ def _run(cmd,
         to = ''
         if timeout:
             to = ' (timeout: {0}s)'.format(timeout)
-        if _check_loglevel(output_loglevel, quiet) is not None:
+        if _check_loglevel(output_loglevel) is not None:
             log.debug('Running {0} in VT{1}'.format(cmd, to))
         stdout, stderr = '', ''
         now = time.time()
