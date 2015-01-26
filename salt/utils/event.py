@@ -529,12 +529,12 @@ class RunnerEvent(MasterEvent):
     '''
     def __init__(self, opts, jid):
         super(RunnerEvent, self).__init__(opts['sock_dir'])
-        self.jid = jid
+        self.jid = str(jid)
 
     def fire_progress(self, data, outputter='pprint'):
         progress_event = {'data': data,
                           'outputter': outputter}
-        self.fire_event(progress_event, tagify([self.jid, 'progress'], 'runner'))
+        self.fire_event(progress_event, tagify([self.jid, 'progress'], 'run'))
 
 
 class MinionEvent(SaltEvent):
