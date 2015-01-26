@@ -3012,6 +3012,15 @@ class HighState(BaseHighState):
         self.stack.append(self)
 
     @classmethod
+    def clear_active(cls):
+        # Nuclear option
+        #
+        # Blow away the entire stack. Used primarily by the test runner but also
+        # useful in custom wrappers of the HighState class, to reset the stack
+        # to a fresh state.
+        cls.stack = []
+
+    @classmethod
     def pop_active(cls):
         cls.stack.pop()
 
