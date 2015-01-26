@@ -32,7 +32,7 @@ ddns.__grains__ = {}
 ddns.__salt__ = {}
 
 
-@skipIf(HAS_DNS, 'dnspython libs not installed')
+@skipIf(HAS_DNS is False, 'dnspython libs not installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DDNSTestCase(TestCase):
     '''
