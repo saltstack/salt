@@ -363,7 +363,6 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                 for remote in stack.remotes.values():
                     stack.removeRemote(remote, clear=True)
 
-
             if refresh_all or refresh_masters:
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
