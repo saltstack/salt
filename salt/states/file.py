@@ -974,7 +974,7 @@ def exists(name):
     if not name:
         return _error(ret, 'Must provide name to file.exists')
     if not os.path.exists(name):
-        return _error(ret, ('Specified path {0} does not exist').format(name))
+        return _error(ret, 'Specified path {0} does not exist'.format(name))
 
     ret['comment'] = 'Path {0} exists'.format(name)
     return ret
@@ -995,7 +995,7 @@ def missing(name):
     if not name:
         return _error(ret, 'Must provide name to file.missing')
     if os.path.exists(name):
-        return _error(ret, ('Specified path {0} exists').format(name))
+        return _error(ret, 'Specified path {0} exists'.format(name))
 
     ret['comment'] = 'Path {0} is missing'.format(name)
     return ret
