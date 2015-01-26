@@ -3,6 +3,7 @@
 __docformat__ = 'restructuredtext en'
 
 import logging
+import salt.minion
 import salt.utils.verify
 import salt.utils.jid
 from salt.utils.event import tagify
