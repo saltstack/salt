@@ -253,7 +253,8 @@ class SyncClientMixin(object):
         namespaced_event.fire_event(data, 'ret')
         salt.utils.job.store_job(
             self.opts,
-            {'id': self.opts['id'], 'jid': data['jid'], 'return': data},
+            {'id': self.opts['id'], 'tgt': self.opts['id'],
+             'jid': data['jid'], 'return': data},
             event=None)
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
