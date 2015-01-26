@@ -7,6 +7,8 @@ Execute salt convenience routines
 from __future__ import print_function
 from __future__ import absolute_import
 import logging
+import threading
+import os
 
 # Import salt libs
 import salt.exceptions
@@ -137,14 +139,32 @@ class Runner(RunnerClient):
                 low['args'] = args
                 low['kwargs'] = kwargs
 
-                async_pub = self.async(self.opts['fun'], low)
+                user = salt.utils.get_specific_user()
+
                 # Run the runner!
                 if self.opts.get('async', False):
+                    async_pub = self.async(self.opts['fun'], low, user=user)
                     log.info('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured. '
                              'This execution is running under tag {tag}'.format(**async_pub))
                     return async_pub['jid']  # return the jid
+
+                # otherwise run it in a thread, so you can stop it *and* so we
+                # can see raw "print" (the builtin)
+                async_pub = self._gen_async_pub()
+                t = threading.Thread(target=self._proc_function,
+                                     args=(self.opts['fun'],
+                                           low,
+                                           user,
+                                           async_pub['tag'],
+                                           async_pub['jid'],
+                                           False,  # Don't daemonize
+                                           ))
+                # Daemon thread, so if someone throws a keyboard exception
+                # we will stop execution in the thread
+                t.daemon = True
+                t.start()
 
                 # output rets if you have some
                 for suffix, event in self.get_async_returns(async_pub['tag'], event=self.event):
@@ -152,6 +172,7 @@ class Runner(RunnerClient):
                         self.print_async_event(suffix, event)
                     if suffix == 'ret':
                         ret = event['return']
+                t.join()
 
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)

@@ -276,12 +276,13 @@ class AsyncClientMixin(object):
     client = None
     tag_prefix = None
 
-    def _proc_function(self, fun, low, user, tag, jid):
+    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
         '''
         Run this method in a multiprocess target to execute the function in a
         multiprocess and fire the return data on the event bus
         '''
-        salt.utils.daemonize()
+        if daemonize:
+            salt.utils.daemonize()
 
         # pack a few things into low
         low['__jid__'] = jid
@@ -310,20 +311,24 @@ class AsyncClientMixin(object):
         '''
         return self.master_call(**low)
 
+    def _gen_async_pub(self):
+        jid = salt.utils.jid.gen_jid()
+        tag = tagify(jid, prefix=self.tag_prefix)
+        return {'tag': tag, 'jid': jid}
+
     def async(self, fun, low, user='UNKNOWN'):
         '''
         Execute the function in a multiprocess and return the event tag to use
         to watch for the return
         '''
-        jid = salt.utils.jid.gen_jid()
-        tag = tagify(jid, prefix=self.tag_prefix)
+        async_pub = self._gen_async_pub()
 
         proc = multiprocessing.Process(
                 target=self._proc_function,
-                args=(fun, low, user, tag, jid))
+                args=(fun, low, user, async_pub['tag'], async_pub['jid']))
         proc.start()
         proc.join()  # MUST join, otherwise we leave zombies all over
-        return {'tag': tag, 'jid': jid}
+        return async_pub
 
     def print_async_event(self, suffix, event):
         '''
