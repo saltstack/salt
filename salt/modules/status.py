@@ -366,16 +366,7 @@ def nproc():
 
         salt '*' status.nproc
     '''
-    cmd = {
-        'Linux': 'nproc',
-        'FreeBSD': 'sysctl -n hw.ncpu',
-    }
-    try:
-        data = __salt__['cmd.run'](cmd[__grains__['kernel']])
-        ret = int(data.strip())
-    except Exception:
-        return 0
-    return ret
+    return __grains__.get('num_cpus',0)
 
 
 def netstats():
