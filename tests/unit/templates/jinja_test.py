@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+import copy
 import os
 import tempfile
 import json
@@ -57,12 +58,26 @@ class MockFileClient(object):
 
 
 class TestSaltCacheLoader(TestCase):
+    def __init__(self, *args, **kws):
+        TestCase.__init__(self, *args, **kws)
+        self.opts = {
+            'cachedir': TEMPLATES_DIR,
+            'file_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
+            'pillar_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            }
+        }
+
     def test_searchpath(self):
         '''
         The searchpath is based on the cachedir option and the saltenv parameter
         '''
         tmp = tempfile.gettempdir()
-        loader = SaltCacheLoader({'cachedir': tmp}, saltenv='test')
+        opts = copy.deepcopy(self.opts)
+        opts.update({'cachedir': tmp})
+        loader = SaltCacheLoader(opts, saltenv='test')
         assert loader.searchpath == [os.path.join(tmp, 'files', 'test')]
 
     def test_mockclient(self):
@@ -70,7 +85,7 @@ class TestSaltCacheLoader(TestCase):
         A MockFileClient is used that records all file requests normally sent
         to the master.
         '''
-        loader = SaltCacheLoader({'cachedir': TEMPLATES_DIR}, 'test')
+        loader = SaltCacheLoader(self.opts, 'test')
         fc = MockFileClient(loader)
         res = loader.get_source(None, 'hello_simple')
         assert len(res) == 3
@@ -86,7 +101,7 @@ class TestSaltCacheLoader(TestCase):
         '''
         Setup a simple jinja test environment
         '''
-        loader = SaltCacheLoader({'cachedir': TEMPLATES_DIR}, 'test')
+        loader = SaltCacheLoader(self.opts, 'test')
         fc = MockFileClient(loader)
         jinja = Environment(loader=loader)
         return fc, jinja
