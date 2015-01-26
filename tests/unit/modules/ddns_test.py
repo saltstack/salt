@@ -5,8 +5,12 @@
 
 
 # Import python libs
-import dns.query
-import dns.tsigkeyring
+try:
+    import dns.query
+    import dns.tsigkeyring
+    HAS_DNS = True
+except:
+    HAS_DNS = False
 import json
 
 
@@ -28,6 +32,7 @@ ddns.__grains__ = {}
 ddns.__salt__ = {}
 
 
+@skipIf(HAS_DNS, 'dnspython libs not installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DDNSTestCase(TestCase):
     '''
@@ -81,29 +86,33 @@ class DDNSTestCase(TestCase):
                                                   return_value=True):
                                     with patch.object(dns.query, 'udp') as mock:
                                         mock.answer = [{'address': 'localhost'}]
-                                        self.assertFalse(ddns.update(zone='A',
-                                                                     name='B',
-                                                                     ttl=1,
-                                                                     rdtype='C',
-                                                                     data='D'))
+                                        self.assertTrue(ddns.update(zone='A',
+                                                                    name='B',
+                                                                    ttl=1,
+                                                                    rdtype='C',
+                                                                    data='D'))
 
     def test_delete(self):
         '''
         Test to delete a DNS record.
         '''
         file_data = json.dumps({'A': 'B'})
-        with patch.object(dns.query, 'udp') as mock:
-            mock.answer = [{'address': 'localhost'}]
-            mock = MagicMock(return_value=True)
-            with patch.dict(ddns.__salt__, {'config.option': mock}):
-                mock = MagicMock(return_value=True)
-                with patch.dict(ddns.__salt__, {'file.file_exists': mock}):
-                    with patch('salt.utils.fopen',
-                               mock_open(read_data=file_data),
-                               create=True):
-                        with patch.object(dns.tsigkeyring, 'from_text',
-                                          return_value=True):
-                            self.assertFalse(ddns.delete(zone='A', name='B'))
+
+        class MockAnswer(object):
+            def __init__(self, *args, **kwargs):
+                self.answer = [{'address': 'localhost'}]
+            def rcode(self):
+                return 0
+
+        def mock_udp_query(*args, **kwargs):
+            return MockAnswer
+
+        with patch.object(dns.query, 'udp', mock_udp_query()),\
+                patch('salt.utils.fopen', mock_open(read_data=file_data), create=True),\
+                patch.object(dns.tsigkeyring, 'from_text', return_value=True),\
+                patch.object(ddns, '_get_keyring', return_value=None),\
+                patch.object(ddns, '_config', return_value=None):
+            self.assertTrue(ddns.delete(zone='A', name='B'))
 
 if __name__ == '__main__':
     from integration import run_tests
