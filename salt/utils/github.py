@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Connection library for GitHub
-
-:depends: requests
 '''
 from __future__ import absolute_import
 
