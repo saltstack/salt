@@ -62,3 +62,6 @@ _version.py
 
 # Ignore grains file written out during tests
 tests/integration/files/conf/grains
+
+# Ignore file cache created by jinja tests
+tests/unit/templates/roots
