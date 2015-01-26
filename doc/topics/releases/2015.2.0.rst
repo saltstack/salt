@@ -11,3 +11,22 @@ Salt SSH
 - Added support for ``publish.publish``, ``publish.full_data``, and
   ``publish.runner`` in ``salt-ssh``
 - Added support for ``mine.get`` in ``salt-ssh``
+
+Deprecations
+============
+- Removed ``parameter`` keyword argument from ``eselect.exec_action`` execution
+  module.
+
+- Removed ``runas`` parameter from the following ``pip``` execution module
+  functions: ``install``, ``uninstall``, ``freeze``, ``list_``, ``list_upgrades``,
+  ``upgrade_available``, ``upgrade``. Please migrate to ``user``.
+
+- Removed ``runas`` parameter from the following ``pip`` state module
+  functions: ``installed``, ``removed``, ``uptodate`` . Please migrate to ``user``.
+
+- Removed ``quiet`` option from all functions in ``cmdmod`` execution module.
+  Please use ``output_loglevel=quiet`` instead.
+
+- Removed ``parameter`` argument from ``eselect.set_`` state. Please migrate to 
+  ``module_parameter`` or ``action_parameter``.
+

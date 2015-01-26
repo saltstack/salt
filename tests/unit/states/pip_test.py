@@ -7,9 +7,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
-# Import python libs
-import warnings
-
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -19,7 +16,6 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 from salt.states import pip_state
-from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 try:
@@ -37,82 +33,6 @@ pip_state.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
 @skipIf(not HAS_PIP,
         'The \'pip\' library is not importable(installed system-wide)')
 class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
-
-    def test_installed_deprecated_runas(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value=[])
-        pip_install = MagicMock(return_value={'retcode': 0})
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list,
-                                             'pip.install': pip_install}):
-            with warnings.catch_warnings(record=True) as w:
-                ret = pip_state.installed('pep8', runas='me!')
-                self.assertEqual(
-                    'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Lithium (Unreleased). '
-                    'Please use \'user\' instead.', str(w[-1].message)
-                )
-                self.assertSaltTrueReturn({'testsuite': ret})
-                # Is the state returning a warnings key with the deprecation
-                # message?
-                self.assertInSaltStateWarning(
-                    'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Lithium (Unreleased). '
-                    'Please use \'user\' instead.', {'testsuite': ret}
-                )
-
-    def test_installed_runas_and_user_raises_exception(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip_state.installed,
-                'pep8',
-                user='Me!',
-                runas='Not Me!'
-            )
-
-    def test_removed_deprecated_runas(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value=['pep8'])
-        pip_uninstall = MagicMock(return_value=True)
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list,
-                                             'pip.uninstall': pip_uninstall}):
-            with warnings.catch_warnings(record=True) as w:
-                ret = pip_state.removed('pep8', runas='me!')
-                self.assertEqual(
-                    'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Lithium (Unreleased). '
-                    'Please use \'user\' instead.', str(w[-1].message)
-                )
-                self.assertSaltTrueReturn({'testsuite': ret})
-                # Is the state returning a warnings key with the deprecation
-                # message?
-                self.assertInSaltStateWarning(
-                    'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Lithium (Unreleased). '
-                    'Please use \'user\' instead.', {'testsuite': ret}
-                )
-
-    def test_removed_runas_and_user_raises_exception(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip_state.removed,
-                'pep8',
-                user='Me!',
-                runas='Not Me!'
-            )
 
     def test_install_requirements_parsing(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
