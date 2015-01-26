@@ -123,7 +123,7 @@ class Runner(RunnerClient):
         '''
         Execute the runner sequence
         '''
-        ret = {}
+        ret, async_pub = {}, {}
         if self.opts.get('doc', False):
             self.print_docs()
         else:
@@ -141,7 +141,8 @@ class Runner(RunnerClient):
                 # Run the runner!
                 if self.opts.get('async', False):
                     async_pub = self.async(self.opts['fun'], low, user=user)
-                    log.info('Running in async mode. Results of this execution may '
+                    # by default: info will be not enougth to be printed out !
+                    log.warn('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured. '
                              'This execution is running under tag {tag}'.format(**async_pub))
@@ -156,6 +157,12 @@ class Runner(RunnerClient):
                                            async_pub['jid'],
                                            False,  # Don't daemonize
                                            )
+                msg = 'Runner completed'
+                if async_pub.get('jid', ''):
+                    msg += ': {async_pub[jid]}'
+                msg = msg .format(ret=ret, async_pub=async_pub)
+                # by default: info will be not enougth to be printed out !
+                log.warn(msg)
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 if not self.opts.get('quiet', False):
