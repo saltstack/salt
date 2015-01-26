@@ -131,7 +131,7 @@ def get_printout(out, opts=None, **kwargs):
         if out == 'text':
             out = 'txt'
 
-    if out is None:
+    if out is None or out == '':
         out = 'nested'
     if opts.get('progress', False):
         out = 'progress'

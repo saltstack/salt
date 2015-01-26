@@ -1980,7 +1980,7 @@ class ClearFuncs(object):
             if auth_error:
                 return auth_error
             else:
-                token = self.loadauth.get_tok(clear_load['token'])
+                token = self.loadauth.get_tok(clear_load.pop('token'))
             try:
                 fun = clear_load.pop('fun')
                 runner_client = salt.runner.RunnerClient(self.opts)
@@ -1999,12 +1999,15 @@ class ClearFuncs(object):
             eauth_error = self.process_eauth(clear_load, 'runner')
             if eauth_error:
                 return eauth_error
+            # No error occurred, consume the password from the clear_load if
+            # passed
+            clear_load.pop('password', None)
             try:
                 fun = clear_load.pop('fun')
                 runner_client = salt.runner.RunnerClient(self.opts)
                 return runner_client.async(fun,
                                            clear_load.get('kwarg', {}),
-                                           clear_load.get('username', 'UNKNOWN'))
+                                           clear_load.pop('username', 'UNKNOWN'))
             except Exception as exc:
                 log.error('Exception occurred while '
                           'introspecting {0}: {1}'.format(fun, exc))
@@ -2032,7 +2035,7 @@ class ClearFuncs(object):
             if auth_error:
                 return auth_error
             else:
-                token = self.loadauth.get_tok(clear_load['token'])
+                token = self.loadauth.get_tok(clear_load.pop('token'))
 
             jid = salt.utils.jid.gen_jid()
             fun = clear_load.pop('fun')
@@ -2066,13 +2069,17 @@ class ClearFuncs(object):
             eauth_error = self.process_eauth(clear_load, 'wheel')
             if eauth_error:
                 return eauth_error
+
+            # No error occurred, consume the password from the clear_load if
+            # passed
+            clear_load.pop('password', None)
             jid = salt.utils.jid.gen_jid()
             fun = clear_load.pop('fun')
             tag = tagify(jid, prefix='wheel')
             data = {'fun': "wheel.{0}".format(fun),
                     'jid': jid,
                     'tag': tag,
-                    'user': clear_load.get('username', 'UNKNOWN')}
+                    'user': clear_load.pop('username', 'UNKNOWN')}
             try:
                 self.event.fire_event(data, tagify([jid, 'new'], 'wheel'))
                 ret = self.wheel_.call_func(fun, **clear_load)

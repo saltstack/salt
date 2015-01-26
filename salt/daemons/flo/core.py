@@ -4,9 +4,8 @@ The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import time
@@ -17,8 +16,6 @@ import traceback
 import itertools
 from collections import deque
 import random
-import salt.ext.six as six
-from salt.ext.six.moves import range
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -46,6 +43,8 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 # Import Third Party Libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 HAS_PSUTIL = False
 try:
     import psutil
@@ -195,7 +194,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      offset=0.5)
 
         if self.opts.value.get('raet_clear_remotes'):
-            for remote in self.stack.value.remotes.values():
+            for remote in six.itervalues(self.stack.value.remotes):
                 self.stack.value.removeRemote(remote, clear=True)
             self.stack.puid = self.stack.value.Uid  # reset puid
 
