@@ -46,7 +46,10 @@ class PyDSLRendererTestCase(TestCase):
         self.HIGHSTATE.push_active()
 
     def tearDown(self):
-        self.HIGHSTATE.pop_active()
+        try:
+            self.HIGHSTATE.pop_active()
+        except IndexError:
+            pass
 
     def render_sls(self, content, sls='', env='base', **kws):
         return self.HIGHSTATE.state.rend['pydsl'](
@@ -509,6 +512,7 @@ def write_to(fpath, content):
 def state_highstate(state, dirpath):
     OPTS['file_roots'] = dict(base=[dirpath])
     HIGHSTATE = HighState(OPTS)
+    HIGHSTATE.clear_active()
     HIGHSTATE.push_active()
     try:
         high, errors = HIGHSTATE.render_highstate(state)

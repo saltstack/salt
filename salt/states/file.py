@@ -1355,7 +1355,6 @@ def managed(name,
 
     try:
         if __opts__['test']:
-            ret['result'] = None
             ret['changes'] = __salt__['file.check_managed_changes'](
                 name,
                 source,
@@ -1370,6 +1369,10 @@ def managed(name,
                 contents,
                 **kwargs
             )
+            if not ret['changes']:
+                ret['result'] = True
+            else:
+                ret['result'] = None
 
             if ret['changes']:
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
@@ -3784,7 +3787,8 @@ def _merge_dict(obj, k, v):
 
 
 def serialize(name,
-              dataset,
+              dataset=None,
+              dataset_pillar=None,
               user=None,
               group=None,
               mode=None,
@@ -3803,7 +3807,17 @@ def serialize(name,
         The location of the file to create
 
     dataset
-        the dataset that will be serialized
+        The dataset that will be serialized
+
+    dataset_pillar
+        Operates like ``dataset``, but draws from a value stored in pillar,
+        using the pillar path syntax used in :mod:`pillar.get
+        <salt.modules.pillar.get>`. This is useful when the pillar value
+        contains newlines, as referencing a pillar variable using a jinja/mako
+        template can result in YAML formatting issues due to the newlines
+        causing indentation mismatches.
+
+        .. versionadded:: FIXME
 
     formatter
         Write the data as this format. Supported output formats:
@@ -3904,6 +3918,17 @@ def serialize(name,
             return ret
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
+
+    if len([_f for _f in [dataset, dataset_pillar] if _f]) > 1:
+        return _error(
+            ret, 'Only one of \'dataset\' and \'dataset_pillar\' is permitted')
+
+    if dataset_pillar:
+        dataset = __salt__['pillar.get'](dataset_pillar)
+
+    if dataset is None:
+        return _error(
+            ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
 
     if merge_if_exists:
         if os.path.isfile(name):

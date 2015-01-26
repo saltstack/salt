@@ -60,7 +60,7 @@ def compile_template(template,
         return ret
     # Template is an empty file
     if salt.utils.is_empty(template):
-        log.error('Template is an empty file: {0}'.format(template))
+        log.warn('Template is an empty file: {0}'.format(template))
         return ret
 
     # Get the list of render funcs in the render pipe line.
