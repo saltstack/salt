@@ -366,7 +366,11 @@ def nproc():
 
         salt '*' status.nproc
     '''
-    data = __salt__['cmd.run']('nproc')
+    cmd = {
+        'Linux': 'nproc',
+        'FreeBSD': 'sysctl -n hw.ncpu',
+    }
+    data = __salt__['cmd.run'](cmd[__grains__['kernel']])
     try:
         ret = int(data.strip())
     except Exception:
