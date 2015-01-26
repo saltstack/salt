@@ -134,6 +134,9 @@ class TestGetTemplate(TestCase):
             'file_roots': {
                 'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
             },
+            'pillar_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
             'extension_modules': os.path.join(
@@ -178,7 +181,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Salt', saltenv='test'))
         self.assertEqual(out, 'Hey world !Hi Salt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
@@ -267,7 +272,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Sàlt', saltenv='test'))
         self.assertEqual(out, u'Hey world !Hi Sàlt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
@@ -278,7 +285,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Sàlt', saltenv='test'))
         self.assertEqual(u'Assunção\n', out)
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
