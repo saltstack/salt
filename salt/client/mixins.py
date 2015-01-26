@@ -263,6 +263,7 @@ class SyncClientMixin(object):
             event=None, mminion=mminion)
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
+        log.info('Runner completed: {data[jid]}'.format(data=data))
         del event
         del namespaced_event
         return data['return']

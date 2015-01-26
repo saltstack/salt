@@ -157,12 +157,6 @@ class Runner(RunnerClient):
                                            async_pub['jid'],
                                            False,  # Don't daemonize
                                            )
-                msg = 'Runner completed'
-                if async_pub.get('jid', ''):
-                    msg += ': {async_pub[jid]}'
-                msg = msg .format(ret=ret, async_pub=async_pub)
-                # by default: info will be not enougth to be printed out !
-                log.warn(msg)
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 if not self.opts.get('quiet', False):
