@@ -249,7 +249,10 @@ def _parse_hostname():
     Parse /etc/hostname and return hostname
     '''
     contents = _read_file(_DEB_HOSTNAME_FILE)
-    return contents[0].split('\n')[0]
+    if contents:
+        return contents[0].split('\n')[0]
+    else:
+        return ''
 
 
 def _parse_current_network_settings():
