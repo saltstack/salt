@@ -6,6 +6,7 @@ import sys
 import shutil
 import tempfile
 import textwrap
+import copy
 from cStringIO import StringIO
 
 # Import Salt Testing libs
@@ -510,9 +511,9 @@ def write_to(fpath, content):
 
 
 def state_highstate(state, dirpath):
-    OPTS['file_roots'] = dict(base=[dirpath])
-    HIGHSTATE = HighState(OPTS)
-    HIGHSTATE.clear_active()
+    opts = copy.copy(OPTS)
+    opts['file_roots'] = dict(base=[dirpath])
+    HIGHSTATE = HighState(opts)
     HIGHSTATE.push_active()
     try:
         high, errors = HIGHSTATE.render_highstate(state)
