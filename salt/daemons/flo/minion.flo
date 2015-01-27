@@ -30,9 +30,6 @@ framer minionudpstack be active first setup
         bid start eventing
         # Start the functionmanage framer
         bid start functionmanager
-        # Start the Beacon system
-        bid start masterevents
-        bid start beacon
         # Start the outbound framer
         bid start outbound
         # Start the scheduler
@@ -90,6 +87,14 @@ framer bootstrap be inactive first join
         print Loading
         enter
             do salt load modules
+        go latestart
+
+    frame latestart
+        # Start late frames that need the pillar/modules to be available
+        # Start the master events loop
+        bid start masterevents
+        # Start Beacon
+        bid start beacon
         go router
 
     frame router
