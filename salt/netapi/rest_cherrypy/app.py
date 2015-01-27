@@ -1512,21 +1512,21 @@ class Events(object):
             :status 200: |200|
             :status 401: |401|
             :status 406: |406|
+            :query token: **optional** parameter containing the token
+                ordinarily supplied via the X-Auth-Token header in order to
+                allow cross-domain requests in browsers that do not include
+                CORS support in the EventSource API. E.g.,
+                ``curl -NsS localhost:8000/events?token=308650d``
+            :query salt_token: **optional** parameter containing a raw Salt
+                *eauth token* (not to be confused with the token returned from
+                the /login URL). E.g.,
+                ``curl -NsS localhost:8000/events?salt_token=30742765``
 
         **Example request:**
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events?salt_token=307427657b16a70aed360a46c5370035
-
-        Or you can pass the token sent by cherrypy's
-        `/login` endpoint (these are different tokens).
-        :ref:`salt-token-generation` describes the process of obtaining a
-        Salt token.
-
-        .. code-block:: bash
-
-            curl -NsS localhost:8000/events?token=308650dbd728d8405a32ac9c2b2c1ed7705222bc
+            curl -NsS localhost:8000/events
 
         .. code-block:: http
 
@@ -1551,9 +1551,7 @@ class Events(object):
 
         .. code-block:: javascript
 
-            var source = new EventSource('/events?token=ecd589e4e01912cf3c4035afad73426dbb8dba75');
-            // Salt token works as well!
-            // var source = new EventSource('/events?salt_token=307427657b16a70aed360a46c5370035');
+            var source = new EventSource('/events');
             source.onopen = function() { console.debug('opening') };
             source.onerror = function(e) { console.debug('error!', e) };
             source.onmessage = function(e) { console.debug(e.data) };
@@ -1563,16 +1561,6 @@ class Events(object):
         .. code-block:: javascript
 
             var source = new EventSource('/events?token=ecd589e4e01912cf3c4035afad73426dbb8dba75', {withCredentials: true});
-            // You can supply the salt token as well
-            var source = new EventSource('/events?salt_token=307427657b16a70aed360a46c5370035', {withCredentials: true});
-
-        Some browser clients lack CORS support for the ``EventSource()`` API. Such
-        clients may instead pass the :mailheader:`X-Auth-Token` value as an URL
-        parameter:
-
-        .. code-block:: bash
-
-            curl -NsS localhost:8000/events/6d1b722e
 
         It is also possible to consume the stream via the shell.
 
@@ -1587,7 +1575,7 @@ class Events(object):
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events?salt_token=307427657b16a70aed360a46c5370035 |\
+            curl -NsS localhost:8000/events |\
                     while IFS= read -r line ; do
                         echo $line
                     done
@@ -1596,7 +1584,7 @@ class Events(object):
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events?salt_token=307427657b16a70aed360a46c5370035 |\
+            curl -NsS localhost:8000/events |\
                     awk '
                         BEGIN { RS=""; FS="\\n" }
                         $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
