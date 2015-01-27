@@ -539,12 +539,20 @@ def version():
 
         salt '*' status.version
     '''
-    procf = '/proc/version'
-    if not os.path.isfile(procf):
-        return {}
-    ret = salt.utils.fopen(procf, 'r').read().strip()
+    def linux_version():
+        procf = '/proc/version'
+        if not os.path.isfile(procf):
+            return {}
+        return salt.utils.fopen(procf, 'r').read().strip()
 
-    return ret
+    # dict that return a function that does the right thing per platform
+    get_version = {
+    'Linux': linux_version,
+    'FreeBSD': lambda : __salt__['cmd.run']('sysctl -n kern.version'),
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def master(master_ip=None, connected=True):
