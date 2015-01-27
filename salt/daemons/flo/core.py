@@ -1250,6 +1250,8 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
         self.master_events.value = deque()
 
     def action(self):
+        if not self.master_events.value:
+            return
         events = []
         for master in self.road_stack.value.remotes:
             master_uid = master
