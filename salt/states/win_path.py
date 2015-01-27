@@ -2,6 +2,7 @@
 '''
 Manage the Windows System PATH
 '''
+from __future__ import absolute_import
 
 # Python Libs
 import re
@@ -27,7 +28,9 @@ def absent(name):
 
     index: where the directory should be placed in the PATH (default: 0)
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         'C:\\sysinternals':
           win_path.absent
@@ -60,7 +63,9 @@ def exists(name, index=None):
     [Note:  Providing no index will append directory to PATH and
     will not enforce its location within the PATH.]
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         'C:\\python27':
           win_path.exists

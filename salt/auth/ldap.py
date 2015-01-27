@@ -19,17 +19,20 @@ from jinja2 import Environment
 try:
     import ldap
     import ldap.modlist
+    import ldap.filter
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
 
 # Defaults, override in master config
-__defopts__ = {'auth.ldap.server': 'localhost',
+__defopts__ = {'auth.ldap.uri': '',
+               'auth.ldap.server': 'localhost',
                'auth.ldap.port': '389',
                'auth.ldap.tls': False,
                'auth.ldap.no_verify': False,
                'auth.ldap.anonymous': False,
-               'auth.ldap.scope': 2
+               'auth.ldap.scope': 2,
+               'auth.ldap.groupou': 'Groups'
                }
 
 
@@ -65,28 +68,31 @@ class _LDAPConnection(object):
     Setup an LDAP connection.
     '''
 
-    def __init__(self, server, port, tls, no_verify, binddn, bindpw,
+    def __init__(self, uri, server, port, tls, no_verify, binddn, bindpw,
                  anonymous):
         '''
         Bind to an LDAP directory using passed credentials.
         '''
+        self.uri = uri
         self.server = server
         self.port = port
         self.tls = tls
+        schema = 'ldaps' if tls else 'ldap'
         self.binddn = binddn
         self.bindpw = bindpw
-        schema = 'ldap'
         if not HAS_LDAP:
             raise CommandExecutionError('Failed to connect to LDAP, module '
                                         'not loaded')
+        if self.uri == '':
+            self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
+
         try:
             if no_verify:
                 ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT,
                                 ldap.OPT_X_TLS_NEVER)
-            if self.tls:
-                schema = 'ldaps'
+
             self.ldap = ldap.initialize(
-                '{0}://{1}:{2}'.format(schema, self.server, self.port)
+                '{0}'.format(self.uri)
             )
             self.ldap.protocol_version = 3  # ldap.VERSION3
             self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
@@ -95,13 +101,13 @@ class _LDAPConnection(object):
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
         except Exception as ldap_error:
             raise CommandExecutionError(
-                'Failed to bind to LDAP server {0}:{1} as {2}: {3}'.format(
-                    self.server, self.port, self.binddn, ldap_error
+                'Failed to bind to LDAP server {0} as {1}: {2}'.format(
+                    self.uri, self.binddn, ldap_error
                 )
             )
 
 
-def auth(username, password):
+def _bind(username, password):
     '''
     Authenticate via an LDAP bind
     '''
@@ -111,8 +117,8 @@ def auth(username, password):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-            'mandatory': ['server', 'port', 'tls', 'no_verify', 'anonymous'],
-            'additional': ['binddn', 'bindpw', 'filter'],
+        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous'],
+        'additional': ['binddn', 'bindpw', 'filter'],
     }
 
     paramvalues = {}
@@ -133,9 +139,11 @@ def auth(username, password):
         #   - cn={{ username }},ou=users,dc=company,dc=tld
         # so make sure to render it first before using it
         paramvalues['binddn'] = _render_template(paramvalues['binddn'], username)
+        paramvalues['binddn'] = ldap.filter.escape_filter_chars(paramvalues['binddn'])
 
     if paramvalues['filter']:
-        paramvalues['filter'] = _render_template(paramvalues['filter'], username)
+        escaped_username = ldap.filter.escape_filter_chars(username)
+        paramvalues['filter'] = _render_template(paramvalues['filter'], escaped_username)
 
     # Only add binddn/bindpw to the connargs when they're set, as they're not
     # mandatory for initializing the LDAP object, but if they're provided
@@ -177,14 +185,49 @@ def auth(username, password):
     # Attempt bind with user dn and password
     log.debug('Attempting LDAP bind with user dn: {0}'.format(connargs['binddn']))
     try:
-        _LDAPConnection(**connargs).ldap
+        ldap_conn = _LDAPConnection(**connargs).ldap
     except Exception:
-        #log.warn('Failed to authenticate user dn via LDAP: {0}'.format(connargs['binddn']))
+        connargs.pop('bindpw', None)  # Don't log the password
         log.warn('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
+        log.debug('Error authenticating user dn via LDAP:', exc_info=True)
         return False
     log.debug(
         'Successfully authenticated user dn via LDAP: {0}'.format(
             connargs['binddn']
         )
     )
-    return True
+    return ldap_conn
+
+
+def auth(username, password):
+    '''
+    Simple LDAP auth
+    '''
+    if _bind(username, password):
+        log.debug('LDAP authentication successful')
+        return True
+    else:
+        return False
+
+
+def groups(username, **kwargs):
+    '''
+    Authenticate against an LDAP group
+
+    Uses groupou and basedn specified in group to filter
+    group search
+    '''
+    group_list = []
+    bind = _bind(username, kwargs['password'])
+    if bind:
+        search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')),
+                                       ldap.SCOPE_SUBTREE,
+                                       '(&(memberUid={0})(objectClass=posixGroup))'.format(username),
+                                       ['memberUid', 'cn'])
+    else:
+        return False
+    for _, entry in search_results:
+        if entry['memberUid'][0] == username:
+            group_list.append(entry['cn'][0])
+    log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+    return group_list

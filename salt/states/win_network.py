@@ -3,7 +3,7 @@
 Configuration of network interfaces on Windows hosts
 ====================================================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 This module provides the ``network`` state(s) on Windows hosts. DNS servers, IP
 addresses and default gateways can currently be managed.
@@ -59,6 +59,7 @@ default gateway using the ``gateway`` parameter:
           - 10.2.3.4/24
         - gateway: 10.2.3.1
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -66,6 +67,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.validate.net
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -357,7 +359,7 @@ def managed(name,
                 changes['ip_addrs'] = ip_addrs
             if changes.get('ip_proto') == 'static' and not changes.get('ip_addrs'):
                 changes['ip_addrs'] = ip_addrs
-            for idx in xrange(len(changes['ip_addrs'])):
+            for idx in range(len(changes['ip_addrs'])):
                 if idx == 0:
                     __salt__['ip.set_static_ip'](
                         name,

@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
-Management of PostgreSQL extensions (eg: postgis)
-=================================================
+Management of PostgreSQL extensions (e.g.: postgis)
+===================================================
 
-The postgres_users module is used to create and manage Postgres extensions.
+The postgres_extensions module is used to create and manage Postgres extensions.
 
 .. code-block:: yaml
 
     adminpack:
       postgres_extension.present
+
+
+.. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -24,9 +28,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_extension' if (
-        'postgres.create_extension' in __salt__
-    ) else False
+    return 'postgres.create_extension' in __salt__
 
 
 def present(name,
@@ -41,7 +43,7 @@ def present(name,
             db_port=None,
             db_user=None):
     '''
-    Ensure that the named user is present with the specified privileges
+    Ensure that the named extension is present with the specified privileges
 
     name
         The name of the extension to manage
@@ -79,7 +81,7 @@ def present(name,
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': 'Extention {0} is already present'.format(name)}
+           'comment': 'Extension {0} is already present'.format(name)}
     db_args = {
         'maintenance_db': maintenance_db,
         'runas': user,
@@ -88,7 +90,7 @@ def present(name,
         'port': db_port,
         'password': db_password,
     }
-    # check if user exists
+    # check if extension exists
     mode = 'create'
     mtdata = __salt__['postgres.create_metadata'](
         name,
@@ -96,7 +98,7 @@ def present(name,
         ext_version=ext_version,
         **db_args)
 
-    # The user is not present, make it!
+    # The extension is not present, install it!
     toinstall = postgres._EXTENSION_NOT_INSTALLED in mtdata
     if toinstall:
         mode = 'install'
@@ -117,7 +119,7 @@ def present(name,
         return ret
     cret = None
     if toinstall or toupgrade:
-        cret = __salt__['postgres.create_extension'.format(mode)](
+        cret = __salt__['postgres.create_extension'](
             name=name,
             if_not_exists=if_not_exists,
             schema=schema,
@@ -125,7 +127,11 @@ def present(name,
             from_version=from_version,
             **db_args)
     if cret:
-        ret['comment'] = 'The extension {0} has been {1}ed'.format(name, mode)
+        if mode.endswith('e'):
+            suffix = 'd'
+        else:
+            suffix = 'ed'
+        ret['comment'] = 'The extension {0} has been {1}{2}'.format(name, mode, suffix)
     elif cret is not None:
         ret['comment'] = 'Failed to {1} extension {0}'.format(name, mode)
         ret['result'] = False
@@ -145,10 +151,10 @@ def absent(name,
            db_port=None,
            db_user=None):
     '''
-    Ensure that the named user is absent
+    Ensure that the named extension is absent
 
     name
-        Extension username of the extension to remove
+        Extension name of the extension to remove
 
     cascade
         Drop on cascade
@@ -189,7 +195,7 @@ def absent(name,
         'port': db_port,
         'password': db_password,
     }
-    # check if user exists and remove it
+    # check if extension exists and remove it
     exists = __salt__['postgres.is_installed_extension'](name, **db_args)
     if exists:
         if __opts__['test']:

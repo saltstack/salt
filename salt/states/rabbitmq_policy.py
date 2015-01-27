@@ -17,10 +17,11 @@ Example:
             - pattern: '.*'
             - definition: '{"ha-mode": "all"}'
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
-from salt import exceptions, utils
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -29,12 +30,7 @@ def __virtual__():
     '''
     Only load if RabbitMQ is installed.
     '''
-    name = 'rabbitmq_policy'
-    try:
-        utils.check_or_die('rabbitmqctl')
-    except exceptions.CommandNotFoundError:
-        name = False
-    return name
+    return salt.utils.which('rabbitmqctl') is not None
 
 
 def present(name,
@@ -72,7 +68,7 @@ def present(name,
             updates.append('Pattern')
         if policy.get('definition') != definition:
             updates.append('Definition')
-        if policy.get('priority') != priority:
+        if int(policy.get('priority')) != priority:
             updates.append('Priority')
 
     if policy and not updates:
@@ -85,7 +81,6 @@ def present(name,
             ret['comment'] = 'Policy {0} {1} is set to be created'.format(vhost, name)
         elif updates:
             ret['comment'] = 'Policy {0} {1} is set to be updated'.format(vhost, name)
-        ret['comment'] = ret['comment'].format(name)
     else:
         changes = {'new': '', 'old': ''}
         if not policy:

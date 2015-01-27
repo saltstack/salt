@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Management of package repos
-===========================
+Management of APT/YUM package repos
+===================================
 
-Package repositories can be managed with the pkgrepo state:
+Package repositories for APT-based and YUM-based distros can be managed with
+these states. Here is some example SLS:
 
 .. code-block:: yaml
 
@@ -55,9 +56,19 @@ Package repositories can be managed with the pkgrepo state:
     ``python-software-properties`` package, a missing dependency on pycurl, so
     ``python-pycurl`` will need to be manually installed if it is not present
     once ``python-software-properties`` is installed.
+
+    On Ubuntu & Debian systems, the ```python-apt`` package is required to be installed.
+    To check if this package is installed, run ``dpkg -l python-software-properties``.
+    ``python-apt`` will need to be manually installed if it is not present.
+
 '''
+from __future__ import absolute_import
+
+# Import python libs
+import sys
 
 # Import salt libs
+from salt.exceptions import CommandExecutionError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -66,7 +77,7 @@ def __virtual__():
     '''
     Only load if modifying repos is available for this package type
     '''
-    return 'pkgrepo' if 'pkg.mod_repo' in __salt__ else False
+    return 'pkg.mod_repo' in __salt__
 
 
 def managed(name, **kwargs):
@@ -77,7 +88,6 @@ def managed(name, **kwargs):
     name
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
-
 
     For yum-based systems, take note of the following configuration values:
 
@@ -144,8 +154,13 @@ def managed(name, **kwargs):
                 - name: deb http://us.archive.ubuntu.com/ubuntu precise main
 
     disabled
-        On apt-based systems, disabled toggles whether or not the repo is
-        used for resolving dependencies and/or installing packages
+        Toggles whether or not the repo is used for resolving dependencies
+        and/or installing packages.
+
+    enabled
+        Enables the repository, even if the repository has been disabled, in
+        order for the respective package requiring the repository can be found
+        and installed.
 
     comps
         On apt-based systems, comps dictate the types of packages to be
@@ -170,7 +185,7 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       A web URL to retrieve the GPG key from.
+       URL to retrieve a GPG key from.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
@@ -180,10 +195,18 @@ def managed(name, **kwargs):
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
 
+    clean_file
+       If set to true, empty file before config repo, dangerous if use
+       multiple sources in one file.
+
+    refresh_db
+       If set to false this will skip refreshing the apt package database on
+       debian based systems.
+
     require_in
-        Set this to a list of pkg.installed or pkg.latest to trigger the
-        running of apt-get update prior to attempting to install these
-        packages. Setting a require in the pkg will not work for this.
+       Set this to a list of pkg.installed or pkg.latest to trigger the
+       running of apt-get update prior to attempting to install these
+       packages. Setting a require in the pkg will not work for this.
     '''
     ret = {'name': name,
            'changes': {},
@@ -219,14 +242,29 @@ def managed(name, **kwargs):
                 kwargs['repo'],
                 ppa_auth=kwargs.get('ppa_auth', None)
         )
-    except Exception:
-        pass
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = \
+            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+        return ret
+
+    # aptpkg supports "disabled", yumpkg supports "enabled"
+    # lets just provide both to everyone.
+    if 'enabled' in kwargs and 'disabled' not in kwargs:
+        kw_enabled = kwargs['enabled'] in (['true', 'True', 'TRUE', True, 1])
+        kwargs['disabled'] = not kw_enabled
+    if 'disabled' in kwargs and 'enabled' not in kwargs:
+        kw_disabled = kwargs['disabled'] in (['true', 'True', 'TRUE', True, 1])
+        kwargs['enabled'] = not kw_disabled
 
     # this is because of how apt-sources works.  This pushes distro logic
     # out of the state itself and into a module that it makes more sense
     # to use.  Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    sanitizedkwargs = __salt__['pkg.expand_repo_def'](kwargs)
+    if 'pkg.expand_repo_def' in __salt__:
+        sanitizedkwargs = __salt__['pkg.expand_repo_def'](kwargs)
+    else:
+        sanitizedkwargs = kwargs
     if __grains__['os_family'] == 'Debian':
         kwargs['repo'] = _strip_uri(kwargs['repo'])
 
@@ -235,7 +273,7 @@ def managed(name, **kwargs):
         for kwarg in sanitizedkwargs:
             if kwarg == 'repo':
                 pass
-            elif kwarg not in repo.keys():
+            elif kwarg not in repo:
                 notset = True
             elif kwarg == 'comps':
                 if sorted(sanitizedkwargs[kwarg]) != sorted(repo[kwarg]):
@@ -256,6 +294,10 @@ def managed(name, **kwargs):
             ret['comment'] = ('Package repo {0!r} already configured'
                               .format(name))
             return ret
+
+    if kwargs.get('clean_file', False):
+        open(kwargs['file'], 'w').close()
+
     if __opts__['test']:
         ret['comment'] = ('Package repo {0!r} will be configured. This may '
                           'cause pkg states to behave differently than stated '
@@ -264,24 +306,22 @@ def managed(name, **kwargs):
                           .format(name))
         return ret
     try:
-        __salt__['pkg.mod_repo'](**kwargs)
-    except Exception as e:
+        if __grains__['os_family'] == 'Debian':
+            __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
+        else:
+            __salt__['pkg.mod_repo'](**kwargs)
+    except Exception as exc:
         # This is another way to pass information back from the mod_repo
         # function.
         ret['result'] = False
-        ret['comment'] = ('Failed to configure repo {0!r}: {1}'
-                          .format(name, str(e)))
+        ret['comment'] = \
+            'Failed to configure repo {0!r}: {1}'.format(name, exc)
         return ret
-    else:
-        # Repo was modified, refresh the pkg db if on an apt-based OS. Other
-        # package managers do this sort of thing automatically.
-        if __grains__['os_family'] == 'Debian':
-            __salt__['pkg.refresh_db']()
 
     try:
-        repodict = __salt__['pkg.get_repo'](kwargs['repo'],
-                                            ppa_auth=kwargs.get('ppa_auth',
-                                                                None))
+        repodict = __salt__['pkg.get_repo'](
+            kwargs['repo'], ppa_auth=kwargs.get('ppa_auth', None)
+        )
         if repo:
             for kwarg in sanitizedkwargs:
                 if repodict.get(kwarg) != repo.get(kwarg):
@@ -293,10 +333,16 @@ def managed(name, **kwargs):
 
         ret['result'] = True
         ret['comment'] = 'Configured package repo {0!r}'.format(name)
-    except Exception as e:
+    except Exception as exc:
         ret['result'] = False
-        ret['comment'] = 'Failed to confirm config of repo {0!r}: {1}'.format(
-            name, str(e))
+        ret['comment'] = \
+            'Failed to confirm config of repo {0!r}: {1}'.format(name, exc)
+    # Clear cache of available packages, if present, since changes to the
+    # repositories may change the packages that are available.
+    if ret['changes']:
+        sys.modules[
+            __salt__['test.ping'].__module__
+        ].__context__.pop('pkg._avail', None)
     return ret
 
 
@@ -342,10 +388,15 @@ def absent(name, **kwargs):
         kwargs['name'] = kwargs.pop('ppa')
 
     try:
-        repo = __salt__['pkg.get_repo'](name,
-                                        ppa_auth=kwargs.get('ppa_auth', None))
-    except Exception:
-        pass
+        repo = __salt__['pkg.get_repo'](
+            name, ppa_auth=kwargs.get('ppa_auth', None)
+        )
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = \
+            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+        return ret
+
     if not repo:
         ret['comment'] = 'Package repo {0} is absent'.format(name)
         ret['result'] = True
@@ -359,11 +410,17 @@ def absent(name, **kwargs):
         return ret
     __salt__['pkg.del_repo'](repo=name, **kwargs)
     repos = __salt__['pkg.list_repos']()
-    if name not in repos.keys():
-        ret['changes'] = {'repo': name}
+    if name not in repos:
         ret['result'] = True
+        ret['changes'] = {'repo': name}
         ret['comment'] = 'Removed package repo {0}'.format(name)
-        return ret
-    ret['result'] = False
-    ret['comment'] = 'Failed to remove repo {0}'.format(name)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Failed to remove repo {0}'.format(name)
+    # Clear cache of available packages, if present, since changes to the
+    # repositories may change the packages that are available.
+    if ret['changes']:
+        sys.modules[
+            __salt__['test.ping'].__module__
+        ].__context__.pop('pkg._avail', None)
     return ret
