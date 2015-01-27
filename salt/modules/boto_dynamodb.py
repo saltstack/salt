@@ -34,7 +34,6 @@ Connection module for Amazon DynamoDB
 '''
 
 # Import Python libs
-import sys
 import logging
 import time
 

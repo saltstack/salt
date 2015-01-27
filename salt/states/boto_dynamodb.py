@@ -79,7 +79,6 @@ Ensure DynamoDB table exists:
 # Import Python libs
 import sys
 import logging
-import json
 
 logging.basicConfig(
     level=logging.INFO,
@@ -264,6 +263,6 @@ def absent(table_name,
         ret['result'] = True
     else:
         ret['comment'] = 'Failed to delete DynamoDB table {0} \
-                         '.format(table_name, MAX_ITERATIONS)
+                         '.format(table_name)
         ret['result'] = False
     return ret
