@@ -345,14 +345,19 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
         '''
         if self.opts['aes'].value != self.crypticle.key_string:
             self.crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
-
+            return True
+        return False
 
     def _decode_payload(self, payload):
         # we need to decrypt it
         if payload['enc'] == 'aes':
-            self._update_aes()  # check if you need to update the aes key
             try:
-                payload['load'] = self.crypticle.loads(payload['load'])
+                try:
+                    payload['load'] = self.crypticle.loads(payload['load'])
+                except salt.crypt.AuthenticationError:
+                    if not self._update_aes():
+                        raise
+                    payload['load'] = self.crypticle.loads(payload['load'])
             except Exception:
                 # send something back to the client so the client so they know
                 # their load was malformed
@@ -390,19 +395,26 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
 
     # TODO? maybe have recv() return this function, so this class isn't tied to
     # a send/recv order
-    def send(self, payload):
+    def send_clear(self, payload):
         '''
         Send a response to a recv()'d payload
         '''
         self._socket.send(self.serial.dumps(payload))
 
-    def encrypt(self, payload):
+    def send(self, payload):
         '''
-        Regular encryption
+        Send a response to a recv()'d payload
         '''
-        return self.crypticle.dumps(payload)
+        self.send_clear(self.crypticle.dumps(payload))
 
-    def encrypt_private(self, ret, dictkey, target):
+
+    def send_private(self, payload, dictkey, target):
+        '''
+        Send a response to a recv()'d payload encrypted privately for target
+        '''
+        self.send_clear(self._encrypt_private(payload, dictkey, target))
+
+    def _encrypt_private(self, ret, dictkey, target):
         '''
         The server equivalent of ReqChannel.crypted_transfer_decode_dictentry
         '''

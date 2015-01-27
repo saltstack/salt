@@ -71,18 +71,22 @@ class ReqServerChannel(object):
         '''
         raise NotImplementedError()
 
-    # TODO: use a send method? or have the recv return one?
-    def send(self, load, tries=3, timeout=60):
+    def send_clear(self, payload):
         '''
-        Send "load" to the master.
+        Send a response to a recv()'d payload
         '''
         raise NotImplementedError()
 
-    # TODO:
-    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+    def send(self, payload):
         '''
-        Send "load" to the master in a way that the load is only readable by
-        the minion and the master (not other minions etc.)
+        Send a response to a recv()'d payload
+        '''
+        raise NotImplementedError()
+
+
+    def send_private(self, payload, dictkey, target):
+        '''
+        Send a response to a recv()'d payload encrypted privately for target
         '''
         raise NotImplementedError()
 

@@ -654,8 +654,19 @@ class MWorker(multiprocessing.Process):
             while True:
                 try:
                     payload = self.req_channel.recv()
-                    ret = self._handle_payload(payload)
-                    self.req_channel.send(ret)
+                    ret, req_opts = self._handle_payload(payload)
+
+                    # req_opts defines our response
+                    # req_fun: default to send_clear
+                    req_fun = req_opts.get('fun', 'send_clear')
+                    if req_fun == 'send_clear':
+                        self.req_channel.send_clear(ret)
+                    elif req_fun == 'send':
+                        self.req_channel.send(ret)
+                    elif req_fun == 'send_private':
+                        self.req_channel.send_private(ret, req_opts['key'], req_opts['tgt'])
+                    else:
+                        log.error('Unknown req_fun {0}'.format(req_fun))
                 # don't catch keyboard interrupts, just re-raise them
                 except KeyboardInterrupt:
                     raise
@@ -719,7 +730,7 @@ class MWorker(multiprocessing.Process):
         log.info('Clear payload received with command {cmd}'.format(**load))
         if load['cmd'].startswith('__'):
             return False
-        return getattr(self.clear_funcs, load['cmd'])(load)
+        return getattr(self.clear_funcs, load['cmd'])(load), {'fun': 'send_clear'}
 
     def _handle_aes(self, data):
         '''
@@ -746,7 +757,7 @@ class MWorker(multiprocessing.Process):
             self.opts,
             self.key,
             self.mkey)
-        self.aes_funcs = AESFuncs(self.opts, self.req_channel)
+        self.aes_funcs = AESFuncs(self.opts)
         self.__bind()
 
 
@@ -757,7 +768,7 @@ class AESFuncs(object):
     '''
     # The AES Functions:
     #
-    def __init__(self, opts, req_channel):
+    def __init__(self, opts):
         '''
         Create a new AESFuncs
 
@@ -770,7 +781,6 @@ class AESFuncs(object):
         self.opts = opts
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         self.serial = salt.payload.Serial(opts)
-        self.req_channel = req_channel
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts['conf_file'])
@@ -1344,7 +1354,7 @@ class AESFuncs(object):
         # Don't honor private functions
         if func.startswith('__'):
             # TODO: return some error? Seems odd to return {}
-            return self.req_channel.encrypt({})
+            return {}, {'fun': 'send'}
         # Run the func
         if hasattr(self, func):
             try:
@@ -1368,18 +1378,18 @@ class AESFuncs(object):
                     func
                 )
             )
-            return self.req_channel.encrypt(False)
+            return False, {'fun': 'send'}
         # Don't encrypt the return value for the _return func
         # (we don't care about the return value, so why encrypt it?)
         if func == '_return':
-            return ret
+            return ret, {'fun': 'send'}
         if func == '_pillar' and 'id' in load:
             if load.get('ver') != '2' and self.opts['pillar_version'] == 1:
                 # Authorized to return old pillar proto
-                return self.req_channel.encrypt(ret)
-            return self.req_channel.encrypt_private(ret, 'pillar', load['id'])
+                return ret, {'fun': 'send'}
+            return ret, {'fun': 'send_private', 'key': 'pillar', 'tgt': load['id']}
         # Encrypt the return
-        return self.req_channel.encrypt(ret)
+        return ret, {'fun': 'send'}
 
 
 class ClearFuncs(object):
