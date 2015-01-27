@@ -56,9 +56,11 @@ def beacon(config):
             if len(raw) != SIZE:
                 return ret
             __context__[LOC_KEY] = fp_.tell()
-            pack = struct.unpack(raw, FMT)
+            pack = struct.unpack(FMT, raw)
             event = {}
             for ind in range(len(FIELDS)):
-                event[FIELDS[ind]] = pack[ind].strip('\x00')
+                event[FIELDS[ind]] = pack[ind]
+                if isinstance(event[FIELDS[ind]], str):
+                    event[FIELDS[ind]] = event[FIELDS[ind]].strip('\x00')
             ret.append(event)
     return ret
