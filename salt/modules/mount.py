@@ -364,12 +364,12 @@ def set_fstab(
 
     # preserve arguments for updating
     entry_args = {
-        name: name,
-        device: device,
-        fstype: fstype,
-        opts: opts,
-        dump: dump,
-        pass_num: pass_num,
+        'name': name,
+        'device': device,
+        'fstype': fstype,
+        'opts': opts,
+        'dump': dump,
+        'pass_num': pass_num,
     }
 
     lines = []
