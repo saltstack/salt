@@ -3,10 +3,22 @@ Watch files and translate the changes into salt events
 '''
 # Import python libs
 import collections
-# Import third party libs
-import pyinotify
 
-DEFAULT_MASK = pyinotify.IN_CREATE | pyinotify.IN_DELETE | pyinotify.IN_MODIFY
+# Import third party libs
+try:
+    import pyinotify
+    HAS_PYINOTIFY = True
+    DEFAULT_MASK = pyinotify.IN_CREATE | pyinotify.IN_DELETE | pyinotify.IN_MODIFY
+except ImportError:
+    HAS_PYINOTIFY = False
+    DEFAULT_MASK = None
+
+__virtualname__ = 'inotify'
+
+def __virtual__():
+    if HAS_PYINOTIFY:
+        return __virtualname__
+    return False
 
 
 def _enqueue(revent):
@@ -26,6 +38,7 @@ def _get_notifier():
     wm = pyinotify.WatchManager()
     __context__['inotify.notifier'] = pyinotify.Notifier(wm, _enqueue)
     return __context__['inotify.notifier']
+
 
 def beacon(config):
     '''
