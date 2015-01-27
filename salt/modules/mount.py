@@ -363,8 +363,14 @@ def set_fstab(
         opts = ','.join(opts)
 
     # preserve arguments for updating
-    entry_args = dict(vars())
-    map(entry_args.pop, ['test', 'config', 'match_on', 'kwargs'])
+    entry_args = {
+        name: name,
+        device: device,
+        fstype: fstype,
+        opts: opts,
+        dump: dump,
+        pass_num: pass_num,
+    }
 
     lines = []
     ret = None
