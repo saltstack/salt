@@ -12,7 +12,7 @@ try:
     import dns.query
     import dns.tsigkeyring
     HAS_DNS = True
-except:
+except ImportError:
     HAS_DNS = False
 
 
@@ -88,9 +88,11 @@ class DDNSTestCase(TestCase):
             def __init__(self):
                 self.items = [{'address': 'localhost'}]
                 self.ttl = 2
+
         class MockAnswer(object):
             def __init__(self, *args, **kwargs):
                 self.answer = [MockRrset()]
+
             def rcode(self):
                 return 0
 
@@ -114,6 +116,7 @@ class DDNSTestCase(TestCase):
         class MockAnswer(object):
             def __init__(self, *args, **kwargs):
                 self.answer = [{'address': 'localhost'}]
+
             def rcode(self):
                 return 0
 
