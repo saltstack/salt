@@ -5,7 +5,7 @@ import os
 from imp import find_module
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import patch, Mock, NO_MOCK, NO_MOCK_REASON
 
@@ -15,8 +15,10 @@ ensure_in_syspath('../../')
 import salt.loader
 import salt.config
 import salt.utils
-from salt.state import HighState
 from integration import TMP
+from tests.integration import ModuleCase
+
+import copy
 
 try:
     from collections import OrderedDict
@@ -32,17 +34,6 @@ if not os.path.isdir(GPG_KEYDIR):
     os.makedirs(GPG_KEYDIR)
 
 os.chdir(GPG_KEYDIR)
-
-
-OPTS = salt.config.minion_config(None)
-OPTS['state_events'] = False
-OPTS['id'] = 'whatever'
-OPTS['file_client'] = 'local'
-OPTS['file_roots'] = dict(base=['/tmp'])
-OPTS['cachedir'] = 'cachedir'
-OPTS['test'] = False
-OPTS['grains'] = salt.loader.grains(OPTS)
-OPTS['gpg_keydir'] = GPG_KEYDIR
 
 ENCRYPTED_STRING = '''
 -----BEGIN PGP MESSAGE-----
@@ -63,17 +54,27 @@ if salt.utils.which('gpg') is None:
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(SKIP, "GPG must be installed")
-class GPGTestCase(TestCase):
+class GPGTestCase(ModuleCase):
 
     def setUp(self):
-        self.HIGHSTATE = HighState(OPTS)
-        self.HIGHSTATE.push_active()
+        opts = dict(copy.copy(self.minion_opts))
+        opts['state_events'] = False
+        opts['id'] = 'whatever'
+        opts['file_client'] = 'local'
+        opts['file_roots'] = dict(base=['/tmp'])
+        opts['cachedir'] = 'cachedir'
+        opts['test'] = False
+        opts['grains'] = salt.loader.grains(opts)
+        opts['gpg_keydir'] = GPG_KEYDIR
+        opts['gpg_keydir'] = opts['gpg_keydir']
 
-    def tearDown(self):
-        self.HIGHSTATE.pop_active()
+        self.opts = opts
+
+        self.funcs = salt.loader.minion_mods(self.opts)
+        self.render = salt.loader.render(self.opts, self.funcs)['gpg']
 
     def render_sls(self, data, sls='', env='base', **kws):
-        return self.HIGHSTATE.state.rend['gpg'](
+        return self.render(
             data, env=env, sls=sls, **kws
         )
 
@@ -94,7 +95,7 @@ class GPGTestCase(TestCase):
     @patch('gnupg.GPG')
     def test_homedir_is_passed_to_gpg(self, gpg_mock):
         self.render_sls({})
-        gpg_mock.assert_called_with(gnupghome=OPTS['gpg_keydir'])
+        gpg_mock.assert_called_with(gnupghome=self.opts['gpg_keydir'])
 
     def test_normal_string_is_unchanged(self):
         s = 'I am just another string'
