@@ -5,6 +5,7 @@ Network tools to run from the Master
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import socket
 
 # Import salt libs
@@ -32,7 +33,7 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
                 print('Waking up {0}'.format(mac.strip()))
                 ret.append(mac)
     except Exception as err:
-        print('Failed to open the MAC file. Error: {0}'.format(err))
+        __jid_event__.fire_event({'error': 'Failed to open the MAC file. Error: {0}'.format(err)}, 'progress')
         return []
     return ret
 
@@ -65,5 +66,4 @@ def wol(mac, bcast='255.255.255.255', destport=9):
            ('\\x' + mac[8:10]).decode('string_escape') + \
            ('\\x' + mac[10:12]).decode('string_escape')
     sock.sendto('\xff' * 6 + dest * 16, (bcast, int(destport)))
-    print('Sent magic packet to minion.')
     return True

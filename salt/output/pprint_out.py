@@ -1,8 +1,18 @@
 # -*- coding: utf-8 -*-
 '''
-The python pretty print system was the default outputter. This outputter
-simply passed the data passed into it through the pprint module.
+Python pretty-print (pprint)
+============================
+
+The python pretty-print system was once the default outputter. It simply
+passes the return data through to ``pprint.pformat`` and prints the results.
+
+Example output::
+
+    {'saltmine': {'foo': {'bar': 'baz',
+                          'dictionary': {'abc': 123, 'def': 456},
+                          'list': ['Hello', 'World']}}}
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import pprint

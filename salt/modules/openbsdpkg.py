@@ -2,6 +2,7 @@
 '''
 Package support for OpenBSD
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -45,8 +46,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -59,7 +61,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = 'pkg_info -q -a'
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
@@ -95,7 +97,7 @@ def latest_version(*names, **kwargs):
 
     stems = [x.split('--')[0] for x in names]
     cmd = 'pkg_info -q -I {0}'.format(' '.join(stems))
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='debug')
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False, output_loglevel='trace')
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
@@ -176,7 +178,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
             stem, flavor = (pkg.split('--') + [''])[:2]
             pkg = '--'.join((stem, flavor))
         cmd = 'pkg_add -x {0}'.format(pkg)
-        __salt__['cmd.run'](cmd, output_loglevel='debug')
+        __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -218,7 +220,7 @@ def remove(name=None, pkgs=None, **kwargs):
         return {}
 
     cmd = 'pkg_delete -xD dependencies {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='debug')
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)

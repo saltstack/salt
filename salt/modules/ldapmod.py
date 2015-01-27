@@ -5,20 +5,29 @@ Salt interface to LDAP commands
 :depends:   - ldap Python module
 :configuration: In order to connect to LDAP, certain configuration is required
     in the minion config on the LDAP server. The minimum configuration items
-    that must be set are::
+    that must be set are:
+
+    .. code-block:: yaml
 
         ldap.basedn: dc=acme,dc=com (example values, adjust to suit)
 
-    If your LDAP server requires authentication then you must also set::
+    If your LDAP server requires authentication then you must also set:
 
+    .. code-block:: yaml
+
+        ldap.anonymous: False
         ldap.binddn: admin
         ldap.bindpw: password
 
-    In addition, the following optional values may be set::
+    In addition, the following optional values may be set:
+
+    .. code-block:: yaml
 
         ldap.server: localhost (default=localhost, see warning below)
         ldap.port: 389 (default=389, standard port)
         ldap.tls: False (default=False, no TLS)
+        ldap.no_verify: False (default=False, verify TLS)
+        ldap.anonymous: True (default=True, bind anonymous)
         ldap.scope: 2 (default=2, ldap.SCOPE_SUBTREE)
         ldap.attrs: [saltAttr] (default=None, return all attributes)
 
@@ -27,16 +36,17 @@ Salt interface to LDAP commands
     At the moment this module only recommends connection to LDAP services
     listening on ``localhost``. This is deliberate to avoid the potentially
     dangerous situation of multiple minions sending identical update commands
-    to the same LDAP server. It's easy enough to override this behaviour, but
+    to the same LDAP server. It's easy enough to override this behavior, but
     badness may ensue - you have been warned.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
 import logging
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 try:
@@ -73,9 +83,6 @@ def _config(name, key=None, **kwargs):
         value = kwargs[name]
     else:
         value = __salt__['config.option']('ldap.{0}'.format(key))
-        if not value:
-            msg = 'missing ldap.{0} in config or {1} in args'.format(key, name)
-            raise SaltInvocationError(msg)
     return value
 
 
@@ -84,7 +91,8 @@ def _connect(**kwargs):
     Instantiate LDAP Connection class and return an LDAP connection object
     '''
     connargs = {}
-    for name in ['server', 'port', 'tls', 'binddn', 'bindpw']:
+    for name in ['uri', 'server', 'port', 'tls', 'no_verify', 'binddn',
+                 'bindpw', 'anonymous']:
         connargs[name] = _config(name, **kwargs)
 
     return _LDAPConnection(**connargs).ldap
@@ -156,29 +164,43 @@ def search(filter,      # pylint: disable=C0103
 
 class _LDAPConnection(object):
     '''
-    Setup a LDAP connection.
+    Setup an LDAP connection.
     '''
-    def __init__(self, server, port, tls, binddn, bindpw):
+
+    def __init__(self, uri, server, port, tls, no_verify, binddn, bindpw,
+                 anonymous):
         '''
-        Bind to a LDAP directory using passed credentials."""
+        Bind to an LDAP directory using passed credentials.
         '''
+        self.uri = uri
         self.server = server
         self.port = port
         self.tls = tls
         self.binddn = binddn
         self.bindpw = bindpw
+
+        if self.uri == '':
+            self.uri = 'ldap://{0}:{1}'.format(self.server, self.port)
+
         try:
-            # TODO: Support ldaps:// and possibly ldapi://
-            self.ldap = ldap.initialize('ldap://{0}:{1}'.format(
-                self.server, self.port
-            ))
+            if no_verify:
+                ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT,
+                                ldap.OPT_X_TLS_NEVER)
+
+            self.ldap = ldap.initialize(
+                '{0}'.format(self.uri)
+            )
             self.ldap.protocol_version = 3  # ldap.VERSION3
+            self.ldap.set_option(ldap.OPT_REFERRALS, 0)  # Needed for AD
+
             if self.tls:
                 self.ldap.start_tls_s()
-            self.ldap.simple_bind_s(self.binddn, self.bindpw)
-        except Exception:
+
+            if not anonymous:
+                self.ldap.simple_bind_s(self.binddn, self.bindpw)
+        except Exception as ldap_error:
             raise CommandExecutionError(
-                'Failed to bind to LDAP server {0}:{1} as {2}'.format(
-                    self.server, self.port, self.binddn
+                'Failed to bind to LDAP server {0} as {1}: {2}'.format(
+                    self.uri, self.binddn, ldap_error
                 )
             )

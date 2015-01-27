@@ -4,6 +4,8 @@ Provide authentication using OpenStack Keystone
 
 :depends:   - keystoneclient Python module
 '''
+
+from __future__ import print_function
 try:
     from keystoneclient.v2_0 import client
     from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
@@ -28,14 +30,14 @@ def auth(username, password):
     try:
         keystone = client.Client(username=username, password=password,
                                  auth_url=get_auth_url())
+        return keystone.authenticate()
     except (AuthorizationFailure, Unauthorized):
         return False
-    else:
-        return keystone.authenticate()
+
 
 if __name__ == '__main__':
     __opts__ = {}
     if auth('test', 'test'):
-        print "Authenticated"
+        print("Authenticated")
     else:
-        print "Failed to authenticate"
+        print("Failed to authenticate")

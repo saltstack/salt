@@ -21,12 +21,24 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import time
 import pprint
-import urllib
-import urllib2
 import logging
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.error import URLError
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
+from salt.ext.six.moves.urllib.request import (
+        HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
+        Request as _Request,
+        urlopen as _urlopen,
+        build_opener as _build_opener,
+        install_opener as _install_opener
+)
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -35,7 +47,7 @@ from salt._compat import ElementTree as ET
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
@@ -52,13 +64,8 @@ def __virtual__():
     Check for PARALLELS configurations
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Parallels cloud provider configuration available. '
-            'Not loading module.'
-        )
         return False
 
-    log.debug('Loading Parallels cloud module')
     return True
 
 
@@ -252,6 +259,7 @@ def create_node(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': data},
+        transport=__opts__['transport']
     )
 
     node = query(action='ve', method='POST', data=data)
@@ -262,13 +270,6 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
-    if deploy is True and salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'sshpass\' binary is not '
-            'present on the system.'
-        )
-
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -278,6 +279,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -289,10 +291,10 @@ def create(vm_):
             'Error creating {0} on PARALLELS\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -327,7 +329,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     comps = data['network']['public-ip']['address'].split('/')
     public_ip = comps[0]
@@ -339,6 +341,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': public_ip,
             'username': ssh_username,
             'password': config.get_cloud_config_value(
@@ -421,6 +424,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -454,6 +458,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return data
@@ -466,7 +471,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     path = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
     )
-    auth_handler = urllib2.HTTPBasicAuthHandler()
+    auth_handler = _HTTPBasicAuthHandler()
     auth_handler.add_password(
         realm='Parallels Instance Manager',
         uri=path,
@@ -478,8 +483,8 @@ def query(action=None, command=None, args=None, method='GET', data=None):
             search_global=False
         )
     )
-    opener = urllib2.build_opener(auth_handler)
-    urllib2.install_opener(opener)
+    opener = _build_opener(auth_handler)
+    _install_opener(opener)
 
     if action:
         path += action
@@ -487,21 +492,20 @@ def query(action=None, command=None, args=None, method='GET', data=None):
     if command:
         path += '/{0}'.format(command)
 
-    if type(args) is not dict:
+    if not type(args, dict):
         args = {}
 
     kwargs = {'data': data}
-    if type(data) is str and '<?xml' in data:
+    if isinstance(data, str) and '<?xml' in data:
         kwargs['headers'] = {
             'Content-type': 'application/xml',
         }
 
     if args:
-        path += '?%s'
-        params = urllib.urlencode(args)
-        req = urllib2.Request(url=path % params, **kwargs)
+        params = _urlencode(args)
+        req = _Request(url='{0}?{1}'.format(path, params), **kwargs)
     else:
-        req = urllib2.Request(url=path, **kwargs)
+        req = _Request(url=path, **kwargs)
 
     req.get_method = lambda: method
 
@@ -510,7 +514,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
         log.debug(data)
 
     try:
-        result = urllib2.urlopen(req)
+        result = _urlopen(req)
         log.debug(
             'PARALLELS Response Status Code: {0}'.format(
                 result.getcode()
@@ -524,7 +528,7 @@ def query(action=None, command=None, args=None, method='GET', data=None):
             return items
 
         return {}
-    except urllib2.URLError as exc:
+    except URLError as exc:
         log.error(
             'PARALLELS Response Status Code: {0} {1}'.format(
                 exc.code,
@@ -560,7 +564,14 @@ def show_image(kwargs, call=None):
         )
 
     items = query(action='template', command=kwargs['image'])
-    return {items.attrib['name']: items.attrib}
+    if 'error' in items:
+        return items['error']
+
+    ret = {}
+    for item in items:
+        ret.update({item.attrib['name']: item.attrib})
+
+    return ret
 
 
 def show_instance(name, call=None):
@@ -586,6 +597,8 @@ def show_instance(name, call=None):
             children = item._children
             for child in children:
                 ret[item.tag][child.tag] = child.attrib
+
+    salt.utils.cloud.cache_node(ret, __active_provider_name__, __opts__)
     return ret
 
 
@@ -608,7 +621,9 @@ def destroy(name, call=None):
     '''
     Destroy a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -623,6 +638,7 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     node = show_instance(name, call='action')
@@ -645,7 +661,11 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return {'Destroyed': '{0} was destroyed.'.format(name)}
 
@@ -654,7 +674,9 @@ def start(name, call=None):
     '''
     Start a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a start mymachine
     '''
@@ -675,7 +697,9 @@ def stop(name, call=None):
     '''
     Stop a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -a stop mymachine
     '''

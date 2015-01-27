@@ -15,8 +15,7 @@ configuration could look like:
 .. code-block:: yaml
 
     rvm:
-      group:
-        - present
+      group.present: []
       user.present:
         - gid: rvm
         - home: /home/rvm
@@ -25,7 +24,7 @@ configuration could look like:
 
     rvm-deps:
       pkg.installed:
-        - names:
+        - pkgs:
           - bash
           - coreutils
           - gzip
@@ -38,7 +37,7 @@ configuration could look like:
 
     mri-deps:
       pkg.installed:
-        - names:
+        - pkgs:
           - build-essential
           - openssl
           - libreadline6
@@ -65,7 +64,7 @@ configuration could look like:
 
     jruby-deps:
       pkg.installed:
-        - names:
+        - pkgs:
           - curl
           - g++
           - openjdk-6-jre-headless
@@ -101,12 +100,10 @@ configuration could look like:
         - require:
           - rvm: ruby-1.9.2
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
-
-# Import salt libs
-import salt.utils
 
 
 def _check_rvm(ret, user=None):
@@ -169,7 +166,7 @@ def _check_ruby(ret, ruby, user=None):
     return ret
 
 
-def installed(name, default=False, runas=None, user=None):
+def installed(name, default=False, user=None):
     '''
     Verify that the specified ruby is installed with RVM. RVM is
     installed when necessary.
@@ -180,41 +177,12 @@ def installed(name, default=False, runas=None, user=None):
     default : False
         Whether to make this ruby the default.
 
-    runas: None
-        The user to run rvm as.
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user to run rvm as.
 
         .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if __opts__['test']:
         ret['comment'] = 'Ruby {0} is set to be installed'.format(name)
@@ -231,7 +199,7 @@ def installed(name, default=False, runas=None, user=None):
         return _check_and_install_ruby(ret, name, default, user=user)
 
 
-def gemset_present(name, ruby='default', runas=None, user=None):
+def gemset_present(name, ruby='default', user=None):
     '''
     Verify that the gemset is present.
 
@@ -241,41 +209,12 @@ def gemset_present(name, ruby='default', runas=None, user=None):
     ruby: default
         The ruby version this gemset belongs to.
 
-    runas: None
-        The user to run rvm as.
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user to run rvm as.
 
         .. versionadded:: 0.17.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     ret = _check_rvm(ret, user)
     if ret['result'] is False:

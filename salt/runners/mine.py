@@ -2,41 +2,33 @@
 '''
 A runner to access data from the salt mine
 '''
-# Import python libs
-import os
+from __future__ import absolute_import
+
+# Import Python Libs
+import logging
 
 # Import salt libs
-import salt.payload
-import salt.utils.minions
 import salt.utils
+import salt.utils.minions
+
+log = logging.getLevelName(__name__)
 
 
-def get(tgt, fun, tgt_type='glob'):
+def get(tgt, fun, tgt_type='glob', output=None):
     '''
     Gathers the data from the specified minions' mine, pass in the target,
     function to look up and the target type
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-run mine.get '*' network.interfaces
     '''
-    ret = {}
-    serial = salt.payload.Serial(__opts__)
-    checker = salt.utils.minions.CkMinions(__opts__)
-    minions = checker.check_minions(
-            tgt,
-            tgt_type)
-    for minion in minions:
-        mine = os.path.join(
-                __opts__['cachedir'],
-                'minions',
-                minion,
-                'mine.p')
-        try:
-            with salt.utils.fopen(mine, 'rb') as fp_:
-                fdata = serial.load(fp_).get(fun)
-                if fdata:
-                    ret[minion] = fdata
-        except Exception:
-            continue
+    if output is not None:
+        # Remove this logging warning in Beryllium
+        salt.utils.warn_until(
+                'Beryllium',
+                'Runners now supports --out. Please use --out instead.')
+    ret = salt.utils.minions.mine_get(tgt, fun, tgt_type, __opts__)
     return ret

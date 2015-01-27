@@ -4,6 +4,9 @@ from __future__ import absolute_import
 # Import third party libs
 import msgpack
 
+# Import salt libs
+from salt.ext.six import string_types
+
 
 def render(msgpack_data, saltenv='base', sls='', **kws):
     '''
@@ -18,7 +21,7 @@ def render(msgpack_data, saltenv='base', sls='', **kws):
 
     :rtype: A Python data structure
     '''
-    if not isinstance(msgpack_data, basestring):
+    if not isinstance(msgpack_data, string_types):
         msgpack_data = msgpack_data.read()
 
     if msgpack_data.startswith('#!'):

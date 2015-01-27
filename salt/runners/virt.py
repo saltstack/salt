@@ -5,12 +5,15 @@ Control virtual machines via Salt
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
+import logging
 
 # Import Salt libs
 import salt.client
-import salt.output
 import salt.utils.virt
 import salt.key
+
+log = logging.getLogger(__name__)
 
 
 def _determine_hyper(data, omit=''):
@@ -22,7 +25,6 @@ def _determine_hyper(data, omit=''):
     # to be much more complicated.
     hyper = ''
     bestmem = 0
-    bestcpu = 0
     for hv_, comps in data.items():
         if hv_ == omit:
             continue
@@ -45,10 +47,7 @@ def _find_vm(name, data, quiet=False):
         if name in data[hv_].get('vm_info', {}):
             ret = {hv_: {name: data[hv_]['vm_info'][name]}}
             if not quiet:
-                salt.output.display_output(
-                        ret,
-                        'nested',
-                        __opts__)
+                __jid_event__.fire_event({'data': ret, 'outputter': 'nested'}, 'progress')
             return ret
     return {}
 
@@ -59,8 +58,10 @@ def query(hyper=None, quiet=False):
     are detected and a full query is returned. A single hypervisor can be
     passed in to specify an individual hypervisor to query.
     '''
+    if quiet:
+        log.warn('\'quiet\' is deprecated. Please migrate to --quiet')
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',
                                 'virt.full_info', expr_form='grain'):
         if not info:
@@ -68,7 +69,7 @@ def query(hyper=None, quiet=False):
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = info.keys()[0]
+        id_ = next(info.iterkeys())
         if hyper:
             if hyper != id_:
                 continue
@@ -81,20 +82,22 @@ def query(hyper=None, quiet=False):
         chunk[id_] = info[id_]['ret']
         ret.update(chunk)
         if not quiet:
-            salt.output.display_output(chunk, 'virt_query', __opts__)
+            __jid_event__.fire_event({'data': chunk, 'outputter': 'virt_query'}, 'progress')
 
     return ret
 
 
-def list(hyper=None, quiet=False):
+def list(hyper=None, quiet=False):  # pylint: disable=redefined-builtin
     '''
     List the virtual machines on each hyper, this is a simplified query,
     showing only the virtual machine names belonging to each hypervisor.
     A single hypervisor can be passed in to specify an individual hypervisor
     to list.
     '''
+    if quiet:
+        log.warn('\'quiet\' is deprecated. Please migrate to --quiet')
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',
                                 'virt.vm_info', expr_form='grain'):
         if not info:
@@ -102,7 +105,7 @@ def list(hyper=None, quiet=False):
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = info.keys()[0]
+        id_ = next(info.iterkeys())
         if hyper:
             if hyper != id_:
                 continue
@@ -113,22 +116,22 @@ def list(hyper=None, quiet=False):
         if not isinstance(info[id_]['ret'], dict):
             continue
         data = {}
-        for k, v in info[id_]['ret'].items():
-            if v['state'] in data:
-                data[v['state']].append(k)
+        for key, val in info[id_]['ret'].items():
+            if val['state'] in data:
+                data[val['state']].append(key)
             else:
-                data[v['state']] = [k]
+                data[val['state']] = [key]
         chunk[id_] = data
         ret.update(chunk)
         if not quiet:
-            salt.output.display_output(chunk, 'virt_list', __opts__)
+            __jid_event__.fire_event({'data': chunk, 'outputter': 'virt_list'}, 'progress')
 
     return ret
 
 
 def next_hyper():
     '''
-    Return the hypervisor to use for the next autodeployed vm. This querires
+    Return the hypervisor to use for the next autodeployed vm. This queries
     the available hypervisors and executes some math the determine the most
     "available" next hypervisor.
     '''
@@ -145,7 +148,7 @@ def hyper_info(hyper=None):
     for id_ in data:
         if 'vm_info' in data[id_]:
             data[id_].pop('vm_info')
-    salt.output.display_output(data, 'nested', __opts__)
+    __jid_event__.fire_event({'data': data, 'outputter': 'nested'}, 'progress')
     return data
 
 
@@ -172,14 +175,14 @@ def init(
 
     mem
         The amount of memory to allocate tot his virtual machine. The number
-        is interpereted in megabytes.
+        is interpreted in megabytes.
 
     image
         The network location of the virtual machine image, commonly a location
         on the salt fileserver, but http, https and ftp can also be used.
 
     hyper
-        The hypervisor to use for the new virtual macine, if this is ommited
+        The hypervisor to use for the new virtual machine, if this is omitted
         Salt will automatically detect what hypervisor to use.
 
     seed
@@ -191,33 +194,33 @@ def init(
         bridge on the master.
 
     install
-        Set to False to prevent Salt fom instaling a minion on the new vm
+        Set to False to prevent Salt from installing a minion on the new vm
         before it spins up.
     '''
-    print('Searching for Hypervisors')
+    __jid_event__.fire_event({'message': 'Searching for Hypervisors'}, 'progress')
     data = query(hyper, quiet=True)
     # Check if the name is already deployed
     for hyper in data:
         if 'vm_info' in data[hyper]:
             if name in data[hyper]['vm_info']:
-                print('Virtual machine {0} is already deployed'.format(name))
+                __jid_event__.fire_event({'message': 'Virtual machine {0} is already deployed'.format(name)}, 'progress')
                 return 'fail'
 
     if hyper is None:
         hyper = _determine_hyper(data)
 
     if hyper not in data or not hyper:
-        print('Hypervisor {0} was not found'.format(hyper))
+        __jid_event__.fire_event({'message': 'Hypervisor {0} was not found'.format(hyper)}, 'progress')
         return 'fail'
 
     if seed:
-        print('Minion will be preseeded')
-        kv = salt.utils.virt.VirtKey(hyper, name, __opts__)
-        kv.authorize()
+        __jid_event__.fire_event({'message': 'Minion will be preseeded'}, 'progress')
+        kv_ = salt.utils.virt.VirtKey(hyper, name, __opts__)
+        kv_.authorize()
 
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
 
-    print('Creating VM {0} on hypervisor {1}'.format(name, hyper))
+    __jid_event__.fire_event({'message': 'Creating VM {0} on hypervisor {1}'.format(name, hyper)}, 'progress')
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.init',
@@ -234,10 +237,10 @@ def init(
 
     ret = next(cmd_ret)
     if not ret:
-        print('VM {0} was not initialized.'.format(name))
+        __jid_event__.fire_event({'message': 'VM {0} was not initialized.'.format(name)}, 'progress')
         return 'fail'
 
-    print('VM {0} initialized on hypervisor {1}'.format(name, hyper))
+    __jid_event__.fire_event({'message': 'VM {0} initialized on hypervisor {1}'.format(name, hyper)}, 'progress')
     return 'good'
 
 
@@ -254,12 +257,12 @@ def reset(name):
     Force power down and restart an existing vm
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
-        print('Failed to find vm {0} to reset'.format(name))
+        __jid_event__.fire_event({'message': 'Failed to find vm {0} to reset'.format(name)}, 'progress')
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = next(data.iterkeys())
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.reset',
@@ -267,7 +270,7 @@ def reset(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print('Reset VM {0}'.format(name))
+    __jid_event__.fire_event({'message': 'Reset VM {0}'.format(name)}, 'progress')
     return ret
 
 
@@ -276,12 +279,12 @@ def start(name):
     Start a named virtual machine
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
-        print('Failed to find vm {0} to start'.format(name))
+        __jid_event__.fire_event({'message': 'Failed to find vm {0} to start'.format(name)}, 'progress')
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = next(data.iterkeys())
     if data[hyper][name]['state'] == 'running':
         print('VM {0} is already running'.format(name))
         return 'bad state'
@@ -292,7 +295,7 @@ def start(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print('Started VM {0}'.format(name))
+    __jid_event__.fire_event({'message': 'Started VM {0}'.format(name)}, 'progress')
     return 'good'
 
 
@@ -301,12 +304,12 @@ def force_off(name):
     Force power down the named virtual machine
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
         print('Failed to find vm {0} to destroy'.format(name))
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = next(data.iterkeys())
     if data[hyper][name]['state'] == 'shutdown':
         print('VM {0} is already shutdown'.format(name))
         return'bad state'
@@ -317,7 +320,7 @@ def force_off(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print('Powered off VM {0}'.format(name))
+    __jid_event__.fire_event({'message': 'Powered off VM {0}'.format(name)}, 'progress')
     return 'good'
 
 
@@ -326,12 +329,12 @@ def purge(name, delete_key=True):
     Destroy the named vm
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
-        print('Failed to find vm {0} to purge'.format(name))
+        __jid_event__.fire_event({'error': 'Failed to find vm {0} to purge'.format(name)}, 'progress')
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = next(data.iterkeys())
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.purge',
@@ -343,7 +346,7 @@ def purge(name, delete_key=True):
     if delete_key:
         skey = salt.key.Key(__opts__)
         skey.delete_key(name)
-    print('Purged VM {0}'.format(name))
+    __jid_event__.fire_event({'message': 'Purged VM {0}'.format(name)}, 'progress')
     return 'good'
 
 
@@ -352,14 +355,15 @@ def pause(name):
     Pause the named vm
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
+
     data = vm_info(name, quiet=True)
     if not data:
-        print('Failed to find VM {0} to pause'.format(name))
+        __jid_event__.fire_event({'error': 'Failed to find VM {0} to pause'.format(name)}, 'progress')
         return 'fail'
-    hyper = data.keys()[0]
+    hyper = next(data.iterkeys())
     if data[hyper][name]['state'] == 'paused':
-        print('VM {0} is already paused'.format(name))
+        __jid_event__.fire_event({'error': 'VM {0} is already paused'.format(name)}, 'progress')
         return 'bad state'
     cmd_ret = client.cmd_iter(
             hyper,
@@ -368,7 +372,7 @@ def pause(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print('Paused VM {0}'.format(name))
+    __jid_event__.fire_event({'message': 'Paused VM {0}'.format(name)}, 'progress')
     return 'good'
 
 
@@ -377,14 +381,14 @@ def resume(name):
     Resume a paused vm
     '''
     ret = {}
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = vm_info(name, quiet=True)
     if not data:
-        print('Failed to find VM {0} to pause'.format(name))
+        __jid_event__.fire_event({'error': 'Failed to find VM {0} to pause'.format(name)}, 'progress')
         return 'not found'
-    hyper = data.keys()[0]
+    hyper = next(data.iterkeys())
     if data[hyper][name]['state'] != 'paused':
-        print('VM {0} is not paused'.format(name))
+        __jid_event__.fire_event({'error': 'VM {0} is not paused'.format(name)}, 'progress')
         return 'bad state'
     cmd_ret = client.cmd_iter(
             hyper,
@@ -393,7 +397,7 @@ def resume(name):
             timeout=600)
     for comp in cmd_ret:
         ret.update(comp)
-    print('Resumed VM {0}'.format(name))
+    __jid_event__.fire_event({'message': 'Resumed VM {0}'.format(name)}, 'progress')
     return 'good'
 
 
@@ -402,22 +406,22 @@ def migrate(name, target=''):
     Migrate a vm from one hypervisor to another. This routine will just start
     the migration and display information on how to look up the progress.
     '''
-    client = salt.client.LocalClient(__opts__['conf_file'])
+    client = salt.client.get_local_client(__opts__['conf_file'])
     data = query(quiet=True)
     origin_data = _find_vm(name, data, quiet=True)
     try:
-        origin_hyper = origin_data.keys()[0]
+        origin_hyper = list(origin_data.keys())[0]
     except IndexError:
-        print('Named vm {0} was not found to migrate'.format(name))
+        __jid_event__.fire_event({'error': 'Named vm {0} was not found to migrate'.format(name)}, 'progress')
         return ''
     disks = origin_data[origin_hyper][name]['disks']
     if not origin_data:
-        print('Named vm {0} was not found to migrate'.format(name))
+        __jid_event__.fire_event({'error': 'Named vm {0} was not found to migrate'.format(name)}, 'progress')
         return ''
     if not target:
         target = _determine_hyper(data, origin_hyper)
     if target not in data:
-        print('Target hypervisor {0} not found'.format(origin_data))
+        __jid_event__.fire_event({'error': 'Target hypervisor {0} not found'.format(origin_data)}, 'progress')
         return ''
     client.cmd(target, 'virt.seed_non_shared_migrate', [disks, True])
     jid = client.cmd_async(origin_hyper,
@@ -428,4 +432,4 @@ def migrate(name, target=''):
            'and can be tracked via jid {2}. The ``salt-run virt.query`` '
            'runner can also be used, the target vm will be shown as paused '
            'until the migration is complete.').format(name, target, jid)
-    print(msg)
+    __jid_event__.fire_event({'message': msg}, 'progress')

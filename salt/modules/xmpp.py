@@ -2,7 +2,7 @@
 '''
 Module for Sending Messages via XMPP (a.k.a. Jabber)
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 :depends:   - sleekxmpp python module
 :configuration: This module can be used by either passing a jid and password

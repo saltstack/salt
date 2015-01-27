@@ -1,8 +1,7 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 Management of zc.buildout
-===========================
+=========================
 
 This module is inspired from minitage's buildout maker
 (https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py)
@@ -36,12 +35,13 @@ Available Functions
           - onlyif: /bin/test_else_installed
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
@@ -51,9 +51,7 @@ def __virtual__():
     '''
     Only load if zc.buildout libs available
     '''
-    if True:
-        return __virtualname__
-    return False
+    return __virtualname__
 
 
 INVALID_RESPONSE = 'We did not get any expectable answer from docker'
@@ -64,7 +62,7 @@ FN_CACHE = {}
 
 
 def __salt(fn):
-    if not fn in FN_CACHE:
+    if fn not in FN_CACHE:
         FN_CACHE[fn] = __salt__[fn]
     return FN_CACHE[fn]
 
@@ -122,7 +120,7 @@ def installed(name,
               config='buildout.cfg',
               quiet=False,
               parts=None,
-              runas=None,
+              user=None,
               env=(),
               buildout_ver=None,
               test_release=False,
@@ -134,7 +132,9 @@ def installed(name,
               debug=False,
               verbose=False,
               unless=None,
-              onlyif=None):
+              onlyif=None,
+              use_vt=False,
+              loglevel='debug'):
     '''
     Install buildout in a specific directory
 
@@ -153,8 +153,10 @@ def installed(name,
     parts
         specific buildout parts to run
 
-    runas
+    user
         user used to run buildout as
+
+        .. versionadded:: 2014.1.4
 
     env
         environment variables to set when running
@@ -192,17 +194,25 @@ def installed(name,
     verbose
         run buildout in verbose mode (-vvvvv)
 
+    use_vt
+        Use the new salt VT to stream output [experimental]
+
+    loglevel
+        loglevel for buildout commands
     '''
+    ret = {}
+
     try:
         test_release = int(test_release)
     except ValueError:
         test_release = None
+
     func = __salt('buildout.buildout')
-    a, kw = [], dict(
+    kwargs = dict(
         directory=name,
         config=config,
         parts=parts,
-        runas=runas,
+        runas=user,
         env=env,
         buildout_ver=buildout_ver,
         test_release=test_release,
@@ -215,8 +225,8 @@ def installed(name,
         verbose=verbose,
         onlyif=onlyif,
         unless=unless,
+        use_vt=use_vt,
+        loglevel=loglevel
     )
-    status = _ret_status(func(*a, **kw), name, quiet=quiet)
-    return status
-
-# vim:set et sts=4 ts=4 tw=80:
+    ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
+    return ret

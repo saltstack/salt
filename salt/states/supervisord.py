@@ -6,19 +6,18 @@ Interaction with the Supervisor daemon
 .. code-block:: yaml
 
     wsgi_server:
-      supervisord:
-        - running
+      supervisord.running:
         - require:
           - pkg: supervisor
         - watch:
           - file: /etc/nginx/sites-enabled/wsgi_server.conf
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
+import salt.ext.six as six
 
-# Import salt libs
-import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -27,8 +26,13 @@ def _check_error(result, success_message):
     ret = {}
 
     if 'ERROR' in result:
-        ret['comment'] = result
-        ret['result'] = False
+        if 'already started' in result:
+            ret['comment'] = success_message
+        elif 'not running' in result:
+            ret['comment'] = success_message
+        else:
+            ret['comment'] = result
+            ret['result'] = False
     else:
         ret['comment'] = success_message
 
@@ -36,14 +40,17 @@ def _check_error(result, success_message):
 
 
 def _is_stopped_state(state):
-    return state in ('STOPPED', 'STOPPING', 'EXITED', 'FATAL')
+    if state in ('STOPPED', 'STOPPING', 'EXITED', 'FATAL', 'BACKOFF'):
+        return True
+    if state in ('STARTING', 'RUNNING'):
+        return False
+    return False
 
 
 def running(name,
             restart=False,
             update=False,
             user=None,
-            runas=None,
             conf_file=None,
             bin_env=None):
     '''
@@ -57,11 +64,6 @@ def running(name,
 
     update
         Whether to update the supervisor configuration.
-
-    runas
-        Name of the user to run the supervisorctl command
-
-        .. deprecated:: 0.17.0
 
     user
         Name of the user to run the supervisorctl command
@@ -78,29 +80,10 @@ def running(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
+    if 'supervisord.status' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'Supervisord module not activated. Do you need to install supervisord?'
+        return ret
 
     all_processes = __salt__['supervisord.status'](
         user=user,
@@ -109,27 +92,66 @@ def running(name,
     )
 
     # parse process groups
-    process_groups = []
+    process_groups = set()
     for proc in all_processes:
         if ':' in proc:
-            process_groups.append(proc[:proc.index(':') + 1])
-    process_groups = list(set(process_groups))
+            process_groups.add(proc[:proc.index(':') + 1])
+    process_groups = sorted(process_groups)
 
-    # determine if this process/group needs loading
-    needs_update = name not in all_processes and name not in process_groups
+    matches = {}
+    if name in all_processes:
+        matches[name] = (all_processes[name]['state'].lower() == 'running')
+    elif name in process_groups:
+        for process in (x for x in all_processes if x.startswith(name)):
+            matches[process] = (
+                all_processes[process]['state'].lower() == 'running'
+            )
+    to_add = not bool(matches)
 
     if __opts__['test']:
-        ret['result'] = None
-        _msg = 'restarted' if restart else 'started'
-        _update = ', but service needs to be added' if needs_update else ''
-        ret['comment'] = (
-            'Service {0} is set to be {1}{2}'.format(
-                name, _msg, _update))
+        if not to_add:
+            # Process/group already present, check if any need to be started
+            to_start = [x for x, y in six.iteritems(matches) if y is False]
+            if to_start:
+                ret['result'] = None
+                if name.endswith(':'):
+                    # Process group
+                    if len(to_start) == len(matches):
+                        ret['comment'] = (
+                            'All services in group {0!r} will be started'
+                            .format(name)
+                        )
+                    else:
+                        ret['comment'] = (
+                            'The following services will be started: {0}'
+                            .format(' '.join(to_start))
+                        )
+                else:
+                    # Single program
+                    ret['comment'] = 'Service {0} will be started'.format(name)
+            else:
+                if name.endswith(':'):
+                    # Process group
+                    ret['comment'] = (
+                        'All services in group {0!r} are already running'
+                        .format(name)
+                    )
+                else:
+                    ret['comment'] = ('Service {0} is already running'
+                                      .format(name))
+        else:
+            ret['result'] = None
+            # Process/group needs to be added
+            if name.endswith(':'):
+                _type = 'Group {0!r}'.format(name)
+            else:
+                _type = 'Service {0}'.format(name)
+            ret['comment'] = '{0} will be added and started'.format(_type)
         return ret
 
     changes = []
     just_updated = False
-    if needs_update:
+    if to_add:
         comment = 'Adding service: {0}'.format(name)
         __salt__['supervisord.reread'](
             user=user,
@@ -155,7 +177,6 @@ def running(name,
             bin_env=bin_env
         )
         ret.update(_check_error(result, comment))
-        changes.append(comment)
         log.debug(comment)
 
         if '{0}: updated'.format(name) in result:
@@ -222,13 +243,13 @@ def running(name,
         log.debug(comment)
         result = __salt__['supervisord.start'](
             name,
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
 
         ret.update(_check_error(result, comment))
-        log.debug(unicode(result))
+        log.debug(six.text_type(result))
 
     if ret['result'] and len(changes):
         ret['changes'][name] = ' '.join(changes)
@@ -237,7 +258,6 @@ def running(name,
 
 def dead(name,
          user=None,
-         runas=None,
          conf_file=None,
          bin_env=None):
     '''
@@ -245,11 +265,6 @@ def dead(name,
 
     name
         Service name as defined in the supervisor configuration file
-
-    runas
-        Name of the user to run the supervisorctl command
-
-        .. deprecated:: 0.17.0
 
     user
         Name of the user to run the supervisorctl command
@@ -266,30 +281,6 @@ def dead(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
-
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = (
@@ -299,7 +290,7 @@ def dead(name,
         log.debug(comment)
 
         all_processes = __salt__['supervisord.status'](
-            user=runas,
+            user=user,
             conf_file=conf_file,
             bin_env=bin_env
         )
@@ -341,7 +332,7 @@ def dead(name,
                 bin_env=bin_env
             )}
             ret.update(_check_error(result, comment))
-            log.debug(unicode(result))
+            log.debug(six.text_type(result))
     return ret
 
 
@@ -349,7 +340,6 @@ def mod_watch(name,
               restart=True,
               update=False,
               user=None,
-              runas=None,
               conf_file=None,
               bin_env=None):
     # Always restart on watch
@@ -358,7 +348,6 @@ def mod_watch(name,
         restart=restart,
         update=update,
         user=user,
-        runas=runas,
         conf_file=conf_file,
         bin_env=bin_env
     )

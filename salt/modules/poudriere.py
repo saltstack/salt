@@ -2,6 +2,7 @@
 '''
 Support for poudriere
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -87,10 +88,7 @@ def make_pkgng_aware(jname):
                     cdir)
 
     # Added args to file
-    cmd = 'echo "WITH_PKGNG=yes" > {0}-make.conf'.format(
-            os.path.join(cdir, jname))
-
-    __salt__['cmd.run'](cmd)
+    __salt__['file.write']('{0}-make.conf'.format(os.path.join(cdir, jname)), 'WITH_PKGNG=yes')
 
     if os.path.isfile(os.path.join(cdir, jname) + '-make.conf'):
         ret['changes'] = 'Created {0}'.format(
@@ -204,6 +202,24 @@ def create_jail(name, arch, version="9.0-RELEASE"):
     return 'Issue creating jail {0}'.format(name)
 
 
+def update_jail(name):
+    '''
+    Run freebsd-update on `name` poudriere jail
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' poudriere.update_jail freebsd:10:x86:64
+    '''
+    if is_jail(name):
+        cmd = 'poudriere jail -u -j {0}'.format(name)
+        ret = __salt__['cmd.run'](cmd)
+        return ret
+    else:
+        return 'Could not find jail {0}'.format(name)
+
+
 def delete_jail(name):
     '''
     Deletes poudriere jail with `name`
@@ -234,8 +250,7 @@ def delete_jail(name):
         except (IOError, OSError):
             return ('Deleted jail "{0}" but was unable to remove jail make '
                     'file').format(name)
-        cmd = 'rm -f {0}'.format(make_file)
-        __salt__['cmd.run'](cmd)
+        __salt__['file.remove'](make_file)
 
     return 'Deleted jail {0}'.format(name)
 
@@ -246,6 +261,25 @@ def create_ports_tree():
     '''
     _check_config_exists()
     cmd = 'poudriere ports -c'
+    ret = __salt__['cmd.run'](cmd)
+    return ret
+
+
+def update_ports_tree(ports_tree):
+    '''
+    Updates the ports tree, either the default or the `ports_tree` specified
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' poudriere.update_ports_tree staging
+    '''
+    _check_config_exists()
+    if ports_tree:
+        cmd = 'poudriere ports -u -p {0}'.format(ports_tree)
+    else:
+        cmd = 'poudriere ports -u'
     ret = __salt__['cmd.run'](cmd)
     return ret
 
