@@ -324,10 +324,11 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
                         'skip_watch': True,
                         'result': True}
         elif isinstance(unless, list):
+            cmd = []
             for entry in unless:
-                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
+                cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
                 log.debug('Last command return code: {0}'.format(cmd))
-                if cmd == 0:
+                if all([c == 0 for c in cmd]):
                     return {'comment': 'unless execution succeeded',
                             'skip_watch': True,
                             'result': True}
