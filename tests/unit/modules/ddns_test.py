@@ -5,14 +5,15 @@
 
 
 # Import python libs
+import contextlib
+import textwrap
+import json
 try:
     import dns.query
     import dns.tsigkeyring
     HAS_DNS = True
 except:
     HAS_DNS = False
-import json
-import textwrap
 
 
 # Import Salt Testing Libs
@@ -96,14 +97,13 @@ class DDNSTestCase(TestCase):
         def mock_udp_query(*args, **kwargs):
             return MockAnswer
 
-        # pylint: disable=E0001
-        with patch.object(dns.message, 'make_query', MagicMock(return_value=mock_request)),\
-                patch.object(dns.query, 'udp', mock_udp_query()),\
-                patch.object(dns.rdatatype, 'from_text', MagicMock(return_value=mock_rdtype)),\
-                patch.object(ddns, '_get_keyring', return_value=None),\
-                patch.object(ddns, '_config', return_value=None):
+        with contextlib.nested(
+                patch.object(dns.message, 'make_query', MagicMock(return_value=mock_request)),
+                patch.object(dns.query, 'udp', mock_udp_query()),
+                patch.object(dns.rdatatype, 'from_text', MagicMock(return_value=mock_rdtype)),
+                patch.object(ddns, '_get_keyring', return_value=None),
+                patch.object(ddns, '_config', return_value=None)):
             self.assertTrue(ddns.update('zone', 'name', 1, 'AAAA', '::1'))
-        # pylint: enable=E0001
 
     def test_delete(self):
         '''
@@ -120,14 +120,13 @@ class DDNSTestCase(TestCase):
         def mock_udp_query(*args, **kwargs):
             return MockAnswer
 
-        # pylint: disable=E0001
-        with patch.object(dns.query, 'udp', mock_udp_query()),\
-                patch('salt.utils.fopen', mock_open(read_data=file_data), create=True),\
-                patch.object(dns.tsigkeyring, 'from_text', return_value=True),\
-                patch.object(ddns, '_get_keyring', return_value=None),\
-                patch.object(ddns, '_config', return_value=None):
+        with contextlib.nested(
+                patch.object(dns.query, 'udp', mock_udp_query()),
+                patch('salt.utils.fopen', mock_open(read_data=file_data), create=True),
+                patch.object(dns.tsigkeyring, 'from_text', return_value=True),
+                patch.object(ddns, '_get_keyring', return_value=None),
+                patch.object(ddns, '_config', return_value=None)):
             self.assertTrue(ddns.delete(zone='A', name='B'))
-        # pylint: enable=E0001
 
 if __name__ == '__main__':
     from integration import run_tests
