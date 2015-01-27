@@ -161,6 +161,12 @@ class SyncClientMixin(object):
                'kwargs': kwargs}
         return self.low(fun, low)
 
+    @property
+    def mminion(self):
+        if not hasattr(self, '_mminion'):
+            self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
+        return self._mminion
+
     def low(self, fun, low):
         '''
         Execute a function from low data
@@ -176,10 +182,7 @@ class SyncClientMixin(object):
         '''
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
         tag = low.get('__tag__', tagify(jid, prefix=self.tag_prefix))
-        # this is not neccessary, but the cosmectic is to display
-        # the result after the module loading even with
-        # a hight debug level
-        mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
+
         data = {'fun': '{0}.{1}'.format(self.client, fun),
                 'jid': jid,
                 'user': low.get('__user__', 'UNKNOWN'),
@@ -267,7 +270,7 @@ class SyncClientMixin(object):
              'return': data,
              },
             event=None,
-            mminion=mminion,
+            mminion=self.mminion,
             )
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
