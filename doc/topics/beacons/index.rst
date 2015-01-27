@@ -1,14 +1,16 @@
+.. _beacons:
+
 =======
 Beacons
 =======
 
 The beacon system allows the minion to hook into system processes and
 continually translate external events into the salt event bus. The
-primary example of this is the ``inotify`` beacon. This beacon uses
-inotify to watch configured files or directories on the minion for
+primary example of this is the :py:mod:`~salt.beacons.inotify` beacon. This
+beacon uses inotify to watch configured files or directories on the minion for
 changes, creation, deletion etc.
 
-This allows for the changes to be sent up tot he master where the
+This allows for the changes to be sent up to the master where the
 reactor can respond to changes.
 
 Configuring The Beacons
@@ -27,8 +29,8 @@ minion pillar, grains, or local config file:
 Writing Beacon Plugins
 ======================
 
-Beacon plugins use the standard salt loader system, meaning that many of the
-constructs from other plugin systems holds true, such as the ``__virtul__``
+Beacon plugins use the standard Salt loader system, meaning that many of the
+constructs from other plugin systems holds true, such as the ``__virtual__``
 function.
 
 The important function in the Beacon Plugin is the ``beacon`` function. When
@@ -37,4 +39,4 @@ by the minion. The ``beacon`` function therefore cannot block and should be
 as lightweight as possible. The ``beacon`` also must return a list of dicts,
 each dict in the list will be translated into an event on the master.
 
-Please see the inotify beacon as an example.
+Please see the :py:mod:`~salt.beacons.inotify` beacon as an example.
