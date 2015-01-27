@@ -147,5 +147,8 @@ def render(data, saltenv='base', sls='', argline='', **kwargs):
     else:
         homedir = __opts__.get('gpg_keydir', DEFAULT_GPG_KEYDIR)
     log.debug('Reading GPG keys from: {0}'.format(homedir))
-    gpg = gnupg.GPG(gnupghome=homedir)
+    try:
+        gpg = gnupg.GPG(gnupghome=homedir)
+    except OSError:
+        raise SaltRenderError('Cannot initialize gnupg')
     return decrypt_object(data, gpg)
