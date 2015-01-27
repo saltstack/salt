@@ -1231,7 +1231,7 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
             b_conf = self.modules.value['config.merge']('beacons')
             if b_conf:
                 try:
-                    self.master_events.value.extend(self.beacons.process(b_conf))
+                    self.master_events.value.extend(self.beacon.value.process(b_conf))
                 except Exception:
                     log.error('Error in the beacon system: ', exc_info=True)
         return []
@@ -1252,13 +1252,13 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
     def action(self):
         events = []
         for master in self.road_stack.value.remotes:
-            master_uid = master.uid
+            master_uid = master
         while self.master_events.value:
             events.append(self.master_events.value.popleft())
         route = {'src': (self.road_stack.value.local.name, None, None),
                  'dst': (next(six.itervalues(self.road_stack.value.remotes)).name, None, 'remote_cmd')}
-        load = {'id': self.opts['id'],
-                'events': self.master_events.value,
+        load = {'id': self.opts.value['id'],
+                'events': events,
                 'cmd': '_minion_event'}
         self.road_stack.value.transmit({'route': route, 'load': load},
                                        uid=master_uid)
