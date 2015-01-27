@@ -215,6 +215,7 @@ try:
     _CRON_SUPPORTED = True
 except ImportError:
     _CRON_SUPPORTED = False
+import yaml
 
 # Import Salt libs
 import salt.utils
@@ -222,6 +223,7 @@ import salt.utils.process
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running
 import salt.payload
+import salt.syspaths
 
 log = logging.getLogger(__name__)
 
@@ -241,6 +243,7 @@ class Schedule(object):
             self.returners = returners
         else:
             self.returners = returners.loader.gen_functions()
+        self.time_offset = self.functions['timezone.get_offset']()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint
@@ -254,11 +257,24 @@ class Schedule(object):
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
+    def persist(self):
+        '''
+        Persist the modified schedule into <<configdir>>/minion.d/_schedule.conf
+        '''
+        schedule_conf = os.path.join(
+                salt.syspaths.CONFIG_DIR,
+                'minion.d',
+                '_schedule.conf')
+        with salt.utils.fopen(schedule_conf, 'w+') as fp_:
+            try:
+                fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
+            except (IOError, OSError):
+                log.error('Failed to persist the updated schedule')
+
     def delete_job(self, name, where=None):
         '''
         Deletes a job from the scheduler.
         '''
-
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
             if name in self.opts['schedule']:
@@ -295,6 +311,7 @@ class Schedule(object):
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
         self.opts['schedule'].update(data)
+        self.persist()
 
     def enable_job(self, name, where=None):
         '''
@@ -410,6 +427,8 @@ class Schedule(object):
         if 'metadata' in data:
             if isinstance(data['metadata'], dict):
                 ret['metadata'] = data['metadata']
+                ret['metadata']['_TOS'] = self.time_offset
+                ret['metadata']['_TS'] = time.ctime()
             else:
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
