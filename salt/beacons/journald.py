@@ -1,6 +1,10 @@
 '''
 A simple beacon to watch journald for specific entries
 '''
+# Import salt libs
+import salt.utils
+import salt.utils.cloud
+import salt.ext.six
 
 # Import third party libs
 try:
@@ -44,21 +48,24 @@ def beacon(config):
             journald:
                 sshd:
                     SYSLOG_IDENTIFIER: sshd
-                    PRIORITY: 3
+                    PRIORITY: 6
     '''
     ret = []
     journal = _get_journal()
     while True:
         cur = journal.get_next()
+        print(cur)
         if not cur:
             break
         for name in config:
             n_flag = 0
             for key in config[name]:
+                if isinstance(key, salt.ext.six.string_types):
+                    key = salt.utils.sdecode(key)
                 if key in cur:
                     if config[name][key] == cur[key]:
                         n_flag += 1
             if n_flag == len(config[name]):
                 # Match!
-                ret.append(cur)
+                ret.append(salt.utils.cloud.simple_types_filter(cur))
     return ret
