@@ -85,14 +85,16 @@ class DebianIpTestCase(TestCase):
         self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled',
                                                   test='True'))
 
-        self.assertRaises(AttributeError, debian_ip.build_interface,
-                          'eth0', 'bridge', 'enabled', test='True')
+        with patch.object(debian_ip, '_parse_settings_eth',
+                          MagicMock(return_value={'routes': []})):
+            self.assertRaises(AttributeError, debian_ip.build_interface,
+                              'eth0', 'bridge', 'enabled')
 
-        self.assertRaises(AttributeError, debian_ip.build_interface,
-                          'eth0', 'slave', 'enabled', test='True')
+            self.assertRaises(AttributeError, debian_ip.build_interface,
+                              'eth0', 'slave', 'enabled')
 
-        self.assertRaises(AttributeError, debian_ip.build_interface,
-                          'eth0', 'bond', 'enabled', test='True')
+            self.assertRaises(AttributeError, debian_ip.build_interface,
+                              'eth0', 'bond', 'enabled')
 
         self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled',
                                                   test='True'))
@@ -148,15 +150,22 @@ class DebianIpTestCase(TestCase):
         '''
         Test if it return the contents of an interface script
         '''
-        with patch.object(debian_ip, '_parse_interfaces', MagicMock(return_value={})):
+        with patch.object(debian_ip, '_parse_interfaces',
+                          MagicMock(return_value={})):
             self.assertListEqual(debian_ip.get_interface('eth0'), [])
 
-        self.assertListEqual(debian_ip.get_interface('lo'),
-                             [u'auto lo\n', u'iface lo inet loopback\n', u'\n'])
+        mock_ret = {'lo': {'enabled': True, 'data':
+                           {'inet': {'addrfam': 'inet', 'proto': 'loopback'}}}}
+        with patch.object(debian_ip, '_parse_interfaces',
+                          MagicMock(return_value=mock_ret)):
+            self.assertListEqual(debian_ip.get_interface('lo'),
+                                 [u'auto lo\n', u'iface lo inet loopback\n',
+                                  u'\n'])
 
-        mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound('err'))
-        with patch.object(jinja2.Environment, 'get_template', mock):
-            self.assertEqual(debian_ip.get_interface('lo'), '')
+            mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
+                             ('error'))
+            with patch.object(jinja2.Environment, 'get_template', mock):
+                self.assertEqual(debian_ip.get_interface('lo'), '')
 
     # 'up' function tests: 1
 
@@ -219,7 +228,9 @@ class DebianIpTestCase(TestCase):
     # 'build_network_settings' function tests: 1
 
     @patch('salt.modules.debian_ip._parse_network_settings',
-           MagicMock(return_value={'networking': 'yes', 'hostname': 'Salt'}))
+           MagicMock(return_value={'networking': 'yes',
+                                   'hostname': 'Salt.saltstack.com',
+                                   'domainname': 'saltstack.com'}))
     @patch('salt.modules.debian_ip._write_file_network',
            MagicMock(return_value=True))
     def test_build_network_settings(self):
@@ -233,7 +244,9 @@ class DebianIpTestCase(TestCase):
                                                  'service.disable': mock,
                                                  'service.enable': mock}):
                 self.assertEqual(debian_ip.build_network_settings(),
-                                 [u'NETWORKING=yes\n', u'HOSTNAME=Salt\n'])
+                                 [u'NETWORKING=yes\n',
+                                  u'HOSTNAME=Salt.saltstack.com\n',
+                                  u'DOMAIN=saltstack.com\n'])
 
                 mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                                  ('error'))
