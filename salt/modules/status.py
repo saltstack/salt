@@ -548,7 +548,7 @@ def version():
     # dict that return a function that does the right thing per platform
     get_version = {
     'Linux': linux_version,
-    'FreeBSD': lambda : __salt__['cmd.run']('sysctl -n kern.version'),
+    'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
