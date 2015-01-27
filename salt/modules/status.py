@@ -366,12 +366,7 @@ def nproc():
 
         salt '*' status.nproc
     '''
-    data = __salt__['cmd.run']('nproc')
-    try:
-        ret = int(data.strip())
-    except Exception:
-        return 0
-    return ret
+    return __grains__.get('num_cpus', 0)
 
 
 def netstats():
