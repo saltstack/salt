@@ -2,6 +2,18 @@
 Salt 2014.12.0 Release Notes - Codename Lithium
 ===============================================
 
+Beacons
+=======
+
+The beacon system allows the minion to hook into system processes and
+continually translate external events into the salt event bus. The
+primary example of this is the :py:mod:`~salt.beacons.inotify` beacon. This
+beacon uses inotify to watch configured files or directories on the minion for
+changes, creation, deletion etc.
+
+This allows for the changes to be sent up to the master where the
+reactor can respond to changes.
+
 Salt SSH
 ========
 

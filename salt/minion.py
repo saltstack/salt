@@ -62,6 +62,7 @@ import salt.client
 import salt.crypt
 import salt.loader
 import salt.payload
+import salt.beacons
 import salt.utils
 import salt.utils.jid
 import salt.pillar
@@ -295,6 +296,7 @@ class SMinion(object):
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
+        self.beacons = salt.beacons.Beacon(opts)
 
     def _init_context_and_poller(self):
         self.context = zmq.Context()
@@ -407,6 +409,17 @@ class MinionBase(object):
                 'Exception {0} occurred in scheduled job'.format(exc)
             )
         return loop_interval
+
+    def process_beacons(self, functions):
+        '''
+        Evaluate all of the configured beacons, grab the config again in case
+        the pillar or grains changed
+        '''
+        if 'config.merge' in functions:
+            b_conf = functions['config.merge']('beacons')
+            if b_conf:
+                return self.beacons.process(b_conf)
+        return []
 
 
 class MasterMinion(object):
@@ -873,14 +886,13 @@ class Minion(MinionBase):
         elif not data and tag:
             load['data'] = {}
             load['tag'] = tag
-
         else:
             return
         channel = salt.transport.Channel.factory(self.opts)
         try:
             result = channel.send(load)
         except Exception:
-            log.info("fire_master failed: {0}".format(traceback.format_exc()))
+            log.info('fire_master failed: {0}'.format(traceback.format_exc()))
 
     def _handle_payload(self, payload):
         '''
@@ -1755,6 +1767,13 @@ class Minion(MinionBase):
                     'An exception occurred while polling the minion',
                     exc_info=True
                 )
+            # Process Beacons
+            try:
+                beacons = self.process_beacons(self.functions)
+            except Exception:
+                log.critical('The beacon errored: ', exec_info=True)
+            if beacons:
+                self._fire_master(events=beacons)
 
     def tune_in_no_block(self):
         '''

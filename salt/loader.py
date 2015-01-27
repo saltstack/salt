@@ -284,6 +284,19 @@ def states(opts, functions, whitelist=None):
     return load.gen_functions(pack, whitelist=whitelist)
 
 
+def beacons(opts, context=None):
+    '''
+    Load the beacon modules
+    '''
+    load = _create_loader(opts, 'beacons', 'beacons')
+    if context is None:
+        context = {}
+    pack = {'name': '__context__',
+            'value': context}
+    functions = load.gen_functions(pack)
+    return functions
+
+
 def search(opts, returners, whitelist=None):
     '''
     Returns the search modules
