@@ -219,22 +219,42 @@ def cpuinfo():
 
         salt '*' status.cpuinfo
     '''
-    procf = '/proc/cpuinfo'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split(':')
-        comps[0] = comps[0].strip()
-        if comps[0] == 'flags':
-            ret[comps[0]] = comps[1].split()
-        else:
-            ret[comps[0]] = comps[1].strip()
-    return ret
+    def linux_cpuinfo():
+        procf = '/proc/cpuinfo'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split(':')
+            comps[0] = comps[0].strip()
+            if comps[0] == 'flags':
+                ret[comps[0]] = comps[1].split()
+            else:
+                ret[comps[0]] = comps[1].strip()
+        return ret
 
+    def freebsd_cpuinfo():
+        freebsd_cmd = 'sysctl hw.model hw.ncpu'
+        ret = {}
+        for line in __salt__['cmd.run'](freebsd_cmd).splitlines():
+            if not line:
+                continue
+            comps = line.split(':')
+            comps[0] = comps[0].strip()
+            ret[comps[0]] = comps[1].strip()
+        return ret
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+    'Linux': linux_cpuinfo,
+    'FreeBSD': freebsd_cpuinfo,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 def diskstats():
     '''
@@ -545,7 +565,7 @@ def version():
             return {}
         return salt.utils.fopen(procf, 'r').read().strip()
 
-    # dict that return a function that does the right thing per platform
+    # dict that returns a function that does the right thing per platform
     get_version = {
     'Linux': linux_version,
     'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
