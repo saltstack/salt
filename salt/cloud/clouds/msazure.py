@@ -655,7 +655,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': hostname,
-            'port': ssh_port,
+            'port': int(ssh_port),
             'username': ssh_username,
             'password': ssh_password,
             'script': deploy_script,
