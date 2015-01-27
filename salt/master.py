@@ -654,11 +654,12 @@ class MWorker(multiprocessing.Process):
             while True:
                 try:
                     payload = self.req_channel.recv()
+                    # TODO: maybe change into a wrapper class?
+                    # req_opts defines our response function
                     ret, req_opts = self._handle_payload(payload)
 
-                    # req_opts defines our response
-                    # req_fun: default to send_clear
-                    req_fun = req_opts.get('fun', 'send_clear')
+                    # req_fun: default to send
+                    req_fun = req_opts.get('fun', 'send')
                     if req_fun == 'send_clear':
                         self.req_channel.send_clear(ret)
                     elif req_fun == 'send':
