@@ -15,6 +15,16 @@ import salt.payload
 import salt.utils.network
 import salt.utils.event
 
+MINE_INTERNAL_KEYWORDS = frozenset([
+    '__pub_user',
+    '__pub_arg',
+    '__pub_fun',
+    '__pub_jid',
+    '__pub_tgt',
+    '__pub_tgt_type',
+    '__pub_ret'
+])
+
 __proxyenabled__ = ['*']
 
 log = logging.getLogger(__name__)
@@ -144,7 +154,9 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[mine_func], func_data)
+    f_call = salt.utils.format_call(__salt__[mine_func],
+                                    func_data,
+                                    expected_extra_kws=MINE_INTERNAL_KEYWORDS)
     for arg in args:
         if arg not in f_call['args']:
             f_call['args'].append(arg)

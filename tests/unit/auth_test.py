@@ -43,7 +43,7 @@ class LoadAuthTestCase(TestCase):
                 'test_password': '',
                 'show_timeout': False,
                 'eauth': 'pam'
-            })
+            }, expected_extra_kws=auth.AUTH_INTERNAL_KEYWORDS)
             ret = self.lauth.load_name(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
 
@@ -58,7 +58,7 @@ class LoadAuthTestCase(TestCase):
                 'test_password': '',
                 'show_timeout': False,
                 'eauth': 'pam'
-                })
+                }, expected_extra_kws=auth.AUTH_INTERNAL_KEYWORDS)
             self.lauth.get_groups(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
 
