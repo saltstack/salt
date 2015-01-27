@@ -2358,7 +2358,7 @@ def replace(name,
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.replace')
 
@@ -2381,15 +2381,13 @@ def replace(name,
 
     if changes:
         ret['changes'] = {'diff': changes}
+        ret['comment'] = ('Changes were made'
+                if not __opts__['test'] else 'Changes would have been made')
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Changes would have been made'
-        else:
-            ret['result'] = True
-            ret['comment'] = 'Changes were made'
     else:
-        ret['result'] = True
-        ret['comment'] = 'No changes needed to be made'
+        ret['comment'] = ('No changes were made'
+            if not __opts__['test'] else 'No changes would have been made')
 
     return ret
 

@@ -90,33 +90,6 @@ def _get_env_activate(bin_env):
     raise CommandNotFoundError('Could not find a `activate` binary')
 
 
-def _get_user(user, runas):
-    '''
-    Return user to use and handle runas dperecation mwarnings
-    '''
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.',
-            stacklevel=3
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
-
-    return user
-
-
 def _process_requirements(requirements, cmd, saltenv, user, no_chown):
     '''
     Process the requirements argument
@@ -186,7 +159,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             global_options=None,
             install_options=None,
             user=None,
-            runas=None,
             no_chown=False,
             cwd=None,
             activate=False,
@@ -286,11 +258,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         install command.
     user
         The user under which to run pip
-
-    .. note::
-        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
-        used instead.
-
     no_chown
         When user is given, do not attempt to copy and chown
         a requirements file
@@ -357,8 +324,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         )
         # Backwards compatibility
         saltenv = __env__
-
-    user = _get_user(user, runas)
 
     cmd = [_get_pip_bin(bin_env), 'install']
 
@@ -589,7 +554,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         os.environ.update(env_vars)
 
     try:
-        cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+        cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
         return __salt__['cmd.run_all'](' '.join(cmd), python_shell=False, **cmd_kwargs)
@@ -608,7 +573,6 @@ def uninstall(pkgs=None,
               proxy=None,
               timeout=None,
               user=None,
-              runas=None,
               no_chown=False,
               cwd=None,
               __env__=None,
@@ -643,11 +607,6 @@ def uninstall(pkgs=None,
         Set the socket timeout (default 15 seconds)
     user
         The user under which to run pip
-
-    .. note::
-        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
-        used instead.
-
     no_chown
         When user is given, do not attempt to copy and chown
         a requirements file
@@ -677,8 +636,6 @@ def uninstall(pkgs=None,
         )
         # Backwards compatibility
         saltenv = __env__
-
-    user = _get_user(user, runas)
 
     cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
                                                         saltenv=saltenv, user=user,
@@ -738,7 +695,6 @@ def uninstall(pkgs=None,
 
 def freeze(bin_env=None,
            user=None,
-           runas=None,
            cwd=None,
            use_vt=False):
     '''
@@ -753,11 +709,6 @@ def freeze(bin_env=None,
         (/home/code/path/to/virtualenv/)
     user
         The user under which to run pip
-
-    .. note::
-        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
-        used instead.
-
     cwd
         Current working directory to run pip from
 
@@ -767,8 +718,6 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
-    user = _get_user(user, runas)
-
     cmd = [_get_pip_bin(bin_env), 'freeze']
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
@@ -784,7 +733,6 @@ def freeze(bin_env=None,
 def list_(prefix=None,
           bin_env=None,
           user=None,
-          runas=None,
           cwd=None):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
@@ -801,8 +749,6 @@ def list_(prefix=None,
     pip_bin = _get_pip_bin(bin_env)
     pip_version_cmd = [pip_bin, '--version']
     cmd = [pip_bin, 'freeze']
-
-    user = _get_user(user, runas)
 
     cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
@@ -869,7 +815,6 @@ def version(bin_env=None):
 
 def list_upgrades(bin_env=None,
                   user=None,
-                  runas=None,
                   cwd=None):
     '''
     Check whether or not an upgrade is available for all packages
@@ -884,9 +829,7 @@ def list_upgrades(bin_env=None,
     pip_bin = _get_pip_bin(bin_env)
     cmd = [pip_bin, "list", "--outdated"]
 
-    user = _get_user(user, runas)
-
-    cmd_kwargs = dict(runas=user, cwd=cwd)
+    cmd_kwargs = dict(cwd=cwd, runas=user)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -910,7 +853,6 @@ def list_upgrades(bin_env=None,
 def upgrade_available(pkg,
                       bin_env=None,
                       user=None,
-                      runas=None,
                       cwd=None):
     '''
     .. versionadded:: Lithium
@@ -923,12 +865,11 @@ def upgrade_available(pkg,
 
         salt '*' pip.upgrade_available <package name>
     '''
-    return pkg in list_upgrades(bin_env=bin_env, user=user, runas=runas, cwd=cwd)
+    return pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd)
 
 
 def upgrade(bin_env=None,
             user=None,
-            runas=None,
             cwd=None,
             use_vt=False):
     '''
@@ -952,13 +893,12 @@ def upgrade(bin_env=None,
            'result': True,
            'comment': '',
            }
-    user = _get_user(user, runas)
     pip_bin = _get_pip_bin(bin_env)
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
     cmd = [pip_bin, "install", "-U"]
-    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     errors = False

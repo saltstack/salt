@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-import warnings
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -41,7 +40,7 @@ class PipTestCase(TestCase):
                 pip.install,
                 editable='git+https://github.com/saltstack/salt-testing.git'
             )
-            #mock.assert_called_once_with('', runas=None, cwd=None, use_vt=False)
+            #mock.assert_called_once_with('', cwd=None, use_vt=False)
 
     def test_install_multiple_editable(self):
         editables = [
@@ -278,7 +277,7 @@ class PipTestCase(TestCase):
                 CommandExecutionError,
                 pip.install, no_index=True, index_url='http://foo.tld'
             )
-            #mock.assert_called_once_with('', runas=None, cwd=None)
+            #mock.assert_called_once_with('', cwd=None)
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
@@ -286,7 +285,7 @@ class PipTestCase(TestCase):
                 CommandExecutionError,
                 pip.install, no_index=True, extra_index_url='http://foo.tld'
             )
-            #mock.assert_called_once_with('', runas=None, cwd=None)
+            #mock.assert_called_once_with('', cwd=None)
 
     @patch('salt.modules.pip._get_cached_requirements')
     def test_install_failed_cached_requirements(self, get_cached_requirements):
@@ -1042,110 +1041,6 @@ class PipTestCase(TestCase):
                 cwd=None,
                 use_vt=False,
                 python_shell=False,
-            )
-
-    def test_install_deprecated_runas_triggers_warning(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            with warnings.catch_warnings(record=True) as w:
-                pip.install('pep8', runas='me!')
-                self.assertEqual(
-                    'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in Salt Lithium (Unreleased). Please '
-                    'use \'user\' instead.', str(w[-1].message)
-                )
-
-    def test_uninstall_deprecated_runas_triggers_warning(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            with warnings.catch_warnings(record=True) as w:
-                pip.uninstall('pep8', runas='me!')
-                self.assertEqual(
-                    'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in Salt Lithium (Unreleased). Please '
-                    'use \'user\' instead.', str(w[-1].message)
-                )
-
-    def test_freeze_deprecated_runas_triggers_warning(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            with warnings.catch_warnings(record=True) as w:
-                pip.freeze('/tmp/pip-env', runas='me!')
-                self.assertEqual(
-                    'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in Salt Lithium (Unreleased). Please '
-                    'use \'user\' instead.', str(w[-1].message)
-                )
-
-    def test_list_deprecated_runas_triggers_warning(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': 'pip VERSION'})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            with warnings.catch_warnings(record=True) as w:
-                pip.list_('blah', runas='me!')
-                self.assertEqual(
-                    'The \'runas\' argument to pip.install is deprecated, and '
-                    'will be removed in Salt Lithium (Unreleased). Please '
-                    'use \'user\' instead.', str(w[-1].message)
-                )
-
-    def test_install_user_and_runas_raises_exception(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.install,
-                'pep8',
-                user='Me!',
-                runas='Not Me!',
-            )
-
-    def test_uninstall_user_and_runas_raises_exception(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.uninstall,
-                'pep8',
-                user='Me!',
-                runas='Not Me!',
-            )
-
-    def test_freeze_user_and_runas_raises_exception(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.freeze,
-                '/tmp/pip-env',
-                user='Me!',
-                runas='Not Me!',
-            )
-
-    def test_list_user_and_runas_raises_exception(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.list_,
-                'pep8',
-                user='Me!',
-                runas='Not Me!',
             )
 
 

@@ -45,9 +45,7 @@ class NetapiClient(object):
 
         l_fun = getattr(self, low['client'])
         f_call = salt.utils.format_call(l_fun, low)
-
-        ret = l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
-        return ret
+        return l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
 
     def local_async(self, *args, **kwargs):
         '''
