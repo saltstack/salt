@@ -220,6 +220,9 @@ def cpuinfo():
         salt '*' status.cpuinfo
     '''
     def linux_cpuinfo():
+        '''
+        linux specific cpuinfo implementation
+        '''
         procf = '/proc/cpuinfo'
         if not os.path.isfile(procf):
             return {}
@@ -237,6 +240,9 @@ def cpuinfo():
         return ret
 
     def freebsd_cpuinfo():
+        '''
+        freebds specific cpuinfo implementation
+        '''
         freebsd_cmd = 'sysctl hw.model hw.ncpu'
         ret = {}
         for line in __salt__['cmd.run'](freebsd_cmd).splitlines():
@@ -249,12 +255,13 @@ def cpuinfo():
 
     # dict that returns a function that does the right thing per platform
     get_version = {
-    'Linux': linux_cpuinfo,
-    'FreeBSD': freebsd_cpuinfo,
+        'Linux': linux_cpuinfo,
+        'FreeBSD': freebsd_cpuinfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
+
 
 def diskstats():
     '''
@@ -447,7 +454,7 @@ def netdev():
         comps = line.split()
         # Fix lines like eth0:9999..'
         comps[0] = line.split(':')[0].strip()
-        #Support lines both like eth0:999 and eth0: 9999
+        # Support lines both like eth0:999 and eth0: 9999
         comps.insert(1, line.split(':')[1].strip().split()[0])
         ret[comps[0]] = {'iface': comps[0],
                          'rx_bytes': _number(comps[1]),
@@ -560,6 +567,9 @@ def version():
         salt '*' status.version
     '''
     def linux_version():
+        '''
+        linux specific implementation of version
+        '''
         procf = '/proc/version'
         if not os.path.isfile(procf):
             return {}
@@ -567,8 +577,8 @@ def version():
 
     # dict that returns a function that does the right thing per platform
     get_version = {
-    'Linux': linux_version,
-    'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
+        'Linux': linux_version,
+        'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
