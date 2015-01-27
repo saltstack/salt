@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Watch files and translate the changes into salt events
 '''
@@ -14,6 +15,7 @@ except ImportError:
     DEFAULT_MASK = None
 
 __virtualname__ = 'inotify'
+
 
 def __virtual__():
     if HAS_PYINOTIFY:
@@ -81,12 +83,12 @@ def beacon(config):
             rec = False
             auto_add = False
         # TODO: make the config handle more options
-        if not path in current:
+        if path not in current:
             wm.add_watch(
-                    path,
-                    mask,
-                    rec=rec,
-                    auto_add=auto_add)
+                path,
+                mask,
+                rec=rec,
+                auto_add=auto_add)
         else:
             for wd in wm.watches:
                 if path == wm.watches[wd].path:
@@ -97,8 +99,8 @@ def beacon(config):
                         update = True
                     if update:
                         wm.update_watch(
-                                wd,
-                                mask=mask,
-                                rec=rec,
-                                auto_add=auto_add)
+                            wd,
+                            mask=mask,
+                            rec=rec,
+                            auto_add=auto_add)
     return ret

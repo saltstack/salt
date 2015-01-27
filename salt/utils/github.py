@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import Python libs
 import json
-import requests
 import salt.utils.http
 import logging
 

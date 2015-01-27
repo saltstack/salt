@@ -1244,7 +1244,7 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'road_stack': '.salt.road.manor.stack',
-               'master_events': '.salt.var.master_events',}
+               'master_events': '.salt.var.master_events'}
 
     def postinitio(self):
         self.master_events.value = deque()
