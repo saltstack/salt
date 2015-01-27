@@ -123,7 +123,10 @@ def query(url,
         data = _render(
             data_file, data_render, data_renderer, template_dict, opts
         )
-    log.trace('POST Data: {0}'.format(pprint.pformat(data)))
+
+    log.debug('Using {0} Method'.format(method))
+    if method == 'POST':
+        log.trace('POST Data: {0}'.format(pprint.pformat(data)))
 
     if header_file is not None:
         header_tpl = _render(
@@ -205,7 +208,7 @@ def query(url,
 
         if url.startswith('https') or port == 443:
             if not HAS_MATCHHOSTNAME:
-                log.warn(('match_hostname() not available, SSL hostname checking'
+                log.warn(('match_hostname() not available, SSL hostname checking '
                          'not available. THIS CONNECTION MAY NOT BE SECURE!'))
             elif verify_ssl is False:
                 log.warn(('SSL certificate verification has been explicitly '
@@ -242,6 +245,13 @@ def query(url,
         result_status_code = result.code
         result_headers = result.headers.headers
         result_text = result.read()
+
+    if isinstance(result_headers, list):
+        result_headers_dict = {}
+        for header in result_headers:
+            comps = header.split(':')
+            result_headers_dict[comps[0].strip()] = ':'.join(comps[1:]).strip()
+        result_headers = result_headers_dict
 
     log.debug('Response Status Code: {0}'.format(result_status_code))
     log.trace('Response Headers: {0}'.format(result_headers))
