@@ -293,7 +293,7 @@ def create(vm_):
     if private_networking is not None:
         if not isinstance(private_networking, bool):
             raise SaltCloudConfigError("'private_networking' should be a boolean value.")
-        kwargs['private_networking'] = private_networking
+        kwargs['private_networking'] = str(private_networking).lower()
 
     backups_enabled = config.get_cloud_config_value(
         'backups_enabled', vm_, __opts__, search_global=False, default=None,
@@ -301,7 +301,7 @@ def create(vm_):
     if backups_enabled is not None:
         if not isinstance(backups_enabled, bool):
             raise SaltCloudConfigError("'backups_enabled' should be a boolean value.")
-        kwargs['backups_enabled'] = backups_enabled
+        kwargs['backups_enabled'] = str(backups_enabled).lower()
 
     salt.utils.cloud.fire_event(
         'event',
