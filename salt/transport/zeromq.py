@@ -344,8 +344,6 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
         # other things needed for _auth
         # Create the event manager
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
-        # Make an minion checker object
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
 
         # only create a con_cache-client if the con_cache is active
@@ -353,6 +351,8 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
             self.cache_cli = CacheCli(self.opts)
         else:
             self.cache_cli = False
+            # Make an minion checker object
+            self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
@@ -397,6 +397,8 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
             package = self._socket.recv()
             payload = self.serial.loads(package)
             payload = self._decode_payload(payload)
+            # if timeout was 0 and we got a None, we intercepted the job,
+            # so just queue up another recv()
             if payload is None and timeout == 0:
                 return self.recv(timeout=timeout)
             return payload
