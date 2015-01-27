@@ -8,9 +8,11 @@ Tests for the Git state
 import os
 import shutil
 import socket
+import subprocess
+import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -42,7 +44,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt-bootstrap.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 rev='develop',
                 target=name,
                 submodules=True
@@ -60,7 +62,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://youSpelledGithubWrong.com/saltstack/salt.git',
+                name='https://youSpelledGithubWrong.com/saltstack/salt-test-repo.git',
                 rev='develop',
                 target=name,
                 submodules=True
@@ -80,7 +82,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt-bootstrap.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 rev='develop',
                 target=name,
                 submodules=True
@@ -101,7 +103,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt-bootstrap.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 rev='develop',
                 target=name,
                 unless='test -e {0}'.format(name),
@@ -116,13 +118,11 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         git.latest with numeric revision
         '''
-        # We should actually clone a smaller repository, salt's repo is getting
-        # pretty big
         name = os.path.join(integration.TMP, 'salt_repo')
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://{0}/saltstack/salt.git'.format(self.__domain),
+                name='https://{0}/saltstack/salt-test-repo.git'.format(self.__domain),
                 rev=0.11,
                 target=name,
                 submodules=True,
@@ -187,6 +187,26 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
         finally:
             shutil.rmtree(name, ignore_errors=True)
+
+    @skip_if_binaries_missing('git')
+    def test_config_set_value_with_space_character(self):
+        '''
+        git.config
+        '''
+        name = tempfile.mkdtemp(dir=integration.TMP)
+        self.addCleanup(shutil.rmtree, name, ignore_errors=True)
+        subprocess.check_call(['git', 'init', '--quiet', name])
+
+        config_key = 'user.name'
+        config_value = 'foo bar'
+
+        ret = self.run_state(
+            'git.config',
+            name=config_key,
+            value=config_value,
+            repo=name,
+            is_global=False)
+        self.assertSaltTrueReturn(ret)
 
 
 if __name__ == '__main__':

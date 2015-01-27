@@ -17,11 +17,16 @@ Implemented using ctypes, so no compilation is necessary.
     The Python interface to PAM does not support authenticating as ``root``.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
+
+# Import Salt libs
+from salt.utils import get_group_list
+from salt.ext.six.moves import range
 
 LIBPAM = CDLL(find_library('pam'))
 LIBC = CDLL(find_library('c'))
@@ -64,7 +69,7 @@ class PamMessage(Structure):
             ]
 
     def __repr__(self):
-        return "<PamMessage %i '%s'>" % (self.msg_style, self.msg)
+        return '<PamMessage {0} {1!r}>'.format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
@@ -77,7 +82,7 @@ class PamResponse(Structure):
             ]
 
     def __repr__(self):
-        return "<PamResponse %i '%s'>" % (self.resp_retcode, self.resp)
+        return '<PamResponse {0} {1!r}>'.format(self.resp_retcode, self.resp)
 
 
 CONV_FUNC = CFUNCTYPE(c_int,
@@ -104,6 +109,10 @@ try:
     PAM_AUTHENTICATE = LIBPAM.pam_authenticate
     PAM_AUTHENTICATE.restype = c_int
     PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
+
+    PAM_END = LIBPAM.pam_end
+    PAM_END.restype = c_int
+    PAM_END.argtypes = [PamHandle, c_int]
 except Exception:
     HAS_PAM = False
 else:
@@ -114,10 +123,7 @@ def __virtual__():
     '''
     Only load on Linux systems
     '''
-    if HAS_PAM:
-        return 'pam'
-    else:
-        return False
+    return HAS_PAM
 
 
 def authenticate(username, password, service='login'):
@@ -155,9 +161,11 @@ def authenticate(username, password, service='login'):
     if retval != 0:
         # TODO: This is not an authentication error, something
         # has gone wrong starting up PAM
+        PAM_END(handle, retval)
         return False
 
     retval = PAM_AUTHENTICATE(handle, 0)
+    PAM_END(handle, 0)
     return retval == 0
 
 
@@ -166,3 +174,12 @@ def auth(username, password, **kwargs):
     Authenticate via pam
     '''
     return authenticate(username, password, kwargs.get('service', 'login'))
+
+
+def groups(username, *args, **kwargs):
+    '''
+    Retrieve groups for a given user for this auth provider
+
+    Uses system groups
+    '''
+    return get_group_list(username)

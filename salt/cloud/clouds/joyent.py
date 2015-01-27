@@ -30,7 +30,23 @@ associated with that vm. An example profile might look like:
         size: Extra Small 512 MB
         image: centos-6
         location: us-east-1
+
+This driver can also be used with the Joyent SmartDataCenter project. More
+details can be found at:
+
+.. _`SmartDataCenter`: https://github.com/joyent/sdc
+
+Using SDC requires that an api_host_suffix is set. The default value for this is
+`.api.joyentcloud.com`. All characters, including the leading `.`, should be
+included:
+
+.. code-block:: yaml
+
+      api_host_suffix: .api.myhostname.com
+
+:depends: requests
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate
@@ -38,9 +54,8 @@ associated with that vm. An example profile might look like:
 # Import python libs
 import os
 import copy
-import urllib
-import httplib
-import urllib2
+import salt.ext.six.moves.http_client  # pylint: disable=E0611
+import requests
 import json
 import logging
 import base64
@@ -56,7 +71,7 @@ import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.utils.cloud import is_public_ip
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
@@ -64,6 +79,9 @@ from salt.cloud.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# namespace libcloudfuncs
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 JOYENT_API_HOST_SUFFIX = '.api.joyentcloud.com'
 JOYENT_API_VERSION = '~6.5'
@@ -76,16 +94,16 @@ JOYENT_LOCATIONS = {
 }
 DEFAULT_LOCATION = 'us-east-1'
 
-# joyent no longer reports on all datacenters, so setting this value to true
+# joyent no longer reports on all data centers, so setting this value to true
 # causes the list_nodes function to get information on machines from all
-# datacenters
+# data centers
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    httplib.OK,
-    httplib.ACCEPTED,
-    httplib.CREATED,
-    httplib.NO_CONTENT
+    salt.ext.six.moves.http_client.OK,
+    salt.ext.six.moves.http_client.ACCEPTED,
+    salt.ext.six.moves.http_client.CREATED,
+    salt.ext.six.moves.http_client.NO_CONTENT
 ]
 
 
@@ -95,13 +113,7 @@ def __virtual__():
     Set up the libcloud functions and check for JOYENT configs
     '''
     if get_configured_provider() is False:
-        log.debug(
-            'There is no Joyent cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
-
-    log.debug('Loading Joyent cloud module')
 
     global script
     conn = None
@@ -128,7 +140,7 @@ def get_image(vm_):
 
     vm_image = config.get_cloud_config_value('image', vm_, __opts__)
 
-    if vm_image and str(vm_image) in images.keys():
+    if vm_image and str(vm_image) in images:
         return images[vm_image]
 
     raise SaltCloudNotFound(
@@ -145,7 +157,7 @@ def get_size(vm_):
     if not vm_size:
         raise SaltCloudNotFound('No size specified for this VM.')
 
-    if vm_size and str(vm_size) in sizes.keys():
+    if vm_size and str(vm_size) in sizes:
         return sizes[vm_size]
 
     raise SaltCloudNotFound(
@@ -163,17 +175,9 @@ def create(vm_):
 
         salt-cloud -p profile_name vm_name
     '''
-    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
-    if deploy is True and key_filename is None and \
-            salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'private_key\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
-        )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -184,6 +188,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info(
@@ -208,6 +213,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': kwargs},
+        transport=__opts__['transport']
     )
 
     try:
@@ -220,14 +226,14 @@ def create(vm_):
                 vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
     ret = {}
 
     def __query_node_data(vm_id, vm_location):
-        rcode, data = query2(
+        rcode, data = query(
             command='my/machines/{0}'.format(vm_id),
             method='GET',
             location=vm_location
@@ -268,7 +274,7 @@ def create(vm_):
             except SaltCloudSystemExit:
                 pass
             finally:
-                raise SaltCloudSystemExit(exc.message)
+                raise SaltCloudSystemExit(str(exc))
 
     data = reformat_node(data)
 
@@ -278,12 +284,17 @@ def create(vm_):
 
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         host = data['public_ips'][0]
+        salt_host = data['public_ips'][0]
         if ssh_interface(vm_) == 'private_ips':
             host = data['private_ips'][0]
+        if get_salt_interface(vm_) == 'private_ips':
+            salt_host = data['private_ips'][0]
 
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': host,
+            'salt_host': salt_host,
             'username': ssh_username,
             'key_filename': key_filename,
             'script': deploy_script.script,
@@ -364,6 +375,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -399,6 +411,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret
@@ -420,7 +433,7 @@ def create_node(**kwargs):
     })
 
     try:
-        ret = query2(command='/my/machines', data=data, method='POST',
+        ret = query(command='/my/machines', data=data, method='POST',
                      location=location)
         if ret[0] in VALID_RESPONSE_CODES:
             return ret[1]
@@ -438,7 +451,7 @@ def destroy(name, call=None):
 
     :param name: name given to the machine
     :param call: call value in this case is 'action'
-    :return: array of booleans , true if successful;ly stopped and true if
+    :return: array of booleans , true if successfully stopped and true if
              successfully removed
 
     CLI Example:
@@ -459,10 +472,11 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     node = get_node(name)
-    ret = query2(command='my/machines/{0}'.format(node['id']),
+    ret = query(command='my/machines/{0}'.format(node['id']),
                  location=node['location'], method='DELETE')
 
     salt.utils.cloud.fire_event(
@@ -470,7 +484,11 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return ret[0] in VALID_RESPONSE_CODES
 
@@ -531,7 +549,7 @@ def start(name, call=None):
     '''
     node = get_node(name)
     ret = take_action(name=name, call=call, method='POST',
-                      command='/my/machines/%s' % node['id'],
+                      command='/my/machines/{0}'.format(node['id']),
                       location=node['location'], data={'action': 'start'})
     return ret[0] in VALID_RESPONSE_CODES
 
@@ -546,7 +564,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
     :command: api path
     :data: any data to be passed to the api, must be in json format
     :method: GET,POST,or DELETE
-    :location: datacenter to execute the command on
+    :location: data center to execute the command on
     :return: true if successful
     '''
     caller = inspect.stack()[1][3]
@@ -562,7 +580,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
     ret = []
     try:
 
-        ret = query2(command=command, data=data, method=method,
+        ret = query(command=command, data=data, method=method,
                      location=location)
         log.info('Success {0} for node {1}'.format(caller, name))
     except Exception as exc:
@@ -572,7 +590,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
             log.error(
                 'Failed to invoke {0} node {1}: {2}'.format(caller, name, exc),
                 # Show the traceback if the debug logging level is enabled
-                exc_info=log.isEnabledFor(logging.DEBUG)
+                exc_info_on_loglevel=logging.DEBUG
             )
             ret = [100, {}]
 
@@ -592,7 +610,7 @@ def ssh_interface(vm_):
 
 def get_location(vm_=None):
     '''
-    Return the joyent datacenter to use, in this order:
+    Return the joyent data center to use, in this order:
         - CLI parameter
         - VM parameter
         - Cloud profile setting
@@ -626,11 +644,11 @@ def avail_locations(call=None):
             'region': JOYENT_LOCATIONS[key]
         }
 
-    # this can be enabled when the bug in the joyent get datacenters call is
-    # corrected, currently only the european dc (new api) returns the correct
+    # this can be enabled when the bug in the joyent get data centers call is
+    # corrected, currently only the European dc (new api) returns the correct
     # values
     # ret = {}
-    # rcode, datacenters = query2(
+    # rcode, datacenters = query(
     #     command='my/datacenters', location=DEFAULT_LOCATION, method='GET'
     # )
     # if rcode in VALID_RESPONSE_CODES and isinstance(datacenters, dict):
@@ -657,10 +675,9 @@ def has_method(obj, method_name):
     return False
 
 
-def key_list(key='name', items=None):
+def key_list(items=None):
     '''
     convert list to dictionary using the key as the identifier
-    :param key: identifier - must exist in the arrays elements own dictionary
     :param items: array to iterate over
     :return: dictionary
     '''
@@ -685,14 +702,14 @@ def get_node(name):
     :return: node object
     '''
     nodes = list_nodes()
-    if name in nodes.keys():
+    if name in nodes:
         return nodes[name]
     return None
 
 
 def joyent_node_state(id_):
     '''
-    Convert joyent returned state to state common to other datacenter return
+    Convert joyent returned state to state common to other data center return
     values for consistency
 
     :param id_: joyent state value
@@ -705,7 +722,7 @@ def joyent_node_state(id_):
               'deleted': 2,
               'unknown': 4}
 
-    if id_ not in states.keys():
+    if id_ not in states:
         id_ = 'unknown'
 
     return node_state(states[id_])
@@ -735,16 +752,16 @@ def reformat_node(item=None, full=False):
 
     # add any undefined desired keys
     for key in desired_keys:
-        if not key in item.keys():
+        if key not in item:
             item[key] = None
 
     # remove all the extra key value pairs to provide a brief listing
     if not full:
-        for key in item.keys():
-            if not key in desired_keys:
+        for key in item.keys():  # iterate over a copy of the keys
+            if key not in desired_keys:
                 del item[key]
 
-    if 'state' in item.keys():
+    if 'state' in item:
         item['state'] = joyent_node_state(item['state'])
 
     return item
@@ -767,8 +784,8 @@ def list_nodes(full=False, call=None):
 
     ret = {}
     if POLL_ALL_LOCATIONS:
-        for location in JOYENT_LOCATIONS.keys():
-            result = query2(command='my/machines', location=location,
+        for location in JOYENT_LOCATIONS:
+            result = query(command='my/machines', location=location,
                             method='GET')
             nodes = result[1]
             for node in nodes:
@@ -777,7 +794,7 @@ def list_nodes(full=False, call=None):
                     ret[node['name']] = reformat_node(item=node, full=full)
 
     else:
-        result = query2(command='my/machines', location=DEFAULT_LOCATION,
+        result = query(command='my/machines', location=DEFAULT_LOCATION,
                         method='GET')
         nodes = result[1]
         for node in nodes:
@@ -814,15 +831,41 @@ def list_nodes_select(call=None):
     )
 
 
+def _get_proto():
+    '''
+    Checks configuration to see whether the user has SSL turned on. Default is:
+
+    .. code-block:: yaml
+
+        use_ssl: True
+    '''
+    use_ssl = config.get_cloud_config_value(
+        'use_ssl',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=True
+    )
+    if use_ssl is True:
+        return 'https'
+    return 'http'
+
+
 def avail_images(call=None):
     '''
-    get list of available images
+    Get list of available images
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud --list-images
+
+    Can use a custom URL for images. Default is:
+
+    .. code-block:: yaml
+
+        image_url: images.joyent.com/image
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -830,24 +873,24 @@ def avail_images(call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    img_url = 'https://images.joyent.com/images'
-    request = urllib2.Request(img_url)
-    request.get_method = lambda: 'GET'
-    result = urllib2.urlopen(request)
-    content = result.read()
-    result.close()
+    img_url = config.get_cloud_config_value(
+        'image_url',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='images.joyent.com/images'
+    )
+
+    if not img_url.startswith('http://') and not img_url.startswith('https://'):
+        img_url = '{0}://{1}'.format(_get_proto(), img_url)
+
+    result = requests.get(img_url)
+    content = result.text
 
     ret = {}
     for image in yaml.safe_load(content):
         ret[image['name']] = image
     return ret
-
-    # It appears the API has changed on us again
-    #rcode, items = query2(command='/my/datasets')
-    #log.debug(rcode)
-    #if rcode not in VALID_RESPONSE_CODES:
-    #    return {}
-    #return key_list(items=items)
 
 
 def avail_sizes(call=None):
@@ -866,7 +909,7 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    rcode, items = query2(command='/my/packages')
+    rcode, items = query(command='/my/packages')
     if rcode not in VALID_RESPONSE_CODES:
         return {}
     return key_list(items=items)
@@ -886,7 +929,7 @@ def list_keys(kwargs=None, call=None):
         kwargs = {}
 
     ret = {}
-    data = query(action='keys')
+    rcode, data = query(command='my/keys', method='GET')
     for pair in data:
         ret[pair['name']] = pair['key']
     return {'keys': ret}
@@ -909,7 +952,10 @@ def show_key(kwargs=None, call=None):
         log.error('A keyname is required.')
         return False
 
-    data = query(action='keys/{0}'.format(kwargs['keyname']))
+    rcode, data = query(
+        command='my/keys/{0}'.format(kwargs['keyname']),
+        method='GET',
+    )
     return {'keys': {data['name']: data['key']}}
 
 
@@ -952,8 +998,12 @@ def import_key(kwargs=None, call=None):
     send_data = {'name': kwargs['keyname'], 'key': kwargs['key']}
     kwargs['data'] = json.dumps(send_data)
 
-    data = query(action='keys', method='POST', data=kwargs['data'],
-                 headers={'Content-Type': 'application/json'})
+    rcode, data = query(
+        command='my/keys',
+        method='POST',
+        data=kwargs['data'],
+    )
+    log.debug(pprint.pformat(data))
     return {'keys': {data['name']: data['key']}}
 
 
@@ -980,113 +1030,27 @@ def delete_key(kwargs=None, call=None):
         log.error('A keyname is required.')
         return False
 
-    data = query(action='keys/{0}'.format(kwargs['keyname']), method='DELETE')
+    rcode, data = query(
+        command='my/keys/{0}'.format(kwargs['keyname']),
+        method='DELETE',
+    )
     return data
 
 
-def query(action=None, command=None, args=None, method='GET', data=None,
-          headers=None):
-    '''
-    Make a web call to Joyent
-    '''
-    location = get_location()
-    path = 'https://{0}.api.joyentcloud.com/{1}/'.format(
-        location,
-        config.get_cloud_config_value(
-            'user', get_configured_provider(), __opts__, search_global=False
-        ),
-    )
-    auth_handler = urllib2.HTTPBasicAuthHandler()
-    auth_handler.add_password(
-        realm='SmartDataCenter',
-        uri=path,
-        user=config.get_cloud_config_value(
-            'user', get_configured_provider(), __opts__, search_global=False
-        ),
-        passwd=config.get_cloud_config_value(
-            'password', get_configured_provider(), __opts__,
-            search_global=False
-        )
-    )
-    opener = urllib2.build_opener(auth_handler)
-    urllib2.install_opener(opener)
-
-    if action:
-        path += action
-
-    if command:
-        path += '/{0}'.format(command)
-
-    if type(args) is not dict:
-        args = {}
-
-    kwargs = {'data': data}
-    kwargs['headers'] = {
-        'Accept': 'application/json',
-        'X-Api-Version': '~6.5',
-    }
-    if type(headers) is dict:
-        for header in headers.keys():
-            kwargs['headers'][header] = headers[header]
-
-    log.debug(
-        'Request headers: {0}'.format(
-            pprint.pformat(kwargs['headers'])
-        )
-    )
-
-    if args:
-        path += '?%s'
-        params = urllib.urlencode(args)
-        req = urllib2.Request(url=path % params, **kwargs)
-    else:
-        req = urllib2.Request(url=path, **kwargs)
-
-    req.get_method = lambda: method
-
-    log.debug('{0} {1}'.format(method, req.get_full_url()))
-    if data:
-        log.debug(data)
-
-    try:
-        result = urllib2.urlopen(req)
-        log.debug(
-            'Joyent Response Status Code: {0}'.format(
-                result.getcode()
-            )
-        )
-
-        content = result.read()
-        result.close()
-
-        data = yaml.safe_load(content)
-        return data
-    except urllib2.URLError as exc:
-        log.error(
-            'Joyent Response Status Code: {0} {1}'.format(
-                exc.code,
-                exc.msg
-            )
-        )
-        log.error(exc)
-        return {'error': exc}
-
-
-def get_location_path(location=DEFAULT_LOCATION):
+def get_location_path(location=DEFAULT_LOCATION, api_host_suffix=JOYENT_API_HOST_SUFFIX):
     '''
     create url from location variable
-    :param location: joyent datacenter location
+    :param location: joyent data center location
     :return: url
     '''
-    return 'https://{0}{1}'.format(location, JOYENT_API_HOST_SUFFIX)
+    return '{0}://{1}{2}'.format(_get_proto(), location, api_host_suffix)
 
 
-def query2(action=None, command=None, args=None, method='GET', location=None,
+def query(action=None, command=None, args=None, method='GET', location=None,
            data=None):
     '''
     Make a web call to Joyent
     '''
-
     user = config.get_cloud_config_value(
         'user', get_configured_provider(), __opts__, search_global=False
     )
@@ -1096,10 +1060,20 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
         search_global=False
     )
 
+    verify_ssl = config.get_cloud_config_value(
+        'verify_ssl', get_configured_provider(), __opts__,
+        search_global=False, default=True
+    )
+
     if not location:
         location = get_location()
 
-    path = get_location_path(location=location)
+    api_host_suffix = config.get_cloud_config_value(
+        'api_host_suffix', get_configured_provider(), __opts__,
+        search_global=False, default=JOYENT_API_HOST_SUFFIX
+    )
+
+    path = get_location_path(location=location, api_host_suffix=api_host_suffix)
 
     if action:
         path += action
@@ -1119,40 +1093,33 @@ def query2(action=None, command=None, args=None, method='GET', location=None,
     if not isinstance(args, dict):
         args = {}
 
-    request = None
-    if args:
-        params = urllib.urlencode(args)
-        path = '{0}?{1}'.format(path, params)
-
-    request = urllib2.Request(path)
-    request.get_method = lambda: method
-
     # post form data
     if not data:
         data = json.dumps({})
 
-    request.add_data(data)
-
-    for key, value in headers.items():
-        request.add_header(key, value)
-
     return_content = None
     try:
 
-        result = urllib2.urlopen(request)
+        result = requests.request(
+            method,
+            path,
+            params=args,
+            headers=headers,
+            data=data,
+            verify=verify_ssl,
+        )
         log.debug(
             'Joyent Response Status Code: {0}'.format(
-                result.getcode()
+                result.status_code
             )
         )
         if 'content-length' in result.headers:
-            content = result.read()
-            result.close()
+            content = result.text
             return_content = yaml.safe_load(content)
 
-        return [result.getcode(), return_content]
+        return [result.status_code, return_content]
 
-    except urllib2.URLError as exc:
+    except requests.exceptions.HTTPError as exc:
         log.error(
             'Joyent Response Status Code: {0}'.format(
                 str(exc)

@@ -1,0 +1,28 @@
+# Maintenance process floscript
+
+house master
+
+framer jobcleaner be active first setup
+    frame setup
+        print Setup Maint
+        enter
+            do salt raet maint setup
+        go modules
+    frame modules
+        enter
+            do salt load modules
+        go fsclean
+    frame fsclean
+        enter
+            do salt raet maint fileserver clean
+        go start
+    frame start
+        do salt raet maint old jobs clear
+
+framer backends be active first start
+    frame start
+        do salt raet maint backends update
+
+framer scheduler be active first start
+    frame start
+        do salt schedule

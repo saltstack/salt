@@ -2,7 +2,7 @@
 '''
 Edit ini files
 
-:maintainer: <ageeleshwar.kandavelu@csscorp.com>
+:maintainer: <akilesh1597@gmail.com>
 :maturity: new
 :depends: re
 :platform: all
@@ -12,7 +12,12 @@ Use section as DEFAULT_IMPLICIT if your ini file does not have any section
 '''
 
 # Import Python libs
+from __future__ import print_function
+from __future__ import absolute_import
 import re
+
+# Import Salt libs
+import salt.utils
 
 __virtualname__ = 'ini'
 
@@ -25,8 +30,8 @@ def __virtual__():
 
 comment_regexp = re.compile(r'^\s*#\s*(.*)')
 section_regexp = re.compile(r'\s*\[(.+)\]\s*')
-option_regexp1 = re.compile(r'\s*(.+?)\s*(=)\s*(.+)\s*')
-option_regexp2 = re.compile(r'\s*(.+?)\s*(:)\s*(.+)\s*')
+option_regexp1 = re.compile(r'\s*(.+?)\s*(=)(.*)')
+option_regexp2 = re.compile(r'\s*(.+?)\s*(:)(.*)')
 
 
 def set_option(file_name, sections=None, summary=True):
@@ -47,7 +52,7 @@ def set_option(file_name, sections=None, summary=True):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.set_option',
                ['path_to_ini_file', '{"section_to_change": {"key": "value"}}'])
 
@@ -87,7 +92,7 @@ def set_option(file_name, sections=None, summary=True):
                                                  sections[section][option]})
             except Exception:
                 ret.update({'error':
-                            'while setting option {0} in section {0}'.
+                            'while setting option {0} in section {1}'.
                             format(option, section)})
                 err_flag = True
                 break
@@ -107,7 +112,7 @@ def get_option(file_name, section, option):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.get_option',
                [path_to_ini_file, section_name, option])
 
@@ -134,7 +139,7 @@ def remove_option(file_name, section, option):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.remove_option',
                [path_to_ini_file, section_name, option])
 
@@ -162,7 +167,7 @@ def get_section(file_name, section):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.get_section',
                [path_to_ini_file, section_name])
 
@@ -190,7 +195,7 @@ def remove_section(file_name, section):
     .. code-block:: python
 
         import salt
-        sc = salt.client.LocalClient()
+        sc = salt.client.get_local_client()
         sc.cmd('target', 'ini.remove_section',
                [path_to_ini_file, section_name])
 
@@ -277,8 +282,12 @@ class _Ini(object):
         self.sections = []
         current_section = _Section('DEFAULT_IMPLICIT')
         self.sections.append(current_section)
-        with open(self.file_name, 'r') as inifile:
+        with salt.utils.fopen(self.file_name, 'r') as inifile:
+            previous_line = None
             for line in inifile.readlines():
+                # Make sure the empty lines between options are preserved
+                if _Ini.isempty(previous_line) and not _Ini.isnewsection(line):
+                    current_section.append('\n')
                 if _Ini.iscomment(line):
                     current_section.append(_Ini.decrypt_comment(line))
                 elif _Ini.isnewsection(line):
@@ -286,26 +295,29 @@ class _Ini(object):
                     current_section = self.sections[-1]
                 elif _Ini.isoption(line):
                     current_section.append(_Ini.decrypt_option(line))
-        return self
+                previous_line = line
 
     def flush(self):
-        with open(self.file_name, 'w') as outfile:
+        with salt.utils.fopen(self.file_name, 'w') as outfile:
             outfile.write(self.current_contents())
 
     def dump(self):
-        print self.current_contents()
+        print(self.current_contents())
 
     def current_contents(self):
         file_contents = ''
         for section in self.sections:
             if not section.section_name == 'DEFAULT_IMPLICIT':
-                file_contents += '[%s]\n' % section.section_name
+                file_contents += '[{0}]\n'.format(section.section_name)
             for item in section:
                 if isinstance(item, _Option):
-                    file_contents += '%s%s%s\n' % (item.name, item.separator,
-                                                   item.value)
+                    file_contents += '{0}{1}{2}\n'.format(
+                        item.name, item.separator, item.value
+                    )
+                elif item == '\n':
+                    file_contents += '\n'
                 else:
-                    file_contents += '# %s\n' % item
+                    file_contents += '# {0}\n'.format(item)
             file_contents += '\n'
         return file_contents
 
@@ -362,6 +374,10 @@ class _Ini(object):
         return re.match(comment_regexp, line)
 
     @staticmethod
+    def isempty(line):
+        return line == '\n'
+
+    @staticmethod
     def isnewsection(line):
         return re.match(section_regexp, line)
 
@@ -372,6 +388,10 @@ class _Ini(object):
     @staticmethod
     def get_ini_file(file_name):
         try:
-            return _Ini(file_name).refresh()
+            inifile = _Ini(file_name)
+            inifile.refresh()
+            return inifile
+        except IOError:
+            return inifile
         except Exception:
             return

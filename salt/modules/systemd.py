@@ -3,9 +3,11 @@
 Provide the service module for systemd
 '''
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import re
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ def _sd_booted():
     Return True if the system was booted with systemd, False otherwise.
     '''
     # We can cache this for as long as the minion runs.
-    if not "systemd.sd_booted" in __context__:
+    if "systemd.sd_booted" not in __context__:
         try:
             # This check does the same as sd_booted() from libsystemd-daemon:
             # http://www.freedesktop.org/software/systemd/man/sd_booted.html
@@ -72,6 +74,29 @@ def _systemctl_cmd(action, name):
     return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
 
 
+def _get_all_units():
+    '''
+    Get all units and their state. Units ending in .service
+    are normalized so that they can be referenced without a type suffix.
+    '''
+    rexp = re.compile(r'(?m)^(?P<name>.+)\.(?P<type>' +
+                      '|'.join(VALID_UNIT_TYPES) +
+                      r')\s+loaded\s+(?P<active>[^\s]+)')
+
+    out = __salt__['cmd.run_stdout'](
+        'systemctl --all --full --no-legend --no-pager list-units | col -b',
+        python_shell=True
+    )
+
+    ret = {}
+    for match in rexp.finditer(out):
+        name = match.group('name')
+        if match.group('type') != 'service':
+            name += '.' + match.group('type')
+        ret[name] = match.group('active')
+    return ret
+
+
 def _get_all_unit_files():
     '''
     Get all unit files and their state. Unit files ending in .service
@@ -82,7 +107,8 @@ def _get_all_unit_files():
                       r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full list-unit-files | col -b'
+        'systemctl --full --no-legend --no-pager list-unit-files | col -b',
+        python_shell=True
     )
 
     ret = {}
@@ -140,7 +166,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = []
-    for name, state in _get_all_unit_files().iteritems():
+    for name, state in six.iteritems(_get_all_unit_files()):
         if state == 'enabled':
             ret.append(name)
     return sorted(ret)
@@ -157,7 +183,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = []
-    for name, state in _get_all_unit_files().iteritems():
+    for name, state in six.iteritems(_get_all_unit_files()):
         if state == 'disabled':
             ret.append(name)
     return sorted(ret)
@@ -173,7 +199,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(_get_all_unit_files().keys())
+    return sorted(set(_get_all_units().keys() + _get_all_unit_files().keys()))
 
 
 def available(name):
@@ -187,7 +213,15 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    return _canonical_template_unit_name(name) in get_all()
+    name = _canonical_template_unit_name(name)
+    units = get_all()
+    if name in units:
+        return True
+    elif '@' in name:
+        templatename = name[:name.find('@') + 1]
+        return templatename in units
+    else:
+        return False
 
 
 def missing(name):
@@ -202,7 +236,37 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return not _canonical_template_unit_name(name) in get_all()
+    return not available(name)
+
+
+def unmask(name):
+    '''
+    Unmask the specified service with systemd
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.unmask <service name>
+    '''
+    if _untracked_custom_unit_found(name) or _unit_file_changed(name):
+        systemctl_reload()
+    return not __salt__['cmd.retcode'](_systemctl_cmd('unmask', name))
+
+
+def mask(name):
+    '''
+    Mask the specified service with systemd
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.mask <service name>
+    '''
+    if _untracked_custom_unit_found(name) or _unit_file_changed(name):
+        systemctl_reload()
+    return not __salt__['cmd.retcode'](_systemctl_cmd('mask', name))
 
 
 def start(name):
@@ -295,8 +359,7 @@ def status(name, sig=None):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    cmd = 'systemctl is-active {0}'.format(_canonical_unit_name(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](_systemctl_cmd('is-active', name))
 
 
 def enable(name, **kwargs):
@@ -346,11 +409,12 @@ def _templated_instance_enabled(name):
 
 def _enabled(name):
     is_enabled = \
-        not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name))
+        not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name),
+                                    ignore_retcode=True)
     return is_enabled or _templated_instance_enabled(name)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return if the named service is enabled to start on boot
 
@@ -374,3 +438,48 @@ def disabled(name):
         salt '*' service.disabled <service name>
     '''
     return not _enabled(name)
+
+
+def show(name):
+    '''
+    Show properties of one or more units/jobs or the manager
+
+    CLI Example:
+
+        salt '*' service.show <service name>
+    '''
+    ret = {}
+    for line in __salt__['cmd.run'](_systemctl_cmd('show', name)).splitlines():
+        comps = line.split('=')
+        name = comps[0]
+        value = '='.join(comps[1:])
+        if value.startswith('{'):
+            value = value.replace('{', '').replace('}', '')
+            ret[name] = {}
+            for item in value.split(' ; '):
+                comps = item.split('=')
+                ret[name][comps[0].strip()] = comps[1].strip()
+        elif name in ('Before', 'After', 'Wants'):
+            ret[name] = value.split()
+        else:
+            ret[name] = value
+
+    return ret
+
+
+def execs():
+    '''
+    Return a list of all files specified as ``ExecStart`` for all services.
+
+    CLI Example:
+
+        salt '*' service.execs
+    '''
+    execs_ = {}
+    for service in get_all():
+        data = show(service)
+        if 'ExecStart' not in data:
+            continue
+        execs_[service] = data['ExecStart']['path']
+
+    return execs_

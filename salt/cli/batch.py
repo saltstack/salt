@@ -5,6 +5,7 @@ Execute batch runs
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import math
 import time
 import copy
@@ -12,41 +13,33 @@ import copy
 # Import salt libs
 import salt.client
 import salt.output
+import salt.utils.minions
+from salt.utils import print_cli
+from salt.ext.six.moves import range
 
 
 class Batch(object):
     '''
     Manage the execution of batch runs
     '''
-    def __init__(self, opts, quiet=False):
+    def __init__(self, opts, eauth=None, quiet=False):
         self.opts = opts
+        self.eauth = eauth if eauth else {}
         self.quiet = quiet
-        self.local = salt.client.LocalClient(opts['conf_file'])
+        self.local = salt.client.get_local_client(opts['conf_file'])
         self.minions = self.__gather_minions()
 
     def __gather_minions(self):
         '''
         Return a list of minions to use for the batch run
         '''
-        args = [self.opts['tgt'],
-                'test.ping',
-                [],
-                5,
-                ]
-
+        ckminions = salt.utils.minions.CkMinions(self.opts)
         selected_target_option = self.opts.get('selected_target_option', None)
         if selected_target_option is not None:
-            args.append(selected_target_option)
+            expr_form = selected_target_option
         else:
-            args.append(self.opts.get('expr_form', 'glob'))
-
-        fret = []
-        for ret in self.local.cmd_iter(*args):
-            for minion in ret:
-                if not self.quiet:
-                    print('{0} Detected for this batch run'.format(minion))
-                fret.append(minion)
-        return sorted(fret)
+            expr_form = self.opts.get('expr_form', 'glob')
+        return ckminions.check_minions(self.opts['tgt'], expr_form=expr_form)
 
     def get_bnum(self):
         '''
@@ -64,8 +57,8 @@ class Batch(object):
                 return int(self.opts['batch'])
         except ValueError:
             if not self.quiet:
-                print(('Invalid batch data sent: {0}\nData must be in the form'
-                       'of %10, 10% or 3').format(self.opts['batch']))
+                print_cli('Invalid batch data sent: {0}\nData must be in the '
+                          'form of %10, 10% or 3'.format(self.opts['batch']))
 
     def run(self):
         '''
@@ -108,11 +101,13 @@ class Batch(object):
 
             if next_:
                 if not self.quiet:
-                    print('\nExecuting run on {0}\n'.format(next_))
+                    print_cli('\nExecuting run on {0}\n'.format(next_))
                 # create a new iterator for this batch of minions
                 new_iter = self.local.cmd_iter_no_block(
                                 *args,
-                                raw=self.opts.get('raw', False))
+                                raw=self.opts.get('raw', False),
+                                ret=self.opts.get('return', ''),
+                                **self.eauth)
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
                 minion_tracker[new_iter] = {}
@@ -152,7 +147,7 @@ class Batch(object):
                         # add all minions that belong to this iterator and
                         # that have not responded to parts{} with an empty response
                         for minion in minion_tracker[queue]['minions']:
-                            if minion not in parts.keys():
+                            if minion not in parts:
                                 parts[minion] = {}
                                 parts[minion]['ret'] = {}
 
@@ -176,7 +171,7 @@ class Batch(object):
                             self.opts)
 
             # remove inactive iterators from the iters list
-            for queue in minion_tracker.keys():
+            for queue in minion_tracker:
                 # only remove inactive queues
                 if not minion_tracker[queue]['active'] and queue in iters:
                     iters.remove(queue)

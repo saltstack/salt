@@ -6,10 +6,12 @@ Note that not all Windows applications will rehash the PATH environment variable
 Only the ones that listen to the WM_SETTINGCHANGE message
 http://support.microsoft.com/kb/104011
 '''
+from __future__ import absolute_import
 
 # Python Libs
 import logging
 import re
+from salt.ext.six.moves import map
 
 # Third party libs
 try:
@@ -56,7 +58,7 @@ def get_path():
     ret = __salt__['reg.read_key']('HKEY_LOCAL_MACHINE', 'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment', 'PATH').split(';')
 
     # Trim ending backslash
-    return map(_normalize_dir, ret)
+    return list(map(_normalize_dir, ret))
 
 
 def exists(path):

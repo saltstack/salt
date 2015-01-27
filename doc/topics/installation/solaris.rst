@@ -10,29 +10,29 @@ minimally on Solaris 10 (x86), Solaris 9 (sparc/x86) and 11 (sparc/x86).
 has also just focused on the minion, though it has verified that the master
 starts up successfully on Solaris 10.
 
-Comments and patches for better support on these platforms is very welcome. 
+Comments and patches for better support on these platforms is very welcome.
 
 As of version 0.10.4, Solaris is well supported under salt, with all of the
 following working well:
 
 1.   remote execution
 2.   grain detection
-3.   service control with SMF 
+3.   service control with SMF
 4.   'pkg' states with 'pkgadd' and 'pkgutil' modules
 5.   cron modules/states
 6.   user and group modules/states
 7.   shadow password management modules/states
 
 Salt is dependent on the following additional packages. These will
-automatically be installed as dependencies of the ``py_salt`` package.::
+automatically be installed as dependencies of the ``py_salt`` package:
 
-   py_yaml
-   py_pyzmq
-   py_jinja2
-   py_msgpack_python
-   py_m2crypto
-   py_crypto
-   python
+- py_yaml
+- py_pyzmq
+- py_jinja2
+- py_msgpack_python
+- py_m2crypto
+- py_crypto
+- python
 
 Installation
 ============
@@ -109,7 +109,7 @@ salt-minion key is awaiting acceptance:
 .. code-block:: bash
 
    salt-key -l un
- 
+
 Accept the key:
 
 .. code-block:: bash

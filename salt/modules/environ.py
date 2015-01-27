@@ -3,13 +3,14 @@
 Support for getting and setting the environment variables
 of the current salt process.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import logging
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
     false_unsets
         If a key's value is False and false_unsets is True, then the
         key will be removed from the salt processes environment dict
-        entirely. If a key's value is Flase and false_unsets is not
+        entirely. If a key's value is False and false_unsets is not
         True, then the key's value will be set to an empty string.
         Default: False
 
@@ -135,7 +136,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
         return False
     if clear_all is True:
         # Unset any keys not defined in 'environ' dict supplied by user
-        to_unset = [key for key in os.environ.keys() if key not in environ]
+        to_unset = [key for key in os.environ if key not in environ]
         for key in to_unset:
             ret[key] = setval(key, False, false_unsets)
     for key, val in environ.items():
@@ -168,7 +169,7 @@ def get(key, default=''):
         String used as the key for environment lookup.
 
     default
-        If the key is not found in the enironment, return this value.
+        If the key is not found in the environment, return this value.
         Default: ''
 
 
@@ -235,7 +236,7 @@ def item(keys, default=''):
         keys for environment lookup.
 
     default
-        If the key is not found in the enironment, return this value.
+        If the key is not found in the environment, return this value.
         Default: ''
 
     CLI Example:

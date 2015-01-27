@@ -27,16 +27,20 @@ The Ubuntu community documentation contains an explanation of this setting, as
 it applies to systems that dual-boot with Windows. This is explained in greater
 detail here_.
 '''
+from __future__ import absolute_import
+
+# Import salt libs
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 
 def __virtual__():
     '''
     Only load if the timezone module is available in __salt__
     '''
-    return 'timezone' if 'timezone.get_zone' in __salt__ else False
+    return 'timezone.get_zone' in __salt__
 
 
-def system(name, utc=''):
+def system(name, utc=True):
     '''
     Set the timezone for the system.
 
@@ -53,7 +57,17 @@ def system(name, utc=''):
     # Set up metadata
     do_utc = False
     do_zone = False
-    compzone = __salt__['timezone.zone_compare'](name)
+
+    try:
+        compzone = __salt__['timezone.zone_compare'](name)
+    except (SaltInvocationError, CommandExecutionError) as exc:
+        ret['result'] = False
+        ret['comment'] = (
+            'Unable to compare desrired timezone {0!r} to system timezone: {1}'
+            .format(name, exc)
+        )
+        return ret
+
     myutc = True
     messages = []
     if __salt__['timezone.get_hwclock']() == 'localtime':
@@ -67,10 +81,10 @@ def system(name, utc=''):
         do_zone = True
 
     # If the user passed in utc, do a check
-    if utc != '' and utc != myutc:
+    if utc and utc != myutc:
         ret['result'] = None
         do_utc = True
-    elif utc != '' and utc == myutc:
+    elif utc and utc == myutc:
         messages.append('UTC already set to {0}'.format(name))
 
     if ret['result'] is True:
@@ -81,7 +95,7 @@ def system(name, utc=''):
         messages = []
         if compzone is False:
             messages.append('Timezone {0} needs to be set'.format(name))
-        if utc != '' and myutc != utc:
+        if utc and myutc != utc:
             messages.append('UTC needs to be set to {0}'.format(utc))
         ret['comment'] = ', '.join(messages)
         return ret

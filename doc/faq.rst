@@ -7,9 +7,9 @@ Is Salt open-core?
 ------------------
 
 No. Salt is 100% committed to being open-source, including all of our APIs and
-the new `'Halite' web interface`_ which was introduced in version 0.17.0. It
-is developed under the `Apache 2.0 license`_, allowing it to be used in both
-open and proprietary projects.
+the `'Halite' web interface`_ which was introduced in version 0.17.0. It is
+developed under the `Apache 2.0 license`_, allowing it to be used in both open
+and proprietary projects.
 
 .. _`'Halite' web interface`: https://github.com/saltstack/halite
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -39,7 +39,7 @@ A :mod:`cmd.run <salt.states.cmd.run>` state will run the corresponding command
 *every time* (unless it is prevented from running by the ``unless`` or ``onlyif``
 arguments).
 
-More details can be found in the docmentation for the :mod:`cmd
+More details can be found in the documentation for the :mod:`cmd
 <salt.states.cmd>` states.
 
 When I run *test.ping*, why don't the Minions that aren't responding return anything? Returning ``False`` would be helpful.
@@ -163,11 +163,21 @@ PATH using a :mod:`file.symlink <salt.states.file.symlink>` state.
 Can I run different versions of Salt on my Master and Minion?
 -------------------------------------------------------------
 
-As of release 0.17.1 backwards compatibility was broken (specifically for
-0.17.1 trying to interface with older releases) due to a protocol change for
-security purposes. The Salt team continues to emphasize backwards compatibility
-as an important feature and plans to support it to the best of our ability to
-do so.
+This depends on the versions.  In general, it is recommended that Master and
+Minion versions match.
+
+When upgrading Salt, the master(s) should always be upgraded first.  Backwards
+compatibility for minions running newer versions of salt than their masters is
+not guaranteed.
+
+Whenever possible, backwards compatibility between new masters
+and old minions will be preserved.  Generally, the only exception to this
+policy is in case of a security vulnerability.
+
+Recent examples of backwards compatibility breakage include the 0.17.1 release
+(where all backwards compatibility was broken due to a security fix), and the
+2014.1.0 release (which retained compatibility between 2014.1.0 masters and
+0.17 minions, but broke compatibility for 2014.1.0 minions and older masters).
 
 Does Salt support backing up managed files?
 -------------------------------------------
@@ -177,3 +187,105 @@ allow you to back up files via :doc:`backup_mode </ref/states/backup_mode>`,
 backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
+
+What is the best way to restart a Salt daemon using Salt?
+---------------------------------------------------------
+
+Updating the salt-minion package requires a restart of the salt-minion service.
+But restarting the service while in the middle of a state run interrupts the
+process of the minion running states and sending results back to the master.
+It's a tricky problem to solve, and we're working on it, but in the meantime
+one way of handling this (on Linux and UNIX-based operating systems) is to use
+**at** (a job scheduler which predates cron) to schedule a restart of the
+service. **at** is not installed by default on most distros, and requires a
+service to be running (usually called **atd**) in order to schedule jobs.
+Here's an example of how to upgrade the salt-minion package at the end of a
+Salt run, and schedule a service restart for one minute after the package
+update completes.
+
+Linux/Unix
+**********
+
+.. code-block:: yaml
+
+    salt-minion:
+      pkg.installed:
+        - name: salt-minion
+        - version: 2014.1.7-3.el6
+        - order: last
+      service.running:
+        - name: salt-minion
+        - require:
+          - pkg: salt-minion
+      cmd.wait:
+        - name: echo service salt-minion restart | at now + 1 minute
+        - watch:
+          - pkg: salt-minion
+
+To ensure that **at** is installed and **atd** is running, the following states
+can be used (be sure to double-check the package name and service name for the
+distro the minion is running, in case they differ from the example below.
+
+.. code-block:: yaml
+
+    at:
+      pkg.installed:
+        - name: at
+      service.running:
+        - name: atd
+        - enable: True
+
+An alternatvie to using the :program:`atd` daemon is to fork and disown the
+process.
+
+.. code-block:: yaml
+
+    restart_minion:
+      cmd.run:
+        - name: |
+            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion'
+        - python_shell: True
+        - order: last
+
+Windows
+*******
+
+For Windows machines, restarting the minion at can be accomplished by
+adding the following state:
+
+.. code-block:: yaml
+
+    schedule-start:
+      cmd.run:
+        - name: 'start powershell "Restart-Service -Name salt-minion"'
+        - order: last
+
+or running immediately from the command line:
+
+.. code-block:: bash
+
+    salt -G kernel:Windows cmd.run 'start powershell "Restart-Service -Name salt-minion"'
+
+Salting the Salt Master
+-----------------------
+
+In order to configure a master server via states, the Salt master can also be
+"salted" in order to enforce state on the Salt master as well as the Salt
+minions. Salting the Salt master requires a Salt minion to be installed on
+the same machine as the Salt master. Once the Salt minion is installed, the
+minion configuration file must be pointed to the local Salt master:
+
+.. code-block:: yaml
+
+    master: 127.0.0.1
+
+Once the Salt master has been "salted" with a Salt minion, it can be targeted
+just like any other minion. If the minion on the salted master is running, the
+minion can be targeted via any usual ``salt`` command. Additionally, the
+``salt-call`` command can execute operations to enforce state on the salted
+master without requiring the minion to be running.
+
+More information about salting the Salt master can be found in the salt-formula
+for salt itself:
+
+https://github.com/saltstack-formulas/salt-formula

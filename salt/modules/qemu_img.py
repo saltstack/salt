@@ -7,6 +7,7 @@ The qemu img command is wrapped for specific functions
 
 :depends: qemu-img
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -44,6 +45,7 @@ def make_image(location, size, fmt):
             'qemu-img create -f {0} {1} {2}M'.format(
                 fmt,
                 location,
-                size)):
+                size),
+                python_shell=False):
         return location
     return ''

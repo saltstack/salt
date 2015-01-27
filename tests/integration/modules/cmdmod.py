@@ -7,14 +7,9 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
 ensure_in_syspath('../../')
-
-try:
-    from salttesting.helpers import skip_if_binaries_missing
-except ImportError:
-    from integration import skip_if_binaries_missing
 
 # Import salt libs
 import integration
@@ -48,14 +43,11 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function('cmd.run',
                               ['echo $SHELL',
-                               'shell={0}'.format(shell)]).rstrip(),
-            shell)
+                               'shell={0}'.format(shell)], python_shell=True).rstrip(), shell)
 
     @patch('pwd.getpwnam')
     @patch('subprocess.Popen')
-    @patch('json.loads')
     def test_os_environment_remains_intact(self,
-                                           loads_mock,
                                            popen_mock,
                                            getpwnam_mock):
         '''
@@ -70,12 +62,10 @@ class CMDModuleTest(integration.ModuleCase):
             retcode=0
         )
 
-        loads_mock.return_value = {'data': {'USER': 'foo'}}
-
         from salt.modules import cmdmod
 
         cmdmod.__grains__ = {'os': 'darwin'}
-        if sys.platform.startswith('freebsd'):
+        if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
             shell = '/bin/bash'
@@ -91,7 +81,6 @@ class CMDModuleTest(integration.ModuleCase):
             self.assertEqual(environment, environment2)
 
             getpwnam_mock.assert_called_with('foobar')
-            loads_mock.assert_called_with('{}')
         finally:
             delattr(cmdmod, '__grains__')
 
@@ -107,14 +96,14 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run_stderr
         '''
-        if sys.platform.startswith('freebsd'):
+        if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
             shell = '/bin/bash'
 
         self.assertEqual(self.run_function('cmd.run_stderr',
                                            ['echo "cheese" 1>&2',
-                                            'shell={0}'.format(shell)]
+                                            'shell={0}'.format(shell)], python_shell=True
                                            ).rstrip(),
                          'cheese')
 
@@ -122,15 +111,15 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.run_all
         '''
-        from salt._compat import string_types
+        from six import string_types
 
-        if sys.platform.startswith('freebsd'):
+        if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:
             shell = '/bin/bash'
 
         ret = self.run_function('cmd.run_all', ['echo "cheese" 1>&2',
-                                                'shell={0}'.format(shell)])
+                                                'shell={0}'.format(shell)], python_shell=True)
         self.assertTrue('pid' in ret)
         self.assertTrue('retcode' in ret)
         self.assertTrue('stdout' in ret)
@@ -145,8 +134,8 @@ class CMDModuleTest(integration.ModuleCase):
         '''
         cmd.retcode
         '''
-        self.assertEqual(self.run_function('cmd.retcode', ['exit 0']), 0)
-        self.assertEqual(self.run_function('cmd.retcode', ['exit 1']), 1)
+        self.assertEqual(self.run_function('cmd.retcode', ['exit 0'], python_shell=True), 0)
+        self.assertEqual(self.run_function('cmd.retcode', ['exit 1'], python_shell=True), 1)
 
     @skip_if_binaries_missing(['which'])
     def test_which(self):
@@ -210,9 +199,11 @@ sys.stdout.write('cheese')
         '''
         cmd.run trigger timeout
         '''
+        out = self.run_function('cmd.run', ['sleep 2 && echo hello', 'timeout=1'])
+
         self.assertTrue(
             'Timed out' in self.run_function(
-                'cmd.run', ['sleep 2 && echo hello', 'timeout=1']))
+                'cmd.run', ['sleep 2 && echo hello', 'timeout=1'], python_shell=True))
 
     def test_timeout_success(self):
         '''
@@ -220,7 +211,7 @@ sys.stdout.write('cheese')
         '''
         self.assertTrue(
             'hello' == self.run_function(
-                'cmd.run', ['sleep 1 && echo hello', 'timeout=2']))
+                'cmd.run', ['sleep 1 && echo hello', 'timeout=2'], python_shell=True))
 
     def test_run_cwd_doesnt_exist_issue_7154(self):
         '''

@@ -1,6 +1,6 @@
-=======================
-States tutorial, part 1
-=======================
+=====================================
+States tutorial, part 1 - Basic Usage
+=====================================
 
 The purpose of this tutorial is to demonstrate how quickly you can configure a
 system to be managed by Salt States. For detailed information about the state
@@ -16,9 +16,9 @@ Setting up the Salt State Tree
 
 States are stored in text files on the master and transferred to the minions on
 demand via the master's File Server. The collection of state files make up the
-:term:`State Tree`.
+``State Tree``.
 
-To start using a central state system in Salt, the Salt File Server must first 
+To start using a central state system in Salt, the Salt File Server must first
 be set up. Edit the master config file (:conf_master:`file_roots`) and
 uncomment the following lines:
 
@@ -53,9 +53,10 @@ On the master, in the directory uncommented in the previous step,
       '*':
         - webserver
 
-The :term:`top file` is separated into environments (discussed later). The
-default environment is ``base``. Under the ``base`` environment a collection of
-minion matches is defined; for now simply specify all hosts (``*``).
+The :ref:`top file <states-top>` is separated into environments (discussed
+later). The default environment is ``base``. Under the ``base`` environment a
+collection of minion matches is defined; for now simply specify all hosts
+(``*``).
 
 .. _targeting-minions:
 .. admonition:: Targeting minions
@@ -71,11 +72,11 @@ minion matches is defined; for now simply specify all hosts (``*``).
             - match: grain
             - webserver
 
-Create an ``sls`` module
-========================
+Create an ``sls`` file
+======================
 
-In the same directory as the :term:`top file`, create an empty file named
-``webserver.sls``, containing the following:
+In the same directory as the :ref:`top file <states-top>`, create a file
+named ``webserver.sls``, containing the following:
 
 .. code-block:: yaml
 
@@ -83,8 +84,8 @@ In the same directory as the :term:`top file`, create an empty file named
       pkg:                  # state declaration
         - installed         # function declaration
 
-The first line, called the :term:`ID declaration`, is an arbitrary identifier.
-In this case it defines the name of the package to be installed. 
+The first line, called the :ref:`id-declaration`, is an arbitrary identifier.
+In this case it defines the name of the package to be installed.
 
 .. note::
 
@@ -92,16 +93,16 @@ In this case it defines the name of the package to be installed.
     OS or distro — for example, on Fedora it is ``httpd`` but on
     Debian/Ubuntu it is ``apache2``.
 
-The second line, called the :term:`state declaration`, defines which of the
-Salt States we are using. In this example, we are using the :mod:`pkg state
+The second line, called the :ref:`state-declaration`, defines which of the Salt
+States we are using. In this example, we are using the :mod:`pkg state
 <salt.states.pkg>` to ensure that a given package is installed.
 
-The third line, called the :term:`function declaration`, defines which function
+The third line, called the :ref:`function-declaration`, defines which function
 in the :mod:`pkg state <salt.states.pkg>` module to call.
 
 .. admonition:: Renderers
 
-    States :term:`sls` files can be written in many formats. Salt requires only
+    States ``sls`` files can be written in many formats. Salt requires only
     a simple data structure and is not concerned with how that data structure
     is built. Templating languages and `DSLs`_ are a dime-a-dozen and everyone
     has a favorite.
@@ -115,6 +116,8 @@ in the :mod:`pkg state <salt.states.pkg>` module to call.
 
 .. _`DSLs`: http://en.wikipedia.org/wiki/Domain-specific_language
 
+.. _running-highstate:
+
 Install the package
 ===================
 
@@ -126,32 +129,47 @@ Next, let's run the state we created. Open a terminal on the master and run:
 
 Our master is instructing all targeted minions to run :func:`state.highstate
 <salt.modules.state.highstate>`. When a minion executes a highstate call it
-will download the :term:`top file` and attempt to match the expressions. When
-it does match an expression the modules listed for it will be downloaded,
-compiled, and executed.
+will download the :ref:`top file <states-top>` and attempt to match the
+expressions. When it does match an expression the modules listed for it will be
+downloaded, compiled, and executed.
 
 Once completed, the minion will report back with a summary of all actions taken
 and all changes made.
+
+.. warning::
+
+    If you have created :ref:`custom grain modules <writing-grains>`, they will
+    not be available in the top file until after the first :ref:`highstate
+    <running-highstate>`. To make custom grains available on a minion's first
+    highstate, it is recommended to use :ref:`this example
+    <minion-start-reactor>` to ensure that the custom grains are synced when
+    the minion starts.
 
 .. _sls-file-namespace:
 .. admonition:: SLS File Namespace
 
     Note that in the :ref:`example <targeting-minions>` above, the SLS file
     ``webserver.sls`` was referred to simply as ``webserver``. The namespace
-    for SLS files follows a few simple rules:
+    for SLS files when referenced in :conf_master:`top.sls <state_top>` or an :ref:`include-declaration` 
+    follows a few simple rules:
 
     1. The ``.sls`` is discarded (i.e. ``webserver.sls`` becomes
        ``webserver``).
     2. Subdirectories can be used for better organization.
-        a. Each subdirectory is represented by a dot.
-        b. ``webserver/dev.sls`` is referred to as ``webserver.dev``.
+        a. Each subdirectory can be represented with a dot (following the python 
+           import model) or a slash.  ``webserver/dev.sls`` can also be referred to 
+           as ``webserver.dev``
+        b. Because slashes can be represented as dots, SLS files can not contain
+           dots in the name besides the dot for the SLS suffix.  The SLS file 
+           webserver_1.0.sls can not be matched, and webserver_1.0 would match 
+           the directory/file webserver_1/0.sls
+        
     3. A file called ``init.sls`` in a subdirectory is referred to by the path
        of the directory. So, ``webserver/init.sls`` is referred to as
        ``webserver``.
     4. If both ``webserver.sls`` and ``webserver/init.sls`` happen to exist,
        ``webserver/init.sls`` will be ignored and ``webserver.sls`` will be the
        file referred to as ``webserver``.
-
 
 .. admonition:: Troubleshooting Salt
 
@@ -193,4 +211,4 @@ Next steps
 
 This tutorial focused on getting a simple Salt States configuration working.
 :doc:`Part 2 <states_pt2>` will build on this example to cover more advanced
-:term:`sls` syntax and will explore more of the states that ship with Salt.
+``sls`` syntax and will explore more of the states that ship with Salt.

@@ -2,11 +2,11 @@
 '''
 Wheel system wrapper for key system
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import hashlib
-import random
 
 # Import salt libs
 import salt.key
@@ -41,6 +41,14 @@ def accept(match):
     return skey.accept(match)
 
 
+def accept_dict(match):
+    '''
+    Accept keys based on a dict of keys
+    '''
+    skey = salt.key.Key(__opts__)
+    return skey.accept(match_dict=match)
+
+
 def delete(match):
     '''
     Delete keys based on a glob match
@@ -49,12 +57,28 @@ def delete(match):
     return skey.delete_key(match)
 
 
+def delete_dict(match):
+    '''
+    Delete keys based on a dict of keys
+    '''
+    skey = salt.key.Key(__opts__)
+    return skey.delete_key(match_dict=match)
+
+
 def reject(match):
     '''
-    Delete keys based on a glob match
+    Reject keys based on a glob match
     '''
     skey = salt.key.Key(__opts__)
     return skey.reject(match)
+
+
+def reject_dict(match):
+    '''
+    Reject keys based on a dict of keys
+    '''
+    skey = salt.key.Key(__opts__)
+    return skey.reject(match_dict=match)
 
 
 def key_str(match):
@@ -79,7 +103,7 @@ def gen(id_=None, keysize=2048):
     returned as a dict containing pub and priv keys
     '''
     if id_ is None:
-        id_ = hashlib.sha512(str(random.randint(0, 99999999))).hexdigest()
+        id_ = hashlib.sha512(os.urandom(32)).hexdigest()
     ret = {'priv': '',
            'pub': ''}
     priv = salt.crypt.gen_keys(__opts__['pki_dir'], id_, keysize)

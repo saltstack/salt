@@ -30,13 +30,15 @@ the location of composer in the state.
 
 
     # Without composer installed in your PATH
-
-    /path/to/composer:
+    # Note: composer.phar must be executable for state to work properly
+    /path/to/project:
       composer.installed:
         - composer: /path/to/composer.phar
         - php: /usr/local/bin/php
         - no_dev: true
 '''
+from __future__ import absolute_import
+
 # Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -45,13 +47,13 @@ def __virtual__():
     '''
     Only load if the composer module is available in __salt__
     '''
-    return 'composer' if 'composer.install' in __salt__ else False
+    return 'composer.install' in __salt__
 
 
 def installed(name,
               composer=None,
               php=None,
-              runas=None,
+              user=None,
               prefer_source=None,
               prefer_dist=None,
               no_scripts=None,
@@ -72,11 +74,13 @@ def installed(name,
         (i.e. /path/to/composer.phar)
 
     php
-        Location of the php executible to use with composer.
+        Location of the php executable to use with composer.
         (i.e. /usr/bin/php)
 
-    runas
+    user
         Which system user to run composer as.
+
+        .. versionadded:: 2014.1.4
 
     prefer_source
         --prefer-source option of composer.
@@ -109,7 +113,7 @@ def installed(name,
             name,
             composer=composer,
             php=php,
-            runas=runas,
+            runas=user,
             prefer_source=prefer_source,
             prefer_dist=prefer_dist,
             no_scripts=no_scripts,

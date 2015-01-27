@@ -55,19 +55,19 @@ reason to ask first.
 Fixing issues
 =============
 
-If you wish to help us fixing the issue you're reporting, `Salt's documentation`_ already includes 
+If you wish to help us fixing the issue you're reporting, `Salt's documentation`_ already includes
 information to help you setup a development environment, under `Developing Salt`_.
 
-Fix the issue you have in hands, if possible also add a test case to Salt's testing suite, create a 
+Fix the issue you have in hands, if possible also add a test case to Salt's testing suite, create a
 `pull request`_, and **that's it**!
 
-Salt's development team will review your fix and if everything is OK, your fix will be merged into 
+Salt's development team will review your fix and if everything is OK, your fix will be merged into
 salt's code.
 
 
 .. _`report an issue`: https://github.com/saltstack/salt/issues
-.. _`Salt's documentation`: http://docs.saltstack.org/en/latest/index.html
-.. _`Developing Salt`: http://docs.saltstack.com/topics/hacking.html
-.. _`pull request`: http://docs.saltstack.com/topics/hacking.html#sending-a-github-pull-request
+.. _`Salt's documentation`: http://docs.saltstack.com/en/latest/index.html
+.. _`Developing Salt`: http://docs.saltstack.com/en/latest/topics/development/hacking.html
+.. _`pull request`: http://docs.saltstack.com/en/latest/topics/development/contributing.html#sending-a-github-pull-request
 
 .. vim: fenc=utf-8 spell spl=en

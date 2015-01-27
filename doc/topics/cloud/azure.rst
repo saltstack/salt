@@ -2,11 +2,13 @@
 Getting Started With Azure
 ==========================
 
+.. versionadded:: 2014.1.0
+
 Azure is a cloud service by Microsoft providing virtual machines, SQL services,
 media services, and more. This document describes how to use Salt Cloud to
 create a virtual machine on Azure, with Salt installed.
 
-You can find more information about Azure at `http://www.windowsazure.com/ 
+More information about Azure is located at `http://www.windowsazure.com/
 <http://www.windowsazure.com/>`_.
 
 
@@ -37,8 +39,6 @@ Set up the provider config at ``/etc/salt/cloud.providers.d/azure.conf``:
       minion:
         master: saltmaster.example.com
 
-      provider: azure
-
       # Optional
       management_host: management.core.windows.net
 
@@ -58,11 +58,11 @@ To create the .cer file, execute the following command:
 
     openssl x509 -inform pem -in /etc/salt/azure.pem -outform der -out /etc/salt/azure.cer
 
-After you creating these files, the .cer file will need to be uploaded to
-Azure via the "Upload" action of the "Settings" tab of the management portal.
+After creating these files, the .cer file will need to be uploaded to
+Azure via the "Upload a Management Certificate" action of the "Management Certificates"
+tab within the "Settings" section of the management portal.
 
-Optionally, a ``management_host`` may be configured, if necessary for your
-region.
+Optionally, a ``management_host`` may be configured, if necessary for the region.
 
 
 Cloud Profiles
@@ -97,7 +97,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt newminion test.ping
+    salt newinstance test.ping
 
 
 Profile Options

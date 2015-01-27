@@ -19,7 +19,7 @@ MY_NAME = 'test_ext_pillar_opts'
 
 def __virtual__():
     log.debug('Loaded external pillar {0} as {1}'.format(__name__, MY_NAME))
-    return MY_NAME
+    return True
 
 
 def ext_pillar(minion_id, pillar, *args):

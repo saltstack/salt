@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     salt.utils.context
@@ -10,6 +8,7 @@
 
     Context managers used throughout Salt's source code.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 from contextlib import contextmanager
@@ -22,10 +21,10 @@ def func_globals_inject(func, **overrides):
     '''
     # recognize methods
     if hasattr(func, "im_func"):
-        func = func.im_func
+        func = func.__func__
 
     # Get a reference to the function globals dictionary
-    func_globals = func.func_globals
+    func_globals = func.__globals__
     # Save the current function globals dictionary state values for the
     # overridden objects
     injected_func_globals = []

@@ -38,7 +38,7 @@ information gathered from PuppetLabs' Facter application, making Salt module
 more flexible. In the future I hope to also allow Salt to group servers based
 on Facter information as well.
 
-All in all Salt is fast, efficient and clean, can be used from a simple command
+All in all Salt is fast, efficient, and clean, can be used from a simple command
 line client or through an API, uses message queue technology to make network
 execution extremely fast, and encryption is handled in a very fast and
 efficient manner. Salt is also VERY easy to use and VERY easy to extend.

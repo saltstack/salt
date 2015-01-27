@@ -1,12 +1,8 @@
+.. _targeting-nodegroups:
+
 ===========
 Node groups
 ===========
-
-.. glossary::
-
-    Node group
-        A predefined group of minions declared in the master configuration file
-        :conf_master:`nodegroups` setting as a compound target.
 
 Nodegroups are declared using a compound target specification. The compound
 target documentation can be found :doc:`here <compound>`.
@@ -42,3 +38,11 @@ nodegroup`` on the line directly following the nodegroup name.
       group1:
         - match: nodegroup
         - webserver
+
+.. note::
+
+    When adding or modifying nodegroups to a master configuration file, the master must be restarted
+    for those changes to be fully recognized.
+
+    A limited amount of functionality, such as targeting with -N from the command-line may be
+    available without a restart.

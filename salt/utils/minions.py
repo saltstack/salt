@@ -4,6 +4,8 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import os
 import glob
@@ -13,11 +15,13 @@ import logging
 # Import salt libs
 import salt.payload
 import salt.utils
+from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
+from salt._compat import string_types
 
 HAS_RANGE = False
 try:
-    import seco.range
+    import seco.range  # pylint: disable=import-error
     HAS_RANGE = True
 except ImportError:
     pass
@@ -42,18 +46,22 @@ def get_minion_data(minion, opts):
             # If no minion specified, take first one with valid grains
             for id_ in minions:
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        miniondata = serial.load(fp_)
+                except (IOError, OSError):
                     continue
-                miniondata = serial.load(salt.utils.fopen(datap, 'rb'))
                 grains = miniondata.get('grains')
                 pillar = miniondata.get('pillar')
                 return id_, grains, pillar
         else:
             # Search for specific minion
             datap = os.path.join(cdir, minion, 'data.p')
-            if not os.path.isfile(datap):
+            try:
+                with salt.utils.fopen(datap, 'rb') as fp_:
+                    miniondata = serial.load(fp_)
+            except (IOError, OSError):
                 return minion, None, None
-            miniondata = serial.load(salt.utils.fopen(datap, 'rb'))
             grains = miniondata.get('grains')
             pillar = miniondata.get('pillar')
             return minion, grains, pillar
@@ -65,22 +73,27 @@ def nodegroup_comp(group, nodegroups, skip=None):
     '''
     Take the nodegroup and the nodegroups and fill in nodegroup refs
     '''
+    k = 1
     if skip is None:
         skip = set([group])
+        k = 0
     if group not in nodegroups:
         return ''
     gstr = nodegroups[group]
     ret = ''
-    for comp in gstr.split():
+    for comp in gstr.split(','):
         if not comp.startswith('N@'):
-            ret += '{0} '.format(comp)
+            ret += '{0} or '.format(comp)
             continue
         ngroup = comp[2:]
         if ngroup in skip:
             continue
         skip.add(ngroup)
         ret += nodegroup_comp(ngroup, nodegroups, skip)
-    return ret
+    if k == 1:
+        return ret
+    else:
+        return ret[:-3]
 
 
 class CkMinions(object):
@@ -90,14 +103,23 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
-        self.ip_addrs = salt.utils.network.ip_addrs()
+        if self.opts.get('transport', 'zeromq') == 'zeromq':
+            self.acc = 'minions'
+        else:
+            self.acc = 'accepted'
 
-    def _check_glob_minions(self, expr):
+    def _check_glob_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
+
+        # If there is no directory return an empty list
+        if os.path.isdir(pki_dir) is False:
+            return []
+
+        os.chdir(pki_dir)
         ret = set(glob.glob(expr))
         try:
             os.chdir(cwd)
@@ -108,124 +130,137 @@ class CkMinions(object):
                 raise
         return list(ret)
 
-    def _check_list_minions(self, expr):
+    def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via a list
         '''
-        if isinstance(expr, str):
+        if isinstance(expr, string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], 'minions')):
+        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
             if fn_ in expr:
                 if fn_ not in ret:
                     ret.append(fn_)
         return ret
 
-    def _check_pcre_minions(self, expr):
+    def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via regular expressions
         '''
         cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
         reg = re.compile(expr)
         ret = [fn_ for fn_ in os.listdir('.') if reg.match(fn_)]
         os.chdir(cwd)
         return ret
 
-    def _check_grain_minions(self, expr):
+    def _check_cache_minions(self,
+                             expr,
+                             delimiter,
+                             greedy,
+                             search_type,
+                             regex_match=False,
+                             exact_match=False):
+        '''
+        Helper function to search for minions in master caches
+        '''
+        cache_enabled = self.opts.get('minion_data_cache', False)
+
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
+            cdir = os.path.join(self.opts['cachedir'], 'minions')
+            if not os.path.isdir(cdir):
+                return list(minions)
+            for id_ in os.listdir(cdir):
+                if not greedy and id_ not in minions:
+                    continue
+                datap = os.path.join(cdir, id_, 'data.p')
+                if not os.path.isfile(datap):
+                    if not greedy and id_ in minions:
+                        minions.remove(id_)
+                    continue
+                search_results = self.serial.load(
+                    salt.utils.fopen(datap, 'rb')
+                ).get(search_type)
+                if not salt.utils.subdict_match(search_results,
+                                                expr,
+                                                regex_match=regex_match,
+                                                exact_match=exact_match) and id_ in minions:
+                    minions.remove(id_)
+        return list(minions)
+
+    def _check_grain_minions(self, expr, delimiter, greedy):
         '''
         Return the minions found by looking via grains
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        )
-        if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-                if not salt.utils.subdict_match(grains, expr):
-                    minions.remove(id_)
-        return list(minions)
+        return self._check_cache_minions(expr, delimiter, greedy, 'grains')
 
-    def _check_grain_pcre_minions(self, expr):
+    def _check_grain_pcre_minions(self, expr, delimiter, greedy):
         '''
         Return the minions found by looking via grains with PCRE
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        )
-        if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-                if not salt.utils.subdict_match(grains, expr,
-                                                delim=':', regex_match=True):
-                    minions.remove(id_)
-        return list(minions)
+        return self._check_cache_minions(expr,
+                                         delimiter,
+                                         greedy,
+                                         'grains',
+                                         regex_match=True)
 
-    def _check_pillar_minions(self, expr):
+    def _check_pillar_minions(self, expr, delimiter, greedy):
         '''
         Return the minions found by looking via pillar
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        )
-        if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    continue
-                pillar = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('pillar')
-                if not salt.utils.subdict_match(pillar, expr):
-                    minions.remove(id_)
-        return list(minions)
+        return self._check_cache_minions(expr, delimiter, greedy, 'pillar')
 
-    def _check_ipcidr_minions(self, expr):
+    def _check_pillar_exact_minions(self, expr, delimiter, greedy):
+        '''
+        Return the minions found by looking via pillar
+        '''
+        return self._check_cache_minions(expr,
+                                         greedy,
+                                         delimiter,
+                                         'pillar',
+                                         exact_match=True)
+
+    def _check_ipcidr_minions(self, expr, greedy):
         '''
         Return the minions found by looking via ipcidr
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        )
-        if self.opts.get('minion_data_cache', False):
+        cache_enabled = self.opts.get('minion_data_cache', False)
+
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if id_ not in minions:
+                if not greedy and id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
+                    if not greedy and id_ in minions:
+                        minions.remove(id_)
                     continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        grains = self.serial.load(fp_).get('grains')
+                except (IOError, OSError):
+                    continue
                 num_parts = len(expr.split('/'))
                 if num_parts > 2:
                     # Target is not valid CIDR, no minions match
@@ -234,7 +269,7 @@ class CkMinions(object):
                     # Target is CIDR
                     if not salt.utils.network.in_subnet(
                             expr,
-                            addrs=grains.get('ipv4', [])):
+                            addrs=grains.get('ipv4', [])) and id_ in minions:
                         minions.remove(id_)
                 else:
                     # Target is an IPv4 address
@@ -245,53 +280,81 @@ class CkMinions(object):
                         # Not a valid IPv4 address, no minions match
                         return []
                     else:
-                        if not expr in grains.get('ipv4', []):
+                        if expr not in grains.get('ipv4', []) and id_ in minions:
                             minions.remove(id_)
         return list(minions)
 
-    def _check_range_minions(self, expr):
+    def _check_range_minions(self, expr, greedy):
         '''
         Return the minions found by looking via range expression
         '''
         if not HAS_RANGE:
             raise CommandExecutionError(
-                'Range matcher unavailble (unable to import seco.range, '
+                'Range matcher unavailable (unable to import seco.range, '
                 'module most likely not installed)'
             )
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
-        )
-        if self.opts.get('minion_data_cache', False):
+        cache_enabled = self.opts.get('minion_data_cache', False)
+        if greedy:
+            minions = set(
+                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            )
+        elif cache_enabled:
+            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+        else:
+            return list()
+
+        if cache_enabled:
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
                 return list(minions)
             for id_ in os.listdir(cdir):
-                if id_ not in minions:
+                if not greedy and id_ not in minions:
                     continue
                 datap = os.path.join(cdir, id_, 'data.p')
                 if not os.path.isfile(datap):
+                    if not greedy and id_ in minions:
+                        minions.remove(id_)
                     continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        grains = self.serial.load(fp_).get('grains')
+                except (IOError, OSError):
+                    continue
                 range_ = seco.range.Range(self.opts['range_server'])
                 try:
-                    if grains.get('fqdn', '') not in range_.expand(expr):
+                    if grains.get('fqdn', '') not in range_.expand(expr) and id_ in minions:
                         minions.remove(id_)
                 except seco.range.RangeException as exc:
                     log.debug(
                         'Range exception in compound match: {0}'.format(exc)
                     )
-                    minions.remove(id_)
+                    try:
+                        minions.remove(id_)
+                    except KeyError:
+                        pass
         return list(minions)
 
-    def _check_compound_minions(self, expr):
+    def _check_compound_pillar_exact_minions(self, expr, delimiter, greedy):
+        '''
+        Return the minions found by looking via compound matcher
+
+        Disable pillar glob matching
+        '''
+        return self._check_compound_minions(expr,
+                                            delimiter,
+                                            greedy,
+                                            pillar_exact=True)
+
+    def _check_compound_minions(self,
+                                expr,
+                                delimiter,
+                                greedy,
+                                pillar_exact=False):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via compound matcher
         '''
         minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
@@ -301,6 +364,8 @@ class CkMinions(object):
                    'S': self._check_ipcidr_minions,
                    'E': self._check_pcre_minions,
                    'R': self._all_minions}
+            if pillar_exact:
+                ref['I'] = self._check_pillar_exact_minions
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
@@ -311,25 +376,27 @@ class CkMinions(object):
                 if '@' in match and match[1] == '@':
                     comps = match.split('@')
                     matcher = ref.get(comps[0])
+
+                    matcher_args = ['@'.join(comps[1:])]
+                    if comps[0] in ('G', 'P', 'I'):
+                        matcher_args.append(delimiter)
+
                     if not matcher:
                         # If an unknown matcher is called at any time, fail out
                         return []
                     if unmatched and unmatched[-1] == '-':
-                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(str(set(matcher('@'.join(comps[1:]), True))))
                         results.append(')')
                         unmatched.pop()
                     else:
-                        results.append(str(set(matcher('@'.join(comps[1:])))))
+                        results.append(str(set(matcher('@'.join(comps[1:]), True))))
                 elif match in opers:
                     # We didn't match a target, so append a boolean operator or
                     # subexpression
                     if results:
                         if match == 'not':
-                            if results[-1] == '&':
-                                pass
-                            elif results[-1] == '|':
-                                pass
-                            else:
+                            result_suffix = results[-1]
+                            if not (result_suffix == '&' or result_suffix == '|'):
                                 results.append('&')
                             results.append('(')
                             results.append(str(set(minions)))
@@ -368,25 +435,25 @@ class CkMinions(object):
                     # The match is not explicitly defined, evaluate as a glob
                     if unmatched and unmatched[-1] == '-':
                         results.append(
-                                str(set(self._check_glob_minions(match))))
+                                str(set(self._check_glob_minions(match, True))))
                         results.append(')')
                         unmatched.pop()
                     else:
                         results.append(
-                                str(set(self._check_glob_minions(match))))
+                                str(set(self._check_glob_minions(match, True))))
             for token in unmatched:
                 results.append(')')
             results = ' '.join(results)
             log.debug('Evaluating final compound matching expr: {0}'
                       .format(results))
             try:
-                return list(eval(results))
+                return list(eval(results))  # pylint: disable=W0123
             except Exception:
                 log.error('Invalid compound target: {0}'.format(expr))
                 return []
         return list(minions)
 
-    def connected_ids(self, subset=None):
+    def connected_ids(self, subset=None, show_ipv4=False):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
@@ -394,26 +461,27 @@ class CkMinions(object):
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
-                return list(minions)
+                return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts['publish_port']))
-            if '127.0.0.1' in addrs:
-                addrs.update(self.ip_addrs)
             if subset:
                 search = subset
             else:
                 search = os.listdir(cdir)
             for id_ in search:
                 datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
+                try:
+                    with salt.utils.fopen(datap, 'rb') as fp_:
+                        grains = self.serial.load(fp_).get('grains', {})
+                except (AttributeError, IOError, OSError):
                     continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
                 for ipv4 in grains.get('ipv4', []):
                     if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
                         continue
                     if ipv4 in addrs:
-                        minions.add(id_)
+                        if show_ipv4:
+                            minions.add((id_, ipv4))
+                        else:
+                            minions.add(id_)
                         break
         return minions
 
@@ -421,9 +489,13 @@ class CkMinions(object):
         '''
         Return a list of all minions that have auth'd
         '''
-        return os.listdir(os.path.join(self.opts['pki_dir'], 'minions'))
+        return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
 
-    def check_minions(self, expr, expr_form='glob'):
+    def check_minions(self,
+                      expr,
+                      expr_form='glob',
+                      delimiter=DEFAULT_TARGET_DELIM,
+                      greedy=True):
         '''
         Check the passed regex against the available minions' public keys
         stored for authentication. This should return a set of ids which
@@ -431,16 +503,16 @@ class CkMinions(object):
         make sure everyone has checked back in.
         '''
         try:
-            minions = {'glob': self._check_glob_minions,
-                       'pcre': self._check_pcre_minions,
-                       'list': self._check_list_minions,
-                       'grain': self._check_grain_minions,
-                       'grain_pcre': self._check_grain_pcre_minions,
-                       'pillar': self._check_pillar_minions,
-                       'compound': self._check_compound_minions,
-                       'ipcidr': self._check_ipcidr_minions,
-                       'range': self._check_range_minions,
-                       }[expr_form](expr)
+            check_func = getattr(self, '_check_{0}_minions'.format(expr_form), None)
+            if expr_form in ('grain',
+                             'grain_pcre',
+                             'pillar',
+                             'pillar_exact',
+                             'compound',
+                             'compound_pillar_exact'):
+                minions = check_func(expr, delimiter, greedy)
+            else:
+                minions = check_func(expr, greedy)
         except Exception:
             log.exception(
                     'Failed matching available minions with {0} pattern: {1}'
@@ -455,7 +527,6 @@ class CkMinions(object):
         '''
         ref = {'G': 'grain',
                'P': 'grain_pcre',
-               'X': 'exsel',
                'I': 'pillar',
                'L': 'list',
                'S': 'ipcidr',
@@ -464,7 +535,6 @@ class CkMinions(object):
         infinite = [
                 'node',
                 'ipcidr',
-                'exsel',
                 'pillar']
         if not self.opts.get('minion_data_cache', False):
             infinite.append('grain')
@@ -524,41 +594,81 @@ class CkMinions(object):
                 fun,
                 form)
 
-    def auth_check(self, auth_list, funs, tgt, tgt_type='glob'):
+    def auth_check(self,
+                   auth_list,
+                   funs,
+                   tgt,
+                   tgt_type='glob',
+                   groups=None,
+                   publish_validate=False):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
+        if publish_validate:
+            v_tgt_type = tgt_type
+            if tgt_type.lower() == 'pillar':
+                v_tgt_type = 'pillar_exact'
+            elif tgt_type.lower() == 'compound':
+                v_tgt_type = 'compound_pillar_exact'
+            v_minions = set(self.check_minions(tgt, v_tgt_type))
+            minions = set(self.check_minions(tgt, tgt_type))
+            mismatch = bool(minions.difference(v_minions))
+            # If the non-exact match gets more minions than the exact match
+            # then pillar globbing is being used, and we have a problem
+            if mismatch:
+                return False
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
-
-        for fun in funs:
-            for ind in auth_list:
-                if isinstance(ind, str):
-                    # Allowed for all minions
-                    if self.match_check(ind, fun):
-                        return True
-                elif isinstance(ind, dict):
-                    if len(ind) != 1:
-                        # Invalid argument
-                        continue
-                    valid = ind.keys()[0]
-                    # Check if minions are allowed
-                    if self.validate_tgt(
-                            valid,
-                            tgt,
-                            tgt_type):
-                        # Minions are allowed, verify function in allowed list
-                        if isinstance(ind[valid], str):
-                            if self.match_check(ind[valid], fun):
-                                return True
-                        elif isinstance(ind[valid], list):
-                            for regex in ind[valid]:
-                                if self.match_check(regex, fun):
+        try:
+            for fun in funs:
+                for ind in auth_list:
+                    if isinstance(ind, string_types):
+                        # Allowed for all minions
+                        if self.match_check(ind, fun):
+                            return True
+                    elif isinstance(ind, dict):
+                        if len(ind) != 1:
+                            # Invalid argument
+                            continue
+                        valid = next(iter(ind.keys()))
+                        # Check if minions are allowed
+                        if self.validate_tgt(
+                                valid,
+                                tgt,
+                                tgt_type):
+                            # Minions are allowed, verify function in allowed list
+                            if isinstance(ind[valid], string_types):
+                                if self.match_check(ind[valid], fun):
                                     return True
+                            elif isinstance(ind[valid], list):
+                                for regex in ind[valid]:
+                                    if self.match_check(regex, fun):
+                                        return True
+        except TypeError:
+            return False
         return False
+
+    def gather_groups(self, auth_provider, user_groups, auth_list):
+        '''
+        Returns the list of groups, if any, for a given authentication provider type
+
+        Groups are defined as any dict in which a key has a trailing '%'
+        '''
+        group_perm_keys = [item for item in auth_provider if item.endswith('%')]
+        groups = {}
+        if group_perm_keys:
+            for group_perm in group_perm_keys:
+                for matcher in auth_provider[group_perm]:
+                    if group_perm[:-1] in user_groups:
+                        groups[group_perm] = matcher
+        else:
+            return None
+        for item in groups.values():
+            auth_list.append(item)
+        return auth_list
 
     def wheel_check(self, auth_list, fun):
         '''
@@ -570,7 +680,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@wheel':
@@ -580,9 +690,9 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(iter(ind.keys()))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -601,7 +711,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@runners':
@@ -611,9 +721,9 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(iter(ind.keys()))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -635,7 +745,7 @@ class CkMinions(object):
         else:
             mod = fun
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@{0}'.format(form):
@@ -645,9 +755,9 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(iter(ind.keys()))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -655,3 +765,30 @@ class CkMinions(object):
                             if self.match_check(regex, fun):
                                 return True
         return False
+
+
+def mine_get(tgt, fun, tgt_type='glob', opts=None):
+    '''
+    Gathers the data from the specified minions' mine, pass in the target,
+    function to look up and the target type
+    '''
+    ret = {}
+    serial = salt.payload.Serial(opts)
+    checker = salt.utils.minions.CkMinions(opts)
+    minions = checker.check_minions(
+            tgt,
+            tgt_type)
+    for minion in minions:
+        mine = os.path.join(
+                opts['cachedir'],
+                'minions',
+                minion,
+                'mine.p')
+        try:
+            with salt.utils.fopen(mine, 'rb') as fp_:
+                fdata = serial.load(fp_).get(fun)
+                if fdata:
+                    ret[minion] = fdata
+        except Exception:
+            continue
+    return ret

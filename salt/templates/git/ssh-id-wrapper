@@ -1,0 +1,6 @@
+#!/bin/sh
+OPTS="-oStrictHostKeyChecking=no -oPasswordAuthentication=no -oKbdInteractiveAuthentication=no -oChallengeResponseAuthentication=no"
+if [ ! -z "$GIT_IDENTITY" ]; then
+    OPTS="$OPTS -i $GIT_IDENTITY"
+fi
+exec ssh $OPTS "$@"

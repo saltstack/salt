@@ -6,13 +6,8 @@
     letter denoting the type; example: 'webserv* and G@os:Debian or E@db*'
     Make sure that the compound target is encapsulated in quotes.
 
-.. option:: -X, --exsel
-
-    Instead of using shell globs, use the return code of a function.
-
-
 .. option:: -I, --pillar
-    
+
     Instead of using shell globs to evaluate the target, use a pillar value to
     identify targets. The syntax for the target is the pillar key followed by
     a glob expression: "role:production*"

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Module for managing dnqmasq
+Module for managing dnsmasq
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -15,16 +16,16 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only work on POSIX-like systems.
     '''
     if salt.utils.is_windows():
         return False
-    return 'dnsmasq'
+    return True
 
 
 def version():
     '''
-    Shows installed version of dnsmasq
+    Shows installed version of dnsmasq.
 
     CLI Example:
 
@@ -40,7 +41,7 @@ def version():
 
 def fullversion():
     '''
-    Shows installed version of dnsmasq, and compile options
+    Shows installed version of dnsmasq and compile options.
 
     CLI Example:
 
@@ -91,7 +92,7 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
             if filename.endswith('#') and filename.endswith('#'):
                 continue
             includes.append('{0}/{1}'.format(dnsopts['conf-dir'], filename))
-    for key in kwargs.keys():
+    for key in kwargs:
         if key in dnsopts:
             if isinstance(dnsopts[key], str):
                 for config in includes:
@@ -109,7 +110,7 @@ def set_config(config_file='/etc/dnsmasq.conf', follow=True, **kwargs):
 
 def get_config(config_file='/etc/dnsmasq.conf'):
     '''
-    Dumps all options from the config file
+    Dumps all options from the config file.
 
     CLI Examples:
 
@@ -134,7 +135,7 @@ def get_config(config_file='/etc/dnsmasq.conf'):
 
 def _parse_dnamasq(filename):
     '''
-    Generic function for parsing dnsmasq files, including includes
+    Generic function for parsing dnsmasq files including includes.
     '''
     fileopts = {}
     with salt.utils.fopen(filename, 'r') as fp_:
@@ -153,7 +154,7 @@ def _parse_dnamasq(filename):
                 else:
                     fileopts[comps[0]] = comps[1].strip()
             else:
-                if not 'unparsed' in fileopts:
+                if 'unparsed' not in fileopts:
                     fileopts['unparsed'] = []
                 fileopts['unparsed'].append(line)
     return fileopts

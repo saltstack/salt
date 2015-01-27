@@ -2,11 +2,12 @@
 '''
 Wrapper for rsync
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 This data can also be passed into :doc:`pillar </topics/tutorials/pillar>`.
 Options passed into opts will overwrite options passed into pillar.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -37,9 +38,9 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom):
         if exclude:
             exclude = None
     if exclude:
-        options.append(' --exclude={0}'.format(exclude))
+        options.append('--exclude={0}'.format(exclude))
 
-    return options
+    return ' '.join(options)
 
 
 def rsync(src,
@@ -91,7 +92,7 @@ def rsync(src,
     )
 
     try:
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
 
@@ -132,7 +133,7 @@ def config(confile='/etc/rsyncd.conf'):
     '''
 
     if not os.path.isfile(confile):
-        raise CommandExecutionError('ERROR: %s is not exists' % confile)
+        raise CommandExecutionError('{0!r} does not exit'.format(confile))
 
     cmd = (
           r'''cat {confile}'''
@@ -142,7 +143,7 @@ def config(confile='/etc/rsyncd.conf'):
           )
 
     try:
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
 

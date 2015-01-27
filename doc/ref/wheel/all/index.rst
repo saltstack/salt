@@ -11,6 +11,8 @@ Full list of builtin wheel modules
     :template: autosummary.rst.tmpl
 
     config
+    error
     file_roots
     key
     pillar_roots
+    minions

@@ -7,9 +7,13 @@ Provision virtual machines in the cloud with Salt
 Synopsis
 ========
 
-::
+.. code-block:: bash
 
     salt-cloud -m /etc/salt/cloud.map
+
+    salt-cloud -m /etc/salt/cloud.map NAME
+
+    salt-cloud -m /etc/salt/cloud.map NAME1 NAME2
 
     salt-cloud -p PROFILE NAME
 
@@ -38,8 +42,9 @@ Options
 .. option:: -m MAP, --map=MAP
 
     Specify a map file to use. If used without any other options, this option
-    will ensure that all of the mapped VMs are created. If the named VM
-    already exists then it will be skipped.
+    will ensure that all of the mapped VMs are created. If VM names are
+    also passed as arguments, they will be used to filter the map file.
+    If the named VM already exists then it will be skipped.
 
 .. option:: -H, --hard
 
@@ -84,6 +89,18 @@ Options
     Can be used in conjunction with -m to display only information about the
     specified map.
 
+.. option:: --list-providers
+
+    Display a list of configured providers.
+
+.. option:: --list-profiles
+
+    .. versionadded:: 2014.7.0
+
+    Display a list of configured profiles. Pass in a cloud provider to view
+    the provider's associated profiles, such as ``digital_ocean``, or pass in
+    ``all`` to list all the configured profiles.
+
 .. option:: --list-images
 
     Display a list of images available in configured cloud providers.
@@ -118,17 +135,12 @@ Options
     form, this is suitable for re-reading the output into
     an executing python script with eval.
 
-.. option:: --text-out
+.. option:: --out=OUTPUT, --output=OUTPUT
 
-    Print the output from the salt command in the same form the shell would.
-
-.. option:: --yaml-out
-
-    Print the output from the salt command in yaml.
-
-.. option:: --json-out
-
-    Print the output from the salt command in json.
+    Print the output from the salt-cloud command using the specified outputter. The
+    builtins are 'raw', 'compact', 'no_return', 'grains', 'overstatestage', 'pprint',
+    'json', 'nested', 'yaml', 'highstate', 'quiet', 'key', 'txt', 'newline_values_only',
+    'virt_query'.
 
 .. option:: --no-color
 
@@ -138,27 +150,39 @@ Options
 Examples
 ========
 
-To create 4 VMs named web1, web2, db1 and db2 from specified profiles::
+To create 4 VMs named web1, web2, db1, and db2 from specified profiles:
+
+.. code-block:: bash
 
     salt-cloud -p fedora_rackspace web1 web2 db1 db2
 
-To read in a map file and create all VMs specified therein::
+To read in a map file and create all VMs specified therein:
+
+.. code-block:: bash
 
     salt-cloud -m /path/to/cloud.map
 
-To read in a map file and create all VMs specified therein in parallel::
+To read in a map file and create all VMs specified therein in parallel:
+
+.. code-block:: bash
 
     salt-cloud -m /path/to/cloud.map -P
 
-To delete any VMs specified in the map file::
+To delete any VMs specified in the map file:
+
+.. code-block:: bash
 
     salt-cloud -m /path/to/cloud.map -d
 
-To delete any VMs NOT specified in the map file::
+To delete any VMs NOT specified in the map file:
+
+.. code-block:: bash
 
     salt-cloud -m /path/to/cloud.map -H
 
-To display the status of all VMs specified in the map file::
+To display the status of all VMs specified in the map file:
+
+.. code-block:: bash
 
     salt-cloud -m /path/to/cloud.map -Q
 

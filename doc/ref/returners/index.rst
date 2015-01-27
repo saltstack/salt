@@ -9,6 +9,9 @@ data.
 By using a Salt returner, results data can be redirected to external data-stores
 for analysis and archival.
 
+Returners pull their configuration values from the Salt minions. Returners are only
+configured once, which is generally at load time.
+
 The returner interface allows the return data to be sent to any system that
 can receive data. This means that return data can be sent to a Redis server,
 a MongoDB server, a MySQL server, or any system.
@@ -100,10 +103,32 @@ loaded as simply ``redis``:
     except ImportError:
         HAS_REDIS = False
 
+    __virtualname__ = 'redis'
+
     def __virtual__():
         if not HAS_REDIS:
             return False
-        return 'redis'
+        return __virtualname__
+
+Event Returners
+===============
+
+For maximimum visibility into the history of events across a Salt
+infrastructure, all events seen by a salt master may be logged to a returner.
+
+To enable event logging, set the ``event_return`` configuration option in the
+master config to returner which should be designated as the handler for event
+returns.
+
+.. note::
+    Not all returners support event returns. Verify a returner has an
+    ``event_return()`` function before using.
+
+.. note::
+    On larger installations, many hundreds of events may be generated on a
+    busy master every second. Be certain to closely monitor the storage of
+    a given returner as Salt can easily overwhealm an underpowered server
+    with thousands of returns.
 
 Full List of Returners
 ======================

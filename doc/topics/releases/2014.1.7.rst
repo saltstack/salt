@@ -1,0 +1,31 @@
+===========================
+Salt 2014.1.7 Release Notes
+===========================
+
+:release: 2014-07-09
+
+Version 2014.1.7 is another bugfix release for :doc:`2014.1.0
+</topics/releases/2014.1.0>`.  Changes include:
+
+- Fix batch mode regression (:issue:`14046`)
+
+This release was a hotfix release for the regression listed above which was
+present in the 2014.1.6 release.  The changes included in 2014.1.6 are listed
+below:
+
+- Fix extra ``iptables --help`` output (Sorry!)  (:issue:`13648`,
+  :issue:`13507`, :issue:`13527`, :issue:`13607`)
+- Fix ``mount.active`` for Solaris
+- Fix support for ``allow-hotplug`` statement in debian_ip network module
+- Add sqlite3 to esky builds
+- Fix ``jobs.active`` output (:issue:`9526`)
+- Fix the ``virtual`` grain for Xen (:issue:`13534`)
+- Fix eauth for batch mode (:issue:`9605`)
+- Fix force-related issues with ``tomcat`` support (:issue:`12889`)
+- Fix KeyError when cloud mapping
+- Fix salt-minion restart loop in Windows (:issue:`12086`)
+- Fix detection of ``service`` virtual module on Fedora minions
+- Fix traceback with missing ipv4 grain (:issue:`13838`)
+- Fix issue in roots backend with invalid data in mtime_map (:issue:`13836`)
+- Fix traceback in ``jobs.active`` (:issue:`11151`)
+- Fix ``master_tops`` and ``_ext_nodes`` issue (:issue:`13535`, :issue:`13673`)

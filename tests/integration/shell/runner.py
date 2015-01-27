@@ -15,6 +15,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -46,6 +47,13 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertNotIn('jobs.SaltException:', data)
 
+    def test_salt_documentation_too_many_arguments(self):
+        '''
+        Test to see if passing additional arguments shows an error
+        '''
+        data = self.run_run('-d virt.list foo', catch_stderr=True)
+        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
+
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(integration.TMP, 'issue-7754')
@@ -55,13 +63,13 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        config = yaml.load(
-            open(self.get_config_file_path(config_file_name), 'r').read()
-        )
-        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        open(os.path.join(config_dir, config_file_name), 'w').write(
-            yaml.dump(config, default_flow_style=False)
-        )
+        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = yaml.load(fhr.read())
+            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                fhw.write(
+                    yaml.dump(config, default_flow_style=False)
+                )
         ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -d'.format(

@@ -15,27 +15,23 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
 .. code-block:: yaml
 
     AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-dss
 
     ? AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY==...
     :
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-dss
 
     thatch:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - source: salt://ssh_keys/thatch.id_rsa.pub
 
     sshkeys:
-      ssh_auth:
-        - present
+      ssh_auth.present:
         - user: root
         - enc: ssh-rsa
         - options:
@@ -48,6 +44,7 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
@@ -83,6 +80,27 @@ def _present_test(user, name, enc, comment, options, source, config):
                 True,
                 'All host keys in file {0} are already present'.format(source)
             )
+    else:
+        # check if this is of form {options} {enc} {key} {comment}
+        sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
+        fullkey = sshre.search(name)
+        # if it is {key} [comment]
+        if not fullkey:
+            key_and_comment = name.split()
+            name = key_and_comment[0]
+            if len(key_and_comment) == 2:
+                comment = key_and_comment[1]
+        else:
+            # if there are options, set them
+            if fullkey.group(1):
+                options = fullkey.group(1).split(',')
+            # key is of format: {enc} {key} [comment]
+            comps = fullkey.group(2).split()
+            enc = comps[0]
+            name = comps[1]
+            if len(comps) == 3:
+                comment = comps[2]
+
     check = __salt__['ssh.check_key'](
             user,
             name,
@@ -125,7 +143,8 @@ def present(
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ecdsa, ssh-rsa or ssh-dss
+        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
+        or ssh-dss
 
     comment
         The comment to be placed with the SSH public key
@@ -159,25 +178,7 @@ def present(
            'result': True,
            'comment': ''}
 
-    if __opts__['test']:
-        ret['result'], ret['comment'] = _present_test(
-                user,
-                name,
-                enc,
-                comment,
-                options or [],
-                source,
-                config,
-                )
-        return ret
-
-    if source != '':
-        data = __salt__['ssh.set_auth_key_from_file'](
-                user,
-                source,
-                config,
-                saltenv=__env__)
-    else:
+    if source == '':
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
         fullkey = sshre.search(name)
@@ -198,6 +199,25 @@ def present(
             if len(comps) == 3:
                 comment = comps[2]
 
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _present_test(
+                user,
+                name,
+                enc,
+                comment,
+                options or [],
+                source,
+                config,
+                )
+        return ret
+
+    if source != '':
+        data = __salt__['ssh.set_auth_key_from_file'](
+                user,
+                source,
+                config,
+                saltenv=__env__)
+    else:
         data = __salt__['ssh.set_auth_key'](
                 user,
                 name,
@@ -252,7 +272,8 @@ def absent(name,
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ecdsa, ssh-rsa or ssh-dss
+        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
+        or ssh-dss
 
     comment
         The comment to be placed with the SSH public key
@@ -270,11 +291,24 @@ def absent(name,
            'comment': ''}
 
     # Get just the key
-    keydata = name.split(' ')
-    if len(keydata) > 1:
-        name = keydata[1]
+    sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
+    fullkey = sshre.search(name)
+    # if it is {key} [comment]
+    if not fullkey:
+        key_and_comment = name.split()
+        name = key_and_comment[0]
+        if len(key_and_comment) == 2:
+            comment = key_and_comment[1]
     else:
-        name = keydata[0]
+        # if there are options, set them
+        if fullkey.group(1):
+            options = fullkey.group(1).split(',')
+        # key is of format: {enc} {key} [comment]
+        comps = fullkey.group(2).split()
+        enc = comps[0]
+        name = comps[1]
+        if len(comps) == 3:
+            comment = comps[2]
 
     if __opts__['test']:
         check = __salt__['ssh.check_key'](

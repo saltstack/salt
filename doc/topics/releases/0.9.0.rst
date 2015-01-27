@@ -35,9 +35,10 @@ New Features
 Salt Syndic
 ```````````
 
-The new :doc:`Syndic interface </ref/syndic>` allows a master to be commanded via another higher
-level salt master. This is a powerful solution allowing a master control
-structure to exist, allowing salt to scale to much larger levels then before.
+The new :ref:`Syndic interface <syndic>` allows a master to be
+commanded via another higher level salt master. This is a powerful solution
+allowing a master control structure to exist, allowing salt to scale to much
+larger levels then before.
 
 Peer Communication
 ``````````````````

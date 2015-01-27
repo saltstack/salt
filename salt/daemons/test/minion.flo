@@ -1,0 +1,61 @@
+# Raet Test FloScript
+
+house minion
+
+init .salt.road.manor.local to name "minion" host "" port 7531 main false
+
+framer minionudpstack be active first start
+   frame start
+      enter
+         do salt raet road stack setup per inode ".salt.road.manor"
+      exit
+         do salt raet road stack closer per inode ".salt.road.manor."
+
+framer bootstrap be active first join
+   frame join
+      print Joining...
+      enter
+         do salt raet road stack joiner per inode ".salt.road.manor."
+      recur
+         do raet road stack joined per inode ".salt.road.manor."
+
+      go next if joined in .salt.road.manor.status
+      go abort if elapsed >= 10
+
+   frame joined
+      print Joined
+      go next
+
+   frame allow
+      print Allowing...
+      enter
+         do salt raet road stack allower per inode ".salt.road.manor."
+      recur
+         do salt raet road stack allowed per inode ".salt.road.manor."
+
+      go next if allowed in .salt.road.manor.status
+      go abort if elapsed >= 5
+
+
+   frame allowed
+      print Allowed
+      go next
+
+   frame message
+      print Messaging...
+      enter
+         do raet road stack messenger to contents "Minion 1 Hello" code 15 \
+            per inode ".salt.road.manor."
+      go next
+
+   frame idle
+      print Idling...
+      do raet road stack idled per inode ".salt.road.manor."
+      go abort if idled in .salt.road.manor.status
+
+   frame abort
+      bid stop all
+
+framer service be active first start
+    frame start
+        do salt raet road stack service

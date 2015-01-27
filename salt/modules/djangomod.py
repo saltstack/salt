@@ -2,6 +2,7 @@
 '''
 Manage Django sites
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -64,7 +65,7 @@ def command(settings_module,
     for key, value in kwargs.items():
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
-    return __salt__['cmd.run'](cmd, env=env)
+    return __salt__['cmd.run'](cmd, env=env, python_shell=False)
 
 
 def syncdb(settings_module,

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     unit.utils.kwarg_regex_test
@@ -16,7 +14,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.utils import KWARG_REGEX
+from salt.utils.args import KWARG_REGEX
 
 
 class KwargRegexTest(TestCase):

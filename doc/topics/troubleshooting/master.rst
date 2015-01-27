@@ -19,7 +19,7 @@ run them in the foreground.
 
 .. _`monit`: http://mmonit.com/monit/
 .. _`runit`: http://smarden.org/runit/
-.. _`supervisord`: http://supervisord.org/         
+.. _`supervisord`: http://supervisord.org/
 
 What Ports does the Master Need Open?
 =====================================
@@ -77,7 +77,9 @@ As with any change to resource limits, it is best to stay logged into your
 current shell and open another shell to run ``ulimit -n`` again and verify that
 the changes were applied correctly. Additionally, if your master is running
 upstart, it may be necessary to specify the ``nofile`` limit in
-``/etc/default/salt-master`` if upstart isn't respecting your resource limits::
+``/etc/default/salt-master`` if upstart isn't respecting your resource limits:
+
+.. code-block:: text
 
     limit nofile 4096 4096
 
@@ -180,7 +182,13 @@ Commands Time Out or Do Not Return Output
 
 Depending on your OS (this is most common on Ubuntu due to apt-get) you may
 sometimes encounter times where your highstate, or other long running commands
-do not return output. This is most commonly due to the timeout being reached.
+do not return output.
+
+.. note::
+    A number of timing issues were resolved in the 2014.1 release of Salt.
+    Upgrading to at least this version is strongly recommended if timeouts
+    persist.
+
 By default the timeout is set to 5 seconds. The timeout value can easily be
 increased by modifying the ``timeout`` line within your ``/etc/salt/master``
 configuration file.
@@ -190,8 +198,79 @@ Passing the -c Option to Salt Returns a Permissions Error
 =========================================================
 
 Using the ``-c`` option with the Salt command modifies the configuration
-directory. When the configuratio file is read it will still base data off of
+directory. When the configuration file is read it will still base data off of
 the ``root_dir`` setting. This can result in unintended behavior if you are
 expecting files such as ``/etc/salt/pki`` to be pulled from the location
 specified with ``-c``. Modify the ``root_dir`` setting to address this
 behavior.
+
+Salt Master Doesn't Return Anything While Running jobs
+======================================================
+
+When a command being run via Salt takes a very long time to return
+(package installations, certain scripts, etc.) the master may drop you back
+to the shell. In most situations the job is still running but Salt has
+exceeded the set timeout before returning. Querying the job queue will
+provide the data of the job but is inconvenient. This can be resolved by
+either manually using the ``-t`` option to set a longer timeout when running
+commands (by default it is 5 seconds) or by modifying the master
+configuration file: ``/etc/salt/master`` and setting the ``timeout`` value to
+change the default timeout for all commands, and then restarting the
+salt-master service.
+
+Salt Master Auth Flooding
+=========================
+
+In large installations, care must be taken not to overwhealm the master with
+authentication requests. Several options can be set on the master which
+mitigate the chances of an authentication flood from causing an interuption in
+service.
+
+.. note::
+    recon_default:
+
+    The average number of seconds to wait between reconnection attempts.
+
+    recon_max:
+       The maximum number of seconds to wait between reconnection attempts.
+
+    recon_randomize:
+        A flag to indicate whether the recon_default value should be randomized.
+
+    acceptance_wait_time:
+        The number of seconds to wait for a reply to each authentication request.
+
+    random_reauth_delay:
+        The range of seconds across which the minions should attempt to randomize
+        authentication attempts.
+
+    auth_timeout:
+        The total time to wait for the authentication process to complete, regardless
+        of the number of attempts.
+
+
+=====================
+Running state locally
+=====================
+
+To debug the states, you can use call locally.
+
+.. code-block:: bash
+
+    salt-call -l trace --local state.highstate
+
+
+The top.sls file is used to map what SLS modules get loaded onto what minions via the state system.
+
+It is located in the file defined in the ``file_roots`` variable of the salt master
+configuration file which is defined by found in ``CONFIG_DIR/master``, normally ``/etc/salt/master``
+
+The default configuration for the ``file_roots`` is:
+
+.. code-block:: yaml
+
+   file_roots:
+     base:
+       - /srv/salt
+
+So the top file is defaulted to the location ``/srv/salt/top.sls``

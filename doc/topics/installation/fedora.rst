@@ -7,6 +7,12 @@ repositories and `EPEL`_. It is installable using yum. Fedora will have more
 up to date versions of Salt than other members of the Red Hat family, which
 makes it a great place to help improve Salt!
 
+**WARNING**: Fedora 19 comes with systemd 204.  Systemd has known bugs fixed in
+later revisions that prevent the salt-master from starting reliably or opening
+the network connections that it needs to.  It's not likely that a salt-master
+will start or run reliably on any distribution that uses systemd version 204 or
+earlier.  Running salt-minions should be OK.
+
 Installation
 ============
 
@@ -26,6 +32,19 @@ will be one master and multiple minions.
     yum install salt-minion
 
 .. _`EPEL`: http://fedoraproject.org/wiki/EPEL
+
+Installing from ``updates-testing``
+-----------------------------------
+
+When a new Salt release is packaged, it is first admitted into the
+``updates-testing`` repository, before being moved to the stable repo.
+
+To install from ``updates-testing``, use the ``enablerepo`` argument for yum:
+
+.. code-block:: bash
+
+    yum --enablerepo=updates-testing install salt-master
+    yum --enablerepo=updates-testing install salt-minion
 
 Post-installation tasks
 =======================

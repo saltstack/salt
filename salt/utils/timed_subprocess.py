@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""For running command line executables with a timeout"""
+'''For running command line executables with a timeout'''
+from __future__ import absolute_import
 
 import subprocess
 import threading
@@ -49,10 +50,12 @@ class TimedProc(object):
                     if rt.isAlive():
                         self.process.terminate()
                 threading.Timer(10, terminate).start()
-                raise salt.exceptions.TimedProcTimeoutError('%s : Timed out after %s seconds' % (
-                    self.command,
-                    str(timeout),
-                ))
+                raise salt.exceptions.TimedProcTimeoutError(
+                    '{0} : Timed out after {1} seconds'.format(
+                        self.command,
+                        str(timeout),
+                    )
+                )
         else:
             receive()
         return self.process.returncode

@@ -1,0 +1,10 @@
+{% if '-g' in version %}
+{% set sha = version.rsplit('-g', 1)[-1] %}
+<p>These docs are for Salt's development version:
+    <a href="https://github.com/saltstack/salt/tree/{{ sha }}">{{ sha }}</a>.</p>
+{% endif %}
+
+<p class="muted">Docs for previous releases are available on
+    <a href="https://readthedocs.org/projects/salt/">readthedocs.org</a>.</p>
+
+<p>Latest Salt release: <a href="{{ pathto('topics/releases/{0}'.format(release)) }}">{{ release }}</a></p>

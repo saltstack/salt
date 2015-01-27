@@ -2,6 +2,7 @@
 '''
 State to control Apache modjk
 '''
+from __future__ import absolute_import
 
 # Python Libs
 import logging
@@ -14,7 +15,7 @@ def __virtual__():
     Load this state if modjk is loaded
     '''
 
-    return 'modjk' if 'modjk.workers' in __salt__ else False
+    return 'modjk.workers' in __salt__
 
 
 def _bulk_state(saltfunc, lbn, workers, profile):
@@ -66,7 +67,9 @@ def worker_stopped(name, workers=None, profile='default'):
     '''
     Stop all the workers in the modjk load balancer
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         loadbalancer:
           modjk.worker_stopped:
@@ -85,7 +88,9 @@ def worker_activated(name, workers=None, profile='default'):
     '''
     Activate all the workers in the modjk load balancer
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         loadbalancer:
           modjk.worker_activated:
@@ -104,7 +109,9 @@ def worker_disabled(name, workers=None, profile='default'):
     '''
     Disable all the workers in the modjk load balancer
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         loadbalancer:
           modjk.worker_disabled:
@@ -123,7 +130,9 @@ def worker_recover(name, workers=None, profile='default'):
     '''
     Recover all the workers in the modjk load balancer
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         loadbalancer:
           modjk.worker_recover:

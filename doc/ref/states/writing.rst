@@ -24,7 +24,7 @@ illustrate:
         - mode: 644
         - source: salt://salt/master
 
-Therefore this SLS data can be directly linked to a module, function and
+Therefore this SLS data can be directly linked to a module, function, and
 arguments passed to that function.
 
 This does issue the burden, that function names, state names and function
@@ -101,8 +101,8 @@ A State Module must return a dict containing the following keys/values:
 Test State
 ==========
 
-All states should check for and support ``test`` being passed in the options. 
-This will return data about what changes would occur if the state were actually 
+All states should check for and support ``test`` being passed in the options.
+This will return data about what changes would occur if the state were actually
 run. An example of such a check could look like this:
 
 .. code-block:: python
@@ -182,3 +182,99 @@ need to refresh the package database. Therefore if the package database is
 prepared to refresh, then return True and the mod_init will not be called
 the next time a pkg state is evaluated, otherwise return False and the mod_init
 will be called next time a pkg state is evaluated.
+
+Full State Module Example
+=========================
+
+The following is a simplistic example of a full state module and function.
+Remember to call out to execution modules to perform all the real work. The
+state module should only perform "before" and "after" checks.
+
+1.  Make a custom state module by putting the code into a file at the following
+    path: **/srv/salt/_states/my_custom_state.py**.
+
+2.  Distribute the custom state module to the minions:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_states
+
+3.  Write a new state to use the custom state by making a new state file, for
+    instance **/srv/salt/my_custom_state.sls**.
+
+4.  Add the following SLS configuration to the file created in Step 3:
+
+    .. code-block:: yaml
+
+        human_friendly_state_id:        # An arbitrary state ID declaration.
+          my_custom_state:              # The custom state module name.
+            - enforce_custom_thing      # The function in the custom state module.
+            - name: a_value             # Maps to the ``name`` parameter in the custom function.
+            - foo: Foo                  # Specify the required ``foo`` parameter.
+            - bar: False                # Override the default value for the ``bar`` parameter.
+
+Example state module
+--------------------
+
+.. code-block:: python
+
+    import salt.exceptions
+
+    def enforce_custom_thing(name, foo, bar=True):
+        '''
+        Enforce the state of a custom thing
+
+        This state module does a custom thing. It calls out to the execution module
+        ``my_custom_module`` in order to check the current system and perform any
+        needed changes.
+
+        name
+            The thing to do something to
+        foo
+            A required argument
+        bar : True
+            An argument with a default value
+        '''
+        ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+        # Start with basic error-checking. Do all the passed parameters make sense
+        # and agree with each-other?
+        if bar == True and foo.startswith('Foo'):
+            raise salt.exceptions.SaltInvocationError(
+                'Argument "foo" cannot start with "Foo" if argument "bar" is True.')
+
+        # Check the current state of the system. Does anything need to change?
+        current_state = __salt__['my_custom_module.current_state'](name)
+
+        if current_state == foo:
+            ret['result'] = True
+            ret['comment'] = 'System already in the correct state'
+            return ret
+
+        # The state of the system does need to be changed. Check if we're running
+        # in ``test=true`` mode.
+        if __opts__['test'] == True:
+            ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
+            ret['changes'] = {
+                'old': current_state,
+                'new': 'Description, diff, whatever of the new state',
+            }
+
+            # Return ``None`` when running with ``test=true``.
+            ret['result'] = None
+
+            return ret
+
+        # Finally, make the actual change and return the result.
+        new_state = __salt__['my_custom_module.change_state'](name, foo)
+
+        ret['comment'] = 'The state of "{0}" was changed!'.format(name)
+
+        ret['changes'] = {
+            'old': current_state,
+            'new': new_state,
+        }
+
+        ret['result'] = True
+
+        return ret

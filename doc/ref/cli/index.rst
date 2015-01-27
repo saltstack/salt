@@ -16,7 +16,7 @@ environment variables ``SALT_MASTER_CONFIG`` and ``SALT_MINION_CONFIG``.
 
 .. seealso::
 
-    :doc:`/ref/configuration`
+    :doc:`Configuration </ref/configuration/index>`
 
 Using the Salt Command
 ======================
@@ -52,7 +52,7 @@ Or to explicitly list hosts, salt can take a list:
 More Powerful Targets
 ---------------------
 
-The simple target specifications, glob, regex and list will cover many use
+The simple target specifications, glob, regex, and list will cover many use
 cases, and for some will cover all use cases, but more powerful options exist.
 
 Targeting with Grains
@@ -78,6 +78,9 @@ grains.item salt function:
 .. code-block:: bash
 
     salt '*' grains.items
+
+more info on using targeting with grains can be found :ref:`here
+<targeting-grains>`.
 
 Targeting with Executions
 `````````````````````````
@@ -114,21 +117,27 @@ is used with ``G@`` as well as a regular expression with ``E@``. The
 ``webser*`` target does not need to be prefaced with a target type specifier
 because it is a glob.
 
+more info on using compound targeting can be found :ref:`here
+<targeting-compound>`.
+
 Node Group Targeting
 ````````````````````
 
 .. versionadded:: 0.9.5
 
-Often the convenience of having a predefined group of minions to execute
-targets on is desired. This can be accomplished with the new nodegroups
-feature. Nodegroups allow for predefined compound targets to be declared in
-the master configuration file:
+For certain cases, it can be convenient to have a predefined group of minions
+on which to execute commands. This can be accomplished using what are called
+:ref:`nodegroups <targeting-nodegroups>`. Nodegroups allow for predefined
+compound targets to be declared in the master configuration file, as a sort of
+shorthand for having to type out complicated compound expressions.
 
 .. code-block:: yaml
 
     nodegroups:
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
+
+More info on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
 Calling the Function
 --------------------
@@ -282,3 +291,8 @@ salt-syndic
 
     salt-syndic
 
+salt-api
+========
+.. toctree::
+
+    salt-api

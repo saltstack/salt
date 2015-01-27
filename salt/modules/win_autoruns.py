@@ -5,6 +5,7 @@ Module for listing programs that automatically run on startup
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
@@ -50,9 +51,8 @@ def list_():
     winver = __grains__['osfullname']
     for key in keys:
         autoruns[key] = []
-        cmd = 'reg query ' + key
-        print cmd
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        cmd = ['reg', 'query', key]
+        for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
             if line and line[0:4] != "HKEY" and line[0:5] != "ERROR":   # Remove junk lines
                 autoruns[key].append(line)
 

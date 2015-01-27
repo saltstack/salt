@@ -2,6 +2,7 @@
 '''
 Manage groups on FreeBSD
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -49,7 +50,7 @@ def add(name, gid=None, **kwargs):
     if gid:
         cmd += '-g {0} '.format(gid)
     cmd = '{0} -n {1}'.format(cmd, name)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret['retcode']
 
@@ -64,7 +65,7 @@ def delete(name):
 
         salt '*' group.delete foo
     '''
-    ret = __salt__['cmd.run_all']('pw groupdel {0}'.format(name))
+    ret = __salt__['cmd.run_all']('pw groupdel {0}'.format(name), python_shell=False)
 
     return not ret['retcode']
 
@@ -124,7 +125,7 @@ def chgid(name, gid):
     if gid == pre_gid:
         return True
     cmd = 'pw groupmod {0} -g {1}'.format(name, gid)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_gid = __salt__['file.group_to_gid'](name)
     if post_gid != pre_gid:
         return post_gid == gid

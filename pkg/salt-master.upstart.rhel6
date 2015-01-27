@@ -11,6 +11,5 @@ script
   # Activate the virtualenv if defined
   [ -f $SALT_USE_VIRTUALENV/bin/activate ] && . $SALT_USE_VIRTUALENV/bin/activate
 
-  # invoke salt-master via su so that /etc/environment is read
-  exec su -c salt-master
+  exec salt-master
 end script

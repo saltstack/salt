@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.integration.states.pip
@@ -20,7 +18,8 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    with_system_account
+    requires_system_grains,
+    with_system_user
 )
 ensure_in_syspath('../../')
 
@@ -49,9 +48,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertSaltFalseReturn(ret)
             self.assertSaltCommentRegexpMatches(
                 ret,
-                'Error installing \'supervisor\':(?:.*)'
-                '/tmp/pip-installed-errors(?:.*)'
-                '([nN]o such file or directory|not found)'
+                'Error installing \'supervisor\':'
             )
 
             # We now create the missing virtualenv
@@ -65,7 +62,12 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
-    def test_pip_installed_weird_install(self):
+    @requires_system_grains
+    def test_pip_installed_weird_install(self, grains=None):
+        # First, check to see if this is running on CentOS 5. If so, skip this test.
+        if grains['os'] in ('CentOS',) and grains['osrelease_info'][0] in (5,):
+            self.skipTest('This test does not run reliably on CentOS 5')
+
         ographite = '/opt/graphite'
         if os.path.isdir(ographite):
             self.skipTest(
@@ -177,14 +179,14 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    @with_system_account('issue-6912', on_existing='delete', delete=True)
+    @with_system_user('issue-6912', on_existing='delete', delete=True)
     def test_issue_6912_wrong_owner(self, username):
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, '6912-wrong-owner'
         )
         # ----- Using runas ------------------------------------------------->
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -196,7 +198,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         # Using the package name.
         try:
             ret = self.run_state(
-                'pip.installed', name='pep8', runas=username, bin_env=venv_dir
+                'pip.installed', name='pep8', user=username, bin_env=venv_dir
             )
             self.assertSaltTrueReturn(ret)
             uinfo = pwd.getpwnam(username)
@@ -214,7 +216,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Using a requirements file
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -230,7 +232,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         try:
             ret = self.run_state(
-                'pip.installed', name='', runas=username, bin_env=venv_dir,
+                'pip.installed', name='', user=username, bin_env=venv_dir,
                 requirements='salt://issue-6912-requirements.txt'
             )
             self.assertSaltTrueReturn(ret)
@@ -251,7 +253,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # ----- Using user -------------------------------------------------->
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -281,7 +283,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Using a requirements file
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -392,7 +394,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             reqf.write('pep8\n')
 
         try:
-            ret = self.run_function('virtualenv.create', [venv_dir])
+            self.run_function('virtualenv.create', [venv_dir])
 
             # The requirements file should not be found the base environment
             ret = self.run_state(
@@ -419,21 +421,12 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # environment as an url arg to salt://
             ret = self.run_state(
                 'pip.installed', name='', bin_env=venv_dir,
-                requirements='salt://prod-env-requirements.txt?env=prod'
-            )
-            self.assertSaltTrueReturn(ret)
-            self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
-            )
-            ret = self.run_state(
-                'pip.installed', name='', bin_env=venv_dir,
                 requirements='salt://prod-env-requirements.txt?saltenv=prod'
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
+                'Requirements were already installed.',
+                ret
             )
         finally:
             if os.path.isdir(venv_dir):

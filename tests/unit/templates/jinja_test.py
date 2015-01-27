@@ -8,11 +8,13 @@ import datetime
 import pprint
 
 # Import Salt Testing libs
-from salttesting import skipIf, TestCase
+from salttesting.unit import skipIf, TestCase
+from salttesting.case import ModuleCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.loader
 import salt.utils
 from salt.exceptions import SaltRenderError
 from salt.utils import get_context
@@ -127,9 +129,16 @@ class TestGetTemplate(TestCase):
         self.local_opts = {
             'cachedir': TEMPLATES_DIR,
             'file_client': 'local',
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
             'file_roots': {
-                'other': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
-            }
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
+            'fileserver_backend': ['roots'],
+            'hash_type': 'md5',
+            'extension_modules': os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                'extmods'),
         }
 
     def test_fallback(self):
@@ -141,7 +150,7 @@ class TestGetTemplate(TestCase):
         with salt.utils.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
                     fp_.read(),
-                    dict(opts=self.local_opts, saltenv='other'))
+                    dict(opts=self.local_opts, saltenv='test'))
         self.assertEqual(out, 'world\n')
 
     def test_fallback_noloader(self):
@@ -152,7 +161,7 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts=self.local_opts, saltenv='other'))
+                dict(opts=self.local_opts, saltenv='test'))
         self.assertEqual(out, 'Hey world !a b !\n')
 
     def test_saltenv(self):
@@ -177,7 +186,7 @@ class TestGetTemplate(TestCase):
 
     def test_macro_additional_log_for_generalexc(self):
         '''
-        If we failed in a macro because of eg a typeerror, get
+        If we failed in a macro because of e.g. a TypeError, get
         more output from trace.
         '''
         expected = r'''Jinja error:.*division.*
@@ -197,7 +206,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='other'))
+            dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_macro_additional_log_for_undefined(self):
@@ -222,7 +231,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='other'))
+            dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_macro_additional_log_syntaxerror(self):
@@ -247,7 +256,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='other'))
+            dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_non_ascii_encoding(self):
@@ -278,7 +287,7 @@ class TestGetTemplate(TestCase):
     @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
     def test_strftime(self):
         response = render_jinja_tmpl('{{ "2002/12/25"|strftime }}',
-                dict(opts=self.local_opts, saltenv='other'))
+                dict(opts=self.local_opts, saltenv='test'))
         self.assertEqual(response, '2002-12-25')
 
         objects = (
@@ -290,20 +299,20 @@ class TestGetTemplate(TestCase):
 
         for object in objects:
             response = render_jinja_tmpl('{{ object|strftime }}',
-                    dict(object=object, opts=self.local_opts, saltenv='other'))
+                    dict(object=object, opts=self.local_opts, saltenv='test'))
             self.assertEqual(response, '2002-12-25')
 
             response = render_jinja_tmpl('{{ object|strftime("%b %d, %Y") }}',
-                    dict(object=object, opts=self.local_opts, saltenv='other'))
+                    dict(object=object, opts=self.local_opts, saltenv='test'))
             self.assertEqual(response, 'Dec 25, 2002')
 
             response = render_jinja_tmpl('{{ object|strftime("%y") }}',
-                    dict(object=object, opts=self.local_opts, saltenv='other'))
+                    dict(object=object, opts=self.local_opts, saltenv='test'))
             self.assertEqual(response, '02')
 
     def test_non_ascii(self):
         fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-        out = JINJA(fn, opts=self.local_opts, saltenv='other')
+        out = JINJA(fn, opts=self.local_opts, saltenv='test')
         with salt.utils.fopen(out['data']) as fp:
             result = fp.read().decode('utf-8')
             self.assertEqual(u'Assunção\n', result)
@@ -346,7 +355,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_unicode_syntax_error(self):
@@ -357,7 +366,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_utf8_syntax_error(self):
@@ -368,40 +377,40 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_undefined_variable_utf8(self):
         template = "hello\xed\x95\x9c\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_undefined_variable_unicode(self):
         template = u"hello\ud55c\n\n{{ foo }}\n\nfoo"
-        expected = r'Jinja variable \'foo\' is undefined;.*\n\n---\nhello\xed\x95\x9c\n\n{{ foo }}.*'
+        expected = r'Jinja variable \'foo\' is undefined'
         self.assertRaisesRegexp(
             SaltRenderError,
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
 
@@ -509,6 +518,16 @@ class TestCustomExtensions(TestCase):
 
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_json "does not exists" as doc %}').render()
+
+    def test_load_text_template(self):
+        loader = DictLoader({'foo': 'Foo!'})
+        env = Environment(extensions=[SerializerExtension], loader=loader)
+
+        rendered = env.from_string('{% import_text "foo" as doc %}{{ doc }}').render()
+        self.assertEqual(rendered, u"Foo!")
+
+        with self.assertRaises(exceptions.TemplateNotFound):
+            env.from_string('{% import_text "does not exists" as doc %}').render()
 
     def test_catalog(self):
         loader = DictLoader({
@@ -621,7 +640,51 @@ class TestCustomExtensions(TestCase):
     #     return
 
 
+class TestDotNotationLookup(ModuleCase):
+    '''
+    Tests to call Salt functions via Jinja with various lookup syntaxes
+    '''
+    def setUp(self, *args, **kwargs):
+        functions = {
+            'mocktest.ping': lambda: True,
+            'mockgrains.get': lambda x: 'jerry',
+        }
+        render = salt.loader.render(self.minion_opts, functions)
+        self.jinja = render.get('jinja')
+
+    def render(self, tmpl_str, context=None):
+        return self.jinja(tmpl_str, context=context or {}, from_str=True).read()
+
+    def test_normlookup(self):
+        '''
+        Sanity-check the normal dictionary-lookup syntax for our stub function
+        '''
+        tmpl_str = '''Hello, {{ salt['mocktest.ping']() }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, True.')
+
+    def test_dotlookup(self):
+        '''
+        Check calling a stub function using awesome dot-notation
+        '''
+        tmpl_str = '''Hello, {{ salt.mocktest.ping() }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, True.')
+
+    def test_shadowed_dict_method(self):
+        '''
+        Check calling a stub function with a name that shadows a ``dict``
+        method name
+        '''
+        tmpl_str = '''Hello, {{ salt.mockgrains.get('id') }}.'''
+
+        ret = self.render(tmpl_str)
+        self.assertEqual(ret, 'Hello, jerry.')
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TestSaltCacheLoader, TestGetTemplate, TestCustomExtensions,
+            TestDotNotationLookup,
               needs_daemon=False)

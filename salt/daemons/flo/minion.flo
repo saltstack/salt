@@ -1,58 +1,138 @@
-# Raet Test FloScript
+# Salt Minion floscript
 
 house minion
 
-init .raet.udp.stack.local to did 0 name "minion" host "" port 7531
-init port in .raet.udp.stack.local from value in .salt.etc.raet_port
+framer minionudpstack be active first setup
+    # Begin the pre-flight checks
+    frame setup
+        enter
+            do salt raet cleanup
+            do salt raet road stack setup per inode ".salt.road.manor"
+            do salt raet manor lane setup
+        go loadmodules
+
+    # Load the minion mods
+    frame loadmodules
+        do salt load modules at enter
+        go start
+
+    # OK, let's start the minion up
+    frame start
+        # Start the inbound framer
+        bid start inbound
+        # Start the bootstrap framer
+        bid start bootstrap
+        # Start the eventing framer
+        bid start eventing
+        # Start the functionmanage framer
+        bid start functionmanager
+        # Start the outbound framer
+        bid start outbound
+        bid start scheduler
+
+        # Cleanup on exit
+        exit
+            do salt raet road stack closer per inode ".salt.road.manor."
+            do salt raet lane stack closer per inode ".salt.lane.manor."
+
+# Framer for handling inbound traffic
+framer inbound be inactive first start
+    frame start
+        do salt raet road stack service rx
+        do salt raet lane stack service rx
+
+framer bootstrap be inactive first setup
+
+    frame setup
+        enter
+            do salt raet road clustered per inode ".salt.road.manor."
+            do salt raet road usher minion setup per inode ".salt.road.manor."
+        go clustermaster
+        go multimaster
+
+    frame clustermaster
+        let if salt.road.manor.cluster.clustered
+        print Setting Up Master Cluster ....
+        go join
+
+    frame multimaster
+        print Setting Up Master or MultiMaster
+        go join
+
+    frame join
+        print Joining...
+        enter
+            do salt raet road stack joiner per inode ".salt.road.manor."
+        recur
+            do salt raet road stack joined per inode ".salt.road.manor."
+            do salt raet road stack rejected per inode ".salt.road.manor."
+
+        go next if joined in .salt.road.manor.status
+        go abort if rejected in .salt.road.manor.status
+
+    frame joined
+        print Joined
+        go next if elapsed >= 0.5
+
+    frame allow
+        print Allowing...
+        enter
+            do salt raet road stack allower per inode ".salt.road.manor."
+        recur
+            do salt raet road stack allowed per inode ".salt.road.manor."
+
+        go next if allowed in .salt.road.manor.status
+
+    frame allowed
+        print Allowed
+        go next if elapsed >= 0.5
+
+    frame clustering
+        print Cluster Setup ...
+        do salt raet road cluster load setup
+        go next
+
+    frame pillar
+        print Pillaring
+        enter
+            do salt load pillar
+        go loading
+
+    frame loading
+        print Loading
+        enter
+            do salt load modules
+        go router
+
+    frame router
+        # start the manager framer
+        bid start manager #start alive presence from minion side
+        do salt raet router minion
+        go pillar if .salt.var.pillar_refresh
+        go loading if .salt.var.module_refresh
+
+    frame abort
+        bid stop all
+
+framer eventing be inactive first event
+    frame event
+        do salt raet eventer
+
+framer functionmanager be inactive first checkexec
+    frame checkexec
+        do salt raet nix jobber
+
+framer manager be inactive first start at 10.0
+    frame start
+         do salt raet road stack manager per inode ".salt.road.manor"
+
+# Framer for handling outbound traffic
+framer outbound be inactive first start
+    frame start
+        do salt raet lane stack service tx
+        do salt raet road stack service tx
 
 
-framer minionudpstack be active first start
-   frame start
-      do raet udp stack per inode ".raet.udp.stack"
-      exit
-         do raet udp stack closer per inode ".raet.udp.stack."
-
-framer bootstrap be active first join
-   frame join
-      print Joining...
-      enter
-         do raet udp stack joiner per inode ".raet.udp.stack."
-      recur
-         do raet udp stack joined per inode ".raet.udp.stack."
-
-      go next if joined in .raet.udp.stack.status
-      go abort if elapsed >= 10
-
-   frame joined
-      print Joined
-      go next
-
-   frame allow
-      print Allowing...
-      enter
-         do raet udp stack allower per inode ".raet.udp.stack."
-      recur
-         do raet udp stack allowed per inode ".raet.udp.stack."
-
-      go next if allowed in .raet.udp.stack.status
-      go abort if elapsed >= 5
-
-
-   frame allowed
-      print Allowed
-      go next
-
-   frame message
-      print Messaging...
-      enter
-         do raet udp stack messenger to contents "Minion 1 Hello" code 15 \
-            per inode ".raet.udp.stack."
-      go next
-
-   frame idle
-      print Idling...
-      do raet udp stack idled per inode ".raet.udp.stack."
-      go abort if idled in .raet.udp.stack.status
-
-   frame abort
-      bid stop all
+framer scheduler be inactive first start
+    frame start
+        do salt schedule

@@ -2,9 +2,13 @@
 '''
 Support for DEB packages
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
+
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +21,31 @@ def __virtual__():
     Confirm this module is on a Debian based system
     '''
     return __virtualname__ if __grains__['os_family'] == 'Debian' else False
+
+
+def unpurge(*packages):
+    '''
+    Change package selection for each package specified to 'install'
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.unpurge curl
+    '''
+    if not packages:
+        return {}
+    old = __salt__['pkg.list_pkgs'](purge_desired=True)
+    ret = {}
+    __salt__['cmd.run'](
+        ['dpkg', '--set-selections'],
+        stdin=r'\n'.join(['{0} install'.format(x) for x in packages]),
+        python_shell=False,
+        output_loglevel='trace'
+    )
+    __context__.pop('pkg.list_pkgs', None)
+    new = __salt__['pkg.list_pkgs'](purge_desired=True)
+    return salt.utils.compare_dicts(old, new)
 
 
 def list_pkgs(*packages):
@@ -39,7 +68,7 @@ def list_pkgs(*packages):
     '''
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -71,7 +100,7 @@ def file_list(*packages):
     ret = set([])
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -85,10 +114,10 @@ def file_list(*packages):
                               'description': ' '.join(comps[3:])}
         if 'No packages found' in line:
             errors.append(line)
-    for pkg in pkgs.keys():
+    for pkg in pkgs:
         files = []
         cmd = 'dpkg -L {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
             files.append(line)
         fileset = set(files)
         ret = ret.union(fileset)
@@ -113,7 +142,7 @@ def file_dict(*packages):
     ret = {}
     pkgs = {}
     cmd = 'dpkg -l {0}'.format(' '.join(packages))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] != 0:
         msg = 'Error:  ' + out['stderr']
         log.error(msg)
@@ -127,10 +156,10 @@ def file_dict(*packages):
                               'description': ' '.join(comps[3:])}
         if 'No packages found' in line:
             errors.append(line)
-    for pkg in pkgs.keys():
+    for pkg in pkgs:
         files = []
         cmd = 'dpkg -L {0}'.format(pkg)
-        for line in __salt__['cmd.run'](cmd).splitlines():
+        for line in __salt__['cmd.run'](cmd, python_shell=False).splitlines():
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}

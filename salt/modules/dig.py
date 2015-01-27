@@ -2,6 +2,7 @@
 '''
 Compendium of generic DNS utilities
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -20,7 +21,7 @@ def __virtual__():
     '''
     Only load module if dig binary is present
     '''
-    return __virtualname__ if salt.utils.which('dig') else False
+    return True if salt.utils.which('dig') else False
 
 
 def check_ip(addr):
@@ -94,7 +95,7 @@ def A(host, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
@@ -126,7 +127,7 @@ def AAAA(host, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
@@ -158,7 +159,7 @@ def NS(domain, resolve=True, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
@@ -199,7 +200,7 @@ def SPF(domain, record='SPF', nameserver=None):
     if nameserver is not None:
         cmd.append('@{0}'.format(nameserver))
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), output_loglevel='debug')
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
         log.warn(
@@ -256,7 +257,7 @@ def MX(domain, resolve=False, nameserver=None):
     if nameserver is not None:
         dig.append('@{0}'.format(nameserver))
 
-    cmd = __salt__['cmd.run_all'](' '.join(dig))
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
         log.warn(
@@ -275,6 +276,37 @@ def MX(domain, resolve=False, nameserver=None):
         ]
 
     return stdout
+
+
+def TXT(host, nameserver=None):
+    '''
+    Return the TXT record for ``host``.
+
+    Always returns a list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt ns1 dig.TXT google.com
+    '''
+    dig = ['dig', '+short', str(host), 'TXT']
+
+    if nameserver is not None:
+        dig.append('@{0}'.format(nameserver))
+
+    cmd = __salt__['cmd.run_all'](dig, python_shell=False)
+
+    if cmd['retcode'] != 0:
+        log.warn(
+            'dig returned exit code \'{0}\'. Returning empty list as '
+            'fallback.'.format(
+                cmd['retcode']
+            )
+        )
+        return []
+
+    return [i for i in cmd['stdout'].split('\n')]
 
 # Let lowercase work, since that is the convention for Salt functions
 a = A

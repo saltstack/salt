@@ -163,7 +163,7 @@ directly to Salt Cloud to create the instance:
 .. code-block:: bash
 
     salt myminion cloud.create my-ec2-config my-new-instance \
-        image=ami-1624987f size='Micro Instance' ssh_username=ec2-user \
+        image=ami-1624987f size='t1.micro' ssh_username=ec2-user \
         securitygroup=default delvol_on_destroy=True
 
 Please note that the execution module does *not* run in parallel mode. Using
@@ -223,7 +223,7 @@ State Module
 A subset of the execution module is available through the ``cloud`` state
 module. Not all functions are currently included, because there is currently
 insufficient code for them to perform statefully. For example, a command to
-create an istance may be issued with a series of options, but those options
+create an instance may be issued with a series of options, but those options
 cannot currently be statefully managed. Additional states to manage these
 options will be released at a later time.
 
@@ -238,9 +238,9 @@ presence of the instance will be managed statefully.
 
     my-instance-name:
       cloud.present:
-        - provider: my-ec2-config 
+        - provider: my-ec2-config
         - image: ami-1624987f
-        - size: 'Micro Instance'
+        - size: 't1.micro'
         - ssh_username: ec2-user
         - securitygroup: default
         - delvol_on_destroy: True
@@ -255,8 +255,8 @@ instance will be managed statefully.
 .. code-block:: yaml
 
     my-instance-name:
-      cloud.present:
-        - profile ec2-centos64-x64
+      cloud.profile:
+        - profile: ec2-centos64-x64
 
 cloud.absent
 ~~~~~~~~~~~~
@@ -301,7 +301,7 @@ usual:
 
 CloudClient
 -----------
-The execution, state and runner modules ultimately all use the CloudClient
+The execution, state, and runner modules ultimately all use the CloudClient
 library that ships with Salt. To use the CloudClient library locally (either on
 the master or a minion), create a client object and issue a command against it:
 

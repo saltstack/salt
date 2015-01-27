@@ -3,6 +3,8 @@
 Helpful decorators module writing
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import inspect
 import logging
@@ -43,7 +45,7 @@ class Depends(object):
                 return 'foo'
         '''
 
-        log.debug(
+        log.trace(
             'Depends decorator instantiated with dep list of {0}'.format(
                 dependencies
             )
@@ -72,12 +74,12 @@ class Depends(object):
         It will modify the "functions" dict and remove/replace modules that
         are missing dependencies.
         '''
-        for dependency, dependent_set in cls.dependency_dict.iteritems():
+        for dependency, dependent_set in cls.dependency_dict.items():
             # check if dependency is loaded
             for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
                 if dependency in dir(module):
-                    log.debug(
+                    log.trace(
                         'Dependency ({0}) already loaded inside {1}, '
                         'skipping'.format(
                             dependency,
@@ -85,7 +87,7 @@ class Depends(object):
                         )
                     )
                     continue
-                log.debug(
+                log.trace(
                     'Unloading {0}.{1} because dependency ({2}) is not '
                     'imported'.format(
                         module,
@@ -94,22 +96,28 @@ class Depends(object):
                     )
                 )
                 # if not, unload dependent_set
-                mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
-                                           func.__name__)
+                if module:
+                    try:
+                        func_name = module.__func_alias__[func.__name__]
+                    except (AttributeError, KeyError):
+                        func_name = func.__name__
 
-                # if we don't have this module loaded, skip it!
-                if mod_key not in functions:
-                    continue
+                    mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
+                                               func_name)
 
-                try:
-                    if fallback_function is not None:
-                        functions[mod_key] = fallback_function
-                    else:
-                        del functions[mod_key]
-                except AttributeError:
-                    # we already did???
-                    log.debug('{0} already removed, skipping'.format(mod_key))
-                    continue
+                    # if we don't have this module loaded, skip it!
+                    if mod_key not in functions:
+                        continue
+
+                    try:
+                        if fallback_function is not None:
+                            functions[mod_key] = fallback_function
+                        else:
+                            del functions[mod_key]
+                    except AttributeError:
+                        # we already did???
+                        log.trace('{0} already removed, skipping'.format(mod_key))
+                        continue
 
 
 class depends(Depends):  # pylint: disable=C0103
@@ -162,7 +170,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         '    return __wrapped__({2})'.format(
             # Keep the original function name
             original_function.__name__,
-            # The function signature including defaults, ie, 'timeout=1'
+            # The function signature including defaults, i.e., 'timeout=1'
             inspect.formatargspec(
                 *inspect.getargspec(original_function)
             )[1:-1],
@@ -175,7 +183,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         '<string>',
         'exec'
     )
-    exec function_def in context
+    exec(function_def, context)
     return wraps(original_function)(context[original_function.__name__])
 
 

@@ -24,16 +24,19 @@ cloud is operating on.
 Minion Configuration
 ====================
 
-The default minion configuration is set up in this file. This is where the
-minions that are created derive their configuration from.
+The default minion configuration is set up in this file. Minions created by
+salt-cloud derive their configuration from this file.  Almost all parameters
+found in :ref:`Configuring the Salt Minion <configuration-salt-minion>` can
+be used here.
 
 .. code-block:: yaml
 
     minion:
-        master: saltmaster.example.com
+      master: saltmaster.example.com
 
 
-In particular, this is the location to specify the location of the salt master.
+In particular, this is the location to specify the location of the salt master
+and its listening port, if the port is not set to the default.
 
 
 New Cloud Configuration Syntax
@@ -127,7 +130,7 @@ configuration key in the defined profiles.
     rhel_aws:
       provider: aws
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
 
 * To:
@@ -137,7 +140,7 @@ configuration key in the defined profiles.
     rhel_aws:
       provider: my-aws-migrated-config
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
 
 This new configuration syntax even allows you to have multiple cloud
@@ -171,7 +174,7 @@ key on any defined profile to change, see the example:
     rhel_aws_dev:
       provider: production-config:aws
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
 
     rhel_aws_prod:
       provider: production-config:aws
@@ -190,11 +193,68 @@ Notice that because of the multiple entries, one has to be explicit about the
 provider alias and name, from the above example, ``production-config:aws``.
 
 This new syntax also changes the interaction with the ``salt-cloud`` binary.
-``--list-location``, ``--list-images`` and ``--list-sizes`` which needs a cloud
+``--list-location``, ``--list-images``, and ``--list-sizes`` which needs a cloud
 provider as an argument. Since 0.8.7 the argument used should be the configured
 cloud provider alias. If the provider alias only has a single entry, use
 ``<provider-alias>``.  If it has multiple entries,
 ``<provider-alias>:<provider-name>`` should be used.
+
+
+
+Pillar Configuration
+====================
+
+It is possible to configure cloud providers using pillars.  This is only used
+when inside the cloud module.  You can setup a variable called ``cloud`` that
+contains your profile and provider to pass that information to the cloud
+servers instead of having to copy the full configuration to every minion.
+
+In your pillar file, you would use something like this.
+
+.. code-block:: yaml
+
+    cloud:
+      ssh_key_name: saltstack
+      ssh_key_file: /root/.ssh/id_rsa
+      update_cachedir: True
+      diff_cache_events: True
+      change_password: True
+
+      providers:
+        my-nova:
+          identity_url: https://identity.api.rackspacecloud.com/v2.0/
+          compute_region: IAD
+          user: myuser
+          api_key: apikey
+          tenant: 123456
+          provider: nova
+
+        my-openstack:
+          identity_url: https://identity.api.rackspacecloud.com/v2.0/tokens
+          user: user2
+          apikey: apikey2
+          tenant: 654321
+          compute_region: DFW
+          provider: openstack
+          compute_name: cloudServersOpenStack
+
+      profiles:
+        ubuntu-nova:
+          provider: my-nova
+          size: performance1-8
+          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          script_args: git develop
+          flush_mine_on_destroy: True
+
+        ubuntu-openstack:
+          provider: my-openstack
+          size: performance1-8
+          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          script_args: git develop
+          flush_mine_on_destroy: True
+
+**NOTE**: This is only valid in the cloud module, so also in the cloud state.
+This does not work with the salt-cloud binary.
 
 
 
@@ -293,6 +353,8 @@ be set:
     my-linode-config:
       apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
       password: F00barbaz
+      ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
+      ssh_key_file: ~/.ssh/id_ed25519
       provider: linode
 
 
@@ -300,7 +362,7 @@ be set:
 ``provider: my-linode-config`` instead of ``provider: linode`` on a profile
 configuration.
 
-The password needs to be 8 characters and contain lowercase, uppercase and
+The password needs to be 8 characters and contain lowercase, uppercase, and
 numbers.
 
 
@@ -459,7 +521,7 @@ my-openstack-rackspace-config`` instead of ``provider: openstack`` on a profile
 configuration.
 
 
-You will certainly need to configure the ``user``, ``tenant`` and either
+You will certainly need to configure the ``user``, ``tenant``, and either
 ``password`` or ``apikey``.
 
 
@@ -491,11 +553,11 @@ For in-house OpenStack Essex installation, libcloud needs the service_type :
 
 
 
-Digital Ocean
+DigitalOcean
 -------------
 
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
+Using Salt for DigitalOcean requires a client_key and an api_key. These can be
+found in the DigitalOcean web interface, in the "My Settings" section, under
 the API Access tab.
 
 * Using the old format:
@@ -512,8 +574,7 @@ the API Access tab.
 
     my-digitalocean-config:
       provider: digital_ocean
-      client_key: wFGEwgregeqw3435gDger
-      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+      personal_access_token: xxx
       location: New York 1
 
 
@@ -525,7 +586,7 @@ profile configuration.
 Parallels
 ---------
 
-Using Salt with Parallels requires a user, password and URL. These can be
+Using Salt with Parallels requires a user, password, and URL. These can be
 obtained from your cloud provider.
 
 * Using the old format:
@@ -552,45 +613,53 @@ obtained from your cloud provider.
 ``provider: my-parallels-config`` instead of ``provider: parallels`` on a
 profile configuration.
 
+Proxmox
+---------
 
-IBM SmartCloud Enterprise
--------------------------
-
-In addition to a username and password, the IBM SCE module requires an SSH key,
-which is currently configured inside IBM's web interface. A location is also
-required to create instances, but not to query their cloud. This is important,
-because you need to use salt-cloud --list-locations (with the other options
-already set) in order to find the name of the location that you want to use.
-
-* Using the old format:
-
-.. code-block:: yaml
-
-  IBMSCE.user: myuser@mycorp.com
-  IBMSCE.password: mypass
-  IBMSCE.ssh_key_name: mykey
-  IBMSCE.ssh_key_file: '/etc/salt/ibm/mykey.pem'
-  IBMSCE.location: Raleigh
-
-
+Using Salt with Proxmox requires a user, password, and URL. These can be
+obtained from your cloud provider. Both PAM and PVE users can be used.
 
 * Using the new configuration format:
 
 .. code-block:: yaml
 
-    my-ibmsce-config:
-      user: myuser@mycorp.com
-      password: mypass
-      ssh_key_name: mykey
-      ssh_key_file: '/etc/salt/ibm/mykey.pem'
-      location: Raleigh
-      provider: ibmsce
+    my-proxmox-config:
+      provider: proxmox
+      user: saltcloud@pve
+      password: xyzzy
+      url: your.proxmox.host
 
+lxc
+---
 
-**NOTE**: With the new providers configuration syntax you would have
-``provider: my-imbsce-config`` instead of ``provider: ibmsce`` on a profile
-configuration.
+The lxc driver is a new, experimental driver for installing Salt on
+newly provisioned (via saltcloud) lxc containers. It will in turn use saltify
+to install salt and reattach the lxc container as a new lxc minion.
+As soon as we can, we manage baremetal operation over SSH.
+You can also destroy those containers via this driver.
 
+.. code-block:: yaml
+
+    devhost10-lxc:
+      target: devhost10
+      provider: lxc
+
+And in the map file:
+
+.. code-block:: yaml
+
+    devhost10-lxc:
+      provider: devhost10-lxc
+      from_container: ubuntu
+      backing: lvm
+      sudo: True
+      size: 3g
+      ip: 10.0.3.9
+      minion:
+        master: 10.5.0.1
+        master_port: 4506
+      lxc_conf:
+        - lxc.utsname: superlxc
 
 .. _config_saltify:
 
@@ -634,6 +703,18 @@ files, i.e. ``/etc/salt/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/*.conf``.
 
 
+.. note::
+
+    Extending cloud profiles and providers is not recursive. For example, a
+    profile that is extended by a second profile is possible, but the second
+    profile cannot be extended by a third profile.
+
+    Also, if a profile (or provider) is extending another profile and each
+    contains a list of values, the lists from the extending profile will
+    override the list from the original profile. The lists are not merged
+    together.
+
+
 Extending Profiles
 ------------------
 
@@ -644,7 +725,7 @@ Some example usage on how to use ``extends`` with profiles. Consider
 
     development-instances:
       provider: my-ec2-config
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2_user
       securitygroup:
         - default
@@ -674,27 +755,27 @@ data:
       'profile': 'Fedora-17',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'image': 'ami-09b61d60',
       'profile': 'CentOS-5',
       'provider': 'my-aws-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'image': 'ami-54cf5c3d',
       'profile': 'Amazon-Linux-AMI-2012.09-64bit',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'},
      {'deploy': False,
       'profile': 'development-instances',
       'provider': 'my-ec2-config',
       'securitygroup': ['default'],
-      'size': 'Micro Instance',
+      'size': 't1.micro',
       'ssh_username': 'ec2_user'}]
 
 Pretty cool right?
@@ -769,4 +850,3 @@ data:
             }
         ]
     }
-

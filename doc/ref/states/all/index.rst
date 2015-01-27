@@ -12,40 +12,74 @@ Full list of builtin state modules
 
     alias
     alternatives
+    apache
+    apache_module
     apt
     archive
+    artifactory
+    at
     augeas
     aws_sqs
+    blockdev
+    boto_asg
+    boto_cloudwatch_alarm
+    boto_elasticache
+    boto_elb
+    boto_iam_role
+    boto_lc
+    boto_route53
+    boto_secgroup
+    boto_sns
+    boto_sqs
+    chef
     cloud
     cmd
     composer
     cron
+    cyg
     ddns
     debconfmod
     disk
     dockerio
+    drac
+    environ
     eselect
+    event
     file
     gem
     git
+    glusterfs
     gnomedesktop
+    grafana
     grains
     group
     hg
+    hipchat
     host
+    htpasswd
+    http
+    incron
+    influxdb_database
+    influxdb_user
+    ini_manage
+    ipset
     iptables
+    jboss7
     keyboard
     keystone
     kmod
     layman
     libvirt
+    linux_acl
     locale
     lvm
     lvs_server
     lvs_service
+    lxc
     makeconf
     mdadm
     memcached
+    modjk
     modjk_worker
     module
     mongodb_database
@@ -53,8 +87,10 @@ Full list of builtin state modules
     mount
     mysql_database
     mysql_grants
+    mysql_query
     mysql_user
     network
+    nftables
     npm
     ntp
     openstack_config
@@ -67,11 +103,14 @@ Full list of builtin state modules
     portage_config
     ports
     postgres_database
-    postgres_group
-    postgres_user
     postgres_extension
+    postgres_group
+    postgres_schema
+    postgres_user
     powerpath
     process
+    pyenv
+    pyrax_queues
     quota
     rabbitmq_cluster
     rabbitmq_plugin
@@ -80,11 +119,17 @@ Full list of builtin state modules
     rabbitmq_vhost
     rbenv
     rdp
+    redismod
     reg
     rvm
     saltmod
+    schedule
     selinux
+    serverdensity_device
     service
+    slack
+    smtp
+    splunk_search
     ssh_auth
     ssh_known_hosts
     stateconf
@@ -92,9 +137,14 @@ Full list of builtin state modules
     supervisord
     svn
     sysctl
+    syslog_ng
+    sysrc
+    test
     timezone
     tomcat
+    tuned
     user
+    vbox_guest
     virtualenv_mod
     win_dns_client
     win_firewall
@@ -102,5 +152,8 @@ Full list of builtin state modules
     win_path
     win_servermanager
     win_system
+    win_update
+    winrepo
     xmpp
     zcbuildout
+    zk_concurrency

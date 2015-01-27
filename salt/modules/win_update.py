@@ -7,12 +7,14 @@ Module for running windows updates.
         - win32api
         - pywintypes
 
-.. versionadded: (Helium)
+.. versionadded:: 2014.7.0
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from salt.ext.six.moves import range
 try:
     import win32com.client
     import pythoncom
@@ -57,8 +59,8 @@ def _gather_update_categories(updateCollection):
 
 
 class PyWinUpdater(object):
-    def __init__(self, categories=None, skipUI=True, skipDownloaded=True,
-            skipInstalled=True, skipReboot=False, skipPresent=True,
+    def __init__(self, categories=None, skipUI=True, skipDownloaded=False,
+            skipInstalled=True, skipReboot=False, skipPresent=False,
             softwareUpdates=True, driverUpdates=False, skipHidden=True):
         log.debug('CoInitializing the pycom system')
         pythoncom.CoInitialize()
@@ -106,6 +108,9 @@ class PyWinUpdater(object):
         #the results of the installation process
         self.install_results = None
 
+        #search results from CreateUpdateSearcher()
+        self.search_results = None
+
     def Search(self, searchString):
         try:
             log.debug('beginning search of the passed string: {0}'.format(searchString))
@@ -124,17 +129,18 @@ class PyWinUpdater(object):
             for update in self.search_results.Updates:
                 #this skipps an update if UI updates are not desired.
                 if update.InstallationBehavior.CanRequestUserInput:
-                    log.debug('Skipped update {0}'.format(str(update)))
+                    log.debug('Skipped update {0} - requests user input'.format(str(update)))
                     continue
 
                 #if this update is already downloaded, it doesn't need to be in
-                # the download_collection. so skipping it unless the user mandates redownload.
+                # the download_collection. so skipping it unless the user mandates re-download.
                 if self.skipDownloaded and update.IsDownloaded:
+                    log.debug('Skipped update {0} - already downloaded'.format(str(update)))
                     continue
 
-                #check this update's categories aginst the ones desired.
+                #check this update's categories against the ones desired.
                 for category in update.Categories:
-                    #this is a zero gaurd. these tests have to be in this order
+                    #this is a zero guard. these tests have to be in this order
                     # or it will error out when the user tries to search for
                     # updates with out specifying categories.
                     if self.categories is None or category.Name in self.categories:
@@ -164,29 +170,18 @@ class PyWinUpdater(object):
 
         if self.skipInstalled:
             searchParams.append('IsInstalled=0')
-        else:
-            searchParams.append('IsInstalled=1')
 
         if self.skipHidden:
             searchParams.append('IsHidden=0')
-        else:
-            searchParams.append('IsHidden=1')
 
         if self.skipReboot:
-            searchParams.append('RebootRequired=1')
-        else:
             searchParams.append('RebootRequired=0')
 
         if self.skipPresent:
             searchParams.append('IsPresent=0')
-        else:
-            searchParams.append('IsPresent=1')
 
-        if len(searchParams) > 1:
-            for i in searchParams:
-                search_string += '{0} and '.format(i)
-        else:
-            search_string += '{0} and '.format(searchParams[1])
+        for i in searchParams:
+            search_string += '{0} and '.format(i)
 
         if self.softwareUpdates and self.driverUpdates:
             search_string += 'Type=\'Software\' or Type=\'Driver\''
@@ -230,7 +225,6 @@ class PyWinUpdater(object):
         #if the blugger is empty. no point it starting the install process.
         if self.install_collection.Count != 0:
             log.debug('Install list created, about to install')
-            updates = []
             try:
                 #the call to install.
                 self.install_results = self.win_installer.Install()
@@ -248,12 +242,12 @@ class PyWinUpdater(object):
         this gets results of installation process.
         '''
         #if the blugger is empty, the results are nil.
-        log.debug('bluger has {0} updates in it'.format(str(self.install_collection.Count)))
+        log.debug('blugger has {0} updates in it'.format(str(self.install_collection.Count)))
         if self.install_collection.Count == 0:
             return {}
 
         updates = []
-        log.debug('reparing update list')
+        log.debug('repairing update list')
         for i in range(self.install_collection.Count):
             #this gets the result from install_results, but the title comes from the update
             #collection install_collection.
@@ -277,8 +271,8 @@ class PyWinUpdater(object):
         '''
         updates = self.GetInstallationResults()
         ret = 'The following are the updates and their return codes.\n'
-        for i in updates.keys():
-            ret += '\t{0} : {1}\n'.format(str(updates[i].ResultCode), str(updates[i].Title))
+        for i in updates:
+            ret += '\t{0}\n'.format(updates[i])
         return ret
 
     def GetDownloadResults(self):
@@ -324,8 +318,8 @@ class PyWinUpdater(object):
     def SetIncludes(self, includes):
         if includes:
             for i in includes:
-                value = i[i.keys()[0]]
-                include = i.keys()[0]
+                value = i[next(i.iterkeys())]
+                include = next(i.iterkeys())
                 self.SetInclude(include, value)
                 log.debug('was asked to set {0} to {1}'.format(include, value))
 
@@ -349,7 +343,6 @@ class PyWinUpdater(object):
             self.skipPresent, self.softwareUpdates, self.driverUpdates))
 
     def __str__(self):
-        updates = []
         results = 'There are {0} updates, by category there are:\n'.format(
             str(self.download_collection.count))
         for category in self.foundCategories:
@@ -372,7 +365,7 @@ def _search(quidditch, retries=5):
     comment = ''
     while not passed:
         log.debug('Searching. tries left: {0}'.format(str(retries)))
-        #let the updater make it's own search string. MORE POWER this way.
+        #let the updater make its own search string. MORE POWER this way.
         passed = quidditch.AutoSearch()
         log.debug('Done searching: {0}'.format(str(passed)))
         if isinstance(passed, Exception):
@@ -381,7 +374,6 @@ def _search(quidditch, retries=5):
             retries -= 1
             if retries:
                 comment += '{0} tries to go. retrying\n'.format(str(retries))
-                passed = False
             else:
                 comment += 'out of retries. this update round failed.\n'
                 return (comment, True, retries)
@@ -454,34 +446,41 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
     Returns a summary of available updates, grouped into their non-mutually
     exclusive categories.
 
-    To list the actual updates by name, add 'verbose' to the call.
+    verbose
+        Print results in greater detail
 
-    you can set the maximum number of retries to n in the search process by
-    adding: retries=n
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    various aspects of the updates can be included or excluded. this feature is
-    still indevelopment.
+    categories
+        Specify the categories to list. Must be passed as a list.
 
-    You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7', 'Security Updates']
-    Some known categories:
-            Updates
-            Windows 7
-            Critical Updates
-            Security Updates
-            Update Rollups
+        .. code-block:: bash
 
-    CLI Example:
-    Normal Usage:
+            salt '*' win_update.list_updates categories="['Updates']"
+
+        Categories include the following:
+
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
+
+    CLI Examples:
+
     .. code-block:: bash
+
+        # Normal Usage
         salt '*' win_update.list_updates
 
-    Find all critical updates list in detail:
-    .. code-block:: bash
-        salt '*' win_update.list_updates categories=['Critical Updates'] verbose
+        # List all critical updates list in verbose detail
+        salt '*' win_update.list_updates categories=['Critical Updates'] verbose=True
+
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater()
     if categories:
         quidditch.SetCategories(categories)
@@ -499,35 +498,45 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
 
 def download_updates(includes=None, retries=5, categories=None):
     '''
-    Downloads all available updates, skipping those that require user interaction.
+    Downloads all available updates, skipping those that require user
+    interaction.
 
-    you can set the maximum number of retries to n in the search process by
-    adding: retries=n
+    Various aspects of the updates can be included or excluded. this feature is
+    still in development.
 
-    various aspects of the updates can be included or excluded. this feature is
-    still indevelopment.
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7', 'Security Updates']
-    Some known categories:
-            Updates
-            Windows 7
-            Critical Updates
-            Security Updates
-            Update Rollups
+    categories
+        Specify the categories to update. Must be passed as a list.
 
-    CLI Example:
-    Normal Usage:
+        .. code-block:: bash
+
+            salt '*' win_update.download_updates categories="['Updates']"
+
+        Categories include the following:
+
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
+
+    CLI Examples:
+
     .. code-block:: bash
+
+        # Normal Usage
         salt '*' win_update.download_updates
 
-    Find all critical updates list in detail:
-    .. code-block:: bash
-        salt '*' win_update.download_updates categories=['Critical Updates'] verbose
+        # Download critical updates only
+        salt '*' win_update.download_updates categories="['Critical Updates']"
+
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
-    quidditch = PyWinUpdater()
+    log.debug('categories to search for are: {0}'.format(str(categories)))
+    quidditch = PyWinUpdater(skipDownloaded=True)
     quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)
 
@@ -544,42 +553,55 @@ def download_updates(includes=None, retries=5, categories=None):
     try:
         comment = quidditch.GetDownloadResults()
     except Exception as e:
-        comment = 'could not get results, but updates were installed.'
+        comment = 'could not get results, but updates were installed. {0}'.format(str(e))
     return 'Windows is up to date. \n{0}'.format(comment)
 
 
-def install_updates(cached=None, includes=None, retries=5, categories=None):
+def install_updates(includes=None, retries=5, categories=None):
     '''
-    Downloads and installs all available updates, skipping those that require user interaction.
+    Downloads and installs all available updates, skipping those that require
+    user interaction.
 
-    Add 'cached' to only install those updates which have already been downloaded.
+    Add ``cached`` to only install those updates which have already been downloaded.
 
-    you can set the maximum number of retries to n in the search process by
-    adding: retries=n
+    you can set the maximum number of retries to ``n`` in the search process by
+    adding: ``retries=n``
 
-    various aspects of the updates can be included or excluded. this feature is
-    still indevelopment.
+    various aspects of the updates can be included or excluded. This function is
+    still under development.
 
-    You can also specify by category of update similarly to how you do includes:
-    categories=['Windows 7', 'Security Updates']
-    Some known categories:
-            Updates
-            Windows 7
-            Critical Updates
-            Security Updates
-            Update Rollups
+    retries
+        Number of retries to make before giving up. This is total, not per
+        step.
 
-    CLI Example:
-    Normal Usage:
+    categories
+        Specify the categories to install. Must be passed as a list.
+
+        .. code-block:: bash
+
+            salt '*' win_update.install_updates categories="['Updates']"
+
+        Categories include the following:
+
+        * Updates
+        * Windows 7
+        * Critical Updates
+        * Security Updates
+        * Update Rollups
+
+    CLI Examples:
+
     .. code-block:: bash
+
+        # Normal Usage
         salt '*' win_update.install_updates
 
-    Find all critical updates list in detail:
-    .. code-block:: bash
-        salt '*' win_update.install_updates categories=['Critical Updates'] verbose
+        # Install all critical updates
+        salt '*' win_update.install_updates categories="['Critical Updates']"
+
     '''
 
-    log.debug('categories to search for are: '.format(str(categories)))
+    log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater()
     quidditch.SetCategories(categories)
     quidditch.SetIncludes(includes)
@@ -602,5 +624,5 @@ def install_updates(cached=None, includes=None, retries=5, categories=None):
     try:
         comment = quidditch.GetInstallationResultsPretty()
     except Exception as e:
-        comment = 'could not get results, but updates were installed.'
+        comment = 'Could not get results, but updates were installed. {0}'.format(str(e))
     return 'Windows is up to date. \n{0}'.format(comment)

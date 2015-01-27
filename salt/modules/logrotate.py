@@ -2,6 +2,7 @@
 '''
 Module for managing logrotate.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -26,7 +27,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'logrotate'
+    return True
 
 
 def _parse_conf(conf_file=default_conf):
@@ -110,7 +111,9 @@ def set_(key, value, setting=None, conf_file=default_conf):
         salt '*' logrotate.set rotate 2
 
     Can also be used to set a single value inside a multiline configuration
-    block. For instance, to change rotate in the following block::
+    block. For instance, to change rotate in the following block:
+
+    .. code-block:: text
 
         /var/log/wtmp {
             monthly

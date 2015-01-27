@@ -23,10 +23,11 @@ as either absent or present
     testuser:
       user.absent
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
-import sys
+import os
 
 # Import salt libs
 import salt.utils
@@ -34,7 +35,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def _group_changes(cur, wanted, remove=True):
+def _group_changes(cur, wanted, remove=False):
     '''
     Determine if the groups need to be changed
     '''
@@ -52,16 +53,28 @@ def _changes(name,
              optional_groups=None,
              remove_groups=True,
              home=None,
+             createhome=True,
              password=None,
              enforce_password=True,
+             empty_password=False,
              shell=None,
              fullname='',
              roomnumber='',
              workphone='',
-             homephone=''):
+             homephone='',
+             loginclass=None,
+             date=0,
+             mindays=0,
+             maxdays=999999,
+             inactdays=0,
+             warndays=7,
+             expire=-1):
     '''
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
+
+    Updated in 2014.7.0 to include support for shadow attributes, all
+    attributes supported as integers only.
     '''
 
     if 'shadow.info' in __salt__:
@@ -96,6 +109,9 @@ def _changes(name,
     if home:
         if lusr['home'] != home:
             change['home'] = home
+        if createhome and not os.path.isdir(home):
+            change['homeDoesNotExist'] = home
+
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
@@ -106,6 +122,18 @@ def _changes(name,
                     or lshad['passwd'] != default_hash and enforce_password:
                 if lshad['passwd'] != password:
                     change['passwd'] = password
+        if date and date is not 0 and lshad['lstchg'] != date:
+            change['date'] = date
+        if mindays and mindays is not 0 and lshad['min'] != mindays:
+            change['mindays'] = mindays
+        if maxdays and maxdays is not 999999 and lshad['max'] != maxdays:
+            change['maxdays'] = maxdays
+        if inactdays and inactdays is not 0 and lshad['inact'] != inactdays:
+            change['inactdays'] = inactdays
+        if warndays and warndays is not 7 and lshad['warn'] != warndays:
+            change['warndays'] = warndays
+        if expire and expire is not -1 and lshad['expire'] != expire:
+            change['expire'] = expire
     # GECOS fields
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
@@ -120,6 +148,12 @@ def _changes(name,
     if 'user.chhomephone' in __salt__:
         if homephone is not None and lusr['homephone'] != homephone:
             change['homephone'] = homephone
+    # OpenBSD login class
+    if __grains__['kernel'] == 'OpenBSD':
+        if not loginclass:
+            loginclass = '""'
+        if __salt__['user.get_loginclass'](name)['loginclass'] != loginclass:
+            change['loginclass'] = loginclass
 
     return change
 
@@ -135,13 +169,21 @@ def present(name,
             createhome=True,
             password=None,
             enforce_password=True,
+            empty_password=False,
             shell=None,
             unique=True,
             system=False,
             fullname=None,
             roomnumber=None,
             workphone=None,
-            homephone=None):
+            homephone=None,
+            loginclass=None,
+            date=None,
+            mindays=None,
+            maxdays=None,
+            inactdays=None,
+            warndays=None,
+            expire=None):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -153,11 +195,11 @@ def present(name,
         will be assigned
 
     gid
-        The default group id
+        The default group id. Also accepts group name.
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
-        the same name as the user.
+        the same name as the user, Default is ``False``.
 
     groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -175,15 +217,15 @@ def present(name,
 
     remove_groups
         Remove groups that the user is a member of that weren't specified in
-        the state, True by default
+        the state, Default is ``True``.
 
     home
         The location of the home directory to manage
 
     createhome
-        If True, the home directory will be created if it doesn't exist.
+        If False, the home directory will not be created if it doesn't exist.
         Please note that directories leading up to the home directory
-        will NOT be created.
+        will NOT be created, Default is ``True``.
 
     password
         A password hash to set for the user. This field is only supported on
@@ -196,19 +238,26 @@ def present(name,
         Set to False to keep the password from being changed if it has already
         been set and the password hash differs from what is specified in the
         "password" field. This option will be ignored if "password" is not
-        specified.
+        specified, Default is ``True``.
+
+    empty_password
+        Set to True to enable password-less login for user, Default is ``False``.
 
     shell
         The login shell, defaults to the system default shell
 
     unique
-        Require a unique UID, True by default
+        Require a unique UID, Default is ``True``.
 
     system
-        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID.
+        Choose UID in the range of FIRST_SYSTEM_UID and LAST_SYSTEM_UID, Default is
+        ``False``.
 
+    loginclass
+        The login class, defaults to empty
+        (BSD only)
 
-    User comment field (GECOS) support (currently Linux, FreeBSD, and MacOS
+    User comment field (GECOS) support (currently Linux, BSD, and MacOS
     only):
 
     The below values should be specified as strings to avoid ambiguities when
@@ -226,11 +275,40 @@ def present(name,
 
     homephone
         The user's home phone number (not supported in MacOS)
+
+
+    .. versionchanged:: 2014.7.0
+       Shadow attribute support added.
+
+    Shadow attributes support (currently Linux only):
+
+    The below values should be specified as integers.
+
+    date
+        Date of last change of password, represented in days since epoch
+        (January 1, 1970).
+
+    mindays
+        The minimum number of days between password changes.
+
+    maxdays
+        The maximum number of days between password changes.
+
+    inactdays
+        The number of days after a password expires before an account is
+        locked.
+
+    warndays
+        Number of days prior to maxdays to warn users.
+
+    expire
+        Date that account expires, represented in days since epoch (January 1,
+        1970).
     '''
-    fullname = str(fullname) if fullname is not None else fullname
-    roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
-    workphone = str(workphone) if workphone is not None else workphone
-    homephone = str(homephone) if homephone is not None else homephone
+    fullname = salt.utils.sdecode(fullname) if fullname is not None else fullname
+    roomnumber = salt.utils.sdecode(roomnumber) if roomnumber is not None else roomnumber
+    workphone = salt.utils.sdecode(workphone) if workphone is not None else workphone
+    homephone = salt.utils.sdecode(homephone) if homephone is not None else homephone
 
     ret = {'name': name,
            'changes': {},
@@ -265,6 +343,9 @@ def present(name,
     if gid_from_name:
         gid = __salt__['file.group_to_gid'](name)
 
+    if empty_password:
+        __salt__['shadow.del_password'](name)
+
     changes = _changes(name,
                        uid,
                        gid,
@@ -272,13 +353,21 @@ def present(name,
                        present_optgroups,
                        remove_groups,
                        home,
+                       createhome,
                        password,
                        enforce_password,
+                       empty_password,
                        shell,
                        fullname,
                        roomnumber,
                        workphone,
-                       homephone)
+                       homephone,
+                       date,
+                       mindays,
+                       maxdays,
+                       inactdays,
+                       warndays,
+                       expire)
 
     if changes:
         if __opts__['test']:
@@ -291,10 +380,36 @@ def present(name,
         # The user is present
         if 'shadow.info' in __salt__:
             lshad = __salt__['shadow.info'](name)
+        if __grains__['kernel'] == 'OpenBSD':
+            lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
         for key, val in changes.items():
-            if key == 'passwd':
+            if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
+                continue
+            if key == 'date':
+                __salt__['shadow.set_date'](name, date)
+                continue
+            if key == 'home' or key == 'homeDoesNotExist':
+                if createhome:
+                    __salt__['user.chhome'](name, val, True)
+                else:
+                    __salt__['user.chhome'](name, val, False)
+                continue
+            if key == 'mindays':
+                __salt__['shadow.set_mindays'](name, mindays)
+                continue
+            if key == 'maxdays':
+                __salt__['shadow.set_maxdays'](name, maxdays)
+                continue
+            if key == 'inactdays':
+                __salt__['shadow.set_inactdays'](name, inactdays)
+                continue
+            if key == 'warndays':
+                __salt__['shadow.set_warndays'](name, warndays)
+                continue
+            if key == 'expire':
+                __salt__['shadow.set_expire'](name, expire)
                 continue
             if key == 'groups':
                 __salt__['user.ch{0}'.format(key)](
@@ -303,16 +418,13 @@ def present(name,
             else:
                 __salt__['user.ch{0}'.format(key)](name, val)
 
-        # Clear cached groups
-        sys.modules[
-            __salt__['test.ping'].__module__
-        ].__context__.pop('user.getgrall', None)
-
         post = __salt__['user.info'](name)
         spost = {}
         if 'shadow.info' in __salt__:
             if lshad['passwd'] != password:
                 spost = __salt__['shadow.info'](name)
+        if __grains__['kernel'] == 'OpenBSD':
+            lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
         for key in post:
             if post[key] != pre[key]:
@@ -321,6 +433,9 @@ def present(name,
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
+        if __grains__['kernel'] == 'OpenBSD':
+            if lcpost['loginclass'] != lcpre['loginclass']:
+                ret['changes']['loginclass'] = lcpost['loginclass']
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
         changes = _changes(name,
@@ -330,13 +445,22 @@ def present(name,
                            present_optgroups,
                            remove_groups,
                            home,
+                           createhome,
                            password,
                            enforce_password,
+                           empty_password,
                            shell,
                            fullname,
                            roomnumber,
                            workphone,
-                           homephone)
+                           homephone,
+                           loginclass,
+                           date,
+                           mindays,
+                           maxdays,
+                           inactdays,
+                           warndays,
+                           expire)
 
         if changes:
             ret['comment'] = 'These values could not be changed: {0}'.format(
@@ -367,17 +491,74 @@ def present(name,
                                 roomnumber=roomnumber,
                                 workphone=workphone,
                                 homephone=homephone,
+                                loginclass=loginclass,
                                 createhome=createhome):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
-            if all((password, 'shadow.info' in __salt__)):
-                __salt__['shadow.set_password'](name, password)
-                spost = __salt__['shadow.info'](name)
-                if spost['passwd'] != password and not salt.utils.is_windows():
-                    ret['comment'] = 'User {0} created but failed to set' \
-                                     ' password to {1}'.format(name, password)
-                    ret['result'] = False
-                ret['changes']['password'] = password
+            if 'shadow.info' in __salt__ and not salt.utils.is_windows():
+                if password and not empty_password:
+                    __salt__['shadow.set_password'](name, password)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['passwd'] != password:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' password to' \
+                                         ' {1}'.format(name, password)
+                        ret['result'] = False
+                    ret['changes']['password'] = password
+                if date:
+                    __salt__['shadow.set_date'](name, date)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['lstchg'] != date:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' last change date to' \
+                                         ' {1}'.format(name, date)
+                        ret['result'] = False
+                    ret['changes']['date'] = date
+                if mindays:
+                    __salt__['shadow.set_mindays'](name, mindays)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['min'] != mindays:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' minimum days to' \
+                                         ' {1}'.format(name, mindays)
+                        ret['result'] = False
+                    ret['changes']['mindays'] = mindays
+                if maxdays:
+                    __salt__['shadow.set_maxdays'](name, maxdays)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['max'] != maxdays:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' maximum days to' \
+                                         ' {1}'.format(name, maxdays)
+                        ret['result'] = False
+                    ret['changes']['maxdays'] = maxdays
+                if inactdays:
+                    __salt__['shadow.set_inactdays'](name, inactdays)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['inact'] != inactdays:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' inactive days to' \
+                                         ' {1}'.format(name, inactdays)
+                        ret['result'] = False
+                    ret['changes']['inactdays'] = inactdays
+                if warndays:
+                    __salt__['shadow.set_warndays'](name, warndays)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['warn'] != warndays:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' warn days to' \
+                                         ' {1}'.format(name, warndays)
+                        ret['result'] = False
+                    ret['changes']['warndays'] = warndays
+                if expire:
+                    __salt__['shadow.set_expire'](name, expire)
+                    spost = __salt__['shadow.info'](name)
+                    if spost['expire'] != expire:
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' expire days to' \
+                                         ' {1}'.format(name, expire)
+                        ret['result'] = False
+                    ret['changes']['expire'] = expire
         else:
             ret['comment'] = 'Failed to create new user {0}'.format(name)
             ret['result'] = False
@@ -393,12 +574,13 @@ def absent(name, purge=False, force=False):
         The name of the user to remove
 
     purge
-        Set purge to delete all of the user's files as well as the user
+        Set purge to True to delete all of the user's files as well as the user,
+        Default is ``False``.
 
     force
-        If the user is logged in the absent state will fail, set the force
+        If the user is logged in, the absent state will fail. Set the force
         option to True to remove the user even if they are logged in. Not
-        supported in FreeBSD and Solaris.
+        supported in FreeBSD and Solaris, Default is ``False``.
     '''
     ret = {'name': name,
            'changes': {},
@@ -412,11 +594,9 @@ def absent(name, purge=False, force=False):
             ret['result'] = None
             ret['comment'] = 'User {0} set for removal'.format(name)
             return ret
-        beforegroups = set(
-                [g['name'] for g in __salt__['group.getent'](refresh=True)])
+        beforegroups = set(salt.utils.get_group_list(name))
         ret['result'] = __salt__['user.delete'](name, purge, force)
-        aftergroups = set(
-                [g['name'] for g in __salt__['group.getent'](refresh=True)])
+        aftergroups = set([g for g in beforegroups if __salt__['group.info'](g)])
         if ret['result']:
             ret['changes'] = {}
             for g in beforegroups - aftergroups:

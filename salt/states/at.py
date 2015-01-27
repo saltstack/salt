@@ -5,9 +5,11 @@ Configuration disposable regularly scheduled tasks for at.
 
 The at state can be add disposable regularly scheduled tasks for your system.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+from salt.ext.six.moves import map
 
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')
@@ -20,7 +22,7 @@ def __virtual__():
     return 'at.at' in __salt__
 
 
-def present(name, timespec, tag=None, runas=None, job=None):
+def present(name, timespec, tag=None, user=None, job=None):
     '''
     Add a job to queue.
 
@@ -33,17 +35,19 @@ def present(name, timespec, tag=None, runas=None, job=None):
     tag
         Make a tag for the job.
 
-    runas
-        Users run the job.
+    user
+        The user to run the at job
+
+        .. versionadded:: 2014.1.4
 
     .. code-block:: yaml
 
         rose:
           at.present:
             - job: 'echo "I love saltstack" > love'
-            - timespec: '9:9 11/09/13'
+            - timespec: '9:09 11/09/13'
             - tag: love
-            - runas: jam
+            - user: jam
 
     '''
     if job:
@@ -73,13 +77,13 @@ def present(name, timespec, tag=None, runas=None, job=None):
     else:
         cmd = '{0} "{1}" | {2} {3}'.format(echo_cmd, name, binary, timespec)
 
-    if runas:
-        luser = __salt__['user.info'](runas)
+    if user:
+        luser = __salt__['user.info'](user)
         if not luser:
-            ret['comment'] = 'User: {0} is not exists'.format(runas)
+            ret['comment'] = 'User: {0} is not exists'.format(user)
             ret['result'] = False
             return ret
-        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=runas)
+        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=user)
     else:
         ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd))
 
@@ -158,9 +162,9 @@ def absent(name, jobid=None, **kwargs):
     #    return ret
 
     if kwargs:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])
+        opts = list(list(map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])))
     else:
-        opts = map(str, [j['job'] for j in __salt__['at.atq']()['jobs']])
+        opts = list(list(map(str, [j['job'] for j in __salt__['at.atq']()['jobs']])))
 
     if not opts:
         ret['result'] = False
@@ -170,7 +174,7 @@ def absent(name, jobid=None, **kwargs):
     __salt__['cmd.run']('{0} -d {1}'.format(binary, ' '.join(opts)))
     fail = []
     for i in opts:
-        if i in map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]):
+        if i in list(list(map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]))):
             fail.append(i)
 
     if fail:

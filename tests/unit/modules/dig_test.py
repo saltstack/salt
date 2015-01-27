@@ -24,8 +24,7 @@ _SPF_VALUES = {
         'pid': 27282,
         'retcode': 0,
         'stderr': '',
-        'stdout': '"v=spf1 a mx ip4:198.60.22.0/24 '
-                    'ip4:166.70.13.0/24 ~all"'
+        'stdout': '"v=spf1 a mx ip4:198.60.22.0/24 ip4:166.70.13.0/24 ~all"'
     },
     'dig +short xmission-redirect.com TXT': {
         'pid': 27282,
@@ -42,11 +41,11 @@ _SPF_VALUES = {
 }
 
 
-def _spf_side_effect(key, output_loglevel='info'):
-    return _SPF_VALUES.get(key, {'pid': 27310,
-                                 'retcode': 0,
-                                 'stderr': '',
-                                 'stdout': ''})
+def _spf_side_effect(key, python_shell=False):
+    return _SPF_VALUES.get(' '.join(key), {'pid': 27310,
+                                           'retcode': 0,
+                                           'stderr': '',
+                                           'stdout': ''})
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -191,3 +190,8 @@ class DigTestCase(TestCase):
                  ['50', 'alt4.aspmx.l.google.com.'],
                  ['30', 'alt2.aspmx.l.google.com.']]
             )
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(DigTestCase, needs_daemon=False)

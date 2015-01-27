@@ -16,14 +16,14 @@ except ImportError:
 def __virtual__():
     if not HAS_SQLITE3:
         return False
-    return 'sqlite3'
+    return True
 
 
 def _connect(db=None):
     if db is None:
         return False
 
-    con = sqlite3.connect(db)
+    con = sqlite3.connect(db, isolation_level=None)
     cur = con.cursor()
     return cur
 

@@ -7,16 +7,17 @@
 
     Custom logging handlers to be used in salt.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
 import atexit
 import logging
 import threading
+import logging.handlers
 
 # Import salt libs
-from salt._compat import Queue
-from salt.log.mixins import NewStyleClassMixIn
+from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ if sys.version_info < (2, 7):
 
 class TemporaryLoggingHandler(logging.NullHandler):
     '''
-    This logging handler will store all the log records up to it's maximum
+    This logging handler will store all the log records up to its maximum
     queue size at which stage the first messages stored will be dropped.
 
     Should only be used as a temporary logging handler, while the logging
@@ -84,3 +85,28 @@ class TemporaryLoggingHandler(logging.NullHandler):
                     # it should not handle the log record
                     continue
                 handler.handle(record)
+
+
+class StreamHandler(ExcInfoOnLogLevelFormatMixIn, logging.StreamHandler, NewStyleClassMixIn):
+    '''
+    Stream handler which properly handles exc_info on a per handler basis
+    '''
+
+
+class FileHandler(ExcInfoOnLogLevelFormatMixIn, logging.FileHandler, NewStyleClassMixIn):
+    '''
+    File handler which properly handles exc_info on a per handler basis
+    '''
+
+
+class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler, NewStyleClassMixIn):
+    '''
+    Syslog handler which properly handles exc_info on a per handler basis
+    '''
+
+
+if sys.version_info > (2, 6):
+    class WatchedFileHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.WatchedFileHandler, NewStyleClassMixIn):
+        '''
+        Watched file handler which properly handles exc_info on a per handler basis
+        '''

@@ -11,16 +11,14 @@ Databases can be set as either absent or present
     frank:
       postgres_database.present
 '''
-
-# Import salt libs
-import salt.utils
+from __future__ import absolute_import
 
 
 def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres_database' if 'postgres.user_exists' in __salt__ else False
+    return 'postgres.user_exists' in __salt__
 
 
 def present(name,
@@ -30,7 +28,6 @@ def present(name,
             lc_ctype=None,
             owner=None,
             template=None,
-            runas=None,
             user=None,
             maintenance_db=None,
             db_password=None,
@@ -62,16 +59,11 @@ def present(name,
     template
         The template database from which to build this database
 
-    runas
-        System user all operations should be performed on behalf of
-
-        .. deprecated:: 0.17.0
-
     user
         System user all operations should be performed on behalf of
 
     db_user
-        database username if different from config or defaul
+        database username if different from config or default
 
     db_password
         user password if any password for a specified user
@@ -88,30 +80,6 @@ def present(name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(name)}
-
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     db_args = {
         'maintenance_db': maintenance_db,
@@ -188,7 +156,6 @@ def present(name,
 
 
 def absent(name,
-           runas=None,
            user=None,
            maintenance_db=None,
            db_password=None,
@@ -213,11 +180,6 @@ def absent(name,
     db_port
         Database port if different from config or default
 
-    runas
-        System user all operations should be performed on behalf of
-
-        .. deprecated:: 0.17.0
-
     user
         System user all operations should be performed on behalf of
 
@@ -227,29 +189,6 @@ def absent(name,
            'changes': {},
            'result': True,
            'comment': ''}
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     db_args = {
         'maintenance_db': maintenance_db,

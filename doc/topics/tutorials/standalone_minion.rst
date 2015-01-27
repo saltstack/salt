@@ -6,9 +6,14 @@ Since the Salt minion contains such extensive functionality it can be useful
 to run it standalone. A standalone minion can be used to do a number of
 things:
 
-- Stand up a master server via States (Salting a Salt Master)
 - Use salt-call commands on a system without connectivity to a master
 - Masterless States, run states entirely from files local to the minion
+
+.. note::
+
+    When running Salt in masterless mode, do not run the salt-minion daemon.
+    Otherwise, it will attempt to connect to a master and fail. The salt-call
+    command stands on its own and does not need the salt-minion daemon.
 
 Telling Salt Call to Run Masterless
 ===================================
@@ -29,7 +34,7 @@ minion is configured to not gather this data from the master.
     file_client: local
 
 Now the salt-call command will not look for a master and will assume that the
-local system has all of the file ad pillar resources.
+local system has all of the file and pillar resources.
 
 
 
@@ -61,7 +66,7 @@ This makes it easy to "script" deployments with Salt states without having to
 set up a master, and allows for these SLS modules to be easily moved into a
 Salt master as the deployment grows.
 
-Now the declared state can now be executed with:
+The declared state can now be executed with:
 
 .. code-block:: bash
 

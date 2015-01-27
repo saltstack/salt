@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     salt.utils.vt
@@ -21,6 +19,7 @@
     .. __: https://github.com/pexpect/pexpect
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -47,7 +46,8 @@ else:
     import resource
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
+from salt.log.setup import LOG_LEVELS
 
 log = logging.getLogger(__name__)
 
@@ -93,6 +93,7 @@ class Terminal(object):
                  shell=False,
                  cwd=None,
                  env=None,
+                 preexec_fn=None,
 
                  # Terminal Size
                  rows=None,
@@ -100,8 +101,11 @@ class Terminal(object):
 
                  # Logging options
                  log_stdin=None,
+                 log_stdin_level='debug',
                  log_stdout=None,
+                 log_stdout_level='debug',
                  log_stderr=None,
+                 log_stderr_level='debug',
 
                  # sys.stdXYZ streaming options
                  stream_stdout=None,
@@ -122,6 +126,7 @@ class Terminal(object):
         self.shell = shell
         self.cwd = cwd
         self.env = env
+        self.preexec_fn = preexec_fn
 
         # ----- Set the desired terminal size ------------------------------->
         if rows is None and cols is None:
@@ -144,7 +149,8 @@ class Terminal(object):
         self.child_fde = None
 
         self.closed = True
-        self.flag_eof = False
+        self.flag_eof_stdout = False
+        self.flag_eof_stderr = False
         self.terminated = True
         self.exitstatus = None
         self.signalstatus = None
@@ -201,7 +207,7 @@ class Terminal(object):
             # exception type
             log.warning(
                 'Failed to spawn the VT: {0}'.format(err),
-                 exc_info=log.isEnabledFor(logging.DEBUG)
+                 exc_info_on_loglevel=logging.DEBUG
             )
             raise TerminalException(
                 'Failed to spawn the VT. Error: {0}'.format(err)
@@ -216,6 +222,7 @@ class Terminal(object):
 
         # ----- Setup Logging ----------------------------------------------->
         # Setup logging after spawned in order to have a pid value
+        self.stdin_logger_level = LOG_LEVELS.get(log_stdin_level, log_stdin_level)
         if log_stdin is True:
             self.stdin_logger = logging.getLogger(
                 '{0}.{1}.PID-{2}.STDIN'.format(
@@ -223,15 +230,15 @@ class Terminal(object):
                 )
             )
         elif log_stdin is not None:
-            if not hasattr(log_stdin, 'debug'):
+            if not isinstance(log_stdin, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stdin\' needs to have at least the \'debug()\' '
-                    'method.'
+                    '\'log_stdin\' needs to subclass `logging.Logger`'
                 )
             self.stdin_logger = log_stdin
         else:
             self.stdin_logger = None
 
+        self.stdout_logger_level = LOG_LEVELS.get(log_stdout_level, log_stdout_level)
         if log_stdout is True:
             self.stdout_logger = logging.getLogger(
                 '{0}.{1}.PID-{2}.STDOUT'.format(
@@ -239,15 +246,15 @@ class Terminal(object):
                 )
             )
         elif log_stdout is not None:
-            if not hasattr(log_stdout, 'debug'):
+            if not isinstance(log_stdout, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stdout\' needs to have at least the \'debug()\' '
-                    'method.'
+                    '\'log_stdout\' needs to subclass `logging.Logger`'
                 )
             self.stdout_logger = log_stdout
         else:
             self.stdout_logger = None
 
+        self.stderr_logger_level = LOG_LEVELS.get(log_stderr_level, log_stderr_level)
         if log_stderr is True:
             self.stderr_logger = logging.getLogger(
                 '{0}.{1}.PID-{2}.STDERR'.format(
@@ -255,10 +262,9 @@ class Terminal(object):
                 )
             )
         elif log_stderr is not None:
-            if not hasattr(log_stderr, 'debug'):
+            if not isinstance(log_stderr, logging.Logger):
                 raise RuntimeError(
-                    '\'log_stderr\' needs to have at least the \'debug()\' '
-                    'method.'
+                    '\'log_stderr\' needs to subclass `logging.Logger`'
                 )
             self.stderr_logger = log_stderr
         else:
@@ -291,18 +297,29 @@ class Terminal(object):
             maxsize = 1
         return self._recv(maxsize)
 
-    def close(self, force=False):
+    def close(self, terminate=True, kill=False):
         '''
-        Close the communication with the terminal's child and terminate it.
+        Close the communication with the terminal's child.
+        If ``terminate`` is ``True`` then additionally try to terminate the
+        terminal, and if ``kill`` is also ``True``, kill the terminal if
+        terminating it was not enough.
         '''
         if not self.closed:
-            os.close(self.child_fd)
-            os.close(self.child_fde)
+            if self.child_fd is not None:
+                os.close(self.child_fd)
+                self.child_fd = None
+            if self.child_fde is not None:
+                os.close(self.child_fde)
+                self.child_fde = None
             time.sleep(0.1)
-            if not self.terminate(force):
-                raise TerminalException('Failed to terminate child process.')
-            self.child_fd = self.child_fde = None
+            if terminate:
+                if not self.terminate(kill):
+                    raise TerminalException('Failed to terminate child process.')
             self.closed = True
+
+    @property
+    def has_unread_data(self):
+        return self.flag_eof_stderr is False or self.flag_eof_stdout is False
 
     # <---- Common Public API ------------------------------------------------
 
@@ -319,14 +336,15 @@ class Terminal(object):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.close(force=True)
+        self.close(terminate=True, kill=True)
         # Wait for the process to terminate, to avoid zombies.
-        self.wait()
+        if self.isalive():
+            self.wait()
     # <---- Context Manager Methods ------------------------------------------
 
 # ----- Platform Specific Methods ------------------------------------------->
     if subprocess.mswindows:
-    # ----- Windows Methods ------------------------------------------------->
+        # ----- Windows Methods --------------------------------------------->
         def _execute(self):
             raise NotImplementedError
 
@@ -371,7 +389,7 @@ class Terminal(object):
         kill = terminate
     # <---- Windows Methods --------------------------------------------------
     else:
-    # ----- Linux Methods --------------------------------------------------->
+        # ----- Linux Methods ----------------------------------------------->
         # ----- Internal API ------------------------------------------------>
         def _spawn(self):
             self.pid, self.child_fd, self.child_fde = self.__fork_ptys()
@@ -384,7 +402,7 @@ class Terminal(object):
                 args = []
 
             if self.shell and self.args:
-                self.args = ['/bin/sh', '-c'] + args
+                self.args = ['/bin/sh', '-c', ' '.join(args)]
             elif self.shell:
                 self.args = ['/bin/sh']
             else:
@@ -414,7 +432,7 @@ class Terminal(object):
                             'Failed to set the VT terminal size: {0}'.format(
                                 err
                             ),
-                            exc_info=log.isEnabledFor(logging.DEBUG)
+                            exc_info_on_loglevel=logging.DEBUG
                         )
 
                 # Do not allow child to inherit open file descriptors from
@@ -427,6 +445,9 @@ class Terminal(object):
 
                 if self.cwd is not None:
                     os.chdir(self.cwd)
+
+                if self.preexec_fn:
+                    self.preexec_fn()
 
                 if self.env is None:
                     os.execvp(self.executable, self.args)
@@ -532,7 +553,7 @@ class Terminal(object):
 
             try:
                 if self.stdin_logger:
-                    self.stdin_logger.debug(data)
+                    self.stdin_logger.log(self.stdin_logger_level, data)
                 written = os.write(self.child_fd, data)
             except OSError as why:
                 if why.errno == errno.EPIPE:  # broken pipe
@@ -554,7 +575,7 @@ class Terminal(object):
                     return None, None
                 rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Brain-dead platform.')
                     return None, None
             elif self.__irix_hack:
@@ -565,7 +586,7 @@ class Terminal(object):
                 # That sucks.
                 rlist, _, _ = select.select(rfds, [], [], 2)
                 if not rlist:
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Slow platform.')
                     return None, None
 
@@ -595,7 +616,7 @@ class Terminal(object):
             # ----- Nothing to Process!? ------------------------------------>
             if not rlist:
                 if not self.isalive():
-                    self.flag_eof = True
+                    self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug('End of file(EOL). Very slow platform.')
                     return None, None
             # <---- Nothing to Process!? -------------------------------------
@@ -608,7 +629,7 @@ class Terminal(object):
                     )
 
                     if not stderr:
-                        self.flag_eof = True
+                        self.flag_eof_stderr = True
                         stderr = None
                     else:
                         if self.stream_stderr:
@@ -620,13 +641,14 @@ class Terminal(object):
                             if stripped.startswith(os.linesep):
                                 stripped = stripped[len(os.linesep):]
                             if stripped:
-                                self.stderr_logger.debug(stripped)
+                                self.stderr_logger.log(self.stderr_logger_level, stripped)
                 except OSError:
                     os.close(self.child_fde)
                     self.child_fde = None
+                    self.flag_eof_stderr = True
                     stderr = None
                 finally:
-                    if self.isalive() and self.child_fde is not None:
+                    if self.child_fde is not None:
                         fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags)
             # <---- Process STDERR -------------------------------------------
 
@@ -638,7 +660,7 @@ class Terminal(object):
                     )
 
                     if not stdout:
-                        self.flag_eof = True
+                        self.flag_eof_stdout = True
                         stdout = None
                     else:
                         if self.stream_stdout:
@@ -650,13 +672,14 @@ class Terminal(object):
                             if stripped.startswith(os.linesep):
                                 stripped = stripped[len(os.linesep):]
                             if stripped:
-                                self.stdout_logger.debug(stripped)
+                                self.stdout_logger.log(self.stdout_logger_level, stripped)
                 except OSError:
                     os.close(self.child_fd)
                     self.child_fd = None
+                    self.flag_eof_stdout = True
                     stdout = None
                 finally:
-                    if self.isalive() and self.child_fd is not None:
+                    if self.child_fd is not None:
                         fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags)
             # <---- Process STDOUT -------------------------------------------
             return stdout, stderr
@@ -739,10 +762,10 @@ class Terminal(object):
             if self.terminated:
                 return False
 
-            if self.flag_eof:
+            if self.has_unread_data is False:
                 # This is for Linux, which requires the blocking form
                 # of waitpid to get status of a defunct process.
-                # This is super-lame. The flag_eof would have been set
+                # This is super-lame. The flag_eof_* would have been set
                 # in recv(), so this should be safe.
                 waitpid_options = 0
             else:
@@ -817,6 +840,8 @@ class Terminal(object):
             returns True if the child was terminated. This returns False if the
             child could not be terminated.
             '''
+            if not self.closed:
+                self.close(terminate=False)
 
             if not self.isalive():
                 return True
@@ -834,7 +859,7 @@ class Terminal(object):
                 if not self.isalive():
                     return True
                 if force:
-                    self.send(signal.SIGKILL)
+                    self.send_signal(signal.SIGKILL)
                     time.sleep(0.1)
                     if not self.isalive():
                         return True

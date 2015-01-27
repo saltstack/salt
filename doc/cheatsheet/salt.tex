@@ -26,6 +26,17 @@
 
 The \texttt{top.sls} file is used to map what SLS modules get loaded onto what minions via the state system.\\
 
+It is located in the file defined in the \texttt{file_roots} variable of the
+salt master configuration file which is found in
+\texttt{CONFIG_DIR}/master.
+
+The file roots is defined like this by default.
+\begin{verbatim}
+file_roots:
+  base:
+    - /srv/salt
+\end{verbatim}
+
 Here is an example \texttt{top.sls} file which uses \texttt{pkg}, \texttt{file} and \texttt{service} states:
 
 \begin{verbatim}
@@ -262,7 +273,7 @@ Mounting of filesystems.
 
 \bfseries{\LARGE{sysctl}}
 
-Configuration of the Linux kernel using sysctrl.
+Configuration of the Linux kernel using sysctl.
 
 \begin{verbatim}
 vm.swappiness:

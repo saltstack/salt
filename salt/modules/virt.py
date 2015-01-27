@@ -8,6 +8,7 @@ Work with virtual machines managed by libvirt
 # of his in the virt func module have been used
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -20,8 +21,10 @@ import logging
 import yaml
 import jinja2
 import jinja2.exceptions
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 try:
-    import libvirt
+    import libvirt  # pylint: disable=import-error
     from xml.dom import minidom
     HAS_ALL_IMPORTS = True
 except ImportError:
@@ -29,9 +32,9 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.validate.net
-from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -98,14 +101,12 @@ def __get_conn():
          - http://libvirt.org/uri.html#URI_config
         '''
         connection = __salt__['config.get']('libvirt:connection', 'esx')
-        if connection.startswith('esx://'):
-            return connection
-        return '%s' % connection
+        return connection
 
     def __esxi_auth():
         '''
         We rely on that the credentials is provided to libvirt through
-        it's built in mechanisms.
+        its built in mechanisms.
 
         Example libvirt `/etc/libvirt/auth.conf`:
 
@@ -127,11 +128,16 @@ def __get_conn():
         '''
         return [[libvirt.VIR_CRED_EXTERNAL], lambda: 0, None]
 
+    if 'virt.connect' in __opts__:
+        conn_str = __opts__['virt.connect']
+    else:
+        conn_str = 'qemu:///system'
+
     conn_func = {
         'esxi': [libvirt.openAuth, [__esxi_uri(),
                                     __esxi_auth(),
                                     0]],
-        'qemu': [libvirt.open, ['qemu:///system']],
+        'qemu': [libvirt.open, [conn_str]],
         }
 
     hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
@@ -457,7 +463,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     elif isinstance(config_data, list):
         for interface in config_data:
             if isinstance(interface, dict):
-                if len(interface.keys()) == 1:
+                if len(interface) == 1:
                     append_dict_profile_to_interface_list(interface)
                 else:
                     interfaces.append(interface)
@@ -547,7 +553,7 @@ def init(name,
 
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
-        disk_name = diskp[0].keys()[0]
+        disk_name = next(diskp[0].iterkeys())
         disk_type = diskp[0][disk_name]['format']
         disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
@@ -568,7 +574,7 @@ def init(name,
             if not os.path.isdir(img_dir):
                 os.makedirs(img_dir)
             try:
-                salt.utils.copyfile(sfn, img_dest)
+                salt.utils.files.copyfile(sfn, img_dest)
                 mask = os.umask(0)
                 os.umask(mask)
                 # Apply umask and remove exec bit
@@ -606,12 +612,12 @@ def init(name,
 
     if kwargs.get('seed') and seedable:
         install = kwargs.get('install', True)
-        __salt__['seed.apply'](img_dest,
-                               id_=name,
-                               config=kwargs.get('config'),
-                               install=install)
-    elif kwargs.get('seed_cmd') and seedable:
-        __salt__[kwargs['seed_cmd']](img_dest, name, kwargs.get('config'))
+        seed_cmd = kwargs.get('seed_cmd', 'seed.apply')
+
+        __salt__[seed_cmd](img_dest,
+                           id_=name,
+                           config=kwargs.get('config'),
+                           install=install)
     if start:
         create(name)
 
@@ -793,7 +799,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
@@ -801,7 +807,7 @@ def get_nics(vm_):
                 if v_node.tagName == 'virtualport':
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes.keys():
+                    for key in v_node.attributes:
                         temp[key] = v_node.getAttribute(key)
                     nic['virtualport'] = temp
             if 'mac' not in nic:
@@ -851,7 +857,7 @@ def get_graphics(vm_):
     for node in doc.getElementsByTagName('domain'):
         g_nodes = node.getElementsByTagName('graphics')
         for g_node in g_nodes:
-            for key in g_node.attributes.keys():
+            for key in g_node.attributes:
                 out[key] = g_node.getAttribute(key)
     return out
 
@@ -887,7 +893,7 @@ def get_disks(vm_):
                 qemu_target = source.getAttribute('dev')
             elif source.hasAttribute('protocol') and \
                     source.hasAttribute('name'):  # For rbd network
-                qemu_target = '%s:%s' % (
+                qemu_target = '{0}:{1}'.format(
                         source.getAttribute('protocol'),
                         source.getAttribute('name'))
             if qemu_target:
@@ -1093,7 +1099,9 @@ def get_profiles(hypervisor=None):
      - nic
      - disk
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' virt.get_profiles
         salt '*' virt.get_profiles hypervisor=esxi
@@ -1581,7 +1589,7 @@ def is_hyper():
         salt '*' virt.is_hyper
     '''
     try:
-        import libvirt
+        import libvirt  # pylint: disable=import-error
     except ImportError:
         # not a usable hypervisor without libvirt module
         return False
@@ -1625,7 +1633,7 @@ def vm_cputime(vm_=None):
             cputime_percent = (1.0e-7 * cputime / host_cpus) / vcpus
         return {
                 'cputime': int(raw[4]),
-                'cputime_percent': int('%.0f' % cputime_percent)
+                'cputime_percent': int('{0:.0f}'.format(cputime_percent))
                }
     info = {}
     if vm_:
@@ -1679,7 +1687,7 @@ def vm_netstats(vm_=None):
                 'tx_errs': 0,
                 'tx_drop': 0
                }
-        for attrs in nics.values():
+        for attrs in six.itervalues(nics):
             if 'target' in attrs:
                 dev = attrs['target']
                 stats = dom.interfaceStats(dev)

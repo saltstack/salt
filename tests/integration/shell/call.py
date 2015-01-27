@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.integration.shell.call
@@ -24,6 +22,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -50,6 +49,27 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
 
+    def test_json_out_indent(self):
+        out = self.run_call('test.ping -l quiet --out=json --out-indent=-1')
+        expect = ['{"local": true}']
+        self.assertEqual(expect, out)
+
+        out = self.run_call('test.ping -l quiet --out=json --out-indent=0')
+        expect = ['{', '"local": true', '}']
+        self.assertEqual(expect, out)
+
+        out = self.run_call('test.ping -l quiet --out=json --out-indent=1')
+        expect = ['{', ' "local": true', '}']
+        self.assertEqual(expect, out)
+
+    def test_local_sls_call(self):
+        fileroot = os.path.join(integration.FILES, 'file', 'base')
+        out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
+        self.assertIn('Name: test.echo', ''.join(out))
+        self.assertIn('Result: True', ''.join(out))
+        self.assertIn('hello', ''.join(out))
+        self.assertIn('Succeeded: 1', ''.join(out))
+
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
@@ -57,6 +77,13 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             'salt \'*\' user.delete name remove=True force=True',
             ''.join(ret)
         )
+
+    def test_salt_documentation_too_many_arguments(self):
+        '''
+        Test to see if passing additional arguments shows an error
+        '''
+        data = self.run_call('-d virtualenv.create /tmp/ve', catch_stderr=True)
+        self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
 
     def test_issue_6973_state_highstate_exit_code(self):
         '''
@@ -67,7 +94,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         src = os.path.join(integration.FILES, 'file/base/top.sls')
         dst = os.path.join(integration.FILES, 'file/base/top.sls.bak')
         shutil.move(src, dst)
-        expected_comment = 'No Top file or external nodes data matches found'
+        expected_comment = 'No states found for this minion'
         try:
             stdout, retcode = self.run_call(
                 '-l quiet --retcode-passthrough state.highstate',
@@ -80,34 +107,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_return(self):
-        config_dir = '/tmp/salttest'
-        minion_config_file = os.path.join(config_dir, 'minion')
-        minion_config = {
-            'id': 'minion_test_issue_2731',
-            'master': 'localhost',
-            'master_port': 64506,
-            'root_dir': '/tmp/salttest',
-            'pki_dir': 'pki',
-            'cachedir': 'cachedir',
-            'sock_dir': 'minion_sock',
-            'open_mode': True,
-            'log_file': '/tmp/salttest/minion_test_issue_2731',
-            'log_level': 'quiet',
-            'log_level_logfile': 'info'
-        }
-
-        # Remove existing logfile
-        if os.path.isfile('/tmp/salttest/minion_test_issue_2731'):
-            os.unlink('/tmp/salttest/minion_test_issue_2731')
-
-        # Let's first test with a master running
-        open(minion_config_file, 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
-        out = self.run_call('-c {0} cmd.run "echo returnTOmaster"'.format(
-            os.path.join(integration.INTEGRATION_TEST_DIR, 'files', 'conf')))
-        jobs = [a for a in self.run_run('-c {0} jobs.list_jobs'.format(
-            os.path.join(integration.INTEGRATION_TEST_DIR, 'files', 'conf')))]
+        self.run_call('cmd.run "echo returnTOmaster"')
+        jobs = [a for a in self.run_run('jobs.list_jobs')]
 
         self.assertTrue(True in ['returnTOmaster' in j for j in jobs])
         # lookback jid
@@ -116,52 +117,60 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                        if 'returnTOmaster' in j][0]
         jid, idx = None, first_match[0]
         while idx > 0:
-            jid = re.match("('|\")([0-9]+)('|\"):", jobs[idx])
+            jid = re.match("([0-9]+):", jobs[idx])
             if jid:
-                jid = jid.group(2)
+                jid = jid.group(1)
                 break
             idx -= 1
         assert idx > 0
         assert jid
         master_out = [
-            a for a in self.run_run('-c {0} jobs.lookup_jid {1}'.format(
-                os.path.join(integration.INTEGRATION_TEST_DIR,
-                             'files',
-                             'conf'),
-                jid))]
+            a for a in self.run_run('jobs.lookup_jid {0}'.format(jid))
+        ]
         self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_issue_2731_masterless(self):
-        config_dir = '/tmp/salttest'
+        root_dir = os.path.join(integration.TMP, 'issue-2731')
+        config_dir = os.path.join(root_dir, 'conf')
         minion_config_file = os.path.join(config_dir, 'minion')
+        logfile = os.path.join(root_dir, 'minion_test_issue_2731')
+
+        if not os.path.isdir(config_dir):
+            os.makedirs(config_dir)
+
+        with salt.utils.fopen(self.get_config_file_path('master')) as fhr:
+            master_config = yaml.load(fhr.read())
+
+        master_root_dir = master_config['root_dir']
         this_minion_key = os.path.join(
-            config_dir, 'pki', 'minions', 'minion_test_issue_2731'
+            master_root_dir, 'pki', 'minions', 'minion_test_issue_2731'
         )
 
         minion_config = {
             'id': 'minion_test_issue_2731',
             'master': 'localhost',
             'master_port': 64506,
-            'root_dir': '/tmp/salttest',
+            'root_dir': master_root_dir,
             'pki_dir': 'pki',
             'cachedir': 'cachedir',
             'sock_dir': 'minion_sock',
             'open_mode': True,
-            'log_file': '/tmp/salttest/minion_test_issue_2731',
+            'log_file': logfile,
             'log_level': 'quiet',
             'log_level_logfile': 'info'
         }
 
         # Remove existing logfile
-        if os.path.isfile('/tmp/salttest/minion_test_issue_2731'):
-            os.unlink('/tmp/salttest/minion_test_issue_2731')
+        if os.path.isfile(logfile):
+            os.unlink(logfile)
 
         start = datetime.now()
         # Let's first test with a master running
-        open(minion_config_file, 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            fh_.write(
+                yaml.dump(minion_config, default_flow_style=False)
+            )
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
@@ -188,9 +197,10 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         # Now let's remove the master configuration
         minion_config.pop('master')
         minion_config.pop('master_port')
-        open(minion_config_file, 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            fh_.write(
+                yaml.dump(minion_config, default_flow_style=False)
+            )
 
         out = self.run_script(
             'salt-call',
@@ -235,9 +245,10 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         # Should work with local file client
         minion_config['file_client'] = 'local'
-        open(minion_config_file, 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(minion_config_file, 'w') as fh_:
+            fh_.write(
+                yaml.dump(minion_config, default_flow_style=False)
+            )
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
@@ -262,13 +273,13 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         os.chdir(config_dir)
 
-        minion_config = yaml.load(
-            open(self.get_config_file_path('minion'), 'r').read()
-        )
-        minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        open(os.path.join(config_dir, 'minion'), 'w').write(
-            yaml.dump(minion_config, default_flow_style=False)
-        )
+        with salt.utils.fopen(self.get_config_file_path('minion'), 'r') as fh_:
+            minion_config = yaml.load(fh_.read())
+            minion_config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.fopen(os.path.join(config_dir, 'minion'), 'w') as fh_:
+                fh_.write(
+                    yaml.dump(minion_config, default_flow_style=False)
+                )
         ret = self.run_script(
             'salt-call',
             '--config-dir {0} cmd.run "echo foo"'.format(
@@ -291,6 +302,95 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             os.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
+
+    def test_issue_15074_output_file_append(self):
+        output_file_append = os.path.join(integration.TMP, 'issue-15074')
+        try:
+            # Let's create an initial output file with some data
+            ret = self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file_append
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+
+            with salt.utils.fopen(output_file_append) as ofa:
+                output = ofa.read()
+
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} --output-file-append -g'.format(
+                    self.get_config_dir(),
+                    output_file_append
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            with salt.utils.fopen(output_file_append) as ofa:
+                self.assertEqual(ofa.read(), output + output)
+        finally:
+            if os.path.exists(output_file_append):
+                os.unlink(output_file_append)
+
+    def test_issue_14979_output_file_permissions(self):
+        output_file = os.path.join(integration.TMP, 'issue-14979')
+        current_umask = os.umask(0077)
+        try:
+            # Let's create an initial output file with some data
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            stat1 = os.stat(output_file)
+
+            # Let's change umask
+            os.umask(0777)
+
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} --output-file-append -g'.format(
+                    self.get_config_dir(),
+                    output_file
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            stat2 = os.stat(output_file)
+            self.assertEqual(stat1.st_mode, stat2.st_mode)
+            # Data was appeneded to file
+            self.assertTrue(stat1.st_size < stat2.st_size)
+
+            # Let's remove the output file
+            os.unlink(output_file)
+
+            # Not appending data
+            self.run_script(
+                'salt-call',
+                '-c {0} --output-file={1} -g'.format(
+                    self.get_config_dir(),
+                    output_file
+                ),
+                catch_stderr=True,
+                with_retcode=True
+            )
+            stat3 = os.stat(output_file)
+            # Mode must have changed since we're creating a new log file
+            self.assertNotEqual(stat1.st_mode, stat3.st_mode)
+            # Data was appended to file
+            self.assertEqual(stat1.st_size, stat3.st_size)
+        finally:
+            if os.path.exists(output_file):
+                os.unlink(output_file)
+            # Restore umask
+            os.umask(current_umask)
 
 
 if __name__ == '__main__':

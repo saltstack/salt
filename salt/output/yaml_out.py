@@ -1,8 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-Output data in YAML, this outputter defaults to printing in YAML block mode
-for better readability.
+Display return data in YAML format
+==================================
+
+This outputter defaults to printing in YAML block mode for better readability.
+
+Example output::
+
+    saltmine:
+      foo:
+        bar: baz
+        dictionary:
+          abc: 123
+          def: 456
+        list:
+          - Hello
+          - World
 '''
+from __future__ import absolute_import
 
 # Import third party libs
 import yaml

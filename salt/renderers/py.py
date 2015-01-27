@@ -2,12 +2,32 @@
 '''
 Pure python state renderer
 
-The sls file should contain a function called ``run`` which returns high state
-data
+The SLS file should contain a function called ``run`` which returns high state
+data.
 
-In this module, a few objects are defined for you, including the usual
-(with``__`` added) ``__salt__`` dictionary, ``__grains__``,
-``__pillar__``, ``__opts__``, ``__env__``, and ``__sls__``.
+In this module, a few objects are defined for you, giving access to Salt's
+execution functions, grains, pillar, etc. They are:
+
+- ``__salt__`` - :ref:`Execution functions <all-salt.modules>` (i.e.
+  ``__salt__['test.echo']('foo')``)
+- ``__grains__`` - :ref:`Grains <targeting-grains>` (i.e. ``__grains__['os']``)
+- ``__pillar__`` - :ref:`Pillar data <pillar>` (i.e. ``__pillar__['foo']``)
+- ``__opts__`` - Minion configuration options
+- ``__env__`` - The effective salt fileserver environment (i.e. ``base``). Also
+  referred to as a "saltenv". ``__env__`` should not be modified in a pure
+  python SLS file. To use a different environment, the environment should be
+  set when executing the state. This can be done in a couple different ways:
+
+  - Using the ``saltenv`` argument on the salt CLI (i.e. ``salt '*' state.sls foo.bar.baz saltenv=env_name``).
+  - By adding a ``saltenv`` argument to an individual state within the SLS
+    file. In other words, adding a line like this to the state's data
+    structure: ``{'saltenv': 'env_name'}``
+
+- ``__sls__`` - The SLS path of the file. For example, if the root of the base
+  environment is ``/srv/salt``, and the SLS file is
+  ``/srv/salt/foo/bar/baz.sls``, then ``__sls__`` in that file will be
+  ``foo.bar.baz``.
+
 
 .. code-block:: python
    :linenos:
@@ -51,6 +71,7 @@ In this module, a few objects are defined for you, including the usual
         return config
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

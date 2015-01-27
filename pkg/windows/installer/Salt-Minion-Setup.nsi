@@ -1,5 +1,5 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "2014.1.0"
+!define PRODUCT_VERSION "{{ salt_version }}"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -12,6 +12,8 @@
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
+
+!include x64.nsh
 
 Var Dialog
 Var Label
@@ -115,6 +117,18 @@ Function updateMinionConfig
 
 FunctionEnd
 
+Function MsiQueryProductState
+
+  !define INSTALLSTATE_DEFAULT "5"
+  Var /GLOBAL NeedVcRedist                       ; used as a return value
+
+  Pop $R0
+  StrCpy $NeedVcRedist "False"
+  System::Call "msi::MsiQueryProductStateA(t '$R0') i.r0"
+  StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
+  StrCpy $NeedVcRedist "True"
+
+FunctionEnd
 
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
@@ -123,6 +137,37 @@ InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
+
+; Check and install Visual C++ 2008 SP1 MFC Security Update redist packages
+; See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
+Section -Prerequisites
+
+  !define VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
+  !define VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
+  !define VC_REDIST_X64_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe"
+  !define VC_REDIST_X86_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe"
+
+  Var /GLOBAL VcRedistGuid
+  Var /GLOBAL VcRedistUri
+  ${If} ${RunningX64}
+    StrCpy $VcRedistGuid ${VC_REDIST_X64_GUID}
+    StrCpy $VcRedistUri  ${VC_REDIST_X64_URI}
+  ${Else}
+    StrCpy $VcRedistGuid ${VC_REDIST_X86_GUID}
+    StrCpy $VcRedistUri  ${VC_REDIST_X86_URI}
+  ${EndIf}
+
+  Push $VcRedistGuid
+  Call MsiQueryProductState
+  ${If} $NeedVcRedist == "True"
+    NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
+    Pop $R0
+    StrCmp $R0 "success" +2
+      MessageBox MB_OK "VC redist package download failed: $R0" /SD IDOK    ; just report, do not break installation
+    Execwait '"$TEMP\vcredist.exe" /q'
+  ${EndIf}
+
+SectionEnd
 
 Section "MainSection" SEC01
 
@@ -158,11 +203,11 @@ FunctionEnd
 
 Function un.onUninstSuccess
   HideWindow
-  MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer."
+  MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer." /SD IDOK
 FunctionEnd
 
 Function un.onInit
-  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" IDYES +2
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" /SD IDYES IDYES +2
   Abort
 FunctionEnd
 

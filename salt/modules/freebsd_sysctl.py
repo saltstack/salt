@@ -2,6 +2,7 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -25,7 +26,7 @@ def _formatfor(name, value, config, tail=''):
         return '{0}={1}{2}'.format(name, value, tail)
 
 
-def show():
+def show(config_file=False):
     '''
     Return a list of sysctl parameters for this minion
 
@@ -52,9 +53,9 @@ def show():
     )
     cmd = 'sysctl -ae'
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
     comps = ['']
-    for line in out:
+    for line in out.splitlines():
         if any([line.startswith('{0}.'.format(root)) for root in roots]):
             comps = line.split('=', 1)
             ret[comps[0]] = comps[1]
@@ -76,7 +77,7 @@ def get(name):
         salt '*' sysctl.get hw.physmem
     '''
     cmd = 'sysctl -n {0}'.format(name)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     return out
 
 
@@ -92,7 +93,7 @@ def assign(name, value):
     '''
     ret = {}
     cmd = 'sysctl {0}="{1}"'.format(name, value)
-    data = __salt__['cmd.run_all'](cmd)
+    data = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if data['retcode'] != 0:
         raise CommandExecutionError('sysctl failed: {0}'.format(

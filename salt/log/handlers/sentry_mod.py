@@ -69,6 +69,7 @@
     .. _`Raven`: http://raven.readthedocs.org
     .. _`Raven client documentation`: http://raven.readthedocs.org/en/latest/config/index.html#client-arguments
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -170,7 +171,10 @@ def setup_handlers():
         # processors: A list of processors to apply to events before sending
         # them to the Sentry server. Useful for sending additional global state
         # data or sanitizing data that you want to keep off of the server.
-        'processors': get_config_value('processors')
+        'processors': get_config_value('processors'),
+
+        # dsn: Ensure the DSN is passed into the client
+        'dsn': dsn
     })
 
     client = raven.Client(**options)

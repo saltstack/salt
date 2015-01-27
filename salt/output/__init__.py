@@ -6,47 +6,105 @@ for managing outputters.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import errno
 import logging
 import traceback
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.loader
 import salt.utils
+from salt.utils import print_cli
+import salt.ext.six as six
 
+# Are you really sure !!!
+# dealing with unicode is not as simple as setting defaultencoding
+# which can break other python modules imported by salt in bad ways...
+# reloading sys is not either a good idea...
+# reload(sys)
+# sys.setdefaultencoding('utf-8')
 
 log = logging.getLogger(__name__)
 
-STATIC = (
-    'yaml_out',
-    'text_out',
-    'raw_out',
-    'json_out',
-)
 
-
-def display_output(data, out, opts=None):
+def try_printout(data, out, opts):
     '''
-    Print the passed data using the desired output
+    Safely get the string to print out, try the configured outputter, then
+    fall back to nested and then to raw
     '''
     try:
-        display_data = get_printout(out, opts)(data).rstrip()
+        return get_printout(out, opts)(data).rstrip()
     except (KeyError, AttributeError):
         log.debug(traceback.format_exc())
         opts.pop('output', None)
-        display_data = get_printout('nested', opts)(data).rstrip()
+        try:
+            return get_printout('nested', opts)(data).rstrip()
+        except (KeyError, AttributeError):
+            log.error('Nested output failed: ', exec_info=True)
+            return get_printout('raw', opts)(data).rstrip()
+
+
+def get_progress(opts, out, progress):
+    '''
+    Get the progress bar from the given outputter
+    '''
+    return salt.loader.raw_mod(opts,
+                                out,
+                                'rawmodule',
+                                mod='output')['{0}.progress_iter'.format(out)](progress)
+
+
+def update_progress(opts, progress, progress_iter, out):
+    '''
+    Update the progress iterator for the given outputter
+    '''
+    # Look up the outputter
+    try:
+        progress_outputter = salt.loader.outputters(opts)[out]
+    except KeyError:  # Outputter is not loaded
+        log.warning('Progress outputter not available.')
+        return False
+    progress_outputter(progress, progress_iter)
+
+
+def progress_end(progress_iter):
+    try:
+        progress_iter.stop()
+    except Exception:
+        pass
+    return None
+
+
+def display_output(data, out=None, opts=None):
+    '''
+    Print the passed data using the desired output
+    '''
+    if opts is None:
+        opts = {}
+    display_data = try_printout(data, out, opts)
 
     output_filename = opts.get('output_file', None)
+    log.trace('data = {0}'.format(data))
     try:
-        if output_filename is not None:
+        # output filename can be either '' or None
+        if output_filename:
             with salt.utils.fopen(output_filename, 'a') as ofh:
-                ofh.write(display_data)
+                fdata = display_data
+                if isinstance(fdata, six.text_type):
+                    try:
+                        fdata = fdata.encode('utf-8')
+                    except (UnicodeDecodeError, UnicodeEncodeError):
+                        # try to let the stream write
+                        # even if we didn't encode it
+                        pass
+                ofh.write(fdata)
                 ofh.write('\n')
             return
         if display_data:
-            print(display_data)
+            print_cli(display_data)
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:
@@ -66,8 +124,10 @@ def get_printout(out, opts=None, **kwargs):
         if out == 'text':
             out = 'txt'
 
-    if out is None:
+    if out is None or out == '':
         out = 'nested'
+    if opts.get('progress', False):
+        out = 'progress'
 
     opts.update(kwargs)
     if 'color' not in opts:
@@ -90,6 +150,7 @@ def get_printout(out, opts=None, **kwargs):
 
     outputters = salt.loader.outputters(opts)
     if out not in outputters:
+        log.error('Invalid outputter {0} specified, fall back to nested'.format(out))
         return outputters['nested']
     return outputters[out]
 
@@ -98,4 +159,15 @@ def out_format(data, out, opts=None):
     '''
     Return the formatted outputter string for the passed data
     '''
-    return get_printout(out, opts)(data).rstrip()
+    return try_printout(data, out, opts)
+
+
+def strip_esc_sequence(txt):
+    '''
+    Replace ESC (ASCII 27/Oct 33) to prevent unsafe strings
+    from writing their own terminal manipulation commands
+    '''
+    if isinstance(txt, six.string_types):
+        return txt.replace('\033', '?')
+    else:
+        return txt

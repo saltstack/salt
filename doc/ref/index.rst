@@ -6,7 +6,7 @@ Reference
     auth/all/index
     cli/index
     clientacl
-    clients/index   
+    clients/index
     clouds/all/index
     configuration/*
     configuration/logging/*
@@ -15,12 +15,14 @@ Reference
     file_server/all/index
     internals/index
     modules/all/index
-    output/all/index 
+    netapi/all/index
+    output/all/index
     peer
     pillar/index
     pillar/all/index
     renderers/index
     returners/index
+    roster/all/index
     runners/index
     states/index
     states/all/index
@@ -28,4 +30,3 @@ Reference
     tops/index
     tops/all/index
     wheel/all/index
-

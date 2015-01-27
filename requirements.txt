@@ -1,8 +1,0 @@
-Jinja2
-M2Crypto
-msgpack-python
-pycrypto
-PyYAML
-pyzmq >= 2.2.0
-MarkupSafe
-apache-libcloud >= 0.14.0

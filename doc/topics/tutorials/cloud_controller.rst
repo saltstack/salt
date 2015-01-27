@@ -2,18 +2,19 @@
 Salt as a Cloud Controller
 ==========================
 
-In Salt 0.14.0 advanced cloud control systems were introduced, allowing for
+In Salt 0.14.0, an advanced cloud control system were introduced, allow
 private cloud vms to be managed directly with Salt. This system is generally
 referred to as :strong:`Salt Virt`.
 
 The Salt Virt system already exists and is installed within Salt itself, this
-means that beyond setting up Salt no additional salt code needs to be deployed.
+means that beside setting up Salt, no additional salt code needs to be
+deployed.
 
-The main goal of Salt Virt is the facilitate a very fast and simple cloud. A
-cloud that can scale and a fully featured cloud. Salt Virt comes with the
+The main goal of Salt Virt is to facilitate a very fast and simple cloud. The
+cloud that can scale and fully featured. Salt Virt comes with the
 ability to set up and manage complex virtual machine networking, powerful
-image and disk management, as well as virtual machine migration, migration
-with and without shared storage.
+image, and disk management, as well as virtual machine migration with and without
+shared storage.
 
 This means that Salt Virt can be used to create a cloud from a blade center
 and a SAN, but can also create a cloud out of a swarm of Linux Desktops
@@ -30,10 +31,10 @@ installed and setting up the hypervisor network interfaces.
 Installing Hypervisor Software
 ------------------------------
 
-Salt Virt is made to be hypervisor agnostic, but currently the only fully
+Salt Virt is made to be hypervisor agnostic but currently the only fully
 implemented hypervisor is KVM via libvirt.
 
-The required software for a hypervisor is libvirt and kvm. For advanced 
+The required software for a hypervisor is libvirt and kvm. For advanced
 features install libguestfs or qemu-nbd.
 
 .. note::
@@ -52,20 +53,16 @@ to set up the libvirt pki keys.
 .. code-block:: yaml
 
     libvirt:
-      pkg:
-        - installed
-      file:
-        - managed
+      pkg.installed: []
+      file.managed:
         - name: /etc/sysconfig/libvirtd
         - contents: 'LIBVIRTD_ARGS="--listen"'
         - require:
           - pkg: libvirt
-      libvirt:
-        - keys
+      libvirt.keys:
         - require:
           - pkg: libvirt
-      service:
-        - running
+      service.running:
         - name: libvirtd
         - require:
           - pkg: libvirt
@@ -75,12 +72,10 @@ to set up the libvirt pki keys.
           - file: libvirt
 
     libvirt-python:
-      pkg:
-        - installed
+      pkg.installed: []
 
     libguestfs:
-      pkg:
-        - installed
+      pkg.installed:
         - pkgs:
           - libguestfs
           - libguestfs-tools
@@ -113,14 +108,14 @@ Virtual Machine Network Setup
 -----------------------------
 
 Salt Virt comes with a system to model the network interfaces used by the
-deployed virtual machines, by default a single interface is created for the
+deployed virtual machines; by default a single interface is created for the
 deployed virtual machine and is bridged to ``br0``. To get going with the
-default networking setup ensure that the bridge interface named ``br0`` exists
+default networking setup, ensure that the bridge interface named ``br0`` exists
 on the hypervisor and is bridged to an active network device.
 
 .. note::
 
-    To use more advanced networking in Salt Virt read the `Salt Virt
+    To use more advanced networking in Salt Virt, read the `Salt Virt
     Networking` document:
 
     :doc:`Salt Virt Networking </topics/virt/nic>`
@@ -162,9 +157,11 @@ Virtual Machine generation applications are available for many platforms:
 vm-builder:
   https://wiki.debian.org/VMBuilder
 
-Once virtual machines images are available the easiest way to make them available
-to Salt Virt is to place them in the Salt file server. Just copy an image into
-``/srv/salt`` and it can now be used by Salt Virt.
+  .. seealso:: :formula_url:`vmbuilder-formula`
+
+Once virtual machine images are available, the easiest way to make them
+available to Salt Virt is to place them in the Salt file server. Just copy an
+image into ``/srv/salt`` and it can now be used by Salt Virt.
 
 For purposes of this demo, the file name ``centos.img`` will be used.
 
@@ -172,7 +169,7 @@ Existing Virtual Machine Images
 -------------------------------
 
 Many existing Linux distributions distribute virtual machine images which
-can be used with Salt Virt. Please be advised that NONE OF THESE IMAGES ARE 
+can be used with Salt Virt. Please be advised that NONE OF THESE IMAGES ARE
 SUPPORTED BY SALTSTACK.
 
 CentOS
@@ -264,7 +261,7 @@ opened on hypervisors:
 .. note::
 
     More in-depth information regarding distribution specific firewall settings can read in:
-    
+
     :doc:`Opening the Firewall up for Salt </topics/tutorials/firewall>`
 
 Salt also needs an additional flag to be turned on as well. The ``virt.tunnel``

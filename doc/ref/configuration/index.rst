@@ -7,21 +7,8 @@ Salt configuration is very simple. The default configuration for the
 setting up a :term:`minion` is to set the location of the master in the minion
 configuration file.
 
-.. glossary::
-
-    master
-        The Salt master is the central server that all minions connect to. 
-        Commands are run on the minions through the master, and minions send data
-        back to the master (unless otherwise redirected with a :doc:`returner
-        </ref/returners/index>`). It is started with the
-        :command:`salt-master` program.
-
-    minion
-        Salt minions are the potentially hundreds or thousands of servers that
-        may be queried and controlled from the master.
-
 The configuration files will be installed to :file:`/etc/salt` and are named
-after the respective components, :file:`/etc/salt/master` and
+after the respective components, :file:`/etc/salt/master`, and
 :file:`/etc/salt/minion`.
 
 Master Configuration
@@ -83,11 +70,13 @@ Running Salt
 .. admonition:: Having trouble?
 
     The simplest way to troubleshoot Salt is to run the master and minion in
-    the foreground with :option:`log level <salt-master -l>` set to ``debug``::
+    the foreground with :option:`log level <salt-master -l>` set to ``debug``:
+
+    .. code-block:: bash
 
         salt-master --log-level=debug
 
-    For information on salt's logging system please see the :doc:`logging 
+    For information on salt's logging system please see the :doc:`logging
     document</ref/configuration/logging/index>`.
 
 
@@ -96,13 +85,14 @@ Running Salt
     To run Salt as another user, set the :conf_master:`user` parameter in the
     master config file.
 
-    Additionally, ownership and permissions need to be set such that the
+    Additionally, ownership, and permissions need to be set such that the
     desired user can read from and write to the following directories (and
     their subdirectories, where applicable):
 
     * /etc/salt
     * /var/cache/salt
     * /var/log/salt
+    * /var/run/salt
 
     More information about running salt as a non-privileged user can be found
     :doc:`here </ref/configuration/nonroot>`.
@@ -191,4 +181,3 @@ Understanding :doc:`targeting </topics/targeting/index>` is important. From ther
 depending on the way you wish to use Salt, you should also proceed to learn
 about :doc:`States </topics/tutorials/starting_states>` and :doc:`Execution Modules
 </ref/modules/index>`.
-

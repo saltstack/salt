@@ -5,20 +5,28 @@ Tests for the file state
 '''
 
 # Import python libs
-import os
 import glob
+import grp
+import os
+import pwd
 import shutil
+import stat
+import tempfile
+import filecmp
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting import skipIf
+from salttesting.helpers import (
+    destructiveTest,
+    ensure_in_syspath,
+    with_system_user_and_group
+)
 ensure_in_syspath('../../')
+
 
 # Import salt libs
 import integration
 import salt.utils
-
-# Import Python libs
-import stat
 
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -114,6 +122,69 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(master_data, minion_data)
         self.assertSaltTrueReturn(ret)
 
+    def test_managed_file_mode(self):
+        '''
+        file.managed, correct file permissions
+        '''
+        desired_mode = 504    # 0770 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, mode='0770', source='salt://grail/scene33'
+        )
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_file_mode_file_exists_replace(self):
+        '''
+        file.managed, existing file with replace=True, change permissions
+        '''
+        initial_mode = 504    # 0770 octal
+        desired_mode = 384    # 0600 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, mode=oct(initial_mode), source='salt://grail/scene33'
+        )
+
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(initial_mode), oct(resulting_mode))
+
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    def test_managed_file_mode_file_exists_noreplace(self):
+        '''
+        file.managed, existing file with replace=False, change permissions
+        '''
+        initial_mode = 504    # 0770 octal
+        desired_mode = 384    # 0600 octal
+        name = os.path.join(integration.TMP, 'grail_scene33')
+        ret = self.run_state(
+            'file.managed', name=name, replace=True, mode=oct(initial_mode), source='salt://grail/scene33'
+        )
+
+        ret = self.run_state(
+            'file.managed', name=name, replace=False, mode=oct(desired_mode), source='salt://grail/scene33'
+        )
+        resulting_mode = stat.S_IMODE(
+            os.stat(name).st_mode
+        )
+        self.assertEqual(oct(desired_mode), oct(resulting_mode))
+        self.assertSaltTrueReturn(ret)
+
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_managed_dir_mode(self):
         '''
         Tests to ensure that file.managed creates directories with the
@@ -121,19 +192,23 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         desired_mode = 511  # 0777 in octal
         name = os.path.join(integration.TMP, 'a', 'managed_dir_mode_test_file')
+        desired_owner = 'nobody'
         ret = self.run_state(
             'file.managed',
             name=name,
             source='salt://grail/scene33',
             mode=600,
             makedirs=True,
+            user=desired_owner,
             dir_mode=oct(desired_mode)  # 0777
         )
         resulting_mode = stat.S_IMODE(
             os.stat(os.path.join(integration.TMP, 'a')).st_mode
         )
+        resulting_owner = pwd.getpwuid(os.stat(os.path.join(integration.TMP, 'a')).st_uid).pw_name
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
+        self.assertEqual(desired_owner, resulting_owner)
 
     def test_test_managed(self):
         '''
@@ -151,7 +226,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         file.managed test interface
         '''
         name = os.path.join(integration.TMP, 'grail_not_scene33')
-        with open(name, 'wb') as fp_:
+        with salt.utils.fopen(name, 'wb') as fp_:
             fp_.write('test_managed_show_diff_false\n')
 
         ret = self.run_state(
@@ -370,10 +445,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             template='jinja', defaults={'spam': _ts})
         try:
             self.assertSaltTrueReturn(ret)
-            self.assertIn(
-                _ts,
-                salt.utils.fopen(os.path.join(name, 'scene33'), 'r').read()
-            )
+            with salt.utils.fopen(os.path.join(name, 'scene33'), 'r') as fp_:
+                contents = fp_.read()
+            self.assertIn(_ts, contents)
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
@@ -445,39 +519,342 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             os.remove(name)
 
-    def test_sed(self):
+    def test_replace_issue_18612(self):
         '''
-        file.sed
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested file contains one commented line
+        The commented line should be uncommented in the end, nothing else should change
         '''
-        name = os.path.join(integration.TMP, 'sed_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('change_me')
-        ret = self.run_state(
-            'file.sed', name=name, before='change', after='salt'
-        )
+        test_name = 'test_replace_issue_18612'
+        path_test = os.path.join(integration.TMP, test_name)
+
+        with salt.utils.fopen(path_test, 'w+') as fp_test_:
+            fp_test_.write('# en_US.UTF-8')
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(self.run_state('file.replace',
+                name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', append_if_not_found=True))
+
         try:
-            with salt.utils.fopen(name, 'r') as fp_:
-                self.assertIn('salt', fp_.read())
+            # ensure, the number of lines didn't change, even after invoking 'file.replace' 3 times
+            with salt.utils.fopen(path_test, 'r') as fp_test_:
+                self.assertTrue((sum(1 for _ in fp_test_) == 1))
+
+            # ensure, the replacement succeeded
+            with salt.utils.fopen(path_test, 'r') as fp_test_:
+                self.assertTrue(fp_test_.read().startswith('en_US.UTF-8'))
+
+            # ensure, all runs of 'file.replace' reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18612_prepend(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The replacement pattern should be prepended to the file
+        '''
+        test_name = 'test_replace_issue_18612_prepend'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_out = os.path.join(
+            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(self.run_state('file.replace',
+                name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', prepend_if_not_found=True))
+
+        try:
+            # ensure, the resulting file contains the expected lines
+            self.assertTrue(filecmp.cmp(path_test, path_out))
+
+            # ensure the initial file was properly backed up
+            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+
+            # ensure, all runs of 'file.replace' reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18612_append(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The replacement pattern should be appended to the file
+        '''
+        test_name = 'test_replace_issue_18612_append'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_out = os.path.join(
+            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(self.run_state('file.replace',
+                name=path_test, pattern='^# en_US.UTF-8$', repl='en_US.UTF-8', append_if_not_found=True))
+
+        try:
+            # ensure, the resulting file contains the expected lines
+            self.assertTrue(filecmp.cmp(path_test, path_out))
+
+            # ensure the initial file was properly backed up
+            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+
+            # ensure, all runs of 'file.replace' reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18612_append_not_found_content(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested multfile contains multiple lines not matching the pattern or replacement in any way
+        The 'not_found_content' value should be appended to the file
+        '''
+        test_name = 'test_replace_issue_18612_append_not_found_content'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_out = os.path.join(
+            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(
+                self.run_state('file.replace',
+                    name=path_test,
+                    pattern='^# en_US.UTF-8$',
+                    repl='en_US.UTF-8',
+                    append_if_not_found=True,
+                    not_found_content='THIS LINE WASN\'T FOUND! SO WE\'RE APPENDING IT HERE!'
+            ))
+
+        try:
+            # ensure, the resulting file contains the expected lines
+            self.assertTrue(filecmp.cmp(path_test, path_out))
+
+            # ensure the initial file was properly backed up
+            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+
+            # ensure, all runs of 'file.replace' reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18612_change_mid_line_with_comment(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18612:
+
+        Using 'prepend_if_not_found' or 'append_if_not_found' resulted in
+        an infinitely growing file as 'file.replace' didn't check beforehand
+        whether the changes had already been done to the file
+
+        # Case description:
+
+        The tested file contains 5 key=value pairs
+        The commented key=value pair #foo=bar should be changed to foo=salt
+        The comment char (#) in front of foo=bar should be removed
+        '''
+        test_name = 'test_replace_issue_18612_change_mid_line_with_comment'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_out = os.path.join(
+            integration.FILES, 'file.replace', '{0}.out'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        ret = []
+        for x in range(0, 3):
+            ret.append(self.run_state('file.replace',
+                name=path_test, pattern='^#foo=bar$', repl='foo=salt', append_if_not_found=True))
+
+        try:
+            # ensure, the resulting file contains the expected lines
+            self.assertTrue(filecmp.cmp(path_test, path_out))
+
+            # ensure the initial file was properly backed up
+            self.assertTrue(filecmp.cmp(path_test + '.bak', path_in))
+
+            # ensure, all 'file.replace' runs reported success
+            for item in ret:
+                self.assertSaltTrueReturn(item)
+        finally:
+            os.remove(path_test)
+
+    def test_replace_issue_18841_no_changes(self):
+        '''
+        Test the (mis-)behaviour of file.replace as described in #18841:
+
+        Using file.replace in a way which shouldn't modify the file at all
+        results in changed mtime of the original file and a backup file being created.
+
+        # Case description
+
+        The tested file contains multiple lines
+        The tested file contains a line already matching the replacement (no change needed)
+        The tested file's content shouldn't change at all
+        The tested file's mtime shouldn't change at all
+        No backup file should be created
+        '''
+        test_name = 'test_replace_issue_18841_no_changes'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
+        )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        # get (m|a)time of file
+        fstats_orig = os.stat(path_test)
+
+        # define how far we predate the file
+        age = 5*24*60*60
+
+        # set (m|a)time of file 5 days into the past
+        os.utime(path_test, (fstats_orig.st_mtime-age, fstats_orig.st_atime-age))
+
+        ret = self.run_state('file.replace',
+            name=path_test,
+            pattern='^hello world$',
+            repl='goodbye world',
+            show_changes=True,
+            flags=['IGNORECASE'],
+            backup=False
+        )
+
+        # get (m|a)time of file
+        fstats_post = os.stat(path_test)
+
+        try:
+            # ensure, the file content didn't change
+            self.assertTrue(filecmp.cmp(path_in, path_test))
+
+            # ensure no backup file was created
+            self.assertFalse(os.path.exists(path_test + '.bak'))
+
+            # ensure the file's mtime didn't change
+            self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+
+            # ensure, all 'file.replace' runs reported success
             self.assertSaltTrueReturn(ret)
         finally:
-            os.remove(name)
+            os.remove(path_test)
 
-    def test_test_sed(self):
+    def test_replace_issue_18841_omit_backup(self):
         '''
-        file.sed test integration
+        Test the (mis-)behaviour of file.replace as described in #18841:
+
+        Using file.replace in a way which shouldn't modify the file at all
+        results in changed mtime of the original file and a backup file being created.
+
+        # Case description
+
+        The tested file contains multiple lines
+        The tested file contains a line already matching the replacement (no change needed)
+        The tested file's content shouldn't change at all
+        The tested file's mtime shouldn't change at all
+        No backup file should be created, although backup=False isn't explicitly defined
         '''
-        name = os.path.join(integration.TMP, 'sed_test_test')
-        with salt.utils.fopen(name, 'w+') as fp_:
-            fp_.write('change_me')
-        ret = self.run_state(
-            'file.sed', test=True, name=name, before='change', after='salt'
+        test_name = 'test_replace_issue_18841_omit_backup'
+        path_in = os.path.join(
+            integration.FILES, 'file.replace', '{0}.in'.format(test_name)
         )
+        path_test = os.path.join(integration.TMP, test_name)
+
+        # create test file based on initial template
+        shutil.copyfile(path_in, path_test)
+
+        # get (m|a)time of file
+        fstats_orig = os.stat(path_test)
+
+        # define how far we predate the file
+        age = 5*24*60*60
+
+        # set (m|a)time of file 5 days into the past
+        os.utime(path_test, (fstats_orig.st_mtime-age, fstats_orig.st_atime-age))
+
+        ret = self.run_state('file.replace',
+            name=path_test,
+            pattern='^hello world$',
+            repl='goodbye world',
+            show_changes=True,
+            flags=['IGNORECASE']
+        )
+
+        # get (m|a)time of file
+        fstats_post = os.stat(path_test)
+
         try:
-            with salt.utils.fopen(name, 'r') as fp_:
-                self.assertIn('change', fp_.read())
-            self.assertSaltNoneReturn(ret)
+            # ensure, the file content didn't change
+            self.assertTrue(filecmp.cmp(path_in, path_test))
+
+            # ensure no backup file was created
+            self.assertFalse(os.path.exists(path_test + '.bak'))
+
+            # ensure the file's mtime didn't change
+            self.assertTrue(fstats_post.st_mtime, fstats_orig.st_mtime-age)
+
+            # ensure, all 'file.replace' runs reported success
+            self.assertSaltTrueReturn(ret)
         finally:
-            os.remove(name)
+            os.remove(path_test)
 
     def test_comment(self):
         '''
@@ -597,11 +974,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertFalse(os.path.exists(name))
         except AssertionError:
             os.remove(name)
-
-        ret = self.run_state('file.append', name=name, text='cheese')
-        # A non existing file is touched, the text is NOT appended.
-        self.assertSaltFalseReturn(ret)
-
         try:
             # Non existing file get's touched
             if os.path.isfile(name):
@@ -690,7 +1062,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 'state.sls', mods='testappend.issue-2227'
             )
             self.assertSaltTrueReturn(ret)
-            contents = salt.utils.fopen(tmp_file_append, 'r').read()
+            with salt.utils.fopen(tmp_file_append, 'r') as fp_:
+                contents_pre = fp_.read()
 
             # It should not append text again
             ret = self.run_function(
@@ -698,10 +1071,10 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
 
-            self.assertEqual(
-                contents, salt.utils.fopen(tmp_file_append, 'r').read()
-            )
+            with salt.utils.fopen(tmp_file_append, 'r') as fp_:
+                contents_post = fp_.read()
 
+            self.assertEqual(contents_pre, contents_post)
         except AssertionError:
             shutil.copy(tmp_file_append, tmp_file_append + '.bak')
             raise
@@ -900,12 +1273,15 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             "    - backup: '.bak2'",
             '    - show_changes: True',
             '']
-        open(template_path, 'w').write(
-                '\n'.join(sls_template).format(testcase_filedest))
+        with salt.utils.fopen(template_path, 'w') as fp_:
+            fp_.write('\n'.join(sls_template).format(testcase_filedest))
+
         try:
             ret = self.run_function('state.sls', mods='issue-8343')
             for name, step in ret.items():
                 self.assertSaltTrueReturn({name: step})
+            with salt.utils.fopen(testcase_filedest) as fp_:
+                contents = fp_.read().split('\n')
             self.assertEqual(
                 ['#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
                  'foo',
@@ -917,7 +1293,72 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                  '',
                  '#-- end salt managed zoneend --',
                  ''],
-                open(testcase_filedest).read().split('\n')
+                contents
+            )
+        finally:
+            if os.path.isdir(testcase_filedest):
+                os.unlink(testcase_filedest)
+            for filename in glob.glob('{0}.bak*'.format(testcase_filedest)):
+                os.unlink(filename)
+
+    def test_issue_11003_immutable_lazy_proxy_sum(self):
+        template_path = os.path.join(integration.TMP_STATE_TREE, 'issue-11003.sls')
+        testcase_filedest = os.path.join(integration.TMP, 'issue-11003.txt')
+        sls_template = [
+            'a{0}:',
+            '  file.absent:',
+            '    - name: {0}',
+            '',
+            '{0}:',
+            '  file.managed:',
+            '    - contents: |',
+            '                #',
+            '',
+            'test-acc1:',
+            '  file.accumulated:',
+            '    - require_in:',
+            '      - file: final',
+            '    - filename: {0}',
+            '    - text: |',
+            '            bar',
+            '',
+            'test-acc2:',
+            '  file.accumulated:',
+            '    - watch_in:',
+            '      - file: final',
+            '    - filename: {0}',
+            '    - text: |',
+            '            baz',
+            '',
+            'final:',
+            '  file.blockreplace:',
+            '    - name: {0}',
+            '    - marker_start: "#-- start managed zone PLEASE, DO NOT EDIT"',
+            '    - marker_end: "#-- end managed zone"',
+            '    - content: \'\'',
+            '    - append_if_not_found: True',
+            '    - show_changes: True'
+        ]
+
+        with salt.utils.fopen(template_path, 'w') as fp_:
+            fp_.write('\n'.join(sls_template).format(testcase_filedest))
+
+        try:
+            ret = self.run_function('state.sls', mods='issue-11003')
+            for name, step in ret.items():
+                self.assertSaltTrueReturn({name: step})
+            with salt.utils.fopen(testcase_filedest) as fp_:
+                contents = fp_.read().split('\n')
+            self.assertEqual(
+                ['#',
+                 '#-- start managed zone PLEASE, DO NOT EDIT',
+                 'bar',
+                 '',
+                 'baz',
+                 '',
+                 '#-- end managed zone',
+                 ''],
+                contents
             )
         finally:
             if os.path.isdir(testcase_filedest):
@@ -932,7 +1373,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         This is more generic than just a file test. Feel free to move
         '''
         # Get a path to the temporary file
-         # 한국어 시험 (korean)
+        # 한국어 시험 (korean)
         # '\xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98' (utf-8)
         # u'\ud55c\uad6d\uc5b4 \uc2dc\ud5d8' (unicode)
         korean_1 = '한국어 시험'
@@ -989,8 +1430,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             '    - require:',
             '      - cmd: some-utf8-file-content-remove',
         ]
-        open(template_path, 'w').write(
-                '\n'.join(template_lines))
+        with salt.utils.fopen(template_path, 'w') as fp_:
+            fp_.write('\n'.join(template_lines))
         try:
             ret = self.run_function('state.sls', mods='issue-8947')
             if not isinstance(ret, dict):
@@ -1074,6 +1515,144 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(test_file):
                 os.unlink(test_file)
                 os.unlink(template_path)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @with_system_user_and_group('user12209', 'group12209',
+                                on_existing='delete', delete=True)
+    def test_issue_12209_follow_symlinks(self, user, group):
+        '''
+        Ensure that symlinks are properly chowned when recursing (following
+        symlinks)
+        '''
+        tmp_dir = os.path.join(integration.TMP, 'test.12209')
+
+        # Cleanup the path if it already exists
+        if os.path.isdir(tmp_dir):
+            shutil.rmtree(tmp_dir)
+        elif os.path.isfile(tmp_dir):
+            os.remove(tmp_dir)
+
+        # Make the directories for this test
+        onedir = os.path.join(tmp_dir, 'one')
+        twodir = os.path.join(tmp_dir, 'two')
+        os.makedirs(onedir)
+        os.symlink(onedir, twodir)
+
+        try:
+            # Run the state
+            ret = self.run_state(
+                'file.directory', name=tmp_dir, follow_symlinks=True,
+                user=user, group=group, recurse=['user', 'group']
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Double-check, in case state mis-reported a True result. Since we are
+            # following symlinks, we expect twodir to still be owned by root, but
+            # onedir should be owned by the 'issue12209' user.
+            onestats = os.stat(onedir)
+            twostats = os.lstat(twodir)
+            self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+            self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
+            self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
+        finally:
+            if os.path.isdir(tmp_dir):
+                shutil.rmtree(tmp_dir)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @with_system_user_and_group('user12209', 'group12209',
+                                on_existing='delete', delete=True)
+    def test_issue_12209_no_follow_symlinks(self, user, group):
+        '''
+        Ensure that symlinks are properly chowned when recursing (not following
+        symlinks)
+        '''
+        tmp_dir = os.path.join(integration.TMP, 'test.12209')
+
+        # Cleanup the path if it already exists
+        if os.path.isdir(tmp_dir):
+            shutil.rmtree(tmp_dir)
+        elif os.path.isfile(tmp_dir):
+            os.remove(tmp_dir)
+
+        # Make the directories for this test
+        onedir = os.path.join(tmp_dir, 'one')
+        twodir = os.path.join(tmp_dir, 'two')
+        os.makedirs(onedir)
+        os.symlink(onedir, twodir)
+
+        try:
+            # Run the state
+            ret = self.run_state(
+                'file.directory', name=tmp_dir, follow_symlinks=False,
+                user=user, group=group, recurse=['user', 'group']
+            )
+            self.assertSaltTrueReturn(ret)
+
+            # Double-check, in case state mis-reported a True result. Since we
+            # are not following symlinks, we expect twodir to now be owned by
+            # the 'issue12209' user, just link onedir.
+            onestats = os.stat(onedir)
+            twostats = os.lstat(twodir)
+            self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
+            self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, user)
+            self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
+            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, group)
+        finally:
+            if os.path.isdir(tmp_dir):
+                shutil.rmtree(tmp_dir)
+
+    def test_template_local_file(self):
+        '''
+        Test a file.managed state with a local file as the source. Test both
+        with the file:// protocol designation prepended, and without it.
+        '''
+        source = tempfile.mkstemp()[-1]
+        dest = tempfile.mkstemp()[-1]
+        with salt.utils.fopen(source, 'w') as fp_:
+            fp_.write('{{ foo }}\n')
+
+        try:
+            for prefix in ('file://', ''):
+                ret = self.run_state(
+                    'file.managed',
+                    name=dest,
+                    source=prefix + source,
+                    template='jinja',
+                    context={'foo': 'Hello world!'}
+                )
+                self.assertSaltTrueReturn(ret)
+        finally:
+            os.remove(source)
+            os.remove(dest)
+
+    def test_template_local_file_noclobber(self):
+        '''
+        Test the case where a source file is in the minion's local filesystem,
+        and the source path is the same as the destination path.
+        '''
+        source = tempfile.mkstemp()[-1]
+        with salt.utils.fopen(source, 'w') as fp_:
+            fp_.write('{{ foo }}\n')
+
+        try:
+            ret = self.run_state(
+                'file.managed',
+                name=source,
+                source=source,
+                template='jinja',
+                context={'foo': 'Hello world!'}
+            )
+            self.assertSaltFalseReturn(ret)
+            self.assertEqual(
+                ret[next(iter(ret))]['comment'],
+                ('Unable to manage file: Source file cannot be the same as '
+                    'destination')
+            )
+        finally:
+            os.remove(source)
 
 if __name__ == '__main__':
     from integration import run_tests

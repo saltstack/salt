@@ -13,14 +13,10 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    with_system_account
+    with_system_user,
+    skip_if_binaries_missing
 )
 ensure_in_syspath('../../')
-
-try:
-    from salttesting.helpers import skip_if_binaries_missing
-except ImportError:
-    from integration import skip_if_binaries_missing
 
 # Import salt libs
 import integration
@@ -75,8 +71,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         )
 
         # save twice, no changes
-        ret = self.run_state('ssh_known_hosts.present', **kwargs)
-        self.assertSaltStateChangesEqual(ret, {})
+        self.run_state('ssh_known_hosts.present', **kwargs)
 
         # test again, nothing is about to be changed
         ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
@@ -158,7 +153,7 @@ class SSHAuthStateTests(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    @with_system_account('issue_7409', on_existing='delete', delete=True)
+    @with_system_user('issue_7409', on_existing='delete', delete=True)
     def test_issue_7409_no_linebreaks_between_keys(self, username):
 
         userdetails = self.run_function('user.info', [username])
@@ -170,6 +165,7 @@ class SSHAuthStateTests(integration.ModuleCase,
             name=authorized_keys_file,
             user=username,
             makedirs=True,
+            contents_newline=False,
             # Explicit no ending line break
             contents='ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root'
         )
@@ -185,15 +181,16 @@ class SSHAuthStateTests(integration.ModuleCase,
         self.assertSaltStateChangesEqual(
             ret, {'AAAAB3NzaC1kcQ9J5bYTEyZ==': 'New'}
         )
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    @with_system_account('issue_10198', on_existing='delete', delete=True)
+    @with_system_user('issue_10198', on_existing='delete', delete=True)
     def test_issue_10198_keyfile_from_another_env(self, username=None):
         userdetails = self.run_function('user.info', [username])
         user_ssh_dir = os.path.join(userdetails['home'], '.ssh')
@@ -222,10 +219,11 @@ class SSHAuthStateTests(integration.ModuleCase,
             comment=username
         )
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
         os.unlink(authorized_keys_file)
 
@@ -239,10 +237,11 @@ class SSHAuthStateTests(integration.ModuleCase,
             saltenv='prod'
         )
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
 
 if __name__ == '__main__':

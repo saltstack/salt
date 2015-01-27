@@ -2,6 +2,7 @@
 '''
 Module for managing ext2/3/4 file systems
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -18,7 +19,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return False
-    return 'extfs'
+    return True
 
 
 def mkfs(device, fs_type, **kwargs):
@@ -31,34 +32,34 @@ def mkfs(device, fs_type, **kwargs):
 
         salt '*' extfs.mkfs /dev/sda1 fs_type=ext4 opts='acl,noexec'
 
-    Valid options are::
+    Valid options are:
 
-        block_size: 1024, 2048 or 4096
-        check: check for bad blocks
-        direct: use direct IO
-        ext_opts: extended file system options (comma-separated)
-        fragment_size: size of fragments
-        force: setting force to True will cause mke2fs to specify the -F option
-               twice (it is already set once); this is truly dangerous
-        blocks_per_group: number of blocks in a block group
-        number_of_groups: ext4 option for a virtual block group
-        bytes_per_inode: set the bytes/inode ratio
-        inode_size: size of the inode
-        journal: set to True to create a journal (default on ext3/4)
-        journal_opts: options for the fs journal (comma separated)
-        blocks_file: read bad blocks from file
-        label: label to apply to the file system
-        reserved: percentage of blocks reserved for super-user
-        last_dir: last mounted directory
-        test: set to True to not actually create the file system (mke2fs -n)
-        number_of_inodes: override default number of inodes
-        creator_os: override "creator operating system" field
-        opts: mount options (comma separated)
-        revision: set the filesystem revision (default 1)
-        super: write superblock and group descriptors only
-        fs_type: set the filesystem type (REQUIRED)
-        usage_type: how the filesystem is going to be used
-        uuid: set the UUID for the file system
+    * **block_size**: 1024, 2048 or 4096
+    * **check**: check for bad blocks
+    * **direct**: use direct IO
+    * **ext_opts**: extended file system options (comma-separated)
+    * **fragment_size**: size of fragments
+    * **force**: setting force to True will cause mke2fs to specify the -F
+      option twice (it is already set once); this is truly dangerous
+    * **blocks_per_group**: number of blocks in a block group
+    * **number_of_groups**: ext4 option for a virtual block group
+    * **bytes_per_inode**: set the bytes/inode ratio
+    * **inode_size**: size of the inode
+    * **journal**: set to True to create a journal (default on ext3/4)
+    * **journal_opts**: options for the fs journal (comma separated)
+    * **blocks_file**: read bad blocks from file
+    * **label**: label to apply to the file system
+    * **reserved**: percentage of blocks reserved for super-user
+    * **last_dir**: last mounted directory
+    * **test**: set to True to not actually create the file system (mke2fs -n)
+    * **number_of_inodes**: override default number of inodes
+    * **creator_os**: override "creator operating system" field
+    * **opts**: mount options (comma separated)
+    * **revision**: set the filesystem revision (default 1)
+    * **super**: write superblock and group descriptors only
+    * **fs_type**: set the filesystem type (REQUIRED)
+    * **usage_type**: how the filesystem is going to be used
+    * **uuid**: set the UUID for the file system
 
     See the ``mke2fs(8)`` manpage for a more complete description of these
     options.
@@ -97,7 +98,7 @@ def mkfs(device, fs_type, **kwargs):
             else:
                 opts += '-{0} {1} '.format(opt, kwargs[key])
     cmd = 'mke2fs -F -t {0} {1}{2}'.format(fs_type, opts, device)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     ret = []
     for line in out:
         if not line:
@@ -128,28 +129,28 @@ def tune(device, **kwargs):
 
         salt '*' extfs.tune /dev/sda1 force=True label=wildstallyns opts='acl,noexec'
 
-    Valid options are::
+    Valid options are:
 
-        max: max mount count
-        count: mount count
-        error: error behavior
-        extended_opts: extended options (comma separated)
-        force: force, even if there are errors (set to True)
-        group: group name or gid that can use the reserved blocks
-        interval: interval between checks
-        journal: set to True to create a journal (default on ext3/4)
-        journal_opts: options for the fs journal (comma separated)
-        label: label to apply to the file system
-        reserved: percentage of blocks reserved for super-user
-        last_dir: last mounted directory
-        opts: mount options (comma separated)
-        feature: set or clear a feature (comma separated)
-        mmp_check: mmp check interval
-        reserved: reserved blocks count
-        quota_opts: quota options (comma separated)
-        time: time last checked
-        user: user or uid who can use the reserved blocks
-        uuid: set the UUID for the file system
+    * **max**: max mount count
+    * **count**: mount count
+    * **error**: error behavior
+    * **extended_opts**: extended options (comma separated)
+    * **force**: force, even if there are errors (set to True)
+    * **group**: group name or gid that can use the reserved blocks
+    * **interval**: interval between checks
+    * **journal**: set to True to create a journal (default on ext3/4)
+    * **journal_opts**: options for the fs journal (comma separated)
+    * **label**: label to apply to the file system
+    * **reserved**: percentage of blocks reserved for super-user
+    * **last_dir**: last mounted directory
+    * **opts**: mount options (comma separated)
+    * **feature**: set or clear a feature (comma separated)
+    * **mmp_check**: mmp check interval
+    * **reserved**: reserved blocks count
+    * **quota_opts**: quota options (comma separated)
+    * **time**: time last checked
+    * **user**: user or uid who can use the reserved blocks
+    * **uuid**: set the UUID for the file system
 
     See the ``mke2fs(8)`` manpage for a more complete description of these
     options.
@@ -182,7 +183,7 @@ def tune(device, **kwargs):
             else:
                 opts += '-{0} {1} '.format(opt, kwargs[key])
     cmd = 'tune2fs {0}{1}'.format(opts, device)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 
@@ -228,7 +229,7 @@ def dump(device, args=None):
     if args:
         cmd = cmd + ' -' + args
     ret = {'attributes': {}, 'blocks': {}}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     mode = 'opts'
     group = None
     for line in out:
@@ -241,7 +242,7 @@ def dump(device, args=None):
             comps = line.split(': ')
             if line.startswith('Filesystem features'):
                 ret['attributes'][comps[0]] = comps[1].split()
-            elif line.startswith('Group'):
+            elif line.startswith('Group') and not line.startswith('Group descriptor size'):
                 mode = 'blocks'
             else:
                 ret['attributes'][comps[0]] = comps[1].strip()

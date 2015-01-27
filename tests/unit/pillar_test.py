@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.unit.pillar_test
@@ -173,3 +171,8 @@ ssh:
             }[sls]
 
         client.get_state.side_effect = get_state
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(PillarTestCase, needs_daemon=False)

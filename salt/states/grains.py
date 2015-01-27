@@ -45,8 +45,10 @@ def present(name, value):
         ret['result'] = None
         if name not in __grains__:
             ret['comment'] = 'Grain {0} is set to be added'.format(name)
+            ret['changes'] = {'new': name}
         else:
             ret['comment'] = 'Grain {0} is set to be changed'.format(name)
+            ret['changes'] = {'new': name}
         return ret
     grain = __salt__['grains.setval'](name, value)
     if grain != {name: value}:
@@ -61,7 +63,7 @@ def present(name, value):
 
 def list_present(name, value):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
     Ensure the value is present in the list type grain
 
@@ -69,9 +71,9 @@ def list_present(name, value):
         The grain name
 
     value
-       The value is present in the list type grain
+        The value is present in the list type grain
 
-    The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_ .
+    The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
     .. code-block:: yaml
 
@@ -98,67 +100,181 @@ def list_present(name, value):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Value {1} is set to be appended to grain {0}'.format(name, value)
+            ret['changes'] = {'new': grain}
             return ret
 
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Grain {0} is set to be added'.format(name)
+        ret['changes'] = {'new': grain}
         return ret
 
-    __salt__['grains.append'](name, value)
+    new_grains = __salt__['grains.append'](name, value)
     if value not in __grains__.get(name):
         ret['result'] = False
         ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
         return ret
     ret['comment'] = 'Append value {1} to grain {0}'.format(name, value)
+    ret['changes'] = {'new': new_grains}
     return ret
 
 
 def list_absent(name, value):
     '''
-    Ensure the value is absent in the list type grain
+    Delete a value from a grain formed as a list
 
     name
         The grain name
 
     value
-       The value is  absent in the list type grain
+       The value to delete from the grain list
 
-    The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_ .
+    The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
     .. code-block:: yaml
 
-        roles:
-          grains.list_absent:
-            - value: db
+      roles:
+        grains.list_absent:
+          - value: db
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
     grain = __grains__.get(name)
-
     if grain:
-        # check whether grain is a list
-        if not isinstance(grain, list):
-            ret['result'] = False
-            ret['coment'] = 'Grain {0} is not a valid list'
-            return ret
+        if isinstance(grain, list):
+            if value not in grain:
+                ret['comment'] = 'Value {1} is absent from grain {0}' \
+                                 .format(name, value)
+                return ret
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Value {1} in grain {0} is set to ' \
+                                 'be deleted'.format(name, value)
+                ret['changes'] = {'deleted': value}
+                return ret
+            __salt__['grains.remove'](name, value)
+            ret['comment'] = 'Value {1} was deleted from grain {0}'\
+                .format(name, value)
+            ret['changes'] = {'deleted': value}
+        else:
+            ret['comment'] = 'Grain {0} is not a valid list'\
+                .format(name)
+    else:
+        ret['comment'] = 'Grain {0} does not exist'.format(name)
+    return ret
 
-        if value not in grain:
-            ret['comment'] = 'Value {1} is absent in grain {0}'.format(name, value)
-            return ret
+
+def absent(name, destructive=False):
+    '''
+    .. versionadded:: 2014.7.0
+
+    Delete a grain from the grains config file
+
+    name
+        The grain name
+
+    :param destructive: If destructive is True, delete the entire grain. If
+        destructive is False, set the grain's value to None. Defaults to False.
+
+    .. code-block:: yaml
+
+      grain_name:
+        grains.absent
+    '''
+
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    grain = __grains__.get(name)
+    if grain:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Value {1} is set to be remove from grain {0}'.format(name, value)
+            if destructive is True:
+                ret['comment'] = 'Grain {0} is set to be deleted'\
+                    .format(name)
+                ret['changes'] = {'deleted': name}
+            else:
+                ret['comment'] = 'Value for grain {0} is set to be ' \
+                                 'deleted (None)'.format(name)
+                ret['changes'] = {'grain': name, 'value': None}
             return ret
-        __salt__['grains.remove'](name, value)
-
-        if value in __grains__.get(name):
-            ret['result'] = False
-            ret['comment'] = 'Failed remove value {1} from grain {0}'.format(name, value)
-            return ret
-        ret['comment'] = 'Remove value {1} from grain {0}'.format(name, value)
+        __salt__['grains.delval'](name, destructive)
+        if destructive is True:
+            ret['comment'] = 'Grain {0} was deleted'.format(name)
+            ret['changes'] = {'deleted': name}
+        else:
+            ret['comment'] = 'Value for grain {0} was set to {1}'\
+                .format(name, None)
+            ret['changes'] = {'grain': name, 'value': None}
     else:
-        ret['comment'] = 'Grain {0} is not exist or empty'.format(name)
+        ret['comment'] = 'Grain {0} does not exist'.format(name)
+    return ret
+
+
+def append(name, value, convert=False):
+    '''
+    .. versionadded:: 2014.7.0
+
+    Append a value to a list in the grains config file
+
+    name
+        The grain name
+
+    value
+        The value to append
+
+    :param convert: If convert is True, convert non-list contents into a list.
+        If convert is False and the grain contains non-list contents, an error
+        is given. Defaults to False.
+
+    .. code-block:: yaml
+
+      grain_name:
+        grains.append:
+          - value: to_be_appended
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+    grain = __grains__.get(name)
+    if grain:
+        if isinstance(grain, list):
+            if value in grain:
+                ret['comment'] = 'Value {1} is already in the list ' \
+                                 'for grain {0}'.format(name, value)
+                return ret
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'Value {1} in grain {0} is set to ' \
+                                 'be added'.format(name, value)
+                ret['changes'] = {'added': value}
+                return ret
+            __salt__['grains.append'](name, value)
+            ret['comment'] = 'Value {1} was added to grain {0}'\
+                .format(name, value)
+            ret['changes'] = {'added': value}
+        else:
+            if convert is True:
+                if __opts__['test']:
+                    ret['result'] = None
+                    ret['comment'] = 'Grain {0} is set to be converted ' \
+                                     'to list and value {1} will be ' \
+                                     'added'.format(name, value)
+                    ret['changes'] = {'added': value}
+                    return ret
+                grain = [grain]
+                grain.append(value)
+                __salt__['grains.setval'](name, grain)
+                ret['comment'] = 'Value {1} was added to grain {0}'\
+                    .format(name, value)
+                ret['changes'] = {'added': value}
+            else:
+                ret['comment'] = 'Grain {0} is not a valid list'\
+                    .format(name)
+    else:
+        ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret

@@ -19,8 +19,14 @@ configuration at:
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       provider: softlayer_hw
 
+The SoftLayer Python Library needs to be installed in order to use the
+SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
+
+:depends: softlayer
 '''
 # pylint: disable=E0102
+
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -30,7 +36,7 @@ import time
 
 # Import salt cloud libs
 import salt.config as config
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
 
@@ -55,21 +61,11 @@ def __virtual__():
     Set up the libcloud functions and check for SoftLayer configurations.
     '''
     if not HAS_SLLIBS:
-        log.debug(
-            'The SoftLayer Python Library needs to be installed in ordere to '
-            'use the SoftLayer HW salt.cloud module. See: '
-            'https://pypi.python.org/pypi/SoftLayer'
-        )
         return False
 
     if get_configured_provider() is False:
-        log.debug(
-            'There is no SoftLayer cloud provider configuration available. Not '
-            'loading module.'
-        )
         return False
 
-    log.debug('Loading SoftLayer cloud module')
     return True
 
 
@@ -407,6 +403,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -482,6 +479,7 @@ def create(vm_):
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': kwargs},
+        transport=__opts__['transport']
     )
 
     try:
@@ -493,10 +491,10 @@ def create(vm_):
             'Error creating {0} on SoftLayer\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -563,6 +561,7 @@ def create(vm_):
     if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
         deploy_script = script(vm_)
         deploy_kwargs = {
+            'opts': __opts__,
             'host': ip_address,
             'username': ssh_username,
             'password': passwd,
@@ -644,6 +643,7 @@ def create(vm_):
             'executing deploy script',
             'salt/cloud/{0}/deploying'.format(vm_['name']),
             {'kwargs': event_kwargs},
+            transport=__opts__['transport']
         )
 
         deployed = False
@@ -679,6 +679,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
+        transport=__opts__['transport']
     )
 
     return ret
@@ -697,10 +698,11 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
 
     ret = {}
     conn = get_conn(service='Account')
-    response = conn.getBareMetalInstances(mask=mask)
+    response = conn.getHardware(mask=mask)
 
     for node in response:
         ret[node['hostname']] = node
+    salt.utils.cloud.cache_node_list(ret, __active_provider_name__.split(':')[0], __opts__)
     return ret
 
 
@@ -721,7 +723,7 @@ def list_nodes(call=None):
                 nodes['error']['Errors']['Error']['Message']
             )
         )
-    for node in nodes.keys():
+    for node in nodes:
         ret[node] = {
             'id': nodes[node]['hostname'],
             'ram': nodes[node]['memoryCount'],
@@ -753,6 +755,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
 
@@ -760,7 +763,9 @@ def destroy(name, call=None):
     '''
     Destroy a node.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud --destroy mymachine
     '''
@@ -775,6 +780,7 @@ def destroy(name, call=None):
         'destroying instance',
         'salt/cloud/{0}/destroying'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
 
     node = show_instance(name, call='action')
@@ -782,7 +788,7 @@ def destroy(name, call=None):
     response = conn.createCancelServerTicket(
         {
             'id': node['id'],
-            'reason': 'Salt Cloud Hardware Server Cancelation',
+            'reason': 'Salt Cloud Hardware Server Cancellation',
             'content': 'Please cancel this server',
             'cancelAssociatedItems': True,
             'attachmentType': 'HARDWARE',
@@ -794,7 +800,10 @@ def destroy(name, call=None):
         'destroyed instance',
         'salt/cloud/{0}/destroyed'.format(name),
         {'name': name},
+        transport=__opts__['transport']
     )
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return response
 

@@ -27,7 +27,7 @@ that can solve many specific problems in an infrastructure.
 
 The backbone of Salt is the remote execution engine, which creates a high-speed,
 secure and bi-directional communication net for groups of systems. On top of this
-communication system, Salt provides an extremely fast, flexible and easy-to-use
+communication system, Salt provides an extremely fast, flexible, and easy-to-use
 configuration management system called ``Salt States``.
 
 Installing Salt
@@ -43,7 +43,7 @@ Starting Salt
 -------------
 
 Salt functions on a master/minion topology. A master server acts as a
-central control bus for the clients, which called ``minions``. The minions
+central control bus for the clients, which are called ``minions``. The minions
 connect back to the master.
 
 
@@ -184,7 +184,7 @@ master. To list the keys that are on the master:
 
     salt-key -L
 
-The keys that have been rejected, accepted and pending acceptance are listed.
+The keys that have been rejected, accepted, and pending acceptance are listed.
 The easiest way to accept the minion key is to accept all pending keys:
 
 .. code-block:: bash
@@ -194,52 +194,33 @@ The easiest way to accept the minion key is to accept all pending keys:
 .. note::
 
     Keys should be verified! The secure thing to do before accepting a key is
-    to run ``salt-key -p minion-id`` to print the public key for the minion.
-    This can then be compared against the minion's public key file, which is
-    located (on the minion, of course) at ``/etc/salt/pki/minion/minion.pub``.
+    to run ``salt-key -f minion-id`` to print the fingerprint of the minion's
+    public key. This fingerprint can then be compared against the fingerprint
+    generated on the minion.
 
-    On the master::
+    On the master:
 
-        # salt-key -p foo.domain.com
-        Accepted Keys:
-        foo.domain.com:  -----BEGIN PUBLIC KEY-----
-        MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0JcA0IEp/yqghK5V2VLM
-        jbG7FWV6qtw/ubTDBnpDGQgrvSNOtd0QcJsAzAtDcHwrudQgyxTZGVJqPY7gLc7P
-        5b4EFWt5E1w3+KZ+XXy4YtW5oOzVN5BvsJ85g7c0TUnmjL7p3MUUXE4049Ue/zgX
-        jtbFJ0aa1HB8bnlQdWWOeflYRNEQL8482ZCmXXATFP1l5uJA9Pr6/ltdWtQTsXUA
-        bEseUGEpmq83vAkwtZIyJRG2cJh8ZRlJ6whSMg6wr7lFvStHQQzKHt9pRPml3lLK
-        ba2X07myAEJq/lpJNXJm5bkKV0+o8hqYQZ1ndh9HblHb2EoDBNbuIlhYft1uv8Tp
-        8beaEbq8ZST082sS/NjeL7W1T9JS6w2rw4GlUFuQlbqW8FSl1VDo+Alxu0VAr4GZ
-        gZpl2DgVoL59YDEVrlB464goly2c+eY4XkNT+JdwQ9LwMr83/yAAG6EGNpjT3pZg
-        Wey7WRnNTIF7H7ISwEzvik1GrhyBkn6K1RX3uAf760ZsQdhxwHmop+krgVcC0S93
-        xFjbBFF3+53mNv7BNPPgl0iwgA9/WuPE3aoE0A8Cm+Q6asZjf8P/h7KS67rIBEKV
-        zrQtgf3aZBbW38CT4fTzyWAP138yrU7VSGhPMm5KfTLywNsmXeaR5DnZl6GGNdL1
-        fZDM+J9FIGb/50Ee77saAlUCAwEAAQ==
-        -----END PUBLIC KEY-----
+    .. code-block:: bash
 
-    On the minion::
+        # salt-key -f foo.domain.com
+        Unaccepted Keys:
+        foo.domain.com:  39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
 
-        # cat /etc/salt/pki/minion/minion.pub
-        -----BEGIN PUBLIC KEY-----
-        MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0JcA0IEp/yqghK5V2VLM
-        jbG7FWV6qtw/ubTDBnpDGQgrvSNOtd0QcJsAzAtDcHwrudQgyxTZGVJqPY7gLc7P
-        5b4EFWt5E1w3+KZ+XXy4YtW5oOzVN5BvsJ85g7c0TUnmjL7p3MUUXE4049Ue/zgX
-        jtbFJ0aa1HB8bnlQdWWOeflYRNEQL8482ZCmXXATFP1l5uJA9Pr6/ltdWtQTsXUA
-        bEseUGEpmq83vAkwtZIyJRG2cJh8ZRlJ6whSMg6wr7lFvStHQQzKHt9pRPml3lLK
-        ba2X07myAEJq/lpJNXJm5bkKV0+o8hqYQZ1ndh9HblHb2EoDBNbuIlhYft1uv8Tp
-        8beaEbq8ZST082sS/NjeL7W1T9JS6w2rw4GlUFuQlbqW8FSl1VDo+Alxu0VAr4GZ
-        gZpl2DgVoL59YDEVrlB464goly2c+eY4XkNT+JdwQ9LwMr83/yAAG6EGNpjT3pZg
-        Wey7WRnNTIF7H7ISwEzvik1GrhyBkn6K1RX3uAf760ZsQdhxwHmop+krgVcC0S93
-        xFjbBFF3+53mNv7BNPPgl0iwgA9/WuPE3aoE0A8Cm+Q6asZjf8P/h7KS67rIBEKV
-        zrQtgf3aZBbW38CT4fTzyWAP138yrU7VSGhPMm5KfTLywNsmXeaR5DnZl6GGNdL1
-        fZDM+J9FIGb/50Ee77saAlUCAwEAAQ==
-        -----END PUBLIC KEY-----
+    On the minion:
+
+    .. code-block:: bash
+
+        # salt-call key.finger --local
+        local:
+            39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
+
+    If they match, approve the key with ``salt-key -a foo.domain.com``.
 
 
 Sending the First Commands
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now that the minion is connected to the master and authenticated, the master 
+Now that the minion is connected to the master and authenticated, the master
 can start to command the minion.
 
 Salt commands allow for a vast set of functions to be executed and for
@@ -257,15 +238,19 @@ start with looks like this:
 
 The ``*`` is the target, which specifies all minions.
 
-``test.ping`` tells the minion to run the :py:func:`test.ping <salt.modules.test.ping>` function.
+``test.ping`` tells the minion to run the :py:func:`test.ping
+<salt.modules.test.ping>` function.
 
-In the case of ``test.ping``, ``test`` refers to a :doc:`execution module </ref/modules/>`.
-``ping`` refers to the :py:func:`ping <salt.modules.test.ping>` function contained in the
-aforementioned ``test`` module.
+In the case of ``test.ping``, ``test`` refers to a :doc:`execution module
+</ref/modules/index>`.  ``ping`` refers to the :py:func:`ping
+<salt.modules.test.ping>` function contained in the aforementioned ``test``
+module.
 
 .. note::
-    Execution modules are the workhorses of Salt. They do the work on the system to perform
-    various tasks, such as manipulating files and restarting services.
+
+    Execution modules are the workhorses of Salt. They do the work on the
+    system to perform various tasks, such as manipulating files and restarting
+    services.
 
 The result of running this command will be the master instructing all of the
 minions to execute :py:func:`test.ping <salt.modules.test.ping>` in parallel
@@ -281,12 +266,13 @@ connected.
     the minion's hostname, but can be explicitly defined in the minion config as
     well by using the :conf_minion:`id` parameter.
 
-Of course, there are hundreds of other modules that can be called just as ``test.ping`` can.
-For example, the following would return disk usage on all targeted minions:
+Of course, there are hundreds of other modules that can be called just as
+``test.ping`` can.  For example, the following would return disk usage on all
+targeted minions:
 
 .. code-block:: bash
 
-    salt '*' disk.percent
+    salt '*' disk.usage
 
 
 Getting to Know the Functions
@@ -352,6 +338,30 @@ addresses, etc:
 
     salt '*' network.interfaces
 
+
+Changing the Output Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The default output format used for most Salt commands is called the ``nested``
+outputter, but there are several other outputters that can be used to change
+the way the output is displayed. For instance, the ``pprint`` outputter can be
+used to display the return data using Python's ``pprint`` module:
+
+.. code-block:: bash
+
+    root@saltmaster:~# salt myminion grains.item pythonpath --out=pprint
+    {'myminion': {'pythonpath': ['/usr/lib64/python2.7',
+                                 '/usr/lib/python2.7/plat-linux2',
+                                 '/usr/lib64/python2.7/lib-tk',
+                                 '/usr/lib/python2.7/lib-tk',
+                                 '/usr/lib/python2.7/site-packages',
+                                 '/usr/lib/python2.7/site-packages/gst-0.10',
+                                 '/usr/lib/python2.7/site-packages/gtk-2.0']}}
+
+The full list of Salt outputters, as well as example output, can be found
+:ref:`here <all-salt.output>`.
+
+
 ``salt-call``
 ~~~~~~~~~~~~~
 
@@ -388,7 +398,7 @@ Targeting
 
 Salt allows for minions to be targeted based on a wide range of criteria.  The
 default targeting system uses globular expressions to match minions, hence if
-there are minions named ``larry1``, ``larry2``, ``curly1`` and ``curly2``, a
+there are minions named ``larry1``, ``larry2``, ``curly1``, and ``curly2``, a
 glob of ``larry*`` will match ``larry1`` and ``larry2``, and a glob of ``*1``
 will match ``larry1`` and ``curly1``.
 
@@ -509,7 +519,7 @@ Now, to beef up the vim SLS formula, a ``vimrc`` can be added:
 .. code-block:: yaml
 
     vim:
-      pkg.installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -543,10 +553,8 @@ make an nginx subdirectory and add an init.sls file:
 .. code-block:: yaml
 
     nginx:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: nginx
 

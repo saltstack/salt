@@ -7,9 +7,9 @@ import integration
 import salt.wheel
 
 
-class KeyWheelModuleTest(integration.ClientCase):
+class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     def setUp(self):
-        self.wheel = salt.wheel.Wheel(self.get_opts())
+        self.wheel = salt.wheel.Wheel(self.get_config('client_config'))
 
     def test_list_all(self):
         ret = self.wheel.call_func('key.list_all')
@@ -24,6 +24,7 @@ class KeyWheelModuleTest(integration.ClientCase):
             ],
             'minions_rejected': [],
             'minions_pre': [],
+            'minions_denied': [],
             'minions': ['minion', 'sub_minion'],
         })
 

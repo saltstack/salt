@@ -8,6 +8,7 @@ Modify, retrieve, or delete values from OpenStack configuration files.
 :platform: linux
 
 '''
+from __future__ import absolute_import
 # Import Salt libs
 import salt.utils
 import salt.exceptions
@@ -37,7 +38,7 @@ __func_alias__ = {
 def __virtual__():
     if _quote is None and not HAS_DEPS:
         return False
-    return 'openstack_config'
+    return True
 
 
 def _fallback(*args, **kw):
@@ -76,7 +77,8 @@ def set_(filename, section, parameter, value):
     result = __salt__['cmd.run_all'](
             'openstack-config --set {0} {1} {2} {3}'.format(
                 filename, section, parameter, value
-                )
+                ),
+            python_shell=False,
             )
 
     if result['retcode'] == 0:
@@ -114,7 +116,8 @@ def get(filename, section, parameter):
     result = __salt__['cmd.run_all'](
             'openstack-config --get {0} {1} {2}'.format(
                 filename, section, parameter
-                )
+                ),
+            python_shell=False,
             )
 
     if result['retcode'] == 0:
@@ -151,7 +154,8 @@ def delete(filename, section, parameter):
     result = __salt__['cmd.run_all'](
             'openstack-config --del {0} {1} {2}'.format(
                 filename, section, parameter
-                )
+                ),
+            python_shell=False,
             )
 
     if result['retcode'] == 0:

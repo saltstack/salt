@@ -11,6 +11,7 @@ for the generation and signing of certificates for systems running libvirt:
     libvirt_keys:
       libvirt.keys
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -27,7 +28,7 @@ def keys(name, basepath='/etc/pki'):
         The name variable used to track the execution
 
     basepath
-        Defaults to `/etc/pki`, this is the root location used for libvirt
+        Defaults to ``/etc/pki``, this is the root location used for libvirt
         keys on the hypervisor
     '''
     #libvirt.serverkey.pem

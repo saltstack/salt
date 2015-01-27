@@ -9,6 +9,7 @@ from docutils.statemachine import ViewList
 from sphinx import addnodes
 from sphinx.directives import ObjectDescription, Directive
 from sphinx.domains import Domain, ObjType
+from sphinx.domains.python import PyObject
 from sphinx.locale import l_, _
 from sphinx.roles import XRefRole
 from sphinx.util.nodes import make_refnode
@@ -18,6 +19,14 @@ from sphinx.util.nodes import set_source_info
 from sphinx.domains import python as python_domain
 
 import salt
+
+
+class Event(PyObject):
+    '''
+    Document Salt events
+    '''
+    domain = 'salt'
+
 
 class LiterateCoding(Directive):
     '''
@@ -247,6 +256,7 @@ class SaltDomain(python_domain.PythonDomain):
 
     directives = python_domain.PythonDomain.directives
     directives.update({
+        'event': Event,
         'state': State,
         'formula': LiterateFormula,
         'currentformula': CurrentFormula,

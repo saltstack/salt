@@ -4,6 +4,10 @@ Disk monitoring state
 
 Monitor the state of disk resources
 '''
+from __future__ import absolute_import
+
+# Import salt libs
+from salt.ext.six import string_types
 
 __monitor__ = [
         'status',
@@ -12,7 +16,7 @@ __monitor__ = [
 
 def status(name, maximum=None, minimum=None):
     '''
-    Return the current disk usage stats for the named device
+    Return the current disk usage stats for the named mount point
     '''
     # Monitoring state, no changes will be made so no test interface needed
     ret = {'name': name,
@@ -28,13 +32,13 @@ def status(name, maximum=None, minimum=None):
         return ret
     if maximum:
         try:
-            if isinstance(maximum, basestring):
+            if isinstance(maximum, string_types):
                 maximum = int(maximum.strip('%'))
         except Exception:
             ret['comment'] += 'Max argument must be an integer '
     if minimum:
         try:
-            if isinstance(minimum, basestring):
+            if isinstance(minimum, string_types):
                 minimum = int(minimum.strip('%'))
         except Exception:
             ret['comment'] += 'Min argument must be an integer '

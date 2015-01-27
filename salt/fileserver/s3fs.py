@@ -58,14 +58,17 @@ A multiple-environment bucket must adhere to the following root directory
 structure::
 
     s3://<bucket name>/<environment>/<files>
+
+.. note:: This fileserver back-end requires the use of the MD5 hashing algorithm.
+    MD5 may not be compliant with all security policies.
 '''
+from __future__ import absolute_import
 
 # Import python libs
+import datetime
 import os
-import hashlib
 import time
 import pickle
-import urllib
 import logging
 
 # Import salt libs
@@ -74,10 +77,17 @@ import salt.modules
 import salt.utils
 import salt.utils.s3 as s3
 
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import filter
+from salt.ext.six.moves.urllib.parse import quote as _quote
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+
 log = logging.getLogger(__name__)
 
-_s3_cache_expire = 30  # cache for 30 seconds
-_s3_sync_on_update = True  # sync cache on update rather than jit
+S3_CACHE_EXPIRE = 30  # cache for 30 seconds
+S3_SYNC_ON_UPDATE = True  # sync cache on update rather than jit
 
 
 def envs():
@@ -88,7 +98,7 @@ def envs():
 
     # update and grab the envs from the metadata keys
     metadata = _init()
-    return metadata.keys()
+    return list(metadata.keys())
 
 
 def update():
@@ -98,13 +108,11 @@ def update():
 
     metadata = _init()
 
-    if _s3_sync_on_update:
-        key, keyid, service_url = _get_s3_key()
-
+    if S3_SYNC_ON_UPDATE:
         # sync the buckets to the local cache
         log.info('Syncing local cache from S3...')
-        for saltenv, env_meta in metadata.iteritems():
-            for bucket, files in _find_files(env_meta).iteritems():
+        for saltenv, env_meta in six.iteritems(metadata):
+            for bucket, files in six.iteritems(_find_files(env_meta)):
                 for file_path in files:
                     cached_file_path = _get_cached_file_name(bucket, saltenv, file_path)
                     log.info('{0} - {1} : {2}'.format(bucket, saltenv, file_path))
@@ -143,7 +151,7 @@ def find_file(path, saltenv='base', env=None, **kwargs):
         path = os.path.join(saltenv, path)
 
     # look for the files and check if they're ignored globally
-    for bucket_name, files in env_files.iteritems():
+    for bucket_name, files in six.iteritems(env_files):
         if path in files and not fs.is_file_ignored(__opts__, path):
             fnd['bucket'] = bucket_name
             fnd['path'] = path
@@ -255,8 +263,8 @@ def file_list(load):
     if not metadata or saltenv not in metadata:
         return ret
 
-    for buckets in _find_files(metadata[saltenv]).values():
-        files = filter(lambda f: not fs.is_file_ignored(__opts__, f), buckets)
+    for buckets in six.itervalues(_find_files(metadata[saltenv])):
+        files = [f for f in buckets if not fs.is_file_ignored(__opts__, f)]
         ret += _trim_env_off_path(files, saltenv)
 
     return ret
@@ -296,11 +304,11 @@ def dir_list(load):
         return ret
 
     # grab all the dirs from the buckets cache file
-    for dirs in _find_files(metadata[saltenv], dirs_only=True).values():
+    for dirs in six.itervalues(_find_dirs(metadata[saltenv])):
         # trim env and trailing slash
         dirs = _trim_env_off_path(dirs, saltenv, trim_slash=True)
         # remove empty string left by the base env dir in single bucket mode
-        ret += filter(None, dirs)
+        ret += [_f for _f in dirs if _f]
 
     return ret
 
@@ -315,8 +323,11 @@ def _get_s3_key():
     service_url = __opts__['s3.service_url'] \
         if 's3.service_url' in __opts__ \
         else None
+    verify_ssl = __opts__['s3.verify_ssl'] \
+        if 's3.verify_ssl' in __opts__ \
+        else None
 
-    return key, keyid, service_url
+    return key, keyid, service_url, verify_ssl
 
 
 def _init():
@@ -324,16 +335,22 @@ def _init():
     Connect to S3 and download the metadata for each file in all buckets
     specified and cache the data to disk.
     '''
-
     cache_file = _get_buckets_cache_filename()
-    exp = time.time() - _s3_cache_expire
+    exp = time.time() - S3_CACHE_EXPIRE
 
     # check mtime of the buckets files cache
-    if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > exp:
-        return _read_buckets_cache_file(cache_file)
-    else:
-        # bucket files cache expired
-        return _refresh_buckets_cache_file(cache_file)
+    metadata = None
+    try:
+        if os.path.getmtime(cache_file) > exp:
+            metadata = _read_buckets_cache_file(cache_file)
+    except OSError:
+        pass
+
+    if metadata is None:
+        # bucket files cache expired or does not exist
+        metadata = _refresh_buckets_cache_file(cache_file)
+
+    return metadata
 
 
 def _get_cache_dir():
@@ -380,7 +397,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Refreshing buckets cache file')
 
-    key, keyid, service_url = _get_s3_key()
+    key, keyid, service_url, verify_ssl = _get_s3_key()
     metadata = {}
 
     # helper s3 query function
@@ -390,6 +407,7 @@ def _refresh_buckets_cache_file(cache_file):
                 keyid=keyid,
                 bucket=bucket,
                 service_url=service_url,
+                verify_ssl=verify_ssl,
                 return_bin=False)
 
     if _is_env_per_bucket():
@@ -404,7 +422,23 @@ def _refresh_buckets_cache_file(cache_file):
                     continue
 
                 # grab only the files/dirs
-                bucket_files[bucket_name] = filter(lambda k: 'Key' in k, s3_meta)
+                bucket_files[bucket_name] = [k for k in s3_meta if 'Key' in k]
+
+                # check to see if we added any keys, otherwise investigate possible error conditions
+                if len(bucket_files[bucket_name]) == 0:
+                    meta_response = {}
+                    for k in s3_meta:
+                        if 'Code' in k or 'Message' in k:
+                            # assumes no duplicate keys, consisdent with current erro response.
+                            meta_response.update(k)
+                    # attempt use of human readable output first.
+                    try:
+                        log.warning("'{0}' response for bucket '{1}'".format(meta_response['Message'], bucket_name))
+                        continue
+                    except KeyError:
+                        # no human readable error message provided
+                        log.warning("'{0}' response for bucket '{1}'".format(meta_response['Code'], bucket_name))
+                        continue
 
             metadata[saltenv] = bucket_files
 
@@ -417,15 +451,32 @@ def _refresh_buckets_cache_file(cache_file):
             if not s3_meta:
                 continue
 
-            # pull out the environment dirs (eg. the root dirs)
-            files = filter(lambda k: 'Key' in k, s3_meta)
-            environments = map(lambda k: (os.path.dirname(k['Key']).split('/', 1))[0], files)
+            # pull out the environment dirs (e.g. the root dirs)
+            files = [k for k in s3_meta if 'Key' in k]
+
+            # check to see if we added any keys, otherwise investigate possible error conditions
+            if len(files) == 0:
+                meta_response = {}
+                for k in s3_meta:
+                    if 'Code' in k or 'Message' in k:
+                        # assumes no duplicate keys, consisdent with current erro response.
+                        meta_response.update(k)
+                # attempt use of human readable output first.
+                try:
+                    log.warning("'{0}' response for bucket '{1}'".format(meta_response['Message'], bucket_name))
+                    continue
+                except KeyError:
+                    # no human readable error message provided
+                    log.warning("'{0}' response for bucket '{1}'".format(meta_response['Code'], bucket_name))
+                    continue
+
+            environments = [(os.path.dirname(k['Key']).split('/', 1))[0] for k in files]
             environments = set(environments)
 
             # pull out the files for the environment
             for saltenv in environments:
                 # grab only files/dirs that match this saltenv
-                env_files = filter(lambda k: k['Key'].startswith(saltenv), files)
+                env_files = [k for k in files if k['Key'].startswith(saltenv)]
 
                 if saltenv not in metadata:
                     metadata[saltenv] = {}
@@ -455,26 +506,53 @@ def _read_buckets_cache_file(cache_file):
     log.debug('Reading buckets cache file')
 
     with salt.utils.fopen(cache_file, 'rb') as fp_:
-        data = pickle.load(fp_)
+        try:
+            data = pickle.load(fp_)
+        except (pickle.UnpicklingError, AttributeError, EOFError, ImportError,
+                IndexError, KeyError):
+            data = None
 
     return data
 
 
-def _find_files(metadata, dirs_only=False):
+def _find_files(metadata):
     '''
     Looks for all the files in the S3 bucket cache metadata
     '''
 
     ret = {}
 
-    for bucket_name, data in metadata.iteritems():
+    for bucket_name, data in six.iteritems(metadata):
         if bucket_name not in ret:
             ret[bucket_name] = []
 
-        # grab the paths from the metadata
-        filePaths = map(lambda k: k['Key'], data)
-        # filter out the files or the dirs depending on flag
-        ret[bucket_name] += filter(lambda k: k.endswith('/') == dirs_only, filePaths)
+        filePaths = [k['Key'] for k in data]
+        # filter out the dirs
+        ret[bucket_name] += [k for k in filePaths if not k.endswith('/')]
+
+    return ret
+
+
+def _find_dirs(metadata):
+    '''
+    Looks for all the directories in the S3 bucket cache metadata.
+
+    Supports trailing '/' keys (as created by S3 console) as well as
+    directories discovered in the path of file keys.
+    '''
+
+    ret = {}
+
+    for bucket_name, data in six.iteritems(metadata):
+        if bucket_name not in ret:
+            ret[bucket_name] = set()
+
+        for path in [k['Key'] for k in data]:
+            prefix = ''
+            for part in path.split('/')[:-1]:
+                directory = prefix + part + '/'
+                ret[bucket_name].add(directory)
+                prefix = directory
 
     return ret
 
@@ -483,13 +561,17 @@ def _find_file_meta(metadata, bucket_name, saltenv, path):
     '''
     Looks for a file's metadata in the S3 bucket cache file
     '''
-
     env_meta = metadata[saltenv] if saltenv in metadata else {}
     bucket_meta = env_meta[bucket_name] if bucket_name in env_meta else {}
-    files_meta = filter((lambda k: 'Key' in k), bucket_meta)
+    files_meta = list(list(filter((lambda k: 'Key' in k), bucket_meta)))
 
     for item_meta in files_meta:
         if 'Key' in item_meta and item_meta['Key'] == path:
+            try:
+                # Get rid of quotes surrounding md5
+                item_meta['ETag'] = item_meta['ETag'].strip('"')
+            except KeyError:
+                pass
             return item_meta
 
 
@@ -506,28 +588,70 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     Checks the local cache for the file, if it's old or missing go grab the
     file from S3 and update the cache
     '''
+    key, keyid, service_url, verify_ssl = _get_s3_key()
 
     # check the local cache...
     if os.path.isfile(cached_file_path):
         file_meta = _find_file_meta(metadata, bucket_name, saltenv, path)
-        file_md5 = filter(str.isalnum, file_meta['ETag']) if file_meta else None
+        if file_meta:
+            file_etag = file_meta['ETag']
 
-        cached_file_hash = hashlib.md5()
-        with salt.utils.fopen(cached_file_path, 'rb') as fp_:
-            cached_file_hash.update(fp_.read())
+            if file_etag.find('-') == -1:
+                file_md5 = file_etag
+                cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
 
-        # hashes match we have a cache hit
-        if cached_file_hash.hexdigest() == file_md5:
-            return
+                # hashes match we have a cache hit
+                if cached_md5 == file_md5:
+                    return
+            else:
+                cached_file_stat = os.stat(cached_file_path)
+                cached_file_size = cached_file_stat.st_size
+                cached_file_mtime = datetime.datetime.fromtimestamp(
+                    cached_file_stat.st_mtime)
+
+                cached_file_lastmod = datetime.datetime.strptime(
+                    file_meta['LastModified'], '%Y-%m-%dT%H:%M:%S.%fZ')
+                if (cached_file_size == int(file_meta['Size']) and
+                        cached_file_mtime > cached_file_lastmod):
+                    log.debug('cached file size equal to metadata size and '
+                              'cached file mtime later than metadata last '
+                              'modification time.')
+                    ret = s3.query(
+                        key=key,
+                        keyid=keyid,
+                        method='HEAD',
+                        bucket=bucket_name,
+                        service_url=service_url,
+                        verify_ssl=verify_ssl,
+                        path=_quote(path),
+                        local_file=cached_file_path
+                    )
+                    if ret is not None:
+                        for header in ret['headers']:
+                            name, value = header.split(':', 1)
+                            name = name.strip()
+                            value = value.strip()
+                            if name == 'Last-Modified':
+                                s3_file_mtime = datetime.datetime.strptime(
+                                    value, '%a, %d %b %Y %H:%M:%S %Z')
+                            elif name == 'Content-Length':
+                                s3_file_size = int(value)
+                        if (cached_file_size == s3_file_size and
+                                cached_file_mtime > s3_file_mtime):
+                            log.info(
+                                '{0} - {1} : {2} skipped download since cached file size '
+                                'equal to and mtime after s3 values'.format(
+                                    bucket_name, saltenv, path))
+                            return
 
     # ... or get the file from S3
-    key, keyid, service_url = _get_s3_key()
     s3.query(
         key=key,
         keyid=keyid,
         bucket=bucket_name,
         service_url=service_url,
-        path=urllib.quote(path),
+        verify_ssl=verify_ssl,
+        path=_quote(path),
         local_file=cached_file_path
     )
 
@@ -539,7 +663,7 @@ def _trim_env_off_path(paths, saltenv, trim_slash=False):
     env_len = None if _is_env_per_bucket() else len(saltenv) + 1
     slash_len = -1 if trim_slash else None
 
-    return map(lambda d: d[env_len:slash_len], paths)
+    return [d[env_len:slash_len] for d in paths]
 
 
 def _is_env_per_bucket():

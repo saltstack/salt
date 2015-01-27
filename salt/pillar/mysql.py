@@ -8,17 +8,21 @@ Retrieve Pillar data by doing a MySQL query
 
 Theory of mysql ext_pillar
 =====================================
+
 Ok, here's the theory for how this works...
+
 - If there's a keyword arg of mysql_query, that'll go first.
-- Then any non-keyworded args are processed in order.
+- Then any non-keyword args are processed in order.
 - Finally, remaining keywords are processed.
+
 We do this so that it's backward compatible with older configs.
 Keyword arguments are sorted before being appended, so that they're predictable,
 but they will always be applied last so overall it's moot.
 
 For each of those items we process, it depends on the object type:
-- Strings are executed as is and the pillar depth is determined by the number of
-  fields returned.
+
+- Strings are executed as is and the pillar depth is determined by the number
+  of fields returned.
 - A list has the first entry used as the query, the second as the pillar depth.
 - A mapping uses the keys "query" and "depth" as the tuple
 
@@ -27,7 +31,9 @@ exact settings.
 
 Configuring the mysql ext_pillar
 =====================================
+
 First an example of how legacy queries were specified.
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -35,6 +41,7 @@ First an example of how legacy queries were specified.
         mysql_query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
 
 Alternatively, a list of queries can be passed in
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -43,6 +50,7 @@ Alternatively, a list of queries can be passed in
         - "SELECT pillar,value FROM more_pillars WHERE minion_id = %s"
 
 Or you can pass in a mapping
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -52,6 +60,7 @@ Or you can pass in a mapping
 
 The query can be provided as a string as we have just shown, but they can be
 provided as lists
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -60,6 +69,7 @@ provided as lists
           2
 
 Or as a mapping
+
 .. code-block:: yaml
 
   ext_pillar:
@@ -69,46 +79,66 @@ Or as a mapping
 
 The depth defines how the dicts are constructed.
 Essentially if you query for fields a,b,c,d for each row you'll get:
+
 - With depth 1: {a: {"b": b, "c": c, "d": d}}
 - With depth 2: {a: {b: {"c": c, "d": d}}}
 - With depth 3: {a: {b: {c: d}}}
+
 Depth greater than 3 wouldn't be different from 3 itself.
 Depth of 0 translates to the largest depth needed, so 3 in this case.
 (max depth == key count - 1)
+
 The legacy compatibility translates to depth 1.
+
 Then they are merged the in a similar way to plain pillar data, in the order
 returned by MySQL.
+
 Thus subsequent results overwrite previous ones when they collide.
+
+The ignore_null option can be used to change the overwrite behavior so that
+only non-NULL values in subsequent results will overwrite.  This can be used
+to selectively overwrite default values.
+
+.. code-block:: yaml
+
+  ext_pillar:
+    - mysql:
+        - query: "SELECT pillar,value FROM pillars WHERE minion_id = 'default' and minion_id != %s"
+          depth: 2
+        - query: "SELECT pillar,value FROM pillars WHERE minion_id = %s"
+          depth: 2
+          ignore_null: True
 
 If you specify `as_list: True` in the mapping expression it will convert
 collisions to lists.
 
 If you specify `with_lists: '...'` in the mapping expression it will
 convert the specified depths to list.  The string provided is a sequence
-numbers that are comma separated.  The string '1,3' will result in:
+numbers that are comma separated.  The string '1,3' will result in::
 
-a,b,c,d,e,1  # field 1 same, field 3 differs
-a,b,c,f,g,2  # ^^^^
-a,z,h,y,j,3  # field 1 same, field 3 same
-a,z,h,y,k,4  # ^^^^
-  ^   ^
+    a,b,c,d,e,1  # field 1 same, field 3 differs
+    a,b,c,f,g,2  # ^^^^
+    a,z,h,y,j,3  # field 1 same, field 3 same
+    a,z,h,y,k,4  # ^^^^
+      ^   ^
+
 These columns define list grouping
 
 .. code-block:: python
 
-{a: [
-      {c: [
-          {e: 1},
-          {g: 2}
-          ]
-      },
-      {h: [
-          {j: 3, k: 4 }
-          ]
-      }
-]}
+    {a: [
+          {c: [
+              {e: 1},
+              {g: 2}
+              ]
+          },
+          {h: [
+              {j: 3, k: 4 }
+              ]
+          }
+    ]}
 
-The range for with_lists is 1 to number_of_fiels, inclusive.
+The range for with_lists is 1 to number_of_fields, inclusive.
 Numbers outside this range are ignored.
 
 Finally, if you use pass the queries in via a mapping, the key will be the
@@ -127,6 +157,7 @@ Required python modules: MySQLdb
 
 More complete example
 =====================================
+
 .. code-block:: yaml
 
     mysql:
@@ -144,6 +175,7 @@ More complete example
             as_list: True
             with_lists: [1,3]
 '''
+from __future__ import absolute_import
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
@@ -156,6 +188,7 @@ import logging
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -171,7 +204,7 @@ except ImportError:
 def __virtual__():
     if not HAS_MYSQL:
         return False
-    return 'mysql'
+    return True
 
 
 def _get_options():
@@ -213,7 +246,7 @@ def _get_serv():
         conn.close()
 
 
-class merger(object):
+class Merger(object):
     '''
         This class receives and processes the database rows in a database
         agnostic way.
@@ -225,13 +258,14 @@ class merger(object):
     depth = 0
     as_list = False
     with_lists = None
+    ignore_null = False
 
     def __init__(self):
         self.result = self.focus = {}
 
     def extract_queries(self, args, kwargs):
         '''
-            This function normalises the config block in to a set of queries we
+            This function normalizes the config block in to a set of queries we
             can use.  The return is a list of consistently laid out dicts.
         '''
         # Please note the function signature is NOT an error.  Neither args, nor
@@ -251,31 +285,30 @@ class merger(object):
 
         # And then the keywords...
         # They aren't in definition order, but they can't conflict each other.
-        klist = kwargs.keys()
+        klist = list(kwargs.keys())
         klist.sort()
         qbuffer.extend([[k, kwargs[k]] for k in klist])
 
         # Filter out values that don't have queries.
-        qbuffer = filter(
-            lambda x: (
-                (type(x[1]) is str and len(x[1]))
+        qbuffer = [x for x in qbuffer if (
+                (isinstance(x[1], str) and len(x[1]))
                 or
-                ((type(x[1]) in (list, tuple)) and (len(x[1]) > 0) and x[1][0])
+                (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
                 or
-                (type(x[1]) is dict and 'query' in x[1] and len(x[1]['query']))
-            ),
-            qbuffer)
+                (isinstance(x[1], dict) and 'query' in x[1] and len(x[1]['query']))
+            )]
 
         # Next, turn the whole buffer in to full dicts.
         for qb in qbuffer:
             defaults = {'query': '',
                         'depth': 0,
                         'as_list': False,
-                        'with_lists': None
+                        'with_lists': None,
+                        'ignore_null': False
                         }
-            if type(qb[1]) is str:
+            if isinstance(qb[1], str):
                 defaults['query'] = qb[1]
-            elif type(qb[1]) in (list, tuple):
+            elif isinstance(qb[1], (list, tuple)):
                 defaults['query'] = qb[1][0]
                 if len(qb[1]) > 1:
                     defaults['depth'] = qb[1][1]
@@ -368,15 +401,15 @@ class merger(object):
                 if ((self.as_list and (ret[nk] in crd)) or
                         (nk+1 in self.with_lists)):
                     if ret[nk] in crd:
-                        if type(crd[ret[nk]]) is not list:
+                        if not isinstance(crd[ret[nk]], list):
                             crd[ret[nk]] = [crd[ret[nk]]]
                         # if it's already a list, do nothing
                     else:
                         crd[ret[nk]] = []
                     crd[ret[nk]].append(ret[self.num_fields-1])
                 else:
-                    # No clobber checks then
-                    crd[ret[nk]] = ret[self.num_fields-1]
+                    if not self.ignore_null or ret[self.num_fields-1]:
+                        crd[ret[nk]] = ret[self.num_fields-1]
             else:
                 # Otherwise, the field name is the key but we have a spare.
                 # The spare results because of {c: d} vs {c: {"d": d, "e": e }}
@@ -404,25 +437,29 @@ class merger(object):
                     # Collision detection
                     if self.as_list and (nk in crd):
                         # Same as before...
-                        if type(crd[nk]) is list:
+                        if isinstance(crd[nk], list):
                             crd[nk].append(ret[i])
                         else:
                             crd[nk] = [crd[nk], ret[i]]
                     else:
-                        crd[nk] = ret[i]
+                        if not self.ignore_null or ret[i]:
+                            crd[nk] = ret[i]
         # Get key list and work backwards.  This is inner-out processing
-        ks = listify_dicts.keys()
+        ks = list(listify_dicts.keys())
         ks.reverse()
         for i in ks:
             d = listify_dicts[i]
             for k in listify[i]:
-                if type(d[k]) is dict:
-                    d[k] = d[k].values()
-                elif type(d[k]) is not list:
+                if isinstance(d[k], dict):
+                    d[k] = list(d[k].values())
+                elif isinstance(d[k], list):
                     d[k] = [d[k]]
 
 
-def ext_pillar(minion_id, pillar, *args, **kwargs):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               *args,
+               **kwargs):
     '''
     Execute queries, merge and return as a dict
     '''
@@ -432,7 +469,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
     #    log.debug('ext_pillar MySQL kwargs: {0}'.format(kwargs))
     #
     # Most of the heavy lifting is in this class for ease of testing.
-    return_data = merger()
+    return_data = Merger()
     qbuffer = return_data.extract_queries(args, kwargs)
     with _get_serv() as cur:
         for root, details in qbuffer:
@@ -440,7 +477,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             cur.execute(details['query'], (minion_id,))
 
             # Extract the field names MySQL has returned and process them
-            # All heavy lifting is done in the merger class to decouple the
+            # All heavy lifting is done in the Merger class to decouple the
             # logic from MySQL.  Makes it easier to test.
             return_data.process_fields([row[0] for row in cur.description],
                                        details['depth'])
@@ -450,6 +487,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 return_data.with_lists = details['with_lists']
             else:
                 return_data.with_lists = []
+            return_data.ignore_null = details['ignore_null']
             return_data.process_results(cur.fetchall())
 
             log.debug('ext_pillar MySQL: Return data: {0}'.format(

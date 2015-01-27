@@ -3,6 +3,7 @@
 Error generator to enable integration testing of salt wheel error handling
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 
@@ -14,12 +15,13 @@ import salt.utils.error
 def error(name=None, message=''):
     '''
     If name is None Then return empty dict
-    Otherwise
-       Raise an exception with __name__ from name, message from message
+
+    Otherwise raise an exception with __name__ from name, message from message
 
     CLI Example:
 
     .. code-block:: bash
+
         salt-wheel error
         salt-wheel error.error name="Exception" message="This is an error."
     '''

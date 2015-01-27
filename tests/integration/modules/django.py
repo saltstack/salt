@@ -30,6 +30,7 @@ class DjangoModuleTest(integration.ModuleCase):
             django.command('settings.py', 'runserver')
             mock.assert_called_once_with(
                 'django-admin.py runserver --settings=settings.py',
+                python_shell=False,
                 env=None
             )
 
@@ -49,6 +50,7 @@ class DjangoModuleTest(integration.ModuleCase):
             mock.assert_called_once_with(
                 'django-admin.py runserver --settings=settings.py '
                 '--noinput --somethingelse',
+                python_shell=False,
                 env=None
             )
 
@@ -66,6 +68,7 @@ class DjangoModuleTest(integration.ModuleCase):
             mock.assert_called_once_with(
                 'django-admin.py runserver --settings=settings.py '
                 '--database=something',
+                python_shell=False,
                 env=None
             )
 
@@ -78,6 +81,7 @@ class DjangoModuleTest(integration.ModuleCase):
             )
             mock.assert_called_once_with(
                 'django-admin.py runserver --settings=settings.py',
+                python_shell=False,
                 env=None
             )
 
@@ -88,6 +92,7 @@ class DjangoModuleTest(integration.ModuleCase):
             django.syncdb('settings.py')
             mock.assert_called_once_with(
                 'django-admin.py syncdb --settings=settings.py --noinput',
+                python_shell=False,
                 env=None
             )
 
@@ -99,6 +104,7 @@ class DjangoModuleTest(integration.ModuleCase):
             mock.assert_called_once_with(
                 'django-admin.py syncdb --settings=settings.py --migrate '
                 '--noinput',
+                python_shell=False,
                 env=None
             )
 
@@ -112,6 +118,7 @@ class DjangoModuleTest(integration.ModuleCase):
             mock.assert_called_once_with(
                 'django-admin.py createsuperuser --settings=settings.py '
                 '--noinput --username=testuser --email=user@example.com',
+                python_shell=False,
                 env=None
             )
 
@@ -134,7 +141,9 @@ class DjangoModuleTest(integration.ModuleCase):
             mock.assert_called_once_with(
                 'django-admin.py collectstatic --settings=settings.py '
                 '--noinput --no-post-process --dry-run --clear --link '
-                '--no-default-ignore --ignore=something', env=None
+                '--no-default-ignore --ignore=something',
+                python_shell=False,
+                env=None
             )
 
 

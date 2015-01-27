@@ -22,7 +22,7 @@ configuration file for the master or minion.
 .. note::
 
     In many places in salt, instead of pulling raw data from the __opts__
-    dict, configuration data should be pulled from the salt `get` frunctions
+    dict, configuration data should be pulled from the salt `get` functions
     such as config.get, aka - __salt__['config.get']('foo:bar')
     The `get` functions also allow for dict traversal via the *:* delimiter.
     Consider using get functions whenever using __opts__ or __pillar__ and
@@ -108,5 +108,5 @@ each file. Here is an example from salt/modules/cp.py:
 
 
 .. note:: Because __context__ may or may not have been destroyed, always be
-          sure to check for the existence of the key in __context__ and 
+          sure to check for the existence of the key in __context__ and
           generate the key before using it.

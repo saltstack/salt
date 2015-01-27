@@ -8,12 +8,8 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
 ensure_in_syspath('../../')
-try:
-    from salttesting.helpers import skip_if_binaries_missing
-except ImportError:
-    from integration import skip_if_binaries_missing
 
 
 # Import salt libs
@@ -225,7 +221,7 @@ class SSHModuleTest(integration.ModuleCase):
         ret = self.run_function('ssh.set_known_host', ['root', 'github.com'],
                                 config=KNOWN_HOSTS)
         try:
-            self.assertEqual(ret['status'], 'exists')
+            self.assertEqual(ret['status'], 'updated')
         except AssertionError as exc:
             raise AssertionError(
                 'AssertionError: {0}. Function returned: {1}'.format(

@@ -11,6 +11,7 @@ Manage repository checkouts via the svn vcs system:
       svn.latest:
         - target: /tmp/swallow
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -27,9 +28,7 @@ def __virtual__():
     '''
     Only load if svn is available
     '''
-    if __salt__['cmd.has_exec']('svn'):
-        return 'svn'
-    return False
+    return __salt__['cmd.has_exec']('svn')
 
 
 def latest(name,
@@ -154,6 +153,7 @@ def export(name,
            username=None,
            password=None,
            force=False,
+           overwrite=False,
            externals=True,
            trust=False):
     '''
@@ -185,6 +185,9 @@ def export(name,
     force : False
         Continue if conflicts are encountered
 
+    overwrite : False
+        Overwrite existing target
+
     externals : True
         Change to False to not checkout or update externals
 
@@ -199,7 +202,7 @@ def export(name,
     cwd, basename = os.path.split(target)
     opts = tuple()
 
-    if os.path.exists(target) and not os.path.isdir(target):
+    if not overwrite and os.path.exists(target) and not os.path.isdir(target):
         return _fail(ret,
                      'The path "{0}" exists and is not '
                      'a directory.'.format(target)
@@ -210,14 +213,14 @@ def export(name,
                     ret,
                     ('{0} doesn\'t exist and is set to be checked out.').format(target))
         svn_cmd = 'svn.list'
-        opts += ('-r', 'HEAD')
+        rev = 'HEAD'
         out = __salt__[svn_cmd](cwd, target, user, username, password, *opts)
         return _neutral_test(
                 ret,
                 ('{0}').format(out))
 
-    if rev:
-        opts += ('-r', str(rev))
+    if not rev:
+        rev = 'HEAD'
 
     if force:
         opts += ('--force',)
@@ -228,7 +231,7 @@ def export(name,
     if trust:
         opts += ('--trust-server-cert',)
 
-    out = __salt__[svn_cmd](cwd, name, basename, user, username, password, *opts)
+    out = __salt__[svn_cmd](cwd, name, basename, user, username, password, rev, *opts)
     ret['changes'] = name + ' was Exported to ' + target
 
     return ret

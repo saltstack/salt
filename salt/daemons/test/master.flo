@@ -1,0 +1,26 @@
+# Raet Test FloScript
+
+house master
+
+init .salt.road.manor.local to role "master" host "" port 7530 main true
+
+framer masterudpstack be active first start
+   frame start
+      do salt raet cleanup at enter
+      do salt raet road stack setup per inode ".salt.road.manor" at enter
+      bid start service
+      do raet road stack closer per inode ".salt.road.manor." at exit
+
+framer printer be active first start
+   frame start
+      do salt raet road stack printer per inode ".salt.road.manor."
+      timeout 20
+
+   frame abort
+      bid stop all
+
+framer service be inactive first start
+    frame start
+        do salt raet road stack service
+
+

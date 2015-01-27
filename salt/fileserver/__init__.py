@@ -2,27 +2,44 @@
 '''
 File server pluggable modules and generic backend functions
 '''
+from __future__ import absolute_import
 
 # Import python libs
-import os
-import re
+import errno
 import fnmatch
 import logging
+import os
+import re
 import time
-import errno
 
 # Import salt libs
 import salt.loader
 import salt.utils
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
+
+
+def _unlock_cache(w_lock):
+    '''
+    Unlock a FS file/dir based lock
+    '''
+    if not os.path.exists(w_lock):
+        return
+    try:
+        if os.path.isdir(w_lock):
+            os.rmdir(w_lock)
+        elif os.path.isfile(w_lock):
+            os.unlink(w_lock)
+    except (OSError, IOError) as exc:
+        log.trace('Error removing lockfile {0}: {1}'.format(w_lock, exc))
 
 
 def _lock_cache(w_lock):
     try:
         os.mkdir(w_lock)
-    except OSError, e:
-        if e.errno != errno.EEXIST:
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
             raise
         return False
     else:
@@ -30,24 +47,24 @@ def _lock_cache(w_lock):
         return True
 
 
-def wait_lock(lk_fn, dest):
+def wait_lock(lk_fn, dest, wait_timeout=0):
     '''
     If the write lock is there, check to see if the file is actually being
     written. If there is no change in the file size after a short sleep,
     remove the lock and move forward.
     '''
-    if not os.path.isfile(lk_fn):
+    if not os.path.exists(lk_fn):
         return False
-    if not os.path.isfile(dest):
+    if not os.path.exists(dest):
         # The dest is not here, sleep for a bit, if the dest is not here yet
         # kill the lockfile and start the write
         time.sleep(1)
         if not os.path.isfile(dest):
-            try:
-                os.remove(lk_fn)
-            except (OSError, IOError):
-                pass
+            _unlock_cache(lk_fn)
             return False
+    timeout = None
+    if wait_timeout:
+        timeout = time.time() + wait_timeout
     # There is a lock file, the dest is there, stat the dest, sleep and check
     # that the dest is being written, if it is not being written kill the lock
     # file and continue. Also check if the lock file is gone.
@@ -55,20 +72,23 @@ def wait_lock(lk_fn, dest):
     s_size = os.stat(dest).st_size
     while True:
         time.sleep(1)
-        if not os.path.isfile(lk_fn):
+        if not os.path.exists(lk_fn):
             return False
         size = os.stat(dest).st_size
         if size == s_size:
             s_count += 1
             if s_count >= 3:
                 # The file is not being written to, kill the lock and proceed
-                try:
-                    os.remove(lk_fn)
-                except (OSError, IOError):
-                    pass
+                _unlock_cache(lk_fn)
                 return False
         else:
             s_size = size
+        if timeout:
+            if time.time() > timeout:
+                raise ValueError(
+                    'Timeout({0}s) for {1} '
+                    '(lock: {2}) elapsed'.format(
+                        wait_timeout, dest, lk_fn))
     return False
 
 
@@ -81,14 +101,23 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
     refresh_cache = False
     save_cache = True
     serial = salt.payload.Serial(opts)
+    wait_lock(w_lock, list_cache, 5 * 60)
     if not os.path.isfile(list_cache) and _lock_cache(w_lock):
         refresh_cache = True
     else:
         attempt = 0
         while attempt < 11:
             try:
-                cache_stat = os.stat(list_cache)
-                age = time.time() - cache_stat.st_mtime
+                if os.path.exists(w_lock):
+                    # wait for a filelist lock for max 15min
+                    wait_lock(w_lock, list_cache, 15 * 60)
+                if os.path.exists(list_cache):
+                    # calculate filelist age is possible
+                    cache_stat = os.stat(list_cache)
+                    age = time.time() - cache_stat.st_mtime
+                else:
+                    # if filelist does not exists yet, mark it as expired
+                    age = opts.get('fileserver_list_cache_time', 30) + 1
                 if age < opts.get('fileserver_list_cache_time', 30):
                     # Young enough! Load this sucker up!
                     with salt.utils.fopen(list_cache, 'rb') as fp_:
@@ -118,10 +147,7 @@ def write_file_list_cache(opts, data, list_cache, w_lock):
     serial = salt.payload.Serial(opts)
     with salt.utils.fopen(list_cache, 'w+b') as fp_:
         fp_.write(serial.dumps(data))
-        try:
-            os.rmdir(w_lock)
-        except OSError, e:
-            log.trace("Error removing lockfile {0}:  {1}".format(w_lock, e))
+        _unlock_cache(w_lock)
         log.trace('Lockfile {0} removed'.format(w_lock))
 
 
@@ -146,12 +172,19 @@ def generate_mtime_map(path_map):
     Generate a dict of filename -> mtime
     '''
     file_map = {}
-    for saltenv, path_list in path_map.iteritems():
+    for saltenv, path_list in six.iteritems(path_map):
         for path in path_list:
             for directory, dirnames, filenames in os.walk(path):
                 for item in filenames:
-                    file_path = os.path.join(directory, item)
-                    file_map[file_path] = os.path.getmtime(file_path)
+                    try:
+                        file_path = os.path.join(directory, item)
+                        file_map[file_path] = os.path.getmtime(file_path)
+                    except (OSError, IOError):
+                        # skip dangling symlinks
+                        log.info(
+                            'Failed to get mtime on {0}, '
+                            'dangling symlink ?'.format(file_path))
+                        continue
     return file_map
 
 
@@ -159,24 +192,20 @@ def diff_mtime_map(map1, map2):
     '''
     Is there a change to the mtime map? return a boolean
     '''
-    # check if the file lists are different
-    if cmp(sorted(map1.keys()), sorted(map2.keys())) != 0:
-        log.debug('diff_mtime_map: the keys are different')
-        return True
-
     # check if the mtimes are the same
     if cmp(sorted(map1), sorted(map2)) != 0:
-        log.debug('diff_mtime_map: the maps are different')
+        #log.debug('diff_mtime_map: the maps are different')
         return True
 
     # we made it, that means we have no changes
-    log.debug('diff_mtime_map: the maps are the same')
+    #log.debug('diff_mtime_map: the maps are the same')
     return False
 
 
 def reap_fileserver_cache_dir(cache_base, find_func):
     '''
-    Remove unused cache items assuming the cache directory follows a directory convention:
+    Remove unused cache items assuming the cache directory follows a directory
+    convention:
 
     cache_base -> saltenv -> relpath
     '''
@@ -184,7 +213,8 @@ def reap_fileserver_cache_dir(cache_base, find_func):
         env_base = os.path.join(cache_base, saltenv)
         for root, dirs, files in os.walk(env_base):
             # if we have an empty directory, lets cleanup
-            # This will only remove the directory on the second time "_reap_cache" is called (which is intentional)
+            # This will only remove the directory on the second time
+            # "_reap_cache" is called (which is intentional)
             if len(dirs) == 0 and len(files) == 0:
                 os.rmdir(root)
                 continue
@@ -195,11 +225,15 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 try:
                     filename, _, hash_type = file_rel_path.rsplit('.', 2)
                 except ValueError:
-                    log.warn('Found invalid hash file [{0}] when attempting to reap cache directory.'.format(file_))
+                    log.warn((
+                        'Found invalid hash file [{0}] when attempting to reap'
+                        ' cache directory.'
+                    ).format(file_))
                     continue
                 # do we have the file?
                 ret = find_func(filename, saltenv=saltenv)
-                # if we don't actually have the file, lets clean up the cache object
+                # if we don't actually have the file, lets clean up the cache
+                # object
                 if ret['path'] == '':
                     os.unlink(file_path)
 
@@ -255,6 +289,12 @@ class Fileserver(object):
             if '{0}.envs'.format(sub) in self.servers:
                 ret.append(sub)
         return ret
+
+    def master_opts(self, load):
+        '''
+        Simplify master opts
+        '''
+        return self.opts
 
     def update(self, back=None):
         '''
@@ -318,7 +358,7 @@ class Fileserver(object):
                 path = hcomps[0]
                 comps = hcomps[1].split('&')
                 for comp in comps:
-                    if not '=' in comp:
+                    if '=' not in comp:
                         # Invalid option, skip it
                         continue
                     args = comp.split('=', 1)
@@ -491,5 +531,38 @@ class Fileserver(object):
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
-            ret = [f for f in ret if f.startswith(prefix)]
+            ret = dict([
+                (x, y) for x, y in ret.items() if x.startswith(prefix)
+            ])
         return ret
+
+
+class FSChan(object):
+    '''
+    A class that mimics the transport channels allowing for local access to
+    to the fileserver class class structure
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
+        self.kwargs = kwargs
+        self.fs = Fileserver(self.opts)
+        self.fs.init()
+        self.fs.update()
+        self.cmd_stub = {'ext_nodes': {}}
+
+    def send(self, load, tries=None, timeout=None):
+        '''
+        Emulate the channel send method, the tries and timeout are not used
+        '''
+        if 'cmd' not in load:
+            log.error('Malformed request, no cmd: {0}'.format(load))
+            return {}
+        cmd = load['cmd'].lstrip('_')
+        if cmd in self.cmd_stub:
+            return self.cmd_stub[cmd]
+        if cmd == 'file_envs':
+            return self.fs.envs()
+        if not hasattr(self.fs, cmd):
+            log.error('Malformed request, invalid cmd: {0}'.format(load))
+            return {}
+        return getattr(self.fs, cmd)(load)

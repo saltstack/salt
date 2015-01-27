@@ -10,6 +10,7 @@ Use of this module requires no configuration in the main cloud configuration
 file. However, profiles must still be configured, as described in the
 :ref:`core config documentation <config_saltify>`.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -22,7 +23,7 @@ import salt.utils
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import SaltCloudConfigError, SaltCloudSystemExit
+from salt.exceptions import SaltCloudConfigError
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -69,21 +70,16 @@ def create(vm_):
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
             }
         }
+
     key_filename = config.get_cloud_config_value(
         'key_filename', vm_, __opts__, search_global=False, default=None
     )
+
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined ssh_keyfile {0!r} does not exist'.format(
                 key_filename
             )
-        )
-
-    if key_filename is None and salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
         )
 
     ret = {}
@@ -93,6 +89,7 @@ def create(vm_):
     ssh_username = config.get_cloud_config_value('ssh_username', vm_, __opts__)
     deploy_script = script(vm_)
     deploy_kwargs = {
+        'opts': __opts__,
         'host': vm_['ssh_host'],
         'username': ssh_username,
         'script': deploy_script,
@@ -132,6 +129,15 @@ def create(vm_):
             'display_ssh_output', vm_, __opts__, default=True
         )
     }
+    if 'ssh_port' in vm_:
+        deploy_kwargs.update({'port': vm_['ssh_port']})
+    if 'salt_host' in vm_:
+        deploy_kwargs.update({'salt_host': vm_['salt_host']})
+
+    # forward any info about possible ssh gateway to deploy script
+    # as some providers need also a 'gateway' configuration
+    if 'gateway' in vm_:
+        deploy_kwargs.update({'gateway': vm_['gateway']})
 
     # Deploy salt-master files, if necessary
     if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
@@ -174,9 +180,9 @@ def create(vm_):
         'executing deploy script',
         'salt/cloud/{0}/deploying'.format(vm_['name']),
         {'kwargs': event_kwargs},
+        transport=__opts__['transport']
     )
 
-    deployed = False
     if win_installer:
         deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
     else:

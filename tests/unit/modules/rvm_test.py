@@ -24,14 +24,14 @@ class TestRvmModule(TestCase):
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm._rvm('install', '1.9.3')
             mock.assert_called_once_with(
-                '/usr/local/rvm/bin/rvm install 1.9.3', runas=None
+                '/usr/local/rvm/bin/rvm install 1.9.3', runas=None, cwd=None
             )
 
     def test__rvm_do(self):
         mock = MagicMock(return_value=None)
         with patch.object(rvm, '_rvm', new=mock):
             rvm._rvm_do('1.9.3', 'gemset list')
-            mock.assert_called_once_with('1.9.3 do gemset list', runas=None)
+            mock.assert_called_once_with('1.9.3 do gemset list', runas=None, cwd=None)
 
     def test_install(self):
         mock = MagicMock(return_value={'retcode': 0})

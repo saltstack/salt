@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 virt.query outputter
+====================
+
+Used to display the output from the :mod:`virt.query <salt.runners.virt.query>`
+runner.
 '''
 
 
@@ -34,6 +38,6 @@ def output(data):
             if 'nics' in vm_data:
                 for mac in vm_data['nics']:
                     out += '    Nic - {0}:\n'.format(mac)
-                    out += '      Source: {0}\n'.format(vm_data['nics'][mac]['source'][vm_data['nics'][mac]['source'].keys()[0]])
+                    out += '      Source: {0}\n'.format(vm_data['nics'][mac]['source'][next(vm_data['nics'][mac]['source'].iterkeys())])
                     out += '      Type: {0}\n'.format(vm_data['nics'][mac]['type'])
     return out

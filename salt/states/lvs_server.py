@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-
-Management of LVS(Linux Virtual Server) Real Server.
-=====================================================
-
-This lvs_server module is used to add and manage LVS Real Server in the specified service. Server can be set as either absent or present.
+Management of LVS (Linux Virtual Server) Real Server
+====================================================
 '''
 
 
 def __virtual__():
     '''
-
     Only load if the lvs module is available in __salt__
     '''
     return 'lvs_server' if 'lvs.get_rules' in __salt__ else False
@@ -117,7 +113,6 @@ def present(name,
 
 def absent(name, protocol=None, service_address=None, server_address=None):
     '''
-
     Ensure the LVS Real Server in specified service is absent.
 
     name
@@ -154,7 +149,7 @@ def absent(name, protocol=None, service_address=None, server_address=None):
             ret['changes'][name] = 'Absent'
             return ret
         else:
-            ret['comment'] = 'LVS Server {0} in service {1}(2) removed failed({3})'.format(name, service_address, protocol, server_delete)
+            ret['comment'] = 'LVS Server {0} in service {1}({2}) removed failed({3})'.format(name, service_address, protocol, server_delete)
             ret['result'] = False
             return ret
     else:

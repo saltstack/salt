@@ -2,10 +2,15 @@
 '''
 Support for the Amazon Simple Queue Service.
 '''
+from __future__ import absolute_import
+import logging
 import json
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
+
+log = logging.getLogger(__name__)
 
 _OUTPUT = '--output json'
 
@@ -38,8 +43,17 @@ def _run_aws(cmd, region, opts, user, **kwargs):
     kwargs
         Key-value arguments to pass to the command
     '''
+    # These args need a specific key value that aren't
+    # valid python parameter keys
+    receipthandle = kwargs.pop('receipthandle', None)
+    if receipthandle:
+        kwargs['receipt-handle'] = receipthandle
+    num = kwargs.pop('num', None)
+    if num:
+        kwargs['max-number-of-messages'] = num
+
     _formatted_args = [
-        '--{0} "{1}"'.format(k, v) for k, v in kwargs.iteritems()]
+        '--{0} "{1}"'.format(k, v) for k, v in six.iteritems(kwargs)]
 
     cmd = 'aws sqs {cmd} {args} {region} {out}'.format(
         cmd=cmd,
@@ -47,9 +61,93 @@ def _run_aws(cmd, region, opts, user, **kwargs):
         region=_region(region),
         out=_OUTPUT)
 
-    rtn = __salt__['cmd.run'](cmd, runas=user)
+    rtn = __salt__['cmd.run'](cmd, runas=user, python_shell=False)
 
     return json.loads(rtn) if rtn else ''
+
+
+def receive_message(queue, region, num=1, opts=None, user=None):
+    '''
+    Receive one or more messages from a queue in a region
+
+    queue
+        The name of the queue to receive messages from
+
+    region
+        Region where SQS queues exists
+
+    num : 1
+        The max number of messages to receive
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aws_sqs.receive_message <sqs queue> <region>
+        salt '*' aws_sqs.receive_message <sqs queue> <region> num=10
+
+    .. versionadded:: 2014.7.0
+
+    '''
+    ret = {
+            'Messages': None,
+          }
+    queues = list_queues(region, opts, user)
+    url_map = _parse_queue_list(queues)
+    if queue not in url_map:
+        log.info('"{0}" queue does not exist.'.format(queue))
+        return ret
+
+    out = _run_aws('receive-message', region, opts, user, queue=url_map[queue],
+                   num=num)
+    ret['Messages'] = out['Messages']
+    return ret
+
+
+def delete_message(queue, region, receipthandle, opts=None, user=None):
+    '''
+    Delete one or more messages from a queue in a region
+
+    queue
+        The name of the queue to delete messages from
+
+    region
+        Region where SQS queues exists
+
+    receipthandle
+        The ReceiptHandle of the message to delete. The ReceiptHandle
+        is obtained in the return from receive_message
+
+    opts : None
+        Any additional options to add to the command line
+
+    user : None
+        Run as a user other than what the minion runs as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' aws_sqs.delete_message <sqs queue> <region> receipthandle='<sqs ReceiptHandle>'
+
+    .. versionadded:: 2014.7.0
+
+    '''
+    queues = list_queues(region, opts, user)
+    url_map = _parse_queue_list(queues)
+    if queue not in url_map:
+        log.info('"{0}" queue does not exist.'.format(queue))
+        return False
+
+    out = _run_aws('delete-message', region, opts, user,
+                   receipthandle=receipthandle, queue=url_map[queue],)
+    return True
 
 
 def list_queues(region, opts=None, user=None):
@@ -122,9 +220,8 @@ def delete_queue(name, region, opts=None, user=None):
     queues = list_queues(region, opts, user)
     url_map = _parse_queue_list(queues)
 
-    import logging
     logger = logging.getLogger(__name__)
-    logger.debug('map ' + unicode(url_map))
+    logger.debug('map ' + six.text_type(url_map))
     if name in url_map:
         delete = {'queue-url': url_map[name]}
 

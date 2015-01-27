@@ -2,21 +2,20 @@
 '''
 Modules used to control the master itself
 '''
+from __future__ import absolute_import
 #import python libs
+import os
 import collections
 
-import os
 # Import salt libs
 from salt import syspaths
 import salt.config
 import salt.loader
-import salt.payload
-import salt.utils
-import salt.exceptions
+from salt.client import mixins
 from salt.utils.error import raise_error
 
 
-class WheelClient(object):
+class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     '''
     An interface to Salt's wheel modules
 
@@ -28,82 +27,81 @@ class WheelClient(object):
     running as. Unless :conf_master:`external_auth` is configured and the user
     is authorized to execute wheel functions: (``@wheel``).
     '''
+    client = 'wheel'
+    tag_prefix = 'wheel'
+
     def __init__(self, opts=None):
-        if not opts:
-            opts = salt.config.client_config(
-                    os.environ.get(
-                        'SALT_MASTER_CONFIG',
-                        os.path.join(syspaths.CONFIG_DIR, 'master')
-                        )
-                    )
-
         self.opts = opts
-        self.w_funcs = salt.loader.wheels(opts)
+        self.functions = salt.loader.wheels(opts)
 
-    def get_docs(self):
-        '''
-        Return a dictionary of functions and the inline documentation for each
-        '''
-        ret = [(fun, self.w_funcs[fun].__doc__)
-                for fun in sorted(self.w_funcs)]
-
-        return dict(ret)
-
+    # TODO: remove/deprecate
     def call_func(self, fun, **kwargs):
         '''
-        Execute a wheel function
-
-        .. code-block:: python
-
-            >>> opts = salt.config.master_config('/etc/salt/master')
-            >>> wheel = salt.wheel.Wheel(opts)
-            >>> wheel.call_func('key.list_all')
-            {'local': ['master.pem', 'master.pub'],
-            'minions': ['jerry'],
-            'minions_pre': [],
-            'minions_rejected': []}
+        Backwards compatibility
         '''
-        if fun not in self.w_funcs:
-            return 'Unknown wheel function'
-        f_call = salt.utils.format_call(self.w_funcs[fun], kwargs)
-        return self.w_funcs[fun](*f_call.get('args', ()), **f_call.get('kwargs', {}))
+        return self.low(fun, kwargs)
 
+    # TODO: Inconsistent with runner client-- the runner client's master_call gives
+    # an async return, unlike this
     def master_call(self, **kwargs):
         '''
         Execute a wheel function through the master network interface (eauth).
+        '''
+        load = kwargs
+        load['cmd'] = 'wheel'
+        master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+                                                      ':' + str(self.opts['ret_port'])
+        channel = salt.transport.Channel.factory(self.opts,
+                                                 crypt='clear',
+                                                 master_uri=master_uri)
+        ret = channel.send(load)
+        if isinstance(ret, collections.Mapping):
+            if 'error' in ret:
+                raise_error(**ret['error'])
+        return ret
+
+    def cmd_sync(self, low, timeout=None):
+        '''
+        Execute a wheel function synchronously; eauth is respected
 
         This function requires that :conf_master:`external_auth` is configured
-        and the user is authorized to execute wheel functions: (``@wheel``).
+        and the user is authorized to execute runner functions: (``@wheel``).
 
         .. code-block:: python
 
-            >>> wheel.master_call(**{
+        >>> wheel.cmd_sync({
+        'fun': 'key.finger',
+        'match': 'jerry',
+        'eauth': 'auto',
+        'username': 'saltdev',
+        'password': 'saltdev',
+        })
+        {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+        '''
+        return self.master_call(**low)
+
+    # TODO: Inconsistent with runner client-- that one uses the master_call function
+    # and runs within the master daemon. Need to pick one...
+    def cmd_async(self, low):
+        '''
+        Execute a function asynchronously; eauth is respected
+
+        This function requires that :conf_master:`external_auth` is configured
+        and the user is authorized
+
+        .. code-block:: python
+
+            >>> wheel.cmd_async({
                 'fun': 'key.finger',
                 'match': 'jerry',
                 'eauth': 'auto',
                 'username': 'saltdev',
                 'password': 'saltdev',
             })
-            {'data': {
-                '_stamp': '2013-12-19_22:47:44.427338',
-                'fun': 'wheel.key.finger',
-                'jid': '20131219224744416681',
-                'return': {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}},
-                'success': True,
-                'tag': 'salt/wheel/20131219224744416681',
-                'user': 'saltdev'
-            },
-            'tag': 'salt/wheel/20131219224744416681'}
+            {'jid': '20131219224744416681', 'tag': 'salt/wheel/20131219224744416681'}
         '''
-        load = kwargs
-        load['cmd'] = 'wheel'
-        sreq = salt.payload.SREQ(
-                'tcp://{0[interface]}:{0[ret_port]}'.format(self.opts),
-                )
-        ret = sreq.send('clear', load)
-        if isinstance(ret, collections.Mapping):
-            if 'error' in ret:
-                raise_error(**ret['error'])
-        return ret
+        fun = low.pop('fun')
+        return self.async(fun, low)
+
 
 Wheel = WheelClient  # for backward-compat

@@ -50,7 +50,7 @@ then a new cron job will be added to the user's crontab.
 
 The current behavior is still relying on that mechanism, but you can also
 specify an identifier to identify your crontabs:
-.. versionadded:: 2014.2
+
 .. code-block:: yaml
 
     date > /tmp/crontest:
@@ -60,8 +60,10 @@ specify an identifier to identify your crontabs:
         - minute: 7
         - hour: 2
 
+.. versionadded:: 2014.1.2
+
 And, some months later, you modify it:
-.. versionadded:: 2014.2
+
 .. code-block:: yaml
 
     superscript > /tmp/crontest:
@@ -70,6 +72,8 @@ And, some months later, you modify it:
         - user: root
         - minute: 3
         - hour: 4
+
+.. versionadded:: 2014.1.2
 
 The old **date > /tmp/crontest** will be replaced by
 **superscript > /tmp/crontest**.
@@ -111,12 +115,13 @@ from ``*`` to a randomized numeric value. However, if that field in the cron
 entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
+from salt.ext.six import string_types
 
 # Import salt libs
-import salt._compat
 import salt.utils
 from salt.modules.cron import (
     _needs_change,
@@ -147,13 +152,18 @@ def _check_cron(user,
         month = str(month).lower()
     if dayweek is not None:
         dayweek = str(dayweek).lower()
+    if identifier is not None:
+        identifier = str(identifier)
+    if cmd is not None:
+        cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if _cron_matched(cron, cmd, identifier):
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek), (cron['comment'], comment))]):
+                     (cron['dayweek'], dayweek), (cron['identifier'], identifier),
+                     (cron['cmd'], cmd), (cron['comment'], comment))]):
                 return 'update'
             return 'present'
     return 'absent'
@@ -292,7 +302,7 @@ def present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Cron {0} updated'.format(name, user)
+        ret['comment'] = 'Cron {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Cron {0} for user {1} failed to commit with error \n{2}'
@@ -376,7 +386,7 @@ def file(name,
         hosted on either the salt master server, or on an HTTP or FTP server.
         For files hosted on the salt file server, if the file is located on
         the master in the directory named spam, and is called eggs, the source
-        string is salt://spam/eggs.
+        string is ``salt://spam/eggs``
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
@@ -385,7 +395,7 @@ def file(name,
         This can be either a file which contains a source hash string for
         the source, or a source hash string. The source hash string is the
         hash algorithm followed by the hash of the file:
-        md5=e138491e9d5b97023cea823fe17bac22
+        ``md5=e138491e9d5b97023cea823fe17bac22``
 
     user
         The user to whom the crontab should be assigned. This defaults to
@@ -415,7 +425,10 @@ def file(name,
 
     cron_path = salt.utils.mkstemp()
     with salt.utils.fopen(cron_path, 'w+') as fp_:
-        fp_.write(__salt__['cron.raw_cron'](user))
+        raw_cron = __salt__['cron.raw_cron'](user)
+        if not raw_cron.endswith('\n'):
+            raw_cron = "{0}\n".format(raw_cron)
+        fp_.write(raw_cron)
 
     ret = {'changes': {},
            'comment': '',
@@ -426,11 +439,11 @@ def file(name,
     # declaration for this state will be a source URI.
     source = name
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behaviour. Please update your '
+            'will be the default and expected behavior. Please update your '
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
@@ -451,7 +464,6 @@ def file(name,
                                              group,
                                              mode,
                                              template,
-                                             False,  # makedirs = False
                                              context,
                                              defaults,
                                              __env__,
@@ -464,7 +476,7 @@ def file(name,
     # If the source is a list then find which file exists
     source, source_hash = __salt__['file.source_list'](source,
                                                        source_hash,
-                                                       env)
+                                                       __env__)
 
     # Gather the source file from the server
     try:
@@ -476,7 +488,7 @@ def file(name,
             owner,
             group,
             mode,
-            env,
+            __env__,
             context,
             defaults,
             **kwargs
@@ -503,7 +515,7 @@ def file(name,
             owner,
             group,
             mode,
-            env,
+            __env__,
             backup
         )
     except Exception as exc:
@@ -573,7 +585,7 @@ def env_present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Cron env {0} updated'.format(name, user)
+        ret['comment'] = 'Cron env {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Cron env {0} for user {1} failed to commit with error \n{2}'

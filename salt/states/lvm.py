@@ -21,6 +21,7 @@ A state module to manage LVMs
         - stripes: 5
         - stripesize: 8K
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -69,6 +70,36 @@ def pv_present(name, **kwargs):
     return ret
 
 
+def pv_absent(name):
+    '''
+    Ensure that a Physical Device is not being used by lvm
+
+    name
+        The device name to initialize.
+    '''
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
+
+    if not __salt__['lvm.pvdisplay'](name):
+        ret['comment'] = 'Physical Volume {0} does not exist'.format(name)
+    elif __opts__['test']:
+        ret['comment'] = 'Physical Volume {0} is set to be removed'.format(name)
+        ret['result'] = None
+        return ret
+    else:
+        changes = __salt__['lvm.pvremove'](name)
+
+        if __salt__['lvm.pvdisplay'](name):
+            ret['comment'] = 'Failed to remove Physical Volume {0}'.format(name)
+            ret['result'] = False
+        else:
+            ret['comment'] = 'Removed Physical Volume {0}'.format(name)
+            ret['changes'] = changes
+    return ret
+
+
 def vg_present(name, devices=None, **kwargs):
     '''
     Create an LVM volume group
@@ -90,6 +121,35 @@ def vg_present(name, devices=None, **kwargs):
 
     if __salt__['lvm.vgdisplay'](name):
         ret['comment'] = 'Volume Group {0} already present'.format(name)
+        for device in devices.split(','):
+            pvs = __salt__['lvm.pvdisplay'](device)
+            if pvs and pvs.get(device, None):
+                if pvs[device]['Volume Group Name'] == name:
+                    ret['comment'] = '{0}\n{1}'.format(
+                        ret['comment'],
+                        '{0} is part of Volume Group'.format(device))
+                elif pvs[device]['Volume Group Name'] == '#orphans_lvm2':
+                    __salt__['lvm.vgextend'](name, device)
+                    pvs = __salt__['lvm.pvdisplay'](device)
+                    if pvs[device]['Volume Group Name'] == name:
+                        ret['changes'].update(
+                            {device: 'added to {0}'.format(name)})
+                    else:
+                        ret['comment'] = '{0}\n{1}'.format(
+                            ret['comment'],
+                            '{0} could not be added'.format(device))
+                        ret['result'] = False
+                else:
+                    ret['comment'] = '{0}\n{1}'.format(
+                        ret['comment'],
+                        '{0} is part of {1}'.format(
+                            device, pvs[device]['Volume Group Name']))
+                    ret['result'] = False
+            else:
+                ret['comment'] = '{0}\n{1}'.format(
+                    ret['comment'],
+                    'pv {0} is not present'.format(device))
+                ret['result'] = False
     elif __opts__['test']:
         ret['comment'] = 'Volume Group {0} is set to be created'.format(name)
         ret['result'] = None
@@ -136,7 +196,13 @@ def vg_absent(name):
     return ret
 
 
-def lv_present(name, vgname=None, size=None, extents=None, pv='', **kwargs):
+def lv_present(name,
+               vgname=None,
+               size=None,
+               extents=None,
+               snapshot=None,
+               pv='',
+               **kwargs):
     '''
     Create a new logical volume
 
@@ -152,6 +218,9 @@ def lv_present(name, vgname=None, size=None, extents=None, pv='', **kwargs):
     extents
         The number of logical extents to allocate
 
+    snapshot
+        The name of the snapshot
+
     pv
         The physical volume to use
 
@@ -164,7 +233,14 @@ def lv_present(name, vgname=None, size=None, extents=None, pv='', **kwargs):
            'name': name,
            'result': True}
 
+    _snapshot = None
+
+    if snapshot:
+        _snapshot = name
+        name = snapshot
+
     lvpath = '/dev/{0}/{1}'.format(vgname, name)
+
     if __salt__['lvm.lvdisplay'](lvpath):
         ret['comment'] = 'Logical Volume {0} already present'.format(name)
     elif __opts__['test']:
@@ -176,6 +252,7 @@ def lv_present(name, vgname=None, size=None, extents=None, pv='', **kwargs):
                                            vgname,
                                            size=size,
                                            extents=extents,
+                                           snapshot=_snapshot,
                                            pv=pv,
                                            **kwargs)
 

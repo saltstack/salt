@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     salt.utils.validate.path
@@ -10,6 +8,7 @@
 
     Several path related validators
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -49,3 +48,19 @@ def is_writeable(path, check_parent=False):
     # Finally, return if we're allowed to write in the parent directory of the
     # provided path
     return os.access(parent_dir, os.W_OK)
+
+
+def is_readable(path):
+    '''
+    Check if a given path is readable by the current user.
+
+    :param path: The path to check
+    :returns: True or False
+    '''
+
+    if os.access(path, os.F_OK) and os.access(path, os.R_OK):
+        # The path exists and is readable
+        return True
+
+    # The path does not exist
+    return False

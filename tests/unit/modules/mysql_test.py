@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Mike Place (mp@saltstack.com)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.unit.modules.mysql
@@ -253,3 +251,8 @@ class MySQLTestCase(TestCase):
             else:
                 calls = (call().cursor().execute('{0}'.format(expected_sql)))
             connect_mock.assert_has_calls(calls)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MySQLTestCase, needs_daemon=False)

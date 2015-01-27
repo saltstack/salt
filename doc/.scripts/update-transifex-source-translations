@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     update-transifex-source-translations
@@ -157,6 +155,7 @@ def main():
                     ['-r', resource_name],
                     tx_root
                 )
+                handled_resources.remove(resource_name)
             except Exception as err:
                 sys.stdout.write('An error occurred: {0}\n'.format(err))
             finally:

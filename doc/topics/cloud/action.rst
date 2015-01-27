@@ -30,4 +30,3 @@ The following is a list of actions currently supported by salt-cloud:
         - stop
     joyent:
         - stop
-

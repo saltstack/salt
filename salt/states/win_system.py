@@ -3,7 +3,7 @@
 Management of Windows system information
 ========================================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 This state is used to manage system information such as the computer name and
 description.
@@ -11,13 +11,13 @@ description.
 .. code-block:: yaml
 
     ERIK-WORKSTATION:
-      system:
-        - computer_name
+      system.computer_name: []
 
     This is Erik's computer, don't touch!:
-      system:
-        - computer_desc
+      system.computer_desc: []
 '''
+
+from __future__ import absolute_import
 
 # Import python libs
 import logging

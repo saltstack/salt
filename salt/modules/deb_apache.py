@@ -6,6 +6,7 @@ Please note: The functions in here are Debian-specific. Placing them in this
 separate file will allow them to load only on Debian-based systems, while still
 loading under the ``apache`` namespace.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -16,6 +17,8 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'apache'
+
 
 def __virtual__():
     '''
@@ -23,7 +26,7 @@ def __virtual__():
     '''
     cmd = _detect_os()
     if salt.utils.which(cmd) and __grains__['os_family'] == 'Debian':
-        return 'apache'
+        return __virtualname__
     return False
 
 

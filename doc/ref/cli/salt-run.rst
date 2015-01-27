@@ -7,7 +7,7 @@ Execute a Salt runner
 Synopsis
 ========
 
-::
+.. code-block:: bash
 
     salt-run RUNNER
 
@@ -30,7 +30,7 @@ Options
 
 .. option:: -d, --doc, --documentation
 
-    Display documentation for runners, pass a module or a runner to see 
+    Display documentation for runners, pass a module or a runner to see
     documentation on only that module/runner.
 
 .. include:: _includes/logging-options.rst

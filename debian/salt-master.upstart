@@ -6,9 +6,14 @@ start on (net-device-up
 stop on runlevel [!2345]
 limit nofile 100000 100000
 
+env CONFIG_DIR=/etc/salt
+
 script
   # Read configuration variable file if it is present
   [ -f /etc/default/$UPSTART_JOB ] && . /etc/default/$UPSTART_JOB
 
-  exec salt-master
+  # Activate the virtualenv if defined
+  [ -f $SALT_USE_VIRTUALENV/bin/activate ] && . $SALT_USE_VIRTUALENV/bin/activate
+
+  exec salt-master -c $CONFIG_DIR
 end script

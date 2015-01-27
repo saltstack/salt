@@ -61,9 +61,9 @@ Improved Windows Support
 Support for Salt on Windows continues to improve. Software management on
 Windows has become more seamless with Linux/UNIX/BSD software management.
 Installed software is now recognized by the short names defined in the
-:doc:`repository SLS </ref/windows-package-manager>`. This makes it possible to
-run ``salt '*' pkg.version firefox`` and get back results from Windows and
-non-Windows minions alike.
+:doc:`repository SLS </topics/windows/windows-package-manager>`. This makes it
+possible to run ``salt '*' pkg.version firefox`` and get back results from
+Windows and non-Windows minions alike.
 
 When templating files on Windows, Salt will now correctly use Windows
 appropriate line endings. This makes it much easier to edit and consume files
@@ -85,7 +85,7 @@ default. This means that it's no longer necessary to specify the ``-c`` option
 to specify the location of the config file when starting the Salt Minion on
 Windows in a terminal.
 
-Muliple Targets for pkg.removed, pkg.purged States
+Multiple Targets for pkg.removed, pkg.purged States
 --------------------------------------------------
 
 Both :mod:`pkg.removed <salt.states.pkg.removed>` and :mod:`pkg.purged
@@ -132,4 +132,4 @@ Support for Setting Password Hashes on BSD Minions
 --------------------------------------------------
 
 FreeBSD, NetBSD, and OpenBSD all now support setting passwords in
-:mod:`user.present <salt.states.user.present>` states. 
+:mod:`user.present <salt.states.user.present>` states.

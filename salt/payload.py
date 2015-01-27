@@ -6,14 +6,15 @@ in here
 '''
 
 # Import python libs
-#import sys  # Use of sys is commented out below
+from __future__ import absolute_import
 import logging
+import gc
 
 # Import salt libs
 import salt.log
-import salt.crypt
+import salt.ext.six as six
+
 from salt.exceptions import SaltReqTimeoutError
-from salt._compat import pickle
 
 # Import third party libs
 try:
@@ -43,7 +44,7 @@ except ImportError:
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
-        #sys.exit(1)
+        #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def package(payload):
@@ -91,13 +92,16 @@ class Serial(object):
         '''
         Run the correct loads serialization format
         '''
-        if self.serial == 'msgpack':
+        try:
+            gc.disable()  # performance optimization for msgpack
             return msgpack.loads(msg, use_list=True)
-        elif self.serial == 'pickle':
-            try:
-                return pickle.loads(msg)
-            except Exception:
-                return msgpack.loads(msg, use_list=True)
+        except Exception as exc:
+            log.critical('Could not deserialize msgpack message: {0}'
+                         'This often happens when trying to read a file not in binary mode.'
+                         'Please open an issue and include the following error: {1}'.format(msg, exc))
+            raise
+        finally:
+            gc.enable()
 
     def load(self, fn_):
         '''
@@ -111,35 +115,36 @@ class Serial(object):
         '''
         Run the correct dumps serialization format
         '''
-        if self.serial == 'pickle':
-            return pickle.dumps(msg)
-        else:
-            try:
-                return msgpack.dumps(msg)
-            except TypeError:
-                if msgpack.version >= (0, 2, 0):
-                    # Should support OrderedDict serialization, so, let's
-                    # raise the exception
-                    raise
+        try:
+            return msgpack.dumps(msg)
+        except TypeError:
+            if msgpack.version >= (0, 2, 0):
+                # Should support OrderedDict serialization, so, let's
+                # raise the exception
+                raise
 
-                # msgpack is < 0.2.0, let's make it's life easier
-                # Since OrderedDict is identified as a dictionary, we can't
-                # make use of msgpack custom types, we will need to convert by
-                # hand.
-                # This means iterating through all elements of a dictionary or
-                # list/tuple
-                def odict_encoder(obj):
-                    if isinstance(obj, dict):
-                        for key, value in obj.copy().iteritems():
-                            obj[key] = odict_encoder(value)
-                        return dict(obj)
-                    elif isinstance(obj, (list, tuple)):
-                        obj = list(obj)
-                        for idx, entry in enumerate(obj):
-                            obj[idx] = odict_encoder(entry)
-                        return obj
+            # msgpack is < 0.2.0, let's make its life easier
+            # Since OrderedDict is identified as a dictionary, we can't
+            # make use of msgpack custom types, we will need to convert by
+            # hand.
+            # This means iterating through all elements of a dictionary or
+            # list/tuple
+            def odict_encoder(obj):
+                if isinstance(obj, dict):
+                    for key, value in six.iteritems(obj.copy()):
+                        obj[key] = odict_encoder(value)
+                    return dict(obj)
+                elif isinstance(obj, (list, tuple)):
+                    obj = list(obj)
+                    for idx, entry in enumerate(obj):
+                        obj[idx] = odict_encoder(entry)
                     return obj
-                return msgpack.dumps(odict_encoder(msg))
+                return obj
+            return msgpack.dumps(odict_encoder(msg))
+        except SystemError as exc:
+            log.critical('Unable to serialize message! Consider upgrading msgpack. '
+                         'Message which failed was {failed_message} '
+                         'with exception {exception_message}').format(msg, exc)
 
     def dump(self, msg, fn_):
         '''
@@ -155,22 +160,49 @@ class SREQ(object):
     '''
     def __init__(self, master, id_='', serial='msgpack', linger=0):
         self.master = master
+        self.id_ = id_
         self.serial = Serial(serial)
+        self.linger = linger
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REQ)
-        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
-            self.socket.setsockopt(
-                zmq.RECONNECT_IVL_MAX, 5000
-            )
-
-        if master.startswith('tcp://[') and hasattr(zmq, 'IPV4ONLY'):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            self.socket.setsockopt(zmq.IPV4ONLY, 0)
-        self.socket.linger = linger
-        if id_:
-            self.socket.setsockopt(zmq.IDENTITY, id_)
-        self.socket.connect(master)
         self.poller = zmq.Poller()
+
+    @property
+    def socket(self):
+        '''
+        Lazily create the socket.
+        '''
+        if not hasattr(self, '_socket'):
+            # create a new one
+            self._socket = self.context.socket(zmq.REQ)
+            if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+                self._socket.setsockopt(
+                    zmq.RECONNECT_IVL_MAX, 5000
+                )
+
+            if self.master.startswith('tcp://['):
+                # Hint PF type if bracket enclosed IPv6 address
+                if hasattr(zmq, 'IPV6'):
+                    self._socket.setsockopt(zmq.IPV6, 1)
+                elif hasattr(zmq, 'IPV4ONLY'):
+                    self._socket.setsockopt(zmq.IPV4ONLY, 0)
+            self._socket.linger = self.linger
+            if self.id_:
+                self._socket.setsockopt(zmq.IDENTITY, self.id_)
+            self._socket.connect(self.master)
+        return self._socket
+
+    def clear_socket(self):
+        '''
+        delete socket if you have it
+        '''
+        if hasattr(self, '_socket'):
+            if isinstance(self.poller.sockets, dict):
+                for socket in self.poller.sockets.keys():
+                    self.poller.unregister(socket)
+            else:
+                for socket in self.poller.sockets:
+                    self.poller.unregister(socket[0])
+            del self._socket
 
     def send(self, enc, load, tries=1, timeout=60):
         '''
@@ -187,11 +219,13 @@ class SREQ(object):
             tried += 1
             if polled:
                 break
-            elif tried >= tries:
+            if tries > 1:
+                log.info('SaltReqTimeoutError: after {0} seconds. (Try {1} of {2})'.format(
+                  timeout, tried, tries))
+            if tried >= tries:
+                self.clear_socket()
                 raise SaltReqTimeoutError(
-                    'Waited {0} seconds'.format(
-                        timeout * tried
-                    )
+                    'SaltReqTimeoutError: after {0} seconds, ran {1} tries'.format(timeout * tried, tried)
                 )
         return self.serial.loads(self.socket.recv())
 

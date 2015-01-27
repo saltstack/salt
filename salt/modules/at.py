@@ -5,11 +5,18 @@ Wrapper module for at(1)
 Also, a 'tag' feature has been added to more
 easily tag jobs.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import time
 import datetime
+
+# Import 3rd-party libs
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+# pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
 import salt.utils
@@ -59,13 +66,13 @@ def atq(tag=None):
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
     # Tested on CentOS 5.8
-    if __grains__['os_family'] == "RedHat":
+    if __grains__['os_family'] == 'RedHat':
         output = _cmd('at', '-l')
     else:
         output = _cmd('atq')
 
     if output is None:
-        return '"{0}" is not available.'.format('at.atq')
+        return '\'at.atq\' is not available.'
 
     # No jobs so return
     if output == '':
@@ -148,28 +155,28 @@ def atrm(*args):
 
     # Need to do this here also since we use atq()
     if not salt.utils.which('at'):
-        return '"{0}" is not available.'.format('at.atrm')
+        return '\'at.atrm\' is not available.'
 
     if not args:
         return {'jobs': {'removed': [], 'tag': None}}
 
     if args[0] == 'all':
         if len(args) > 1:
-            opts = map(str, [j['job'] for j in atq(args[1])['jobs']])
+            opts = list(list(map(str, [j['job'] for j in atq(args[1])['jobs']])))
             ret = {'jobs': {'removed': opts, 'tag': args[1]}}
         else:
-            opts = map(str, [j['job'] for j in atq()['jobs']])
+            opts = list(list(map(str, [j['job'] for j in atq()['jobs']])))
             ret = {'jobs': {'removed': opts, 'tag': None}}
     else:
-        opts = map(str, [i['job'] for i in atq()['jobs']
-            if i['job'] in args])
+        opts = list(list(map(str, [i['job'] for i in atq()['jobs']
+            if i['job'] in args])))
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
     # Shim to produce output similar to what __virtual__() should do
     # but __salt__ isn't available in __virtual__()
     output = _cmd('at', '-d', ' '.join(opts))
     if output is None:
-        return '"{0}" is not available.'.format('at.atrm')
+        return '\'at.atrm\' is not available.'
 
     return ret
 
@@ -197,7 +204,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     # but __salt__ isn't available in __virtual__()
     binary = salt.utils.which('at')
     if not binary:
-        return '"{0}" is not available.'.format('at.at')
+        return '\'at.at\' is not available.'
 
     if __grains__['os_family'] == 'RedHat':
         echo_cmd = 'echo -e'
@@ -205,8 +212,11 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         echo_cmd = 'echo'
 
     if 'tag' in kwargs:
-        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(kwargs['tag'],
-            ' '.join(args[1:]), binary, args[0], echo_cmd)
+        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(_cmd_quote(kwargs['tag']),
+                                                          _cmd_quote(' '.join(args[1:])),
+                                                          binary,
+                                                          _cmd_quote(args[0]),
+                                                          echo_cmd)
     else:
         cmd = '{3} "{1}" | {2} {0}'.format(args[0], ' '.join(args[1:]),
             binary, echo_cmd)
@@ -218,7 +228,7 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         output = __salt__['cmd.run']('{0}'.format(cmd))
 
     if output is None:
-        return '"{0}" is not available.'.format('at.at')
+        return '\'at.at\' is not available.'
 
     if output.endswith('Garbled time'):
         return {'jobs': [], 'error': 'invalid timespec'}
@@ -254,9 +264,9 @@ def atc(jobid):
     output = _cmd('at', '-c', str(jobid))
 
     if output is None:
-        return '"{0}" is not available.'.format('at.atc')
+        return '\'at.atc\' is not available.'
     elif output == '':
-        return {'error': 'invalid job id "{0}"'.format(str(jobid))}
+        return {'error': 'invalid job id {0!r}'.format(jobid)}
 
     return output
 
@@ -276,7 +286,7 @@ def _atq(**kwargs):
     month = kwargs.get('month', None)
     year = kwargs.get('year', None)
     if year and len(str(year)) == 2:
-        year = "20" + str(year)
+        year = '20{0}'.format(year)
 
     jobinfo = atq()['jobs']
     if not jobinfo:
@@ -300,28 +310,28 @@ def _atq(**kwargs):
 
         if not hour:
             pass
-        elif "%02d" % int(hour) == job['time'].split(':')[0]:
+        elif '{0:02d}'.format(int(hour)) == job['time'].split(':')[0]:
             pass
         else:
             continue
 
         if not minute:
             pass
-        elif "%02d" % int(minute) == job['time'].split(':')[1]:
+        elif '{0:02d}'.format(int(minute)) == job['time'].split(':')[1]:
             pass
         else:
             continue
 
         if not day:
             pass
-        elif "%02d" % int(day) == job['date'].split('-')[2]:
+        elif '{0:02d}'.format(int(day)) == job['date'].split('-')[2]:
             pass
         else:
             continue
 
         if not month:
             pass
-        elif "%02d" % int(month) == job['date'].split('-')[1]:
+        elif '{0:02d}'.format(int(month)) == job['date'].split('-')[1]:
             pass
         else:
             continue

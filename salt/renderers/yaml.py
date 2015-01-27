@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+'''
+YAML Renderer for Salt
+'''
+
 from __future__ import absolute_import
 
 # Import python libs
@@ -8,9 +12,12 @@ from yaml.scanner import ScannerError
 from yaml.constructor import ConstructorError
 
 # Import salt libs
-from salt.utils.yamlloader import CustomLoader, load
+from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
+import salt.ext.six as six
+from salt.ext.six import string_types
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +32,7 @@ def get_yaml_loader(argline):
     Return the ordered dict yaml loader
     '''
     def yaml_loader(*args):
-        return CustomLoader(*args, dictclass=OrderedDict)
+        return SaltYamlSafeLoader(*args, dictclass=OrderedDict)
     return yaml_loader
 
 
@@ -36,7 +43,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
 
     :rtype: A Python data structure
     '''
-    if not isinstance(yaml_data, basestring):
+    if not isinstance(yaml_data, string_types):
         yaml_data = yaml_data.read()
     with warnings.catch_warnings(record=True) as warn_list:
         try:
@@ -74,19 +81,19 @@ def _yaml_result_unicode_to_utf8(data):
     This is a recursive function
     '''
     if isinstance(data, OrderedDict):
-        for key, elt in data.iteritems():
-            if isinstance(elt, unicode):
+        for key, elt in six.iteritems(data):
+            if isinstance(elt, six.text_type):
                 # Here be dragons
                 data[key] = elt.encode('utf-8')
             elif isinstance(elt, OrderedDict):
                 data[key] = _yaml_result_unicode_to_utf8(elt)
             elif isinstance(elt, list):
-                for i in xrange(len(elt)):
+                for i in range(len(elt)):
                     elt[i] = _yaml_result_unicode_to_utf8(elt[i])
     elif isinstance(data, list):
-        for i in xrange(len(data)):
+        for i in range(len(data)):
             data[i] = _yaml_result_unicode_to_utf8(data[i])
-    elif isinstance(data, unicode):
+    elif isinstance(data, six.text_type):
         # here also
         data = data.encode('utf-8')
     return data

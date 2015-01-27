@@ -3,14 +3,21 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import re
 import fnmatch
 
+from salt.ext.six.moves import range
+
 # Import salt libs
 import salt.utils
+from salt.utils.network import remote_port_tcp as _remote_port_tcp
+from salt.utils.network import host_to_ip as _host_to_ip
+import salt.utils.event
+import salt.config
 
 
 __opts__ = {}
@@ -21,7 +28,7 @@ __opts__ = {}
 def __virtual__():
     if salt.utils.is_windows():
         return False
-    return 'status'
+    return True
 
 
 def _number(text):
@@ -102,7 +109,7 @@ def custom():
     conf = __salt__['config.dot_vals']('status')
     for key, val in conf.items():
         func = '{0}()'.format(key.split('.')[1])
-        vals = eval(func)
+        vals = eval(func)  # pylint: disable=W0123
 
         for item in val:
             ret[item] = vals[item]
@@ -180,7 +187,7 @@ def cpustats():
 
 def meminfo():
     '''
-    Return the CPU stats for this minion
+    Return the memory info for this minion
 
     CLI Example:
 
@@ -353,6 +360,24 @@ def vmstats():
     return ret
 
 
+def nproc():
+    '''
+    Return the number of processing units available on this system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.nproc
+    '''
+    data = __salt__['cmd.run']('nproc')
+    try:
+        ret = int(data.strip())
+    except Exception:
+        return 0
+    return ret
+
+
 def netstats():
     '''
     Return the network stats for this minion
@@ -487,7 +512,9 @@ def all_status():
 def pid(sig):
     '''
     Return the PID or an empty string if the process is running or not.
-    Pass a signature to use to find the process via ps.
+    Pass a signature to use to find the process via ps.  Note you can pass
+    a Python-compatible regular expression to return all pids of
+    processes matching the regexp.
 
     CLI Example:
 
@@ -495,15 +522,20 @@ def pid(sig):
 
         salt '*' status.pid <sig>
     '''
-    # Check whether the sig is already quoted (we check at the end in case they
-    # send a sig like `-E 'someregex'` to use egrep) and doesn't begin with a
-    # dash (again, like `-E someregex`).  Quote sigs that qualify.
-    if (not sig.endswith('"') and not sig.endswith("'") and
-            not sig.startswith('-')):
-        sig = "'" + sig + "'"
-    cmd = ("{0[ps]} | grep {1} | grep -v grep | fgrep -v status.pid | "
-           "awk '{{print $2}}'".format(__grains__, sig))
-    return __salt__['cmd.run_stdout'](cmd) or ''
+
+    cmd = __grains__['ps']
+    output = __salt__['cmd.run_stdout'](cmd)
+
+    pids = ''
+    for line in output.splitlines():
+        if 'status.pid' in line:
+            continue
+        if re.search(sig, line):
+            if pids:
+                pids += '\n'
+            pids += line.split()[1]
+
+    return pids
 
 
 def version():
@@ -522,3 +554,46 @@ def version():
     ret = salt.utils.fopen(procf, 'r').read().strip()
 
     return ret
+
+
+def master(master=None, connected=True):
+    '''
+    .. versionadded:: 2014.7.0
+
+    Fire an event if the minion gets disconnected from its master. This
+    function is meant to be run via a scheduled job from the minion. If
+    master_ip is an FQDN/Hostname, is must be resolvable to a valid IPv4
+    address.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.master
+    '''
+
+    # the default publishing port
+    port = 4505
+    master_ip = None
+
+    if __salt__['config.get']('publish_port') != '':
+        port = int(__salt__['config.get']('publish_port'))
+
+    # Check if we have FQDN/hostname defined as master
+    # address and try resolving it first. _remote_port_tcp
+    # only works with IP-addresses.
+    if master is not None:
+        tmp_ip = _host_to_ip(master)
+        if tmp_ip is not None:
+            master_ip = tmp_ip
+
+    ips = _remote_port_tcp(port)
+
+    if connected:
+        if master_ip not in ips:
+            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+            event.fire_event({'master': master}, '__master_disconnected')
+    else:
+        if master_ip in ips:
+            event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+            event.fire_event({'master': master}, '__master_connected')

@@ -1,13 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Mike Place <mp@saltstack.com>`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
+    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
-
-# Import python libs
-import os
-import shutil
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -49,13 +43,6 @@ class OverstateTestCase(TestCase,
 
     def setUp(self):
         self.master_config = master_config(self.get_config_file_path('master'))
-        for entry in ('root_dir', 'cachedir'):
-            if not os.path.isdir(self.master_config[entry]):
-                os.makedirs(self.master_config[entry])
-
-    def tearDown(self):
-        if os.path.isdir(self.master_config['root_dir']):
-            shutil.rmtree(self.master_config['root_dir'])
 
     @patch('salt.client.LocalClient.cmd')
     def test__stage_list(self, local_client_mock):
@@ -175,7 +162,6 @@ class OverstateTestCase(TestCase,
         ret = overstate._check_results('mysql', 'all', {}, {'all': {}})
         self.assertEqual(ret, ({}, {'all': {}}))
 
-
     # @patch('salt.overstate.OverState.call_stage')
     # def test_call_stage(self, call_stage_mock):
     #     overstate = salt.overstate.OverState(self.master_config)
@@ -183,3 +169,8 @@ class OverstateTestCase(TestCase,
     #     overstate.call_stage('all', {'require': {'webservers': 'mysql'}, 'match': '*'})
     #     overstate.call_stage('mysql', {'match': 'db*', 'sls': {'drbb': 'mysql.server'}})
     #     overstate.call_stage({'require': ['mysql'], 'match': 'web*'})
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(OverstateTestCase, needs_daemon=False)

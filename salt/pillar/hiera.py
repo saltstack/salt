@@ -2,13 +2,14 @@
 '''
 Use hiera data as a Pillar source
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 # Import third party libs
 import yaml
@@ -25,7 +26,9 @@ def __virtual__():
     return 'hiera' if salt.utils.which('hiera') else False
 
 
-def ext_pillar(minion_id, pillar, conf):
+def ext_pillar(minion_id,  # pylint: disable=W0613
+               pillar,  # pylint: disable=W0613
+               conf):
     '''
     Execute hiera and return the data
     '''

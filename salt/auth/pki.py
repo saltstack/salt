@@ -27,6 +27,9 @@ except ImportError:
 # Import python libs
 import logging
 
+# Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 
 
@@ -35,7 +38,7 @@ def __virtual__():
     Requires newer pycrypto and pyOpenSSL
     '''
     if HAS_DEPS:
-        return 'pki'
+        return True
     return False
 
 
@@ -48,7 +51,7 @@ def auth(pem, **kwargs):
 
     Configure the CA cert in the master config file:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         external_auth:
           pki:
@@ -60,7 +63,7 @@ def auth(pem, **kwargs):
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem)
 
     cacert_file = __salt__['config.get']('external_auth:pki:ca_file')
-    with open(cacert_file) as f:
+    with salt.utils.fopen(cacert_file) as f:
         cacert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
 
     log.debug('Attempting to authenticate via pki.')
