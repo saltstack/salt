@@ -28,7 +28,10 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     'fun',
     'kwarg',
     'match',
-    'token'
+    'token',
+    '__jid__',
+    '__tag__',
+    '__user__'
 ])
 
 
