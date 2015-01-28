@@ -95,7 +95,7 @@ log = logging.getLogger(__name__)
 
 def cleanup_runtime_config_instance(to_cleanup):
     # Explicit and forced cleanup
-    for key in six.iterkeys(to_cleanup):
+    for key in list(to_cleanup.keys()):
         instance = to_cleanup.pop(key)
         del instance
 
