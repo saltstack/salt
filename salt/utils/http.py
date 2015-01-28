@@ -336,11 +336,13 @@ def get_ca_bundle(opts=None):
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
+    file_roots = opts.get('file_roots', '/srv/salt')
+
     # Please do not change the order without good reason
     for path in (
         # Check Salt first
-        '/srv/salt/cacert.pem',
-        '/srv/salt/ca-bundle.crt',
+        os.path.join(file_roots, 'cacert.pem'),
+        os.path.join(file_roots, 'ca-bundle.crt'),
         # Debian has paths that often exist on other distros
         '/etc/ssl/certs/ca-certificates.crt',
         # RedHat is also very common
@@ -380,11 +382,13 @@ def update_ca_bundle(
     if opts is None:
         opts = {}
 
+    file_roots = opts.get('file_roots', '/srv/salt')
+
     if target is None:
         target = get_ca_bundle(opts)
 
     if target is None:
-        target = '/srv/salt/cacert.pem'
+        target = os.path.join(file_roots, 'cacert.pem')
 
     if source is None:
         source = opts.get('ca_bundle_url', 'http://curl.haxx.se/ca/cacert.pem')
