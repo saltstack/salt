@@ -883,23 +883,20 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         for key in set(volume.keys()) - set(kwargs_add_data_disk):
             del volume[key]
 
-        attach = conn.add_data_disk(kwargs["service_name"], kwargs["deployment_name"], kwargs["role_name"],
+        result = conn.add_data_disk(kwargs["service_name"],
+                                    kwargs["deployment_name"],
+                                    kwargs["role_name"],
                                     **volume)
-        log.debug(attach)
+        _wait_for_async(conn, result.request_id)
 
-        # If attach is None then everything is fine
-        if attach:
-            msg = (
+        msg = (
                 '{0} attached to {1} (aka {2})'.format(
                     volume_dict['volume_name'],
                     kwargs['role_name'],
-                    name,
-                )
-            )
-            log.info(msg)
-            ret.append(msg)
-        else:
-            log.error('Error attaching {0} on Azure'.format(volume_dict))
+                    name)
+               )
+        log.info(msg)
+        ret.append(msg)
     return ret
 
 # Helper function for azure tests
