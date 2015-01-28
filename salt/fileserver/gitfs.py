@@ -912,7 +912,7 @@ def _aquire_update_lock_for_repo(repo):
     elif provider == 'dulwich':
         working_dir = repo['repo'].path
 
-    with wait_for_write_lock(working_dir, 'update.lk'):
+    with wait_for_write_lock(os.path.join(working_dir, 'update.lk')):
         yield
 
 
@@ -1819,4 +1819,3 @@ def symlink_list(load):
     return dict([(key, val)
                  for key, val in symlinks.iteritems()
                  if key.startswith(prefix)])
-
