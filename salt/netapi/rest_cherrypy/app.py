@@ -169,20 +169,15 @@ requests to the URLs detailed below.
 
 Data sent in :http:method:`post` and :http:method:`put` requests  must be in
 the format of a list of lowstate dictionaries. This allows multiple commands to
-be executed in a single HTTP request.
+be executed in a single HTTP request. The order of commands in the request
+corresponds to the return for each command in the response.
 
-.. glossary::
+Lowstate, broadly, is a dictionary of values that are mapped to a function
+call. This pattern is used pervasively throughout Salt. The functions called
+from netapi modules are described in :ref:`Client Interfaces <netapi-clients>`.
 
-    lowstate
-        A dictionary containing various keys that instruct Salt which command
-        to run, where that command lives, any parameters for that command, any
-        authentication credentials, what returner to use, etc.
-
-        Salt uses the lowstate data format internally in many places to pass
-        command data between functions. Salt also uses lowstate for the
-        :ref:`LocalClient() <python-api>` Python API interface.
-
-The following example (in JSON format) causes Salt to execute two commands::
+The following example (in JSON format) causes Salt to execute two commands, a
+command sent to minions as well as a runner function on the master::
 
     [{
         "client": "local",
@@ -723,13 +718,12 @@ class LowDataAdapter(object):
 
         .. code-block:: bash
 
-            curl -si https://localhost:8000 \\
+            curl -sSik https://localhost:8000 \\
                     -H "Accept: application/x-yaml" \\
-                    -H "X-Auth-Token: d40d1e1e" \\
+                    -H "X-Auth-Token: d40d1e1e<...snip...>" \\
                     -d client=local \\
                     -d tgt='*' \\
                     -d fun='test.ping' \\
-                    -d arg
 
         .. code-block:: http
 
@@ -740,7 +734,7 @@ class LowDataAdapter(object):
             Content-Length: 36
             Content-Type: application/x-www-form-urlencoded
 
-            fun=test.ping&arg&client=local&tgt=*
+            fun=test.ping&client=local&tgt=*
 
         **Example response:**
 
@@ -757,6 +751,51 @@ class LowDataAdapter(object):
                 ms-2: true
                 ms-3: true
                 ms-4: true
+
+        **Other examples**:
+
+        .. code-block:: bash
+
+            # Sending multiple positional args with urlencoded:
+            curl -sSik https://localhost:8000 \\
+                    -d client=local \\
+                    -d tgt='*' \\
+                    -d fun='cmd.run' \\
+                    -d arg='du -sh .' \\
+                    -d arg='/path/to/dir'
+
+            # Sending posiitonal args and Keyword args with JSON:
+            echo '[
+                {
+                    "client": "local",
+                    "tgt": "*",
+                    "fun": "cmd.run",
+                    "arg": [
+                        "du -sh .",
+                        "/path/to/dir"
+                    ],
+                    "kwarg": {
+                        "shell": "/bin/sh",
+                        "template": "jinja"
+                    }
+                }
+            ]' | curl -sSik https://localhost:8000 \\
+                    -H 'Content-type: application/json' \\
+                    -d@-
+
+            # Calling runner functions:
+            curl -sSik https://localhost:8000 \\
+                    -d client=runner \\
+                    -d fun='jobs.lookup_jid' \\
+                    -d jid='20150129182456704682' \\
+                    -d outputter=highstate
+
+            # Calling wheel functions:
+            curl -sSik https://localhost:8000 \\
+                    -d client=wheel \\
+                    -d fun='key.gen_accept' \\
+                    -d id_=dave \\
+                    -d keysize=4096
         '''
         return {
             'return': list(self.exec_lowstate(
