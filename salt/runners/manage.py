@@ -47,8 +47,6 @@ def status(output=True):
     ret = {}
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
-    if output:
-        __jid_event__.fire_event({'message': ret}, 'progress')
     return ret
 
 
