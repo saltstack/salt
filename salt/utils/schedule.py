@@ -243,7 +243,7 @@ class Schedule(object):
             self.returners = returners
         else:
             self.returners = returners.loader.gen_functions()
-        self.time_offset = self.functions['timezone.get_offset']()
+        self.time_offset = self.functions.get('timezone.get_offset', lambda: '0000')()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint
