@@ -265,11 +265,11 @@ class Schedule(object):
                 salt.syspaths.CONFIG_DIR,
                 'minion.d',
                 '_schedule.conf')
-        with salt.utils.fopen(schedule_conf, 'w+') as fp_:
-            try:
+        try:
+            with salt.utils.fopen(schedule_conf, 'w+') as fp_:
                 fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
-            except (IOError, OSError):
-                log.error('Failed to persist the updated schedule')
+        except (IOError, OSError):
+            log.error('Failed to persist the updated schedule')
 
     def delete_job(self, name, where=None):
         '''
