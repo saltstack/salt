@@ -1430,7 +1430,7 @@ class SaltRaetEventerMaster(SaltRaetEventer):
         if self.opts.value.get('cluster_mode'):
             if msg.get('origin') is None:
                 masters = (self.availables.value &
-                           set((remote.name for remote in self.road_stack.value.remotes.values()
+                           set((remote.name for remote in six.itervalues(self.road_stack.value.remotes)
                                 if remote.kind == kinds.applKinds.master)))
                 for name in masters:
                     remote = self.road_stack.value.nameRemotes[name]
