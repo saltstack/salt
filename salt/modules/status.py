@@ -152,33 +152,65 @@ def cpustats():
 
         salt '*' status.cpustats
     '''
-    procf = '/proc/stat'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        if comps[0] == 'cpu':
-            ret[comps[0]] = {'idle': _number(comps[4]),
-                             'iowait': _number(comps[5]),
-                             'irq': _number(comps[6]),
-                             'nice': _number(comps[2]),
-                             'softirq': _number(comps[7]),
-                             'steal': _number(comps[8]),
-                             'system': _number(comps[3]),
-                             'user': _number(comps[1])}
-        elif comps[0] == 'intr':
-            ret[comps[0]] = {'total': _number(comps[1]),
-                             'irqs': [_number(x) for x in comps[2:]]}
-        elif comps[0] == 'softirq':
-            ret[comps[0]] = {'total': _number(comps[1]),
-                             'softirqs': [_number(x) for x in comps[2:]]}
-        else:
-            ret[comps[0]] = _number(comps[1])
-    return ret
+    def linux_cpustats():
+        '''
+        linux specific implementation of cpustats
+        '''
+        procf = '/proc/stat'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            if comps[0] == 'cpu':
+                ret[comps[0]] = {'idle': _number(comps[4]),
+                                 'iowait': _number(comps[5]),
+                                 'irq': _number(comps[6]),
+                                 'nice': _number(comps[2]),
+                                 'softirq': _number(comps[7]),
+                                 'steal': _number(comps[8]),
+                                 'system': _number(comps[3]),
+                                 'user': _number(comps[1])}
+            elif comps[0] == 'intr':
+                ret[comps[0]] = {'total': _number(comps[1]),
+                                 'irqs': [_number(x) for x in comps[2:]]}
+            elif comps[0] == 'softirq':
+                ret[comps[0]] = {'total': _number(comps[1]),
+                                 'softirqs': [_number(x) for x in comps[2:]]}
+            else:
+                ret[comps[0]] = _number(comps[1])
+        return ret
+
+    def freebsd_cpustats():
+        '''
+        freebsd specific implementation of cpustats
+        '''
+        vmstat = __salt__['cmd.run']('vmstat -P').splitlines()
+        vm0 = vmstat[0].split()
+        cpu0loc = vm0.index('cpu0')
+        vm1 = vmstat[1].split()
+        usloc = vm1.index('us')
+        vm2 = vmstat[2].split()
+        cpuctr = 0
+        ret = {}
+        for cpu in vm0[cpu0loc:]:
+            ret[cpu] = {'us': _number(vm2[usloc + 3 * cpuctr]),
+                        'sy': _number(vm2[usloc + 1 + 3 * cpuctr]),
+                        'id': _number(vm2[usloc + 2 + 3 * cpuctr]), }
+            cpuctr += 1
+        return ret
+
+    # dict that return a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_cpustats,
+        'FreeBSD': freebsd_cpustats,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def meminfo():
