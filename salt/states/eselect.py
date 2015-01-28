@@ -15,9 +15,6 @@ A state module to manage Gentoo configuration via eselect
 # Import Python libs
 from __future__ import absolute_import
 
-# Import Salt libs
-import salt.utils
-
 # Define a function alias in order not to shadow built-in's
 __func_alias__ = {
     'set_': 'set'
