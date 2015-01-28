@@ -15,7 +15,6 @@ import salt.utils
 import salt.utils.cache
 import salt.utils.event
 import salt.utils.process
-from salt.ext.six import string_types
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
@@ -186,7 +185,12 @@ class ReactWrap(object):
         '''
         if 'local' not in self.client_cache:
             self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
-        self.client_cache['local'].cmd_async(*args, **kwargs)
+        try:
+            self.client_cache['local'].cmd_async(*args, **kwargs)
+        except SystemExit:
+            log.warning('Attempt to exit reactor. Ignored.')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))
 
     cmd = local
 
@@ -196,7 +200,12 @@ class ReactWrap(object):
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
-        self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        try:
+            self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
+        except SystemExit:
+            log.warning('Attempt to exit in reactor by runner. Ignored')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))
 
     def wheel(self, fun, **kwargs):
         '''
@@ -204,4 +213,9 @@ class ReactWrap(object):
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
-        self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        try:
+            self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
+        except SystemExit:
+            log.warning('Attempt to in reactor by whell. Ignored.')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))
