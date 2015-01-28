@@ -251,21 +251,48 @@ def cpuinfo():
 
         salt '*' status.cpuinfo
     '''
-    procf = '/proc/cpuinfo'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split(':')
-        comps[0] = comps[0].strip()
-        if comps[0] == 'flags':
-            ret[comps[0]] = comps[1].split()
-        else:
+    def linux_cpuinfo():
+        '''
+        linux specific cpuinfo implementation
+        '''
+        procf = '/proc/cpuinfo'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split(':')
+            comps[0] = comps[0].strip()
+            if comps[0] == 'flags':
+                ret[comps[0]] = comps[1].split()
+            else:
+                ret[comps[0]] = comps[1].strip()
+        return ret
+
+    def freebsd_cpuinfo():
+        '''
+        freebds specific cpuinfo implementation
+        '''
+        freebsd_cmd = 'sysctl hw.model hw.ncpu'
+        ret = {}
+        for line in __salt__['cmd.run'](freebsd_cmd).splitlines():
+            if not line:
+                continue
+            comps = line.split(':')
+            comps[0] = comps[0].strip()
             ret[comps[0]] = comps[1].strip()
-    return ret
+        return ret
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_cpuinfo,
+        'FreeBSD': freebsd_cpuinfo,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def diskstats():
@@ -459,7 +486,7 @@ def netdev():
         comps = line.split()
         # Fix lines like eth0:9999..'
         comps[0] = line.split(':')[0].strip()
-        #Support lines both like eth0:999 and eth0: 9999
+        # Support lines both like eth0:999 and eth0: 9999
         comps.insert(1, line.split(':')[1].strip().split()[0])
         ret[comps[0]] = {'iface': comps[0],
                          'rx_bytes': _number(comps[1]),
@@ -572,15 +599,18 @@ def version():
         salt '*' status.version
     '''
     def linux_version():
+        '''
+        linux specific implementation of version
+        '''
         procf = '/proc/version'
         if not os.path.isfile(procf):
             return {}
         return salt.utils.fopen(procf, 'r').read().strip()
 
-    # dict that return a function that does the right thing per platform
+    # dict that returns a function that does the right thing per platform
     get_version = {
-    'Linux': linux_version,
-    'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
+        'Linux': linux_version,
+        'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
