@@ -275,9 +275,25 @@ as required. However, each must individually be turned on.
 The return from these will be found in the return dict as ``status``,
 ``headers`` and ``text``, respectively.
 
+Writing Return Data to Files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+It is possible to write either the return data or headers to files, as soon as
+the response is received from the server, but specifying file locations via the
+``text_out`` or ``headers_out`` arguments. ``text`` and ``headers`` do not need
+to be returned to the user in order to do this.
+
+.. code-block:: python
+
+    salt.utils.http.query(
+        'http://example.com',
+        text=False,
+        headers=False,
+        text_out='/path/to/url_download.txt',
+        headers_out='/path/to/headers_download.txt',
+    )
+
 SSL Verification
 ~~~~~~~~~~~~~~~~
-
 By default, this function will verify SSL certificates. However, for testing or
 debugging purposes, SSL verification can be turned off.
 
