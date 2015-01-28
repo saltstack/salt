@@ -5,9 +5,15 @@ Package helper functions using ``salt.modules.pkg``
 .. versionadded:: FIXME
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import salt libs
 import salt.output
 import salt.minion
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def _get_returner(returner_types):
@@ -45,11 +51,11 @@ def list_upgrades(jid,
     if style == 'group':
         for minion in data:
             results = data[minion]['return']
-            for pkg, pkgver in results.items():
-                if pkg not in pkgs.keys():
+            for pkg, pkgver in six.iteritems(results):
+                if pkg not in six.iterkeys(pkgs):
                     pkgs[pkg] = {pkgver: {'hosts': []}}
 
-                if pkgver not in pkgs[pkg].keys():
+                if pkgver not in six.iterkeys(pkgs[pkg]):
                     pkgs[pkg].update({pkgver: {'hosts': []}})
 
                 pkgs[pkg][pkgver]['hosts'].append(minion)
