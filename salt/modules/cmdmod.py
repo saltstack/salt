@@ -556,7 +556,7 @@ def run(cmd,
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
     *************************************************************************
-    WARNING: This function does not process commands through a shell 
+    WARNING: This function does not process commands through a shell
     unless the python_shell flag is set to True. This means that any
     shell-specific functionality such as 'echo' or the use of pipes,
     redirection or &&, should either be migrated to cmd.shell or
@@ -683,7 +683,7 @@ def shell(cmd,
     ************************************************************
     WARNING: This passes the cmd argument directly to the shell
     without any further processing! Be absolutely sure that you
-    have properly santized the command passed to this function 
+    have properly santized the command passed to this function
     and do not use untrusted inputs.
     ************************************************************
 
