@@ -52,7 +52,7 @@ def mounted(name,
 
     device
         The device name, typically the device node, such as ``/dev/sdb1``
-        or ``UUID=066e0200-2867-4ebe-b9e6-f30026ca2314``
+        or ``UUID=066e0200-2867-4ebe-b9e6-f30026ca2314`` or ``LABEL=DATA``
 
     fstype
         The filesystem type, this will be ``xfs``, ``ext2/3/4`` in the case of classic
@@ -157,10 +157,13 @@ def mounted(name,
             device_list.append(os.path.realpath(device_list[0]))
             alt_device = active[real_name]['alt_device'] if 'alt_device' in active[real_name] else None
             uuid_device = active[real_name]['device_uuid'] if 'device_uuid' in active[real_name] else None
+            label_device = active[real_name]['device_label'] if 'device_label' in active[real_name] else None
             if alt_device and alt_device not in device_list:
                 device_list.append(alt_device)
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
+            if label_device and label_device not in device_list:
+                device_list.append(label_device)
             if opts:
                 mount_invisible_options = [
                     '_netdev',
@@ -184,6 +187,7 @@ def mounted(name,
                     'password',
                     'retry',
                 ]
+
                 for opt in opts:
                     keyval_option = opt.split('=')[0]
                     if keyval_option in mount_invisible_keys:
