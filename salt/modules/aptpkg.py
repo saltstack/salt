@@ -1525,6 +1525,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if not keyid or not keyserver:
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
+        if isinstance(keyid, int):  # yaml can make this an int, we need the hex version
+            keyid = hex(keyid)
         cmd = 'apt-key export {0}'.format(_cmd_quote(keyid))
         output = __salt__['cmd.run_stdout'](cmd, **kwargs)
         imported = output.startswith('-----BEGIN PGP')
@@ -1953,6 +1955,8 @@ def owner(*paths):
     then an empty string will be returned for that path.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename

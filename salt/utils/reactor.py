@@ -193,6 +193,8 @@ class ReactWrap(object):
             self.client_cache['local'].cmd_async(*args, **kwargs)
         except SystemExit:
             log.warning('Attempt to exit reactor. Ignored.')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))
 
     cmd = local
 
@@ -206,6 +208,8 @@ class ReactWrap(object):
             self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
         except SystemExit:
             log.warning('Attempt to exit in reactor by runner. Ignored')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))
 
     def wheel(self, fun, **kwargs):
         '''
@@ -217,3 +221,5 @@ class ReactWrap(object):
             self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
         except SystemExit:
             log.warning('Attempt to in reactor by whell. Ignored.')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))

@@ -135,10 +135,6 @@ def option(
             return __opts__[value]
     if not omit_master:
         if value in __pillar__.get('master', {}):
-            salt.utils.warn_until(
-                'Lithium',
-                'pillar_opts will default to False in the Lithium release'
-            )
             return __pillar__['master'][value]
     if not omit_pillar:
         if value in __pillar__:
@@ -173,10 +169,6 @@ def merge(value,
                 return ret
     if not omit_master:
         if value in __pillar__.get('master', {}):
-            salt.utils.warn_until(
-                'Lithium',
-                'pillar_opts will default to False in the Lithium release'
-            )
             tmp = __pillar__['master'][value]
             if ret is None:
                 ret = tmp
@@ -250,10 +242,6 @@ def get(key, default=''):
         return sdb.sdb_get(ret, __opts__)
 
     ret = salt.utils.traverse_dict_and_list(__pillar__.get('master', {}), key, '_|-')
-    salt.utils.warn_until(
-        'Lithium',
-        'pillar_opts will default to False in the Lithium release'
-    )
     if ret != '_|-':
         return sdb.sdb_get(ret, __opts__)
 
@@ -273,10 +261,6 @@ def dot_vals(value):
     '''
     ret = {}
     for key, val in __pillar__.get('master', {}).items():
-        salt.utils.warn_until(
-            'Lithium',
-            'pillar_opts will default to False in the Lithium release'
-        )
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
     for key, val in __opts__.items():

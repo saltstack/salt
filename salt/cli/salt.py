@@ -302,6 +302,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
-            salt.output.display_output(fun + ':', 'text', self.config)
+            salt.output.display_output(fun + ':', 'nested', self.config)
             print_cli(docs[fun])
             print_cli('')

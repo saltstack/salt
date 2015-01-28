@@ -142,7 +142,13 @@ def render(data, saltenv='base', sls='', argline='', **kwargs):
     '''
     if not HAS_GPG:
         raise SaltRenderError('GPG unavailable')
-    homedir = __salt__['config.get']('gpg_keydir', DEFAULT_GPG_KEYDIR)
+    if 'config.get' in __salt__:
+        homedir = __salt__['config.get']('gpg_keydir', DEFAULT_GPG_KEYDIR)
+    else:
+        homedir = __opts__.get('gpg_keydir', DEFAULT_GPG_KEYDIR)
     log.debug('Reading GPG keys from: {0}'.format(homedir))
-    gpg = gnupg.GPG(gnupghome=homedir)
+    try:
+        gpg = gnupg.GPG(gnupghome=homedir)
+    except OSError:
+        raise SaltRenderError('Cannot initialize gnupg')
     return decrypt_object(data, gpg)
