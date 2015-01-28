@@ -94,7 +94,9 @@ def image_create(profile=None, **kwargs):
     For all possible values, run ``glance help image-create`` on the minion.
     '''
     nt_ks = _auth(profile)
-    fields = [(k, v) for (k, v) in six.iteritems(kwargs) if k in glanceclient.v1.images.CREATE_PARAMS]
+    fields = dict(
+        [(k, v) for (k, v) in six.iteritems(kwargs) if k in glanceclient.v1.images.CREATE_PARAMS]
+    )
 
     image = nt_ks.images.create(**fields)
     newimage = image_list(str(image.id))
