@@ -316,7 +316,6 @@ def _run(cmd,
     if python_shell is None:
         python_shell = False
 
-
     kwargs = {'cwd': cwd,
               'shell': python_shell,
               'env': run_env,
@@ -560,7 +559,7 @@ def run(cmd,
     WARNING: This function does not process commands through a shell 
     unless the python_shell flag is set to True. This means that any
     shell-specific functionality such as 'echo' or the use of pipes,
-    redirection or &&, should either be migrated to cmd.shell or 
+    redirection or &&, should either be migrated to cmd.shell or
     have the python_shell=True flag set here.
 
     The use of python_shell=True means that the shell will accept _any_ input
@@ -659,6 +658,7 @@ def run(cmd,
         log.log(lvl, 'output: {0}'.format(ret['stdout']))
     return ret['stdout']
 
+
 def shell(cmd,
         cwd=None,
         stdin=None,
@@ -746,6 +746,7 @@ def shell(cmd,
         use_vt=use_vt,
         python_shell=True,
         **kwargs)
+
 
 def run_stdout(cmd,
                cwd=None,
@@ -1178,6 +1179,7 @@ def script(source,
             python_shell = True
     except NameError:
         pass
+
     def _cleanup_tempfile(path):
         try:
             os.remove(path)
