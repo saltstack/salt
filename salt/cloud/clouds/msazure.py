@@ -36,19 +36,17 @@ Example ``/etc/salt/cloud.providers`` or
 
 # Import python libs
 from __future__ import absolute_import
-
 import copy
 import logging
 import pprint
 import time
+import yaml
 
+# Import salt libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
-import yaml
 
-# Import python libs
-# Import salt cloud libs
 # Import azure libs
 HAS_LIBS = False
 try:
@@ -767,6 +765,7 @@ def create(vm_):
 
     return ret
 
+
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     '''
     Create and attach volumes to created node
@@ -856,6 +855,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         else:
             log.error('Error attaching {0} on Azure'.format(volume_dict))
     return ret
+
 
 def destroy(name, conn=None, call=None, kwargs=None):
     '''
