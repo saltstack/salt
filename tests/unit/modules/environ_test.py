@@ -53,14 +53,16 @@ class EnvironTestCase(TestCase):
         Set multiple salt process environment variables from a dict.
         Returns a dict.
         '''
-        self.assertFalse(environ.setenv('environ'))
-
-        self.assertFalse(environ.setenv({'A': True},
-                                        False,
-                                        True,
-                                        False))
-
         mock_environ = {'key': 'value'}
+        with patch.dict(os.environ, mock_environ):
+            self.assertFalse(environ.setenv('environ'))
+
+        with patch.dict(os.environ, mock_environ):
+            self.assertFalse(environ.setenv({'A': True},
+                                            False,
+                                            True,
+                                            False))
+
         with patch.dict(os.environ, mock_environ):
             mock_setval = MagicMock(return_value=None)
             with patch.object(environ, 'setval', mock_setval):
