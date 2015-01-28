@@ -1303,7 +1303,7 @@ class SaltRaetRouterMinion(SaltRaetRouter):
             self.road_stack.value.message(msg,
                                           self.road_stack.value.nameRemotes[d_estate].uid)
 
-    def _get_master_estate_name(self):
+    def _get_master_estate_name(self, clustered=False):
         '''
         Assign and return the name of the estate for the default master or empty if none
         If the default master is no longer available then selects one of the available
