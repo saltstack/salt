@@ -2822,7 +2822,7 @@ class BaseHighState(object):
     def clean_duplicate_extends(self, highstate):
         if '__extend__' in highstate:
             highext = []
-            for items in six.iteritems((ext) for ext in highstate['__extend__']):
+            for items in (six.iteritems(ext) for ext in highstate['__extend__']):
                 for item in items:
                     if item not in highext:
                         highext.append(item)
