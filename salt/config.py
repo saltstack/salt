@@ -423,7 +423,6 @@ DEFAULT_MINION_OPTS = {
     'raet_mutable': False,
     'raet_main': False,
     'raet_clear_remotes': True,
-    'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
     'password': None,
