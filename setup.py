@@ -643,7 +643,7 @@ class SaltDistribution(distutils.dist.Distribution):
             modules.append(os.path.relpath(root, SETUP_DIRNAME).replace(os.sep, '.'))
         return modules
 
-    # ----- Static Data ---------------------------------------------------------------------------------------------
+    # ----- Static Data -------------------------------------------------------------------------------------------->
     @property
     def _property_classifiers(self):
         return ['Programming Language :: Python',
