@@ -782,6 +782,17 @@ def installed(
           pkg.installed:
             - install_recommends: False
 
+    only_upgrade
+        Only upgrade the packages, if they are already installed. Default is False.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.installed:
+            - only_upgrade: True
 
     '''
     kwargs['saltenv'] = __env__
@@ -1177,6 +1188,18 @@ def latest(
         httpd:
           pkg.latest:
             - install_recommends: False
+
+    only_upgrade
+        Only upgrade the packages, if they are already installed. Default is False.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.latest:
+            - only_upgrade: True
 
     '''
     rtag = __gen_rtag()
