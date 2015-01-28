@@ -82,6 +82,8 @@ def query(url,
           requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
+          text_out=None,
+          headers_out=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -252,6 +254,14 @@ def query(url,
         log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
                   'incompatibilities between requests and logging.').format(exc))
 
+    if os.path.exists(text_out):
+        with salt.utils.fopen(text_out, 'w') as tof:
+            tof.write(result_text)
+
+    if os.path.exists(headers_out):
+        with salt.utils.fopen(headers_out, 'w') as hof:
+            hof.write(result_headers)
+
     if cookies is not None:
         sess_cookies.save()
 
@@ -310,7 +320,7 @@ def query(url,
     return ret
 
 
-def get_ca_bundle(opts):
+def get_ca_bundle(opts=None):
     '''
     Return the location of the ca bundle file. See the following article:
 
@@ -319,22 +329,74 @@ def get_ca_bundle(opts):
     if hasattr(get_ca_bundle, '__return_value__'):
         return get_ca_bundle.__return_value__
 
+    if opts is None:
+        opts = {}
+
     opts_bundle = opts.get('ca_bundle', None)
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
+    # Please do not change the order without good reason
     for path in (
-        '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem',
+        # Check Salt first
+        '/srv/salt/cacert.pem',
+        '/srv/salt/ca-bundle.crt',
+        # Debian has paths that often exist on other distros
+        '/etc/ssl/certs/ca-certificates.crt',
+        # RedHat is also very common
         '/etc/pki/tls/certs/ca-bundle.crt',
         '/etc/pki/tls/certs/ca-bundle.trust.crt',
+        # RedHat's link for Debian compatability
         '/etc/ssl/certs/ca-bundle.crt',
-        '/etc/ssl/certs/ca-certificates.crt',
+        # Suse has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
     ):
         if os.path.exists(path):
             return path
 
     return None
+
+
+def update_ca_bundle(
+        target=None,
+        source=None,
+        opts=None
+    ):
+    '''
+    Attempt to update the CA bundle file from a URL
+
+    If not specified, the local location on disk (``target``) will be
+    auto-detected, if possible. If it is not found, then a new location on disk
+    will be created and updated.
+
+    The default ``source`` is:
+
+        http://curl.haxx.se/ca/cacert.pem
+
+    This is based on the information at:
+
+        http://curl.haxx.se/docs/caextract.html
+    '''
+    if opts is None:
+        opts = {}
+
+    if target is None:
+        target = get_ca_bundle(opts)
+
+    if target is None:
+        target = '/srv/salt/cacert.pem'
+
+    if source is None:
+        source = opts.get('ca_bundle_url', 'http://curl.haxx.se/ca/cacert.pem')
+
+    query(
+        source,
+        text=True,
+        decode=False,
+        headers=False,
+        status=False,
+        text_out=target
+    )
 
 
 def _render(template, render, renderer, template_dict, opts):
