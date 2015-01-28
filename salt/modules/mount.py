@@ -16,7 +16,7 @@ from salt.exceptions import CommandNotFoundError, CommandExecutionError
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six.moves import filter, zip, map  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
 
 # Set up logger
 log = logging.getLogger(__name__)
