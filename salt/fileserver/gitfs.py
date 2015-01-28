@@ -43,7 +43,9 @@ Walkthrough <tutorial-gitfs>`.
 
 # Import python libs
 import copy
+import contextlib
 import distutils.version  # pylint: disable=E0611
+import fnctl
 import glob
 import hashlib
 import logging
@@ -901,6 +903,8 @@ def purge_cache():
 
 @contextlib.contextmanager
 def _aquire_update_lock_for_repo(repo):
+    provider = _get_provider()
+
     if provider == 'gitpython':
         working_dir = repo['repo'].working_dir
     elif provider == 'pygit2':
@@ -1033,10 +1037,6 @@ def update():
                     .format(exc, repo['url']),
                     exc_info_on_loglevel=logging.DEBUG
                 )
-            try:
-                os.remove(lk_fn)
-            except (IOError, OSError):
-                pass
 
     env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
