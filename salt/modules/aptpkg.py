@@ -446,6 +446,11 @@ def install(name=None,
 
         .. versionadded:: Lithium
 
+    only_upgrade
+        Only upgrade the packages, if they are already installed. Default is False.
+
+        .. versionadded:: Lithium
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -530,6 +535,8 @@ def install(name=None,
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
         if 'install_recommends' in kwargs and not kwargs['install_recommends']:
             cmd.append('--no-install-recommends')
+        if 'only_upgrade' in kwargs and kwargs['only_upgrade']:
+            cmd.append('--only-upgrade')
         if skip_verify:
             cmd.append('--allow-unauthenticated')
         if fromrepo:
