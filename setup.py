@@ -644,7 +644,6 @@ class SaltDistribution(distutils.dist.Distribution):
         return modules
 
     # ----- Static Data -------------------------------------------------------------------------------------------->
-    Static
     @property
     def _property_classifiers(self):
         return ['Programming Language :: Python',
