@@ -235,7 +235,7 @@ class SerializerExtension(Extension, object):
 
     .. code-block:: jinja
 
-        {{ data|yaml(False)}}
+        {{ data|yaml(False) }}
 
     will be rendered as:
 
