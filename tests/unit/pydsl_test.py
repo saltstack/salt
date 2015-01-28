@@ -11,7 +11,7 @@ import copy
 from cStringIO import StringIO
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting.unit import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
@@ -24,31 +24,38 @@ import salt.utils
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
+
 # Import 3rd-party libs
 import salt.ext.six as six
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.minion_config(None)
-OPTS['state_events'] = False
-OPTS['id'] = 'whatever'
-OPTS['file_client'] = 'local'
-OPTS['file_roots'] = dict(base=['/tmp'])
-OPTS['cachedir'] = 'cachedir'
-OPTS['test'] = False
-OPTS['grains'] = salt.loader.grains(OPTS)
 
-
-class PyDSLRendererTestCase(TestCase):
-    '''
-    WARNING: If tests in here are flaky, they may need
-    to be moved to their own class. Sharing HighState, especially
-    through setUp/tearDown can create dangerous race conditions!
-    '''
+class CommonTestCaseBoilerplate(TestCase):
 
     def setUp(self):
-        self.HIGHSTATE = HighState(OPTS)
+        self.root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
+        self.cache_dir = os.path.join(self.root_dir, 'cachedir')
+        if not os.path.isdir(self.root_dir):
+            os.makedirs(self.root_dir)
+
+        if not os.path.isdir(self.state_tree_dir):
+            os.makedirs(self.state_tree_dir)
+
+        if not os.path.isdir(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        self.config = salt.config.minion_config(None)
+        self.config['root_dir'] = self.root_dir
+        self.config['state_events'] = False
+        self.config['id'] = 'match'
+        self.config['file_client'] = 'local'
+        self.config['file_roots'] = dict(base=[self.state_tree_dir])
+        self.config['cachedir'] = self.cache_dir
+        self.config['test'] = False
+        self.config['grains'] = salt.loader.grains(self.config)
+        self.HIGHSTATE = HighState(self.config)
         self.HIGHSTATE.push_active()
 
     def tearDown(self):
@@ -56,6 +63,31 @@ class PyDSLRendererTestCase(TestCase):
             self.HIGHSTATE.pop_active()
         except IndexError:
             pass
+
+    def state_highstate(self, state, dirpath):
+        opts = copy.copy(self.config)
+        opts['file_roots'] = dict(base=[dirpath])
+        HIGHSTATE = HighState(opts)
+        HIGHSTATE.push_active()
+        try:
+            high, errors = HIGHSTATE.render_highstate(state)
+            if errors:
+                import pprint
+                pprint.pprint('\n'.join(errors))
+                pprint.pprint(high)
+
+            out = HIGHSTATE.state.call_high(high)
+            # pprint.pprint(out)
+        finally:
+            HIGHSTATE.pop_active()
+
+
+class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
+    '''
+    WARNING: If tests in here are flaky, they may need
+    to be moved to their own class. Sharing HighState, especially
+    through setUp/tearDown can create dangerous race conditions!
+    '''
 
     def render_sls(self, content, sls='', env='base', **kws):
         return self.HIGHSTATE.state.rend['pydsl'](
@@ -305,7 +337,7 @@ class PyDSLRendererTestCase(TestCase):
                 state('.C').cmd.run('echo C >> {2}', cwd='/')
                 '''.format(output, output, output)))
 
-            state_highstate({'base': ['aaa']}, dirpath)
+            self.state_highstate({'base': ['aaa']}, dirpath)
             with salt.utils.fopen(output, 'r') as f:
                 self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
 
@@ -338,7 +370,7 @@ class PyDSLRendererTestCase(TestCase):
                 A.file.managed('{3}/xxx.txt', source='salt://zzz.txt')
                 A()
                 '''.format(dirpath, dirpath, dirpath, dirpath)))
-            state_highstate({'base': ['aaa']}, dirpath)
+            self.state_highstate({'base': ['aaa']}, dirpath)
             with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'r') as f:
 
                 self.assertEqual(f.read(), 'hehe\nhoho\n')
@@ -375,7 +407,7 @@ class PyDSLRendererTestCase(TestCase):
                 #!pydsl
                 state().cmd.run('echo ccccc', cwd='/')
                 '''))
-            state_highstate({'base': ['aaa']}, dirpath)
+            self.state_highstate({'base': ['aaa']}, dirpath)
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
@@ -408,13 +440,13 @@ class PyDSLRendererTestCase(TestCase):
                 #!pydsl
                 success = True
                 '''))
-            state_highstate({'base': ['b']}, dirpath)
-            state_highstate({'base': ['c', 'd']}, dirpath)
+            self.state_highstate({'base': ['b']}, dirpath)
+            self.state_highstate({'base': ['c', 'd']}, dirpath)
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
 
-class PyDSLRendererIncludeTestCase(TestCase):
+class PyDSLRendererIncludeTestCase(CommonTestCaseBoilerplate):
 
     def test_rendering_includes(self):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
@@ -490,7 +522,7 @@ class PyDSLRendererIncludeTestCase(TestCase):
                     state(color).cmd.run('echo hello '+color+' '+str(number)+' >> {3}', cwd='/')
                 '''.format(output, output, output, output)))
 
-            state_highstate({'base': ['aaa']}, dirpath)
+            self.state_highstate({'base': ['aaa']}, dirpath)
             expected = textwrap.dedent('''\
                 X1
                 X2
@@ -513,24 +545,6 @@ class PyDSLRendererIncludeTestCase(TestCase):
 def write_to(fpath, content):
     with salt.utils.fopen(fpath, 'w') as f:
         f.write(content)
-
-
-def state_highstate(state, dirpath):
-    opts = copy.copy(OPTS)
-    opts['file_roots'] = dict(base=[dirpath])
-    HIGHSTATE = HighState(opts)
-    HIGHSTATE.push_active()
-    try:
-        high, errors = HIGHSTATE.render_highstate(state)
-        if errors:
-            import pprint
-            pprint.pprint('\n'.join(errors))
-            pprint.pprint(high)
-
-        out = HIGHSTATE.state.call_high(high)
-        # pprint.pprint(out)
-    finally:
-        HIGHSTATE.pop_active()
 
 
 if __name__ == '__main__':
