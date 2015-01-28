@@ -45,7 +45,7 @@ Walkthrough <tutorial-gitfs>`.
 import copy
 import contextlib
 import distutils.version  # pylint: disable=E0611
-import fnctl
+import fcntl
 import glob
 import hashlib
 import logging
@@ -920,12 +920,12 @@ def _aquire_update_lock_for_repo(repo):
 def wait_for_write_lock(filename):
     fhandle = open(filename, 'w')
 
-    if is_fcntl_available(check_sunos=True):
+    if salt.utils.is_fcntl_available(check_sunos=True):
         fcntl.flock(fhandle.fileno(), fcntl.LOCK_EX)
     try:
         yield
     finally:
-        if is_fcntl_available(check_sunos=True):
+        if salt.utils.is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_UN)
 
 
