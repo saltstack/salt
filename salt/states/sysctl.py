@@ -79,7 +79,7 @@ def present(name, value, config=None):
                     'The value {0} is set to be changed to {1} '
             return ret
         elif name in configured and name in current:
-            if str(value) == __salt__['sysctl.get'](name):
+            if str(value).split() == __salt__['sysctl.get'](name).split():
                 ret['result'] = True
                 ret['comment'] = 'Sysctl value {0} = {1} is already set'.format(
                         name,
