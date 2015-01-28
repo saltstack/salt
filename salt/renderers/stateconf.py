@@ -554,7 +554,7 @@ def extract_state_confs(data, is_extend=False):
         for sdk in state_dict[key]:
             if not isinstance(sdk, dict):
                 continue
-            key, val = next(six.iteritems(six))
+            key, val = next(six.iteritems(sdk))
             conf[key] = val
 
         if not is_extend and state_id in STATE_CONF_EXT:
