@@ -1957,7 +1957,7 @@ def owner(*paths):
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename
     '''
