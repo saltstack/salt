@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A simple beacon to watch journald for specific entries
 '''
@@ -54,7 +55,6 @@ def beacon(config):
     journal = _get_journal()
     while True:
         cur = journal.get_next()
-        print(cur)
         if not cur:
             break
         for name in config:

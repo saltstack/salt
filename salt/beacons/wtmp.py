@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Beacon to fire events at login of users as registered in the wtmp file
 '''
@@ -35,7 +36,7 @@ def _get_loc():
     return the active file location
     '''
     if LOC_KEY in __context__:
-        return __context
+        return __context__[LOC_KEY]
 
 
 def beacon(config):
