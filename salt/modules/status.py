@@ -12,6 +12,7 @@ import fnmatch
 # Import salt libs
 import salt.utils
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
+from salt.utils.network import host_to_ip as _host_to_ip
 import salt.utils.event
 import salt.config
 
@@ -648,12 +649,14 @@ def version():
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
-def master(master_ip=None, connected=True):
+def master(master=None, connected=True):
     '''
     .. versionadded:: 2014.7.0
 
     Fire an event if the minion gets disconnected from its master. This
-    function is meant to be run via a scheduled job from the minion
+    function is meant to be run via a scheduled job from the minion. If
+    master_ip is an FQDN/Hostname, is must be resolvable to a valid IPv4
+    address.
 
     CLI Example:
 
@@ -661,14 +664,29 @@ def master(master_ip=None, connected=True):
 
         salt '*' status.master
     '''
-    port = int(__salt__['config.option']('publish_port'))
+
+    # the default publishing port
+    port = 4505
+    master_ip = None
+
+    if __salt__['config.get']('publish_port') != '':
+        port = int(__salt__['config.get']('publish_port'))
+
+    # Check if we have FQDN/hostname defined as master
+    # address and try resolving it first. _remote_port_tcp
+    # only works with IP-addresses.
+    if master is not None:
+        tmp_ip = _host_to_ip(master)
+        if tmp_ip is not None:
+            master_ip = tmp_ip
+
     ips = _remote_port_tcp(port)
 
     if connected:
         if master_ip not in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master_ip}, '__master_disconnected')
+            event.fire_event({'master': master}, '__master_disconnected')
     else:
         if master_ip in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master_ip}, '__master_connected')
+            event.fire_event({'master': master}, '__master_connected')
