@@ -176,36 +176,25 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
     '''
     if context is None:
         context = {}
-    pack = [{'name': '__context__',
-             'value': context},
-            {'name': '__pillar__',
-             'value': opts.get('pillar', {})},
-            ]
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
-    return NewLazyLoader(_module_dirs(opts, 'modules', 'module'),
+    ret = NewLazyLoader(_module_dirs(opts, 'modules', 'module'),
                          opts,
                          tag='modules',
                          loaded_base_name='module',
-                         pack=pack,
                          whitelist=whitelist,
                          )
+    # only add the pack once
+    if ret.pack is None:
+        ret.pack = [{'name': '__context__',
+                     'value': context},
+                    {'name': '__salt__',
+                     'value': ret},
+                    ]
+    return ret
     # TODO: depends??
-    load = _create_loader(opts, 'modules', 'module')
-
-    pack = {'name': '__context__',
-            'value': context}
-
-    functions = load.gen_functions(
-        pack,
-        whitelist=whitelist,
-        provider_overrides=True,
-        include_errors=include_errors,
-        initial_load=initial_load
-    )
     # Enforce dependencies of module functions from "functions"
     Depends.enforce_dependencies(functions)
-    return functions
 
 
 def raw_mod(opts, name, functions, mod='modules'):
@@ -229,10 +218,17 @@ def proxy(opts, functions, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
-    load = _create_loader(opts, 'proxy', 'proxy')
-    pack = {'name': '__proxy__',
-            'value': functions}
-    return load.gen_functions(pack, whitelist=whitelist)
+    ret = NewLazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
+                        opts,
+                        tag='proxy',
+                        loaded_base_name='proxy',
+                        whitelist=whitelist,
+                        )
+    # only add the pack once
+    if ret.pack is None:
+        ret.pack = {'name': '__proxy__',
+                    'value': ret}
+    return ret
 
 
 def returners(opts, functions, whitelist=None):
@@ -245,8 +241,8 @@ def returners(opts, functions, whitelist=None):
                          opts,
                          tag='returners',
                          loaded_base_name='returner',
-                         pack=pack,
                          whitelist=whitelist,
+                         pack=pack,
                          )
 
 
@@ -254,19 +250,28 @@ def utils(opts, whitelist=None):
     '''
     Returns the utility modules
     '''
-    load = _create_loader(opts, 'utils', 'utils',
-                          ext_type_dirs='utils_dirs')
-    return LazyLoader(load, whitelist=whitelist)
+    return NewLazyLoader(_module_dirs(opts, 'utils', 'utils', ext_type_dirs='utils_dirs'),
+                         opts,
+                         tag='utils',
+                         loaded_base_name='utils',
+                         whitelist=whitelist,
+                         )
 
 
 def pillars(opts, functions):
     '''
     Returns the pillars modules
     '''
-    load = _create_loader(opts, 'pillar', 'pillar')
     pack = {'name': '__salt__',
             'value': functions}
-    return load.filter_func('ext_pillar', pack)
+
+    ret =  NewLazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
+                         opts,
+                         tag='pillar',
+                         loaded_base_name='pillar',
+                         pack=pack,
+                         )
+    return FilterDictWrapper(ret, '.ext_pillar')
 
 
 def tops(opts):
@@ -275,54 +280,78 @@ def tops(opts):
     '''
     if 'master_tops' not in opts:
         return {}
-    whitelist = list(opts['master_tops'].keys())
-    load = _create_loader(opts, 'tops', 'top')
-    topmodules = load.filter_func('top', whitelist=whitelist)
-    return topmodules
+    whitelist = opts['master_tops'].keys()
+    ret =  NewLazyLoader(_module_dirs(opts, 'tops', 'top'),
+                         opts,
+                         tag='tops',
+                         loaded_base_name='top',
+                         )
+    return FilterDictWrapper(ret, '.top')
 
 
 def wheels(opts, whitelist=None):
     '''
     Returns the wheels modules
     '''
-    load = _create_loader(opts, 'wheel', 'wheel')
-    return load.gen_functions(whitelist=whitelist)
+    return NewLazyLoader(_module_dirs(opts, 'wheel', 'wheel'),
+                         opts,
+                         tag='wheel',
+                         loaded_base_name='wheel',
+                         whitelist=whitelist,
+                         )
 
 
 def outputters(opts):
     '''
     Returns the outputters modules
     '''
-    load = _create_loader(
-        opts,
-        'output',
-        'output',
-        ext_type_dirs='outputter_dirs')
-    return load.filter_func('output')
+    ret =  NewLazyLoader(_module_dirs(opts, 'output', 'output', ext_type_dirs='outputter_dirs'),
+                         opts,
+                         tag='output',
+                         loaded_base_name='output',
+                         )
+    a = FilterDictWrapper(ret, '.output')
+    if ret.pack is None:
+        # TODO: this name seems terrible... __salt__ should always be execution mods
+        ret.pack = {'name': '__salt__',
+                    'value': a}
+    return a
 
 
 def auth(opts, whitelist=None):
     '''
     Returns the auth modules
     '''
-    load = _create_loader(opts, 'auth', 'auth')
-    return load.gen_functions(whitelist=whitelist)
+    return NewLazyLoader(_module_dirs(opts, 'auth', 'auth'),
+                         opts,
+                         tag='auth',
+                         loaded_base_name='auth',
+                         whitelist=whitelist,
+                         )
 
 
 def fileserver(opts, backends):
     '''
     Returns the file server modules
     '''
-    load = _create_loader(opts, 'fileserver', 'fileserver')
-    return load.gen_functions(whitelist=backends)
+    return NewLazyLoader(_module_dirs(opts, 'fileserver', 'fileserver'),
+                         opts,
+                         tag='fileserver',
+                         loaded_base_name='fileserver',
+                         whitelist=backends,
+                         )
 
 
 def roster(opts, whitelist=None):
     '''
     Returns the roster modules
     '''
-    load = _create_loader(opts, 'roster', 'roster')
-    return load.gen_functions(whitelist=whitelist)
+    return NewLazyLoader(_module_dirs(opts, 'roster', 'roster'),
+                         opts,
+                         tag='roster',
+                         loaded_base_name='roster',
+                         whitelist=whitelist,
+                         )
 
 
 def states(opts, functions, whitelist=None):
@@ -346,7 +375,6 @@ def states(opts, functions, whitelist=None):
                          pack=pack,
                          whitelist=whitelist,
                          )
-    return load.gen_functions(pack, whitelist=whitelist)
 
 
 def beacons(opts, context=None):
@@ -366,24 +394,31 @@ def search(opts, returners, whitelist=None):
     '''
     Returns the search modules
     '''
-    load = _create_loader(opts, 'search', 'search')
     pack = {'name': '__ret__',
             'value': returners}
-    return LazyLoader(load, pack=pack, whitelist=whitelist)
+    return NewLazyLoader(_module_dirs(opts, 'search', 'search'),
+                         opts,
+                         tag='search',
+                         loaded_base_name='search',
+                         whitelist=whitelist,
+                         pack=pack,
+                         )
 
 
 def log_handlers(opts):
     '''
     Returns the custom logging handler modules
     '''
-    load = _create_loader(
-        opts,
-        'log_handlers',
-        'log_handlers',
-        int_type='handlers',
-        base_path=os.path.join(SALT_BASE_PATH, 'log')
-    )
-    return load.filter_func('setup_handlers')
+    ret =  NewLazyLoader(_module_dirs(opts,
+                                      'log_handlers',
+                                      'log_handlers',
+                                      int_type='handlers',
+                                      base_path=os.path.join(SALT_BASE_PATH, 'log')),
+                         opts,
+                         tag='log_handlers',
+                         loaded_base_name='log_handlers',
+                         )
+    return FilterDictWrapper(ret, '.setup_handlers')
 
 
 def ssh_wrapper(opts, functions=None, context=None):
@@ -394,36 +429,40 @@ def ssh_wrapper(opts, functions=None, context=None):
         context = {}
     if functions is None:
         functions = {}
-    load = _create_loader(
-        opts,
-        'wrapper',
-        'wrapper',
-        base_path=os.path.join(SALT_BASE_PATH, os.path.join(
-            'client',
-            'ssh'))
-    )
     pack = [{'name': '__salt__',
              'value': functions},
             {'name': '__context__',
              'value': context}]
-    return load.gen_functions(pack)
+    return NewLazyLoader(_module_dirs(opts,
+                                      'wrapper',
+                                      'wrapper',
+                                      base_path=os.path.join(SALT_BASE_PATH, os.path.join('client','ssh'))),
+                         opts,
+                         tag='wrapper',
+                         loaded_base_name='wrapper',
+                         pack=pack,
+                         )
 
 
 def render(opts, functions, states=None):
     '''
     Returns the render modules
     '''
-    load = _create_loader(
-        opts, 'renderers', 'render', ext_type_dirs='render_dirs'
-    )
-    pack = [{'name': '__salt__',
-             'value': functions},
-            {'name': '__pillar__',
-             'value': opts.get('pillar', {})}]
-
+    pack = {'name': '__salt__',
+            'value': functions}
     if states:
         pack.append({'name': '__states__', 'value': states})
-    rend = load.filter_func('render', pack)
+    ret =  NewLazyLoader(_module_dirs(opts,
+                                      'renderers',
+                                      'render',
+                                      ext_type_dirs='render_dirs'),
+                         opts,
+                         tag='renderers',
+                         loaded_base_name='render',
+                         pack=pack,
+                         )
+    rend = FilterDictWrapper(ret, '.render')
+
     if not check_render_pipe_str(opts['renderer'], rend):
         err = ('The renderer {0} is unavailable, this error is often because '
                'the needed software is unavailable'.format(opts['renderer']))
@@ -431,7 +470,7 @@ def render(opts, functions, states=None):
         raise LoaderError(err)
     return rend
 
-
+grains_data = None
 def grains(opts, force_refresh=False):
     '''
     Return the functions for the dynamic grains and the values for the static
@@ -446,6 +485,11 @@ def grains(opts, force_refresh=False):
         __grains__ = salt.loader.grains(__opts__)
         print __grains__['id']
     '''
+    # globally cache grains data (todo: wrap grains_data in a class?)
+    global grains_data
+    if grains_data is not None and not force_refresh:
+        return grains_data
+
     if opts.get('skip_grains', False):
         return {}
     if 'conf_file' in opts:
@@ -471,10 +515,62 @@ def grains(opts, force_refresh=False):
     else:
         opts['grains'] = {}
 
-    load = _create_loader(opts, 'grains', 'grain', ext_type_dirs='grains_dirs')
-    grains_info = load.gen_grains(force_refresh)
-    grains_info.update(opts['grains'])
-    return grains_info
+    grains_data = {}
+    funcs = NewLazyLoader(_module_dirs(opts, 'grains', 'grain', ext_type_dirs='grains_dirs'),
+                     opts,
+                     tag='grains',
+                     loaded_base_name='grain',
+                     )
+    if force_refresh:  # if we refresh, lets reload grain modules
+        funcs.clear()
+    # Run core grains
+    for key, fun in funcs.items():
+        if not key.startswith('core.'):
+            continue
+        ret = fun()
+        if not isinstance(ret, dict):
+            continue
+        grains_data.update(ret)
+
+    # Run the rest of the grains
+    for key, fun in funcs.items():
+        if key.startswith('core.') or key == '_errors':
+            continue
+        try:
+            ret = fun()
+        except Exception:
+            log.critical(
+                'Failed to load grains defined in grain file {0} in '
+                'function {1}, error:\n'.format(
+                    key, fun
+                ),
+                exc_info=True
+            )
+            continue
+        if not isinstance(ret, dict):
+            continue
+        grains_data.update(ret)
+
+    # Write cache if enabled
+    if opts.get('grains_cache', False):
+        cumask = os.umask(0o77)
+        try:
+            if salt.utils.is_windows():
+                # Make sure cache file isn't read-only
+                __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
+            with salt.utils.fopen(cfn, 'w+b') as fp_:
+                try:
+                    self.serial.dump(grains_data, fp_)
+                except TypeError:
+                    # Can't serialize pydsl
+                    pass
+        except (IOError, OSError):
+            msg = 'Unable to write to grains cache file {0}'
+            log.error(msg.format(cfn))
+        os.umask(cumask)
+
+    grains_data.update(opts['grains'])
+    return grains_data
 
 
 def call(fun, **kwargs):
@@ -492,51 +588,42 @@ def runner(opts):
     '''
     Directly call a function inside a loader directory
     '''
-    load = _create_loader(
-        opts, 'runners', 'runner', ext_type_dirs='runner_dirs'
-    )
-    return NewLazyLoader(_module_dirs(opts, 'runners', 'runner'),
+    return NewLazyLoader(_module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
                      opts,
                      tag='runners',
                      loaded_base_name='runner',
                      )
-    return load.gen_functions()
 
 
 def queues(opts):
     '''
     Directly call a function inside a loader directory
     '''
-    load = _create_loader(
-        opts, 'queues', 'queue', ext_type_dirs='queue_dirs'
-    )
-    return load.gen_functions()
+    return NewLazyLoader(_module_dirs(opts, 'queues', 'queue', ext_type_dirs='queue_dirs'),
+                     opts,
+                     tag='queues',
+                     loaded_base_name='queue',
+                     )
 
 
 def sdb(opts, functions=None, whitelist=None):
     '''
     Make a very small database call
     '''
-    load = _create_loader(opts, 'sdb', 'sdb')
     pack = {'name': '__sdb__',
             'value': functions}
-    return LazyLoader(load,
-                      functions,
-                      pack,
-                      whitelist=whitelist,
-                      )
+    return NewLazyLoader(_module_dirs(opts, 'sdb', 'sdb'),
+                     opts,
+                     tag='sdb',
+                     loaded_base_name='sdb',
+                     pack=pack,
+                     )
 
 
 def clouds(opts):
     '''
     Return the cloud functions
     '''
-    load = _create_loader(opts,
-                          'clouds',
-                          'cloud',
-                          base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
-                          int_type='clouds')
-
     # Let's bring __active_provider_name__, defaulting to None, to all cloud
     # drivers. This will get temporarily updated/overridden with a context
     # manager when needed.
@@ -544,8 +631,16 @@ def clouds(opts):
         'name': '__active_provider_name__',
         'value': None
     }
-
-    functions = load.gen_functions(pack)
+    functions =  NewLazyLoader(_module_dirs(opts,
+                                            'clouds',
+                                            'cloud',
+                                            base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
+                                            int_type='clouds'),
+                               opts,
+                               tag='clouds',
+                               loaded_base_name='cloud',
+                               pack=pack,
+                               )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
             '{0!r} has been marked as not supported. Removing from the list '
@@ -561,8 +656,11 @@ def netapi(opts):
     '''
     Return the network api functions
     '''
-    load = salt.loader._create_loader(opts, 'netapi', 'netapi')
-    return load.gen_functions()
+    return NewLazyLoader(_module_dirs(opts, 'netapi', 'netapi'),
+                     opts,
+                     tag='netapi',
+                     loaded_base_name='netapi',
+                     )
 
 
 def _generate_module(name):
@@ -602,6 +700,35 @@ def in_pack(pack, name):
             pass
     return False
 
+import collections
+class FilterDictWrapper(collections.MutableMapping):
+    '''
+    Create a dict which wraps another dict with a specific key suffix on get
+
+    This is to replace "filter_load"
+    '''
+    def __init__(self, d, suffix):
+        self._dict = d
+        self.suffix = suffix
+
+    def __setitem__(self, key, val):
+        self._dict[key] = val
+
+    def __delitem__(self, key):
+        del self._dict[key]
+
+    def __getitem__(self, key):
+        '''
+        '''
+        key = key + self.suffix
+        return self._dict[key]
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __iter__(self):
+        return iter(self._dict)
+
 import salt.utils.lazy
 class NewLazyLoader(salt.utils.lazy.LazyDict):
     '''
@@ -610,7 +737,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
     Goals here:
         - lazy loading
         - minimize disk usage
-        - singletons (per type of course)
+        - singletons (per tag)
     '''
     # This class is only a singleton per minion/master pair
     instances = {}
@@ -659,7 +786,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  ):
-        pass
+        self.opts = self.__prep_mod_opts(opts)
 
     # an init for the singleton instance to call
     def __singleton_init__(self,
@@ -672,28 +799,18 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                  whitelist=None,
                  ):
         super(NewLazyLoader, self).__init__()  # init the lazy loader
+        self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
         if opts is None:
             opts = {}
         self.tag = tag
-        if 'grains' in opts:
-            self.grains = opts['grains']
-        else:
-            self.grains = {}
-        if 'pillar' in opts:
-            self.pillar = opts['pillar']
-        else:
-            self.pillar = {}
-        self.opts = self.__prep_mod_opts(opts)
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
         if self.opts.get('grains_cache', False):
             self.serial = salt.payload.Serial(self.opts)
 
         self.pack = pack
-        if self.tag == 'modules':
-            self.pack.append({'name': '__salt__', 'value': self})
         self.whitelist = whitelist
 
         # names of modules that we don't have (errors, __virtual__, etc.)
@@ -734,12 +851,40 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         '''
         Strip out of the opts any logger instance
         '''
+        if 'grains' in opts:
+            self.grains = opts['grains']
+        else:
+            self.grains = {}
+        if 'pillar' in opts:
+            self.pillar = opts['pillar']
+        else:
+            self.pillar = {}
+
         mod_opts = {}
         for key, val in opts.items():
             if key in ('logger', 'grains'):
                 continue
             mod_opts[key] = val
         return mod_opts
+
+    def __getitem__(self, key):
+        '''
+        When you get a module, make sure to pack the most recent opts/grains/pillar
+
+        This might be problematic, since this means they change after __virtual__,
+        but its been doing this for a while... so it must be fine :/
+        '''
+        mod = super(NewLazyLoader, self).__getitem__(key)
+
+        if '__opts__' in mod.__globals__:
+            mod.__globals__['__opts__'].update(self.opts)
+        else:
+            mod.__globals__['__opts__'] = self.opts
+
+        mod.__globals__['__grains__'] = self.grains
+        mod.__globals__['__pillar__'] = self.pillar
+
+        return mod
 
     def _iter_files(self, mod_name):
         '''
@@ -808,6 +953,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
             mod.__opts__ = self.opts
 
         mod.__grains__ = self.grains
+        mod.__pillar__ = self.pillar
 
         # pack whatever other globals we were asked to
         if self.pack:
@@ -1830,81 +1976,6 @@ class Loader(object):
         for key, fun in self.gen_functions().items():
             funcs[key[key.rindex('.')] + 1:] = fun
         return funcs
-
-    def gen_grains(self, force_refresh=False):
-        '''
-        Read the grains directory and execute all of the public callable
-        members. Then verify that the returns are python dict's and return
-        a dict containing all of the returned values.
-        '''
-        if self.opts.get('grains_cache', False):
-            cfn = os.path.join(
-                self.opts['cachedir'],
-                '{0}.cache.p'.format('grains')
-            )
-            if os.path.isfile(cfn):
-                grains_cache_age = int(time.time() - os.path.getmtime(cfn))
-                if self.opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
-                        self.opts.get('refresh_grains_cache', False) and not force_refresh:
-                    log.debug('Retrieving grains from cache')
-                    try:
-                        with salt.utils.fopen(cfn, 'rb') as fp_:
-                            cached_grains = self.serial.load(fp_)
-                        return cached_grains
-                    except (IOError, OSError):
-                        pass
-                else:
-                    if force_refresh:
-                        log.debug('Grains refresh requested. Refreshing grains.')
-                    else:
-                        log.debug('Grains cache last modified {0} seconds ago and '
-                                  'cache expiration is set to {1}. '
-                                  'Grains cache expired. Refreshing.'.format(
-                                      grains_cache_age,
-                                      self.opts.get('grains_cache_expiration', 300)
-                                  ))
-            else:
-                log.debug('Grains cache file does not exist.')
-        grains_data = {}
-        funcs = self.gen_functions()
-        for key, fun in funcs.items():
-            if key == '_errors':
-                continue
-            try:
-                ret = fun()
-            except Exception:
-                log.critical(
-                    'Failed to load grains defined in grain file {0} in '
-                    'function {1}, error:\n'.format(
-                        key, fun
-                    ),
-                    exc_info=True
-                )
-                continue
-            if not isinstance(ret, dict):
-                continue
-            # The OrderedDict of funcs has core grains at the end. So earlier
-            # grains are the ones which should override
-            ret.update(grains_data)
-            grains_data = ret
-        # Write cache if enabled
-        if self.opts.get('grains_cache', False):
-            cumask = os.umask(0o77)
-            try:
-                if salt.utils.is_windows():
-                    # Make sure cache file isn't read-only
-                    __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
-                with salt.utils.fopen(cfn, 'w+b') as fp_:
-                    try:
-                        self.serial.dump(grains_data, fp_)
-                    except TypeError:
-                        # Can't serialize pydsl
-                        pass
-            except (IOError, OSError):
-                msg = 'Unable to write to grains cache file {0}'
-                log.error(msg.format(cfn))
-            os.umask(cumask)
-        return grains_data
 
 
 class LazyLoader(MutableMapping):
