@@ -403,7 +403,8 @@ def update_ca_bundle(
         target = get_ca_bundle(opts)
 
     if target is None:
-        target = os.path.join(file_roots, 'cacert.pem')
+        log.error('Unable to detect location to write CA bundle to')
+        return
 
     if source is None:
         source = opts.get('ca_bundle_url', 'http://curl.haxx.se/ca/cacert.pem')

@@ -352,17 +352,8 @@ file (master or minion) as ``ca_bundle`` and ``ca_bundle_url``, respectively.
     ca_bundle: /path/to/ca-bundle.crt
     ca_bundle_url: https://example.com/path/to/ca-bundle.crt
 
-If Salt is unable to auto-detect the location of the CA bundle, it will default
-to a file inside of ``file_roots`` (usually ``/srv/salt/``) called
-``cacert.pem``. If the update is performed on the master (such as with the
-runner module), then this file will automatically be made available to minions
-as ``salt://cacert.pem``. To update from the runner, with the ``ca_bundle`` and
-``ca_bundle_url`` configured on the master (``opts`` is already available to
-runners):
-
-.. code-block:: bash
-
-    salt-run http.update_ca_bundle
+If Salt is unable to auto-detect the location of the CA bundle, it will raise
+an error.
 
 The ``update_ca_bundle()`` function can also be passed a string or a list of
 strings which represent files on the local system, which should be appended (in
