@@ -1416,7 +1416,16 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     salt.utils.args.parse_input(data['arg']),
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
-                return_data = func(*args, **kwargs)
+                if self.opts.get('sudo_user', ''):
+                    sudo_runas = self.opts.get('sudo_user')
+                    if 'sudo.salt_call' in self.modules.value:
+                        return_data = self.modules.value['sudo.salt_call'](
+                                sudo_runas,
+                                data['fun'],
+                                *args,
+                                **kwargs)
+                else:
+                    return_data = func(*args, **kwargs)
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}
