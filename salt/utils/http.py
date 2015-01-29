@@ -330,7 +330,6 @@ def query(url,
             with salt.utils.fopen(decode_out, 'w') as dof:
                 dof.write(result_text)
 
-
     if text is True:
         ret['text'] = result_text
 
