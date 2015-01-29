@@ -1011,7 +1011,8 @@ class Minion(MinionBase):
             )
         else:
             process = threading.Thread(
-                target=target, args=(instance, self.opts, data),
+                target=target,
+                args=(instance, self.opts, data),
                 name=data['jid']
             )
         process.start()

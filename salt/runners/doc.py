@@ -89,7 +89,7 @@ def __list_functions(user=None):
     for ret in gener:
         funcs.update(ret)
     if not user:
-        __progress__(funcs)
+        __jid_event__.fire_event({'message': funcs}, 'progress')
         return funcs
     for _, val in __opts__['external_auth'].items():
         if user in val:

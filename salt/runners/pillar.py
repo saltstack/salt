@@ -30,7 +30,7 @@ def show_top(minion=None, saltenv='base'):
     top, errors = pillar.get_top()
 
     if errors:
-        __progress__(errors, outputter='nested')
+        __jid_event__.fire_event({'data': errors, 'outputter': 'nested'}, 'progress')
         return errors
 
     return top

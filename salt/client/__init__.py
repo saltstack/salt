@@ -120,7 +120,7 @@ class LocalClient(object):
                 )
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.salt_user = self.__get_user()
+        self.salt_user = salt.utils.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.event = salt.utils.event.get_event(
@@ -155,20 +155,6 @@ class LocalClient(object):
         except (OSError, IOError):
             # Fall back to eauth
             return ''
-
-    def __get_user(self):
-        '''
-        Determine the current user running the salt command
-        '''
-        user = salt.utils.get_user()
-        # if our user is root, look for other ways to figure out
-        # who we are
-        env_vars = ('SUDO_USER',)
-        if user == 'root' or user == self.opts['user']:
-            for evar in env_vars:
-                if evar in os.environ:
-                    return 'sudo_{0}'.format(os.environ[evar])
-        return user
 
     def _convert_range_to_list(self, tgt):
         '''

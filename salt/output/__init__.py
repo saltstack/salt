@@ -50,7 +50,7 @@ def try_printout(data, out, opts):
         try:
             return get_printout('nested', opts)(data).rstrip()
         except (KeyError, AttributeError):
-            log.error('Nested output failed: ', exec_info=True)
+            log.error('Nested output failed: ', exc_info=True)
             return get_printout('raw', opts)(data).rstrip()
 
 
