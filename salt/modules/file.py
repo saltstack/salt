@@ -3263,10 +3263,10 @@ def manage_file(name,
                                     real_name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
-            except IOError:
+            except IOError as e:
                 __clean_tmp(sfn)
                 return _error(
-                    ret, 'Failed to commit change, permission error')
+                    ret, 'Failed to commit change, {0}'.format(str(e)))
 
         if contents is not None:
             # Write the static contents to a temporary file
