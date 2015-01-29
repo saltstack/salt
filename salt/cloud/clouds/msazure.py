@@ -41,13 +41,13 @@ import copy
 import logging
 import pprint
 import time
+import yaml
 
 # Import salt libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
-import yaml
-#19162 added disks to Azure VM creation. Only new empty disks are
+
 # Import azure libs
 HAS_LIBS = False
 try:
@@ -778,7 +778,7 @@ def create(vm_):
             {
                 'volumes': volumes,
                 'service_name': service_name,
-                'deployment_name': service_name,
+                'deployment_name': vm_['name'],
                 'media_link': media_link,
                 'role_name': vm_['name'],
                 'del_all_vols_on_destroy': vm_.get('set_del_all_vols_on_destroy', False)
@@ -786,6 +786,9 @@ def create(vm_):
             call='action'
         )
         ret['Attached Volumes'] = created
+
+    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+        ret.setdefault(key, value)
 
     data = show_instance(vm_['name'], call='action')
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
@@ -883,39 +886,24 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         for key in set(volume.keys()) - set(kwargs_add_data_disk):
             del volume[key]
 
-        result = conn.add_data_disk(kwargs["service_name"],
-                                    kwargs["deployment_name"],
-                                    kwargs["role_name"],
+        attach = conn.add_data_disk(kwargs["service_name"], kwargs["deployment_name"], kwargs["role_name"],
                                     **volume)
-        _wait_for_async(conn, result.request_id)
+        log.debug(attach)
 
-        msg = (
+        # If attach is None then everything is fine
+        if attach:
+            msg = (
                 '{0} attached to {1} (aka {2})'.format(
                     volume_dict['volume_name'],
                     kwargs['role_name'],
-                    name)
-               )
-        log.info(msg)
-        ret.append(msg)
+                    name,
+                )
+            )
+            log.info(msg)
+            ret.append(msg)
+        else:
+            log.error('Error attaching {0} on Azure'.format(volume_dict))
     return ret
-
-
-# Helper function for azure tests
-def _wait_for_async(conn, request_id):
-    count = 0
-    log.debug('Waiting for asynchronous operation to complete')
-    result = conn.get_operation_status(request_id)
-    while result.status == 'InProgress':
-        count = count + 1
-        if count > 120:
-            raise ValueError('Timed out waiting for async operation to complete.')
-        time.sleep(5)
-        result = conn.get_operation_status(request_id)
-
-    if result.status != 'Succeeded':
-        raise WindowsAzureError('Operation failed. {message} ({code})'
-                                .format(message=result.error.message,
-                                        code=result.error.code))
 
 
 def destroy(name, conn=None, call=None, kwargs=None):
