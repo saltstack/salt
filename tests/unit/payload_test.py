@@ -26,6 +26,10 @@ import errno
 import threading
 import time
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PayloadTestCase(TestCase):
@@ -78,7 +82,9 @@ class SREQTestCase(TestCase):
                     #  Wait for next request from client
                     message = socket.recv(zmq.NOBLOCK)
                     msg_deserialized = payload.loads(message)
+                    log.info('Echo server received message: {0}'.format(msg_deserialized))
                     if isinstance(msg_deserialized['load'], dict) and msg_deserialized['load'].get('sleep'):
+                        log.info('Test echo server sleeping for {0} seconds'.format(msg_deserialized['load']['sleep']))
                         time.sleep(msg_deserialized['load']['sleep'])
                     socket.send(message)
                 except zmq.ZMQError as exc:
@@ -127,6 +133,7 @@ class SREQTestCase(TestCase):
         # This is a try/except instead of an assertRaises because of a possible
         # subtle bug in zmq wherein a timeout=0 actually exceutes a single poll
         # before the timeout is reached.
+        log.info('Sending tries=0, timeout=0')
         try:
             sreq.send('clear', 'foo', tries=0, timeout=0)
         except salt.exceptions.SaltReqTimeoutError:
@@ -134,18 +141,21 @@ class SREQTestCase(TestCase):
         assert time.time() - start < 1  # ensure we didn't wait
 
         # server-side timeout
+        log.info('Sending tries=1, timeout=1')
         start = time.time()
         with self.assertRaises(salt.exceptions.SaltReqTimeoutError):
             sreq.send('clear', {'sleep': 2}, tries=1, timeout=1)
         assert time.time() - start >= 1  # ensure we actually tried once (1s)
 
         # server-side timeout with retries
+        log.info('Sending tries=2, timeout=1')
         start = time.time()
         with self.assertRaises(salt.exceptions.SaltReqTimeoutError):
             sreq.send('clear', {'sleep': 2}, tries=2, timeout=1)
         assert time.time() - start >= 2  # ensure we actually tried twice (2s)
 
         # test a regular send afterwards (to make sure sockets aren't in a twist
+        log.info('Sending regular send')
         assert sreq.send('clear', 'foo') == {'enc': 'clear', 'load': 'foo'}
 
     def test_destroy(self):
