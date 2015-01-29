@@ -30,10 +30,10 @@ else:
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
-    from salt import _syspaths # pylint: disable=W0611,E0611,import-error
-                               # because pylint thinks that _syspaths is an
-                               # attribute of salt.__init__
-except:
+    from salt import _syspaths  # pylint: disable=W0611,E0611,import-error
+                                # because pylint thinks that _syspaths is an
+                                # attribute of salt.__init__
+except ImportError:
     pass
 
 
