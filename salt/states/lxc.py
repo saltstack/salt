@@ -8,6 +8,7 @@ from __future__ import absolute_import
 __docformat__ = 'restructuredtext en'
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
