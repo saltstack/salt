@@ -23,9 +23,9 @@ import os.path
 
 if 'SETUP_DIRNAME' in globals():
     # This is from the exec() call in Salt's setup.py
-    THIS_FILE = os.path.join(SETUP_DIRNAME, 'salt', 'syspaths.py')  # pylint: disable=E0602
+    _THIS_FILE = os.path.join(SETUP_DIRNAME, 'salt', 'syspaths.py')  # pylint: disable=E0602
 else:
-    THIS_FILE = __file__
+    _THIS_FILE = __file__
 
 try:
     # Let's try loading the system paths from the generated module at
@@ -34,7 +34,13 @@ try:
                                 # because pylint thinks that _syspaths is an
                                 # attribute of salt.__init__
 except ImportError:
-    pass
+    # pylint: disable=too-few-public-methods
+    class Empty(object):
+        """An empty class to substitute for _syspaths"""
+        pass
+
+    # pylint: disable=invalid-name
+    _syspaths = Empty()
 
 
 _PLATFORM = sys.platform.lower()
@@ -72,7 +78,7 @@ _SETTINGS = [
     ('BASE_MASTER_ROOTS_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'salt-master')),
     ('LOGS_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'var', 'log', 'salt')),
     ('PIDFILE_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'var', 'run')),
-    ('INSTALL_DIR', lambda: os.path.dirname(os.path.realpath(THIS_FILE))),
+    ('INSTALL_DIR', lambda: os.path.dirname(os.path.realpath(_THIS_FILE))),
     ('CLOUD_DIR', lambda: os.path.join(globals()['INSTALL_DIR'], 'cloud')),
     ('BOOTSTRAP', lambda: os.path.join(globals()['CLOUD_DIR'], 'deploy', 'bootstrap-salt.sh')),
 ]
@@ -80,5 +86,5 @@ _SETTINGS = [
 
 __all__ = []
 for key, val in _SETTINGS:
-    globals()[key] = _syspaths.__dict__.get(key, val())
+    globals()[key] = getattr(_syspaths, key, val()) or val()
     __all__.append(key)
