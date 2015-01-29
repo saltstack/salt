@@ -26,7 +26,7 @@ def salt_call(runas, fun, *args, **kwargs):
         salt '*' sudo.salt_call root test.ping
     '''
     cmd = ['sudo',
-           runas,
+           '-u', runas,
            'salt-call',
            '--out', 'json',
            '--metadata',
@@ -36,8 +36,8 @@ def salt_call(runas, fun, *args, **kwargs):
         cmd.append(arg)
     for key in kwargs:
         cmd.append('{0}={1}'.format(key, kwargs[key]))
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    cmd_meta = json.loads(cmd_ret['stdout'])
+    cmd_ret = __salt__['cmd.run_all'](' '.join(cmd), python_shell=True)
+    cmd_meta = json.loads(cmd_ret['stdout'])['local']
     ret = cmd_meta['return']
     __context__['retcode'] = cmd_meta.get('retcode', 0)
     return ret
