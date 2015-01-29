@@ -260,12 +260,12 @@ def _get_process_owner(process):
 def _byte_calc(val):
     if val < 1024:
         tstr = str(val)+'B'
-	elif val < 1038336:
-	    tstr = str(val/1024)+'kB'
-	elif val < 1073741824:
-	    tstr = str(val/1038336)+'MB'
-	elif val < 1099511627776:
-	    tstr = str(val/1073741824)+'GB'
-	else:
-	    tstr = str(val/1099511627776)+'TB'
-	return tstr
+    elif val < 1038336:
+        tstr = str(val/1024)+'kB'
+    elif val < 1073741824:
+        tstr = str(val/1038336)+'MB'
+    elif val < 1099511627776:
+        tstr = str(val/1073741824)+'GB'
+    else:
+        tstr = str(val/1099511627776)+'TB'
+    return tstr
