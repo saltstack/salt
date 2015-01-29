@@ -64,10 +64,10 @@ def procs(count=False):
         processes = wmi_obj.win32_process()
 
 	#this short circuit's the function to get a short simple proc count.
-	if count:
-		return len(processes)
+    if count:
+    	return len(processes)
 
-	#a propper run of the function, creating a nonsensically long out put.
+    #a propper run of the function, creating a nonsensically long out put.
     process_info = {}
     for proc in processes:
         process_info[proc.ProcessId] = _get_process_info(proc)
@@ -102,13 +102,6 @@ def cpu_load():
 
     #return pull it out of the informatin and cast it to an int.
     return int(info[1][column:end])
-
-import os
-import ctypes
-import sys
-import collections
-import subprocess
-import time
 
 def uptime(human_readable=False):
     '''
