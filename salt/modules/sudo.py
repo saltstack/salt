@@ -36,7 +36,7 @@ def salt_call(runas, fun, *args, **kwargs):
         cmd.append(arg)
     for key in kwargs:
         cmd.append('{0}={1}'.format(key, kwargs[key]))
-    cmd_ret = __salt__['cmd.run_all'](' '.join(cmd), python_shell=True)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     cmd_meta = json.loads(cmd_ret['stdout'])['local']
     ret = cmd_meta['return']
     __context__['retcode'] = cmd_meta.get('retcode', 0)
