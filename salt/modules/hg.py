@@ -188,7 +188,7 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
             cmd.append(opt)
     if repository is not None:
         cmd.append(repository)
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
+    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False, use_vt=True)
 
 
 def update(cwd, rev, force=False, user=None):
