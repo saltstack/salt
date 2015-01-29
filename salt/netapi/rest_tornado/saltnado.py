@@ -1370,7 +1370,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):
             except TimeoutException:
                 break
 
-        self.finish()
+#        self.finish()
 
 
 class WebhookSaltAPIHandler(SaltAPIHandler):
