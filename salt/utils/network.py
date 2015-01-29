@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import socket
 import subprocess
+import shlex
 import re
 import logging
 import os
@@ -1011,7 +1012,8 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        data = subprocess.check_output(['sockstat', '-4', '-c', '-p {0}'.format(port)])
+        cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
+        data = subprocess.check_output(cmd)
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
