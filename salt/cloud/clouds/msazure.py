@@ -797,7 +797,9 @@ def _wait_for_async(conn, request_id):
         result = conn.get_operation_status(request_id)
 
     if result.status != 'Succeeded':
-        raise ValueError('Asynchronous operation did not succeed.')
+        raise WindowsAzureError("Operation failed. {message} ({code})"
+                                .format(message=result.error.message,
+                                        code=result.error.code))
 
 
 def destroy(name, conn=None, call=None, kwargs=None):
