@@ -40,7 +40,13 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     def __init__(self, opts):
         self.opts = opts
-        self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
+
+    @property
+    def functions(self):
+        if not hasattr(self, '_functions'):
+            self._functions = salt.loader.runner(self.opts)  # Must be self.functions for mixin to work correctly :-/
+        return self._functions
+
 
     def _reformat_low(self, low):
         '''
