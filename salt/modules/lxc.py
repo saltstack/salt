@@ -23,9 +23,7 @@ import os
 import time
 import shutil
 import re
-import sys
 import random
-import salt.ext.six as six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 # Import salt libs
@@ -201,7 +199,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         vm_ = {}
     vm_ = copy.deepcopy(vm_)
     vm_ = salt.utils.dictupdate.update(vm_, kwargs)
-    profile = _lxc_profile(vm_.get('profile', {}))
+    profile = get_container_profile(vm_.get('profile'))
     if name is None:
         name = vm_['name']
     from_container = vm_.get('from_container', None)
@@ -1079,7 +1077,9 @@ def init(name,
         if old_chunks != chunks:
             to_reboot = True
     if remove_seed_marker:
-        cmd_run(name, 'rm -f \'{0}\''.format(SEED_MARKER), python_shell=True)
+        cmd_run(name,
+                ['rm', '-f', SEED_MARKER],
+                python_shell=False)
 
     # last time to be sure any of our property is correctly applied
     cfg = _LXCConfig(name=name, network_profile=network_profile,
@@ -2045,26 +2045,6 @@ def set_parameter(name, parameter, value):
         return True
 
 
-def templates(templates_dir='/usr/share/lxc/templates'):
-    '''
-    Returns a list of existing templates
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' lxc.templates
-    '''
-    templates_list = []
-    san = re.compile('^lxc-')
-    if os.path.isdir(templates_dir):
-        templates_list.extend(
-            [san.sub('', a) for a in os.listdir(templates_dir)]
-        )
-    templates_list.sort()
-    return templates_list
-
-
 def info(name):
     '''
     Returns information about a container
@@ -2578,7 +2558,7 @@ def bootstrap(name,
         if orig_state == 'stopped':
             stop(name)
         elif orig_state == 'frozen':
-            lxc.freeze(name)
+            freeze(name)
         # mark seeded upon successful install
         if ret:
             cmd_run(name,
@@ -2616,6 +2596,7 @@ def _run(name,
          no_start=False,
          preserve_state=True,
          stdin=None,
+         python_shell=True,
          output_loglevel='debug',
          use_vt=False,
          ignore_retcode=False,
@@ -2659,14 +2640,14 @@ def _run(name,
         if not use_vt:
             ret = __salt__[cmd_func](cmd,
                                      stdin=stdin,
-                                     python_shell=False,
+                                     python_shell=python_shell,
                                      output_loglevel=output_loglevel,
                                      ignore_retcode=ignore_retcode)
         else:
             stdout, stderr = '', ''
             try:
                 proc = vt.Terminal(cmd,
-                                   shell=True,
+                                   shell=python_shell,
                                    log_stdin_level=output_loglevel if
                                                    output_loglevel == 'quiet'
                                                    else 'info',
@@ -2713,7 +2694,7 @@ def _run(name,
         ret = __salt__['cmd.run_chroot'](rootfs,
                                          cmd,
                                          stdin=stdin,
-                                         python_shell=False,
+                                         python_shell=python_shell,
                                          output_loglevel=output_loglevel,
                                          ignore_retcode=ignore_retcode)
 
