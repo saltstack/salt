@@ -219,12 +219,7 @@ def salt_mem(human_readable=False):
         result = wmi_obj.query('SELECT WorkingSet FROM Win32_PerfRawData_PerfProc_Process WHERE IDProcess={0}'.format(os.getpid()))
         mem = int(result[0].wmi_property('WorkingSet').value)
         if human_readable:
-            if mem < 1024:
-                return str(mem)+'B'
-            elif mem < 1038336:
-                return str(mem/1024)+'kB'
-            else:
-                return str(mem/1038336)+'MB'
+            return _byte_calc(mem)
         return mem
 
 def _get_process_info(proc):
@@ -265,12 +260,12 @@ def _get_process_owner(process):
 def _byte_calc(val):
     if val < 1024:
         tstr = str(val)+'B'
-        elif val < 1038336:
-            tstr = str(val/1024)+'kB'
-        elif val < 1073741824:
-            tstr = str(val/1038336)+'MB'
-        elif val < 1099511627776:
-            tstr = str(val/1073741824)+'GB'
-        else:
-            tstr = str(val/1099511627776)+'TB'
-        return tstr
+	elif val < 1038336:
+	    tstr = str(val/1024)+'kB'
+	elif val < 1073741824:
+	    tstr = str(val/1038336)+'MB'
+	elif val < 1099511627776:
+	    tstr = str(val/1073741824)+'GB'
+	else:
+	    tstr = str(val/1099511627776)+'TB'
+	return tstr
