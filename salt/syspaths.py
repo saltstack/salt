@@ -18,6 +18,8 @@
 '''
 
 # Import python libs
+
+from __future__ import absolute_import
 import sys
 import os.path
 
@@ -37,7 +39,7 @@ except ImportError:
     # pylint: disable=too-few-public-methods
     class Empty(object):
         """An empty class to substitute for _syspaths"""
-        pass
+        __slots__ = ()
 
     # pylint: disable=invalid-name
     _syspaths = Empty()
