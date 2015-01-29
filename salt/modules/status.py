@@ -223,22 +223,53 @@ def meminfo():
 
         salt '*' status.meminfo
     '''
-    procf = '/proc/meminfo'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        comps[0] = comps[0].replace(':', '')
-        ret[comps[0]] = {
-            'value': comps[1],
-        }
-        if len(comps) > 2:
-            ret[comps[0]]['unit'] = comps[2]
-    return ret
+    def linux_meminfo():
+        '''
+        linux specific implementation of meminfo
+        '''
+        procf = '/proc/meminfo'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            comps[0] = comps[0].replace(':', '')
+            ret[comps[0]] = {
+                'value': comps[1],
+            }
+            if len(comps) > 2:
+                ret[comps[0]]['unit'] = comps[2]
+        return ret
+
+    def freebsd_meminfo():
+        '''
+        freebsd specific implementation of meminfo
+        '''
+        sysctlvm = __salt__['cmd.run']('sysctl vm').splitlines()
+        sysctlvm = [x for x in sysctlvm if x.startswith('vm')]
+        sysctlvm = [x.split(':') for x in sysctlvm]
+        sysctlvm = [[y.strip() for y in x] for x in sysctlvm]
+        sysctlvm = [x for x in sysctlvm if x[1]]  # If x[1] not empty
+
+        ret = {}
+        for line in sysctlvm:
+            ret[line[0]] = line[1]
+        # Special handling for vm.total as it's especially important
+        sysctlvmtot = __salt__['cmd.run']('sysctl -n vm.vmtotal').splitlines()
+        sysctlvmtot = [x for x in sysctlvmtot if x]
+        ret['vm.vmtotal'] = sysctlvmtot
+        return ret
+    # dict that return a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_meminfo,
+        'FreeBSD': freebsd_meminfo,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def cpuinfo():
