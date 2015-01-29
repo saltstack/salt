@@ -36,9 +36,16 @@ def output(grains):
     Output the grains in a clean way
     '''
     colors = salt.utils.get_colors(__opts__.get('color'), __opts__.get('color_theme'))
-    encoding = grains['locale_info']['defaultencoding']
+    # find an encoding
+    encoding = 'unknown'  # default to unknown
+    # find *an* encoding
+    for _, min_grains in grains.iteritems():
+        if 'defaultencoding' in min_grains.get('locale_info', {}):
+            encoding = min_grains['locale_info']['defaultencoding']
+            break
     if encoding == 'unknown':
         encoding = 'utf-8'  # let's hope for the best
+
 
     ret = u''
     for id_, minion in six.iteritems(grains):
@@ -46,7 +53,7 @@ def output(grains):
         for key in sorted(minion):
             ret += u'  {0}{1}{2}:'.format(colors['CYAN'], key.decode(encoding), colors['ENDC'])
             if key == 'cpu_flags':
-                ret += colors['LIGHT_GREEN']
+                ret += str(colors['LIGHT_GREEN'])
                 for val in minion[key]:
                     ret += u' {0}'.format(val.decode(encoding))
                 ret += '{0}\n'.format(colors['ENDC'])
@@ -58,8 +65,8 @@ def output(grains):
                 ret += '{0}\n'.format(colors['ENDC'])
             elif isinstance(minion[key], list):
                 for val in minion[key]:
-                    ret += u'\n      {0}{1}{2}'.format(colors['LIGHT_GREEN'], val.decode(encoding), colors['ENDC'])
+                    ret += u'\n      {0}{1}{2}'.format(colors['LIGHT_GREEN'], str(val).decode(encoding), colors['ENDC'])
                 ret += '\n'
             else:
-                ret += u' {0}{1}{2}\n'.format(colors['LIGHT_GREEN'], minion[key].decode(encoding), colors['ENDC'])
+                ret += u' {0}{1}{2}\n'.format(colors['LIGHT_GREEN'], str(minion[key]).decode(encoding), colors['ENDC'])
     return ret
