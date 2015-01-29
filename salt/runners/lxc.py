@@ -11,7 +11,6 @@ import time
 import os
 import copy
 import logging
-import pprint
 
 # Import Salt libs
 import salt.client
