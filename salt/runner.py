@@ -47,7 +47,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             self._functions = salt.loader.runner(self.opts)  # Must be self.functions for mixin to work correctly :-/
         return self._functions
 
-
     def _reformat_low(self, low):
         '''
         Format the low data for RunnerClient()'s master_call() function
