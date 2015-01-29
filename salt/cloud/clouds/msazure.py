@@ -286,9 +286,9 @@ def list_nodes_full(conn=None, call=None):
                 ret[role].update(role_instances[role])
                 ret[role]['id'] = role
                 ret[role]['hosted_service'] = service
-                if role_instances[role]['power_state'] == "Started":
+                if role_instances[role]['power_state'] == 'Started':
                     ret[role]['state'] = 'running'
-                elif role_instances[role]['power_state'] == "Stopped":
+                elif role_instances[role]['power_state'] == 'Stopped':
                     ret[role]['state'] = 'stopped'
                 else:
                     ret[role]['state'] = 'pending'
@@ -554,7 +554,7 @@ def create(vm_):
     try:
         conn.create_hosted_service(**service_kwargs)
     except WindowsAzureConflictError:
-        log.debug("Cloud service already exists")
+        log.debug('Cloud service already exists')
     except Exception as exc:
         error = 'The hosted service name is invalid.'
         if error in str(exc):
@@ -583,10 +583,10 @@ def create(vm_):
         result = conn.create_virtual_machine_deployment(**vm_kwargs)
         _wait_for_async(conn, result.request_id)
     except WindowsAzureConflictError:
-        log.debug("Conflict error. The deployment may already exist, trying add_role")
+        log.debug('Conflict error. The deployment may already exist, trying add_role')
         # Deleting two useless keywords
-        del vm_kwargs["deployment_slot"]
-        del vm_kwargs["label"]
+        del vm_kwargs['deployment_slot']
+        del vm_kwargs['label']
         result = conn.add_role(**vm_kwargs)
         _wait_for_async(conn, result.request_id)
     except Exception as exc:
@@ -623,8 +623,8 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         try:
-            conn.get_role(service_name, service_name, vm_["name"])
-            data = show_instance(vm_["name"], call='action')
+            conn.get_role(service_name, service_name, vm_['name'])
+            data = show_instance(vm_['name'], call='action')
             if 'url' in data and data['url'] != str(''):
                 return data['url']
         except WindowsAzureMissingResourceError:
@@ -787,7 +787,7 @@ def create(vm_):
 #Helper function for azure tests
 def _wait_for_async(conn, request_id):
     count = 0
-    log.debug("Waiting for asynchronous operation to complete")
+    log.debug('Waiting for asynchronous operation to complete')
     result = conn.get_operation_status(request_id)
     while result.status == 'InProgress':
         count = count + 1
@@ -797,7 +797,7 @@ def _wait_for_async(conn, request_id):
         result = conn.get_operation_status(request_id)
 
     if result.status != 'Succeeded':
-        raise WindowsAzureError("Operation failed. {message} ({code})"
+        raise WindowsAzureError('Operation failed. {message} ({code})'
                                 .format(message=result.error.message,
                                         code=result.error.code))
 
