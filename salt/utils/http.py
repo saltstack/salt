@@ -85,6 +85,7 @@ def query(url,
           verify_ssl=None,
           text_out=None,
           headers_out=None,
+          decode_out=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -324,6 +325,11 @@ def query(url,
                 ret['dict'].append(xml.to_dict(item))
         else:
             text = True
+
+        if os.path.exists(decode_out):
+            with salt.utils.fopen(decode_out, 'w') as dof:
+                dof.write(result_text)
+
 
     if text is True:
         ret['text'] = result_text
