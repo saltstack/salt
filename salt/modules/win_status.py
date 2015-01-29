@@ -17,6 +17,7 @@ import ctypes
 import sys
 import collections
 import subprocess
+import time
 
 log = logging.getLogger(__name__)
 
@@ -101,6 +102,76 @@ def cpu_load():
 
     #return pull it out of the informatin and cast it to an int.
     return int(info[1][column:end])
+
+import os
+import ctypes
+import sys
+import collections
+import subprocess
+import time
+
+def uptime(human_readable=False):
+    '''
+    Return the system uptime for this machine in seconds
+
+    human_readable translates the seconds into something a little
+    easier to understand, but not necessarily useful to a machine.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' status.uptime
+       salt '*' status.uptime human_readable
+    '''
+
+    #open up a subprocess to get information from WMIC
+    proc = subprocess.Popen('net stats srv',stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    #pull in the information from WMIC
+    outs = proc.communicate()
+
+    #get the line that has when the computer started in it:
+    stats_line = ''
+    for line in outs[0].split('\r\n'):
+        if "Statistics since" in line:
+            stats_line = line
+
+    #extract the time string from the line and parse
+    startup_time = stats_line[len('Statistics Since '):]#get string
+    startup_time = time.strptime(startup_time,'%d/%m/%Y %H:%M:%S')#convert to struct
+    startup_time = time.mktime(startup_time)#convert to seconds since epoch
+
+    #subtract startup time from current time to get the uptime of the system.
+    uptime = time.time() - startup_time
+
+    if human_readable:
+        #pull out the majority of the uptime tuple. h:m:s
+        uptime = int(uptime)
+        seconds = uptime%60
+        uptime /= 60
+        minutes = uptime%60
+        uptime /= 60
+        hours = uptime%224
+        uptime /= 24
+
+        #translate the h:m:s from above into HH:MM:SS format.
+        ret = '{0:0>2}:{1:0>2}:{2:0>2}'.format(hours,minutes,seconds)
+
+        #If the minion has been on for days, add that in. 
+        if uptime > 0:
+            ret = 'Days: {0} {1}'.format(uptime%365,ret)
+
+        #if you have aWindows minion that has been up for years, my hat is off to you sir.
+        if uptime > 365:
+            ret = 'Years: {0} {1}'.format(uptime/365,ret)
+            
+        return ret
+    
+    else:
+        return uptime
+
+
 
 def disk_usage(human_readable=False,path=None):
     '''
