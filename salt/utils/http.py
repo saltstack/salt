@@ -366,7 +366,7 @@ def get_ca_bundle(opts=None):
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
-    file_roots = opts.get('file_roots', '/srv/salt')
+    file_roots = opts.get('file_roots', {'base': [syspaths.SRV_ROOT_DIR]})
     salt_root = file_roots['base'][0]
     log.debug('file_roots is {0}'.format(salt_root))
 
