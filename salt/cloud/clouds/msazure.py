@@ -580,13 +580,15 @@ def create(vm_):
             )
         return False
     try:
-        conn.create_virtual_machine_deployment(**vm_kwargs)
+        result = conn.create_virtual_machine_deployment(**vm_kwargs)
+        _wait_for_async(conn, result.request_id)
     except WindowsAzureConflictError:
         log.debug("Conflict error. The deployment may already exist, trying add_role")
         # Deleting two useless keywords
         del vm_kwargs["deployment_slot"]
         del vm_kwargs["label"]
-        conn.add_role(**vm_kwargs)
+        result = conn.add_role(**vm_kwargs)
+        _wait_for_async(conn, result.request_id)
     except Exception as exc:
         error = 'The hosted service name is invalid.'
         if error in str(exc):
@@ -785,6 +787,7 @@ def create(vm_):
 #Helper function for azure tests
 def _wait_for_async(conn, request_id):
     count = 0
+    log.debug("Waiting for asynchronous operation to complete")
     result = conn.get_operation_status(request_id)
     while result.status == 'InProgress':
         count = count + 1
