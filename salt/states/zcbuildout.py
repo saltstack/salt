@@ -43,7 +43,6 @@ import sys
 
 # Import salt libs
 from salt.ext.six import string_types
-import salt.utils
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
