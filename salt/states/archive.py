@@ -194,8 +194,9 @@ def extracted(name,
 
             for opt in tar_opts:
                 if not opt.startswith('-'):
-                    if opt not in ['x', 'f']:
-                        tar_shortopts = tar_shortopts + opt
+                    for shortopt in opt:
+                        if shortopt not in ['x', 'f']:
+                            tar_shortopts = tar_shortopts + shortopt
                 else:
                     tar_longopts.append(opt)
 
