@@ -868,7 +868,7 @@ ARGS = {9}\n'''.format(self.minion_config,
             # is a SHIM command for the master.
             shim_command = re.split(r'\r?\n', stdout, 1)[0].strip()
             log.debug('SHIM retcode({0}) and command: {1}'.format(retcode, shim_command))
-            if 'deploy' == shim_command and retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY:
+            if 'deploy' == shim_command and retcode == salt.exitcodes.EX_THIN_DEPLOY:
                 self.deploy()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
