@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+import copy
 import os
 import tempfile
 import json
@@ -57,12 +58,26 @@ class MockFileClient(object):
 
 
 class TestSaltCacheLoader(TestCase):
+    def __init__(self, *args, **kws):
+        TestCase.__init__(self, *args, **kws)
+        self.opts = {
+            'cachedir': TEMPLATES_DIR,
+            'file_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
+            'pillar_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            }
+        }
+
     def test_searchpath(self):
         '''
         The searchpath is based on the cachedir option and the saltenv parameter
         '''
         tmp = tempfile.gettempdir()
-        loader = SaltCacheLoader({'cachedir': tmp}, saltenv='test')
+        opts = copy.deepcopy(self.opts)
+        opts.update({'cachedir': tmp})
+        loader = SaltCacheLoader(opts, saltenv='test')
         assert loader.searchpath == [os.path.join(tmp, 'files', 'test')]
 
     def test_mockclient(self):
@@ -70,7 +85,7 @@ class TestSaltCacheLoader(TestCase):
         A MockFileClient is used that records all file requests normally sent
         to the master.
         '''
-        loader = SaltCacheLoader({'cachedir': TEMPLATES_DIR}, 'test')
+        loader = SaltCacheLoader(self.opts, 'test')
         fc = MockFileClient(loader)
         res = loader.get_source(None, 'hello_simple')
         assert len(res) == 3
@@ -86,7 +101,7 @@ class TestSaltCacheLoader(TestCase):
         '''
         Setup a simple jinja test environment
         '''
-        loader = SaltCacheLoader({'cachedir': TEMPLATES_DIR}, 'test')
+        loader = SaltCacheLoader(self.opts, 'test')
         fc = MockFileClient(loader)
         jinja = Environment(loader=loader)
         return fc, jinja
@@ -134,6 +149,9 @@ class TestGetTemplate(TestCase):
             'file_roots': {
                 'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
             },
+            'pillar_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
             'extension_modules': os.path.join(
@@ -178,7 +196,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Salt', saltenv='test'))
         self.assertEqual(out, 'Hey world !Hi Salt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
@@ -267,7 +287,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Sàlt', saltenv='test'))
         self.assertEqual(out, u'Hey world !Hi Sàlt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
@@ -278,7 +300,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Sàlt', saltenv='test'))
         self.assertEqual(u'Assunção\n', out)
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
