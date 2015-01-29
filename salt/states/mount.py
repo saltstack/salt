@@ -50,7 +50,8 @@ def mounted(name,
             config='/etc/fstab',
             persist=True,
             mount=True,
-            user=None):
+            user=None,
+            match_on='auto'):
     '''
     Verify that a device is mounted
 
@@ -90,6 +91,12 @@ def mounted(name,
     user
         The user to own the mount; this defaults to the user salt is
         running as on the minion
+
+    match_on
+        A name or list of fstab properties on which this state should be applied.
+        Default is ``auto``, a special value indicating to guess based on fstype.
+        In general, ``auto`` matches on name for recognized special devices and
+        device otherwise.
     '''
     ret = {'name': name,
            'changes': {},
@@ -319,7 +326,8 @@ def mounted(name,
                                                   dump,
                                                   pass_num,
                                                   config,
-                                                  test=True)
+                                                  test=True,
+                                                  match_on=match_on)
             if out != 'present':
                 ret['result'] = None
                 if out == 'new':
@@ -361,7 +369,8 @@ def mounted(name,
                                                   opts,
                                                   dump,
                                                   pass_num,
-                                                  config)
+                                                  config,
+                                                  match_on=match_on)
 
         if out == 'present':
             ret['comment'] += '. Entry already exists in the fstab.'
