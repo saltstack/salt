@@ -809,6 +809,7 @@ def create(vm_):
 
     return ret
 
+
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     '''
     Create and attach volumes to created node
@@ -895,6 +896,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         log.info(msg)
         ret.append(msg)
     return ret
+
 
 # Helper function for azure tests
 def _wait_for_async(conn, request_id):
