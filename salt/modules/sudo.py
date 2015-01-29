@@ -12,7 +12,7 @@ __virtualname__ = 'sudo'
 
 
 def __virtual__():
-    if salt.utils.has_exec('sudo'):
+    if salt.utils.which('sudo'):
         return __virtualname__
     return False
 
