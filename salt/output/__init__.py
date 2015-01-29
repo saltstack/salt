@@ -40,7 +40,7 @@ def try_printout(data, out, opts):
     except (KeyError, AttributeError):
         log.debug(traceback.format_exc())
         try:
-            return get_printout('nested', None)(data).rstrip()
+            return get_printout('nested', opts)(data).rstrip()
         except (KeyError, AttributeError):
             log.error('Nested output failed: ', exc_info=True)
             return get_printout('raw', opts)(data).rstrip()

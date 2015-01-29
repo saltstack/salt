@@ -30,9 +30,9 @@ __grains__ = {}
 
 # Change the default outputter to make it more readable
 __outputter__ = {
-    'items': 'grains',
-    'item': 'grains',
-    'setval': 'grains',
+    'items': 'nested',
+    'item': 'nested',
+    'setval': 'nested',
 }
 
 # http://stackoverflow.com/a/12414913/127816
