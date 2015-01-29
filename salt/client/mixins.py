@@ -30,7 +30,10 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     'fun',
     'kwarg',
     'match',
-    'token'
+    'token',
+    '__jid__',
+    '__tag__',
+    '__user__',
 ])
 
 
@@ -229,13 +232,13 @@ class SyncClientMixin(object):
             # if there are no kwargs in the low object passed in
             f_call = None
             if 'args' not in low:
-                f_call = salt.utils.format_call(self.functions[fun], low)
+                f_call = salt.utils.format_call(self.functions[fun], low, expected_extra_kws=CLIENT_INTERNAL_KEYWORDS)
                 args = f_call.get('args', ())
             else:
                 args = low['args']
             if 'kwargs' not in low:
                 if f_call is None:
-                    f_call = salt.utils.format_call(self.functions[fun], low)
+                    f_call = salt.utils.format_call(self.functions[fun], low, expected_extra_kws=CLIENT_INTERNAL_KEYWORDS)
                 kwargs = f_call.get('kwargs', {})
 
                 # throw a warning for the badly formed low data if we found
