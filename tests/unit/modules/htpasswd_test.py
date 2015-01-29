@@ -45,9 +45,9 @@ class HtpasswdTestCase(TestCase):
         '''
         mock = MagicMock(return_value={'out': 'Salt'})
         with patch.dict(htpasswd.__salt__, {'cmd.run_all': mock}):
-            self.assertListEqual(htpasswd.useradd('/etc/httpd/htpasswd',
+            self.assertDictEqual(htpasswd.useradd('/etc/httpd/htpasswd',
                                                   'larry', 'badpassword'),
-                                 ['Salt'])
+                                 {'out': 'Salt'})
 
     # 'userdel' function tests: 1
 
