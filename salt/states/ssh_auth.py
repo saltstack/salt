@@ -169,11 +169,31 @@ def present(
         return ret
 
     if source != '':
-        data = __salt__['ssh.set_auth_key_from_file'](
-                user,
+        key = __salt__['cp.get_file_str'](
                 source,
-                config,
                 saltenv=__env__)
+        fileHasOptions = False
+        # check if this is of form {options} {enc} {key} {comment}
+        sshre = re.compile(r'^(ssh\-|ecds).*')
+        key = key.rstrip().split('\n')
+        for keyline in key:
+            fileHasOptions = sshre.match(keyline)
+            if not fileHasOptions:
+                data = __salt__['ssh.set_auth_key_from_file'](
+                        user,
+                        source,
+                        config,
+                        saltenv=__env__)
+            else:
+                # Split keyline to get key und commen
+                keyline = keyline.split(' ')
+                data = __salt__['ssh.set_auth_key'](
+                        user,
+                        keyline[1],
+                        keyline[0],
+                        keyline[2],
+                        options or [],
+                        config)
     else:
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$')
