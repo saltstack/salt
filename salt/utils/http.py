@@ -213,7 +213,7 @@ def query(url,
             method, url, params=params, data=data, **req_kwargs
         )
         if stream is True or handle is True:
-            return result
+            return {'handle': result}
 
         result_status_code = result.status_code
         result_headers = result.headers
@@ -258,7 +258,7 @@ def query(url,
         request.get_method = lambda: method
         result = opener.open(request)
         if stream is True or handle is True:
-            return result
+            return {'handle': result}
 
         result_status_code = result.code
         result_headers = result.headers.headers

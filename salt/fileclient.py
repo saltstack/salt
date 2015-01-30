@@ -590,10 +590,11 @@ class Client(object):
         else:
             fixed_url = url
         try:
-            response = salt.utils.http.query(
+            query = salt.utils.http.query(
                 fixed_url,
                 stream=True
             )
+            response = query['handle']
             chunk_size = 32 * 1024
             if not no_cache:
                 with salt.utils.fopen(dest, 'wb') as destfp:
