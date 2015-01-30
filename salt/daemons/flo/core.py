@@ -1301,6 +1301,7 @@ class SaltRaetThreadShellJobber(ioflo.base.deeding.Deed):
 
     def action(self):
         '''
+        Evaluate the fun options and execute them via salt-call
         '''
         while self.fun.value:
             msg = self.fun.value.popleft()
