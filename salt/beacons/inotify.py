@@ -2,7 +2,8 @@
 '''
 Watch files and translate the changes into salt events
 '''
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import
 import collections
 
 # Import third party libs
