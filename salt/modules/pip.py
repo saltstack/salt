@@ -72,23 +72,6 @@ def _get_cached_requirements(requirements, saltenv):
     return cached_requirements
 
 
-def _get_env_activate(bin_env):
-    '''
-    Return the path to the activate binary
-    '''
-    if not bin_env:
-        raise CommandNotFoundError('Could not find a `activate` binary')
-
-    if os.path.isdir(bin_env):
-        if salt.utils.is_windows():
-            activate_bin = os.path.join(bin_env, 'Scripts', 'activate.bat')
-        else:
-            activate_bin = os.path.join(bin_env, 'bin', 'activate')
-        if os.path.isfile(activate_bin):
-            return activate_bin
-    raise CommandNotFoundError('Could not find a `activate` binary')
-
-
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             env=None,
@@ -230,6 +213,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     activate
         Activates the virtual environment, if given via bin_env,
         before running install.
+
+        .. deprecated:: 2014.7.2
+            If `bin_env` is given, pip will already be sourced from that
+            virualenv, making `activate` effectively a noop.
+
     pre_releases
         Include pre-releases in the available versions
     cert
@@ -272,6 +260,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         )
         bin_env = env
 
+    if activate:
+        salt.utils.warn_until(
+                'Boron',
+                'Passing \'activate\' to the pip module is deprecated. If '
+                'bin_env refers to a virtualenv, there is no need to activate '
+                'that virtualenv before using pip to install packages in it.'
+        )
+
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
             'Boron',
@@ -302,10 +298,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         user = str(runas)
 
     cmd = [_get_pip_bin(bin_env), 'install']
-
-    if activate and bin_env:
-        if not salt.utils.is_windows():
-            cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
     cleanup_requirements = []
     if requirements is not None:
