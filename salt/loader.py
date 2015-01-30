@@ -486,6 +486,38 @@ def grains(opts, force_refresh=False):
     '''
     # globally cache grains data (todo: wrap grains_data in a class?)
     global grains_data
+    # if we hae no grains, lets try loading from disk (TODO: remove this...)
+    if grains_data is None and not force_refresh:
+        if opts.get('grains_cache', False):
+            cfn = os.path.join(
+                opts['cachedir'],
+                '{0}.cache.p'.format('grains')
+            )
+            if os.path.isfile(cfn):
+                grains_cache_age = int(time.time() - os.path.getmtime(cfn))
+                if opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
+                        opts.get('refresh_grains_cache', False) and not force_refresh:
+                    log.debug('Retrieving grains from cache')
+                    try:
+                        serial = salt.payload.Serial(opts)
+                        with salt.utils.fopen(cfn, 'rb') as fp_:
+                            cached_grains = serial.load(fp_)
+                        grains_data = cached_grains
+                    except (IOError, OSError):
+                        pass
+                else:
+                    if force_refresh:
+                        log.debug('Grains refresh requested. Refreshing grains.')
+                    else:
+                        log.debug('Grains cache last modified {0} seconds ago and '
+                                  'cache expiration is set to {1}. '
+                                  'Grains cache expired. Refreshing.'.format(
+                                      grains_cache_age,
+                                      opts.get('grains_cache_expiration', 300)
+                                  ))
+            else:
+                log.debug('Grains cache file does not exist.')
+
     if grains_data is not None and not force_refresh:
         return grains_data
 
@@ -559,7 +591,8 @@ def grains(opts, force_refresh=False):
                 __salt__['cmd.run']('attrib -R "{0}"'.format(cfn))
             with salt.utils.fopen(cfn, 'w+b') as fp_:
                 try:
-                    self.serial.dump(grains_data, fp_)
+                    serial = salt.payload.Serial(opts)
+                    serial.dump(grains_data, fp_)
                 except TypeError:
                     # Can't serialize pydsl
                     pass
