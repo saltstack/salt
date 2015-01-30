@@ -12,7 +12,7 @@ except ImportError:
     from pipes import quote as _cmd_quote
 
 # Import salt libs
-from salt.modules.systemd import _sd_booted  
+from salt.modules.systemd import _sd_booted
 
 __func_alias__ = {
     'reload_': 'reload'
