@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Module for returning various status data about a minion.
-These data can be useful for compiling into stats later,
+These data can be useful for compiling into stats later, 
 or for problem solving if your minion is having problems.
 
 :depends:   - pythoncom
@@ -15,7 +15,6 @@ import salt.utils
 import os
 import ctypes
 import sys
-import collections
 import subprocess
 import time
 
@@ -63,9 +62,9 @@ def procs(count=False):
         wmi_obj = wmi.WMI()
         processes = wmi_obj.win32_process()
 
-	#this short circuit's the function to get a short simple proc count.
+    #this short circuit's the function to get a short simple proc count.
     if count:
-    	return len(processes)
+        return len(processes)
 
     #a propper run of the function, creating a nonsensically long out put.
     process_info = {}
@@ -73,6 +72,7 @@ def procs(count=False):
         process_info[proc.ProcessId] = _get_process_info(proc)
 
     return process_info
+
 
 def cpu_load():
     '''
@@ -86,7 +86,7 @@ def cpu_load():
     '''
 
     #open up a subprocess to get information from WMIC
-    proc = subprocess.Popen('wmic cpu',stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen('wmic cpu', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     #pull in the information from WMIC
     outs = proc.communicate()
@@ -98,10 +98,11 @@ def cpu_load():
     column = info[0].index('LoadPercentage')
 
     #get the end of the number.
-    end = info[1].index(' ',column+1)
+    end = info[1].index(' ', column+1)
 
     #return pull it out of the informatin and cast it to an int.
     return int(info[1][column:end])
+
 
 def uptime(human_readable=False):
     '''
@@ -119,7 +120,7 @@ def uptime(human_readable=False):
     '''
 
     #open up a subprocess to get information from WMIC
-    proc = subprocess.Popen('net stats srv',stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen('net stats srv', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     #pull in the information from WMIC
     outs = proc.communicate()
@@ -131,9 +132,9 @@ def uptime(human_readable=False):
             stats_line = line
 
     #extract the time string from the line and parse
-    startup_time = stats_line[len('Statistics Since '):]#get string
-    startup_time = time.strptime(startup_time,'%d/%m/%Y %H:%M:%S')#convert to struct
-    startup_time = time.mktime(startup_time)#convert to seconds since epoch
+    startup_time = stats_line[len('Statistics Since '):]  #get string
+    startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')  #convert to struct
+    startup_time = time.mktime(startup_time)  #convert to seconds since epoch
 
     #subtract startup time from current time to get the uptime of the system.
     uptime = time.time() - startup_time
@@ -141,32 +142,31 @@ def uptime(human_readable=False):
     if human_readable:
         #pull out the majority of the uptime tuple. h:m:s
         uptime = int(uptime)
-        seconds = uptime%60
+        seconds = uptime % 60
         uptime /= 60
-        minutes = uptime%60
+        minutes = uptime % 60
         uptime /= 60
-        hours = uptime%224
+        hours = uptime % 24
         uptime /= 24
 
         #translate the h:m:s from above into HH:MM:SS format.
-        ret = '{0:0>2}:{1:0>2}:{2:0>2}'.format(hours,minutes,seconds)
+        ret = '{0:0>2}:{1:0>2}:{2:0>2}'.format(hours, minutes, seconds)
 
-        #If the minion has been on for days, add that in. 
+        #If the minion has been on for days, add that in.
         if uptime > 0:
-            ret = 'Days: {0} {1}'.format(uptime%365,ret)
+            ret = 'Days: {0} {1}'.format(uptime%365, ret)
 
-        #if you have aWindows minion that has been up for years, my hat is off to you sir.
+        #if you have a Windows minion that has been up for years, my hat is off to you sir.
         if uptime > 365:
-            ret = 'Years: {0} {1}'.format(uptime/365,ret)
+            ret = 'Years: {0} {1}'.format(uptime/365, ret)
             
         return ret
-    
+
     else:
         return uptime
 
 
-
-def disk_usage(human_readable=False,path=None):
+def disk_usage(human_readable=False, path=None):
     '''
     return the disk usage for this minion
 
@@ -184,12 +184,12 @@ def disk_usage(human_readable=False,path=None):
     #Credit for the source and ideas for this function:
     # http://code.activestate.com/recipes/577972-disk-usage/?in=user-4178764
     _, total, free = ctypes.c_ulonglong(), ctypes.c_ulonglong(), ctypes.c_longlong()
-    if sys.version_info >= (3,) or isinstance(path,unicode):
+    if sys.version_info >= (3, ) or isinstance(path, unicode):
         fun = ctypes.windll.kernel32.GetDiskFreeSpaceExw
     else:
         fun = ctypes.windll.kernel32.GetDiskFreeSpaceExA
     ret = fun(path, ctypes.byref(_), ctypes.byref(total), ctypes.byref(free))
-    if ret == 0 :
+    if ret == 0:
         raise ctypes.WinError()
     used = total.value - free.value
 
@@ -197,9 +197,10 @@ def disk_usage(human_readable=False,path=None):
         tstr = _byte_calc(total.value)
         ustr = _byte_calc(used)
         fstr = _byte_calc(free.value)
-        return 'Total: {0}, Used: {1}, Free: {2}'.format(tstr,ustr,fstr)
+        return 'Total: {0}, Used: {1}, Free: {2}'.format(tstr, ustr, fstr)
     else:
-        return {'total':total.value,'used':used,'free':free.value}
+        return {'total':total.value, 'used':used, 'free':free.value}
+
 
 def salt_mem(human_readable=False):
     '''
@@ -222,6 +223,7 @@ def salt_mem(human_readable=False):
             return _byte_calc(mem)
         return mem
 
+
 def _get_process_info(proc):
     '''
     Return  process information
@@ -229,8 +231,8 @@ def _get_process_info(proc):
     cmd = (proc.CommandLine or '').encode('utf-8')
     name = proc.Name.encode('utf-8')
     info = dict(
-        cmd=cmd,
-        name=name,
+        cmd=cmd, 
+        name=name, 
         **_get_process_owner(proc)
     )
     return info
@@ -256,6 +258,7 @@ def _get_process_owner(process):
         log.warning('Error getting owner of process; PID=\'{0}\'; Error: {1}'
                     .format(process.ProcessId, error_code))
     return owner
+
 
 def _byte_calc(val):
     if val < 1024:
