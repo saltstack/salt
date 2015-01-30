@@ -608,7 +608,7 @@ class Client(object):
                                 break
                 return dest
             else:
-                if hasattr(response, 'text')
+                if hasattr(response, 'text'):
                     return response.text
                 else:
                     return response['text']
