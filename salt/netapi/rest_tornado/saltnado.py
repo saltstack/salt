@@ -198,18 +198,22 @@ class SaltClientsMixIn(object):
     '''
     MixIn class to container all of the salt clients that the API needs
     '''
+    # TODO: load this proactively, instead of waiting for a request
+    __saltclients = None
+
     @property
     def saltclients(self):
-        if not hasattr(self, '__saltclients'):
+        if SaltClientsMixIn.__saltclients is None:
+            local_client = salt.client.get_local_client(mopts=self.application.opts)
             # TODO: refreshing clients using cachedict
-            self.__saltclients = {
-                'local': salt.client.get_local_client(mopts=self.application.opts).run_job,
+            SaltClientsMixIn.__saltclients = {
+                'local': local_client.run_job,
                 # not the actual client we'll use.. but its what we'll use to get args
-                'local_batch': salt.client.get_local_client(mopts=self.application.opts).cmd_batch,
-                'local_async': salt.client.get_local_client(mopts=self.application.opts).run_job,
+                'local_batch': local_client.cmd_batch,
+                'local_async': local_client.run_job,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).async,
                 }
-        return self.__saltclients
+        return SaltClientsMixIn.__saltclients
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -531,7 +535,6 @@ class SaltAuthHandler(BaseSaltAPIHandler):
                'return': 'Please log in'}
 
         self.write(self.serialize(ret))
-        self.finish()
 
     # TODO: make async? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
@@ -643,7 +646,6 @@ class SaltAuthHandler(BaseSaltAPIHandler):
             }]}
 
         self.write(self.serialize(ret))
-        self.finish()
 
 
 class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
@@ -687,7 +689,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         ret = {"clients": self.saltclients.keys(),
                "return": "Welcome"}
         self.write(self.serialize(ret))
-        self.finish()
 
     @tornado.web.asynchronous
     def post(self):
@@ -1365,8 +1366,6 @@ class EventsSaltAPIHandler(SaltAPIHandler):
                 self.flush()
             except TimeoutException:
                 break
-
-        self.finish()
 
 
 class WebhookSaltAPIHandler(SaltAPIHandler):

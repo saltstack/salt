@@ -33,7 +33,9 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     'token',
     '__jid__',
     '__tag__',
-    '__user__'
+    '__user__',
+    'username',
+    'password'
 ])
 
 
