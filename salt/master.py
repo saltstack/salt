@@ -167,12 +167,15 @@ class Maintenance(multiprocessing.Process):
         # Init fileserver manager
         self.fileserver = salt.fileserver.Fileserver(self.opts)
         # Load Runners
-        self.runners = salt.loader.runner(self.opts)
+        ropts = dict(self.opts)
+        ropts['quiet'] = True
+        runner_client = salt.runner.RunnerClient(ropts)
         # Load Returners
         self.returners = salt.loader.returners(self.opts, {})
+
         # Init Scheduler
         self.schedule = salt.utils.schedule.Schedule(self.opts,
-                                                     self.runners,
+                                                     runner_client.functions_dict(),
                                                      returners=self.returners)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing

@@ -220,6 +220,7 @@ import yaml
 # Import Salt libs
 import salt.utils
 import salt.utils.process
+import salt.utils.args
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running
 import salt.payload
@@ -493,6 +494,13 @@ class Schedule(object):
         kwargs = {}
         if 'kwargs' in data:
             kwargs = data['kwargs']
+        # if the func support **kwargs, lets pack in the pub data we have
+        # TODO: pack the *same* pub data as a minion?
+        argspec = salt.utils.args.get_function_argspec(self.functions[func])
+        if argspec.keywords:
+            # this function accepts **kwargs, pack in the publish data
+            for key, val in ret.iteritems():
+                kwargs['__pub_{0}'.format(key)] = val
 
         try:
             ret['return'] = self.functions[func](*args, **kwargs)
