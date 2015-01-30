@@ -93,6 +93,6 @@ def __list_functions(user=None):
     if not user:
         __jid_event__.fire_event({'message': funcs}, 'progress')
         return funcs
-    for _, val in __opts__['external_auth'].items():
+    for val in six.itervalues(__opts__['external_auth']):
         if user in val:
             pass
