@@ -56,6 +56,13 @@ except ImportError:
 
 django_auth_class = None
 
+__virtualname__ = 'django'
+
+def __virtual__():
+    if HAS_DJANGO:
+        return __virtualname__
+    return False
+
 
 def django_auth_setup():
 
