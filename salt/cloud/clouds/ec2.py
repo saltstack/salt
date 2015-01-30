@@ -1086,9 +1086,9 @@ def _request_eip(interface):
     return None
 
 
-def _create_eni(interface):
+def _create_eni_if_necessary(interface):
     '''
-    Create and return an Elastic Interface
+    Create an Elastic Interface if necessary and return a Network Interface Specification
     '''
     params = {'Action': 'DescribeSubnets'}
     subnet_query = aws.query(params,
@@ -1110,6 +1110,11 @@ def _create_eni(interface):
         raise SaltCloudConfigError(
             'No such subnet <{0}>'.format(interface['SubnetId'])
         )
+
+    if 'AssociatePublicIpAddress' in interface:
+        # Associating a public address in a VPC only works when the interface is not
+        # created beforehand, but as a part of the machine creation request.
+        return interface
 
     params = {'Action': 'CreateNetworkInterface',
               'SubnetId': interface['SubnetId']}
@@ -1494,7 +1499,7 @@ def request_instance(vm_=None, call=None):
         eni_devices = []
         for interface in network_interfaces:
             log.debug('Create network interface: {0}'.format(interface))
-            _new_eni = _create_eni(interface)
+            _new_eni = _create_eni_if_necessary(interface)
             eni_devices.append(_new_eni)
         params.update(_param_from_config(spot_prefix + 'NetworkInterface',
                                          eni_devices))
