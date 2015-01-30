@@ -1150,7 +1150,7 @@ class Keys(LowDataAdapter):
 
             %post
             mkdir -p /etc/salt/pki/minion
-            curl -sS http://localhost:8000/keys \
+            curl -sSk https://localhost:8000/keys \
                     -d mid=jerry \
                     -d username=kickstart \
                     -d password=kickstart \
@@ -1175,7 +1175,7 @@ class Keys(LowDataAdapter):
 
         .. code-block:: bash
 
-            curl -sS http://localhost:8000/keys \
+            curl -sSk https://localhost:8000/keys \
                     -d mid=jerry \
                     -d username=kickstart \
                     -d password=kickstart \
@@ -1702,12 +1702,12 @@ class WebsocketEndpoint(object):
 
         **Example request:**
 
-            curl -NsS \\
+            curl -NsSk \\
                 -H 'X-Auth-Token: ffedf49d' \\
                 -H 'Host: localhost:8000' \\
                 -H 'Connection: Upgrade' \\
                 -H 'Upgrade: websocket' \\
-                -H 'Origin: http://localhost:8000' \\
+                -H 'Origin: https://localhost:8000' \\
                 -H 'Sec-WebSocket-Version: 13' \\
                 -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
                 localhost:8000/ws
@@ -1718,7 +1718,7 @@ class WebsocketEndpoint(object):
             Connection: Upgrade
             Upgrade: websocket
             Host: localhost:8000
-            Origin: http://localhost:8000
+            Origin: https://localhost:8000
             Sec-WebSocket-Version: 13
             Sec-WebSocket-Key: s65VsgHigh7v/Jcf4nXHnA==
             X-Auth-Token: ffedf49d
@@ -1871,7 +1871,10 @@ class Webhook(object):
         language: python
         script: python -m unittest tests
         after_success:
-            - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
+            - |
+                curl -sSk https://saltapi-url.example.com:8000/hook/travis/build/success \
+                        -d branch="${TRAVIS_BRANCH}" \
+                        -d commit="${TRAVIS_COMMIT}"
 
     .. seealso:: :ref:`events`, :ref:`reactor`
     '''
@@ -1938,7 +1941,7 @@ class Webhook(object):
 
         As a practical example, an internal continuous-integration build
         server could send an HTTP POST request to the URL
-        ``http://localhost:8000/hook/mycompany/build/success`` which contains
+        ``https://localhost:8000/hook/mycompany/build/success`` which contains
         the result of a build and the SHA of the version that was built as
         JSON. That would then produce the following event in Salt that could be
         used to kick off a deployment via Salt's Reactor::
