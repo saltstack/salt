@@ -34,6 +34,7 @@ Connection module for Amazon DynamoDB
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import logging
 import time
 
@@ -41,6 +42,8 @@ logger = logging.getLogger(__name__)
 logging.getLogger('boto').setLevel(logging.INFO)
 
 # Import third party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import boto
     import boto.dynamodb2
@@ -224,9 +227,9 @@ def _extract_index(index_data, global_index=False):
     parsed_data = {}
     keys = []
 
-    for key, value in index_data.iteritems():
+    for key, value in six.iteritems(index_data):
         for item in value:
-            for field, data in item.iteritems():
+            for field, data in six.iteritems(item):
                 if field == 'hash_key':
                     parsed_data['hash_key'] = data
                 elif field == 'hash_key_data_type':
