@@ -624,7 +624,7 @@ class _LXCConfig(object):
         filtered = []
         for item in self.data:
             if not re.match('^' + pat, item[0]):
-                item.append(item)
+                filtered.append(item)
             else:
                 removed.append(item)
         self.data = filtered
