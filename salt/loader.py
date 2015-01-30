@@ -875,7 +875,18 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         for (suffix, mode, kind) in imp.get_suffixes():
             self.suffix_map[suffix] = (suffix, mode, kind)
 
-        # create mapping of filename (without suffix) to path (TODO: need the path??)
+
+        if self.opts.get('cython_enable', True) is True:
+            try:
+                import pyximport # pylint: disable=import-error
+                pyximport.install()
+                # add to suffix_map so file_mapping will pick it up
+                self.suffix_map['.pyx'] = typle()
+            except ImportError:
+                log.info('Cython is enabled in the options but not present '
+                'in the system path. Skipping Cython modules.')
+
+        # create mapping of filename (without suffix) to (path, suffix) (TODO: need the path??)
         self.file_mapping = {}
 
         for mod_dir in self.module_dirs:
@@ -886,7 +897,11 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                     if ext not in self.suffix_map:
                         continue
                     if f_noext not in self.file_mapping:
-                        self.file_mapping[f_noext] = os.path.join(mod_dir, filename)
+                        fpath = os.path.join(mod_dir, filename)
+                        self.file_mapping[f_noext] = (fpath,
+                                                      os.path.splitext(fpath)[1],
+                                                      )
+
             except OSError:
                 continue
 
@@ -955,12 +970,15 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
             if mod_name not in k:
                 yield k, v
 
-    def _load_module(self, name, fpath):
+    def _load_module(self, name):
         mod = None
+        fpath, suffix = self.file_mapping[name]
         self.loaded_files.append(name)
         try:
-            try:
-                desc = self.suffix_map[os.path.splitext(fpath)[1]]
+            if suffix == '.pyx':
+                mod = pyximport.load_module(name, full, tempfile.gettempdir())
+            else:
+                desc = self.suffix_map[suffix]
                 with open(fpath, desc[1]) as fn_:
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(
@@ -969,9 +987,6 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                             self.tag,
                             name
                         ), fn_, fpath, desc)
-            except ImportError:
-                # TODO: handle cpython modules
-                return mod
         except IOError:
             raise
         except ImportError:
@@ -1101,7 +1116,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 if name in self.loaded_files:
                     continue
                 # if we got what we wanted, we are done
-                if self._load_module(name, fpath) and key in self._dict:
+                if self._load_module(name) and key in self._dict:
                     return True
             return False
 
@@ -1133,7 +1148,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         for name, fpath in self.file_mapping.iteritems():
             if name in self.loaded_files or name in self.missing_modules:
                 continue
-            self._load_module(name, fpath)
+            self._load_module(name)
 
         self.loaded = True
 
