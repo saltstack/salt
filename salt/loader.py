@@ -770,6 +770,9 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         - lazy loading
         - minimize disk usage
         - singletons (per tag)
+
+    # TODO:
+        - change everyone else's calls to clear()
     '''
     # This class is only a singleton per minion/master pair
     instances = {}
@@ -847,17 +850,9 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
 
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = []
-        # create mapping of filename (without suffix) to path (TODO: need the path??)
-        self.file_mapping = {}
         self.loaded_files = []  # TODO: just remove them from file_mapping?
-        for mod_dir in self.module_dirs:
-            try:
-                for filename in os.listdir(mod_dir):
-                    f_noext = filename.rsplit('.', 1)[0]
-                    if f_noext not in self.file_mapping:
-                        self.file_mapping[f_noext] = os.path.join(mod_dir, filename)
-            except OSError:
-                continue
+
+        self.refresh_file_mapping()
 
         # create all of the import namespaces
         if loaded_base_name is None:
@@ -870,6 +865,30 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         _generate_module('{0}.int.{1}'.format(loaded_base_name, tag))
         _generate_module('{0}.ext'.format(loaded_base_name))
         _generate_module('{0}.ext.{1}'.format(loaded_base_name, tag))
+
+    def refresh_file_mapping(self):
+        '''
+        refresh the mapping of the FS on disk
+        '''
+        # map of suffix to description for imp
+        self.suffix_map = {}
+        for (suffix, mode, kind) in imp.get_suffixes():
+            self.suffix_map[suffix] = (suffix, mode, kind)
+
+        # create mapping of filename (without suffix) to path (TODO: need the path??)
+        self.file_mapping = {}
+
+        for mod_dir in self.module_dirs:
+            try:
+                for filename in os.listdir(mod_dir):
+                    f_noext, ext = os.path.splitext(filename)
+                    # make sure it is a suffix we support
+                    if ext not in self.suffix_map:
+                        continue
+                    if f_noext not in self.file_mapping:
+                        self.file_mapping[f_noext] = os.path.join(mod_dir, filename)
+            except OSError:
+                continue
 
     def clear(self):
         '''
@@ -936,23 +955,25 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
             if mod_name not in k:
                 yield k, v
 
-    def _load_module(self, name):
+    def _load_module(self, name, fpath):
         mod = None
         self.loaded_files.append(name)
         try:
             try:
-                # TODO: don't do a find? We already know...
-                fn_, path, desc = imp.find_module(name, self.module_dirs)
-                mod = imp.load_module(
-                    '{0}.{1}.{2}.{3}'.format(
-                        self.loaded_base_name,
-                        self.mod_type_check(path),
-                        self.tag,
-                        name
-                    ), fn_, path, desc)
+                desc = self.suffix_map[os.path.splitext(fpath)[1]]
+                with open(fpath, desc[1]) as fn_:
+                    mod = imp.load_module(
+                        '{0}.{1}.{2}.{3}'.format(
+                            self.loaded_base_name,
+                            self.mod_type_check(fpath),
+                            self.tag,
+                            name
+                        ), fn_, fpath, desc)
             except ImportError:
                 # TODO: handle cpython modules
                 return mod
+        except IOError:
+            raise
         except ImportError:
             log.debug(
                 'Failed to import {0} {1}:\n'.format(
@@ -1075,14 +1096,35 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
             if mod_name not in self.whitelist:
                 raise KeyError
 
-        for name, fpath in self._iter_files(mod_name):
-            if name in self.loaded_files:
-                continue
-            # if we got what we wanted, we are done
-            if self._load_module(name) and key in self._dict:
-                return True
-        return False
+        def _inner_load(mod_name):
+            for name, fpath in self._iter_files(mod_name):
+                if name in self.loaded_files:
+                    continue
+                # if we got what we wanted, we are done
+                if self._load_module(name, fpath) and key in self._dict:
+                    return True
+            return False
 
+        # try to load the module
+        ret = None
+        reloaded = False
+        # re-scan up to once, IOErrors or a failed load cause re-scans of the
+        # filesystem
+        while True:
+            try:
+                ret = _inner_load(mod_name)
+                if not reloaded:
+                    self.refresh_file_mapping()
+                    reloaded = True
+                    continue
+                break
+            except IOError:
+                if not reloaded:
+                    self.refresh_file_mapping()
+                    reloaded = True
+                continue
+
+        return ret
 
     def _load_all(self):
         '''
@@ -1091,7 +1133,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         for name, fpath in self.file_mapping.iteritems():
             if name in self.loaded_files or name in self.missing_modules:
                 continue
-            self._load_module(name)
+            self._load_module(name, fpath)
 
         self.loaded = True
 
