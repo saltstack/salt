@@ -74,6 +74,7 @@ class SMaster(object):
     Create a simple salt-master, this will generate the top-level master
     '''
     aes = None
+
     def __init__(self, opts):
         '''
         Create a salt master server instance
