@@ -129,6 +129,7 @@ def formatted(name, fs_type='ext4', **kwargs):
             cmd += '-i size={0} '.format(kwargs['inode_size'])
     cmd += name
     __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run']('sync').splitlines()
     blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
 
     if len(blk) == 1:
