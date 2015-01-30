@@ -360,6 +360,10 @@ class AsyncClientMixin(object):
         '''
         Print all of the events with the prefix 'tag'
         '''
+        # if we are "quiet", don't print
+        if self.opts.get('quiet', False):
+            return
+
         # some suffixes we don't want to print
         if suffix in ('new', ):
             return
