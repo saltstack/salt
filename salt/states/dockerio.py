@@ -247,9 +247,6 @@ def pulled(name,
         Pull even if the image is already pulled
     '''
 
-    if tag:
-        name = '{0}:{1}'.format(name, tag)
-
     inspect_image = __salt__['docker.inspect_image']
     image_infos = inspect_image('{0}:{1}'.format(name, tag))
     if image_infos['status'] and not force:
