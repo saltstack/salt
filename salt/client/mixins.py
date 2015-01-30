@@ -182,6 +182,10 @@ class SyncClientMixin(object):
                 - __jid__: jid to run under
                 - __tag__: tag to run under
         '''
+        # fire the mminion loading (if not already done) here
+        # this is not to clutter the output with the module loading
+        # if we have a high debug level.
+        self.mminion # pylint: disable=W0104
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
         tag = low.get('__tag__', tagify(jid, prefix=self.tag_prefix))
 
