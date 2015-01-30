@@ -69,7 +69,7 @@ class ClientFuncsDict(collections.MutableMapping):
                 if k.startswith('__pub_'):
                     pub_data[k] = kwargs.pop(k)
 
-            async_pub = self.client._gen_async_pub(pub_data.get('jid'))
+            async_pub = self.client._gen_async_pub(pub_data.get('__pub_jid'))
 
             user = salt.utils.get_specific_user()
             return self.client._proc_function(key,
