@@ -531,7 +531,6 @@ class SaltAuthHandler(BaseSaltAPIHandler):
                'return': 'Please log in'}
 
         self.write(self.serialize(ret))
-        self.finish()
 
     # TODO: make async? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
@@ -643,7 +642,6 @@ class SaltAuthHandler(BaseSaltAPIHandler):
             }]}
 
         self.write(self.serialize(ret))
-        self.finish()
 
 
 class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
@@ -687,7 +685,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         ret = {"clients": self.saltclients.keys(),
                "return": "Welcome"}
         self.write(self.serialize(ret))
-        self.finish()
 
     @tornado.web.asynchronous
     def post(self):
@@ -1365,8 +1362,6 @@ class EventsSaltAPIHandler(SaltAPIHandler):
                 self.flush()
             except TimeoutException:
                 break
-
-        self.finish()
 
 
 class WebhookSaltAPIHandler(SaltAPIHandler):
