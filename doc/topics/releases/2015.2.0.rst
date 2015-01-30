@@ -24,6 +24,13 @@ Salt SSH
   ``publish.runner`` in ``salt-ssh``
 - Added support for ``mine.get`` in ``salt-ssh``
 
+Misc Fixes/Additions
+====================
+
+- Add ``only_upgrade`` argument to apt-based ``pkg.install`` to only install a
+  package version if the package is already installed. (Great for security
+  updates!)
+
 Deprecations
 ============
 - Removed ``parameter`` keyword argument from ``eselect.exec_action`` execution
