@@ -86,6 +86,8 @@ def query(url,
           text_out=None,
           headers_out=None,
           decode_out=None,
+          stream=False,
+          handle=False,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -200,9 +202,19 @@ def query(url,
             ret['test'] = True
 
     if requests_lib is True:
+        req_kwargs = {}
+        if stream is True:
+            if requests.__version__[0] == '0':
+                # 'stream' was called 'prefetch' before 1.0, with flipped meaning
+                req_kwargs['prefetch'] = False
+            else:
+                req_kwargs['stream'] = True
         result = sess.request(
-            method, url, params=params, data=data
+            method, url, params=params, data=data, **req_kwargs
         )
+        if stream is True or handle is True:
+            return {'handle': result}
+
         result_status_code = result.status_code
         result_headers = result.headers
         result_text = result.text
@@ -245,6 +257,8 @@ def query(url,
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
         result = opener.open(request)
+        if stream is True or handle is True:
+            return {'handle': result}
 
         result_status_code = result.code
         result_headers = result.headers.headers
@@ -352,13 +366,15 @@ def get_ca_bundle(opts=None):
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
-    file_roots = opts.get('file_roots', '/srv/salt')
+    file_roots = opts.get('file_roots', {'base': [syspaths.SRV_ROOT_DIR]})
+    salt_root = file_roots['base'][0]
+    log.debug('file_roots is {0}'.format(salt_root))
 
     # Please do not change the order without good reason
     for path in (
         # Check Salt first
-        os.path.join(file_roots, 'cacert.pem'),
-        os.path.join(file_roots, 'ca-bundle.crt'),
+        os.path.join(salt_root, 'cacert.pem'),
+        os.path.join(salt_root, 'ca-bundle.crt'),
         # Debian has paths that often exist on other distros
         '/etc/ssl/certs/ca-certificates.crt',
         # RedHat is also very common
@@ -401,8 +417,6 @@ def update_ca_bundle(
     '''
     if opts is None:
         opts = {}
-
-    file_roots = opts.get('file_roots', '/srv/salt')
 
     if target is None:
         target = get_ca_bundle(opts)
