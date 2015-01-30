@@ -7,7 +7,8 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
-:depends:   - CherryPy Python module
+:depends:   - CherryPy Python module (strongly recommend 3.2.x versions due to
+    an as yet unknown SSL error).
 :optdepends:    - ws4py Python module for websockets support.
 :configuration: All authentication is done through Salt's :ref:`external auth
     <acl-eauth>` system which requires additional configuration not described
