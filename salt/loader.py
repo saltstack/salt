@@ -885,9 +885,9 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 self.suffix_map['.pyx'] = typle()
             except ImportError:
                 log.info('Cython is enabled in the options but not present '
-                'in the system path. Skipping Cython modules.')
+                    'in the system path. Skipping Cython modules.')
 
-        # create mapping of filename (without suffix) to (path, suffix) (TODO: need the path??)
+        # create mapping of filename (without suffix) to (path, suffix)
         self.file_mapping = {}
 
         for mod_dir in self.module_dirs:
@@ -902,7 +902,6 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                         self.file_mapping[f_noext] = (fpath,
                                                       os.path.splitext(fpath)[1],
                                                       )
-
             except OSError:
                 continue
 
