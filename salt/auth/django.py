@@ -50,7 +50,6 @@ log = logging.getLogger(__name__)
 
 try:
     import django
-    import django.contrib.auth
     HAS_DJANGO = True
 except ImportError:
     HAS_DJANGO = False
@@ -83,6 +82,7 @@ def auth(username, password):
     '''
     Simple Django auth
     '''
+    import django.contrib.auth
 
     global django_auth_class
 
