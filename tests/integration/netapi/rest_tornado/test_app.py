@@ -31,7 +31,7 @@ except ImportError:
 
 @skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
-@skipIf(StrictVersion(zmq.__version__) < StrictVersion('14.0.1'), 'PyZMQ must be >= 14 to run these tests.')
+@skipIf(StrictVersion(zmq.__version__) < StrictVersion('14.0.1'), 'PyZMQ must be >= 14.0.1 to run these tests.')
 class TestSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([('/', saltnado.SaltAPIHandler)], debug=True)
