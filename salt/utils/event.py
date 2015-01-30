@@ -130,7 +130,8 @@ def get_master_event(opts, sock_dir, listen=True):
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen)
+            opts=opts, sock_dir=sock_dir, listen=listen
+        )
 
 
 def tagify(suffix='', prefix='', base=SALT):

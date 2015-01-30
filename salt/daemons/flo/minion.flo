@@ -14,6 +14,10 @@ framer minionudpstack be active first setup
     # Load the minion mods
     frame loadmodules
         do salt load modules at enter
+        go setupbeacon
+
+    frame setupbeacon
+        do salt raet setup beacon at enter
         go start
 
     # OK, let's start the minion up
@@ -28,6 +32,7 @@ framer minionudpstack be active first setup
         bid start functionmanager
         # Start the outbound framer
         bid start outbound
+        # Start the scheduler
         bid start scheduler
 
         # Cleanup on exit
@@ -102,6 +107,14 @@ framer bootstrap be inactive first setup
         print Loading
         enter
             do salt load modules
+        go latestart
+
+    frame latestart
+        # Start late frames that need the pillar/modules to be available
+        # Start the master events loop
+        bid start masterevents
+        # Start Beacon
+        bid start beacon
         go router
 
     frame router
@@ -124,7 +137,15 @@ framer functionmanager be inactive first checkexec
 
 framer manager be inactive first start at 10.0
     frame start
-         do salt raet road stack manager per inode ".salt.road.manor"
+        do salt raet road stack manager per inode ".salt.road.manor"
+
+framer beacon be inactive first start
+    frame start
+        do salt raet beacon
+
+framer masterevents be inactive first start
+    frame start
+        do salt raet master events
 
 # Framer for handling outbound traffic
 framer outbound be inactive first start

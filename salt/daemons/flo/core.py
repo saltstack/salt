@@ -1509,6 +1509,72 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
                     )
 
 
+class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
+    '''
+    Create the Beacon subsystem
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'beacon': '.salt.beacon'}
+
+    def action(self):
+        '''
+        Run the beacons
+        '''
+        self.beacon.value = salt.beacons.Beacon(self.opts.value)
+
+
+class SaltRaetBeacon(ioflo.base.deeding.Deed):
+    '''
+    Run the beacons
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'modules': '.salt.loader.modules',
+               'master_events': '.salt.var.master_events',
+               'beacon': '.salt.beacon'}
+
+    def action(self):
+        '''
+        Run the beacons
+        '''
+        if 'config.merge' in self.modules.value:
+            b_conf = self.modules.value['config.merge']('beacons')
+            if b_conf:
+                try:
+                    self.master_events.value.extend(self.beacon.value.process(b_conf))
+                except Exception:
+                    log.error('Error in the beacon system: ', exc_info=True)
+        return []
+
+
+class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
+    '''
+    Take the events off the master event que and send them to the master to
+    be fired
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'road_stack': '.salt.road.manor.stack',
+               'master_events': '.salt.var.master_events'}
+
+    def postinitio(self):
+        self.master_events.value = deque()
+
+    def action(self):
+        if not self.master_events.value:
+            return
+        events = []
+        for master in self.road_stack.value.remotes:
+            master_uid = master
+        while self.master_events.value:
+            events.append(self.master_events.value.popleft())
+        route = {'src': (self.road_stack.value.local.name, None, None),
+                 'dst': (next(six.itervalues(self.road_stack.value.remotes)).name, None, 'remote_cmd')}
+        load = {'id': self.opts.value['id'],
+                'events': events,
+                'cmd': '_minion_event'}
+        self.road_stack.value.transmit({'route': route, 'load': load},
+                                       uid=master_uid)
+
+
 class SaltRaetNixJobber(ioflo.base.deeding.Deed):
     '''
     Execute a function call job on a minion on a *nix based system

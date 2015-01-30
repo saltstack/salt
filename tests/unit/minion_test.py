@@ -39,7 +39,8 @@ class MinionTestCase(TestCase):
         opts = {
             'id': 'salt-testing',
             'hash_type': 'sha512',
-            'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion')
+            'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
+            'extension_modules': ''
         }
         with patch.dict(__opts__, opts):
             testminion = minion.MinionBase(__opts__)

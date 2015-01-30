@@ -242,17 +242,16 @@ def _verify_dulwich(quiet=False):
             log.error(_RECOMMEND_PYGIT2)
         return False
 
-    dulwich_ver = distutils.version.LooseVersion(dulwich.__version__)
-    dulwich_minver_str = '0.9.4'
-    dulwich_minver = distutils.version.LooseVersion(dulwich_minver_str)
+    dulwich_version = dulwich.__version__
+    dulwich_min_version = (0, 9, 4)
 
     errors = []
 
-    if dulwich_ver < dulwich_minver:
+    if dulwich_version < dulwich_min_version:
         errors.append(
             'Git fileserver backend is enabled in the master config file, but '
             'the installed version of Dulwich is earlier than {0}. Version {1} '
-            'detected.'.format(dulwich_minver_str, dulwich.__version__)
+            'detected.'.format(dulwich_min_version, dulwich_version)
         )
 
         if HAS_PYGIT2 and not quiet:

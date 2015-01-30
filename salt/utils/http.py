@@ -11,6 +11,7 @@ import os.path
 import json
 import logging
 import salt.ext.six.moves.http_cookiejar  # pylint: disable=E0611
+from salt.ext.six import string_types
 from salt._compat import ElementTree as ET
 
 import ssl
@@ -82,6 +83,9 @@ def query(url,
           requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
+          text_out=None,
+          headers_out=None,
+          decode_out=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -123,7 +127,10 @@ def query(url,
         data = _render(
             data_file, data_render, data_renderer, template_dict, opts
         )
-    log.trace('POST Data: {0}'.format(pprint.pformat(data)))
+
+    log.debug('Using {0} Method'.format(method))
+    if method == 'POST':
+        log.trace('POST Data: {0}'.format(pprint.pformat(data)))
 
     if header_file is not None:
         header_tpl = _render(
@@ -205,7 +212,7 @@ def query(url,
 
         if url.startswith('https') or port == 443:
             if not HAS_MATCHHOSTNAME:
-                log.warn(('match_hostname() not available, SSL hostname checking'
+                log.warn(('match_hostname() not available, SSL hostname checking '
                          'not available. THIS CONNECTION MAY NOT BE SECURE!'))
             elif verify_ssl is False:
                 log.warn(('SSL certificate verification has been explicitly '
@@ -243,6 +250,13 @@ def query(url,
         result_headers = result.headers.headers
         result_text = result.read()
 
+    if isinstance(result_headers, list):
+        result_headers_dict = {}
+        for header in result_headers:
+            comps = header.split(':')
+            result_headers_dict[comps[0].strip()] = ':'.join(comps[1:]).strip()
+        result_headers = result_headers_dict
+
     log.debug('Response Status Code: {0}'.format(result_status_code))
     log.trace('Response Headers: {0}'.format(result_headers))
     log.trace('Response Cookies: {0}'.format(sess_cookies))
@@ -251,6 +265,14 @@ def query(url,
     except UnicodeEncodeError as exc:
         log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
                   'incompatibilities between requests and logging.').format(exc))
+
+    if os.path.exists(text_out):
+        with salt.utils.fopen(text_out, 'w') as tof:
+            tof.write(result_text)
+
+    if os.path.exists(headers_out):
+        with salt.utils.fopen(headers_out, 'w') as hof:
+            hof.write(result_headers)
 
     if cookies is not None:
         sess_cookies.save()
@@ -304,13 +326,17 @@ def query(url,
         else:
             text = True
 
+        if os.path.exists(decode_out):
+            with salt.utils.fopen(decode_out, 'w') as dof:
+                dof.write(result_text)
+
     if text is True:
         ret['text'] = result_text
 
     return ret
 
 
-def get_ca_bundle(opts):
+def get_ca_bundle(opts=None):
     '''
     Return the location of the ca bundle file. See the following article:
 
@@ -319,22 +345,125 @@ def get_ca_bundle(opts):
     if hasattr(get_ca_bundle, '__return_value__'):
         return get_ca_bundle.__return_value__
 
+    if opts is None:
+        opts = {}
+
     opts_bundle = opts.get('ca_bundle', None)
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
+    file_roots = opts.get('file_roots', '/srv/salt')
+
+    # Please do not change the order without good reason
     for path in (
-        '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem',
+        # Check Salt first
+        os.path.join(file_roots, 'cacert.pem'),
+        os.path.join(file_roots, 'ca-bundle.crt'),
+        # Debian has paths that often exist on other distros
+        '/etc/ssl/certs/ca-certificates.crt',
+        # RedHat is also very common
         '/etc/pki/tls/certs/ca-bundle.crt',
         '/etc/pki/tls/certs/ca-bundle.trust.crt',
+        # RedHat's link for Debian compatability
         '/etc/ssl/certs/ca-bundle.crt',
-        '/etc/ssl/certs/ca-certificates.crt',
+        # Suse has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
     ):
         if os.path.exists(path):
             return path
 
     return None
+
+
+def update_ca_bundle(
+        target=None,
+        source=None,
+        opts=None,
+        merge_files=None,
+    ):
+    '''
+    Attempt to update the CA bundle file from a URL
+
+    If not specified, the local location on disk (``target``) will be
+    auto-detected, if possible. If it is not found, then a new location on disk
+    will be created and updated.
+
+    The default ``source`` is:
+
+        http://curl.haxx.se/ca/cacert.pem
+
+    This is based on the information at:
+
+        http://curl.haxx.se/docs/caextract.html
+
+    A string or list of strings representing files to be appended to the end of
+    the CA bundle file may also be passed through as ``merge_files``.
+    '''
+    if opts is None:
+        opts = {}
+
+    file_roots = opts.get('file_roots', '/srv/salt')
+
+    if target is None:
+        target = get_ca_bundle(opts)
+
+    if target is None:
+        log.error('Unable to detect location to write CA bundle to')
+        return
+
+    if source is None:
+        source = opts.get('ca_bundle_url', 'http://curl.haxx.se/ca/cacert.pem')
+
+    log.debug('Attempting to download {0} to {1}'.format(source, target))
+    query(
+        source,
+        text=True,
+        decode=False,
+        headers=False,
+        status=False,
+        text_out=target
+    )
+
+    if merge_files is not None:
+        if isinstance(merge_files, string_types):
+            merge_files = [merge_files]
+
+        if not isinstance(merge_files, list):
+            log.error('A value was passed as merge_files which was not either '
+                      'a string or a list')
+            return
+
+        merge_content = ''
+
+        for cert_file in merge_files:
+            if os.path.exists(cert_file):
+                log.debug(
+                    'Queueing up {0} to be appended to {1}'.format(
+                        cert_file, target
+                    )
+                )
+                try:
+                    with salt.utils.fopen(cert_file, 'r') as fcf:
+                        merge_content = '\n'.join((merge_content, fcf.read()))
+                except IOError as exc:
+                    log.error(
+                        'Reading from {0} caused the following error: {1}'.format(
+                            cert_file, exc
+                        )
+                    )
+
+        if merge_content:
+            log.debug('Appending merge_files to {0}'.format(target))
+            try:
+                with salt.utils.fopen(target, 'a') as tfp:
+                    tfp.write('\n')
+                    tfp.write(merge_content)
+            except IOError as exc:
+                log.error(
+                    'Writing to {0} caused the following error: {1}'.format(
+                        target, exc
+                    )
+                )
 
 
 def _render(template, render, renderer, template_dict, opts):
