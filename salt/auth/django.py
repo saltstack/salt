@@ -50,7 +50,6 @@ log = logging.getLogger(__name__)
 
 try:
     import django
-    import django.conf
     import django.contrib.auth
     HAS_DJANGO = True
 except ImportError:
