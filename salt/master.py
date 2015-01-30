@@ -73,6 +73,8 @@ class SMaster(object):
     '''
     Create a simple salt-master, this will generate the top-level master
     '''
+    aes = None
+
     def __init__(self, opts):
         '''
         Create a salt master server instance
@@ -80,7 +82,7 @@ class SMaster(object):
         :param dict opts: The salt options dictionary
         '''
         self.opts = opts
-        self.opts['aes'] = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
+        SMaster.aes = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
         self.crypticle = self.__prep_crypticle()
@@ -89,7 +91,7 @@ class SMaster(object):
         '''
         Return the crypticle used for AES
         '''
-        return salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+        return salt.crypt.Crypticle(self.opts, SMaster.aes.value)
 
     def __prep_key(self):
         '''
@@ -97,44 +99,6 @@ class SMaster(object):
         clients are required to run as root.
         '''
         return salt.daemons.masterapi.access_keys(self.opts)
-
-
-class Scheduler(multiprocessing.Process):
-    '''
-    The master scheduler process.
-
-    This runs in its own process so that it can have a fully
-    independent loop from the Maintenance process.
-    '''
-    def __init__(self, opts):
-        super(Scheduler, self).__init__()
-        self.opts = opts
-        # Init Scheduler
-        self.schedule = salt.utils.schedule.Schedule(self.opts,
-                                                    salt.loader.runner(self.opts),
-                                                    returners=salt.loader.returners(self.opts, {}))
-
-    def run(self):
-        salt.utils.appendproctitle('Scheduler')
-        while True:
-            self.handle_schedule()
-            try:
-                time.sleep(self.schedule.loop_interval)
-            except KeyboardInterrupt:
-                break
-            except IOError:
-                time.sleep(self.opts['loop_interval'])
-
-    def handle_schedule(self):
-        '''
-        Evaluate the scheduler
-        '''
-        try:
-            self.schedule.eval()
-        except Exception as exc:
-            log.error(
-                'Exception {0} occurred in scheduled job'.format(exc)
-            )
 
 
 class Maintenance(multiprocessing.Process):
@@ -165,12 +129,15 @@ class Maintenance(multiprocessing.Process):
         # Init fileserver manager
         self.fileserver = salt.fileserver.Fileserver(self.opts)
         # Load Runners
-        self.runners = salt.loader.runner(self.opts)
+        ropts = dict(self.opts)
+        ropts['quiet'] = True
+        runner_client = salt.runner.RunnerClient(ropts)
         # Load Returners
         self.returners = salt.loader.returners(self.opts, {})
+
         # Init Scheduler
         self.schedule = salt.utils.schedule.Schedule(self.opts,
-                                                     self.runners,
+                                                     runner_client.functions_dict(),
                                                      returners=self.returners)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
@@ -250,8 +217,8 @@ class Maintenance(multiprocessing.Process):
         if to_rotate:
             log.info('Rotating master AES key')
             # should be unecessary-- since no one else should be modifying
-            with self.opts['aes'].get_lock():
-                self.opts['aes'].value = salt.crypt.Crypticle.generate_key_string()
+            with SMaster.aes.get_lock():
+                SMaster.aes.value = salt.crypt.Crypticle.generate_key_string()
             self.event.fire_event({'rotate_aes_key': True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -830,8 +797,8 @@ class MWorker(multiprocessing.Process):
         Check to see if a fresh AES key is available and update the components
         of the worker
         '''
-        if self.opts['aes'].value != self.crypticle.key_string:
-            self.crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+        if SMaster.aes.value != self.crypticle.key_string:
+            self.crypticle = salt.crypt.Crypticle(self.opts, SMaster.aes.value)
             self.clear_funcs.crypticle = self.crypticle
             self.aes_funcs.crypticle = self.crypticle
 
@@ -1823,13 +1790,13 @@ class ClearFuncs(object):
             if 'token' in load:
                 try:
                     mtoken = self.master_key.key.private_decrypt(load['token'], 4)
-                    aes = '{0}_|-{1}'.format(self.opts['aes'].value, mtoken)
+                    aes = '{0}_|-{1}'.format(SMaster.aes.value, mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
             else:
-                aes = self.opts['aes'].value
+                aes = SMaster.aes.value
 
             ret['aes'] = pub.public_encrypt(aes, 4)
         else:
@@ -1844,8 +1811,8 @@ class ClearFuncs(object):
                     # support older minions
                     pass
 
-            aes = self.opts['aes'].value
-            ret['aes'] = pub.public_encrypt(self.opts['aes'].value, 4)
+            aes = SMaster.aes.value
+            ret['aes'] = pub.public_encrypt(SMaster.aes.value, 4)
         # Be aggressive about the signature
         digest = hashlib.sha256(aes).hexdigest()
         ret['sig'] = self.master_key.key.private_encrypt(digest, 5)

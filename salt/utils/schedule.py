@@ -220,6 +220,7 @@ import yaml
 # Import Salt libs
 import salt.utils
 import salt.utils.process
+import salt.utils.args
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running
 import salt.payload
@@ -486,26 +487,23 @@ class Schedule(object):
             with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
-        args = None
+        args = tuple()
         if 'args' in data:
             args = data['args']
 
-        kwargs = None
+        kwargs = {}
         if 'kwargs' in data:
             kwargs = data['kwargs']
+        # if the func support **kwargs, lets pack in the pub data we have
+        # TODO: pack the *same* pub data as a minion?
+        argspec = salt.utils.args.get_function_argspec(self.functions[func])
+        if argspec.keywords:
+            # this function accepts **kwargs, pack in the publish data
+            for key, val in ret.iteritems():
+                kwargs['__pub_{0}'.format(key)] = val
 
         try:
-            if args and kwargs:
-                ret['return'] = self.functions[func](*args, **kwargs)
-
-            if args and not kwargs:
-                ret['return'] = self.functions[func](*args)
-
-            if kwargs and not args:
-                ret['return'] = self.functions[func](**kwargs)
-
-            if not kwargs and not args:
-                ret['return'] = self.functions[func]()
+            ret['return'] = self.functions[func](*args, **kwargs)
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
