@@ -486,26 +486,16 @@ class Schedule(object):
             with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
-        args = None
+        args = tuple()
         if 'args' in data:
             args = data['args']
 
-        kwargs = None
+        kwargs = {}
         if 'kwargs' in data:
             kwargs = data['kwargs']
 
         try:
-            if args and kwargs:
-                ret['return'] = self.functions[func](*args, **kwargs)
-
-            if args and not kwargs:
-                ret['return'] = self.functions[func](*args)
-
-            if kwargs and not args:
-                ret['return'] = self.functions[func](**kwargs)
-
-            if not kwargs and not args:
-                ret['return'] = self.functions[func]()
+            ret['return'] = self.functions[func](*args, **kwargs)
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
