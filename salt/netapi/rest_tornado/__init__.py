@@ -37,7 +37,11 @@ def start():
     '''
     Start the saltnado!
     '''
-    from . import saltnado
+    try:
+        from . import saltnado
+    except ImportError:
+        logger.error('ImportError! {0}'.format(str(err)))
+        return None
 
     mod_opts = __opts__.get(__virtualname__, {})
 
