@@ -24,7 +24,8 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        if isinstance(arg, six.integer_types):
+        if (six.PY3 and isinstance(arg, six.integer_types)) or \
+                (six.PY2 and isinstance(arg, long)):
             ret.append(str(arg))
         else:
             ret.append(arg)
