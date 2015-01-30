@@ -19,7 +19,7 @@ try:
     has_tornado = True
 except ImportError as err:
     has_tornado = False
-    logger.info('ImportError! {0}'.format(str(err)))
+    logger.error('ImportError! {0}'.format(str(err)))
 
 import salt.auth
 
