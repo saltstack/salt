@@ -12,6 +12,7 @@ import time
 import types
 import logging
 import multiprocessing
+import threading
 import traceback
 import itertools
 from collections import deque
@@ -1266,6 +1267,87 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
                                        uid=master_uid)
 
 
+class SaltRaetSetupMatcher(ioflo.base.deeding.Deed):
+    '''
+    Make the matcher object
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'modules': '.salt.loader.modules',
+               'matcher': '.salt.matcher'}
+
+    def action(self):
+        self.matcher.value = salt.minion.Matcher(
+                self.opts.value,
+                self.modules.value)
+
+
+class SaltRaetThreadShellJobber(ioflo.base.deeding.Deed):
+    '''
+    Execute a jobber via shelling out to salt call
+
+    This bahavior is a fallback option for windows platforms
+    and should not be called on any *NIX platform
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'grains': '.salt.grains',
+               'modules': '.salt.modules',
+               'fun': '.salt.var.fun',
+               'matcher': '.salt.matcher',
+               'threads': '.salt.var.threads',
+               }
+
+    def postinitio(self):
+        self.threads.value = deque()
+
+    def action(self):
+        '''
+        Evaluate the fun options and execute them via salt-call
+        '''
+        while self.fun.value:
+            msg = self.fun.value.popleft()
+            data = msg.get('pub')
+            match = getattr(
+                    self.matcher.value,
+                    '{0}_match'.format(
+                        data.get('tgt_type', 'glob')
+                        )
+                    )(data['tgt'])
+            if not match:
+                continue
+            fun = data['fun']
+            if fun in self.modules.value:
+                func = self.modules.value[fun]
+            else:
+                continue
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                func,
+                salt.utils.args.parse_input(data['arg']),
+                data)
+            cmd = ['salt-call',
+                   '--out', 'json',
+                   '--metadata',
+                   '-c', salt.syspaths.CONFIG_DIR]
+            if 'return' in data:
+                cmd.append('--return')
+                cmd.append(data['return'])
+            cmd.append(fun)
+            for arg in args:
+                cmd.append(arg)
+            for key in kwargs:
+                cmd.append('{0}={1}'.format(key, kwargs[key]))
+            self.threads.value.append(threading.Thread(
+                    target=self.shell_thread,
+                    kwargs={'cmd': cmd}
+                ))
+            self.threads.value[-1].start()
+
+    def _shell_thread(self, cmd):
+        '''
+        Execute the jobber via a call to salt call
+        '''
+        self.modules.value['cmd.run'](cmd, python_shell=False)
+
+
 class SaltRaetNixJobber(ioflo.base.deeding.Deed):
     '''
     Execute a function call job on a minion on a *nix based system
@@ -1279,6 +1361,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
                'fun': '.salt.var.fun',
+               'matcher': '.salt.matcher',
                'executors': '.salt.track.executors',
                'road_stack': '.salt.road.manor.stack', }
 
@@ -1287,9 +1370,6 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         Map opts for convenience
         '''
         self.opts = self.opts_store.value
-        self.matcher = salt.minion.Matcher(
-                self.opts,
-                self.modules.value)
         self.proc_dir = salt.minion.get_proc_dir(self.opts['cachedir'])
         self.serial = salt.payload.Serial(self.opts)
         self.executors.value = {}
@@ -1363,7 +1443,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
             msg = self.fun.value.popleft()
             data = msg.get('pub')
             match = getattr(
-                    self.matcher,
+                    self.matcher.value,
                     '{0}_match'.format(
                         data.get('tgt_type', 'glob')
                         )
@@ -1416,7 +1496,16 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     salt.utils.args.parse_input(data['arg']),
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
-                return_data = func(*args, **kwargs)
+                if self.opts.get('sudo_user', ''):
+                    sudo_runas = self.opts.get('sudo_user')
+                    if 'sudo.salt_call' in self.modules.value:
+                        return_data = self.modules.value['sudo.salt_call'](
+                                sudo_runas,
+                                data['fun'],
+                                *args,
+                                **kwargs)
+                else:
+                    return_data = func(*args, **kwargs)
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}
