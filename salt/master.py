@@ -73,6 +73,7 @@ class SMaster(object):
     '''
     Create a simple salt-master, this will generate the top-level master
     '''
+    aes = None
     def __init__(self, opts):
         '''
         Create a salt master server instance
@@ -80,7 +81,7 @@ class SMaster(object):
         :param dict opts: The salt options dictionary
         '''
         self.opts = opts
-        self.opts['aes'] = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
+        SMaster.aes = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
         self.crypticle = self.__prep_crypticle()
@@ -89,7 +90,7 @@ class SMaster(object):
         '''
         Return the crypticle used for AES
         '''
-        return salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+        return salt.crypt.Crypticle(self.opts, SMaster.aes.value)
 
     def __prep_key(self):
         '''
@@ -250,8 +251,8 @@ class Maintenance(multiprocessing.Process):
         if to_rotate:
             log.info('Rotating master AES key')
             # should be unecessary-- since no one else should be modifying
-            with self.opts['aes'].get_lock():
-                self.opts['aes'].value = salt.crypt.Crypticle.generate_key_string()
+            with SMaster.aes.get_lock():
+                SMaster.aes.value = salt.crypt.Crypticle.generate_key_string()
             self.event.fire_event({'rotate_aes_key': True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -830,8 +831,8 @@ class MWorker(multiprocessing.Process):
         Check to see if a fresh AES key is available and update the components
         of the worker
         '''
-        if self.opts['aes'].value != self.crypticle.key_string:
-            self.crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+        if SMaster.aes.value != self.crypticle.key_string:
+            self.crypticle = salt.crypt.Crypticle(self.opts, SMaster.aes.value)
             self.clear_funcs.crypticle = self.crypticle
             self.aes_funcs.crypticle = self.crypticle
 
@@ -1823,13 +1824,13 @@ class ClearFuncs(object):
             if 'token' in load:
                 try:
                     mtoken = self.master_key.key.private_decrypt(load['token'], 4)
-                    aes = '{0}_|-{1}'.format(self.opts['aes'].value, mtoken)
+                    aes = '{0}_|-{1}'.format(SMaster.aes.value, mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
             else:
-                aes = self.opts['aes'].value
+                aes = SMaster.aes.value
 
             ret['aes'] = pub.public_encrypt(aes, 4)
         else:
@@ -1844,8 +1845,8 @@ class ClearFuncs(object):
                     # support older minions
                     pass
 
-            aes = self.opts['aes'].value
-            ret['aes'] = pub.public_encrypt(self.opts['aes'].value, 4)
+            aes = SMaster.aes.value
+            ret['aes'] = pub.public_encrypt(SMaster.aes.value, 4)
         # Be aggressive about the signature
         digest = hashlib.sha256(aes).hexdigest()
         ret['sig'] = self.master_key.key.private_encrypt(digest, 5)
