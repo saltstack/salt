@@ -2025,7 +2025,7 @@ def simple_types_filter(data):
     simpletypes_keys = (str, six.text_type, int, long, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
 
-    if isinstance(data, list):
+    if isinstance(data, (list, tuple)):
         simplearray = []
         for value in data:
             if value is not None:
@@ -2041,7 +2041,7 @@ def simple_types_filter(data):
         for key, value in data.items():
             if key is not None and not isinstance(key, simpletypes_keys):
                 key = repr(key)
-            if value is not None and isinstance(value, (dict, list)):
+            if value is not None and isinstance(value, (dict, list, tuple)):
                 value = simple_types_filter(value)
             elif value is not None and not isinstance(value, simpletypes_values):
                 value = repr(value)

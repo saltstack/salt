@@ -215,7 +215,7 @@ class CMDMODTestCase(TestCase):
         '''
         Tests end result when a command is not found
         '''
-        ret = cmdmod._run('foo').get('stderr')
+        ret = cmdmod._run('foo', use_vt=True).get('stderr')
         self.assertIn('foo', ret)
 
     @patch('salt.utils.is_windows', MagicMock(return_value=True))
