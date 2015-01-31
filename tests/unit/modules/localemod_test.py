@@ -83,36 +83,72 @@ class LocalemodTestCase(TestCase):
                              MagicMock(return_value=['A', 'B'])}):
                 self.assertTrue(localemod.avail('locale'))
 
-    def test_gen_locale(self):
+    def test_gen_locale_debian_no_charmap(self):
         '''
-        Test for Generate a locale
+        Tests the return of gen_locale on Debian with no charmap provided
         '''
-        with patch.dict(localemod.__salt__,
-                        {'file.replace': MagicMock(return_value=None)}):
-            self.assertFalse(localemod.gen_locale('locale'))
+        with patch.dict(localemod.__grains__, {'os': 'Debian'}):
+            self.assertFalse(localemod.gen_locale('foo'))
 
+    def test_gen_locale_debian_with_charmap_not_valid(self):
+        '''
+        Tests the return of gen_locale on Debian with a charmap provided but it is not valid/found
+        '''
+        with patch.dict(localemod.__grains__, {'os': 'Debian'}):
+            with patch.dict(localemod.__salt__, {'file.search': MagicMock(return_value=False)}):
+                self.assertFalse(localemod.gen_locale('foo', charmap='bar'))
+
+    def test_gen_locale_not_valid(self):
+        '''
+        Tests the return of gen_locale when the provided locale is not found
+        '''
+        self.assertFalse(localemod.gen_locale('foo'))
+
+    def test_gen_locale_valid_debian(self):
+        '''
+        Tests the return of successful gen_locale on Debian system
+        '''
+        with patch.dict(localemod.__grains__, {'os': 'Debian'}):
+            with patch.dict(localemod.__salt__,
+                            {'file.search': MagicMock(return_value=True),
+                             'file.replace': MagicMock(return_value=True),
+                             'cmd.retcode': MagicMock(return_value='test')}):
+                self.assertEqual(localemod.gen_locale('foo', charmap='bar'), 'test')
+
+    @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
+    def test_gen_locale_ubuntu(self):
+        '''
+        Test the return of successful gen_locale on Ubuntu system
+        '''
         with patch.dict(localemod.__salt__,
                         {'file.replace': MagicMock(return_value=True),
                          'file.touch': MagicMock(return_value=None),
                          'file.append': MagicMock(return_value=None),
                          'cmd.retcode': MagicMock(return_value='A')}):
-            with patch.dict(localemod.__grains__,
-                            {'os': 'Ubuntu', 'os_family': 'A'}):
+            with patch.dict(localemod.__grains__, {'os': 'Ubuntu'}):
                 self.assertEqual(localemod.gen_locale('en_US.UTF-8'), 'A')
 
-        with patch.dict(localemod.__grains__,
-                        {'os': 'B', 'os_family': 'Gentoo'}):
+    @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
+    def test_gen_locale_gentoo(self):
+        '''
+        Tests the return of successful gen_locale on Gentoo system
+        '''
+        with patch.dict(localemod.__grains__, {'os_family': 'Gentoo'}):
             with patch.dict(localemod.__salt__,
-                            {'file.replace': MagicMock(return_value=True),
+                            {'file.search': MagicMock(return_value=True),
+                             'file.replace': MagicMock(return_value=True),
                              'cmd.retcode': MagicMock(return_value='A')}):
-                self.assertEqual(localemod.gen_locale('en_US.UTF-8'), 'A')
+                self.assertEqual(localemod.gen_locale('en_US.UTF-8', charmap='test'), 'A')
 
-        with patch.dict(localemod.__grains__,
-                        {'os': 'B', 'os_family': 'A'}):
-            with patch.dict(localemod.__salt__,
-                            {'file.replace': MagicMock(return_value=True),
-                             'cmd.retcode': MagicMock(return_value='A')}):
-                self.assertEqual(localemod.gen_locale('en_US.UTF-8'), 'A')
+    @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
+    def test_gen_locale(self):
+        '''
+        Tests the return of successful gen_locale
+        '''
+        with patch.dict(localemod.__salt__,
+                        {'file.replace': MagicMock(return_value=True),
+                         'cmd.retcode': MagicMock(return_value='A')}):
+            self.assertEqual(localemod.gen_locale('en_US.UTF-8'), 'A')
 
 
 if __name__ == '__main__':
