@@ -287,7 +287,7 @@ def query(url,
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
-                        handlers.append(urllib2.HTTPSHandler(context=context))
+                        handlers.append(urllib2.HTTPSHandler(context=context))  # pylint: disable=E1123
                     else:
                         # Python < 2.7.9
                         cert_kwargs = {
