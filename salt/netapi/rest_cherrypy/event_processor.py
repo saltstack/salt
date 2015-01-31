@@ -1,9 +1,14 @@
 # encoding: utf-8
+
+# Import python libs
 from __future__ import absolute_import
 import json
 import logging
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
+# Import Salt libs
 import salt.netapi
 
 logger = logging.getLogger(__name__)
@@ -149,7 +154,7 @@ class SaltInfo(object):
         event_info = event_data['data']
 
         minions_detected = event_info['present']
-        curr_minions = self.minions.keys()
+        curr_minions = six.iterkeys(self.minions)
 
         changed = False
 

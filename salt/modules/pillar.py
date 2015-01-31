@@ -9,12 +9,12 @@ import collections
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
 
 # Import salt libs
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext.six import string_types
 
 __proxyenabled__ = ['*']
 
@@ -117,8 +117,8 @@ def _obfuscate_inner(var):
     In the special case of mapping types, keys are not obfuscated
     '''
     if isinstance(var, (dict, salt.utils.odict.OrderedDict)):
-        return var.__class__((k, _obfuscate_inner(v))
-                             for k, v in var.iteritems())
+        return var.__class__((key, _obfuscate_inner(val))
+                             for key, val in six.iteritems(var))
     elif isinstance(var, (list, set, tuple)):
         return type(var)(_obfuscate_inner(v) for v in var)
     else:
@@ -171,7 +171,7 @@ def ls(*args):
         salt '*' pillar.ls
     '''
 
-    return items(*args).keys()
+    return list(items(*args).keys())
 
 
 def item(*args):
@@ -233,7 +233,7 @@ def ext(external):
 
         salt '*' pillar.ext '{libvirt: _}'
     '''
-    if isinstance(external, string_types):
+    if isinstance(external, six.string_types):
         external = yaml.safe_load(external)
     pillar = salt.pillar.get_pillar(
         __opts__,

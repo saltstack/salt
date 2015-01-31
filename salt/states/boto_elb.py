@@ -852,7 +852,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
         tmp = dictupdate.update(tmp, alarms)
     # set alarms, using boto_cloudwatch_alarm.present
     merged_return_value = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    for _, info in tmp.items():
+    for _, info in six.iteritems(tmp):
         # add elb to name and description
         info["name"] = name + " " + info["name"]
         info["attributes"]["description"] = name + " " + info["attributes"]["description"]
@@ -868,7 +868,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
             "profile": profile,
         }
         ret = __salt__["state.single"]('boto_cloudwatch_alarm.present', **kwargs)
-        results = ret.values()[0]
+        results = next(six.itervalues(ret))
         if not results["result"]:
             merged_return_value["result"] = False
         if results.get("changes", {}) != {}:

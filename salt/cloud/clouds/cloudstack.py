@@ -21,22 +21,22 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       provider: cloudstack
 
 '''
-# pylint: disable=E0102
-
-from __future__ import absolute_import
+# pylint: disable=invalid-name,function-redefined
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import pprint
 import logging
 
 # Import salt cloud libs
 import salt.config as config
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.utils import namespaced_function
 from salt.exceptions import SaltCloudSystemExit
 
 # CloudStackNetwork will be needed during creation of a new node
+# pylint: disable=import-error
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
     HASLIBS = True
@@ -311,7 +311,7 @@ def create(vm_):
         )
         return False
 
-    for device_name in volumes.keys():
+    for device_name in six.iterkeys(volumes):
         try:
             conn.attach_volume(data, volumes[device_name], device_name)
         except Exception as exc:

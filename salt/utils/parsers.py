@@ -99,7 +99,7 @@ class OptionParserMeta(MixInMeta):
         return instance
 
 
-class OptionParser(optparse.OptionParser):
+class OptionParser(optparse.OptionParser, object):
     VERSION = version.__saltstack_version__.formatted_version
 
     usage = '%prog'
@@ -199,14 +199,13 @@ class OptionParser(optparse.OptionParser):
         self.exit(salt.defaults.exitcodes.EX_OK)
 
 
-class MergeConfigMixIn(object):
+class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
     '''
     This mix-in will simply merge the CLI-passed options, by overriding the
     configuration file loaded settings.
 
     This mix-in should run last.
     '''
-    __metaclass__ = MixInMeta
     _mixin_prio_ = six.MAXSIZE
 
     def _mixin_setup(self):
@@ -276,8 +275,7 @@ class MergeConfigMixIn(object):
                             self.config[option.dest])
 
 
-class SaltfileMixIn(object):
-    __metaclass__ = MixInMeta
+class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = -20
 
     def _mixin_setup(self):
@@ -385,8 +383,7 @@ class SaltfileMixIn(object):
             setattr(self.options, key, cli_config[key])
 
 
-class HardCrashMixin(object):
-    __metaclass__ = MixInMeta
+class HardCrashMixin(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 40
     _config_filename_ = None
 
@@ -399,8 +396,7 @@ class HardCrashMixin(object):
         )
 
 
-class ConfigDirMixIn(object):
-    __metaclass__ = MixInMeta
+class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = -10
     _config_filename_ = None
 
@@ -443,8 +439,7 @@ class ConfigDirMixIn(object):
         return os.path.join(self.options.config_dir, configfile)
 
 
-class LogLevelMixIn(object):
-    __metaclass__ = MixInMeta
+class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 10
     _default_logging_level_ = 'warning'
     _default_logging_logfile_ = None
@@ -705,7 +700,7 @@ class LogLevelMixIn(object):
             log_format=log_file_fmt,
             date_format=log_file_datefmt
         )
-        for name, level in self.config['log_granular_levels'].items():
+        for name, level in six.iteritems(self.config['log_granular_levels']):
             log.set_logger_level(name, level)
 
     def __setup_extended_logging(self, *args):
@@ -759,12 +754,11 @@ class LogLevelMixIn(object):
         log.setup_console_logger(
             self.config['log_level'], log_format=logfmt, date_format=datefmt
         )
-        for name, level in self.config['log_granular_levels'].items():
+        for name, level in six.iteritems(self.config['log_granular_levels']):
             log.set_logger_level(name, level)
 
 
-class RunUserMixin(object):
-    __metaclass__ = MixInMeta
+class RunUserMixin(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 20
 
     def _mixin_setup(self):
@@ -774,8 +768,7 @@ class RunUserMixin(object):
         )
 
 
-class DaemonMixIn(object):
-    __metaclass__ = MixInMeta
+class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 30
 
     def _mixin_setup(self):
@@ -793,8 +786,7 @@ class DaemonMixIn(object):
             salt.utils.daemonize()
 
 
-class PidfileMixin(object):
-    __metaclass__ = MixInMeta
+class PidfileMixin(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 40
 
     def _mixin_setup(self):
@@ -811,9 +803,8 @@ class PidfileMixin(object):
         set_pidfile(self.config['pidfile'], self.config['user'])
 
 
-class TargetOptionsMixIn(object):
+class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
-    __metaclass__ = MixInMeta
     _mixin_prio_ = 20
 
     selected_target_option = None
@@ -899,10 +890,10 @@ class TargetOptionsMixIn(object):
                 setattr(self, funcname, partial(process, option))
 
     def _mixin_after_parsed(self):
-        group_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is True,
-            self.target_options_group.option_list
-        )
+        group_options_selected = [
+            option for option in self.target_options_group.option_list if
+            getattr(self.options, option.dest) is True
+        ]
         if len(group_options_selected) > 1:
             self.error(
                 'The options {0} are mutually exclusive. Please only choose '
@@ -947,8 +938,7 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
         self._create_process_functions()
 
 
-class TimeoutMixIn(object):
-    __metaclass__ = MixInMeta
+class TimeoutMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 10
 
     def _mixin_setup(self):
@@ -966,9 +956,8 @@ class TimeoutMixIn(object):
         )
 
 
-class OutputOptionsMixIn(object):
+class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
-    __metaclass__ = MixInMeta
     _mixin_prio_ = 40
     _include_text_out_ = False
 
@@ -1067,13 +1056,11 @@ class OutputOptionsMixIn(object):
                     )
 
     def _mixin_after_parsed(self):
-        group_options_selected = filter(
-            lambda option: (
+        group_options_selected = [
+                option for option in self.output_options_group.option_list if (
                 getattr(self.options, option.dest) and
-                (option.dest.endswith('_out') or option.dest == 'output')
-            ),
-            self.output_options_group.option_list
-        )
+                (option.dest.endswith('_out') or option.dest == 'output'))
+        ]
         if len(group_options_selected) > 1:
             self.error(
                 'The options {0} are mutually exclusive. Please only choose '
@@ -1085,8 +1072,7 @@ class OutputOptionsMixIn(object):
         self.config['selected_output_option'] = self.selected_output_option
 
 
-class ExecutionOptionsMixIn(object):
-    __metaclass__ = MixInMeta
+class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 10
 
     def _mixin_setup(self):
@@ -1200,8 +1186,7 @@ class ExecutionOptionsMixIn(object):
                 )
 
 
-class CloudQueriesMixIn(object):
-    __metaclass__ = MixInMeta
+class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 20
 
     selected_query_option = None
@@ -1282,11 +1267,11 @@ class CloudQueriesMixIn(object):
                 setattr(self, funcname, partial(process, option))
 
     def _mixin_after_parsed(self):
-        group_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is not False
-            and getattr(self.options, option.dest) is not None,
-            self.cloud_queries_group.option_list
-        )
+        group_options_selected = [
+                option for option in self.cloud_queries_group.option_list if
+                getattr(self.options, option.dest) is not False and
+                getattr(self.options, option.dest) is not None
+        ]
         if len(group_options_selected) > 1:
             self.error(
                 'The options {0} are mutually exclusive. Please only choose '
@@ -1298,8 +1283,7 @@ class CloudQueriesMixIn(object):
         self.config['selected_query_option'] = self.selected_query_option
 
 
-class CloudProvidersListsMixIn(object):
-    __metaclass__ = MixInMeta
+class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 30
 
     def _mixin_setup(self):
@@ -1335,10 +1319,10 @@ class CloudProvidersListsMixIn(object):
         self.add_option_group(group)
 
     def _mixin_after_parsed(self):
-        list_options_selected = filter(
-            lambda option: getattr(self.options, option.dest) is not None,
-            self.providers_listings_group.option_list
-        )
+        list_options_selected = [
+                option for option in self.providers_listings_group.option_list if
+                getattr(self.options, option.dest) is not None
+        ]
         if len(list_options_selected) > 1:
             self.error(
                 'The options {0} are mutually exclusive. Please only choose '
@@ -1351,8 +1335,7 @@ class CloudProvidersListsMixIn(object):
             )
 
 
-class CloudCredentialsMixIn(object):
-    __metaclass__ = MixInMeta
+class CloudCredentialsMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 30
 
     def _mixin_setup(self):
@@ -1383,11 +1366,15 @@ class CloudCredentialsMixIn(object):
             )
 
 
-class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                         LogLevelMixIn, RunUserMixin, DaemonMixIn,
-                         PidfileMixin, SaltfileMixIn):
-
-    __metaclass__ = OptionParserMeta
+class MasterOptionParser(six.with_metaclass(OptionParserMeta,
+                                            OptionParser,
+                                            ConfigDirMixIn,
+                                            MergeConfigMixIn,
+                                            LogLevelMixIn,
+                                            RunUserMixin,
+                                            DaemonMixIn,
+                                            PidfileMixin,
+                                            SaltfileMixIn)):
 
     description = 'The Salt master, used to control the Salt minions.'
 
@@ -1400,9 +1387,7 @@ class MasterOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         return config.master_config(self.get_config_file_path())
 
 
-class MinionOptionParser(MasterOptionParser):
-
-    __metaclass__ = OptionParserMeta
+class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser)):
 
     description = (
         'The Salt minion, receives commands from a remote Salt master.'
@@ -1418,11 +1403,15 @@ class MinionOptionParser(MasterOptionParser):
                                     minion_id=True)
 
 
-class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                         LogLevelMixIn, RunUserMixin, DaemonMixIn,
-                         PidfileMixin, SaltfileMixIn):
-
-    __metaclass__ = OptionParserMeta
+class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
+                                            OptionParser,
+                                            ConfigDirMixIn,
+                                            MergeConfigMixIn,
+                                            LogLevelMixIn,
+                                            RunUserMixin,
+                                            DaemonMixIn,
+                                            PidfileMixin,
+                                            SaltfileMixIn)):
 
     description = (
         'A seamless master of masters. Scale Salt to thousands of hosts or '
@@ -1440,12 +1429,16 @@ class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             self.get_config_file_path('minion'))
 
 
-class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          TimeoutMixIn, ExtendedTargetOptionsMixIn,
-                          OutputOptionsMixIn, LogLevelMixIn, HardCrashMixin,
-                          SaltfileMixIn):
-
-    __metaclass__ = OptionParserMeta
+class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
+                                             OptionParser,
+                                             ConfigDirMixIn,
+                                             MergeConfigMixIn,
+                                             TimeoutMixIn,
+                                             ExtendedTargetOptionsMixIn,
+                                             OutputOptionsMixIn,
+                                             LogLevelMixIn,
+                                             HardCrashMixin,
+                                             SaltfileMixIn)):
 
     default_timeout = 5
 
@@ -1687,11 +1680,15 @@ class SaltCMDOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         return config.client_config(self.get_config_file_path())
 
 
-class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                         TimeoutMixIn, TargetOptionsMixIn, LogLevelMixIn,
-                         HardCrashMixin, SaltfileMixIn):
-    __metaclass__ = OptionParserMeta
-
+class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
+                                            OptionParser,
+                                            ConfigDirMixIn,
+                                            MergeConfigMixIn,
+                                            TimeoutMixIn,
+                                            TargetOptionsMixIn,
+                                            LogLevelMixIn,
+                                            HardCrashMixin,
+                                            SaltfileMixIn)):
     description = (
         'salt-cp is NOT intended to broadcast large files, it is intended to '
         'handle text files.\nsalt-cp can be used to distribute configuration '
@@ -1730,11 +1727,15 @@ class SaltCPOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         return config.master_config(self.get_config_file_path())
 
 
-class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          LogLevelMixIn, OutputOptionsMixIn, RunUserMixin,
-                          HardCrashMixin, SaltfileMixIn):
-
-    __metaclass__ = OptionParserMeta
+class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
+                                             OptionParser,
+                                             ConfigDirMixIn,
+                                             MergeConfigMixIn,
+                                             LogLevelMixIn,
+                                             OutputOptionsMixIn,
+                                             RunUserMixin,
+                                             HardCrashMixin,
+                                             SaltfileMixIn)):
 
     description = 'Salt key is used to manage Salt authentication keys'
 
@@ -1994,10 +1995,14 @@ class SaltKeyOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
             os.makedirs(self.config['gen_keys_dir'])
 
 
-class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                           LogLevelMixIn, OutputOptionsMixIn, HardCrashMixin,
-                           SaltfileMixIn):
-    __metaclass__ = OptionParserMeta
+class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
+                                              OptionParser,
+                                              ConfigDirMixIn,
+                                              MergeConfigMixIn,
+                                              LogLevelMixIn,
+                                              OutputOptionsMixIn,
+                                              HardCrashMixin,
+                                              SaltfileMixIn)):
 
     description = ('Salt call is used to execute module functions locally '
                    'on a minion')
@@ -2191,10 +2196,14 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
                                    []).append(os.path.abspath(module_dir))
 
 
-class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          TimeoutMixIn, LogLevelMixIn, HardCrashMixin,
-                          SaltfileMixIn):
-    __metaclass__ = OptionParserMeta
+class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
+                                             OptionParser,
+                                             ConfigDirMixIn,
+                                             MergeConfigMixIn,
+                                             TimeoutMixIn,
+                                             LogLevelMixIn,
+                                             HardCrashMixin,
+                                             SaltfileMixIn)):
 
     default_timeout = 1
 
@@ -2265,10 +2274,15 @@ class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         return config.master_config(self.get_config_file_path())
 
 
-class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          LogLevelMixIn, TargetOptionsMixIn,
-                          OutputOptionsMixIn, SaltfileMixIn, HardCrashMixin):
-    __metaclass__ = OptionParserMeta
+class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
+                                             OptionParser,
+                                             ConfigDirMixIn,
+                                             MergeConfigMixIn,
+                                             LogLevelMixIn,
+                                             TargetOptionsMixIn,
+                                             OutputOptionsMixIn,
+                                             SaltfileMixIn,
+                                             HardCrashMixin)):
 
     usage = '%prog [options]'
 
@@ -2446,19 +2460,18 @@ class SaltSSHOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
         return config.master_config(self.get_config_file_path())
 
 
-class SaltCloudParser(OptionParser,
-                      LogLevelMixIn,
-                      MergeConfigMixIn,
-                      OutputOptionsMixIn,
-                      ConfigDirMixIn,
-                      CloudQueriesMixIn,
-                      ExecutionOptionsMixIn,
-                      CloudProvidersListsMixIn,
-                      CloudCredentialsMixIn,
-                      HardCrashMixin,
-                      SaltfileMixIn):
-
-    __metaclass__ = OptionParserMeta
+class SaltCloudParser(six.with_metaclass(OptionParserMeta,
+                                         OptionParser,
+                                         LogLevelMixIn,
+                                         MergeConfigMixIn,
+                                         OutputOptionsMixIn,
+                                         ConfigDirMixIn,
+                                         CloudQueriesMixIn,
+                                         ExecutionOptionsMixIn,
+                                         CloudProvidersListsMixIn,
+                                         CloudCredentialsMixIn,
+                                         HardCrashMixin,
+                                         SaltfileMixIn)):
 
     # ConfigDirMixIn attributes
     _config_filename_ = 'cloud'

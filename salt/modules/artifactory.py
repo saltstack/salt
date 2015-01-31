@@ -4,6 +4,7 @@ Module for fetching artifacts from Artifactory
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import urllib2
 import os
 import xml.etree.ElementTree as ET

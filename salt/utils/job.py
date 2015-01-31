@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
 import logging
+
+# Import Salt libs
 import salt.minion
 import salt.utils.verify
 import salt.utils.jid

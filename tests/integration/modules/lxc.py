@@ -4,12 +4,18 @@
 Test the lxc module
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, skip_if_not_root, skip_if_binaries_missing
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 @skip_if_not_root
@@ -38,7 +44,7 @@ class LXCModuleTest(integration.ModuleCase):
         Clean up any LXCs created.
         '''
         r = self.run_function('lxc.list')
-        for k, v in r.items():
+        for k, v in six.iteritems(r):
             for x in v:
                 if x.startswith(self.prefix):
                     self.run_function('lxc.destroy', [x])

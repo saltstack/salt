@@ -2,14 +2,16 @@
 '''
 A collection of mixins useful for the various *Client interfaces
 '''
-from __future__ import print_function
-from __future__ import absolute_import
-import collections
-import logging
-import traceback
-import multiprocessing
-import weakref
 
+# Import Python libs
+from __future__ import absolute_import, print_function
+import logging
+import weakref
+import traceback
+import collections
+import multiprocessing
+
+# Import Salt libs
 import salt.exceptions
 import salt.minion
 import salt.utils
@@ -20,6 +22,9 @@ import salt.transport
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -200,9 +205,11 @@ class SyncClientMixin(object):
                 opts=self.opts,
                 listen=False)
 
-        namespaced_event = salt.utils.event.NamespacedEvent(event,
-                                                            tag,
-                                                            print_func=self.print_async_event if hasattr(self, 'print_async_event') else None)
+        namespaced_event = salt.utils.event.NamespacedEvent(
+            event,
+            tag,
+            print_func=self.print_async_event if hasattr(self, 'print_async_event') else None
+        )
         # TODO: document these, and test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
@@ -218,13 +225,17 @@ class SyncClientMixin(object):
         # Inject some useful globals to *all* the funciton's global namespace
         # only once per module-- not per func
         completed_funcs = []
-        for mod_name, mod_func in self.functions.iteritems():
+        for mod_name in six.iterkeys(self.functions):
             mod, _ = mod_name.split('.', 1)
             if mod in completed_funcs:
                 continue
             completed_funcs.append(mod)
-            for global_key, value in func_globals.iteritems():
-                self.functions[mod_name].func_globals[global_key] = value
+            for global_key, value in six.iteritems(func_globals):
+                if six.PY3:
+                    self.functions[fun].__globals__[global_key] = value
+                else:
+                    self.functions[fun].func_globals[global_key] = value  # pylint: disable=incompatible-py3-code
+
         try:
             self._verify_fun(fun)
 
@@ -259,7 +270,7 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except (Exception, SystemExit) as exc:
+        except (Exception, SystemExit):
             data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
                             self.client,
                             fun,

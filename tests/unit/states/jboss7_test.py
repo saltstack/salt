@@ -1,29 +1,42 @@
 # -*- coding: utf-8 -*-
-from salttesting import TestCase
-from salttesting.mock import MagicMock
+
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt testing libs
+from salttesting.unit import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import Salt libs
 from salt.states import jboss7
 from salt.exceptions import CommandExecutionError
-import __builtin__
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 try:
     # will pass if executed along with other tests
     __salt__
 except NameError:
+    from salt.ext.six.moves import builtins as __builtin__
     # if executed separately we need to export __salt__ dictionary ourselves
     __builtin__.__salt__ = {}
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class JBoss7StateTestCase(TestCase):
 
     org_module_functions = {}
 
     def __save_module_functions(self):
-        for name, val in jboss7.__dict__.iteritems():
+        for name, val in six.iteritems(jboss7.__dict__):
             if callable(val):
                 self.org_module_functions[name] = val
 
     def __restore_module_functions(self):
-        for name, val in self.org_module_functions.iteritems():
+        for name, val in six.iteritems(self.org_module_functions):
             jboss7.__dict__[name] = val
 
     def setUp(self):

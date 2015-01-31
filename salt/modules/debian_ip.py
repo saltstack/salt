@@ -1,4 +1,4 @@
-## -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 '''
 The networking module for Debian based distros
 
@@ -9,18 +9,18 @@ References:
 
 # Import python libs
 from __future__ import absolute_import
-import salt.ext.six as six
 import functools
 import logging
 import os.path
 import os
 import re
-import StringIO
 import time
 
 # Import third party libs
 import jinja2
 import jinja2.exceptions
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -395,9 +395,9 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
 
 
 DEBIAN_ATTR_TO_SALT_ATTR_MAP = dict(
-    (v, k) for (k, v) in SALT_ATTR_TO_DEBIAN_ATTR_MAP.items())
+    (v, k) for (k, v) in six.iteritems(SALT_ATTR_TO_DEBIAN_ATTR_MAP))
 
-#TODO
+# TODO
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['address'] = 'address'
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['hwaddress'] = 'hwaddress'
 
@@ -1365,7 +1365,7 @@ def _read_temp(data):
     '''
     Return what would be written to disk
     '''
-    tout = StringIO.StringIO()
+    tout = StringIO()
     tout.write(data)
     tout.seek(0)
     output = tout.readlines()

@@ -62,19 +62,19 @@ def _do_names(names, fun):
         return False
 
     client = salt.client.get_local_client(__opts__['conf_file'])
-    cmds = []
-    for id_, sub_names in hosts.items():
+    for host, sub_names in six.iteritems(hosts):
+        cmds = []
         for name in sub_names:
             cmds.append(client.cmd_iter(
-                    id_,
+                    host,
                     'lxc.{0}'.format(fun),
                     [name],
                     timeout=60))
-    for cmd in cmds:
-        data = next(cmd)
-        data = data.get(id_, {}).get('ret', None)
-        if data:
-            ret.update({id_: data})
+        for cmd in cmds:
+            data = next(cmd)
+            data = data.get(host, {}).get('ret', None)
+            if data:
+                ret.update({host: data})
     return ret
 
 
@@ -89,7 +89,7 @@ def find_guest(name, quiet=False):
     if quiet:
         log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     for data in _list_iter():
-        host, l = data.items()[0]
+        host, l = next(six.iteritems(data))
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
@@ -105,7 +105,7 @@ def find_guests(names):
     ret = {}
     names = names.split(',')
     for data in _list_iter():
-        host, stat = data.items()[0]
+        host, stat = next(six.iteritems(data))
         for state in stat:
             for name in stat[state]:
                 if name in names:
@@ -198,9 +198,9 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         return ret
     log.info('Searching for LXC Hosts')
     data = __salt__['lxc.list'](host, quiet=True)
-    for host, containers in data.items():
+    for host, containers in six.iteritems(data):
         for name in names:
-            if name in sum(containers.values(), []):
+            if name in sum(six.itervalues(containers), []):
                 log.info('Container \'{0}\' already exists'
                          ' on host \'{1}\','
                          ' init can be a NO-OP'.format(
@@ -212,7 +212,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
-    kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
+    kw = dict((k, v) for k, v in six.iteritems(kwargs) if not k.startswith('__'))
     pub_key = kw.get('pub_key', None)
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key

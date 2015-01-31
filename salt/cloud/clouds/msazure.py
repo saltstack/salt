@@ -34,19 +34,21 @@ Example ``/etc/salt/cloud.providers`` or
 '''
 # pylint: disable=E0102
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import pprint
 import time
-import yaml
 
 # Import salt libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
 
 # Import azure libs
 HAS_LIBS = False
@@ -787,7 +789,7 @@ def create(vm_):
         )
         ret['Attached Volumes'] = created
 
-    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+    for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
 
     data = show_instance(vm_['name'], call='action')

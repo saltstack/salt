@@ -207,9 +207,9 @@ dictionary, othewise it will be ignored.
             foo: bar
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import time
 import datetime
@@ -220,6 +220,19 @@ import logging
 import errno
 import random
 
+# Import Salt libs
+import salt.utils
+import salt.utils.jid
+import salt.utils.process
+import salt.payload
+import salt.syspaths
+from salt.utils.odict import OrderedDict
+from salt.utils.process import os_is_running
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
     _WHEN_SUPPORTED = True
@@ -233,16 +246,7 @@ try:
     _CRON_SUPPORTED = True
 except ImportError:
     _CRON_SUPPORTED = False
-import yaml
-
-# Import Salt libs
-import salt.utils
-import salt.utils.jid
-import salt.utils.process
-from salt.utils.odict import OrderedDict
-from salt.utils.process import os_is_running
-import salt.payload
-import salt.syspaths
+# pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -322,7 +326,7 @@ class Schedule(object):
         if not len(data) == 1:
             raise ValueError('You can only schedule one new job at a time.')
 
-        new_job = next(data.iterkeys())
+        new_job = next(six.iterkeys(data))
 
         if new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
@@ -555,7 +559,7 @@ class Schedule(object):
                 mret['jid'] = 'req'
                 channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
                 load = {'cmd': '_return', 'id': self.opts['id']}
-                for key, value in mret.items():
+                for key, value in six.iteritems(mret):
                     load[key] = value
                 channel.send(load)
 
@@ -587,7 +591,7 @@ class Schedule(object):
             raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
-        for job, data in schedule.items():
+        for job, data in six.iteritems(schedule):
             if job == 'enabled':
                 continue
             # Job is disabled, continue

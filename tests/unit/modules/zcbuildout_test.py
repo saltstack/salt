@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import tempfile
 import logging
@@ -8,6 +9,7 @@ import shutil
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -67,7 +69,7 @@ class Base(TestCase):
             os.makedirs(integration.TMP)
         cls.rdir = tempfile.mkdtemp(dir=integration.TMP)
         cls.tdir = os.path.join(cls.rdir, 'test')
-        for idx, url in buildout._URL_VERSIONS.iteritems():
+        for idx, url in six.iteritems(buildout._URL_VERSIONS):
             log.debug('Downloading bootstrap from {0}'.format(url))
             dest = os.path.join(
                 cls.rdir, '{0}_bootstrap.py'.format(idx)
@@ -142,6 +144,7 @@ class BuildoutTestCase(Base):
         def callback2(a, b=1):
             raise Exception('foo')
 
+        # pylint: disable=invalid-sequence-index
         ret1 = callback1(1, b=3)
         # These lines are throwing pylint errors - disabling for now since we are skipping
         # these tests
@@ -185,6 +188,7 @@ class BuildoutTestCase(Base):
         self.assertEqual(ret2['out'], None)
         for l in buildout.LOG.levels:
             self.assertTrue(0 == len(buildout.LOG.by_level[l]))
+        # pylint: enable=invalid-sequence-index
 
     @requires_network()
     def test_get_bootstrap_url(self):
@@ -485,7 +489,7 @@ class BuildoutAPITestCase(TestCase):
         uretm = buildout._merge_statuses([ret1, uret1, ret2, uret2])
         for ret in ret1, uret1, ret2, uret2:
             out = ret['out']
-            if not isinstance(ret['out'], unicode):
+            if not isinstance(ret['out'], six.text_type):
                 out = ret['out'].decode('utf-8')
 
         for out in ['àé', 'ççàé']:

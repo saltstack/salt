@@ -3,14 +3,16 @@
 A runner module to collect and display the inline documentation from the
 various module types
 '''
-from __future__ import absolute_import
 # Import Python libs
+from __future__ import absolute_import
 import itertools
 
 # Import salt libs
 import salt.client
 import salt.runner
 import salt.wheel
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 
@@ -65,10 +67,10 @@ def execution():
 
     docs = {}
     for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
-        for v in six.itervalues(ret):
-            docs.update(v)
+        for val in six.itervalues(ret):
+            docs.update(val)
 
-    i = itertools.chain.from_iterable([i.items() for i in six.itervalues(docs)])
+    i = itertools.chain.from_iterable([six.iteritems(i) for i in six.itervalues(docs)])
     ret = dict(list(i))
 
     return ret
@@ -91,6 +93,6 @@ def __list_functions(user=None):
     if not user:
         __jid_event__.fire_event({'message': funcs}, 'progress')
         return funcs
-    for _, val in __opts__['external_auth'].items():
+    for val in six.itervalues(__opts__['external_auth']):
         if user in val:
             pass

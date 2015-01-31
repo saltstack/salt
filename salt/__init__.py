@@ -2,7 +2,11 @@
 '''
 Salt package
 '''
+
+# Import Python libs
+from __future__ import absolute_import
 import warnings
+
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
         'once',  # Show once

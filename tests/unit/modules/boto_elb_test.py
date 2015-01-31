@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
+from __future__ import absolute_import
+import logging
 from copy import deepcopy
 
 # import Python Third Party Libs
+# pylint: disable=import-error
 try:
     import boto
     import boto.ec2.elb
@@ -38,6 +41,7 @@ except ImportError:
         def stub_function(self):
             pass
         return stub_function
+# pylint: enable=import-error
 
 # Import Salt Libs
 from salt.modules import boto_elb
@@ -48,6 +52,8 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+
+log = logging.getLogger(__name__)
 
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -105,7 +111,7 @@ class BotoElbTestCase(TestCase):
         registered_instance_ids = [instance.id for instance in
                                    load_balancer_refreshed.instances]
 
-        print load_balancer_refreshed.instances
+        log.debug(load_balancer_refreshed.instances)
         self.assertEqual([reservations.instances[0].id], registered_instance_ids)
 
     @mock_ec2
@@ -185,5 +191,5 @@ class BotoElbTestCase(TestCase):
         self.assertEqual(actual_instances, expected_instances)
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoElbTestCase, needs_daemon=False)

@@ -19,14 +19,16 @@ The data structure needs to be:
 # 4. How long do we wait for all of the replies?
 #
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import time
-import logging
+import copy
 import errno
+import logging
 from datetime import datetime
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
+
 
 # Import salt libs
 import salt.config
@@ -43,9 +45,10 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
-import salt.ext.six as six
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import zmq
     HAS_ZMQ = True
@@ -59,6 +62,7 @@ try:
     HAS_RANGE = True
 except ImportError:
     pass
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -176,7 +180,7 @@ class LocalClient(object):
             return self.opts['timeout']
         if isinstance(timeout, int):
             return timeout
-        if isinstance(timeout, string_types):
+        if isinstance(timeout, six.string_types):
             try:
                 return int(timeout)
             except ValueError:
@@ -337,7 +341,7 @@ class LocalClient(object):
         '''
         group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
         f_tgt = []
-        for minion, ret in group.items():
+        for minion, ret in six.iteritems(group):
             if len(f_tgt) >= sub:
                 break
             if fun in ret:
@@ -393,7 +397,7 @@ class LocalClient(object):
                 'ret': ret,
                 'batch': batch,
                 'raw': kwargs.get('raw', False)}
-        for key, val in self.opts.items():
+        for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
         batch = salt.cli.batch.Batch(opts, quiet=True)
@@ -529,7 +533,7 @@ class LocalClient(object):
                 **kwargs):
 
             if fn_ret:
-                for mid, data in fn_ret.items():
+                for mid, data in six.iteritems(fn_ret):
                     ret[mid] = data.get('ret', {})
 
         return ret
@@ -832,7 +836,7 @@ class LocalClient(object):
         :returns: all of the information for the JID
         '''
         if not isinstance(minions, set):
-            if isinstance(minions, string_types):
+            if isinstance(minions, six.string_types):
                 minions = set([minions])
             elif isinstance(minions, (list, tuple)):
                 minions = set(list(minions))

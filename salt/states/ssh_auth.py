@@ -44,11 +44,14 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
           - option3="value3" ssh-dss AAAAB3NzaC1kcQ9J5bYTEyY== other@testdomain
           - AAAAB3NzaC1kcQ9fJFF435bYTEyY== newcomment
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import re
 import sys
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def _present_test(user, name, enc, comment, options, source, config):
@@ -64,7 +67,7 @@ def _present_test(user, name, enc, comment, options, source, config):
                 saltenv=__env__)
         if keys:
             comment = ''
-            for key, status in keys.items():
+            for key, status in six.iteritems(keys):
                 if status == 'exists':
                     continue
                 comment += 'Set to {0}: {1}\n'.format(status, key)

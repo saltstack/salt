@@ -2,19 +2,21 @@
 '''
 Return config information
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import re
 import os
-from salt.ext.six import string_types
+import logging
 
 # Import salt libs
 import salt.utils
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
 
-import logging
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 __proxyenabled__ = ['*']
@@ -87,7 +89,7 @@ def manage_mode(mode):
     '''
     if mode is None:
         return None
-    if not isinstance(mode, string_types):
+    if not isinstance(mode, six.string_types):
         # Make it a string in case it's not
         mode = str(mode)
     # Strip any quotes and initial 0, though zero-pad it up to 4
@@ -260,10 +262,10 @@ def dot_vals(value):
         salt '*' config.dot_vals host
     '''
     ret = {}
-    for key, val in __pillar__.get('master', {}).items():
+    for key, val in six.iteritems(__pillar__.get('master', {})):
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
-    for key, val in __opts__.items():
+    for key, val in six.iteritems(__opts__):
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
     return ret

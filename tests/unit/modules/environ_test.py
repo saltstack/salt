@@ -2,6 +2,8 @@
 '''
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -109,7 +111,7 @@ class EnvironTestCase(TestCase):
         '''
         Return a dict of the entire environment set for the salt process
         '''
-        self.assertTrue(environ.items())
+        self.assertNotEqual(list(environ.items()), [])
 
 
 if __name__ == '__main__':

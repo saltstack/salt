@@ -40,11 +40,11 @@ Walkthrough <tutorial-gitfs>`.
 .. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import glob
 import hashlib
 import logging
@@ -54,8 +54,6 @@ import shutil
 import stat
 import subprocess
 from datetime import datetime
-from salt.ext.six import text_type as _text_type
-from salt._compat import StringIO
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
@@ -93,11 +91,12 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt.ext.six import string_types
 from salt.exceptions import SaltException
 from salt.utils.event import tagify
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import git
     import gitdb
@@ -120,6 +119,7 @@ try:
     HAS_DULWICH = True
 except ImportError:
     HAS_DULWICH = False
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -142,9 +142,11 @@ def _verify_gitpython(quiet=False):
         if HAS_DULWICH and not quiet:
             log.error(_RECOMMEND_DULWICH)
         return False
+    # pylint: disable=no-member
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
     minver = distutils.version.LooseVersion(minver_str)
+    # pylint: enable=no-member
     errors = []
     if gitver < minver:
         errors.append(
@@ -187,6 +189,7 @@ def _verify_pygit2(quiet=False):
             log.error(_RECOMMEND_DULWICH)
         return False
 
+    # pylint: disable=no-member
     pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
     pygit2_minver_str = '0.20.3'
     pygit2_minver = distutils.version.LooseVersion(pygit2_minver_str)
@@ -194,6 +197,7 @@ def _verify_pygit2(quiet=False):
     libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
     libgit2_minver_str = '0.20.0'
     libgit2_minver = distutils.version.LooseVersion(libgit2_minver_str)
+    # pylint: enable=no-member
 
     errors = []
     if pygit2ver < pygit2_minver:
@@ -645,7 +649,7 @@ def init():
     per_remote_defaults = {}
     for param in override_params:
         per_remote_defaults[param] = \
-            _text_type(__opts__['gitfs_{0}'.format(param)])
+            six.text_type(__opts__['gitfs_{0}'.format(param)])
 
     for remote in __opts__['gitfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
@@ -653,8 +657,8 @@ def init():
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
             per_remote_conf = dict(
-                [(key, _text_type(val)) for key, val in
-                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+                [(key, six.text_type(val)) for key, val in
+                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
@@ -697,7 +701,7 @@ def init():
         else:
             repo_url = remote
 
-        if not isinstance(repo_url, string_types):
+        if not isinstance(repo_url, six.string_types):
             log.error(
                 'Invalid gitfs remote {0}. Remotes must be strings, you may '
                 'need to enclose the URL in quotes'.format(repo_url)
@@ -1216,7 +1220,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                         # this path's object ID will be the target of the
                         # symlink. Follow the symlink and set repo_path to the
                         # location indicated in the blob data.
-                        stream = StringIO()
+                        stream = six.StringIO()
                         file_blob.stream_data(stream)
                         stream.seek(0)
                         link_tgt = stream.read()
@@ -1518,7 +1522,7 @@ def _file_list_gitpython(repo, tgt_env):
         file_path = add_mountpoint(relpath(file_blob.path))
         files.add(file_path)
         if stat.S_ISLNK(file_blob.mode):
-            stream = StringIO()
+            stream = six.StringIO()
             file_blob.stream_data(stream)
             stream.seek(0)
             link_tgt = stream.read()
@@ -1573,7 +1577,7 @@ def _file_list_pygit2(repo, tgt_env):
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
         files.add(add_mountpoint(relpath(repo_path)))
-    for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
+    for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
         symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
     return files, symlinks
 
@@ -1587,7 +1591,7 @@ def _file_list_dulwich(repo, tgt_env):
         Traverse through a dulwich Tree object recursively, accumulating all the
         file paths and symlink info in the "blobs" dict
         '''
-        for item in tree.items():
+        for item in six.iteritems(tree):
             obj = repo_obj.get_object(item.sha)
             if isinstance(obj, dulwich.objects.Blob):
                 repo_path = os.path.join(prefix, item.path)
@@ -1616,7 +1620,7 @@ def _file_list_dulwich(repo, tgt_env):
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
         files.add(add_mountpoint(relpath(repo_path)))
-    for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
+    for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
         symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
     return files, symlinks
 
@@ -1746,7 +1750,7 @@ def _dir_list_dulwich(repo, tgt_env):
         Traverse through a dulwich Tree object recursively, accumulating all
         the empty directories within it in the "blobs" list
         '''
-        for item in tree.items():
+        for item in six.iteritems(tree):
             obj = repo_obj.get_object(item.sha)
             if not isinstance(obj, dulwich.objects.Tree):
                 continue
@@ -1793,5 +1797,5 @@ def symlink_list(load):
         prefix = ''
     symlinks = _file_lists(load, 'symlinks')
     return dict([(key, val)
-                 for key, val in symlinks.iteritems()
+                 for key, val in six.iteritems(symlinks)
                  if key.startswith(prefix)])

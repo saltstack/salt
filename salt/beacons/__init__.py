@@ -2,7 +2,11 @@
 '''
 This package contains the loader modules for the salt streams system
 '''
-# Import salt libs
+
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt libs
 import salt.loader
 
 

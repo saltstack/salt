@@ -3,6 +3,9 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -28,8 +31,9 @@ import zmq
 from collections import namedtuple
 
 # Import 3rd-party libs
+import salt.ext.six as six
 try:
-    import timelib  # pylint: disable=W0611
+    import timelib  # pylint: disable=import-error,unused-import
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False
@@ -366,7 +370,7 @@ class UtilsTestCase(TestCase):
                 ]))
             ])
         }
-        for test, data in test_valid_false_states.items():
+        for test, data in six.iteritems(test_valid_false_states):
             self.assertFalse(
                 utils.check_state_result(data),
                 msg='{0} failed'.format(test))
@@ -417,7 +421,7 @@ class UtilsTestCase(TestCase):
                  ]))
             ])
         }
-        for test, data in test_valid_true_states.items():
+        for test, data in six.iteritems(test_valid_true_states):
             self.assertTrue(
                 utils.check_state_result(data),
                 msg='{0} failed'.format(test))
@@ -480,8 +484,6 @@ class UtilsTestCase(TestCase):
             self.assertEqual(now, utils.date_cast(None))
         self.assertEqual(now, utils.date_cast(now))
         try:
-            import timelib
-
             ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
             expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
             self.assertEqual(ret, expected_ret)

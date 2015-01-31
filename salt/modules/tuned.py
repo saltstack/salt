@@ -6,8 +6,12 @@
 :platform:      Linux
 '''
 
-import salt.utils
+# Import Python libs
+from __future__ import absolute_import
 import re
+
+# Import Salt libs
+import salt.utils
 
 __func_alias__ = {
     'list_': 'list',
@@ -21,7 +25,6 @@ def __virtual__():
     Check to see if tuned-adm binary is installed on the system
 
     '''
-
     tuned_adm = salt.utils.which('tuned-adm')
     if not tuned_adm:
         return False

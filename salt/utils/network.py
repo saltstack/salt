@@ -2,19 +2,20 @@
 '''
 Define some generic socket functions for network modules
 '''
-from __future__ import absolute_import
 
 # Import python libs
-import socket
-import subprocess
-import shlex
-import re
-import logging
+from __future__ import absolute_import
 import os
+import re
+import shlex
+import socket
+import logging
+import subprocess
 from string import ascii_letters, digits
-from salt.ext.six.moves import range
-import salt.ext.six as six
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
     import wmi
@@ -25,9 +26,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
-
 log = logging.getLogger(__name__)
-
 
 # pylint: disable=C0103
 
@@ -550,7 +549,7 @@ def _interfaces_ifconfig(out):
             # status determines global interface status.
             #
             # merge items with higher priority for older values
-            ret[iface] = dict(data.items() + ret[iface].items())
+            ret[iface] = dict(list(data.items()) + list(ret[iface].items()))
         else:
             ret[iface] = data
         del data

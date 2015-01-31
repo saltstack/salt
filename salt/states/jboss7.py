@@ -73,13 +73,19 @@ For the sake of brevity, examples for each state assume that jboss_config is mov
 
 '''
 
+# Import python libs
+from __future__ import absolute_import
 import time
 import logging
 import re
 import traceback
-from salt.utils import dictdiffer
 
+# Import Salt libs
+from salt.utils import dictdiffer
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -611,21 +617,21 @@ def __fetch_from_artifactory(artifact):
 
     if 'latest_snapshot' in artifact and artifact['latest_snapshot']:
         fetch_result = __salt__['artifactory.get_latest_snapshot'](artifactory_url=artifact['artifactory_url'],
-                                                                      repository=artifact['repository'],
-                                                                      group_id=artifact['group_id'],
-                                                                      artifact_id=artifact['artifact_id'],
-                                                                      packaging=artifact['packaging'],
-                                                                      target_dir=target_dir)
+                                                                   repository=artifact['repository'],
+                                                                   group_id=artifact['group_id'],
+                                                                   artifact_id=artifact['artifact_id'],
+                                                                   packaging=artifact['packaging'],
+                                                                   target_dir=target_dir)
     elif str(artifact['version']).endswith('SNAPSHOT'):
         if 'snapshot_version' in artifact:
             fetch_result = __salt__['artifactory.get_snapshot'](artifactory_url=artifact['artifactory_url'],
-                                                                       repository=artifact['repository'],
-                                                                       group_id=artifact['group_id'],
-                                                                       artifact_id=artifact['artifact_id'],
-                                                                       packaging=artifact['packaging'],
-                                                                       version=artifact['version'],
-                                                                       snapshot_version=artifact['snapshot_version'],
-                                                                       target_dir=target_dir)
+                                                                repository=artifact['repository'],
+                                                                group_id=artifact['group_id'],
+                                                                artifact_id=artifact['artifact_id'],
+                                                                packaging=artifact['packaging'],
+                                                                version=artifact['version'],
+                                                                snapshot_version=artifact['snapshot_version'],
+                                                                target_dir=target_dir)
         else:
             fetch_result = __salt__['artifactory.get_snapshot'](artifactory_url=artifact['artifactory_url'],
                                                                 repository=artifact['repository'],
@@ -636,12 +642,12 @@ def __fetch_from_artifactory(artifact):
                                                                 target_dir=target_dir)
     else:
         fetch_result = __salt__['artifactory.get_release'](artifactory_url=artifact['artifactory_url'],
-                                                              repository=artifact['repository'],
-                                                              group_id=artifact['group_id'],
-                                                              artifact_id=artifact['artifact_id'],
-                                                              packaging=artifact['packaging'],
-                                                              version=artifact['version'],
-                                                              target_dir=target_dir)
+                                                           repository=artifact['repository'],
+                                                           group_id=artifact['group_id'],
+                                                           artifact_id=artifact['artifact_id'],
+                                                           packaging=artifact['packaging'],
+                                                           version=artifact['version'],
+                                                           target_dir=target_dir)
     return fetch_result
 
 
@@ -715,7 +721,7 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
 
 def __check_dict_contains(dct, dict_name, keys, comment='', result=True):
     for key in keys:
-        if key not in dct.keys():
+        if key not in six.iterkeys(dct):
             result = False
             comment = __append_comment("Missing {0} in {1}".format(key, dict_name), comment)
     return result, comment

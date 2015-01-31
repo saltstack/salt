@@ -21,13 +21,16 @@ Example:
                 - '.*'
             - runas: rabbitmq
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +104,7 @@ def present(name,
                 )
                 changes['new'] += 'Set tags: {0}\n'.format(tags)
             for element in perms:
-                for vhost, perm in element.items():
+                for vhost, perm in six.iteritems(element):
                     result.update(__salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
                     )
@@ -110,8 +113,7 @@ def present(name,
                     ).format(perm, vhost)
 
         if not user_exists:
-            log.debug(
-                "User doesn't exist - Creating")
+            log.debug('User doesn\'t exist - Creating')
             result = __salt__['rabbitmq.add_user'](
                 name, password, runas=runas)
 

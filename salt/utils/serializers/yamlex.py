@@ -99,21 +99,27 @@
 
     Document is defacto an aggregate mapping.
 '''
+# pylint: disable=invalid-name,no-member,missing-docstring,no-self-use
+# pylint: disable=too-few-public-methods,too-many-public-methods
 
+# Import python libs
 from __future__ import absolute_import
-from copy import copy
-import datetime
 import logging
+import datetime
+from copy import copy
 
+
+# Import Salt Libs
+from salt.utils.serializers import DeserializationError, SerializationError
+from salt.utils.aggregation import aggregate, Map, Sequence
+from salt.utils.odict import OrderedDict
+
+# Import 3rd-party libs
 import yaml
 from yaml.nodes import MappingNode
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
-
-from salt.utils.serializers import DeserializationError, SerializationError
-from salt.utils.aggregation import aggregate, Map, Sequence
-from salt.utils.odict import OrderedDict
-from salt.ext.six import text_type, binary_type
+import salt.ext.six as six
 
 __all__ = ['deserialize', 'serialize', 'available']
 
@@ -375,21 +381,18 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     sls dumper.
     '''
     def represent_odict(self, data):
-        return self.represent_mapping('tag:yaml.org,2002:map', data.items())
+        return self.represent_mapping('tag:yaml.org,2002:map', list(data.items()))
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
-Dumper.add_multi_representer(binary_type, Dumper.represent_str)
+Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
 try:
-    Dumper.add_multi_representer(text_type, Dumper.represent_unicode)
+    Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
 except AttributeError:
-    Dumper.add_multi_representer(text_type, Dumper.represent_str)
+    Dumper.add_multi_representer(six.text_type, Dumper.represent_str)
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
-try:
-    Dumper.add_multi_representer(long, Dumper.represent_long)
-except NameError:
-    # Python 3 yaml does not have representation
-    pass
+if six.PY2:
+    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code
 Dumper.add_multi_representer(float, Dumper.represent_float)
 Dumper.add_multi_representer(list, Dumper.represent_list)
 Dumper.add_multi_representer(tuple, Dumper.represent_list)

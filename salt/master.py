@@ -4,25 +4,29 @@ This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-import ctypes
+from __future__ import absolute_import
 import os
 import re
+import sys
 import time
 import errno
+import ctypes
 import shutil
 import logging
 import hashlib
+import binascii
 import resource
-import multiprocessing
-import sys
 import tempfile
+import multiprocessing
 
 # Import third party libs
 import zmq
 from M2Crypto import RSA
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.crypt
@@ -53,14 +57,12 @@ import salt.utils.jid
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.utils.event import tagify
-import binascii
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
-from salt.ext.six.moves import range
 
 # Import halite libs
 try:
-    import halite
+    import halite  # pylint: disable=import-error
     HAS_HALITE = True
 except ImportError:
     HAS_HALITE = False
@@ -1206,7 +1208,7 @@ class AESFuncs(object):
             return False
         load['grains']['id'] = load['id']
         mods = set()
-        for func in self.mminion.functions.values():
+        for func in six.itervalues(self.mminion.functions):
             mods.add(func.__module__)
         for mod in mods:
             sys.modules[mod].__grains__ = load['grains']
@@ -1291,7 +1293,7 @@ class AESFuncs(object):
             self.mminion.returners[fstr](load['jid'], load)
 
         # Format individual return loads
-        for key, item in load['return'].items():
+        for key, item in six.iteritems(load['return']):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
