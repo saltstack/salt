@@ -445,8 +445,9 @@ def render(opts, functions, states=None):
     '''
     Returns the render modules
     '''
-    pack = {'name': '__salt__',
-            'value': functions}
+    pack = [{'name': '__salt__',
+            'value': functions},
+            ]
     if states:
         pack.append({'name': '__states__', 'value': states})
     ret =  NewLazyLoader(_module_dirs(opts,
