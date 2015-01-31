@@ -19,7 +19,6 @@ from collections import MutableMapping
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
-from salt.utils.odict import OrderedDict
 import salt.utils.lazy
 
 # Solve the Chicken and egg problem where grains need to run before any
@@ -65,7 +64,7 @@ def _module_dirs(
         base_path=None,
         loaded_base_name=None,
         mod_type_check=None):
-    sys_types = os.path.join(SALT_BASE_PATH, int_type or ext_type)
+    sys_types = os.path.join(base_path or SALT_BASE_PATH, int_type or ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
 
     ext_type_types = []
@@ -133,7 +132,8 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
     return ret
 
 
-def raw_mod(opts, name, functions, mod='modules'):
+# TODO: fix this silly unused positional argument
+def raw_mod(opts, _, functions, mod='modules'):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
 
@@ -146,11 +146,14 @@ def raw_mod(opts, name, functions, mod='modules'):
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
+    pack = {'name': '__salt__',
+            'value': functions}
     return NewLazyLoader(_module_dirs(opts, mod, 'rawmodule'),
                         opts,
                         tag=mod,
                         loaded_base_name='rawmodule',
                         virtual_enable=False,
+                        pack=pack,
                         )
 
 
@@ -158,17 +161,15 @@ def proxy(opts, functions, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
-    ret = NewLazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
-                        opts,
-                        tag='proxy',
-                        loaded_base_name='proxy',
-                        whitelist=whitelist,
-                        )
-    # only add the pack once
-    if ret.pack is None:
-        ret.pack = {'name': '__proxy__',
-                    'value': ret}
-    return ret
+    pack = {'name': '__proxy__',
+            'value': functions}
+    return NewLazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
+                         opts,
+                         tag='proxy',
+                         loaded_base_name='proxy',
+                         whitelist=whitelist,
+                         pack=pack
+                         )
 
 
 def returners(opts, functions, whitelist=None):
@@ -225,6 +226,7 @@ def tops(opts):
                          opts,
                          tag='tops',
                          loaded_base_name='top',
+                         whitelist=whitelist,
                          )
     return FilterDictWrapper(ret, '.top')
 
@@ -250,12 +252,12 @@ def outputters(opts):
                          tag='output',
                          loaded_base_name='output',
                          )
-    a = FilterDictWrapper(ret, '.output')
+    wrapped_ret = FilterDictWrapper(ret, '.output')
     if ret.pack is None:
         # TODO: this name seems terrible... __salt__ should always be execution mods
         ret.pack = {'name': '__salt__',
-                    'value': a}
-    return a
+                    'value': wrapped_ret}
+    return wrapped_ret
 
 
 def auth(opts, whitelist=None):
@@ -594,6 +596,7 @@ def sdb(opts, functions=None, whitelist=None):
                      tag='sdb',
                      loaded_base_name='sdb',
                      pack=pack,
+                     whitelist=whitelist,
                      )
 
 
@@ -709,7 +712,6 @@ class FilterDictWrapper(MutableMapping):
 
 class NewLazyLoader(salt.utils.lazy.LazyDict):
     '''
-    Used to load in arbitrary modules from a directory.
 
     Goals here:
         - lazy loading
@@ -720,7 +722,6 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         - move modules_max_memory into here
         - reload dep modules on clear??
     '''
-    # This class is only a singleton per minion/master pair
     instances = {}
 
     def __new__(cls,
@@ -733,10 +734,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 whitelist=None,
                 virtual_enable=True,
                 ):
-        '''
-        Only create one instance of NewLazyLoader per __key()
-        '''
-        key = (tag, virtual_enable)
+        key = (tag, virtual_enable, 'proxy' in opts)
         if key not in NewLazyLoader.instances:
             log.debug('Initializing new NewLazyLoader for {0}'.format(key))
             NewLazyLoader.instances[key] = object.__new__(cls)
@@ -902,17 +900,17 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         '''
         # do we have an exact match?
         if mod_name in self.file_mapping:
-            yield mod_name, self.file_mapping[mod_name]
+            yield mod_name
 
         # do we have a partial match?
-        for k, v in self.file_mapping.iteritems():
+        for k in self.file_mapping:
             if mod_name in k:
-                yield k, v
+                yield k
 
         # anyone else? Bueller?
-        for k, v in self.file_mapping.iteritems():
+        for k in self.file_mapping:
             if mod_name not in k:
-                yield k, v
+                yield k
 
     def _load_module(self, name):
         mod = None
@@ -941,7 +939,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 exc_info=True
             )
             return mod
-        except Exception as error:
+        except Exception:
             log.error(
                 'Failed to import {0} {1}, this is due most likely to a '
                 'syntax error:\n'.format(
@@ -950,7 +948,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 exc_info=True
             )
             return mod
-        except SystemExit as error:
+        except SystemExit:
             log.error(
                 'Failed to import {0} {1} as the module called exit()\n'.format(
                     self.tag, name
@@ -1003,7 +1001,17 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 # If a module has information about why it could not be loaded, record it
                 return False  # TODO Support virtual_errors here
 
-                # update our module name to reflect the virtual name
+        # If this is a proxy minion then MOST modules cannot work. Therefore, require that
+        # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
+        # containing the names of the proxy types that the module supports.
+        if not hasattr(mod, 'render') and 'proxy' in self.opts:
+            if not hasattr(mod, '__proxyenabled__') or \
+                    self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
+                    '*' in mod.__proxyenabled__:
+                self.missing_modules.append(module_name)
+                self.missing_modules.append(name)
+                return False
+
         if getattr(mod, '__load__', False) is not False:
             log.info(
                 'The functions from module {0!r} are being loaded from the '
@@ -1050,7 +1058,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         # if the key doesn't have a '.' then it isn't valid for this mod dict
         if '.' not in key:
             raise KeyError
-        mod_name, func_name = key.split('.', 1)
+        mod_name, _ = key.split('.', 1)
         if mod_name in self.missing_modules:
             return True
         if self.whitelist:
@@ -1059,7 +1067,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 raise KeyError
 
         def _inner_load(mod_name):
-            for name, fpath in self._iter_files(mod_name):
+            for name in self._iter_files(mod_name):
                 if name in self.loaded_files:
                     continue
                 # if we got what we wanted, we are done
@@ -1092,7 +1100,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         '''
         Load all of them
         '''
-        for name, fpath in self.file_mapping.iteritems():
+        for name in self.file_mapping:
             if name in self.loaded_files or name in self.missing_modules:
                 continue
             self._load_module(name)
