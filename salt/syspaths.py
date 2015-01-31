@@ -18,111 +18,75 @@
 '''
 
 # Import python libs
+
 from __future__ import absolute_import
 import sys
 import os.path
 
-__PLATFORM = sys.platform.lower()
-
+if 'SETUP_DIRNAME' in globals():
+    # This is from the exec() call in Salt's setup.py
+    _THIS_FILE = os.path.join(SETUP_DIRNAME, 'salt', 'syspaths.py')  # pylint: disable=E0602
+else:
+    _THIS_FILE = __file__
 
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
-    import salt._syspaths as __generated_syspaths  # pylint: disable=no-name-in-module
+    from salt import _syspaths  # pylint: disable=W0611,E0611,import-error
+                                # because pylint thinks that _syspaths is an
+                                # attribute of salt.__init__
 except ImportError:
-    class __generated_syspaths(object):
-        __slots__ = ('ROOT_DIR',
-                     'CONFIG_DIR',
-                     'CACHE_DIR',
-                     'SOCK_DIR',
-                     'SRV_ROOT_DIR',
-                     'BASE_FILE_ROOTS_DIR',
-                     'BASE_PILLAR_ROOTS_DIR',
-                     'BASE_MASTER_ROOTS_DIR',
-                     'LOGS_DIR',
-                     'PIDFILE_DIR')
-        ROOT_DIR = CONFIG_DIR = CACHE_DIR = SOCK_DIR = None
-        SRV_ROOT_DIR = BASE_FILE_ROOTS_DIR = BASE_PILLAR_ROOTS_DIR = None
-        BASE_MASTER_ROOTS_DIR = LOGS_DIR = PIDFILE_DIR = None
+    # pylint: disable=too-few-public-methods
+    class Empty(object):
+        """An empty class to substitute for _syspaths"""
+        __slots__ = ()
+
+    # pylint: disable=invalid-name
+    _syspaths = Empty()
 
 
-# Let's find out the path of this module
-if 'SETUP_DIRNAME' in globals():
-    # This is from the exec() call in Salt's setup.py
-    __THIS_FILE = os.path.join(SETUP_DIRNAME, 'salt', 'syspaths.py')  # pylint: disable=E0602
-else:
-    __THIS_FILE = __file__
+_PLATFORM = sys.platform.lower()
 
+# These are tuples of an install path settings and a function that
+# generates a default value.  Each is processed individually and added to
+# __all__ for export.  This makes it so that a all of the install options
+# or a sub-set of them can be written to salt/_syspaths.py.  Previously if
+# any one option was missing in salt/_syspaths.py then an exception was
+# raised and none of the existing settings were used - only defaults.
 
-# These values are always relative to salt's installation directory
-INSTALL_DIR = os.path.dirname(os.path.realpath(__THIS_FILE))
-CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
-BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')
-
-ROOT_DIR = __generated_syspaths.ROOT_DIR
-if ROOT_DIR is None:
-    # The installation time value was not provided, let's define the default
-    if __PLATFORM.startswith('win'):
-        ROOT_DIR = r'c:\salt' or '/'
-    else:
-        ROOT_DIR = '/'
-
-CONFIG_DIR = __generated_syspaths.CONFIG_DIR
-if CONFIG_DIR is None:
-    if __PLATFORM.startswith('win'):
-        CONFIG_DIR = os.path.join(ROOT_DIR, 'conf')
-    elif 'freebsd' in __PLATFORM:
-        CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'etc', 'salt')
-    elif 'netbsd' in __PLATFORM:
-        CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'pkg', 'etc', 'salt')
-    else:
-        CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
-
-CACHE_DIR = __generated_syspaths.CACHE_DIR
-if CACHE_DIR is None:
-    CACHE_DIR = os.path.join(ROOT_DIR, 'var', 'cache', 'salt')
-
-SOCK_DIR = __generated_syspaths.SOCK_DIR
-if SOCK_DIR is None:
-    SOCK_DIR = os.path.join(ROOT_DIR, 'var', 'run', 'salt')
-
-SRV_ROOT_DIR = __generated_syspaths.SRV_ROOT_DIR
-if SRV_ROOT_DIR is None:
-    SRV_ROOT_DIR = os.path.join(ROOT_DIR, 'srv')
-
-BASE_FILE_ROOTS_DIR = __generated_syspaths.BASE_FILE_ROOTS_DIR
-if BASE_FILE_ROOTS_DIR is None:
-    BASE_FILE_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt')
-
-BASE_PILLAR_ROOTS_DIR = __generated_syspaths.BASE_PILLAR_ROOTS_DIR
-if BASE_PILLAR_ROOTS_DIR is None:
-    BASE_PILLAR_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'pillar')
-
-BASE_MASTER_ROOTS_DIR = __generated_syspaths.BASE_MASTER_ROOTS_DIR
-if BASE_MASTER_ROOTS_DIR is None:
-    BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
-
-LOGS_DIR = __generated_syspaths.LOGS_DIR
-if LOGS_DIR is None:
-    LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'log', 'salt')
-
-PIDFILE_DIR = __generated_syspaths.PIDFILE_DIR
-if PIDFILE_DIR is None:
-    PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
-
-
-__all__ = [
-    'ROOT_DIR',
-    'CONFIG_DIR',
-    'CACHE_DIR',
-    'SOCK_DIR',
-    'SRV_ROOT_DIR',
-    'BASE_FILE_ROOTS_DIR',
-    'BASE_PILLAR_ROOTS_DIR',
-    'BASE_MASTER_ROOTS_DIR',
-    'LOGS_DIR',
-    'PIDFILE_DIR',
-    'INSTALL_DIR',
-    'CLOUD_DIR',
-    'BOOTSTRAP'
+# WARNING: These must be dependency-ordered!  Notice that ROOT_DIR comes
+# before all settings that use it and similarly INSTALL_DIR and CLOUD_DIR.
+_SETTINGS = [
+    ('ROOT_DIR', lambda: r'c:\salt' if _PLATFORM.startswith('win') else '/'),
+    ('CONFIG_DIR', lambda: (
+            os.path.join(globals()['ROOT_DIR'], 'conf')
+            if _PLATFORM.startswith('win')
+            else (
+                os.path.join(globals()['ROOT_DIR'], 'usr', 'local', 'etc', 'salt')
+                if 'freebsd' in _PLATFORM
+                else (
+                    os.path.join(globals()['ROOT_DIR'], 'usr', 'pkg', 'etc', 'salt')
+                    if 'netbsd' in _PLATFORM
+                    else os.path.join(globals()['ROOT_DIR'], 'etc', 'salt')
+                    )
+                )
+            )
+     ),
+    ('CACHE_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'var', 'cache', 'salt')),
+    ('SOCK_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'var', 'run', 'salt')),
+    ('SRV_ROOT_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'srv')),
+    ('BASE_FILE_ROOTS_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'salt')),
+    ('BASE_PILLAR_ROOTS_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'pillar')),
+    ('BASE_MASTER_ROOTS_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'salt-master')),
+    ('LOGS_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'var', 'log', 'salt')),
+    ('PIDFILE_DIR', lambda: os.path.join(globals()['ROOT_DIR'], 'var', 'run')),
+    ('INSTALL_DIR', lambda: os.path.dirname(os.path.realpath(_THIS_FILE))),
+    ('CLOUD_DIR', lambda: os.path.join(globals()['INSTALL_DIR'], 'cloud')),
+    ('BOOTSTRAP', lambda: os.path.join(globals()['CLOUD_DIR'], 'deploy', 'bootstrap-salt.sh')),
 ]
+
+
+__all__ = []
+for key, val in _SETTINGS:
+    globals()[key] = getattr(_syspaths, key, val()) or val()
+    __all__.append(key)
