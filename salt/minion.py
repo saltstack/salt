@@ -865,6 +865,9 @@ class Minion(MinionBase):
             errors = functions['_errors']
             functions.pop('_errors')
 
+        functions.clear()
+        returners.clear()
+
         # we're done, reset the limits!
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
