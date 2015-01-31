@@ -4,18 +4,20 @@ Manage ruby installations with rbenv.
 
 .. versionadded:: 0.16.0
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
-import salt.utils
 import shlex
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+
+# Import Salt libs
+import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -49,7 +51,7 @@ def _parse_env(env):
     if not isinstance(env, dict):
         env = {}
 
-    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+    for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
         log.error('Environment variable {0!r} passed without a value. '
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''

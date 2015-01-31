@@ -44,10 +44,9 @@ indicated above, though the model DOES NOT have to be named 'SaltExternalAuthMod
 from __future__ import absolute_import
 import logging
 
-# Import salt libs
-
-log = logging.getLogger(__name__)
-
+# Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import django
     import django.conf
@@ -58,17 +57,20 @@ except Exception as exc:
     # the following line to display additional information
     #log.warning('Could not load Django auth module. Found exception: {0}'.format(exc))
     HAS_DJANGO = False
+# pylint: enable=import-error
 
-django_auth_class = None
+DJANGO_AUTH_CLASS = None
+
+log = logging.getLogger(__name__)
 
 
 def django_auth_setup():
     '''
     Prepare the connection to the Django authentication framework
     '''
-    global django_auth_class
+    global DJANGO_AUTH_CLASS
 
-    if django_auth_class is not None:
+    if DJANGO_AUTH_CLASS is not None:
         return
 
     # Versions 1.7 and later of Django don't pull models until
@@ -81,8 +83,8 @@ def django_auth_setup():
         django_module_name = '.'.join(django_model_fullname.split('.')[0:-1])
 
         __import__(django_module_name, globals(), locals(), 'SaltExternalAuthModel')
-        django_auth_class_str = 'django_auth_module.{0}'.format(django_model_name)
-        django_auth_class = eval(django_auth_class_str)  # pylint: disable=W0123
+        DJANGO_AUTH_CLASS_str = 'django_auth_module.{0}'.format(django_model_name)
+        DJANGO_AUTH_CLASS = eval(DJANGO_AUTH_CLASS_str)  # pylint: disable=W0123
 
     if django.VERSION >= (1, 7):
         django.setup()
@@ -143,9 +145,9 @@ def retrieve_auth_entries(u=None):
     django_auth_setup()
 
     if u is None:
-        db_records = django_auth_class.objects.all()
+        db_records = DJANGO_AUTH_CLASS.objects.all()
     else:
-        db_records = django_auth_class.objects.filter(user_fk__username=u)
+        db_records = DJANGO_AUTH_CLASS.objects.filter(user_fk__username=u)
     auth_dict = {}
 
     for a in db_records:
@@ -160,7 +162,7 @@ def retrieve_auth_entries(u=None):
             found = False
             for d in auth_dict[a.user_fk.username]:
                 if isinstance(d, dict):
-                    if a.minion_or_fn_matcher in d.keys():
+                    if a.minion_or_fn_matcher in six.iterkeys(d):
                         auth_dict[a.user_fk.username][a.minion_or_fn_matcher].append(a.minion_fn)
                         found = True
             if not found:

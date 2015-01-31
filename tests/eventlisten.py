@@ -8,7 +8,7 @@ This script is a generic tool to test event output
 '''
 
 # Import Python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import optparse
 import pprint
 import time
@@ -16,6 +16,9 @@ import os
 
 # Import Salt libs
 import salt.utils.event
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def parse():
@@ -47,7 +50,7 @@ def parse():
 
     opts = {}
 
-    for k, v in options.__dict__.items():
+    for k, v in six.iteritems(options.__dict__):
         if v is not None:
             opts[k] = v
 
@@ -97,7 +100,7 @@ def listen(opts):
         if opts['func_count']:
             data = ret.get('data', False)
             if data:
-                if 'id' in data.keys() and data.get('id', False) not in found_minions:
+                if 'id' in six.iterkeys(data) and data.get('id', False) not in found_minions:
                     if data['fun'] == opts['func_count']:
                         jid_counter += 1
                         found_minions.append(data['id'])

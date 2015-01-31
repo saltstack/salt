@@ -43,22 +43,23 @@ the default location::
 
     salt '*' test.ping --return carbon --return_config alternative
 '''
-from __future__ import absolute_import
-
 
 # Import python libs
-from contextlib import contextmanager
+from __future__ import absolute_import
 import collections
 import logging
-import salt.ext.six.moves.cPickle as pickle  # pylint: disable=E0611
 import socket
 import struct
 import time
+from contextlib import contextmanager
 
 # Import salt libs
 import salt.utils.jid
 import salt.returners
-from salt.ext.six.moves import map
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import cPickle, map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -127,7 +128,7 @@ def _send_picklemetrics(metrics):
     metrics = [(metric_name, (timestamp, value))
                for (metric_name, value, timestamp) in metrics]
 
-    data = pickle.dumps(metrics, -1)
+    data = cPickle.dumps(metrics, -1)
     payload = struct.pack('!L', len(data)) + data
 
     return payload
@@ -163,7 +164,7 @@ def _walk(path, value, metrics, timestamp, skip):
     '''
 
     if isinstance(value, collections.Mapping):
-        for key, val in value.items():
+        for key, val in six.iteritems(value):
             _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
     else:
         try:

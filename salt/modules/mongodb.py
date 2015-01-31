@@ -411,7 +411,7 @@ def insert(objects, collection, user=None, password=None,
 
     try:
         objects = _to_dict(objects)
-    except Exception, err:
+    except Exception as err:
         return err.message
 
     try:
@@ -433,7 +433,7 @@ def find(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception, err:
+    except Exception as err:
         return err.message
 
     try:
@@ -465,7 +465,7 @@ def remove(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception, err:
+    except Exception as err:
         return err.message
 
     try:

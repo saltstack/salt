@@ -20,15 +20,22 @@ Example:
 
 '''
 
+# Import python libs
+from __future__ import absolute_import
 import re
 import logging
+
+# Import Salt libs
 from salt.utils import dictdiffer
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
+log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'reload_': 'reload'
 }
-
-log = logging.getLogger(__name__)
 
 
 def status(jboss_config):
@@ -138,7 +145,7 @@ def create_datasource(jboss_config, name, datasource_properties):
 def __get_properties_assignment_string(datasource_properties, ds_resource_description):
     assignment_strings = []
     ds_attributes = ds_resource_description['attributes']
-    for key, val in datasource_properties.iteritems():
+    for key, val in six.iteritems(datasource_properties):
         assignment_strings.append(__get_single_assignment_string(key, val, ds_attributes))
 
     return ','.join(assignment_strings)

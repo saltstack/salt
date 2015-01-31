@@ -3,6 +3,9 @@
 This state downloads artifacts from artifactory.
 
 '''
+
+# Import python libs
+from __future__ import absolute_import
 import logging
 
 log = logging.getLogger(__name__)

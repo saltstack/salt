@@ -2,9 +2,14 @@
 '''
 Beacon to fire events at login of users as registered in the wtmp file
 '''
-# Import python libs
+
+# Import Python libs
+from __future__ import absolute_import
 import os
 import struct
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range
 
 __virtualname__ = 'wtmp'
 WTMP = '/var/log/wtmp'

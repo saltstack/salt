@@ -8,10 +8,8 @@ lxc >= 1.0 (even beta alpha) is required
 
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import traceback
 import datetime
 import pipes
@@ -23,8 +21,6 @@ import time
 import shutil
 import re
 import random
-import salt.ext.six as six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 # Import salt libs
 import salt
@@ -34,6 +30,10 @@ import salt.utils.dictupdate
 from salt.utils import vt
 import salt.utils.cloud
 import salt.config
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -397,7 +397,7 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             nic, DEFAULT_NIC_PROFILE)
         nic_opts = kwargs.pop('nic_opts', {})
         if nic_opts:
-            for dev, args in nic_opts.items():
+            for dev, args in six.iteritems(nic_opts):
                 ethx = nicp.setdefault(dev, {})
                 ethx = salt.utils.dictupdate.update(ethx, args)
         ifs = [a for a in nicp]
@@ -423,13 +423,13 @@ def _get_network_conf(conf_tuples=None, **kwargs):
                 ret.append({'lxc.network.ipv4': ipv4})
             if ipv6:
                 ret.append({'lxc.network.ipv6': ipv6})
-            for k, v in args.items():
-                if k == 'link' and bridge:
-                    v = bridge
-                v = opts.get(k, v)
-                if k in ['gateway', 'mac']:
+            for key, val in six.iteritems(args):
+                if key == 'link' and bridge:
+                    val = bridge
+                val = opts.get(key, val)
+                if key in ['gateway', 'mac']:
                     continue
-                ret.append({'lxc.network.{0}'.format(k): v})
+                ret.append({'lxc.network.{0}'.format(key): val})
             # gateway (in automode) must be appended following network conf !
             if not gateway:
                 gateway = args.get('gateway', None)
@@ -469,9 +469,9 @@ def _get_network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for v in new.values():
-        for row in v:
-            ret.append({row: v[row]})
+    for val in six.itervalues(new):
+        for row in val:
+            ret.append({row: val[row]})
     return ret
 
 
@@ -528,7 +528,7 @@ def _config_list(conf_tuples=None, **kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = []
     default_data = _get_lxc_default_data(**kwargs)
-    for k, val in default_data.items():
+    for k, val in six.iteritems(default_data):
         ret.append({k: val})
     net_datas = _get_network_conf(conf_tuples=conf_tuples, **kwargs)
     ret.extend(net_datas)
@@ -567,26 +567,26 @@ class _LXCConfig(object):
         if self.name:
             self.path = '/var/lib/lxc/{0}/config'.format(self.name)
             if os.path.isfile(self.path):
-                with salt.utils.fopen(self.path) as f:
-                    for l in f.readlines():
-                        match = self.pattern.findall((l.strip()))
+                with salt.utils.fopen(self.path) as fhr:
+                    for line in fhr.readlines():
+                        match = self.pattern.findall((line.strip()))
                         if match:
                             self.data.append((match[0][0], match[0][-1]))
                         match = self.non_interpretable_pattern.findall(
-                            (l.strip()))
+                            (line.strip()))
                         if match:
                             self.data.append(('', match[0][0]))
         else:
             self.path = None
 
-        def _replace(k, v):
-            if v:
-                self._filter_data(k)
-                self.data.append((k, v))
+        def _replace(key, val):
+            if val:
+                self._filter_data(key)
+                self.data.append((key, val))
 
         default_data = _get_lxc_default_data(**kwargs)
-        for k, val in default_data.items():
-            _replace(k, val)
+        for key, val in six.iteritems(default_data):
+            _replace(key, val)
         old_net = self._filter_data('lxc.network')
         net_datas = _get_network_conf(conf_tuples=old_net, **kwargs)
         if net_datas:
@@ -594,9 +594,9 @@ class _LXCConfig(object):
                 self.data.extend(list(row.items()))
 
         # be sure to reset harmful settings
-        for i in ['lxc.cgroup.memory.limit_in_bytes']:
-            if not default_data.get(i):
-                self._filter_data(i)
+        for idx in ['lxc.cgroup.memory.limit_in_bytes']:
+            if not default_data.get(idx):
+                self._filter_data(idx)
 
     def as_string(self):
         chunks = ('{0[0]}{1}{0[1]}'.format(item, (' = ' if item[0] else '')) for item in self.data)
@@ -614,20 +614,20 @@ class _LXCConfig(object):
     def tempfile(self):
         # this might look like the function name is shadowing the
         # module, but it's not since the method belongs to the class
-        f = tempfile.NamedTemporaryFile()
-        f.write(self.as_string())
-        f.flush()
-        return f
+        ntf = tempfile.NamedTemporaryFile()
+        ntf.write(self.as_string())
+        ntf.flush()
+        return ntf
 
     def _filter_data(self, pat):
         removed = []
-        x = []
-        for i in self.data:
-            if not re.match('^' + pat, i[0]):
-                x.append(i)
+        filtered = []
+        for item in self.data:
+            if not re.match('^' + pat, item[0]):
+                filtered.append(item)
             else:
-                removed.append(i)
-        self.data = x
+                removed.append(item)
+        self.data = filtered
         return removed
 
 
@@ -811,10 +811,8 @@ def init(name,
     if users is None:
         users = []
     dusers = ['root']
-    if (
-        __grains__['os'] in ['Ubuntu']
-        and 'ubuntu' not in users
-    ):
+    if (__grains__['os'] in ['Ubuntu']
+            and 'ubuntu' not in users):
         dusers.append('ubuntu')
     for user in dusers:
         if user not in users:
@@ -823,13 +821,13 @@ def init(name,
         profile = _lxc_profile(profile)
     profile = copy.deepcopy(profile)
 
-    def select(k, default=None):
-        kw = kwargs.pop(k, _marker)
-        p = profile.pop(k, default)
+    def select(key, default=None):
+        kwarg = kwargs.pop(key, _marker)
+        prof = profile.pop(key, default)
         # let kwargs be really be the preferred choice
-        if kw is _marker:
-            kw = p
-        return kw
+        if kwarg is _marker:
+            kwarg = prof
+        return kwarg
 
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
@@ -876,9 +874,8 @@ def init(name,
                          autostart=autostart,
                          cpushare=cpushare, memory=memory)
         with cfg.tempfile() as cfile:
-            ret.update(
-                create(name, config=cfile.name,
-                                       profile=profile, **kwargs))
+            ret.update(create(name, config=cfile.name,
+                              profile=profile, **kwargs))
         if not ret.get('created', False):
             return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
@@ -1113,13 +1110,13 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         profile = _lxc_profile(profile)
     profile = copy.deepcopy(profile)
 
-    def select(k, default=None):
-        kw = kwargs.pop(k, _marker)
-        p = profile.pop(k, default)
+    def select(key, default=None):
+        kwarg = kwargs.pop(key, _marker)
+        prof = profile.pop(key, default)
         # let kwargs be really be the preferred choice
-        if kw is _marker:
-            kw = p
-        return kw
+        if kwarg is _marker:
+            kwarg = prof
+        return kwarg
 
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
@@ -1170,8 +1167,8 @@ def create(name, config=None, profile=None, options=None, **kwargs):
 
     if options:
         cmd += ' --'
-        for k, v in options.items():
-            cmd += ' --{0} {1}'.format(k, v)
+        for key, val in six.iteritems(options):
+            cmd += ' --{0} {1}'.format(key, val)
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] == 0 and exists(name):
@@ -1232,13 +1229,13 @@ def clone(name,
         return {'cloned': False,
                 'error': 'original container \'{0}\' is running'.format(orig)}
 
-    def select(k, default=None):
-        kw = kwargs.pop(k, _marker)
-        p = profile.pop(k, default)
+    def select(key, default=None):
+        kwarg = kwargs.pop(key, _marker)
+        prof = profile.pop(key, default)
         # let kwargs be really be the preferred choice
-        if kw is _marker:
-            kw = p
-        return kw
+        if kwarg is _marker:
+            kwarg = prof
+        return kwarg
 
     backing = select('backing')
     if backing in ['dir']:
@@ -1365,25 +1362,24 @@ def list_(extra=False):
 
 
 def _change_state(cmd, name, expected):
-    s1 = state(name)
-    if s1 is None:
+    state1 = state(name)
+    if state1 is None:
         return {'state': None, 'change': False}
-    elif s1 == expected:
+    elif state1 == expected:
         return {'state': expected, 'change': False}
 
     cmd = '{0} -n {1}'.format(cmd, name)
     err = __salt__['cmd.run_stderr'](cmd, python_shell=False)
     if err:
-        s2 = state(name)
-        r = {'state': s2, 'change': s1 != s2, 'error': err}
+        state2 = state(name)
+        return {'state': state2, 'change': state1 != state2, 'error': err}
     else:
         if expected is not None:
             # some commands do not wait, so we will
             cmd = 'lxc-wait -n {0} -s {1}'.format(name, expected.upper())
-            __salt__['cmd.run'](cmd, timeout=30, python_shell=False)
-        s2 = state(name)
-        r = {'state': s2, 'change': s1 != s2}
-    return r
+            __salt__['cmd.run'](cmd, timeout=30, python_shell=True)
+        state2 = state(name)
+        return {'state': state2, 'change': state1 != state2}
 
 
 def _ensure_running(name, no_start=False):
@@ -1533,8 +1529,8 @@ def exists(name):
 
         salt '*' lxc.exists name
     '''
-    l = list_()
-    return name in l['running'] + l['stopped'] + l['frozen']
+    _list = list_()
+    return name in _list['running'] + _list['stopped'] + _list['frozen']
 
 
 def state(name):
@@ -1637,13 +1633,13 @@ def info(name):
 
         salt '*' lxc.info name
     '''
-    f = '/var/lib/lxc/{0}/config'.format(name)
-    if not os.path.isfile(f):
+    fname = '/var/lib/lxc/{0}/config'.format(name)
+    if not os.path.isfile(fname):
         return None
 
     ret = {}
 
-    with salt.utils.fopen(f) as fhr:
+    with salt.utils.fopen(fname) as fhr:
         config = [(v[0].strip(), v[1].strip()) for v in
                   [l.split('#', 1)[0].strip().split('=', 1) for l in
                    fhr.readlines()] if len(v) == 2]
@@ -1651,14 +1647,14 @@ def info(name):
     ifaces = []
     current = None
 
-    for k, v in config:
-        if k == 'lxc.network.type':
-            current = {'type': v}
+    for key, val in config:
+        if key == 'lxc.network.type':
+            current = {'type': val}
             ifaces.append(current)
         elif not current:
             continue
-        elif k.startswith('lxc.network.'):
-            current[k.replace('lxc.network.', '', 1)] = v
+        elif key.startswith('lxc.network.'):
+            current[key.replace('lxc.network.', '', 1)] = val
     if ifaces:
         ret['nics'] = ifaces
 
@@ -1674,7 +1670,7 @@ def info(name):
     ret['ipv4_ips'] = []
     ret['ipv6_ips'] = []
     ret['size'] = None
-    ret['config'] = f
+    ret['config'] = fname
 
     if ret['state'] == 'running':
         try:
