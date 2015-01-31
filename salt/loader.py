@@ -22,6 +22,7 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 from salt.utils.odict import OrderedDict
+import salt.utils.lazy
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -192,9 +193,6 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
                      'value': ret},
                     ]
     return ret
-    # TODO: depends??
-    # Enforce dependencies of module functions from "functions"
-    Depends.enforce_dependencies(functions)
 
 
 def raw_mod(opts, name, functions, mod='modules'):
@@ -733,8 +731,8 @@ def in_pack(pack, name):
             pass
     return False
 
-import collections
-class FilterDictWrapper(collections.MutableMapping):
+# TODO: move somewhere else?
+class FilterDictWrapper(MutableMapping):
     '''
     Create a dict which wraps another dict with a specific key suffix on get
 
@@ -762,7 +760,7 @@ class FilterDictWrapper(collections.MutableMapping):
     def __iter__(self):
         return iter(self._dict)
 
-import salt.utils.lazy
+
 class NewLazyLoader(salt.utils.lazy.LazyDict):
     '''
     Used to load in arbitrary modules from a directory.
@@ -1094,6 +1092,9 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
             context = {}
         mod.__context__ = context
         self._dict.update(funcs)
+
+        # enforce depends
+        Depends.enforce_dependencies(self._dict)
         return True
 
     def _load(self, key):
