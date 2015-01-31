@@ -27,6 +27,12 @@ if 'SETUP_DIRNAME' in globals():
 else:
     THIS_FILE = __file__
 
+# These variables are always relative to salt's install directory and are not
+# configurable
+INSTALL_DIR = os.path.dirname(os.path.realpath(THIS_FILE))
+CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
+BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')
+
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
@@ -40,22 +46,19 @@ try:
         BASE_PILLAR_ROOTS_DIR,
         BASE_MASTER_ROOTS_DIR,
         LOGS_DIR,
-        PIDFILE_DIR,
-        CLOUD_DIR,
-        INSTALL_DIR,
-        BOOTSTRAP,
+        PIDFILE_DIR
     )
 except ImportError:
     # The installation time was not generated, let's define the default values
-    __platform = sys.platform.lower()
-    if __platform.startswith('win'):
-        ROOT_DIR = r'c:\salt' or '/'
+    __PLATFORM = sys.platform.lower()
+    if __PLATFORM.startswith('win'):
+        ROOT_DIR = r'c:\salt'
         CONFIG_DIR = os.path.join(ROOT_DIR, 'conf')
     else:
         ROOT_DIR = '/'
-        if 'freebsd' in __platform:
+        if 'freebsd' in __PLATFORM:
             CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'etc', 'salt')
-        elif 'netbsd' in __platform:
+        elif 'netbsd' in __PLATFORM:
             CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'pkg', 'etc', 'salt')
         else:
             CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
@@ -67,6 +70,3 @@ except ImportError:
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, 'salt-master')
     LOGS_DIR = os.path.join(ROOT_DIR, 'var', 'log', 'salt')
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
-    INSTALL_DIR = os.path.dirname(os.path.realpath(THIS_FILE))
-    CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
-    BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')
