@@ -798,16 +798,14 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         self.refresh_file_mapping()
 
         # create all of the import namespaces
-        if loaded_base_name is None:
-            loaded_base_name = LOADED_BASE_NAME
 
         if mod_type_check is None:
             mod_type_check = _mod_type
 
-        _generate_module('{0}.int'.format(loaded_base_name))
-        _generate_module('{0}.int.{1}'.format(loaded_base_name, tag))
-        _generate_module('{0}.ext'.format(loaded_base_name))
-        _generate_module('{0}.ext.{1}'.format(loaded_base_name, tag))
+        _generate_module('{0}.int'.format(self.loaded_base_name))
+        _generate_module('{0}.int.{1}'.format(self.loaded_base_name, tag))
+        _generate_module('{0}.ext'.format(self.loaded_base_name))
+        _generate_module('{0}.ext.{1}'.format(self.loaded_base_name, tag))
 
     def refresh_file_mapping(self):
         '''
@@ -1048,7 +1046,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         self._dict.update(funcs)
 
         # enforce depends
-        Depends.enforce_dependencies(self._dict)
+        Depends.enforce_dependencies(self._dict, self.loaded_base_name)
         return True
 
     def _load(self, key):
