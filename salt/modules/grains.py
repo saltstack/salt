@@ -437,8 +437,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
     '''
 
     ret = lookup_dict.get(
-            __grains__.get(
-                grain, default),
+            salt.utils.traverse_dict_and_list(__grains__, grain, None),
             lookup_dict.get(
                 default, None)
             )
