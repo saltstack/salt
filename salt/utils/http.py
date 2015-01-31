@@ -28,6 +28,7 @@ except ImportError:
         HAS_MATCHHOSTNAME = False
 import socket
 import urllib2
+import httplib
 
 # Import salt libs
 import salt.utils
