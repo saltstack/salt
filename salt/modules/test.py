@@ -20,6 +20,11 @@ import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
+from salt.utils.decorators import depends
+@depends('non_existantmodulename')
+def depends():
+    return 'foo'
+
 
 def echo(text):
     '''
