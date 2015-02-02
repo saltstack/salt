@@ -368,7 +368,7 @@ def ssh_wrapper(opts, functions=None, context=None):
     return NewLazyLoader(_module_dirs(opts,
                                       'wrapper',
                                       'wrapper',
-                                      base_path=os.path.join(SALT_BASE_PATH, os.path.join('client','ssh'))),
+                                      base_path=os.path.join(SALT_BASE_PATH, os.path.join('client', 'ssh'))),
                          opts,
                          tag='wrapper',
                          pack=pack,
@@ -400,6 +400,7 @@ def render(opts, functions, states=None):
         log.critical(err)
         raise LoaderError(err)
     return rend
+
 
 def grains(opts, force_refresh=False):
     '''
@@ -480,7 +481,7 @@ def grains(opts, force_refresh=False):
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
-    for key, fun in funcs.items():
+    for key, fun in funcs.iteritems():
         if not key.startswith('core.'):
             continue
         ret = fun()
@@ -489,7 +490,7 @@ def grains(opts, force_refresh=False):
         grains_data.update(ret)
 
     # Run the rest of the grains
-    for key, fun in funcs.items():
+    for key, fun in funcs.iteritems():
         if key.startswith('core.') or key == '_errors':
             continue
         try:
@@ -744,7 +745,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
-                 ):  # pylint: disable=@0231
+                 ):  # pylint: disable=W0231
         self.opts = self.__prep_mod_opts(opts)
 
     # an init for the singleton instance to call
