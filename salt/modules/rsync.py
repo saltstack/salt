@@ -7,6 +7,7 @@ Wrapper for rsync
 This data can also be passed into :doc:`pillar </topics/tutorials/pillar>`.
 Options passed into opts will overwrite options passed into pillar.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -91,7 +92,7 @@ def rsync(src,
     )
 
     try:
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
 
@@ -142,7 +143,7 @@ def config(confile='/etc/rsyncd.conf'):
           )
 
     try:
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:
         raise CommandExecutionError(exc.strerror)
 

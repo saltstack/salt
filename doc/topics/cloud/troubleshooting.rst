@@ -94,7 +94,7 @@ The ``/tmp/.saltcloud/`` directory should the following files:
   have permissions of ``0600``. Ensure that the ``.pem`` and ``.pub`` files have
   been properly copied to the ``/etc/salt/pki/minion/`` directory.
 - A file called ``minion``. This file should have been copied to the
-  ``/etc/salt/`` directory. 
+  ``/etc/salt/`` directory.
 - Optionally, a file called ``grains``. This file, if present, should have been
   copied to the ``/etc/salt/`` directory.
 
@@ -102,7 +102,7 @@ The ``/tmp/.saltcloud/`` directory should the following files:
 Unprivileged Primary Users
 --------------------------
 Some providers, most notably EC2, are configured with a different primary user.
-Some common examples are ``ec2-user``, ``ubuntu``, ``fedora`` and ``bitnami``.
+Some common examples are ``ec2-user``, ``ubuntu``, ``fedora``, and ``bitnami``.
 In these cases, the ``/tmp/.saltcloud/`` directory and all files in it should
 be owned by this user.
 

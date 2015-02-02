@@ -13,9 +13,34 @@ on the singular implementation of individual functions.
 Preparing to Write a Unit Test
 ==============================
 
-Unit tests live in: `tests/unit/`__.
+This guide assumes you've followed the `directions for setting up salt testing`__.
 
-.. __: https://github.com/saltstack/salt/tree/develop/tests/unit
+Unit tests should be written to the following specifications:
+
+- All the tests for a specific module at salt/.../<module>.py need to be
+  contained in a file called tests/unit/.../<module>_test.py, e.g. the tests
+  for salt/modules/fib.py need to be contained in a file called
+  tests/unit/modules/fib_test.py.
+
+- The tests within tests/unit/modules/fib_test.py file must be member functions
+  of a class which subclasses salttesting.Testcase
+
+- Each external resource used in the code to be tested, such as function calls,
+  external data either globally available or passed in through the function
+  arguments, file data, etc. needs to be mocked.
+
+- Each raise and return statement of the code to be tested needs to be
+  separately and independently tested.
+
+- Test functions should contain only one test and contain all necessary mock
+  data and mock code for that test.
+
+- Test functions should be named test_<fcn>_<test-name> where <fcn> is the name
+  of the function being tested and <test-name> describes which raise or return
+  within the function is being tested and whether that raise or return
+  statement is considered a success or a failure condition.
+
+.. __: http://docs.saltstack.com/topics/installation/index.html
 
 Most commonly, the following imports are necessary to create a unit test:
 
@@ -38,7 +63,7 @@ A Simple Example
 
 Let's assume that we're testing a very basic function in an imaginary Salt
 execution module. Given a module called ``fib.py`` that has a function called
-'calculate(num_of_results)', which given a 'num_of_results', produces a list of
+``calculate(num_of_results)``, which given a ``num_of_results``, produces a list of
 sequential Fibonacci numbers of that length.
 
 A unit test to test this function might be commonly placed in a file called
@@ -63,19 +88,16 @@ we might write the skeleton for testing ``fib.py``:
     class FibTestCase(TestCase):
 
         '''
-        If we want to set up variables common to all unit tests, we can do so
-        by defining a setUp method, which will be run automatically before
-        tests begin.
+        This class contains a set of functions that test salt.modules.fib.
         '''
-        def setUp(self):
-            # Declare a simple set of five Fibonacci numbers starting at zero that we know are correct.
-            self.fib_five = [0, 1, 1, 2, 3]
 
         def test_fib(self):
             '''
-            To create a unit test, we should prefix the name with `test_' so that it's recognized by the test runner.
+            To create a unit test, we should prefix the name with `test_' so
+            that it's recognized by the test runner.
             '''
-            self.assertEqual(fib.calculate(5), self.fib_five)
+            fib_five = (0, 1, 1, 2, 3)
+            self.assertEqual(fib.calculate(5), fib_five)
 
 
 At this point, the test can now be run, either individually or as a part of a
@@ -97,7 +119,9 @@ increase verbosity:
 To review the results of a particular run, take a note of the log location
 given in the output for each test:
 
-    **Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log**
+.. code-block:: text
+
+    Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log
 
 Evaluating Truth
 ================
@@ -160,7 +184,8 @@ additional imports for MagicMock:
 
     # Create test case class and inherit from Salt's customized TestCase
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON) #  Skip this test case if we don't have access to mock!
+    # Skip this test case if we don't have access to mock!
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
     class DbTestCase(TestCase):
         def test_create_user(self):
             # First, we replace 'execute_query' with our own mock function
@@ -170,30 +195,34 @@ additional imports for MagicMock:
 
             db.create_user('testuser')
 
-            # We could now query our mock object to see which calls were made to it.
+            # We could now query our mock object to see which calls were made
+            # to it.
             ## print db.execute_query.mock_calls
 
             '''
-            We want to test to ensure that the correct query was formed.
-            This is a contrived example, just designed to illustrate the concepts at hand.
+            We want to test to ensure that the correct query was formed.  This
+            is a contrived example, just designed to illustrate the concepts at
+            hand.
 
-            We're going to first contruct a call() object that represents the way we expect
-            our mocked execute_query() function to have been called.
-            Then, we'll examine the list of calls that were actually made to to execute_function().
+            We're going to first construct a call() object that represents the
+            way we expect our mocked execute_query() function to have been
+            called.  Then, we'll examine the list of calls that were actually
+            made to to execute_function().
 
-            By comparing our expected call to execute_query() with create_user()'s call to
-            execute_query(), we can determine the success or failure of our unit test.
+            By comparing our expected call to execute_query() with
+            create_user()'s call to execute_query(), we can determine the
+            success or failure of our unit test.
             '''
 
             expected_call = call('CREATE USER testuser')
 
-            # Do the comparison! Will assert False if execute_query() was not called with the given call
+            # Do the comparison! Will assert False if execute_query() was not
+            # called with the given call
 
             db.execute_query.assert_has_calls(expected_call)
 
 
 .. __: http://www.voidspace.org.uk/python/mock/index.html
-
 
 Modifying ``__salt__`` In Place
 ===============================
@@ -208,5 +237,215 @@ function into ``__salt__`` that's actually a MagicMock instance.
 .. code-block:: python
 
     def show_patch(self):
-        with patch.dict(my_module.__salt__, {'function.to_replace': MagicMock()}:
+        with patch.dict(my_module.__salt__,
+                        {'function.to_replace': MagicMock()}:
             # From this scope, carry on with testing, with a modified __salt__!
+
+A More Complete Example
+=======================
+
+Consider the following function from salt/modules/linux_sysctl.py.
+
+.. code-block:: python
+
+    def get(name):
+        '''
+        Return a single sysctl parameter for this minion
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' sysctl.get net.ipv4.ip_forward
+        '''
+        cmd = 'sysctl -n {0}'.format(name)
+        out = __salt__['cmd.run'](cmd)
+        return out
+
+This function is very simple, comprising only four source lines of code and
+having only one return statement, so we know only one test is needed.  There
+are also two inputs to the function, the ``name`` function argument and the call
+to ``__salt__['cmd.run']()``, both of which need to be appropriately mocked.
+Mocking a function parameter is straightforward, whereas mocking a function
+call will require, in this case, the use of MagicMock.  For added isolation, we
+will also redefine the ``__salt__`` dictionary such that it only contains
+``'cmd.run'``.
+
+.. code-block:: python
+
+    # Import Salt Libs
+    from salt.modules import linux_sysctl
+
+    # Import Salt Testing Libs
+    from salttesting import skipIf, TestCase
+    from salttesting.helpers import ensure_in_syspath
+    from salttesting.mock import (
+        MagicMock,
+        patch,
+        NO_MOCK,
+        NO_MOCK_REASON
+    )
+
+    ensure_in_syspath('../../')
+
+    # Globals
+    linux_sysctl.__salt__ = {}
+
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    class LinuxSysctlTestCase(TestCase):
+        '''
+        TestCase for salt.modules.linux_sysctl module
+        '''
+
+        def test_get(self):
+            '''
+            Tests the return of get function
+            '''
+            mock_cmd = MagicMock(return_value=1)
+            with patch.dict(linux_sysctl.__salt__, {'cmd.run': mock_cmd}):
+                self.assertEqual(linux_sysctl.get('net.ipv4.ip_forward'), 1)
+
+
+    if __name__ == '__main__':
+        from integration import run_tests
+        run_tests(LinuxSysctlTestCase, needs_daemon=False)
+
+Since ``get()`` has only one raise or return statement and that statement is a
+success condition, the test function is simply named ``test_get()``.  As
+described, the single function call parameter, ``name`` is mocked with
+``net.ipv4.ip_forward`` and ``__salt__['cmd.run']`` is replaced by a MagicMock
+function object.  We are only interested in the return value of
+``__salt__['cmd.run']``, which MagicMock allows to be specified via
+``return_value=1``.  Finally, the test itself tests for equality between the
+return value of ``get()`` and the expected return of ``1``.  This assertion is
+expected to succeed because ``get()`` will determine its return value from
+``__salt__['cmd.run']``, which we have mocked to return ``1``.
+
+A Complex Example
+=================
+
+Now consider the ``assign()`` function from the same
+salt/modules/linux_sysctl.py source file.
+
+.. code-block:: python
+
+    def assign(name, value):
+        '''
+        Assign a single sysctl parameter for this minion
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' sysctl.assign net.ipv4.ip_forward 1
+        '''
+        value = str(value)
+        sysctl_file = '/proc/sys/{0}'.format(name.replace('.', '/'))
+        if not os.path.exists(sysctl_file):
+            raise CommandExecutionError('sysctl {0} does not exist'.format(name))
+
+        ret = {}
+        cmd = 'sysctl -w {0}="{1}"'.format(name, value)
+        data = __salt__['cmd.run_all'](cmd)
+        out = data['stdout']
+        err = data['stderr']
+
+        # Example:
+        #    # sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216"
+        #    net.ipv4.tcp_rmem = 4096 87380 16777216
+        regex = re.compile(r'^{0}\s+=\s+{1}$'.format(re.escape(name),
+                                                     re.escape(value)))
+
+        if not regex.match(out) or 'Invalid argument' in str(err):
+            if data['retcode'] != 0 and err:
+                error = err
+            else:
+                error = out
+            raise CommandExecutionError('sysctl -w failed: {0}'.format(error))
+        new_name, new_value = out.split(' = ', 1)
+        ret[new_name] = new_value
+        return ret
+
+This function contains two raise statements and one return statement, so we
+know that we will need (at least) three tests.  It has two function arguments
+and many references to non-builtin functions.  In the tests below you will see
+that MagicMock's ``patch()`` method may be used as a context manager or as a
+decorator.
+
+There are three test functions, one for each raise and return statement in the
+source function.  Each function is self-contained and contains all and only the
+mocks and data needed to test the raise or return statement it is concerned
+with.
+
+.. code-block:: python
+
+    # Import Salt Libs
+    from salt.modules import linux_sysctl
+    from salt.exceptions import CommandExecutionError
+
+    # Import Salt Testing Libs
+    from salttesting import skipIf, TestCase
+    from salttesting.helpers import ensure_in_syspath
+    from salttesting.mock import (
+        MagicMock,
+        patch,
+        NO_MOCK,
+        NO_MOCK_REASON
+    )
+
+    ensure_in_syspath('../../')
+
+    # Globals
+    linux_sysctl.__salt__ = {}
+
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    class LinuxSysctlTestCase(TestCase):
+        '''
+        TestCase for salt.modules.linux_sysctl module
+        '''
+
+        @patch('os.path.exists', MagicMock(return_value=False))
+        def test_assign_proc_sys_failed(self):
+            '''
+            Tests if /proc/sys/<kernel-subsystem> exists or not
+            '''
+            cmd = {'pid': 1337, 'retcode': 0, 'stderr': '',
+                   'stdout': 'net.ipv4.ip_forward = 1'}
+            mock_cmd = MagicMock(return_value=cmd)
+            with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
+                self.assertRaises(CommandExecutionError,
+                                  linux_sysctl.assign,
+                                  'net.ipv4.ip_forward', 1)
+
+        @patch('os.path.exists', MagicMock(return_value=True))
+        def test_assign_cmd_failed(self):
+            '''
+            Tests if the assignment was successful or not
+            '''
+            cmd = {'pid': 1337, 'retcode': 0, 'stderr':
+                   'sysctl: setting key "net.ipv4.ip_forward": Invalid argument',
+                   'stdout': 'net.ipv4.ip_forward = backward'}
+            mock_cmd = MagicMock(return_value=cmd)
+            with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
+                self.assertRaises(CommandExecutionError,
+                                  linux_sysctl.assign,
+                                  'net.ipv4.ip_forward', 'backward')
+
+        @patch('os.path.exists', MagicMock(return_value=True))
+        def test_assign_success(self):
+            '''
+            Tests the return of successful assign function
+            '''
+            cmd = {'pid': 1337, 'retcode': 0, 'stderr': '',
+                   'stdout': 'net.ipv4.ip_forward = 1'}
+            ret = {'net.ipv4.ip_forward': '1'}
+            mock_cmd = MagicMock(return_value=cmd)
+            with patch.dict(linux_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
+                self.assertEqual(linux_sysctl.assign(
+                    'net.ipv4.ip_forward', 1), ret)
+
+    if __name__ == '__main__':
+        from integration import run_tests
+        run_tests(LinuxSysctlTestCase, needs_daemon=False)

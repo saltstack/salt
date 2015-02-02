@@ -6,6 +6,9 @@
     Test Salt's loader regarding globals that it should pack in
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
@@ -15,6 +18,9 @@ import integration
 import salt.loader
 import inspect
 import yaml
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class LoaderGlobalsTest(integration.ModuleCase):
@@ -31,22 +37,23 @@ class LoaderGlobalsTest(integration.ModuleCase):
         Verify that the globals listed in the doc string (from the test) are in these modules
         '''
         # find the globals
-        global_vars = None
-        for val in mod_dict.itervalues():
-            if hasattr(val, '__globals__'):
-                global_vars = val.__globals__
-                break
-        # if we couldn't find any, then we have no modules-- so something is broken
-        if global_vars is None:
-            # TODO: log or something? Skip however we do that
-            return
+        global_vars = []
+        for val in six.itervalues(mod_dict):
+            # only find salty globals
+            if val.__module__.startswith('salt.loaded') and hasattr(val, '__globals__'):
+                global_vars.append(val.__globals__)
+
+        # if we couldn't find any, then we have no modules -- so something is broken
+        self.assertNotEqual(global_vars, [], msg='No modules were loaded.')
 
         # get the names of the globals you should have
         func_name = inspect.stack()[1][3]
-        names = yaml.load(getattr(self, func_name).__doc__).values()[0]
+        names = next(six.itervalues(yaml.load(getattr(self, func_name).__doc__)))
 
-        for name in names:
-            assert name in global_vars
+        # Now, test each module!
+        for item in global_vars:
+            for name in names:
+                self.assertIn(name, item)
 
     def test_auth(self):
         '''
@@ -111,13 +118,6 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __grains__
         '''
         self._verify_globals(salt.loader.states(self.master_opts, {}))
-
-    def test_log_handlers(self):
-        '''
-        Test that log_handlers have:
-            - __path__
-        '''
-        self._verify_globals(salt.loader.log_handlers(self.master_opts))
 
     def test_renderers(self):
         '''

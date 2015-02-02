@@ -4,7 +4,7 @@ Execute batch runs
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import math
 import time
 import copy
@@ -12,7 +12,14 @@ import copy
 # Import salt libs
 import salt.client
 import salt.output
+import salt.utils.minions
 from salt.utils import print_cli
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import range
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
 class Batch(object):
@@ -30,25 +37,13 @@ class Batch(object):
         '''
         Return a list of minions to use for the batch run
         '''
-        args = [self.opts['tgt'],
-                'test.ping',
-                [],
-                5,
-                ]
-
+        ckminions = salt.utils.minions.CkMinions(self.opts)
         selected_target_option = self.opts.get('selected_target_option', None)
         if selected_target_option is not None:
-            args.append(selected_target_option)
+            expr_form = selected_target_option
         else:
-            args.append(self.opts.get('expr_form', 'glob'))
-
-        fret = []
-        for ret in self.local.cmd_iter(*args, **self.eauth):
-            for minion in ret:
-                if not self.quiet:
-                    print_cli('{0} Detected for this batch run'.format(minion))
-                fret.append(minion)
-        return sorted(fret)
+            expr_form = self.opts.get('expr_form', 'glob')
+        return ckminions.check_minions(self.opts['tgt'], expr_form=expr_form)
 
     def get_bnum(self):
         '''
@@ -156,11 +151,11 @@ class Batch(object):
                         # add all minions that belong to this iterator and
                         # that have not responded to parts{} with an empty response
                         for minion in minion_tracker[queue]['minions']:
-                            if minion not in parts.keys():
+                            if minion not in parts:
                                 parts[minion] = {}
                                 parts[minion]['ret'] = {}
 
-            for minion, data in parts.items():
+            for minion, data in six.iteritems(parts):
                 active.remove(minion)
                 if self.opts.get('raw'):
                     yield data
@@ -180,7 +175,7 @@ class Batch(object):
                             self.opts)
 
             # remove inactive iterators from the iters list
-            for queue in minion_tracker.keys():
+            for queue in minion_tracker:
                 # only remove inactive queues
                 if not minion_tracker[queue]['active'] and queue in iters:
                     iters.remove(queue)

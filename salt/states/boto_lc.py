@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Launch Configurations
-============================
 
 .. versionadded:: 2014.7.0
 
@@ -92,6 +91,7 @@ and autoscale groups are completely dependent on each other.
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 '''
+from __future__ import absolute_import
 from salt.exceptions import SaltInvocationError
 
 
@@ -150,7 +150,7 @@ def present(
 
     cloud_init
         A dict of cloud_init configuration. Currently supported values:
-        scripts, cloud-config. Mutually exlusive with user_data.
+        scripts, cloud-config. Mutually exclusive with user_data.
 
     instance_type
         The instance type. ex: m1.small.
@@ -213,7 +213,7 @@ def present(
     if user_data and cloud_init:
         raise SaltInvocationError('user_data and cloud_init are mutually'
                                   ' exclusive options.')
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
                                                               key, keyid,
                                                               profile)
@@ -221,6 +221,7 @@ def present(
         if __opts__['test']:
             msg = 'Launch configuration set to be created.'
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         if cloud_init:
             user_data = __salt__['boto_asg.get_cloud_init_mime'](cloud_init)
@@ -234,7 +235,6 @@ def present(
             delete_on_termination, iops, use_block_device_types, region, key,
             keyid, profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = name
         else:
@@ -270,19 +270,18 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
                                                               key, keyid,
                                                               profile)
     if exists:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'Launch configuration set to be deleted.'
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete_launch_configuration'](
             name, region, key, keyid, profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted launch configuration.'

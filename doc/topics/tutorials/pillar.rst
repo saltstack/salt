@@ -96,7 +96,14 @@ This top file associates the data.sls file to all minions. Now the
 
     info: some data
 
-Now that the file has been saved, the minions' pillars will be updated:
+To ensure that the minions have the new pillar data, issue a command
+to them asking that they fetch their pillars from the master:
+
+.. code-block:: bash
+
+    salt '*' saltutil.refresh_pillar
+
+Now that the minions have the new pillar, it can be retrieved:
 
 .. code-block:: bash
 
@@ -240,8 +247,7 @@ A simple formula:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -259,8 +265,7 @@ Can be easily transformed into a powerful, parameterized formula:
 .. code-block:: jinja
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['pkgs']['vim'] }}
 
     /etc/vimrc:
@@ -287,6 +292,34 @@ Where the vimrc source location can now be changed via pillar:
     {% endif %}
 
 Ensuring that the right vimrc is sent out to the correct minions.
+
+Setting Pillar Data on the Command Line
+=======================================
+
+Pillar data can be set on the command line like so:
+
+.. code-block:: bash
+
+    salt '*' state.highstate pillar='{"foo": "bar"}'
+
+The ``state.sls`` command can also be used to set pillar values via the command
+line:
+
+.. code-block:: bash
+
+    salt '*' state.sls my_sls_file pillar='{"hello": "world"}'
+
+Lists can be passed in pillar as well:
+
+.. code-block:: bash
+
+    salt '*' state.highstate pillar='["foo", "bar", "baz"]'
+
+.. note::
+
+    If a key is passed on the command line that already exists on the minion,
+    the key that is passed in will overwrite the entire value of that key,
+    rather than merging only the specified value set via the command line.
 
 More On Pillar
 ==============

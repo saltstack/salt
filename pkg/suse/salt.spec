@@ -1,7 +1,7 @@
 #
 # spec file for package salt
 #
-# Copyright (c) 2013 SUSE LINUX Products GmbH, Nuernberg, Germany.
+# Copyright (c) 2014 SUSE LINUX Products GmbH, Nuernberg, Germany.
 #
 # All modifications and additions to the file contributed by third parties
 # remain the property of their copyright owners, unless otherwise agreed
@@ -15,9 +15,8 @@
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
 
-
 Name:           salt
-Version:        2014.1.7
+Version:        2014.7.0
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -25,20 +24,23 @@ Group:          System/Monitoring
 Url:            http://saltstack.org/
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
 
+# PATCH-FIX-OPENSUSE use-forking-daemon.patch tserong@suse.com -- We don't have python-systemd, so notify can't work
+Patch1:         use-forking-daemon.patch
+
 #for building
 BuildRequires:  fdupes
 BuildRequires:  logrotate
 BuildRequires:  python-Jinja2
 BuildRequires:  python-M2Crypto
 BuildRequires:  python-PyYAML
-BuildRequires:  python-yaml
+BuildRequires:  python-apache-libcloud >= 0.14.0
 BuildRequires:  python-devel
 BuildRequires:  python-msgpack-python
+BuildRequires:  python-psutil
 BuildRequires:  python-pycrypto
 BuildRequires:  python-pyzmq
-BuildRequires:  python-psutil
-BuildRequires:  python-requests
-BuildRequires:  python-apache-libcloud >= 0.14.0
+BuildRequires:  python-requests >= 1.0.0
+BuildRequires:  python-yaml
 
 %if 0%{?sles_version}
 BuildRequires:  python
@@ -65,13 +67,14 @@ BuildRequires:  python-sphinx
 
 Requires:       logrotate
 Requires:       python-Jinja2
-Requires:       python-yaml
 Requires:       python-PyYAML
-Requires:       python-yaml
 Requires:       python-apache-libcloud
-Requires:       python-xml
 Requires:       python-psutil
 Requires:       python-requests
+Requires:       python-xml
+Requires:       python-yaml
+Requires:       python-yaml
+Requires:       python-zypp
 Requires(pre): %fillup_prereq
 %if 0%{?suse_version} < 1210
 Requires(pre): %insserv_prereq
@@ -85,8 +88,8 @@ Requires(pre): %insserv_prereq
 
 %if %with_bashcomp
 BuildRequires:  bash-completion
+BuildRequires:  zsh
 %endif #with_bashcomp
-
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?suse_version} && 0%{?suse_version} <= 1110
@@ -97,7 +100,7 @@ BuildArch:      noarch
 
 Recommends:     python-botocore
 Recommends:     python-netaddr
-
+Recommends:     python-pygit2
 
 %description
 Salt is a distributed remote execution system used to execute commands and
@@ -107,13 +110,22 @@ malleable. Salt accomplishes this via its ability to handle larger loads of
 information, and not just dozens, but hundreds or even thousands of individual
 servers, handle them quickly and through a simple and manageable interface.
 
+%package api
+Summary:        The api for Salt a parallel remote execution system
+Group:          System/Monitoring
+Requires:       %{name} = %{version}
+Requires:       %{name}-master = %{version}
+Recommends:     python-CherryPy
+
+%description api
+salt-api is a modular interface on top of Salt that can provide a variety of entry points into a running Salt system.
+
 %package cloud
 Summary:        Salt Cloud is a generic cloud provisioning tool
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
 Requires:       python-PyYAML
 Requires:       python-apache-libcloud
-Recommends:     sshpass
 Recommends:     python-botocore
 Recommends:     python-netaddr
 
@@ -138,8 +150,13 @@ Documentation of salt, offline version of http://docs.saltstack.com.
 Summary:        Management component for salt, a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
+%if 0%{?suse_version} == 1315
+Recommends:     git
+Recommends:     python-pygit2
+%else
 Requires:       git
-Requires:       python-GitPython
+Requires:       python-pygit2
+%endif
 Requires:       python-M2Crypto
 Requires:       python-msgpack-python
 Requires:       python-pycrypto
@@ -198,7 +215,6 @@ Group:          System/Monitoring
 Requires:       %{name} = %{version}
 BuildRequires:  python-markupsafe
 Requires:       python-markupsafe
-Recommends:     sshpass
 %if 0%{?suse_version} < 1210
 Requires(pre):  %insserv_prereq
 %endif
@@ -220,10 +236,22 @@ BuildArch:      noarch
 %description bash-completion
 Bash command line completion support for %{name}.
 
+%package zsh-completion
+Summary:        Zsh Completion for %{name}
+Group:          System/Management
+Conflicts:		salt-zsh-completion
+Requires:       %{name} = %{version}
+Requires:       zsh
+BuildArch:      noarch
+
+%description zsh-completion
+Zsh command line completion support for %{name}.
+
 %endif # with_bashcomp
 
 %prep
 %setup -q
+%patch1 -p1
 
 %build
 python setup.py build
@@ -253,23 +281,27 @@ mkdir -p %{buildroot}/var/log/salt
 mkdir -p %{buildroot}/srv/salt
 mkdir -p %{buildroot}/srv/pillar
 mkdir -p %{buildroot}%{_docdir}/salt
-#
+
 ## install init and systemd scripts
 %if 0%{?_unitdir:1}
 install -Dpm 0644 pkg/salt-master.service %{buildroot}%_unitdir/salt-master.service
 install -Dpm 0644 pkg/salt-minion.service %{buildroot}%_unitdir/salt-minion.service
 install -Dpm 0644 pkg/salt-syndic.service %{buildroot}%_unitdir/salt-syndic.service
+install -Dpm 0644 pkg/salt-api.service %{buildroot}%_unitdir/salt-api.service
 ln -s service %{buildroot}%{_sbindir}/rcsalt-master
 ln -s service %{buildroot}%{_sbindir}/rcsalt-syndic
 ln -s service %{buildroot}%{_sbindir}/rcsalt-minion
+ln -s service %{buildroot}%{_sbindir}/rcsalt-api
 %else
 ## install init scripts
 install -Dpm 0755 pkg/suse/salt-master %{buildroot}%{_initddir}/salt-master
 install -Dpm 0755 pkg/suse/salt-syndic %{buildroot}%{_initddir}/salt-syndic
 install -Dpm 0755 pkg/suse/salt-minion %{buildroot}%{_initddir}/salt-minion
+install -Dpm 0755 pkg/suse/salt-api %{buildroot}%{_initddir}/salt-api
 ln -sf %{_initddir}/salt-master %{buildroot}%{_sbindir}/rcsalt-master
 ln -sf %{_initddir}/salt-syndic %{buildroot}%{_sbindir}/rcsalt-syndic
 ln -sf %{_initddir}/salt-minion %{buildroot}%{_sbindir}/rcsalt-minion
+ln -sf %{_initddir}/salt-api %{buildroot}%{_sbindir}/rcsalt-api
 %endif
 
 #
@@ -289,13 +321,13 @@ install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/syscon
 #
 ## install completion scripts
 %if %with_bashcomp
-install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
+install -Dpm 0644 pkg/salt.bash %{buildroot}/etc/bash_completion.d/%{name}
+install -Dpm 0644 scripts/completion/zsh_completion.zsh %{buildroot}/etc/zsh_completion.d/%{name}
 %endif #with_bashcomp
 
-%check
-# don't test on factory because of ssl2 method deprication
+#%%check
 #%%if 0%{?suse_version} < 1310
-%{__python} setup.py test --runtests-opts=-u
+#%%{__python} setup.py test --runtests-opts=-u
 #%%endif
 
 %preun syndic
@@ -303,6 +335,11 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %service_del_preun salt-syndic.service
 %else
 %stop_on_removal salt-syndic
+%endif
+
+%pre syndic
+%if 0%{?_unitdir:1}
+%service_add_pre salt-syndic.service
 %endif
 
 %post syndic
@@ -328,6 +365,11 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %stop_on_removal salt-master
 %endif
 
+%pre master
+%if 0%{?_unitdir:1}
+%service_add_pre salt-master.service
+%endif
+
 %post master
 %if 0%{?_unitdir:1}
 %service_add_post salt-master.service
@@ -351,6 +393,11 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %stop_on_removal salt-minion
 %endif
 
+%pre minion
+%if 0%{?_unitdir:1}
+%service_add_pre salt-minion.service
+%endif
+
 %post minion
 %if 0%{?_unitdir:1}
 %service_add_post salt-minion.service
@@ -366,6 +413,44 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %insserv_cleanup
 %restart_on_update salt-minion
 %endif
+
+%preun api
+%if 0%{?_unitdir:1}
+%service_del_preun salt-api.service
+%else
+%stop_on_removal
+%endif
+
+%pre api
+%if 0%{?_unitdir:1}
+%service_add_pre salt-api.service
+%endif
+
+%post api
+%if 0%{?_unitdir:1}
+%service_add_post salt-api.service
+%else
+%fillup_and_insserv
+%endif
+
+%postun api
+%if 0%{?_unitdir:1}
+%service_del_postun salt-api.service
+%else
+%insserv_cleanup
+%restart_on_update
+%endif
+
+%files api
+%defattr(-,root,root)
+%{_bindir}/salt-api
+%{_sbindir}/rcsalt-api
+%if 0%{?_unitdir:1}
+%_unitdir/salt-api.service
+%else
+%{_sysconfdir}/init.d/salt-api
+%endif
+%{_mandir}/man1/salt-api.1.*
 
 %files cloud
 %defattr(-,root,root)
@@ -441,6 +526,8 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %dir %{_sysconfdir}/salt
 %dir /var/log/salt
 %{_bindir}/salt-call
+%{_bindir}/salt-unity
+%{_mandir}/man1/salt-unity.1.gz
 %{_mandir}/man1/salt-call.1.gz
 %{_mandir}/man7/salt.7.gz
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
@@ -453,6 +540,10 @@ install -Dpm 0644 pkg/salt.bash "%{buildroot}/etc/bash_completion.d/%{name}"
 %files bash-completion
 %defattr(-,root,root)
 %config %{_sysconfdir}/bash_completion.d/%{name}
+
+%files zsh-completion
+%defattr(-,root,root)
+%config %{_sysconfdir}/zsh_completion.d/%{name}
 
 %endif #with_bashcomp
 

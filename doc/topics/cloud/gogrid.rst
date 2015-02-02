@@ -7,14 +7,13 @@ GoGrid is a public cloud provider supporting Linux and Windows.
 
 Dependencies
 ============
-The GoGrid driver for Salt Cloud requires Libcloud 0.13.2 or higher to be
-installed.
+* Libcloud >= 0.13.2
 
 
 Configuration
 =============
-To use Salt Cloud with GoGrid log into the GoGrid web interface and create an 
-API key. Do this by clicking on "My Account" and then going to the API Keys 
+To use Salt Cloud with GoGrid log into the GoGrid web interface and create an
+API key. Do this by clicking on "My Account" and then going to the API Keys
 tab.
 
 The ``apikey`` and the ``sharedsecret`` configuration parameters need to be set

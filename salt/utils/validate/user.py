@@ -2,11 +2,12 @@
 '''
 Various user validation utilities
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import logging
-import salt._compat
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ def valid_username(user):
     '''
     Validates a username based on the guidelines in `useradd(8)`
     '''
-    if not isinstance(user, salt._compat.string_types):
+    if not isinstance(user, string_types):
         return False
 
     if len(user) > 32:

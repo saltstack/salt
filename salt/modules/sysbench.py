@@ -5,9 +5,11 @@ performance of the minions, right from the master!
 It measures various system parameters such as
 CPU, Memory, File I/O, Threads and Mutex.
 '''
+from __future__ import absolute_import
 
 import re
 import salt.utils
+from salt.ext.six.moves import zip
 
 
 def __virtual__():

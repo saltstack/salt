@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import sys
 
 # Import Salt Testing libs
@@ -36,6 +37,14 @@ class SysctlModuleTest(integration.ModuleCase):
         self.assertGreater(ret.get('vm.vmtotal').splitlines(),
                            1,
                            'Multiline value was parsed wrong')
+
+    @skipIf(not sys.platform.startswith('openbsd'), 'OpenBSD specific')
+    def test_show_openbsd(self):
+        ret = self.run_function('sysctl.show')
+        self.assertIn('kern.ostype', ret, 'kern.ostype absent')
+        self.assertEqual(
+            ret.get('kern.ostype'), 'OpenBSD', 'Incorrect kern.ostype'
+        )
 
     @skipIf(not sys.platform.startswith('darwin'), 'Darwin (OS X) specific')
     def test_show_darwin(self):

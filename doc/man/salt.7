@@ -2707,7 +2707,7 @@ zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/
 .UNINDENT
 .UNINDENT
 .sp
-This means the the path to the socket the minion is using is too long. This is
+This means that the path to the socket the minion is using is too long. This is
 a system limitation, so the only workaround is to reduce the length of this
 path. This can be done in a couple different ways:
 .INDENT 0.0
@@ -13251,7 +13251,7 @@ required by the developer. When this is the case, some or all of the functions
 in \fBlibcloudfuncs\fP may be replaced. If they are all replaced, the libcloud
 imports should be absent from the Salt Cloud module.
 .sp
-A good example of a non\-libcloud provider is the Digital Ocean module:
+A good example of a non\-libcloud provider is the DigitalOcean module:
 .sp
 \fI\%https://github.com/saltstack/salt/blob/develop/salt/cloud/clouds/digital_ocean.py\fP
 .SS The \fBcreate()\fP Function
@@ -14159,10 +14159,10 @@ my\-openstack\-config:
 .fi
 .UNINDENT
 .UNINDENT
-.SS Digital Ocean
+.SS DigitalOcean
 .sp
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
+Using Salt for DigitalOcean requires a client_key and an api_key. These can be
+found in the DigitalOcean web interface, in the "My Settings" section, under
 the API Access tab.
 .INDENT 0.0
 .IP \(bu 2
@@ -14724,16 +14724,16 @@ script_args: | head
 .fi
 .UNINDENT
 .UNINDENT
-.SS Getting Started With Digital Ocean
+.SS Getting Started With DigitalOcean
 .sp
-Digital Ocean is a public cloud provider that specializes in Linux instances.
+DigitalOcean is a public cloud provider that specializes in Linux instances.
 .SS Dependencies
 .sp
-The Digital Ocean driver requires no special dependencies outside of Salt.
+The DigitalOcean driver requires no special dependencies outside of Salt.
 .SS Configuration
 .sp
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
+Using Salt for DigitalOcean requires a client_key and an api_key. These can be
+found in the DigitalOcean web interface, in the "My Settings" section, under
 the API Access tab.
 .INDENT 0.0
 .INDENT 3.5
@@ -14841,7 +14841,7 @@ my\-digitalocean\-config:
 \fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
-Additional documentation is available from \fI\%Digital Ocean\fP\&.
+Additional documentation is available from \fI\%DigitalOcean\fP\&.
 .UNINDENT
 .UNINDENT
 .SS Feature Matrix
@@ -17283,28 +17283,33 @@ definition.
 .SS wait_for_ip_timeout
 .sp
 The amount of time Salt Cloud should wait for a VM to start and get an IP back
-from the cloud provider. Default: 5 minutes.
+from the cloud provider. 
+Default: varies by cloud provider ( between 5 and 15 minutes)
 .SS wait_for_ip_interval
 .sp
 The amount of time Salt Cloud should sleep while querying for the VM\(aqs IP.
-Default: 5 seconds.
+Default: varies by cloud provider ( between .5 and 10 seconds)
 .SS ssh_connect_timeout
 .sp
 The amount of time Salt Cloud should wait for a successful SSH connection to
-the VM. Default: 5 minutes.
+the VM. 
+Default: varies by cloud provider ( between 5 and 15 minutes)
 .SS wait_for_passwd_timeout
 .sp
 The amount of time until an ssh connection can be established via password or
-ssh key. Default 15 seconds.
+ssh key. 
+Default: varies by cloud provider ( mostly 15 seconds)
 .SS wait_for_fun_timeout
 .sp
 Some cloud drivers check for an available IP or a successful SSH connection
 using a function, namely, SoftLayer and SoftLayer\-HW. So, the amount of time
-Salt Cloud should retry such functions before failing. Default: 5 minutes.
+Salt Cloud should retry such functions before failing. 
+Default: 15 minutes.
 .SS wait_for_spot_timeout
 .sp
 The amount of time Salt Cloud should wait before an EC2 Spot instance is
 available. This setting is only available for the EC2 cloud driver.
+Default: 10 minutes
 .SS Getting Started With OpenStack
 .sp
 OpenStack is one the most popular cloud projects. It\(aqs an open source project
@@ -19442,7 +19447,7 @@ providers.
 .IP \(bu 2
 \fBGetting Started With Azure\fP
 .IP \(bu 2
-\fBGetting Started With Digital Ocean\fP
+\fBGetting Started With DigitalOcean\fP
 .IP \(bu 2
 \fBGetting Started With EC2\fP
 .IP \(bu 2
@@ -19970,8 +19975,8 @@ the lines below, depending on the relevant Python version:
 .sp
 .nf
 .ft C
-pip install \-r dev_requirements_python26.txt
-pip install \-r dev_requirements_python27.txt
+pip install \-r requirements/dev_python26.txt
+pip install \-r requirements/dev_python27.txt
 .ft P
 .fi
 .UNINDENT
@@ -23724,7 +23729,7 @@ log = logging.getLogger(__name__)
 .UNINDENT
 .sp
 Finally, load modules that are specific to what you are doing. You should catch
-import errors and set a flag that the the \fB__virtual__\fP function can use later.
+import errors and set a flag that the \fB__virtual__\fP function can use later.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -37866,7 +37871,7 @@ New in version Hydrogen.
 
 .sp
 This module allows you to install ports using \fBBATCH=yes\fP to bypass
-configuration prompts. It is recommended to use the the \fBports state\fP to install ports, but it it also possible to use
+configuration prompts. It is recommended to use the \fBports state\fP to install ports, but it it also possible to use
 this module exclusively from the command line.
 .INDENT 0.0
 .INDENT 3.5
@@ -50550,7 +50555,7 @@ salt \(aq*\(aq pillar.get pkg:apache
 New in version 0.16.2.
 
 .sp
-Return one ore more pillar entries
+Return one or more pillar entries
 .sp
 CLI Examples:
 .INDENT 7.0
@@ -74257,7 +74262,7 @@ trees can be made to bleed through environments.
 \fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
-Environments in Salt are very flexible, this section defines how the top
+Environments in Salt are very flexible. This section defines how the top
 file can be used to define what states from what environments are to be
 used for specific minions.
 .sp
@@ -88619,7 +88624,7 @@ _
 T{
 \fBdigital_ocean\fP
 T}	T{
-Digital Ocean Cloud Module
+DigitalOcean Cloud Module
 T}
 _
 T{
@@ -88909,9 +88914,9 @@ Return the script deployment object
 Show the details from the provider concerning an instance
 .UNINDENT
 .SS salt.cloud.clouds.digital_ocean
-.SS Digital Ocean Cloud Module
+.SS DigitalOcean Cloud Module
 .sp
-The Digital Ocean cloud module is used to control access to the Digital Ocean
+The DigitalOcean cloud module is used to control access to the DigitalOcean
 VPS system.
 .sp
 Use of this module only requires the \fBapi_key\fP parameter to be set. Set up the
@@ -88923,7 +88928,7 @@ cloud configuration at \fB/etc/salt/cloud.providers\fP or
 .nf
 .ft C
 my\-digital\-ocean\-config:
-  # Digital Ocean account keys
+  # DigitalOcean account keys
   client_key: wFGEwgregeqw3435gDger
   api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
   provider: digital_ocean
@@ -89023,7 +89028,7 @@ Return a list of the VMs that are on the provider, with select fields
 .INDENT 0.0
 .TP
 .B salt.cloud.clouds.digital_ocean.query(method=\(aqdroplets\(aq, droplet_id=None, command=None, args=None)
-Make a web call to Digital Ocean
+Make a web call to DigitalOcean
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -89033,7 +89038,7 @@ Return the script deployment object
 .INDENT 0.0
 .TP
 .B salt.cloud.clouds.digital_ocean.show_instance(name, call=None)
-Show the details from Digital Ocean concerning a droplet
+Show the details from DigitalOcean concerning a droplet
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -93759,7 +93764,7 @@ When we are asked to update (regular interval) lets reap the cache
 #
 # mine_get:
 #   foo.example.com:
-#     \- network.inetrfaces
+#     \- network.interfaces
 #   web.*:
 #     \- network.*
 #     \- disk.*
@@ -93960,7 +93965,7 @@ When we are asked to update (regular interval) lets reap the cache
 #random_reauth_delay: 60
 
 
-# If you don\(aqt have any problems with syn\-floods, dont bother with the
+# If you don\(aqt have any problems with syn\-floods, don\(aqt bother with the
 # three recon_* settings described below, just leave the defaults!
 #
 # The ZeroMQ pull\-socket that binds to the masters publishing interface tries

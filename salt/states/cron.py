@@ -115,12 +115,13 @@ from ``*`` to a randomized numeric value. However, if that field in the cron
 entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
+from salt.ext.six import string_types
 
 # Import salt libs
-import salt._compat
 import salt.utils
 from salt.modules.cron import (
     _needs_change,
@@ -151,13 +152,18 @@ def _check_cron(user,
         month = str(month).lower()
     if dayweek is not None:
         dayweek = str(dayweek).lower()
+    if identifier is not None:
+        identifier = str(identifier)
+    if cmd is not None:
+        cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
     for cron in lst['crons']:
         if _cron_matched(cron, cmd, identifier):
             if any([_needs_change(x, y) for x, y in
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
-                     (cron['dayweek'], dayweek), (cron['comment'], comment))]):
+                     (cron['dayweek'], dayweek), (cron['identifier'], identifier),
+                     (cron['cmd'], cmd), (cron['comment'], comment))]):
                 return 'update'
             return 'present'
     return 'absent'
@@ -296,7 +302,7 @@ def present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Cron {0} updated'.format(name, user)
+        ret['comment'] = 'Cron {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Cron {0} for user {1} failed to commit with error \n{2}'
@@ -419,7 +425,10 @@ def file(name,
 
     cron_path = salt.utils.mkstemp()
     with salt.utils.fopen(cron_path, 'w+') as fp_:
-        fp_.write(__salt__['cron.raw_cron'](user))
+        raw_cron = __salt__['cron.raw_cron'](user)
+        if not raw_cron.endswith('\n'):
+            raw_cron = "{0}\n".format(raw_cron)
+        fp_.write(raw_cron)
 
     ret = {'changes': {},
            'comment': '',
@@ -430,7 +439,7 @@ def file(name,
     # declaration for this state will be a source URI.
     source = name
 
-    if isinstance(env, salt._compat.string_types):
+    if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -576,7 +585,7 @@ def env_present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Cron env {0} updated'.format(name, user)
+        ret['comment'] = 'Cron env {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Cron env {0} for user {1} failed to commit with error \n{2}'

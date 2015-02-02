@@ -1,5 +1,0 @@
-Jinja2
-msgpack-python > 0.1.13
-PyYAML
-MarkupSafe
-requests

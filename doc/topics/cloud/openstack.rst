@@ -6,6 +6,14 @@ OpenStack is one the most popular cloud projects. It's an open source project
 to build public and/or private clouds. You can use Salt Cloud to launch
 OpenStack instances.
 
+
+Dependencies
+============
+* Libcloud >= 0.13.2
+
+
+Configuration
+=============
 * Using the new format, set up the cloud configuration at
   ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/openstack.conf``:
@@ -37,7 +45,6 @@ OpenStack instances.
 
       # skip SSL certificate validation (default false)
       insecure: false
-
 
 
 Using nova client to get information from OpenStack
@@ -91,7 +98,7 @@ Here is an example of a profile:
 The following list explains some of the important properties.
 
 
-size 
+size
     can be one of the options listed in the output of ``nova flavor-list``.
 
 image
@@ -101,20 +108,20 @@ ssh_key_file
     The SSH private key that the salt-cloud uses to SSH into the VM after its
     first booted in order to execute a command or script. This private key's
     *public key* must be the openstack public key inserted into the
-    authorized_key's file of the VM's root user account. 
+    authorized_key's file of the VM's root user account.
 
 ssh_key_name
     The name of the openstack SSH public key that is inserted into the
     authorized_keys file of the VM's root user account. Prior to using this
     public key, you must use openstack commands or the horizon web UI to load
     that key into the tenant's account. Note that this openstack tenant must be
-    the one you defined in the cloud provider. 
+    the one you defined in the cloud provider.
 
 ssh_interface
     This option allows you to create a VM without a public IP. If this option
     is omitted and the VM does not have a public IP, then the salt-cloud waits
-    for a certain period of time and then destroys the VM.    
-  
+    for a certain period of time and then destroys the VM.
+
 For more information concerning cloud profiles, see :doc:`here
 </topics/cloud/profiles>`.
 
@@ -128,3 +135,13 @@ bootstrapped.
 .. code-block:: yaml
 
     change_password: True
+
+
+userdata_file
+~~~~~~~~~~~~~
+Use `userdata_file` to specify the userdata file to upload for use with
+cloud-init if available.
+
+.. code-block:: yaml
+
+    userdata_file: /etc/salt/cloud-init/packages.yml

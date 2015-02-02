@@ -2,6 +2,7 @@
 '''
 Work with incron
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -9,6 +10,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -76,7 +78,7 @@ def write_incron_file(user, path):
 
         salt '*' incron.write_cron_file root /tmp/new_cron
     '''
-    return __salt__['cmd.retcode'](_get_incron_cmdstr(user, path)) == 0
+    return __salt__['cmd.retcode'](_get_incron_cmdstr(user, path), python_shell=False) == 0
 
 
 def write_cron_file_verbose(user, path):
@@ -89,7 +91,7 @@ def write_cron_file_verbose(user, path):
 
         salt '*' incron.write_incron_file_verbose root /tmp/new_cron
     '''
-    return __salt__['cmd.run_all'](_get_incron_cmdstr(user, path))
+    return __salt__['cmd.run_all'](_get_incron_cmdstr(user, path), python_shell=False)
 
 
 def _write_incron_lines(user, lines):
@@ -105,8 +107,8 @@ def _write_incron_lines(user, lines):
         with salt.utils.fopen(path, 'w+') as fp_:
             fp_.writelines(lines)
         if __grains__['os_family'] == 'Solaris' and user != "root":
-            __salt__['cmd.run']('chown {0} {1}'.format(user, path))
-        ret = __salt__['cmd.run_all'](_get_incron_cmdstr(user, path))
+            __salt__['cmd.run']('chown {0} {1}'.format(user, path), python_shell=False)
+        ret = __salt__['cmd.run_all'](_get_incron_cmdstr(user, path), python_shell=False)
         os.remove(path)
         return ret
 
@@ -168,7 +170,7 @@ def raw_incron(user):
         cmd = 'incrontab -l {0}'.format(user)
     else:
         cmd = 'incrontab -l -u {0}'.format(user)
-    return __salt__['cmd.run_stdout'](cmd, rstrip=False)
+    return __salt__['cmd.run_stdout'](cmd, rstrip=False, python_shell=False)
 
 
 def list_tab(user):

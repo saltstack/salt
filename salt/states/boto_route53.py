@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Route53 records
-======================
 
 .. versionadded:: 2014.7.0
 
@@ -32,7 +31,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 
@@ -125,7 +124,7 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
@@ -134,13 +133,13 @@ def present(
     if isinstance(record, dict) and not record:
         if __opts__['test']:
             ret['comment'] = 'Route53 record {0} set to be added.'.format(name)
+            ret['result'] = None
             return ret
         added = __salt__['boto_route53.add_record'](name, value, zone,
                                                     record_type, identifier,
                                                     ttl, region, key, keyid,
                                                     profile)
         if added:
-            ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = {'name': name,
                                      'value': value,
@@ -172,6 +171,7 @@ def present(
             if __opts__['test']:
                 msg = 'Route53 record {0} set to be updated.'.format(name)
                 ret['comment'] = msg
+                ret['result'] = None
                 return ret
             updated = __salt__['boto_route53.update_record'](name, value, zone,
                                                              record_type,
@@ -179,7 +179,6 @@ def present(
                                                              region, key,
                                                              keyid, profile)
             if updated:
-                ret['result'] = True
                 ret['changes']['old'] = record
                 ret['changes']['new'] = {'name': name,
                                          'value': value,
@@ -229,7 +228,7 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
@@ -238,6 +237,7 @@ def absent(
         if __opts__['test']:
             msg = 'Route53 record {0} set to be deleted.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_route53.delete_record'](name, zone,
                                                          record_type,
@@ -245,7 +245,6 @@ def absent(
                                                          region, key, keyid,
                                                          profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = record
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted {0} Route53 record.'.format(name)

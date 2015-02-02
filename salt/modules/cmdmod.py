@@ -5,11 +5,11 @@ A module for shelling out
 Keep in mind that this module is insecure, in that it can give whomever has
 access to the master root execution access to all salt minions.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
 import functools
-import json
 import glob
 import logging
 import os
@@ -17,15 +17,18 @@ import shutil
 import subprocess
 import sys
 import traceback
+import shlex
 from salt.utils import vt
 
 # Import salt libs
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
+import salt.ext.six as six
+from salt.ext.six.moves import range
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -100,7 +103,7 @@ def _render_cmd(cmd, cwd, template, saltenv='base'):
         if not data['result']:
             # Failed to render the template
             raise CommandExecutionError(
-                'Failed to cmd with error: {0}'.format(
+                'Failed to execute cmd with error: {0}'.format(
                     data['data']
                 )
             )
@@ -129,6 +132,9 @@ def _check_loglevel(level='info', quiet=False):
         )
         return LOG_LEVELS['info']
 
+    if salt.utils.is_true(quiet) or str(level).lower() == 'quiet':
+        return None
+
     try:
         level = level.lower()
         if level not in LOG_LEVELS:
@@ -136,9 +142,17 @@ def _check_loglevel(level='info', quiet=False):
     except AttributeError:
         return _bad_level(level)
 
-    if salt.utils.is_true(quiet) or level == 'quiet':
-        return None
     return LOG_LEVELS[level]
+
+
+def _parse_env(env):
+    if not env:
+        env = {}
+    if isinstance(env, list):
+        env = salt.utils.repack_dictlist(env)
+    if not isinstance(env, dict):
+        env = {}
+    return env
 
 
 def _run(cmd,
@@ -147,10 +161,9 @@ def _run(cmd,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
          output_loglevel='debug',
-         quiet=False,
          runas=None,
          shell=DEFAULT_SHELL,
-         python_shell=True,
+         python_shell=False,
          env=None,
          clean_env=False,
          rstrip=True,
@@ -164,15 +177,7 @@ def _run(cmd,
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
-    if salt.utils.is_true(quiet):
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'quiet\' option is deprecated and will be removed in the '
-            '\'Lithium\' Salt release. Please use output_loglevel=quiet '
-            'instead.'
-        )
-
-    if not _is_valid_shell(shell):
+    if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <{0}> is valid for this user.'
@@ -201,6 +206,8 @@ def _run(cmd,
         if not os.path.isfile(shell) or not os.access(shell, os.X_OK):
             msg = 'The shell {0} is not available'.format(shell)
             raise CommandExecutionError(msg)
+    if salt.utils.is_windows() and use_vt:  # Memozation so not much overhead
+        raise CommandExecutionError('VT not available on windows')
 
     if shell.lower().strip() == 'powershell':
         # If we were called by script(), then fakeout the Windows
@@ -221,12 +228,9 @@ def _run(cmd,
 
     ret = {}
 
-    if not env:
-        env = {}
-    if isinstance(env, list):
-        env = salt.utils.repack_dictlist(env)
+    env = _parse_env(env)
 
-    for bad_env_key in (x for x, y in env.iteritems() if y is None):
+    for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
         log.error('Environment variable {0!r} passed without a value. '
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
@@ -247,28 +251,33 @@ def _run(cmd,
         try:
             # Getting the environment for the runas user
             # There must be a better way to do this.
-            py_code = 'import os, json;' \
-                      'print(json.dumps(os.environ.__dict__))'
+            py_code = (
+                'import os, itertools; '
+                'print \"\\0\".join(itertools.chain(*os.environ.items()))'
+            )
             if __grains__['os'] in ['MacOS', 'Darwin']:
-                env_cmd = ('sudo -i -u {1} -- "{2}"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('sudo', '-i', '-u', runas, '--',
+                           sys.executable)
             elif __grains__['os'] in ['FreeBSD']:
-                env_cmd = ('su - {1} -c "{0} -c \'{2}\'"'
-                           ).format(shell, runas, sys.executable)
+                env_cmd = ('su', '-', runas, '-c',
+                           "{0} -c {1}".format(shell, sys.executable))
             else:
-                env_cmd = ('su -s {0} - {1} -c "{2}"'
-                           ).format(shell, runas, sys.executable)
-            env_json = subprocess.Popen(
+                env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)
+            env_encoded = subprocess.Popen(
                 env_cmd,
-                shell=python_shell,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
             ).communicate(py_code)[0]
-            env_json = (filter(lambda x: x.startswith('{') and x.endswith('}'),
-                               env_json.splitlines()) or ['{}']).pop()
-            env_runas = json.loads(env_json).get('data', {})
+            import itertools
+            env_runas = dict(itertools.izip(*[iter(env_encoded.split(b'\0'))]*2))
             env_runas.update(env)
             env = env_runas
+            # Encode unicode kwargs to filesystem encoding to avoid a
+            # UnicodeEncodeError when the subprocess is invoked.
+            fse = sys.getfilesystemencoding()
+            for key, val in six.iteritems(env):
+                if isinstance(val, six.text_type):
+                    env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
                 'Environment could not be retrieved for User {0!r}'.format(
@@ -276,7 +285,7 @@ def _run(cmd,
                 )
             )
 
-    if _check_loglevel(output_loglevel, quiet) is not None:
+    if _check_loglevel(output_loglevel) is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
@@ -294,7 +303,8 @@ def _run(cmd,
             env.setdefault('LC_ALL', 'C')
         else:
             # On Windows set the codepage to US English.
-            cmd = 'chcp 437 > nul & ' + cmd
+            if python_shell:
+                cmd = 'chcp 437 > nul & ' + cmd
 
     if clean_env:
         run_env = env
@@ -302,6 +312,9 @@ def _run(cmd,
     else:
         run_env = os.environ.copy()
         run_env.update(env)
+
+    if python_shell is None:
+        python_shell = False
 
     kwargs = {'cwd': cwd,
               'shell': python_shell,
@@ -311,11 +324,15 @@ def _run(cmd,
               'stderr': stderr,
               'with_communicate': with_communicate}
 
-    if umask:
+    if umask is not None:
+        _umask = str(umask).lstrip('0')
+
+        if _umask == '':
+            msg = 'Zero umask is not allowed.'
+            raise CommandExecutionError(msg)
+
         try:
-            _umask = int(str(umask).lstrip('0'), 8)
-            if not _umask:
-                raise ValueError('Zero umask not allowed.')
+            _umask = int(_umask, 8)
         except ValueError:
             msg = 'Invalid umask: \'{0}\''.format(umask)
             raise CommandExecutionError(msg)
@@ -341,6 +358,8 @@ def _run(cmd,
             .format(cwd)
         )
 
+    if python_shell is not True and not isinstance(cmd, list):
+        cmd = shlex.split(cmd)
     if not use_vt:
         # This is where the magic happens
         try:
@@ -377,7 +396,8 @@ def _run(cmd,
         to = ''
         if timeout:
             to = ' (timeout: {0}s)'.format(timeout)
-        log.debug('Running {0} in VT{1}'.format(cmd, to))
+        if _check_loglevel(output_loglevel) is not None:
+            log.debug('Running {0} in VT{1}'.format(cmd, to))
         stdout, stderr = '', ''
         now = time.time()
         if timeout:
@@ -390,18 +410,15 @@ def _run(cmd,
                                log_stdout=True,
                                log_stderr=True,
                                cwd=cwd,
-                               user=runas,
-                               umask=umask,
-                               env=env,
+                               preexec_fn=kwargs.get('preexec_fn', None),
+                               env=run_env,
                                log_stdin_level=output_loglevel,
                                log_stdout_level=output_loglevel,
                                log_stderr_level=output_loglevel,
                                stream_stdout=True,
                                stream_stderr=True)
-            # consume output
-            finished = False
             ret['pid'] = proc.pid
-            while not finished:
+            while proc.has_unread_data:
                 try:
                     try:
                         time.sleep(0.5)
@@ -417,8 +434,6 @@ def _run(cmd,
                             stderr += cstderr
                         else:
                             cstderr = ''
-                        if not cstdout and not cstderr and not proc.isalive():
-                            finished = True
                         if timeout and (time.time() > will_timeout):
                             ret['stderr'] = (
                                 'SALT: Timeout after {0}s\n{1}').format(
@@ -432,13 +447,15 @@ def _run(cmd,
                 except vt.TerminalException as exc:
                     log.error(
                         'VT: {0}'.format(exc),
-                        exc_info=log.isEnabledFor(logging.DEBUG))
+                        exc_info_on_loglevel=logging.DEBUG)
                     ret = {'retcode': 1, 'pid': '2'}
                     break
-                # only set stdout on sucess as we already mangled in other
+                # only set stdout on success as we already mangled in other
                 # cases
                 ret['stdout'] = stdout
-                if finished:
+                if not proc.isalive():
+                    # Process terminated, i.e., not canceled by the user or by
+                    # the timeout
                     ret['stderr'] = stderr
                     ret['retcode'] = proc.exitstatus
                 ret['pid'] = proc.pid
@@ -457,7 +474,7 @@ def _run_quiet(cmd,
                stdin=None,
                runas=None,
                shell=DEFAULT_SHELL,
-               python_shell=True,
+               python_shell=False,
                env=None,
                template=None,
                umask=None,
@@ -488,7 +505,7 @@ def _run_all_quiet(cmd,
                    stdin=None,
                    runas=None,
                    shell=DEFAULT_SHELL,
-                   python_shell=True,
+                   python_shell=False,
                    env=None,
                    template=None,
                    umask=None,
@@ -519,7 +536,134 @@ def run(cmd,
         stdin=None,
         runas=None,
         shell=DEFAULT_SHELL,
-        python_shell=True,
+        python_shell=None,
+        env=None,
+        clean_env=False,
+        template=None,
+        rstrip=True,
+        umask=None,
+        output_loglevel='debug',
+        timeout=None,
+        reset_system_locale=True,
+        ignore_retcode=False,
+        saltenv='base',
+        use_vt=False,
+        **kwargs):
+    '''
+    Execute the passed command and return the output as a string
+
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    *************************************************************************
+    WARNING: This function does not process commands through a shell
+    unless the python_shell flag is set to True. This means that any
+    shell-specific functionality such as 'echo' or the use of pipes,
+    redirection or &&, should either be migrated to cmd.shell or
+    have the python_shell=True flag set here.
+
+    The use of python_shell=True means that the shell will accept _any_ input
+    including potentially malicious commands such as 'good_command;rm -rf /'.
+    Be absolutely certain that you have sanitized your input prior to using
+    python_shell=True
+    *************************************************************************
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+
+    Specify an alternate shell with the shell parameter:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
+
+    A string of standard input can be specified for the command to be run using
+    the ``stdin`` parameter. This can be useful in cases where sensitive
+    information must be read from standard input.:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
+
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run cmd='sed -e s/=/:/g'
+    '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
+    ret = _run(cmd,
+               runas=runas,
+               shell=shell,
+               python_shell=python_shell,
+               cwd=cwd,
+               stdin=stdin,
+               stderr=subprocess.STDOUT,
+               env=env,
+               clean_env=clean_env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_loglevel=output_loglevel,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               saltenv=saltenv,
+               use_vt=use_vt)
+
+    if 'pid' in ret and '__pub_jid' in kwargs:
+        # Stuff the child pid in the JID file
+        proc_dir = os.path.join(__opts__['cachedir'], 'proc')
+        jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
+        if os.path.isfile(jid_file):
+            serial = salt.payload.Serial(__opts__)
+            with salt.utils.fopen(jid_file, 'rb') as fn_:
+                jid_dict = serial.load(fn_)
+
+            if 'child_pids' in jid_dict:
+                jid_dict['child_pids'].append(ret['pid'])
+            else:
+                jid_dict['child_pids'] = [ret['pid']]
+            # Rewrite file
+            with salt.utils.fopen(jid_file, 'w+b') as fn_:
+                fn_.write(serial.dumps(jid_dict))
+
+    lvl = _check_loglevel(output_loglevel)
+    if lvl is not None:
+        if not ignore_retcode and ret['retcode'] != 0:
+            if lvl < LOG_LEVELS['error']:
+                lvl = LOG_LEVELS['error']
+            log.error(
+                'Command {0!r} failed with return code: {1}'
+                .format(cmd, ret['retcode'])
+            )
+        log.log(lvl, 'output: {0}'.format(ret['stdout']))
+    return ret['stdout']
+
+
+def shell(cmd,
+        cwd=None,
+        stdin=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
         env=None,
         clean_env=False,
         template=None,
@@ -534,7 +678,14 @@ def run(cmd,
         use_vt=False,
         **kwargs):
     '''
-    Execute the passed command and return the output as a string
+    Execute the passed command and return the output as a string.
+
+    ************************************************************
+    WARNING: This passes the cmd argument directly to the shell
+    without any further processing! Be absolutely sure that you
+    have properly santized the command passed to this function
+    and do not use untrusted inputs.
+    ************************************************************
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
@@ -576,53 +727,25 @@ def run(cmd,
 
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
-    ret = _run(cmd,
-               runas=runas,
-               shell=shell,
-               python_shell=python_shell,
-               cwd=cwd,
-               stdin=stdin,
-               stderr=subprocess.STDOUT,
-               env=env,
-               clean_env=clean_env,
-               template=template,
-               rstrip=rstrip,
-               umask=umask,
-               output_loglevel=output_loglevel,
-               quiet=quiet,
-               timeout=timeout,
-               reset_system_locale=reset_system_locale,
-               saltenv=saltenv,
-               use_vt=use_vt)
-
-    if 'pid' in ret and '__pub_jid' in kwargs:
-        # Stuff the child pid in the JID file
-        proc_dir = os.path.join(__opts__['cachedir'], 'proc')
-        jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
-        if os.path.isfile(jid_file):
-            serial = salt.payload.Serial(__opts__)
-            with salt.utils.fopen(jid_file, 'rb') as fn_:
-                jid_dict = serial.load(fn_)
-
-            if 'child_pids' in jid_dict:
-                jid_dict['child_pids'].append(ret['pid'])
-            else:
-                jid_dict['child_pids'] = [ret['pid']]
-            # Rewrite file
-            with salt.utils.fopen(jid_file, 'w+b') as fn_:
-                fn_.write(serial.dumps(jid_dict))
-
-    lvl = _check_loglevel(output_loglevel, quiet)
-    if lvl is not None:
-        if not ignore_retcode and ret['retcode'] != 0:
-            if lvl < LOG_LEVELS['error']:
-                lvl = LOG_LEVELS['error']
-            log.error(
-                'Command {0!r} failed with return code: {1}'
-                .format(cmd, ret['retcode'])
-            )
-        log.log(lvl, 'output: {0}'.format(ret['stdout']))
-    return ret['stdout']
+    run(cmd,
+        cwd=cwd,
+        stdin=stdin,
+        runas=runas,
+        shell=shell,
+        env=env,
+        clean_env=clean_env,
+        template=template,
+        rstrip=rstrip,
+        umask=umask,
+        output_loglevel=output_loglevel,
+        quiet=quiet,
+        timeout=timeout,
+        reset_system_locale=reset_system_locale,
+        ignore_retcode=ignore_retcode,
+        saltenv=saltenv,
+        use_vt=use_vt,
+        python_shell=True,
+        **kwargs)
 
 
 def run_stdout(cmd,
@@ -630,14 +753,13 @@ def run_stdout(cmd,
                stdin=None,
                runas=None,
                shell=DEFAULT_SHELL,
-               python_shell=True,
+               python_shell=None,
                env=None,
                clean_env=False,
                template=None,
                rstrip=True,
                umask=None,
                output_loglevel='debug',
-               quiet=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -672,6 +794,12 @@ def run_stdout(cmd,
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -684,13 +812,12 @@ def run_stdout(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv,
                use_vt=use_vt)
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -713,14 +840,13 @@ def run_stderr(cmd,
                stdin=None,
                runas=None,
                shell=DEFAULT_SHELL,
-               python_shell=True,
+               python_shell=None,
                env=None,
                clean_env=False,
                template=None,
                rstrip=True,
                umask=None,
                output_loglevel='debug',
-               quiet=False,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -755,6 +881,12 @@ def run_stderr(cmd,
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -767,13 +899,12 @@ def run_stderr(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                use_vt=use_vt,
                saltenv=saltenv)
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -796,14 +927,13 @@ def run_all(cmd,
             stdin=None,
             runas=None,
             shell=DEFAULT_SHELL,
-            python_shell=True,
+            python_shell=None,
             env=None,
             clean_env=False,
             template=None,
             rstrip=True,
             umask=None,
             output_loglevel='debug',
-            quiet=False,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
@@ -838,6 +968,12 @@ def run_all(cmd,
 
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -850,13 +986,12 @@ def run_all(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv,
                use_vt=use_vt)
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -879,13 +1014,12 @@ def retcode(cmd,
             stdin=None,
             runas=None,
             shell=DEFAULT_SHELL,
-            python_shell=True,
+            python_shell=None,
             env=None,
             clean_env=False,
             template=None,
             umask=None,
             output_loglevel='debug',
-            quiet=False,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
@@ -897,6 +1031,10 @@ def retcode(cmd,
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    :rtype: int
+    :rtype: None
+    :returns: Return Code as an int or None if there was an exception.
 
     CLI Example:
 
@@ -932,13 +1070,12 @@ def retcode(cmd,
               template=template,
               umask=umask,
               output_loglevel=output_loglevel,
-              quiet=quiet,
               timeout=timeout,
               reset_system_locale=reset_system_locale,
               saltenv=saltenv,
               use_vt=use_vt)
 
-    lvl = _check_loglevel(output_loglevel, quiet)
+    lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
@@ -956,13 +1093,12 @@ def _retcode_quiet(cmd,
                    stdin=None,
                    runas=None,
                    shell=DEFAULT_SHELL,
-                   python_shell=True,
+                   python_shell=False,
                    env=None,
                    clean_env=False,
                    template=None,
                    umask=None,
                    output_loglevel='quiet',
-                   quiet=True,
                    timeout=None,
                    reset_system_locale=True,
                    ignore_retcode=False,
@@ -998,9 +1134,9 @@ def script(source,
            stdin=None,
            runas=None,
            shell=DEFAULT_SHELL,
-           python_shell=True,
+           python_shell=None,
            env=None,
-           template='jinja',
+           template=None,
            umask=None,
            output_loglevel='debug',
            quiet=False,
@@ -1037,6 +1173,13 @@ def script(source,
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
+
     def _cleanup_tempfile(path):
         try:
             os.remove(path)
@@ -1085,7 +1228,6 @@ def script(source,
                cwd=cwd,
                stdin=stdin,
                output_loglevel=output_loglevel,
-               quiet=quiet,
                runas=runas,
                shell=shell,
                python_shell=python_shell,
@@ -1104,7 +1246,7 @@ def script_retcode(source,
                    stdin=None,
                    runas=None,
                    shell=DEFAULT_SHELL,
-                   python_shell=True,
+                   python_shell=None,
                    env=None,
                    template='jinja',
                    umask=None,
@@ -1141,6 +1283,12 @@ def script_retcode(source,
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
+    try:
+        if __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            python_shell = True
+    except NameError:
+        pass
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
             'Boron',
@@ -1221,11 +1369,39 @@ def exec_code(lang, code, cwd=None):
     codefile = salt.utils.mkstemp()
     with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
-
-    cmd = '{0} {1}'.format(lang, codefile)
-    ret = run(cmd, cwd=cwd)
+    cmd = [lang, codefile]
+    ret = run(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
     return ret
+
+
+def tty(device, echo=None):
+    '''
+    Echo a string to a specific tty
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.tty tty0 'This is a test'
+        salt '*' cmd.tty pts3 'This is a test'
+    '''
+    if device.startswith('tty'):
+        teletype = '/dev/{0}'.format(device)
+    elif device.startswith('pts'):
+        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
+    else:
+        return {'Error': 'The specified device is not a valid TTY'}
+    try:
+        with salt.utils.fopen(teletype, 'wb') as tty_device:
+            tty_device.write(echo)
+        return {
+            'Success': 'Message was successfully echoed to {0}'.format(teletype)
+        }
+    except IOError:
+        return {
+            'Error': 'Echoing to {0} returned error'.format(teletype)
+        }
 
 
 def run_chroot(root, cmd):

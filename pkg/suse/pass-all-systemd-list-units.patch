@@ -1,0 +1,28 @@
+From 968b26f45351d790a9fa2afd9bbd6c5bb31f13d5 Mon Sep 17 00:00:00 2001
+From: Tim Serong <tserong@suse.com>
+Date: Mon, 7 Jul 2014 21:14:26 +1000
+Subject: [PATCH] Pass --all when invoking `systemctl list-units`
+
+`systemctl list-units` without --all won't list services that aren't
+actually running.  See https://github.com/saltstack/salt/issues/13788
+for some further discussion.
+---
+ salt/modules/systemd.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/salt/modules/systemd.py b/salt/modules/systemd.py
+index ca93986..036adb4 100644
+--- a/salt/modules/systemd.py
++++ b/salt/modules/systemd.py
+@@ -82,7 +82,7 @@ def _get_all_units():
+                       r')\s+loaded\s+(?P<active>[^\s]+)')
+ 
+     out = __salt__['cmd.run_stdout'](
+-        'systemctl --full --no-legend --no-pager list-units | col -b'
++        'systemctl --all --full --no-legend --no-pager list-units | col -b'
+     )
+ 
+     ret = {}
+-- 
+1.9.3
+

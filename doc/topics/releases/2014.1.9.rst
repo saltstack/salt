@@ -1,0 +1,30 @@
+===========================
+Salt 2014.1.9 Release Notes
+===========================
+
+:release: 2014-07-31
+
+.. note::
+
+    This release contained a regression which caused inaccurate Salt version
+    detection, and thus was never packaged for general release.  Please use
+    version 2014.1.10 instead.
+
+.. note::
+
+    Version 2014.1.8 contained a regression which caused inaccurate Salt version
+    detection, and thus was never packaged for general release.  This version
+    contains the version detection fix, but is otherwise identical to 2014.1.8.
+
+Version 2014.1.9 is another bugfix release for :doc:`2014.1.0
+</topics/releases/2014.1.0>`.  Changes include:
+
+- Ensure salt-ssh will not continue if permissions on a temporary directory are
+  not correct.
+- Use the bootstrap script distributed with Salt instead of relying on an
+  external resource
+- Remove unused testing code
+- Ensure salt states are placed into the ``.salt`` directory in salt-ssh
+- Use a randomized path for temporary files in a salt-cloud deployment
+- Clean any stale directories to ensure a fresh copy of salt-ssh during a
+  deployment

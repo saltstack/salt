@@ -2,6 +2,7 @@
 '''
 Create virtualenv environments
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
@@ -13,7 +14,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.exceptions
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 KNOWN_BINARY_NAMES = frozenset(
     ['virtualenv',
@@ -52,7 +53,7 @@ def create(path,
            symlinks=None,
            upgrade=None,
            user=None,
-           runas=None,
+           use_vt=False,
            saltenv='base'):
     '''
     Create a virtualenv
@@ -87,6 +88,8 @@ def create(path,
         Set ownership for the virtualenv
     runas : None
         Set ownership for the virtualenv
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
 
     .. note::
         The ``runas`` argument is deprecated as of 2014.1.0. ``user`` should be
@@ -102,25 +105,6 @@ def create(path,
         venv_bin = __opts__.get('venv_bin') or __pillar__.get('venv_bin')
     # raise CommandNotFoundError if venv_bin is missing
     salt.utils.check_or_die(venv_bin)
-
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise salt.exceptions.CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
 
     cmd = [venv_bin]
 
@@ -151,7 +135,9 @@ def create(path,
         except ImportError:
             # Unable to import?? Let's parse the version from the console
             version_cmd = '{0} --version'.format(venv_bin)
-            ret = __salt__['cmd.run_all'](version_cmd, runas=user)
+            ret = __salt__['cmd.run_all'](
+                    version_cmd, runas=user, python_shell=False
+                )
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise salt.exceptions.CommandExecutionError(
                     'Unable to get the virtualenv version output using {0!r}. '
@@ -174,10 +160,9 @@ def create(path,
                 cmd.append('--distribute')
 
         if python is not None and python.strip() != '':
-            if not os.access(python, os.X_OK):
+            if not salt.utils.which(python):
                 raise salt.exceptions.CommandExecutionError(
-                    'Requested python ({0}) does not appear '
-                    'executable.'.format(python)
+                    'Cannot find requested python ({0}).'.format(python)
                 )
             cmd.append('--python={0}'.format(python))
         if extra_search_dir is not None:
@@ -243,7 +228,7 @@ def create(path,
     cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=user)
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
     if ret['retcode'] > 0:
         # Something went wrong. Let's bail out now!
         return ret
@@ -262,7 +247,7 @@ def create(path,
     if (pip or distribute) and not os.path.exists(venv_setuptools):
         _install_script(
             'https://bitbucket.org/pypa/setuptools/raw/default/ez_setup.py',
-            path, venv_python, user, saltenv=saltenv
+            path, venv_python, user, saltenv=saltenv, use_vt=use_vt
         )
 
         # clear up the distribute archive which gets downloaded
@@ -277,7 +262,7 @@ def create(path,
     if pip and not os.path.exists(venv_pip):
         _ret = _install_script(
             'https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py',
-            path, venv_python, user, saltenv=saltenv
+            path, venv_python, user, saltenv=saltenv, use_vt=use_vt
         )
         # Let's update the return dictionary with the details from the pip
         # installation
@@ -310,7 +295,7 @@ def get_site_packages(venv):
             'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
 
-def _install_script(source, cwd, python, user, saltenv='base'):
+def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
     if not salt.utils.is_windows():
         tmppath = salt.utils.mkstemp(dir=cwd)
     else:
@@ -319,14 +304,60 @@ def _install_script(source, cwd, python, user, saltenv='base'):
     if not salt.utils.is_windows():
         fn_ = __salt__['cp.cache_file'](source, saltenv)
         shutil.copyfile(fn_, tmppath)
-        os.chmod(tmppath, 320)
+        os.chmod(tmppath, 0o500)
         os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
     try:
         return __salt__['cmd.run_all'](
             '{0} {1}'.format(python, tmppath),
             runas=user,
             cwd=cwd,
-            env={'VIRTUAL_ENV': cwd}
+            env={'VIRTUAL_ENV': cwd},
+            use_vt=use_vt,
+            python_shell=False,
         )
     finally:
         os.remove(tmppath)
+
+
+def get_resource_path(venv, package_or_requirement, resource_name):
+    '''
+    Returns the path to a resource of a package or a distribution inside a virtualenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualenv.get_resource_path /path/to/my/venv my_package my/resource.xml
+    '''
+    if not salt.utils.verify.safe_py_code(package_or_requirement):
+        raise salt.exceptions.CommandExecutionError
+    if not salt.utils.verify.safe_py_code(resource_name):
+        raise salt.exceptions.CommandExecutionError
+    bin_path = os.path.join(venv, 'bin/python')
+
+    if not os.path.exists(bin_path):
+        raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
+
+    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
+
+
+def get_resource_content(venv, package_or_requirement, resource_name):
+    '''
+    Returns the content of a resource of a package or a distribution inside a virtualenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualenv.get_resource_content /path/to/my/venv my_package my/resource.xml
+    '''
+    if not salt.utils.verify.safe_py_code(package_or_requirement):
+        raise salt.exceptions.CommandExecutionError
+    if not salt.utils.verify.safe_py_code(resource_name):
+        raise salt.exceptions.CommandExecutionError
+    bin_path = os.path.join(venv, 'bin/python')
+
+    if not os.path.exists(bin_path):
+        raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
+
+    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))

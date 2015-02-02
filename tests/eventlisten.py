@@ -8,7 +8,7 @@ This script is a generic tool to test event output
 '''
 
 # Import Python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import optparse
 import pprint
 import time
@@ -16,6 +16,9 @@ import os
 
 # Import Salt libs
 import salt.utils.event
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def parse():
@@ -28,7 +31,7 @@ def parse():
             '--sock-dir',
             dest='sock_dir',
             default='/var/run/salt',
-            help=('Staticly define the directory holding the salt unix '
+            help=('Statically define the directory holding the salt unix '
                   'sockets for communication'))
     parser.add_option('-n',
             '--node',
@@ -40,14 +43,14 @@ def parse():
     parser.add_option('-f',
             '--func_count',
             default='',
-            help=('Retun a count of the number of minons which have '
+            help=('Return a count of the number of minions which have '
                  'replied to a job with a given func.'))
 
     options, args = parser.parse_args()
 
     opts = {}
 
-    for k, v in options.__dict__.items():
+    for k, v in six.iteritems(options.__dict__):
         if v is not None:
             opts[k] = v
 
@@ -63,6 +66,20 @@ def parse():
     return opts
 
 
+def check_access_and_print_warning(sock_dir):
+    '''
+    Check if this user is able to access the socket
+    directory and print a warning if not
+    '''
+    if (os.access(sock_dir, os.R_OK) and
+            os.access(sock_dir, os.W_OK) and
+            os.access(sock_dir, os.X_OK)):
+        return
+    else:
+        print('WARNING: Events will not be reported'
+              ' (not able to access {0})'.format(sock_dir))
+
+
 #def listen(sock_dir, node):
 def listen(opts):
     '''
@@ -72,6 +89,7 @@ def listen(opts):
             opts['node'],
             opts['sock_dir']
             )
+    check_access_and_print_warning(opts['sock_dir'])
     print(event.puburi)
     jid_counter = 0
     found_minions = []
@@ -82,7 +100,7 @@ def listen(opts):
         if opts['func_count']:
             data = ret.get('data', False)
             if data:
-                if 'id' in data.keys() and data.get('id', False) not in found_minions:
+                if 'id' in six.iterkeys(data) and data.get('id', False) not in found_minions:
                     if data['fun'] == opts['func_count']:
                         jid_counter += 1
                         found_minions.append(data['id'])

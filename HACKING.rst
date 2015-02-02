@@ -11,11 +11,6 @@ Setting a Github pull request
 
 This is the preferred method for contributions, simply create a Github
 fork, commit your changes to the fork, and then open up a pull request.
-If you want to make our life really easier, please also enable Travis-CI on
-your fork. Salt is already configured, all you need to do is follow the first
-two(2) steps on their `Getting Started Doc`_.
-
-.. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
 
 Posting patches to the mailing list
 -----------------------------------
@@ -168,12 +163,9 @@ ZeroMQ Transport:
 
 .. code-block:: bash
 
-    pip install -r zeromq-requirements.txt
+    pip install -r requirements/zeromq.txt
     pip install psutil
     pip install -e .
-
-
-.. note:: Installing M2Crypto
 
 .. note:: Installing M2Crypto
 
@@ -188,7 +180,7 @@ RAET Transport:
 
 .. code-block:: bash
 
-    pip install -r raet-requirements.txt
+    pip install -r requirements/raet.txt
     pip install psutil
     pip install -e .
 
@@ -260,7 +252,7 @@ Once the minion starts, you may see an error like the following::
 
     zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
-This means the the path to the socket the minion is using is too long. This is
+This means that the path to the socket the minion is using is too long. This is
 a system limitation, so the only workaround is to reduce the length of this
 path. This can be done in a couple different ways:
 
@@ -287,9 +279,9 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-For running tests, you'll also need to install ``dev_requirements_python2x.txt``::
+For running tests, you'll also need to install ``requirements/dev_python2x.txt``::
 
-    pip install -r dev_requirements_python2x.txt
+    pip install -r requirements/dev_python2x.txt
 
 Finally you use setup.py to run the tests with the following command::
 

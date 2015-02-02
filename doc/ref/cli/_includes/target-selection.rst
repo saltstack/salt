@@ -40,4 +40,3 @@ Target Selection
     Using the Range option requires that a range server is set up and the
     location of the range server is referenced in the master configuration
     file.
-

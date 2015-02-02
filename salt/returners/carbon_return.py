@@ -25,20 +25,41 @@ Carbon settings may also be configured as::
         skip_on_error: True
         mode: (pickle|text)
 
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location::
+
+    alternative.carbon:
+        host: <server IP or hostname>
+        port: <carbon port>
+        skip_on_error: True
+        mode: (pickle|text)
+
   To use the carbon returner, append '--return carbon' to the salt command. ex:
 
     salt '*' test.ping --return carbon
+
+  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+
+    salt '*' test.ping --return carbon --return_config alternative
 '''
 
-
 # Import python libs
-from contextlib import contextmanager
+from __future__ import absolute_import
 import collections
 import logging
-import cPickle as pickle
 import socket
 import struct
 import time
+from contextlib import contextmanager
+
+# Import salt libs
+import salt.utils.jid
+import salt.returners
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import cPickle, map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +69,23 @@ __virtualname__ = 'carbon'
 
 def __virtual__():
     return __virtualname__
+
+
+def _get_options(ret):
+    '''
+    Returns options used for the carbon returner.
+    '''
+    attrs = {'host': 'host',
+             'port': 'port',
+             'skip': 'skip_on_error',
+             'mode': 'mode'}
+
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    return _options
 
 
 @contextmanager
@@ -67,8 +105,8 @@ def _carbon(host, port):
                                     socket.IPPROTO_TCP)
 
         carbon_sock.connect((host, port))
-    except socket.error as e:
-        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, e))
+    except socket.error as err:
+        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, err))
         raise
     else:
         log.debug('Connected to carbon')
@@ -90,7 +128,7 @@ def _send_picklemetrics(metrics):
     metrics = [(metric_name, (timestamp, value))
                for (metric_name, value, timestamp) in metrics]
 
-    data = pickle.dumps(metrics, -1)
+    data = cPickle.dumps(metrics, -1)
     payload = struct.pack('!L', len(data)) + data
 
     return payload
@@ -126,7 +164,7 @@ def _walk(path, value, metrics, timestamp, skip):
     '''
 
     if isinstance(value, collections.Mapping):
-        for key, val in value.items():
+        for key, val in six.iteritems(value):
             _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
     else:
         try:
@@ -151,14 +189,13 @@ def returner(ret):
         [module].[function].[minion_id].[metric path [...]].[metric name]
 
     '''
+    _options = _get_options(ret)
 
-    cfg = __salt__['config.option']
-    c_cfg = cfg('carbon', {})
-
-    host = c_cfg.get('host', cfg('carbon.host', None))
-    port = c_cfg.get('port', cfg('carbon.port', None))
-    skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
-    mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
+    host = _options.get('host')
+    port = _options.get('port')
+    skip = _options.get('skip')
+    if 'mode' in _options:
+        mode = _options.get('mode').lower()
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))
@@ -196,3 +233,10 @@ def returner(ret):
 
             log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

@@ -19,7 +19,7 @@ Output Options
     .. note::
         If using ``--out=json``, you will probably want ``--static`` as well.
         Without the static option, you will get a JSON string for each minion.
-        This is due to using an iterative outputter. So if you want to feed it 
+        This is due to using an iterative outputter. So if you want to feed it
         to a JSON parser, use ``--static`` as well.
 
 .. option:: --out-indent OUTPUT_INDENT, --output-indent OUTPUT_INDENT
@@ -45,4 +45,3 @@ Output Options
 
         ``green`` denotes success, ``red`` denotes failure, ``blue`` denotes
         changes and success and ``yellow`` denotes a expected future change in configuration.
-

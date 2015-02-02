@@ -4,6 +4,7 @@ Module for managing block devices
 
 .. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -57,7 +58,7 @@ def tune(device, **kwargs):
             else:
                 opts += '--{0} {1} '.format(switch, kwargs[key])
     cmd = 'blockdev {0}{1}'.format(opts, device)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return dump(device, args)
 
 
@@ -74,7 +75,7 @@ def wipe(device):
 
     cmd = 'wipefs {0}'.format(device)
     try:
-        out = __salt__['cmd.run_all'](cmd)
+        out = __salt__['cmd.run_all'](cmd, python_shell=False)
     except subprocess.CalledProcessError as err:
         return False
     if out['retcode'] == 0:
@@ -93,7 +94,7 @@ def dump(device, args=None):
     cmd = 'blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff  --getmaxsect --getsize --getsize64 --getra --getfra {0}'.format(device)
     ret = {}
     opts = [c[2:] for c in cmd.split() if c.startswith('--')]
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] == 0:
         lines = [line for line in out['stdout'].splitlines() if line]
         count = 0
@@ -109,3 +110,22 @@ def dump(device, args=None):
             return ret
     else:
         return False
+
+
+def resize2fs(device):
+    '''
+    Resizes the filesystem.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' blockdev.resize2fs /dev/sda1
+    '''
+    ret = {}
+    cmd = 'resize2fs {0}'.format(device)
+    try:
+        out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    except subprocess.CalledProcessError as err:
+        return False
+    if out['retcode'] == 0:
+        return True

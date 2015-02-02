@@ -7,6 +7,7 @@ Support for htpasswd command
 The functions here will load inside the webutil module. This allows other
 functions that don't use htpasswd to use the webutil module name.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -72,7 +73,7 @@ def useradd(pwfile, user, password, opts=''):
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpassword
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpass opts=ns
     '''
-    return useradd_all(pwfile, user, password, opts=opts)['out'].splitlines()
+    return useradd_all(pwfile, user, password, opts=opts)
 
 
 def userdel(pwfile, user):

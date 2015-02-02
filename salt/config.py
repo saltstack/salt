@@ -3,18 +3,19 @@
 All salt configuration loading and defaults should be in this module
 '''
 
+from __future__ import absolute_import, generators
+
 # Import python libs
-from __future__ import generators
-import glob
 import os
 import re
-import logging
-import urlparse
-from copy import deepcopy
+import sys
+import glob
 import time
 import codecs
+import logging
+from copy import deepcopy
 
-# import third party libs
+# Import third party libs
 import yaml
 try:
     yaml.Loader = yaml.CLoader
@@ -22,21 +23,19 @@ try:
 except Exception:
     pass
 
+# pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six
+from salt.ext.six import string_types, text_type
+from salt.ext.six.moves.urllib.parse import urlparse
+# pylint: enable=import-error,no-name-in-module
+
 # Import salt libs
-import salt.crypt
-import salt.loader
 import salt.utils
 import salt.utils.network
-import salt.pillar
 import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
-from salt._compat import string_types
-
-import sys
-# can't use salt.utils.is_windows, because config.py is included from salt.utils
-if not sys.platform.lower().startswith('win'):
-    import salt.cloud.exceptions
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
 FLO_DIR = os.path.join(
@@ -83,10 +82,10 @@ VALID_OPTS = {
     'sls_list': list,
     'top_file': str,
     'file_client': str,
+    'use_master_when_local': bool,
     'file_roots': dict,
     'pillar_roots': dict,
     'hash_type': str,
-    'external_nodes': str,
     'disable_modules': list,
     'disable_returners': list,
     'whitelist_modules': list,
@@ -128,7 +127,6 @@ VALID_OPTS = {
     'acceptance_wait_time_max': float,
     'rejected_retry': bool,
     'loop_interval': float,
-    'dns_check': bool,
     'verify_env': bool,
     'grains': dict,
     'permissive_pki_access': bool,
@@ -139,6 +137,10 @@ VALID_OPTS = {
     'recon_max': float,
     'recon_default': float,
     'recon_randomize': float,
+    'event_return': str,
+    'event_return_queue': int,
+    'event_return_whitelist': list,
+    'event_return_blacklist': list,
     'win_repo_cachefile': str,
     'pidfile': str,
     'range_server': str,
@@ -149,6 +151,8 @@ VALID_OPTS = {
     'interface': str,
     'publish_port': int,
     'auth_mode': int,
+    'pub_hwm': int,
+    'rep_hwm': int,
     'worker_threads': int,
     'ret_port': int,
     'keep_jobs': int,
@@ -157,6 +161,12 @@ VALID_OPTS = {
     'gitfs_mountpoint': str,
     'gitfs_root': str,
     'gitfs_base': str,
+    'gitfs_user': str,
+    'gitfs_password': str,
+    'gitfs_insecure_auth': bool,
+    'gitfs_privkey': str,
+    'gitfs_pubkey': str,
+    'gitfs_passphrase': str,
     'gitfs_env_whitelist': list,
     'gitfs_env_blacklist': list,
     'hgfs_remotes': list,
@@ -182,14 +192,18 @@ VALID_OPTS = {
     'pillar_version': int,
     'pillar_opts': bool,
     'pillar_source_merging_strategy': str,
+    'ping_on_rotate': bool,
     'peer': dict,
+    'preserve_minion_cache': bool,
     'syndic_master': str,
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
+    'sudo_acl': bool,
     'external_auth': dict,
     'token_expire': int,
     'file_recv': bool,
+    'file_recv_max_size': int,
     'file_ignore_regex': bool,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
@@ -208,6 +222,8 @@ VALID_OPTS = {
     'publish_session': int,
     'reactor': list,
     'reactor_refresh_interval': int,
+    'reactor_worker_threads': int,
+    'reactor_worker_hwm': int,
     'serial': str,
     'search': str,
     'search_index_interval': int,
@@ -240,16 +256,32 @@ VALID_OPTS = {
     'ssh_sudo': bool,
     'ssh_timeout': float,
     'ssh_user': str,
+    'ssh_scan_ports': str,
+    'ssh_scan_timeout': float,
+    'ioflo_verbose': int,
+    'ioflo_period': float,
+    'ioflo_realtime': bool,
+    'ioflo_console_logdir': str,
     'raet_port': int,
+    'raet_alt_port': int,
+    'raet_mutable': bool,
+    'raet_main': bool,
+    'raet_clear_remotes': bool,
+    'raet_clear_remote_masters': bool,
+    'cluster_mode': bool,
+    'cluster_masters': list,
     'sqlite_queue_dir': str,
     'queue_dirs': list,
-    'restart_on_error': bool,
     'ping_interval': int,
     'cli_summary': bool,
     'max_minions': int,
     'username': str,
     'password': str,
     'zmq_filtering': bool,
+    'con_cache': bool,
+    'rotate_aes_key': bool,
+    'cache_sreqs': bool,
+    'cmd_safe': bool,
 }
 
 # default configurations
@@ -280,20 +312,40 @@ DEFAULT_MINION_OPTS = {
     'failhard': False,
     'autoload_dynamic_modules': True,
     'environment': None,
+    'extension_modules': '',
     'state_top': 'top.sls',
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
     'file_client': 'remote',
+    'use_master_when_local': False,
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
     },
     'fileserver_limit_traversal': False,
+    'file_recv': False,
+    'file_recv_max_size': 100,
+    'file_ignore_regex': None,
+    'file_ignore_glob': None,
+    'fileserver_backend': ['roots'],
+    'fileserver_followsymlinks': True,
+    'fileserver_ignoresymlinks': False,
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
+    'gitfs_remotes': [],
+    'gitfs_mountpoint': '',
+    'gitfs_root': '',
+    'gitfs_base': 'master',
+    'gitfs_user': '',
+    'gitfs_password': '',
+    'gitfs_insecure_auth': False,
+    'gitfs_privkey': '',
+    'gitfs_pubkey': '',
+    'gitfs_passphrase': '',
+    'gitfs_env_whitelist': [],
+    'gitfs_env_blacklist': [],
     'hash_type': 'md5',
-    'external_nodes': '',
     'disable_modules': [],
     'disable_returners': [],
     'whitelist_modules': [],
@@ -337,7 +389,6 @@ DEFAULT_MINION_OPTS = {
     'acceptance_wait_time_max': 0,
     'rejected_retry': False,
     'loop_interval': 1,
-    'dns_check': True,
     'verify_env': True,
     'grains': {},
     'permissive_pki_access': False,
@@ -348,7 +399,7 @@ DEFAULT_MINION_OPTS = {
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
-    'random_reauth_delay': 60,
+    'random_reauth_delay': 10,
     'win_repo_cachefile': 'salt://win/repo/winrepo.p',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
@@ -362,25 +413,37 @@ DEFAULT_MINION_OPTS = {
     'keysize': 4096,
     'transport': 'zeromq',
     'auth_timeout': 60,
-    'auth_tries': 1,
+    'auth_tries': 7,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
+    'caller_floscript': os.path.join(FLO_DIR, 'caller.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.1,
     'ioflo_realtime': True,
+    'ioflo_console_logdir': '',
     'raet_port': 4510,
+    'raet_alt_port': 4511,
+    'raet_mutable': False,
+    'raet_main': False,
+    'raet_clear_remotes': True,
+    'raet_clear_remote_masters': True,
+    'cluster_mode': False,
+    'cluster_masters': [],
     'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
     'password': None,
     'zmq_filtering': False,
+    'cache_sreqs': True,
+    'cmd_safe': True,
 }
 
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
     'publish_port': '4505',
     'pub_hwm': 1000,
+    'rep_hwm': 50000,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
@@ -404,6 +467,12 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_mountpoint': '',
     'gitfs_root': '',
     'gitfs_base': 'master',
+    'gitfs_user': '',
+    'gitfs_password': '',
+    'gitfs_insecure_auth': False,
+    'gitfs_privkey': '',
+    'gitfs_pubkey': '',
+    'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
     'hgfs_remotes': [],
@@ -413,7 +482,7 @@ DEFAULT_MASTER_OPTS = {
     'hgfs_branch_method': 'branches',
     'hgfs_env_whitelist': [],
     'hgfs_env_blacklist': [],
-    'show_timeout': False,
+    'show_timeout': True,
     'show_jid': False,
     'svnfs_remotes': [],
     'svnfs_mountpoint': '',
@@ -430,17 +499,22 @@ DEFAULT_MASTER_OPTS = {
     'minionfs_blacklist': [],
     'ext_pillar': [],
     'pillar_version': 2,
-    'pillar_opts': True,
+    'pillar_opts': False,
     'pillar_source_merging_strategy': 'smart',
+    'ping_on_rotate': False,
     'peer': {},
+    'preserve_minion_cache': False,
     'syndic_master': '',
     'runner_dirs': [],
     'outputter_dirs': [],
     'client_acl': {},
     'client_acl_blacklist': {},
+    'sudo_acl': False,
     'external_auth': {},
     'token_expire': 43200,
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
     'file_recv': False,
+    'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
     'file_ignore_regex': None,
     'file_ignore_glob': None,
@@ -457,7 +531,6 @@ DEFAULT_MASTER_OPTS = {
     'failhard': False,
     'state_top': 'top.sls',
     'master_tops': {},
-    'external_nodes': '',
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
@@ -475,11 +548,15 @@ DEFAULT_MASTER_OPTS = {
     'log_granular_levels': {},
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
-    'cluster_masters': [],
-    'cluster_mode': 'paranoid',
     'range_server': 'range:80',
     'reactor': [],
     'reactor_refresh_interval': 60,
+    'reactor_worker_threads': 10,
+    'reactor_worker_hwm': 10000,
+    'event_return': '',
+    'event_return_queue': 0,
+    'event_return_whitelist': [],
+    'event_return_blacklist': [],
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
@@ -516,13 +593,23 @@ DEFAULT_MASTER_OPTS = {
     'ssh_sudo': False,
     'ssh_timeout': 60,
     'ssh_user': 'root',
+    'ssh_scan_ports': '22',
+    'ssh_scan_timeout': 0.01,
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
     'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
     'ioflo_verbose': 0,
     'ioflo_period': 0.01,
     'ioflo_realtime': True,
+    'ioflo_console_logdir': '',
     'raet_port': 4506,
+    'raet_alt_port': 4511,
+    'raet_mutable': False,
+    'raet_main': True,
+    'raet_clear_remotes': False,
+    'raet_clear_remote_masters': True,
+    'cluster_mode': False,
+    'cluster_masters': [],
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
@@ -532,6 +619,9 @@ DEFAULT_MASTER_OPTS = {
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
+    'con_cache': False,
+    'rotate_aes_key': True,
+    'cache_sreqs': True,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -584,11 +674,26 @@ def _validate_file_roots(opts):
     if not isinstance(opts['file_roots'], dict):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
-        return {'base': [salt.syspaths.BASE_FILE_ROOTS_DIR]}
-    for saltenv, dirs in list(opts['file_roots'].items()):
-        if not isinstance(dirs, list) and not isinstance(dirs, tuple):
+        return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
+    for saltenv, dirs in six.iteritems(opts['file_roots']):
+        if not isinstance(dirs, (list, tuple)):
             opts['file_roots'][saltenv] = []
+        opts['file_roots'][saltenv] = _expand_glob_path(opts['file_roots'][saltenv])
     return opts['file_roots']
+
+
+def _expand_glob_path(file_roots):
+    '''
+    Applies shell globbing to a set of directories and returns
+    the expanded paths
+    '''
+    unglobbed_path = []
+    for path in file_roots:
+        if glob.has_magic(path):
+            unglobbed_path.extend(glob.glob(path))
+        else:
+            unglobbed_path.append(path)
+    return unglobbed_path
 
 
 def _validate_opts(opts):
@@ -599,7 +704,7 @@ def _validate_opts(opts):
     errors = []
     err = ('Key {0} with value {1} has an invalid type of {2}, a {3} is '
            'required for this value')
-    for key, val in opts.items():
+    for key, val in six.iteritems(opts):
         if key in VALID_OPTS:
             if isinstance(VALID_OPTS[key](), list):
                 if isinstance(val, VALID_OPTS[key]):
@@ -644,6 +749,9 @@ def _append_domain(opts):
 
 
 def _read_conf_file(path):
+    '''
+    Read in a config file from a given path and process it into a dictionary
+    '''
     log.debug('Reading configuration from {0}'.format(path))
     with salt.utils.fopen(path, 'r') as conf_file:
         try:
@@ -664,8 +772,8 @@ def _read_conf_file(path):
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
-        for key, value in conf_opts.copy().iteritems():
-            if isinstance(value, unicode):
+        for key, value in six.iteritems(conf_opts.copy()):
+            if isinstance(value, text_type):
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
@@ -703,7 +811,7 @@ def load_config(path, env_var, default_path=None):
         return {}
 
     if default_path is None:
-        # This is most likely not being used from salt, ie, could be salt-cloud
+        # This is most likely not being used from salt, i.e., could be salt-cloud
         # or salt-api which have not yet migrated to the new default_path
         # argument. Let's issue a warning message that the environ vars won't
         # work.
@@ -923,7 +1031,7 @@ def syndic_config(master_config_path,
         'autosign_file', 'autoreject_file', 'token_dir'
     ]
     for config_key in ('log_file', 'key_logfile'):
-        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+        if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
     return opts
@@ -939,7 +1047,7 @@ def apply_sdb(opts, sdb_opts=None):
     if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
-        for key, value in sdb_opts.items():
+        for key, value in six.iteritems(sdb_opts):
             if value is None:
                 continue
             sdb_opts[key] = apply_sdb(opts, value)
@@ -993,7 +1101,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # configuration file
         master_config_path = overrides['master_config']
     elif 'master_config' not in overrides and not master_config \
-                                                and not master_config_path:
+            and not master_config_path:
         # The configuration setting is not being provided in the main cloud
         # configuration file, and
         master_config_path = os.path.join(config_dir, 'master')
@@ -1006,7 +1114,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         # configuration file
         providers_config_path = overrides['providers_config']
     elif 'providers_config' not in overrides and not providers_config \
-                                                and not providers_config_path:
+            and not providers_config_path:
         providers_config_path = os.path.join(config_dir, 'cloud.providers')
 
     # Convert relative to absolute paths if necessary
@@ -1067,7 +1175,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # Grab data from the 4 sources
     # 1st - Master config
     if master_config_path is not None and master_config is not None:
-        raise salt.cloud.exceptions.SaltCloudConfigError(
+        raise salt.exceptions.SaltCloudConfigError(
             'Only pass `master_config` or `master_config_path`, not both.'
         )
     elif master_config_path is None and master_config is None:
@@ -1091,7 +1199,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     overrides = master_config
 
     if providers_config_path is not None and providers_config is not None:
-        raise salt.cloud.exceptions.SaltCloudConfigError(
+        raise salt.exceptions.SaltCloudConfigError(
             'Only pass `providers_config` or `providers_config_path`, '
             'not both.'
         )
@@ -1104,7 +1212,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         )
 
     if profiles_config_path is not None and profiles_config is not None:
-        raise salt.cloud.exceptions.SaltCloudConfigError(
+        raise salt.exceptions.SaltCloudConfigError(
             'Only pass `profiles_config` or `profiles_config_path`, not both.'
         )
     elif profiles_config_path is None and profiles_config is None:
@@ -1121,7 +1229,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # 3rd - Include Cloud Providers
     if 'providers' in opts:
         if providers_config is not None:
-            raise salt.cloud.exceptions.SaltCloudConfigError(
+            raise salt.exceptions.SaltCloudConfigError(
                 'Do not mix the old cloud providers configuration with '
                 'the passing a pre-configured providers configuration '
                 'dictionary.'
@@ -1135,7 +1243,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
             if (os.path.isfile(providers_config_path) or
                     glob.glob(providers_confd)):
-                raise salt.cloud.exceptions.SaltCloudConfigError(
+                raise salt.exceptions.SaltCloudConfigError(
                     'Do not mix the old cloud providers configuration with '
                     'the new one. The providers configuration should now go '
                     'in the file `{0}` or a separate `*.conf` file within '
@@ -1169,6 +1277,9 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
 
 
 def apply_cloud_config(overrides, defaults=None):
+    '''
+    Return a cloud config
+    '''
     if defaults is None:
         defaults = CLOUD_CONFIG_DEFAULTS
 
@@ -1184,11 +1295,11 @@ def apply_cloud_config(overrides, defaults=None):
         # Reset the providers dictionary
         config['providers'] = {}
         # Populate the providers dictionary
-        for alias, details in providers.items():
+        for alias, details in six.iteritems(providers):
             if isinstance(details, list):
                 for detail in details:
                     if 'provider' not in detail:
-                        raise salt.cloud.exceptions.SaltCloudConfigError(
+                        raise salt.exceptions.SaltCloudConfigError(
                             'The cloud provider alias {0!r} has an entry '
                             'missing the required setting \'provider\''.format(
                                 alias
@@ -1207,7 +1318,7 @@ def apply_cloud_config(overrides, defaults=None):
                     config['providers'][alias][driver] = detail
             elif isinstance(details, dict):
                 if 'provider' not in details:
-                    raise salt.cloud.exceptions.SaltCloudConfigError(
+                    raise salt.exceptions.SaltCloudConfigError(
                         'The cloud provider alias {0!r} has an entry '
                         'missing the required setting \'provider\''.format(
                             alias
@@ -1248,7 +1359,7 @@ def old_to_new(opts):
     for provider in providers:
 
         provider_config = {}
-        for opt in opts.keys():
+        for opt in opts:
             if not opt.startswith(provider):
                 continue
             value = opts.pop(opt)
@@ -1304,11 +1415,11 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
 
     vms = {}
 
-    for key, val in config.items():
+    for key, val in six.iteritems(config):
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
-            raise salt.cloud.exceptions.SaltCloudConfigError(
+            raise salt.exceptions.SaltCloudConfigError(
                 'The VM profiles configuration found in {0[conf_file]!r} is '
                 'not in the proper format'.format(config)
             )
@@ -1316,12 +1427,12 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         vms[key] = val
 
     # Is any VM profile extending data!?
-    for profile, details in vms.copy().items():
+    for profile, details in six.iteritems(vms.copy()):
         if 'extends' not in details:
             if ':' in details['provider']:
                 alias, driver = details['provider'].split(':')
                 if alias not in providers or driver not in providers[alias]:
-                    log.warning(
+                    log.trace(
                         'The profile {0!r} is defining {1[provider]!r} as the '
                         'provider. Since there\'s no valid configuration for '
                         'that provider, the profile will be removed from the '
@@ -1335,7 +1446,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 providers[alias][driver]['profiles'][profile] = details
 
             if details['provider'] not in providers:
-                log.warning(
+                log.trace(
                     'The profile {0!r} is defining {1[provider]!r} as the '
                     'provider. Since there\'s no valid configuration for '
                     'that provider, the profile will be removed from the '
@@ -1344,7 +1455,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 vms.pop(profile)
                 continue
 
-            driver = providers[details['provider']].keys()[0]
+            driver = next(iter(list(providers[details['provider']].keys())))
             providers[details['provider']][driver].setdefault(
                 'profiles', {}).update({profile: details})
             details['provider'] = '{0[provider]}:{1}'.format(details, driver)
@@ -1370,7 +1481,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
 
         if ':' not in extended['provider']:
             if extended['provider'] not in providers:
-                log.warning(
+                log.trace(
                     'The profile {0!r} is defining {1[provider]!r} as the '
                     'provider. Since there\'s no valid configuration for '
                     'that provider, the profile will be removed from the '
@@ -1379,7 +1490,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 vms.pop(profile)
                 continue
 
-            driver = providers[extended['provider']].keys()[0]
+            driver = next(iter(list(providers[extended['provider']].keys())))
             providers[extended['provider']][driver].setdefault(
                 'profiles', {}).update({profile: extended})
 
@@ -1387,7 +1498,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         else:
             alias, driver = extended['provider'].split(':')
             if alias not in providers or driver not in providers[alias]:
-                log.warning(
+                log.trace(
                     'The profile {0!r} is defining {1[provider]!r} as the '
                     'provider. Since there\'s no valid configuration for '
                     'that provider, the profile will be removed from the '
@@ -1445,7 +1556,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
         config.update(overrides)
 
     # Is the user still using the old format in the new configuration file?!
-    for name, settings in config.copy().items():
+    for name, settings in six.iteritems(config.copy()):
         if '.' in name:
             log.warn(
                 'Please switch to the new providers configuration syntax'
@@ -1456,13 +1567,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
             # old_to_new will migrate the old data into the 'providers' key of
             # the config dictionary. Let's map it correctly
-            for prov_name, prov_settings in config.pop('providers').items():
+            for prov_name, prov_settings in six.iteritems(config.pop('providers')):
                 config[prov_name] = prov_settings
             break
 
     providers = {}
     ext_count = 0
-    for key, val in config.items():
+    for key, val in six.iteritems(config):
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
 
@@ -1489,7 +1600,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         'single entry for EC2, Joyent, Openstack, and so '
                         'forth.'
                     )
-                    raise salt.cloud.exceptions.SaltCloudConfigError(
+                    raise salt.exceptions.SaltCloudConfigError(
                         'The cloud provider alias {0!r} has multiple entries '
                         'for the {1[provider]!r} driver.'.format(key, details)
                     )
@@ -1510,9 +1621,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
     # Is any provider extending data!?
     while True:
         keep_looping = False
-        for provider_alias, entries in providers.copy().items():
+        for provider_alias, entries in six.iteritems(providers.copy()):
 
-            for driver, details in entries.iteritems():
+            for driver, details in six.iteritems(entries):
                 # Set a holder for the defined profiles
                 providers[provider_alias][driver]['profiles'] = {}
 
@@ -1524,7 +1635,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 if ':' in extends:
                     alias, provider = extends.split(':')
                     if alias not in providers:
-                        raise salt.cloud.exceptions.SaltCloudConfigError(
+                        raise salt.exceptions.SaltCloudConfigError(
                             'The {0!r} cloud provider entry in {1!r} is '
                             'trying to extend data from {2!r} though {2!r} '
                             'is not defined in the salt cloud providers '
@@ -1536,7 +1647,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
 
                     if provider not in providers.get(alias):
-                        raise salt.cloud.exceptions.SaltCloudConfigError(
+                        raise salt.exceptions.SaltCloudConfigError(
                             'The {0!r} cloud provider entry in {1!r} is '
                             'trying to extend data from \'{2}:{3}\' though '
                             '{3!r} is not defined in {1!r}'.format(
@@ -1550,7 +1661,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     # change provider details '-only-extendable-' to extended provider name
                     details['provider'] = provider
                 elif providers.get(extends):
-                    raise salt.cloud.exceptions.SaltCloudConfigError(
+                    raise salt.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend from {2!r} and no provider was specified. '
                         'Not extending!'.format(
@@ -1558,7 +1669,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
                     )
                 elif extends not in providers:
-                    raise salt.cloud.exceptions.SaltCloudConfigError(
+                    raise salt.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend data from {2!r} though {2!r} is not '
                         'defined in the salt cloud providers loaded '
@@ -1584,8 +1695,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
     while True:
         # Merge provided extends
         keep_looping = False
-        for alias, entries in providers.copy().items():
-            for driver, details in entries.iteritems():
+        for alias, entries in six.iteritems(providers.copy()):
+            for driver, details in six.iteritems(entries):
 
                 if 'extends' not in details:
                     # Extends resolved or non existing, continue!
@@ -1618,8 +1729,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     # Now clean up any providers entry that was just used to be a data tree to
     # extend from
-    for provider_alias, entries in providers.copy().items():
-        for driver, details in entries.copy().iteritems():
+    for provider_alias, entries in six.iteritems(providers.copy()):
+        for driver, details in six.iteritems(entries.copy()):
             if not driver.startswith('-only-extendable-'):
                 continue
 
@@ -1696,7 +1807,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
         if vm_['provider'] in opts['providers']:
             # There's only one driver defined for this provider. This is safe.
             alias_defs = opts['providers'].get(vm_['provider'])
-            provider_driver_defs = alias_defs[alias_defs.keys()[0]]
+            provider_driver_defs = alias_defs[next(iter(list(alias_defs.keys())))]
             if name in provider_driver_defs:
                 # The setting name exists in the VM's provider configuration.
                 # Return it!
@@ -1730,7 +1841,7 @@ def is_provider_configured(opts, provider, required_keys=()):
             if opts['providers'][alias][driver].get(key, None) is None:
                 # There's at least one require configuration key which is not
                 # set.
-                log.warn(
+                log.trace(
                     'The required {0!r} configuration setting is missing on '
                     'the {1!r} driver(under the {2!r} alias)'.format(
                         key, provider, alias
@@ -1741,8 +1852,8 @@ def is_provider_configured(opts, provider, required_keys=()):
         # return it!
         return opts['providers'][alias][driver]
 
-    for alias, drivers in opts['providers'].iteritems():
-        for driver, provider_details in drivers.iteritems():
+    for alias, drivers in six.iteritems(opts['providers']):
+        for driver, provider_details in six.iteritems(drivers):
             if driver != provider:
                 continue
 
@@ -1753,7 +1864,7 @@ def is_provider_configured(opts, provider, required_keys=()):
                 if provider_details.get(key, None) is None:
                     # This provider does not include all necessary keys,
                     # continue to next one
-                    log.warn(
+                    log.trace(
                         'The required {0!r} configuration setting is missing '
                         'on the {1!r} driver(under the {2!r} alias)'.format(
                             key, provider, alias
@@ -1812,12 +1923,11 @@ def get_id(opts, minion_id=False):
     if opts.get('minion_id_caching', True):
         try:
             with salt.utils.fopen(id_cache) as idf:
-                name = idf.read().strip()
+                name = idf.readline().strip()
                 if name.startswith(codecs.BOM):  # Remove BOM if exists
                     name = name.replace(codecs.BOM, '', 1)
             if name:
-                log.info('Using cached minion ID from {0}: {1}'
-                         .format(id_cache, name))
+                log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False
         except (IOError, OSError):
             pass
@@ -1887,7 +1997,7 @@ def apply_minion_config(overrides=None,
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ('log_file', 'key_logfile'):
-        if urlparse.urlparse(opts.get(config_key, '')).scheme == '':
+        if urlparse(opts.get(config_key, '')).scheme == '':
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -1935,7 +2045,7 @@ def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     # out or not present.
     if opts.get('nodegroups') is None:
         opts['nodegroups'] = DEFAULT_MASTER_OPTS.get('nodegroups', {})
-    if opts.get('transport') == 'raet':
+    if opts.get('transport') == 'raet' and 'aes' in opts:
         opts.pop('aes')
     return opts
 
@@ -1944,6 +2054,7 @@ def apply_master_config(overrides=None, defaults=None):
     '''
     Returns master configurations dict.
     '''
+    import salt.crypt
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS
 
@@ -1955,13 +2066,25 @@ def apply_master_config(overrides=None, defaults=None):
     if len(opts['sock_dir']) > len(opts['cachedir']) + 10:
         opts['sock_dir'] = os.path.join(opts['cachedir'], '.salt-unix')
 
-    opts['aes'] = salt.crypt.Crypticle.generate_key_string()
-
     opts['extension_modules'] = (
         opts.get('extension_modules') or
         os.path.join(opts['cachedir'], 'extmods')
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
+
+    using_ip_for_id = False
+    append_master = False
+    if opts.get('id') is None:
+        opts['id'], using_ip_for_id = get_id(
+                opts,
+                minion_id=None)
+        append_master = True
+
+    # it does not make sense to append a domain to an IP based id
+    if not using_ip_for_id and 'append_domain' in opts:
+        opts['id'] = _append_domain(opts)
+    if append_master:
+        opts['id'] += '_master'
 
     # Prepend root_dir to other paths
     prepend_root_dirs = [
@@ -1975,7 +2098,7 @@ def apply_master_config(overrides=None, defaults=None):
         if log_setting is None:
             continue
 
-        if urlparse.urlparse(log_setting).scheme == '':
+        if urlparse(log_setting).scheme == '':
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -2013,7 +2136,7 @@ def apply_master_config(overrides=None, defaults=None):
         if isinstance(opts['file_ignore_glob'], str):
             opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
-    # Let's make sure `worker_threads` does not drop bellow 3 which has proven
+    # Let's make sure `worker_threads` does not drop below 3 which has proven
     # to make `salt.modules.publish` not work under the test-suite.
     if opts['worker_threads'] < 3 and opts.get('peer', None):
         log.warning(
@@ -2121,4 +2244,4 @@ def api_config(path):
     # Let's override them with salt-api's required defaults
     defaults.update(DEFAULT_API_OPTS)
 
-    return master_config(path, defaults=defaults)
+    return client_config(path, defaults=defaults)

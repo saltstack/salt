@@ -19,6 +19,7 @@ from jinja2 import Environment
 try:
     import ldap
     import ldap.modlist
+    import ldap.filter
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
@@ -138,9 +139,11 @@ def _bind(username, password):
         #   - cn={{ username }},ou=users,dc=company,dc=tld
         # so make sure to render it first before using it
         paramvalues['binddn'] = _render_template(paramvalues['binddn'], username)
+        paramvalues['binddn'] = ldap.filter.escape_filter_chars(paramvalues['binddn'])
 
     if paramvalues['filter']:
-        paramvalues['filter'] = _render_template(paramvalues['filter'], username)
+        escaped_username = ldap.filter.escape_filter_chars(username)
+        paramvalues['filter'] = _render_template(paramvalues['filter'], escaped_username)
 
     # Only add binddn/bindpw to the connargs when they're set, as they're not
     # mandatory for initializing the LDAP object, but if they're provided
@@ -184,6 +187,7 @@ def _bind(username, password):
     try:
         ldap_conn = _LDAPConnection(**connargs).ldap
     except Exception:
+        connargs.pop('bindpw', None)  # Don't log the password
         log.warn('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
         log.debug('Error authenticating user dn via LDAP:', exc_info=True)
         return False

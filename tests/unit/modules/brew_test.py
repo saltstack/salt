@@ -3,9 +3,12 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing Libs
-from salttesting import TestCase
-from salttesting.mock import MagicMock, patch
+from salttesting import skipIf, TestCase
+from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -22,6 +25,7 @@ TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
 HOMEBREW_BIN = '/usr/local/bin/brew'
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BrewTestCase(TestCase):
     '''
     TestCase for salt.modules.brew module
@@ -33,8 +37,12 @@ class BrewTestCase(TestCase):
         '''
         Tests the return of the list of taps
         '''
-        mock_taps = MagicMock(return_value=TAPS_STRING)
-        with patch.dict(brew.__salt__, {'cmd.run': mock_taps}):
+        mock_taps = MagicMock(return_value={'stdout': TAPS_STRING})
+        mock_user = MagicMock(return_value='foo')
+        moca_cmd = MagicMock(return_value='')
+        with patch.dict(brew.__salt__, {'file.get_user': mock_user,
+                                        'cmd.run_all': mock_taps,
+                                        'cmd.run': moca_cmd}):
             self.assertEqual(brew._list_taps(), TAPS_LIST)
 
     # '_tap' function tests: 3
@@ -51,8 +59,13 @@ class BrewTestCase(TestCase):
         '''
         Tests if the tap installation failed
         '''
-        mock_failure = MagicMock(return_value=1)
-        with patch.dict(brew.__salt__, {'cmd.retcode': mock_failure}):
+        mock_failure = MagicMock(return_value={'retcode': 1})
+        mock_user = MagicMock(return_value='foo')
+        mock_cmd = MagicMock(return_value='')
+        with patch.dict(brew.__salt__, {'cmd.run_all': mock_failure,
+                                        'file.get_user': mock_user,
+                                        'cmd.run': mock_cmd,
+                                        'cmd.retcode': mock_failure}):
             self.assertFalse(brew._tap('homebrew/test'))
 
     @patch('salt.modules.brew._list_taps', MagicMock(return_value=TAPS_LIST))
@@ -60,8 +73,7 @@ class BrewTestCase(TestCase):
         '''
         Tests adding unofficial Github repos to the list of brew taps
         '''
-        mock_success = MagicMock(return_value=0)
-        with patch.dict(brew.__salt__, {'cmd.retcode': mock_success}):
+        with patch.dict(brew.__salt__, {'cmd.retcode': MagicMock(return_value=0)}):
             self.assertTrue(brew._tap('homebrew/test'))
 
     # '_homebrew_bin' function tests: 1
@@ -130,9 +142,9 @@ class BrewTestCase(TestCase):
         Tests an update of homebrew package repository failure
         '''
         mock_user = MagicMock(return_value='foo')
-        mock_failure = MagicMock(return_value=1)
+        mock_failure = MagicMock(return_value={'retcode': 1})
         with patch.dict(brew.__salt__, {'file.get_user': mock_user,
-                                        'cmd.retcode': mock_failure}):
+                                        'cmd.run_all': mock_failure}):
             self.assertFalse(brew.refresh_db())
 
     @patch('salt.modules.brew._homebrew_bin',
@@ -142,9 +154,9 @@ class BrewTestCase(TestCase):
         Tests a successful update of homebrew package repository
         '''
         mock_user = MagicMock(return_value='foo')
-        mock_success = MagicMock(return_value=0)
+        mock_success = MagicMock(return_value={'retcode': 0})
         with patch.dict(brew.__salt__, {'file.get_user': mock_user,
-                                        'cmd.retcode': mock_success}):
+                                        'cmd.run_all': mock_success}):
             self.assertTrue(brew.refresh_db())
 
     # 'install' function tests: 1

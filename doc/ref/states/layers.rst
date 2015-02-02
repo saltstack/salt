@@ -91,7 +91,7 @@ The SLS layer can be called directly to execute individual sls formulas.
 .. note::
 
     SLS Formulas have historically been called "SLS files". This is because a
-    single SLS was only constituted in a single file. Now the term 
+    single SLS was only constituted in a single file. Now the term
     "SLS Formula" better expresses how a compartmentalized SLS can be expressed
     in a much more dynamic way by combining pillar and other sources, and the
     SLS can be dynamically generated.

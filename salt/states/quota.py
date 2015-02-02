@@ -29,10 +29,10 @@ def mode(name, mode, quotatype):
         The filesystem to set the quota mode on
 
     mode
-        Whether the quota system is 'on' or 'off'
+        Whether the quota system is on or off
 
     quotatype
-        Need to be 'user' or 'group'
+        Must be ``user`` or ``group``
     '''
     ret = {'name': name,
            'changes': {},

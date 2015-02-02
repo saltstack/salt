@@ -10,7 +10,7 @@ Glossary
     Bootstrap
         A stand-alone Salt project which can download and install a Salt master
         and/or a Salt minion onto a host. *See also*: `salt-bootstrap
-        <https://github.com/saltstack/salt-bootstrap>`.
+        <https://github.com/saltstack/salt-bootstrap>`_.
 
     Compound Matcher
         A combination of many target definitions that can be combined with
@@ -45,7 +45,7 @@ Glossary
         <all-salt.returners>`.
 
     External Pillar
-        A module that accepts arbitrary arguments and returns a dictionary. 
+        A module that accepts arbitrary arguments and returns a dictionary.
         The dictionary is automatically added to a pillar for a minion.
 
     Event

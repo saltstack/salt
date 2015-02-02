@@ -2,26 +2,33 @@
 '''
 Nova class
 '''
-from __future__ import with_statement
+
+# Import Python libs
+from __future__ import absolute_import, with_statement
+import time
+import inspect
+import logging
 
 # Import third party libs
+import salt.ext.six as six
 HAS_NOVA = False
+# pylint: disable=import-error
 try:
     from novaclient.v1_1 import client
+    from novaclient.shell import OpenStackComputeShell
+    import novaclient.utils
     import novaclient.auth_plugin
     import novaclient.exceptions
     import novaclient.extension
+    import novaclient.base
     HAS_NOVA = True
 except ImportError:
     pass
-
-# Import python libs
-import time
-import logging
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -29,6 +36,12 @@ log = logging.getLogger(__name__)
 
 def check_nova():
     return HAS_NOVA
+
+
+# kwargs has to be an object instead of a dictionary for the __post_parse_arg__
+class KwargsStruct(object):
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
 
 
 class NovaServer(object):
@@ -79,7 +92,7 @@ def sanatize_novaclient(kwargs):
         'auth_token', 'cacert', 'tenant_id'
     )
     ret = {}
-    for var in kwargs.keys():
+    for var in kwargs:
         if var in variables:
             ret[var] = kwargs[var]
 
@@ -87,7 +100,7 @@ def sanatize_novaclient(kwargs):
 
 
 # Function alias to not shadow built-ins
-class SaltNova(object):
+class SaltNova(OpenStackComputeShell):
     '''
     Class for all novaclient functions
     '''
@@ -108,28 +121,39 @@ class SaltNova(object):
             return None
 
         self.kwargs = kwargs.copy()
+
+        if not novaclient.base.Manager._hooks_map:
+            self.extensions = self._discover_extensions('1.1')
+            for extension in self.extensions:
+                extension.run_hooks('__pre_parse_args__')
+            self.kwargs['extensions'] = self.extensions
+
         self.kwargs['username'] = username
         self.kwargs['project_id'] = project_id
         self.kwargs['auth_url'] = auth_url
         self.kwargs['region_name'] = region_name
         self.kwargs['service_type'] = 'compute'
+
+        # used in novaclient extensions to see if they are rackspace or not, to know if it needs to load
+        # the hooks for that extension or not.  This is cleaned up by sanatize_novaclient
+        self.kwargs['os_auth_url'] = auth_url
+
         if os_auth_plugin is not None:
             novaclient.auth_plugin.discover_auth_systems()
             auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
             self.kwargs['auth_plugin'] = auth_plugin
             self.kwargs['auth_system'] = os_auth_plugin
 
-        if 'api_key' not in self.kwargs.keys():
+        if not self.kwargs.get('api_key', None):
             self.kwargs['api_key'] = password
-        extensions = []
-        if 'extensions' in kwargs:
-            exts = []
-            for key, item in self.kwargs['extensions'].items():
-                mod = __import__(item.replace('-', '_'))
-                exts.append(
-                    novaclient.extension.Extension(key, mod)
-                )
-            self.kwargs['extensions'] = exts
+
+        # This has to be run before sanatize_novaclient before extra variables are cleaned out.
+        if hasattr(self, 'extensions'):
+            # needs an object, not a dictionary
+            self.kwargstruct = KwargsStruct(**self.kwargs)
+            for extension in self.extensions:
+                extension.run_hooks('__post_parse_args__', self.kwargstruct)
+            self.kwargs = self.kwargstruct.__dict__
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
@@ -172,6 +196,20 @@ class SaltNova(object):
 
         self.kwargs['service_type'] = 'volume'
         self.volume_conn = client.Client(**self.kwargs)
+        if hasattr(self, 'extensions'):
+            self.expand_extensions()
+
+    def expand_extensions(self):
+        for connection in (self.compute_conn, self.volume_conn):
+            for extension in self.extensions:
+                for attr in extension.module.__dict__:
+                    if not inspect.isclass(getattr(extension.module, attr)):
+                        continue
+                    for key, value in six.iteritems(connection.__dict__):
+                        if not isinstance(value, novaclient.base.Manager):
+                            continue
+                        if value.__class__.__name__ == attr:
+                            setattr(connection, key, getattr(connection, extension.name))
 
     def get_catalog(self):
         '''
@@ -184,8 +222,8 @@ class SaltNova(object):
         Make output look like libcloud output for consistency
         '''
         server_info = self.server_show(uuid)
-        server = server_info.values()[0]
-        server_name = server_info.keys()[0]
+        server = next(six.itervalues(server_info))
+        server_name = next(six.iterkeys(server_info))
         if not hasattr(self, 'password'):
             self.password = None
         ret = NovaServer(server_name, server, self.password)
@@ -197,6 +235,9 @@ class SaltNova(object):
         Boot a cloud server.
         '''
         nt_ks = self.compute_conn
+        for key in ('name', 'flavor', 'image'):
+            if key in kwargs:
+                del kwargs[key]
         response = nt_ks.servers.create(
             name=name, flavor=flavor_id, image=image_id, **kwargs
         )
@@ -694,9 +735,9 @@ class SaltNova(object):
         ret = {}
         try:
             servers = self.server_list_detailed()
-        except AttributeError as exc:
+        except AttributeError:
             raise SaltCloudSystemExit('Corrupt server in server_list_detailed. Remove corrupt servers.')
-        for server_name, server in servers.iteritems():
+        for server_name, server in six.iteritems(servers):
             if str(server['id']) == server_id:
                 ret[server_name] = server
         return ret
@@ -781,7 +822,7 @@ class SaltNova(object):
             'priority', 'project_id', 'vlan_start', 'vpn_start'
         ]
 
-        for variable in kwargs.keys():
+        for variable in six.iterkeys(kwargs):  # iterate over a copy, we might delete some
             if variable not in params:
                 del kwargs[variable]
         return kwargs
@@ -822,94 +863,94 @@ class SaltNova(object):
         nets = nt_ks.virtual_interfaces.create(networkid, serverid)
         return nets
 
-#The following is a list of functions that need to be incorporated in the
-#nova module. This list should be updated as functions are added.
+# The following is a list of functions that need to be incorporated in the
+# nova module. This list should be updated as functions are added.
 #
-#absolute-limits     Print a list of absolute limits for a user
-#actions             Retrieve server actions.
-#add-fixed-ip        Add new IP address to network.
-#add-floating-ip     Add a floating IP address to a server.
-#aggregate-add-host  Add the host to the specified aggregate.
-#aggregate-create    Create a new aggregate with the specified details.
-#aggregate-delete    Delete the aggregate by its id.
-#aggregate-details   Show details of the specified aggregate.
-#aggregate-list      Print a list of all aggregates.
-#aggregate-remove-host
-#                    Remove the specified host from the specified aggregate.
-#aggregate-set-metadata
-#                    Update the metadata associated with the aggregate.
-#aggregate-update    Update the aggregate's name and optionally
-#                    availability zone.
-#cloudpipe-create    Create a cloudpipe instance for the given project
-#cloudpipe-list      Print a list of all cloudpipe instances.
-#console-log         Get console log output of a server.
-#credentials         Show user credentials returned from auth
-#describe-resource   Show details about a resource
-#diagnostics         Retrieve server diagnostics.
-#dns-create          Create a DNS entry for domain, name and ip.
-#dns-create-private-domain
-#                    Create the specified DNS domain.
-#dns-create-public-domain
-#                    Create the specified DNS domain.
-#dns-delete          Delete the specified DNS entry.
-#dns-delete-domain   Delete the specified DNS domain.
-#dns-domains         Print a list of available dns domains.
-#dns-list            List current DNS entries for domain and ip or domain
-#                    and name.
-#endpoints           Discover endpoints that get returned from the
-#                    authenticate services
-#floating-ip-create  Allocate a floating IP for the current tenant.
-#floating-ip-delete  De-allocate a floating IP.
-#floating-ip-list    List floating ips for this tenant.
-#floating-ip-pool-list
-#                    List all floating ip pools.
-#get-vnc-console     Get a vnc console to a server.
-#host-action         Perform a power action on a host.
-#host-update         Update host settings.
-#image-create        Create a new image by taking a snapshot of a running
-#                    server.
-#image-delete        Delete an image.
-#live-migration      Migrates a running instance to a new machine.
-#meta                Set or Delete metadata on a server.
-#migrate             Migrate a server.
-#pause               Pause a server.
-#rate-limits         Print a list of rate limits for a user
-#reboot              Reboot a server.
-#rebuild             Shutdown, re-image, and re-boot a server.
-#remove-fixed-ip     Remove an IP address from a server.
-#remove-floating-ip  Remove a floating IP address from a server.
-#rename              Rename a server.
-#rescue              Rescue a server.
-#resize              Resize a server.
-#resize-confirm      Confirm a previous resize.
-#resize-revert       Revert a previous resize (and return to the previous
-#                    VM).
-#root-password       Change the root password for a server.
-#secgroup-add-group-rule
-#                    Add a source group rule to a security group.
-#secgroup-add-rule   Add a rule to a security group.
-#secgroup-delete-group-rule
-#                    Delete a source group rule from a security group.
-#secgroup-delete-rule
-#                    Delete a rule from a security group.
-#secgroup-list-rules
-#                    List rules for a security group.
-#ssh                 SSH into a server.
-#unlock              Unlock a server.
-#unpause             Unpause a server.
-#unrescue            Unrescue a server.
-#usage-list          List usage data for all tenants
-#volume-list         List all the volumes.
-#volume-snapshot-create
-#                    Add a new snapshot.
-#volume-snapshot-delete
-#                    Remove a snapshot.
-#volume-snapshot-list
-#                    List all the snapshots.
-#volume-snapshot-show
-#                    Show details about a snapshot.
-#volume-type-create  Create a new volume type.
-#volume-type-delete  Delete a specific flavor
-#volume-type-list    Print a list of available 'volume types'.
-#x509-create-cert    Create x509 cert for a user in tenant
-#x509-get-root-cert  Fetches the x509 root cert.
+# absolute-limits     Print a list of absolute limits for a user
+# actions             Retrieve server actions.
+# add-fixed-ip        Add new IP address to network.
+# add-floating-ip     Add a floating IP address to a server.
+# aggregate-add-host  Add the host to the specified aggregate.
+# aggregate-create    Create a new aggregate with the specified details.
+# aggregate-delete    Delete the aggregate by its id.
+# aggregate-details   Show details of the specified aggregate.
+# aggregate-list      Print a list of all aggregates.
+# aggregate-remove-host
+#                     Remove the specified host from the specified aggregate.
+# aggregate-set-metadata
+#                     Update the metadata associated with the aggregate.
+# aggregate-update    Update the aggregate's name and optionally
+#                     availability zone.
+# cloudpipe-create    Create a cloudpipe instance for the given project
+# cloudpipe-list      Print a list of all cloudpipe instances.
+# console-log         Get console log output of a server.
+# credentials         Show user credentials returned from auth
+# describe-resource   Show details about a resource
+# diagnostics         Retrieve server diagnostics.
+# dns-create          Create a DNS entry for domain, name and ip.
+# dns-create-private-domain
+#                     Create the specified DNS domain.
+# dns-create-public-domain
+#                     Create the specified DNS domain.
+# dns-delete          Delete the specified DNS entry.
+# dns-delete-domain   Delete the specified DNS domain.
+# dns-domains         Print a list of available dns domains.
+# dns-list            List current DNS entries for domain and ip or domain
+#                     and name.
+# endpoints           Discover endpoints that get returned from the
+#                     authenticate services
+# floating-ip-create  Allocate a floating IP for the current tenant.
+# floating-ip-delete  De-allocate a floating IP.
+# floating-ip-list    List floating ips for this tenant.
+# floating-ip-pool-list
+#                     List all floating ip pools.
+# get-vnc-console     Get a vnc console to a server.
+# host-action         Perform a power action on a host.
+# host-update         Update host settings.
+# image-create        Create a new image by taking a snapshot of a running
+#                     server.
+# image-delete        Delete an image.
+# live-migration      Migrates a running instance to a new machine.
+# meta                Set or Delete metadata on a server.
+# migrate             Migrate a server.
+# pause               Pause a server.
+# rate-limits         Print a list of rate limits for a user
+# reboot              Reboot a server.
+# rebuild             Shutdown, re-image, and re-boot a server.
+# remove-fixed-ip     Remove an IP address from a server.
+# remove-floating-ip  Remove a floating IP address from a server.
+# rename              Rename a server.
+# rescue              Rescue a server.
+# resize              Resize a server.
+# resize-confirm      Confirm a previous resize.
+# resize-revert       Revert a previous resize (and return to the previous
+#                     VM).
+# root-password       Change the root password for a server.
+# secgroup-add-group-rule
+#                     Add a source group rule to a security group.
+# secgroup-add-rule   Add a rule to a security group.
+# secgroup-delete-group-rule
+#                     Delete a source group rule from a security group.
+# secgroup-delete-rule
+#                     Delete a rule from a security group.
+# secgroup-list-rules
+#                     List rules for a security group.
+# ssh                 SSH into a server.
+# unlock              Unlock a server.
+# unpause             Unpause a server.
+# unrescue            Unrescue a server.
+# usage-list          List usage data for all tenants
+# volume-list         List all the volumes.
+# volume-snapshot-create
+#                     Add a new snapshot.
+# volume-snapshot-delete
+#                     Remove a snapshot.
+# volume-snapshot-list
+#                     List all the snapshots.
+# volume-snapshot-show
+#                     Show details about a snapshot.
+# volume-type-create  Create a new volume type.
+# volume-type-delete  Delete a specific flavor
+# volume-type-list    Print a list of available 'volume types'.
+# x509-create-cert    Create x509 cert for a user in tenant
+# x509-get-root-cert  Fetches the x509 root cert.

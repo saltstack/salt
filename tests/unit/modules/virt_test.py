@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import sys
 import re
 
@@ -18,6 +19,7 @@ import salt.utils
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
 
 config.__grains__ = {}
 config.__opts__ = {}
@@ -183,7 +185,7 @@ class VirtTestCase(TestCase):
     def test_default_disk_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._disk_profile('nonexistant', 'esxi')
+            ret = virt._disk_profile('nonexistent', 'esxi')
             self.assertTrue(len(ret) == 1)
             self.assertIn('system', ret[0])
             system = ret[0]['system']
@@ -194,7 +196,7 @@ class VirtTestCase(TestCase):
     def test_default_disk_profile_hypervisor_kvm(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._disk_profile('nonexistant', 'kvm')
+            ret = virt._disk_profile('nonexistent', 'kvm')
             self.assertTrue(len(ret) == 1)
             self.assertIn('system', ret[0])
             system = ret[0]['system']
@@ -205,7 +207,7 @@ class VirtTestCase(TestCase):
     def test_default_nic_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._nic_profile('nonexistant', 'esxi')
+            ret = virt._nic_profile('nonexistent', 'esxi')
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
             self.assertEqual(eth0['name'], 'eth0')
@@ -216,7 +218,7 @@ class VirtTestCase(TestCase):
     def test_default_nic_profile_hypervisor_kvm(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._nic_profile('nonexistant', 'kvm')
+            ret = virt._nic_profile('nonexistent', 'kvm')
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
             self.assertEqual(eth0['name'], 'eth0')
@@ -485,7 +487,7 @@ class VirtTestCase(TestCase):
         mock_config = yaml.load(yaml_config)
         salt.modules.config.__opts__ = mock_config
 
-        for name in mock_config['virt.nic'].keys():
+        for name in six.iterkeys(mock_config['virt.nic']):
             profile = salt.modules.virt._nic_profile(name, 'kvm')
             self.assertEqual(len(profile), 2)
 

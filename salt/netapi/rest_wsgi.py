@@ -121,6 +121,7 @@ Usage examples
 :status 401: authentication required
 
 '''
+from __future__ import absolute_import
 import errno
 import json
 import logging
@@ -214,7 +215,7 @@ def get_headers(data, extra_headers=None):
     if extra_headers:
         response_headers.update(extra_headers)
 
-    return response_headers.items()
+    return list(response_headers.items())
 
 
 def run_chunk(environ, lowstate):

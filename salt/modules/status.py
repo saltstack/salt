@@ -4,16 +4,23 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
 
+
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import fnmatch
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+
 # Import salt libs
-import salt.utils
-from salt.utils.network import remote_port_tcp as _remote_port_tcp
-import salt.utils.event
 import salt.config
+import salt.utils
+import salt.utils.event
+from salt.utils.network import host_to_ip as _host_to_ip
+from salt.utils.network import remote_port_tcp as _remote_port_tcp
 
 
 __opts__ = {}
@@ -103,7 +110,7 @@ def custom():
     '''
     ret = {}
     conf = __salt__['config.dot_vals']('status')
-    for key, val in conf.items():
+    for key, val in six.iteritems(conf):
         func = '{0}()'.format(key.split('.')[1])
         vals = eval(func)  # pylint: disable=W0123
 
@@ -152,33 +159,65 @@ def cpustats():
 
         salt '*' status.cpustats
     '''
-    procf = '/proc/stat'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        if comps[0] == 'cpu':
-            ret[comps[0]] = {'idle': _number(comps[4]),
-                             'iowait': _number(comps[5]),
-                             'irq': _number(comps[6]),
-                             'nice': _number(comps[2]),
-                             'softirq': _number(comps[7]),
-                             'steal': _number(comps[8]),
-                             'system': _number(comps[3]),
-                             'user': _number(comps[1])}
-        elif comps[0] == 'intr':
-            ret[comps[0]] = {'total': _number(comps[1]),
-                             'irqs': [_number(x) for x in comps[2:]]}
-        elif comps[0] == 'softirq':
-            ret[comps[0]] = {'total': _number(comps[1]),
-                             'softirqs': [_number(x) for x in comps[2:]]}
-        else:
-            ret[comps[0]] = _number(comps[1])
-    return ret
+    def linux_cpustats():
+        '''
+        linux specific implementation of cpustats
+        '''
+        procf = '/proc/stat'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            if comps[0] == 'cpu':
+                ret[comps[0]] = {'idle': _number(comps[4]),
+                                 'iowait': _number(comps[5]),
+                                 'irq': _number(comps[6]),
+                                 'nice': _number(comps[2]),
+                                 'softirq': _number(comps[7]),
+                                 'steal': _number(comps[8]),
+                                 'system': _number(comps[3]),
+                                 'user': _number(comps[1])}
+            elif comps[0] == 'intr':
+                ret[comps[0]] = {'total': _number(comps[1]),
+                                 'irqs': [_number(x) for x in comps[2:]]}
+            elif comps[0] == 'softirq':
+                ret[comps[0]] = {'total': _number(comps[1]),
+                                 'softirqs': [_number(x) for x in comps[2:]]}
+            else:
+                ret[comps[0]] = _number(comps[1])
+        return ret
+
+    def freebsd_cpustats():
+        '''
+        freebsd specific implementation of cpustats
+        '''
+        vmstat = __salt__['cmd.run']('vmstat -P').splitlines()
+        vm0 = vmstat[0].split()
+        cpu0loc = vm0.index('cpu0')
+        vm1 = vmstat[1].split()
+        usloc = vm1.index('us')
+        vm2 = vmstat[2].split()
+        cpuctr = 0
+        ret = {}
+        for cpu in vm0[cpu0loc:]:
+            ret[cpu] = {'us': _number(vm2[usloc + 3 * cpuctr]),
+                        'sy': _number(vm2[usloc + 1 + 3 * cpuctr]),
+                        'id': _number(vm2[usloc + 2 + 3 * cpuctr]), }
+            cpuctr += 1
+        return ret
+
+    # dict that return a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_cpustats,
+        'FreeBSD': freebsd_cpustats,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def meminfo():
@@ -191,22 +230,53 @@ def meminfo():
 
         salt '*' status.meminfo
     '''
-    procf = '/proc/meminfo'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        comps[0] = comps[0].replace(':', '')
-        ret[comps[0]] = {
-            'value': comps[1],
-        }
-        if len(comps) > 2:
-            ret[comps[0]]['unit'] = comps[2]
-    return ret
+    def linux_meminfo():
+        '''
+        linux specific implementation of meminfo
+        '''
+        procf = '/proc/meminfo'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            comps[0] = comps[0].replace(':', '')
+            ret[comps[0]] = {
+                'value': comps[1],
+            }
+            if len(comps) > 2:
+                ret[comps[0]]['unit'] = comps[2]
+        return ret
+
+    def freebsd_meminfo():
+        '''
+        freebsd specific implementation of meminfo
+        '''
+        sysctlvm = __salt__['cmd.run']('sysctl vm').splitlines()
+        sysctlvm = [x for x in sysctlvm if x.startswith('vm')]
+        sysctlvm = [x.split(':') for x in sysctlvm]
+        sysctlvm = [[y.strip() for y in x] for x in sysctlvm]
+        sysctlvm = [x for x in sysctlvm if x[1]]  # If x[1] not empty
+
+        ret = {}
+        for line in sysctlvm:
+            ret[line[0]] = line[1]
+        # Special handling for vm.total as it's especially important
+        sysctlvmtot = __salt__['cmd.run']('sysctl -n vm.vmtotal').splitlines()
+        sysctlvmtot = [x for x in sysctlvmtot if x]
+        ret['vm.vmtotal'] = sysctlvmtot
+        return ret
+    # dict that return a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_meminfo,
+        'FreeBSD': freebsd_meminfo,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def cpuinfo():
@@ -219,21 +289,48 @@ def cpuinfo():
 
         salt '*' status.cpuinfo
     '''
-    procf = '/proc/cpuinfo'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split(':')
-        comps[0] = comps[0].strip()
-        if comps[0] == 'flags':
-            ret[comps[0]] = comps[1].split()
-        else:
+    def linux_cpuinfo():
+        '''
+        linux specific cpuinfo implementation
+        '''
+        procf = '/proc/cpuinfo'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split(':')
+            comps[0] = comps[0].strip()
+            if comps[0] == 'flags':
+                ret[comps[0]] = comps[1].split()
+            else:
+                ret[comps[0]] = comps[1].strip()
+        return ret
+
+    def freebsd_cpuinfo():
+        '''
+        freebds specific cpuinfo implementation
+        '''
+        freebsd_cmd = 'sysctl hw.model hw.ncpu'
+        ret = {}
+        for line in __salt__['cmd.run'](freebsd_cmd).splitlines():
+            if not line:
+                continue
+            comps = line.split(':')
+            comps[0] = comps[0].strip()
             ret[comps[0]] = comps[1].strip()
-    return ret
+        return ret
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_cpuinfo,
+        'FreeBSD': freebsd_cpuinfo,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def diskstats():
@@ -366,12 +463,10 @@ def nproc():
 
         salt '*' status.nproc
     '''
-    data = __salt__['cmd.run']('nproc')
     try:
-        ret = int(data.strip())
-    except Exception:
+        return int(__salt__['cmd.run']('nproc').strip())
+    except ValueError:
         return 0
-    return ret
 
 
 def netstats():
@@ -432,7 +527,7 @@ def netdev():
         comps = line.split()
         # Fix lines like eth0:9999..'
         comps[0] = line.split(':')[0].strip()
-        #Support lines both like eth0:999 and eth0: 9999
+        # Support lines both like eth0:999 and eth0: 9999
         comps.insert(1, line.split(':')[1].strip().split()[0])
         ret[comps[0]] = {'iface': comps[0],
                          'rx_bytes': _number(comps[1]),
@@ -508,7 +603,9 @@ def all_status():
 def pid(sig):
     '''
     Return the PID or an empty string if the process is running or not.
-    Pass a signature to use to find the process via ps.
+    Pass a signature to use to find the process via ps.  Note you can pass
+    a Python-compatible regular expression to return all pids of
+    processes matching the regexp.
 
     CLI Example:
 
@@ -516,15 +613,20 @@ def pid(sig):
 
         salt '*' status.pid <sig>
     '''
-    # Check whether the sig is already quoted (we check at the end in case they
-    # send a sig like `-E 'someregex'` to use egrep) and doesn't begin with a
-    # dash (again, like `-E someregex`).  Quote sigs that qualify.
-    if (not sig.endswith('"') and not sig.endswith("'") and
-            not sig.startswith('-')):
-        sig = "'" + sig + "'"
-    cmd = ("{0[ps]} | grep {1} | grep -v grep | fgrep -v status.pid | "
-           "awk '{{print $2}}'".format(__grains__, sig))
-    return __salt__['cmd.run_stdout'](cmd) or ''
+
+    cmd = __grains__['ps']
+    output = __salt__['cmd.run_stdout'](cmd)
+
+    pids = ''
+    for line in output.splitlines():
+        if 'status.pid' in line:
+            continue
+        if re.search(sig, line):
+            if pids:
+                pids += '\n'
+            pids += line.split()[1]
+
+    return pids
 
 
 def version():
@@ -537,20 +639,33 @@ def version():
 
         salt '*' status.version
     '''
-    procf = '/proc/version'
-    if not os.path.isfile(procf):
-        return {}
-    ret = salt.utils.fopen(procf, 'r').read().strip()
+    def linux_version():
+        '''
+        linux specific implementation of version
+        '''
+        procf = '/proc/version'
+        if not os.path.isfile(procf):
+            return {}
+        return salt.utils.fopen(procf, 'r').read().strip()
 
-    return ret
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_version,
+        'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
-def master(master_ip=None, connected=True):
+def master(master=None, connected=True):
     '''
     .. versionadded:: 2014.7.0
 
     Fire an event if the minion gets disconnected from its master. This
-    function is meant to be run via a scheduled job from the minion
+    function is meant to be run via a scheduled job from the minion. If
+    master_ip is an FQDN/Hostname, is must be resolvable to a valid IPv4
+    address.
 
     CLI Example:
 
@@ -558,14 +673,29 @@ def master(master_ip=None, connected=True):
 
         salt '*' status.master
     '''
-    port = int(__salt__['config.option']('publish_port'))
+
+    # the default publishing port
+    port = 4505
+    master_ip = None
+
+    if __salt__['config.get']('publish_port') != '':
+        port = int(__salt__['config.get']('publish_port'))
+
+    # Check if we have FQDN/hostname defined as master
+    # address and try resolving it first. _remote_port_tcp
+    # only works with IP-addresses.
+    if master is not None:
+        tmp_ip = _host_to_ip(master)
+        if tmp_ip is not None:
+            master_ip = tmp_ip
+
     ips = _remote_port_tcp(port)
 
     if connected:
         if master_ip not in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master_ip}, '__master_disconnected')
+            event.fire_event({'master': master}, '__master_disconnected')
     else:
         if master_ip in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-            event.fire_event({'master': master_ip}, '__master_connected')
+            event.fire_event({'master': master}, '__master_connected')

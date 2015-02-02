@@ -9,7 +9,7 @@ The 30 second summary
 
 Salt is:
 
-* a configuration management system, capable of maintaining remote nodes 
+* a configuration management system, capable of maintaining remote nodes
   in defined states (for example, ensuring that specific packages are installed and
   specific services are running)
 
@@ -44,7 +44,7 @@ The core functions of Salt:
 * use a secure and encrypted protocol
 * use the smallest and fastest network payloads possible
 * provide a simple programming interface
-  
+
 Salt also introduces more granular controls to the realm of remote
 execution, allowing systems to be targeted not just by hostname, but
 also by system properties.
@@ -82,7 +82,7 @@ The result is a system that can execute commands at high speed on
 target server groups ranging from one to very many servers. Salt is
 very fast, easy to set up, amazingly malleable and provides a single
 remote execution architecture that can manage the diverse
-requirements of any number of servers.  The Salt infrastructure 
+requirements of any number of servers.  The Salt infrastructure
 brings together the best of the remote execution world, amplifies its
 capabilities and expands its range, resulting in a system that is as
 versatile as it is practical, suitable for any network.

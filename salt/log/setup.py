@@ -14,15 +14,19 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
 import types
 import socket
-import urlparse
 import logging
 import logging.handlers
 import traceback
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
@@ -31,9 +35,10 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 # Import salt libs
-from salt.log.handlers import TemporaryLoggingHandler
+from salt.textformat import TextFormat
+from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
-from salt._compat import string_types
+
 
 LOG_LEVELS = {
     'all': logging.NOTSET,
@@ -47,9 +52,38 @@ LOG_LEVELS = {
     'warning': logging.WARNING,
 }
 
+
+LOG_COLORS = {
+    'levels': {
+        'QUIET': TextFormat('reset'),
+        'CRITICAL': TextFormat('bold', 'red'),
+        'ERROR': TextFormat('bold', 'red'),
+        'WARNING': TextFormat('bold', 'yellow'),
+        'INFO': TextFormat('bold', 'green'),
+        'DEBUG': TextFormat('bold', 'cyan'),
+        'TRACE': TextFormat('bold', 'magenta'),
+        'GARBAGE': TextFormat('bold', 'blue'),
+        'NOTSET': TextFormat('reset'),
+    },
+    'msgs': {
+        'QUIET': TextFormat('reset'),
+        'CRITICAL': TextFormat('bold', 'red'),
+        'ERROR': TextFormat('red'),
+        'WARNING': TextFormat('yellow'),
+        'INFO': TextFormat('green'),
+        'DEBUG': TextFormat('cyan'),
+        'TRACE': TextFormat('magenta'),
+        'GARBAGE': TextFormat('blue'),
+        'NOTSET': TextFormat('reset'),
+    },
+    'name': TextFormat('bold', 'green'),
+    'process': TextFormat('bold', 'blue'),
+}
+
+
 # Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(LOG_LEVELS.iteritems(), key=lambda x: x[1])
+    l[0] for l in sorted(six.iteritems(LOG_LEVELS), key=lambda x: x[1])
 ]
 
 # Store an instance of the current logging logger class
@@ -87,23 +121,80 @@ def is_extended_logging_configured():
 LOGGING_NULL_HANDLER = TemporaryLoggingHandler(logging.WARNING)
 
 # Store a reference to the temporary console logger
-LOGGING_TEMP_HANDLER = logging.StreamHandler(sys.stderr)
+LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 
 # Store a reference to the "storing" logging handler
 LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
 
 
-class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
-    __metaclass__ = LoggingMixInMeta
+class SaltLogRecord(logging.LogRecord):
+    def __init__(self, *args, **kwargs):
+        logging.LogRecord.__init__(self, *args, **kwargs)
+        self.bracketname = '[{name:17}]'.format(name=self.name)
+        self.bracketlevel = '[{levelname:8}]'.format(levelname=self.levelname)
+        self.bracketprocess = '[{process}]'.format(process=self.process)
 
-    def __new__(cls, *args):  # pylint: disable=W0613
+
+class SaltColorLogRecord(logging.LogRecord):
+    def __init__(self, *args, **kwargs):
+        logging.LogRecord.__init__(self, *args, **kwargs)
+
+        self.colorname = '{tf}[{name:17}]{end}'.format(
+                tf=LOG_COLORS['name'],
+                name=self.name,
+                end=TextFormat('reset')
+            )
+        self.colorlevel = '{tf}[{levelname:8}]{end}'.format(
+                tf=LOG_COLORS['levels'][self.levelname],
+                levelname=self.levelname,
+                end=TextFormat('reset')
+            )
+        self.colorprocess = '{tf}[{process}]{end}'.format(
+                tf=LOG_COLORS['process'],
+                process=self.process,
+                end=TextFormat('reset')
+            )
+        self.colormsg = u'{tf}{msg}{end}'.format(
+                tf=LOG_COLORS['msgs'][self.levelname],
+                msg=self.msg,
+                end=TextFormat('reset')
+            )
+
+
+_log_record_factory = SaltLogRecord
+
+
+def set_log_record_factory(factory):
+    '''
+    Set the factory to be used when instantiating a log record.
+
+    :param factory: A callable which will be called to instantiate
+    a log record.
+    '''
+    global _log_record_factory
+    _log_record_factory = factory
+
+
+def get_log_record_factory():
+    '''
+    Return the factory to be used when instantiating a log record.
+    '''
+
+    return _log_record_factory
+
+
+set_log_record_factory(SaltLogRecord)
+
+
+class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
+    def __new__(cls, *args):  # pylint: disable=W0613, E1002
         '''
         We override `__new__` in our logging logger class in order to provide
         some additional features like expand the module name padding if length
         is being used, and also some Unicode fixes.
 
         This code overhead will only be executed when the class is
-        instantiated, ie:
+        instantiated, i.e.:
 
             logging.getLogger(__name__)
 
@@ -112,7 +203,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
 
         try:
             max_logger_length = len(max(
-                logging.Logger.manager.loggerDict.keys(), key=len
+                list(logging.Logger.manager.loggerDict.keys()), key=len
             ))
             for handler in logging.root.handlers:
                 if handler in (LOGGING_NULL_HANDLER,
@@ -161,26 +252,77 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, NewStyleClassMixIn):
             pass
         return instance
 
-    # pylint: disable=C0103
-    def makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None,
-                   extra=None):
-        # Let's try to make every logging message unicode
-        if isinstance(msg, string_types) and not isinstance(msg, unicode):
-            try:
-                return LOGGING_LOGGER_CLASS.makeRecord(
-                    self, name, level, fn, lno,
-                    msg.decode('utf-8', 'replace'),
-                    args, exc_info, func, extra
+    def _log(self, level, msg, args, exc_info=None, extra=None,  # pylint: disable=arguments-differ
+             exc_info_on_loglevel=None):
+        # If both exc_info and exc_info_on_loglevel are both passed, let's fail.
+        if exc_info and exc_info_on_loglevel:
+            raise RuntimeError(
+                'Please only use one of \'exc_info\' and \'exc_info_on_loglevel\', not both'
+            )
+        if exc_info_on_loglevel is not None:
+            if isinstance(exc_info_on_loglevel, six.string_types):
+                exc_info_on_loglevel = LOG_LEVELS.get(exc_info_on_loglevel, logging.ERROR)
+            elif not isinstance(exc_info_on_loglevel, int):
+                raise RuntimeError(
+                    'The value of \'exc_info_on_loglevel\' needs to be a logging level or '
+                    'a logging level name, not {0!r}'.format(exc_info_on_loglevel)
                 )
-            except UnicodeDecodeError:
-                return LOGGING_LOGGER_CLASS.makeRecord(
-                    self, name, level, fn, lno,
-                    msg.decode('utf-8', 'ignore'),
-                    args, exc_info, func, extra
-                )
-        return LOGGING_LOGGER_CLASS.makeRecord(
-            self, name, level, fn, lno, msg, args, exc_info, func, extra
+        if extra is None:
+            extra = {'exc_info_on_loglevel': exc_info_on_loglevel}
+        else:
+            extra['exc_info_on_loglevel'] = exc_info_on_loglevel
+
+        LOGGING_LOGGER_CLASS._log(
+            self, level, msg, args, exc_info=exc_info, extra=extra
         )
+
+    # pylint: disable=C0103
+    # pylint: disable=W0221
+    def makeRecord(self, name, level, fn, lno, msg, args, exc_info,
+                   func=None, extra=None, sinfo=None):
+        # Let's remove exc_info_on_loglevel from extra
+        exc_info_on_loglevel = extra.pop('exc_info_on_loglevel')
+        if not extra:
+            # If nothing else is in extra, make it None
+            extra = None
+
+        # Let's try to make every logging message unicode
+        if isinstance(msg, six.string_types) and not isinstance(msg, six.text_type):
+            try:
+                _msg = msg.decode('utf-8', 'replace')
+            except UnicodeDecodeError:
+                _msg = msg.decode('utf-8', 'ignore'),
+        else:
+            _msg = msg
+
+        if six.PY3:
+            logrecord = _log_record_factory(name, level, fn, lno, _msg, args,
+                                          exc_info, func, sinfo)
+        else:
+            logrecord = _log_record_factory(name, level, fn, lno, _msg, args,
+                                          exc_info, func)
+
+        if extra is not None:
+            for key in extra:
+                if (key in ['message', 'asctime']) \
+                        or (key in logrecord.__dict__):
+                    raise KeyError(
+                        'Attempt to overwrite {0!r} in LogRecord'.format(key)
+                    )
+                logrecord.__dict__[key] = extra[key]
+
+        if exc_info_on_loglevel is not None:
+            # Let's add some custom attributes to the LogRecord class in order
+            # to include the exc_info on a per handler basis. This will allow
+            # showing tracebacks on logfiles but not on console if the logfile
+            # handler is enabled for the log level "exc_info_on_loglevel" and
+            # console handler is not.
+            logrecord.exc_info_on_loglevel_instance = sys.exc_info()
+            logrecord.exc_info_on_loglevel_formatted = None
+
+        logrecord.exc_info_on_loglevel = exc_info_on_loglevel
+        return logrecord
+
     # pylint: enable=C0103
 
 
@@ -288,6 +430,8 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
+    set_log_record_factory(SaltColorLogRecord)
+
     handler = None
     for handler in logging.root.handlers:
         if handler is LOGGING_STORE_HANDLER:
@@ -301,7 +445,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
             # There's already a logging handler outputting to sys.stderr
             break
     else:
-        handler = logging.StreamHandler(sys.stderr)
+        handler = StreamHandler(sys.stderr)
     handler.setLevel(level)
 
     # Set the default console formatter config
@@ -365,13 +509,13 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    parsed_log_path = urlparse.urlparse(log_path)
+    parsed_log_path = urlparse(log_path)
 
     root_logger = logging.getLogger()
 
     if parsed_log_path.scheme in ('tcp', 'udp', 'file'):
         syslog_opts = {
-            'facility': logging.handlers.SysLogHandler.LOG_USER,
+            'facility': SysLogHandler.LOG_USER,
             'socktype': socket.SOCK_DGRAM
         }
 
@@ -403,7 +547,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             facility_name = 'LOG_USER'      # Syslog default
 
         facility = getattr(
-            logging.handlers.SysLogHandler, facility_name, None
+            SysLogHandler, facility_name, None
         )
         if facility is None:
             # This python syslog version does not know about the user provided
@@ -436,7 +580,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
         try:
             # Et voilá! Finally our syslog handler instance
-            handler = logging.handlers.SysLogHandler(**syslog_opts)
+            handler = SysLogHandler(**syslog_opts)
         except socket.error as err:
             logging.getLogger(__name__).error(
                 'Failed to setup the Syslog logging handler: {0}'.format(
@@ -450,9 +594,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
             # Since salt uses YAML and YAML uses either UTF-8 or UTF-16, if a
             # user is not using plain ASCII, their system should be ready to
             # handle UTF-8.
-            handler = getattr(
-                logging.handlers, 'WatchedFileHandler', logging.FileHandler
-            )(log_path, mode='a', encoding='utf-8', delay=0)
+            handler = WatchedFileHandler(log_path, mode='a', encoding='utf-8', delay=0)
         except (IOError, OSError):
             logging.getLogger(__name__).warning(
                 'Failed to open log file, do you have permission to write to '
@@ -501,7 +643,7 @@ def setup_extended_logging(opts):
     # log records with them
     additional_handlers = []
 
-    for name, get_handlers_func in providers.iteritems():
+    for name, get_handlers_func in six.iteritems(providers):
         logging.getLogger(__name__).info(
             'Processing `log_handlers.{0}`'.format(name)
         )
@@ -638,11 +780,6 @@ def __remove_temp_logging_handler():
         logging.captureWarnings(True)
 
 
-# Let's setup a global exception hook handler which will log all exceptions
-# Store a reference to the original handler
-__GLOBAL_EXCEPTION_HANDLER = sys.excepthook
-
-
 def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
     '''
     This function will log all python exceptions.
@@ -659,7 +796,7 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
         )
     )
     # Call the original sys.excepthook
-    __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
+    sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
 
 # Set our own exception handler as the one to use

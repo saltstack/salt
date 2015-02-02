@@ -131,4 +131,3 @@ of trunk, it will be supported by Salt Cloud.
 
 Additional logging and PEP-8 fixes have also been applied. This should only
 affect developers.
-

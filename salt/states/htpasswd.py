@@ -14,6 +14,7 @@ Support for htpasswd module
         - force: true
 
 '''
+from __future__ import absolute_import
 import salt.utils
 
 

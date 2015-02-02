@@ -7,6 +7,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -18,6 +21,7 @@ ensure_in_syspath('../../')
 from salt.returners import smtp_return as smtp
 
 smtp.__salt__ = {}
+smtp.__opts__ = {}
 
 try:
     import gnupg  # pylint: disable=unused-import

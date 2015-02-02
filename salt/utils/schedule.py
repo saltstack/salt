@@ -46,7 +46,7 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-    ... versionadded:: 2014.7.0
+    .. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
@@ -111,10 +111,59 @@ dictionary with the date strings using the dateutil format.
             start: 8:00am
             end: 5:00pm
 
-Using the invert option for range, this will schedule the command: state.sls httpd
-test=True every 3600 seconds (every hour) until the current time is between the hours
-of 8am and 5pm.  The range parameter must be a dictionary with the date strings using
-the dateutil format.
+Using the invert option for range, this will schedule the command: state.sls
+httpd test=True every 3600 seconds (every hour) until the current time is
+between the hours of 8am and 5pm.  The range parameter must be a dictionary
+with the date strings using the dateutil format.
+
+By default any job scheduled based on the startup time of the minion will run
+the scheduled job when the minion starts up.  Sometimes this is not the desired
+situation.  Using the 'run_on_start' parameter set to False will cause the
+scheduler to skip this first run and wait until the next scheduled run.
+
+    ... versionadded:: Lithium
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        run_on_start: False
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+    ... versionadded:: 2014.7.0
+
+    schedule:
+      job1:
+        function: state.sls
+        cron: '*/15 * * * *'
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+The scheduler also supports scheduling jobs using a cron like format.
+This requires the python-croniter library.
+
+    ... versionadded:: Beryllium
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 15
+        until: '12/31/2015 11:59pm'
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+Using the until argument, the Salt scheduler allows you to specify
+an end time for a scheduled job.  If this argument is specified, jobs
+will not run once the specified time has passed.  Time should be specified
+in a format support by the dateutil library.
+This requires the python-dateutil library.
 
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
@@ -130,9 +179,37 @@ code-block:: yaml
           jid_include: True
           maxrunning: 1
 
+By default, data about jobs runs from the Salt scheduler is not returned to the
+master.  Because of this information for these jobs will not be listed in the
+jobs.list_jobs runner.  The return_job parameter will return the data back to
+the Salt master, making the job available in this list.
+
+    ... versionadded:: Lithium
+
+    schedule:
+      job1:
+          function: scheduled_job_function
+          job_return: True
+
+It can be useful to include specific data to differentiate a job from other
+jobs.  Using the metadata parameter special values can be associated with
+a scheduled job.  These values are not used in the execution of the job,
+but can be used to search for specific jobs later if combined with the
+return_job parameter.  The metadata parameter must be specified as a
+dictionary, othewise it will be ignored.
+
+    ... versionadded:: Lithium
+
+    schedule:
+      job1:
+          function: scheduled_job_function
+          metadata:
+            foo: bar
+
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import time
 import datetime
@@ -143,6 +220,19 @@ import logging
 import errno
 import random
 
+# Import Salt libs
+import salt.utils
+import salt.utils.jid
+import salt.utils.process
+import salt.payload
+import salt.syspaths
+from salt.utils.odict import OrderedDict
+from salt.utils.process import os_is_running
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
     _WHEN_SUPPORTED = True
@@ -156,13 +246,7 @@ try:
     _CRON_SUPPORTED = True
 except ImportError:
     _CRON_SUPPORTED = False
-
-# Import Salt libs
-import salt.utils
-import salt.utils.process
-from salt.utils.odict import OrderedDict
-from salt.utils.process import os_is_running
-import salt.payload
+# pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -178,10 +262,11 @@ class Schedule(object):
             self.intervals = intervals
         else:
             self.intervals = {}
-        if isinstance(returners, dict):
+        if hasattr(returners, '__getitem__'):
             self.returners = returners
         else:
             self.returners = returners.loader.gen_functions()
+        self.time_offset = self.functions.get('timezone.get_offset', lambda: '0000')()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint
@@ -195,11 +280,24 @@ class Schedule(object):
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
+    def persist(self):
+        '''
+        Persist the modified schedule into <<configdir>>/minion.d/_schedule.conf
+        '''
+        schedule_conf = os.path.join(
+                salt.syspaths.CONFIG_DIR,
+                'minion.d',
+                '_schedule.conf')
+        try:
+            with salt.utils.fopen(schedule_conf, 'w+') as fp_:
+                fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
+        except (IOError, OSError):
+            log.error('Failed to persist the updated schedule')
+
     def delete_job(self, name, where=None):
         '''
         Deletes a job from the scheduler.
         '''
-
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
             if name in self.opts['schedule']:
@@ -221,14 +319,14 @@ class Schedule(object):
         python data-structures to make sure, you pass correct dictionaries.
         '''
 
-        # we dont do any checking here besides making sure its a dict.
+        # we don't do any checking here besides making sure its a dict.
         # eval() already does for us and raises errors accordingly
-        if not type(data) is dict:
+        if not isinstance(data, dict):
             raise ValueError('Scheduled jobs have to be of type dict.')
-        if not len(data.keys()) == 1:
+        if not len(data) == 1:
             raise ValueError('You can only schedule one new job at a time.')
 
-        new_job = data.keys()[0]
+        new_job = next(six.iterkeys(data))
 
         if new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
@@ -236,6 +334,7 @@ class Schedule(object):
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
         self.opts['schedule'].update(data)
+        self.persist()
 
     def enable_job(self, name, where=None):
         '''
@@ -346,7 +445,18 @@ class Schedule(object):
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
                'schedule': data['name'],
-               'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+               'jid': salt.utils.jid.gen_jid()}
+
+        if 'metadata' in data:
+            if isinstance(data['metadata'], dict):
+                ret['metadata'] = data['metadata']
+                ret['metadata']['_TOS'] = self.time_offset
+                ret['metadata']['_TS'] = time.ctime()
+            else:
+                log.warning('schedule: The metadata parameter must be '
+                            'specified as a dictionary.  Ignoring.')
+
+        salt.utils.appendproctitle(ret['jid'])
 
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
@@ -422,6 +532,8 @@ class Schedule(object):
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
+                if 'returner_config' in data:
+                    ret['ret_config'] = data['returner_config']
                 rets = []
                 for returner in [data_returner, self.schedule_returner]:
                     if isinstance(returner, str):
@@ -429,8 +541,7 @@ class Schedule(object):
                     elif isinstance(returner, list):
                         rets.extend(returner)
                 # simple de-duplication with order retained
-                rets = OrderedDict.fromkeys(rets).keys()
-                for returner in rets:
+                for returner in OrderedDict.fromkeys(rets):
                     ret_str = '{0}.returner'.format(returner)
                     if ret_str in self.returners:
                         ret['success'] = True
@@ -441,6 +552,17 @@ class Schedule(object):
                                 func, returner
                             )
                         )
+
+            if 'return_job' in data and data['return_job']:
+                # Send back to master so the job is included in the job list
+                mret = ret.copy()
+                mret['jid'] = 'req'
+                channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
+                load = {'cmd': '_return', 'id': self.opts['id']}
+                for key, value in six.iteritems(mret):
+                    load[key] = value
+                channel.send(load)
+
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
             # Although catch-all exception handlers are bad, the exception here
@@ -469,7 +591,7 @@ class Schedule(object):
             raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
-        for job, data in schedule.items():
+        for job, data in six.iteritems(schedule):
             if job == 'enabled':
                 continue
             # Job is disabled, continue
@@ -496,8 +618,22 @@ class Schedule(object):
             when = 0
             seconds = 0
             cron = 0
-
+            now = int(time.time())
             time_conflict = False
+
+            if 'until' in data:
+                if not _WHEN_SUPPORTED:
+                    log.error('Missing python-dateutil.'
+                              'Ignoring until.')
+                else:
+                    until__ = dateutil_parser.parse(data['until'])
+                    until = int(time.mktime(until__.timetuple()))
+
+                    if until <= now:
+                        log.debug('Until time has passed '
+                                  'skipping job: {0}.'.format(data['name']))
+                        continue
+
             for item in ['seconds', 'minutes', 'hours', 'days']:
                 if item in data and 'when' in data:
                     time_conflict = True
@@ -505,12 +641,14 @@ class Schedule(object):
                     time_conflict = True
 
             if time_conflict:
-                log.error('Unable to use "seconds", "minutes", "hours", or "days" with '
+                log.error('Unable to use "seconds", "minutes",'
+                          '"hours", or "days" with '
                           '"when" or "cron" options. Ignoring.')
                 continue
 
             if 'when' in data and 'cron' in data:
-                log.error('Unable to use "when" and "cron" options together. Ignoring.')
+                log.error('Unable to use "when" and "cron" options together.'
+                          'Ignoring.')
                 continue
 
             time_elements = ['seconds', 'minutes', 'hours', 'days']
@@ -522,20 +660,49 @@ class Schedule(object):
                 seconds += int(data.get('days', 0)) * 86400
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
-                    log.error('Missing python-dateutil. Ignoring job {0}'.format(job))
+                    log.error('Missing python-dateutil.'
+                              'Ignoring job {0}'.format(job))
                     continue
 
                 if isinstance(data['when'], list):
                     _when = []
-                    now = int(time.time())
                     for i in data['when']:
-                        try:
-                            tmp = int(dateutil_parser.parse(i).strftime('%s'))
-                        except ValueError:
-                            log.error('Invalid date string {0}. Ignoring job {1}.'.format(i, job))
-                            continue
-                        if tmp >= now:
-                            _when.append(tmp)
+                        if ('whens' in self.opts['pillar'] and
+                                i in self.opts['pillar']['whens']):
+                            if not isinstance(self.opts['pillar']['whens'],
+                                              dict):
+                                log.error('Pillar item "whens" must be dict.'
+                                          'Ignoring')
+                                continue
+                            __when = self.opts['pillar']['whens'][i]
+                            try:
+                                when__ = dateutil_parser.parse(__when)
+                            except ValueError:
+                                log.error('Invalid date string. Ignoring')
+                                continue
+                        elif ('whens' in self.opts['grains'] and
+                              i in self.opts['grains']['whens']):
+                            if not isinstance(self.opts['grains']['whens'],
+                                              dict):
+                                log.error('Grain "whens" must be dict.'
+                                          'Ignoring')
+                                continue
+                            __when = self.opts['grains']['whens'][i]
+                            try:
+                                when__ = dateutil_parser.parse(__when)
+                            except ValueError:
+                                log.error('Invalid date string. Ignoring')
+                                continue
+                        else:
+                            try:
+                                when__ = dateutil_parser.parse(i)
+                            except ValueError:
+                                log.error('Invalid date string {0}.'
+                                          'Ignoring job {1}.'.format(i, job))
+                                continue
+                        when = int(time.mktime(when__.timetuple()))
+                        if when >= now:
+                            _when.append(when)
                     _when.sort()
                     if _when:
                         # Grab the first element
@@ -547,7 +714,7 @@ class Schedule(object):
                         if '_when' in data and data['_when'] != when:
                             data['_when_run'] = True
                             data['_when'] = when
-                        seconds = when - int(time.time())
+                        seconds = when - now
 
                         # scheduled time is in the past
                         if seconds < 0:
@@ -569,12 +736,36 @@ class Schedule(object):
                         continue
 
                 else:
-                    try:
-                        when = int(dateutil_parser.parse(data['when']).strftime('%s'))
-                    except ValueError:
-                        log.error('Invalid date string. Ignoring')
-                        continue
-
+                    if ('whens' in self.opts['pillar'] and
+                            data['when'] in self.opts['pillar']['whens']):
+                        if not isinstance(self.opts['pillar']['whens'], dict):
+                            log.error('Pillar item "whens" must be dict.'
+                                      'Ignoring')
+                            continue
+                        _when = self.opts['pillar']['whens'][data['when']]
+                        try:
+                            when__ = dateutil_parser.parse(_when)
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    elif ('whens' in self.opts['grains'] and
+                          data['when'] in self.opts['grains']['whens']):
+                        if not isinstance(self.opts['grains']['whens'], dict):
+                            log.error('Grain "whens" must be dict. Ignoring')
+                            continue
+                        _when = self.opts['grains']['whens'][data['when']]
+                        try:
+                            when__ = dateutil_parser.parse(_when)
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    else:
+                        try:
+                            when__ = dateutil_parser.parse(data['when'])
+                        except ValueError:
+                            log.error('Invalid date string. Ignoring')
+                            continue
+                    when = int(time.mktime(when__.timetuple()))
                     now = int(time.time())
                     seconds = when - now
 
@@ -599,7 +790,7 @@ class Schedule(object):
                     log.error('Missing python-croniter. Ignoring job {0}'.format(job))
                     continue
 
-                now = int(datetime.datetime.now().strftime('%s'))
+                now = int(time.mktime(datetime.datetime.now().timetuple()))
                 try:
                     cron = int(croniter.croniter(data['cron'], now).get_next())
                 except (ValueError, KeyError):
@@ -610,21 +801,23 @@ class Schedule(object):
                 continue
 
             # Check if the seconds variable is lower than current lowest
-            # loop interval needed. If it is lower then overwrite variable
+            # loop interval needed. If it is lower than overwrite variable
             # external loops using can then check this variable for how often
             # they need to reschedule themselves
-            if seconds < self.loop_interval:
-                self.loop_interval = seconds
-            now = int(time.time())
+            # Not used with 'when' parameter, causes run away jobs and CPU
+            # spikes.
+            if 'when' not in data:
+                if seconds < self.loop_interval:
+                    self.loop_interval = seconds
             run = False
 
             if job in self.intervals:
                 if 'when' in data:
-                    if now - when >= seconds:
+                    if seconds == 0:
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:
@@ -637,18 +830,30 @@ class Schedule(object):
                     elif 'cron' in data:
                         log.error('Unable to use "splay" with "cron" option at this time. Ignoring.')
                     else:
-                        data['_seconds'] = data['seconds']
+                        if 'seconds' in data:
+                            data['_seconds'] = data['seconds']
+                        else:
+                            data['_seconds'] = 0
 
                 if 'when' in data:
-                    if now - when >= seconds:
+                    if seconds == 0:
                         if data['_when_run']:
                             data['_when_run'] = False
                             run = True
-                if 'cron' in data:
+                elif 'cron' in data:
                     if seconds == 1:
                         run = True
                 else:
-                    run = True
+                    # If run_on_start is True, the job will run when the Salt
+                    # minion start.  If the value is False will run at the next
+                    # scheduled run.  Default is True.
+                    if 'run_on_start' in data:
+                        if data['run_on_start']:
+                            run = True
+                        else:
+                            self.intervals[job] = int(time.time())
+                    else:
+                        run = True
 
             if run:
                 if 'range' in data:
@@ -658,12 +863,12 @@ class Schedule(object):
                     else:
                         if isinstance(data['range'], dict):
                             try:
-                                start = int(dateutil_parser.parse(data['range']['start']).strftime('%s'))
+                                start = int(time.mktime(dateutil_parser.parse(data['range']['start']).timetuple()))
                             except ValueError:
                                 log.error('Invalid date string for start. Ignoring job {0}.'.format(job))
                                 continue
                             try:
-                                end = int(dateutil_parser.parse(data['range']['end']).strftime('%s'))
+                                end = int(time.mktime(dateutil_parser.parse(data['range']['end']).timetuple()))
                             except ValueError:
                                 log.error('Invalid date string for end. Ignoring job {0}.'.format(job))
                                 continue
@@ -684,7 +889,7 @@ class Schedule(object):
                                 continue
                         else:
                             log.error('schedule.handle_func: Invalid, range must be specified as a dictionary. \
-                                     Ignoring job {-1}.'.format(job))
+                                     Ignoring job {0}.'.format(job))
                             continue
 
             if not run:
@@ -695,7 +900,7 @@ class Schedule(object):
                         log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
                     else:
                         if isinstance(data['splay'], dict):
-                            if data['splay']['end'] > data['splay']['start']:
+                            if data['splay']['end'] >= data['splay']['start']:
                                 splay = random.randint(data['splay']['start'], data['splay']['end'])
                             else:
                                 log.error('schedule.handle_func: Invalid Splay, end must be larger than start. \
@@ -707,7 +912,10 @@ class Schedule(object):
                         if splay:
                             log.debug('schedule.handle_func: Adding splay of '
                                       '{0} seconds to next run.'.format(splay))
-                            data['seconds'] = data['_seconds'] + splay
+                            if 'seconds' in data:
+                                data['seconds'] = data['_seconds'] + splay
+                            else:
+                                data['seconds'] = 0 + splay
 
                 log.info('Running scheduled job: {0}'.format(job))
 
@@ -733,7 +941,7 @@ class Schedule(object):
                 if self.opts.get('multiprocessing', True):
                     proc.join()
             finally:
-                self.intervals[job] = int(time.time())
+                self.intervals[job] = now
 
 
 def clean_proc_dir(opts):
@@ -748,7 +956,9 @@ def clean_proc_dir(opts):
         with salt.utils.fopen(fn_, 'rb') as fp_:
             job = None
             try:
-                job = salt.payload.Serial(opts).load(fp_)
+                job_data = fp_.read()
+                if job_data:
+                    job = salt.payload.Serial(opts).load(fp_)
             except Exception:  # It's corrupted
                 try:
                     os.unlink(fn_)

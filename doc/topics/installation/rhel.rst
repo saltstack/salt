@@ -1,6 +1,6 @@
-==========================================================================
+==============================================================
 RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux
-==========================================================================
+==============================================================
 
 Installation Using pip
 ======================
@@ -91,6 +91,39 @@ To install from ``epel-testing``, use the ``enablerepo`` argument for yum:
 
     yum --enablerepo=epel-testing install salt-minion
 
+
+ZeroMQ 4
+========
+
+We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.4
+and pyzmq 14.3.1 in a COPR_ repository. Instructions for adding this repository
+(as well as for upgrading ZeroMQ and pyzmq on existing minions) can be found
+here_.
+
+.. _COPR: http://copr.fedoraproject.org/
+.. _here: http://copr.fedoraproject.org/coprs/saltstack/zeromq4/
+
+If this repo is added *before* Salt is installed, then installing either
+``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
+additional states to upgrade ZeroMQ and pyzmq are unnecessary.
+
+.. warning:: RHEL/CentOS 5 Users
+    Using COPR repos on RHEL/CentOS 5 requires that the ``python-hashlib``
+    package be installed. Not having it present will result in checksum errors
+    because YUM will not be able to process the SHA256 checksums used by COPR.
+
+
+Package Management
+==================
+
+Salt's interface to :mod:`yum <salt.modules.yumpkg>` makes heavy use of the
+**repoquery** utility, from the yum-utils_ package. This package will be
+installed as a dependency if salt is installed via EPEL. However, if salt has
+been installed using pip, or a host is being managed using salt-ssh, then as of
+version 2014.7.0 yum-utils_ will be installed automatically to satisfy this
+dependency.
+
+.. _yum-utils: http://yum.baseurl.org/wiki/YumUtils
 
 Post-installation tasks
 =======================

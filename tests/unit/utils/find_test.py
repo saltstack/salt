@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import shutil
@@ -16,6 +17,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 import salt.utils.find
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 class TestFind(TestCase):
@@ -229,7 +233,7 @@ class TestFind(TestCase):
             ValueError, salt.utils.find.GroupOption, 'group', 'notexist'
         )
 
-        if sys.platform.startswith(('darwin', 'freebsd')):
+        if sys.platform.startswith(('darwin', 'freebsd', 'openbsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -238,7 +242,7 @@ class TestFind(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'No /dev/null on Windows')
     def test_group_option_match(self):
-        if sys.platform.startswith(('darwin', 'freebsd')):
+        if sys.platform.startswith(('darwin', 'freebsd', 'openbsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -414,7 +418,7 @@ class TestPrintOption(TestCase):
     @skipIf(sys.platform.startswith('Windows'), "no /dev/null on windows")
     def test_print_group(self):
         option = salt.utils.find.PrintOption('print', 'group')
-        if sys.platform.startswith(('darwin', 'freebsd')):
+        if sys.platform.startswith(('darwin', 'freebsd', 'openbsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'
@@ -508,7 +512,7 @@ class TestFinder(TestCase):
             str(finder.criteria[0].__class__)[-13:-2], 'OwnerOption'
         )
 
-        if sys.platform.startswith(('darwin', 'freebsd')):
+        if sys.platform.startswith(('darwin', 'freebsd', 'openbsd')):
             group_name = 'wheel'
         else:
             group_name = 'root'

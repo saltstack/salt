@@ -4,13 +4,18 @@ Define some generic socket functions for network modules
 '''
 
 # Import python libs
-import socket
-import subprocess
-import re
-import logging
+from __future__ import absolute_import
 import os
+import re
+import shlex
+import socket
+import logging
+import subprocess
 from string import ascii_letters, digits
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
     import wmi
@@ -21,9 +26,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
-
 log = logging.getLogger(__name__)
-
 
 # pylint: disable=C0103
 
@@ -94,6 +97,7 @@ def _filter_localhost_names(name_list):
         '::1.*',
         'fe00::.*',
         'fe02::.*',
+        '1.0.0.*.ip6.arpa',
     ]
     for name in name_list:
         filtered = False
@@ -482,10 +486,15 @@ def _interfaces_ifconfig(out):
 
     piface = re.compile(r'^([^\s:]+)')
     pmac = re.compile('.*?(?:HWaddr|ether|address:|lladdr) ([0-9a-fA-F:]+)')
-    pip = re.compile(r'.*?(?:inet addr:|inet )(.*?)\s')
-    pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
+    if salt.utils.is_sunos():
+        pip = re.compile(r'.*?(?:inet\s+)([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)(.*)')
+        pip6 = re.compile('.*?(?:inet6 )([0-9a-fA-F:]+)')
+        pmask6 = re.compile(r'.*?(?:inet6 [0-9a-fA-F:]+/(\d+)).*')
+    else:
+        pip = re.compile(r'.*?(?:inet addr:|inet )(.*?)\s')
+        pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
+        pmask6 = re.compile(r'.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
     pmask = re.compile(r'.*?(?:Mask:|netmask )(?:((?:0x)?[0-9a-fA-F]{8})|([\d\.]+))')
-    pmask6 = re.compile(r'.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
     pupdown = re.compile('UP')
     pbcast = re.compile(r'.*?(?:Bcast:|broadcast )([\d\.]+)')
 
@@ -533,7 +542,16 @@ def _interfaces_ifconfig(out):
                     addr_obj['prefixlen'] = mmask6.group(1) or mmask6.group(2)
                 data['inet6'].append(addr_obj)
         data['up'] = updown
-        ret[iface] = data
+        if iface in ret:
+            # SunOS optimization, where interfaces occur twice in 'ifconfig -a'
+            # output with the same name: for ipv4 and then for ipv6 addr family.
+            # Every instance has it's own 'UP' status and we assume that ipv4
+            # status determines global interface status.
+            #
+            # merge items with higher priority for older values
+            ret[iface] = dict(list(data.items()) + list(ret[iface].items()))
+        else:
+            ret[iface] = data
         del data
     return ret
 
@@ -711,14 +729,14 @@ def hw_addr(iface):
 
 def interface(iface):
     '''
-    Return the the interface details
+    Return the interface details
     '''
     return interfaces().get(iface, {}).get('inet', '')
 
 
 def interface_ip(iface):
     '''
-    Return the the interface details
+    Return the interface details
     '''
     return interfaces().get(iface, {}).get('inet', {})[0].get('address', {})
 
@@ -730,7 +748,7 @@ def subnets():
     ifaces = interfaces()
     subnetworks = []
 
-    for ipv4_info in ifaces.values():
+    for ipv4_info in six.itervalues(ifaces):
         for ipv4 in ipv4_info.get('inet', []):
             if ipv4['address'] == '127.0.0.1':
                 continue
@@ -773,6 +791,17 @@ def in_subnet(cidr, addrs=None):
     return False
 
 
+def ip_in_subnet(ip_addr, cidr):
+    '''
+    Returns True if given IP is within specified subnet, otherwise False
+    '''
+    ipaddr = int(''.join(['%02x' % int(x) for x in ip_addr.split('.')]), 16)  # pylint: disable=E1321
+    netstr, bits = cidr.split('/')
+    netaddr = int(''.join(['%02x' % int(x) for x in netstr.split('.')]), 16)  # pylint: disable=E1321
+    mask = (0xffffffff << (32 - int(bits))) & 0xffffffff
+    return (ipaddr & mask) == (netaddr & mask)
+
+
 def ip_addrs(interface=None, include_loopback=False):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
@@ -784,11 +813,11 @@ def ip_addrs(interface=None, include_loopback=False):
     if interface is None:
         target_ifaces = ifaces
     else:
-        target_ifaces = dict([(k, v) for k, v in ifaces.iteritems()
+        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv4_info in target_ifaces.values():
+    for ipv4_info in six.itervalues(target_ifaces):
         for ipv4 in ipv4_info.get('inet', []):
             loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
             if not loopback or include_loopback:
@@ -812,11 +841,11 @@ def ip_addrs6(interface=None, include_loopback=False):
     if interface is None:
         target_ifaces = ifaces
     else:
-        target_ifaces = dict([(k, v) for k, v in ifaces.iteritems()
+        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv6_info in target_ifaces.values():
+    for ipv6_info in six.itervalues(target_ifaces):
         for ipv6 in ipv6_info.get('inet6', []):
             if include_loopback or ipv6['address'] != '::1':
                 ret.add(ipv6['address'])
@@ -854,7 +883,7 @@ def active_tcp():
     '''
     ret = {}
     if os.path.isfile('/proc/net/tcp'):
-        with open('/proc/net/tcp', 'rb') as fp_:
+        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
             for line in fp_:
                 if line.strip().startswith('sl'):
                     continue
@@ -869,12 +898,12 @@ def local_port_tcp(port):
     '''
     ret = set()
     if os.path.isfile('/proc/net/tcp'):
-        with open('/proc/net/tcp', 'rb') as fp_:
+        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
             for line in fp_:
                 if line.strip().startswith('sl'):
                     continue
                 iret = _parse_tcp_line(line)
-                sl = iter(iret).next()
+                sl = next(iter(iret))
                 if iret[sl]['local_port'] == port:
                     ret.add(iret[sl]['remote_addr'])
         return ret
@@ -889,12 +918,12 @@ def remote_port_tcp(port):
     '''
     ret = set()
     if os.path.isfile('/proc/net/tcp'):
-        with open('/proc/net/tcp', 'rb') as fp_:
+        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
             for line in fp_:
                 if line.strip().startswith('sl'):
                     continue
                 iret = _parse_tcp_line(line)
-                sl = iter(iret).next()
+                sl = next(iter(iret))
                 if iret[sl]['remote_port'] == port:
                     ret.add(iret[sl]['remote_addr'])
         return ret
@@ -920,12 +949,108 @@ def _parse_tcp_line(line):
     return ret
 
 
+def _sunos_remotes_on(port, which_end):
+    '''
+    SunOS specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    [root@salt-master ~]# netstat -f inet -n
+    TCP: IPv4
+       Local Address        Remote Address    Swind Send-Q Rwind Recv-Q    State
+       -------------------- -------------------- ----- ------ ----- ------ -----------
+       10.0.0.101.4505      10.0.0.1.45329       1064800      0 1055864      0 ESTABLISHED
+       10.0.0.101.4505      10.0.0.100.50798     1064800      0 1055864      0 ESTABLISHED
+    '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = data.split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[0].rsplit('.', 1)
+        remote_host, remote_port = chunks[1].rsplit('.', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
+    return remotes
+
+
+def _freebsd_remotes_on(port, which_end):
+    '''
+    Returns set of ipv4 host addresses of remote established connections
+    on local tcp port port.
+
+    Parses output of shell 'sockstat' (FreeBSD)
+    to get connections
+
+    $ sudo sockstat -4
+    USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
+    root    python2.7   1456    29  tcp4   *:4505           *:*
+    root    python2.7   1445    17  tcp4   *:4506           *:*
+    root    python2.7   1294    14  tcp4   127.0.0.1:11813  127.0.0.1:4505
+    root    python2.7   1294    41  tcp4   127.0.0.1:61115  127.0.0.1:4506
+
+    $ sudo sockstat -4 -c -p 4506
+    USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
+    root    python2.7   1294    41  tcp4   127.0.0.1:61115  127.0.0.1:4506
+    '''
+
+    port = int(port)
+    remotes = set()
+
+    try:
+        cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
+        data = subprocess.check_output(cmd)
+    except subprocess.CalledProcessError as ex:
+        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        raise
+
+    lines = data.split('\n')
+
+    for line in lines:
+        chunks = line.split()
+        if not chunks:
+            continue
+        # ['root', 'python2.7', '1456', '37', 'tcp4',
+        #  '127.0.0.1:4505-', '127.0.0.1:55703']
+        #print chunks
+        if 'COMMAND' in chunks[1]:
+            continue  # ignore header
+        if len(chunks) < 2:
+            continue
+        local = chunks[5]
+        remote = chunks[6]
+        lhost, lport = local.split(':')
+        rhost, rport = remote.split(':')
+        if which_end == 'local' and int(lport) != port:  # ignore if local port not port
+            continue
+        if which_end == 'remote' and int(rport) != port:  # ignore if remote port not port
+            continue
+
+        remotes.add(rhost)
+
+    return remotes
+
+
 def remotes_on_local_tcp_port(port):
     '''
     Returns set of ipv4 host addresses of remote established connections
     on local tcp port port.
 
-    Parses output of shell 'lsof' to get connections
+    Parses output of shell 'lsof'
+    to get connections
 
     $ sudo lsof -i4TCP:4505 -n
     COMMAND   PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
@@ -936,6 +1061,11 @@ def remotes_on_local_tcp_port(port):
     '''
     port = int(port)
     remotes = set()
+
+    if salt.utils.is_sunos():
+        return _sunos_remotes_on(port, 'local_port')
+    if salt.utils.is_freebsd():
+        return _freebsd_remotes_on(port, 'local_port')
 
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
@@ -982,6 +1112,11 @@ def remotes_on_remote_tcp_port(port):
     '''
     port = int(port)
     remotes = set()
+
+    if salt.utils.is_sunos():
+        return _sunos_remotes_on(port, 'remote_port')
+    if salt.utils.is_freebsd():
+        return _freebsd_remotes_on(port, 'remote_port')
 
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
@@ -1060,3 +1195,10 @@ class IPv4Address(object):
         :return: True if the address is a loopback address. Otherwise False.
         '''
         return 127 == self.dotted_quad[0]
+
+    @property
+    def reverse_pointer(self):
+        '''
+        :return: Reversed IP address
+        '''
+        return '.'.join(reversed(self.dotted_quad)) + '.in-addr.arpa.'

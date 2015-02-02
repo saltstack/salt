@@ -4,7 +4,7 @@ Salt 0.14.0 Release Notes
 
 :release: 2013-03-23
 
-Salt 0.14.0 is here! This release was held up primarily by PyCon, Scale and
+Salt 0.14.0 is here! This release was held up primarily by PyCon, Scale, and
 illness, but has arrived! 0.14.0 comes with many new features and is breaking
 ground for Salt in the area of cloud management with the introduction of Salt
 providing basic cloud controller functionality.
@@ -50,7 +50,7 @@ formulas used to set up a hypervisor:
 New get Functions
 -----------------
 
-An easier way to manage data has been introduced. The pillar, grains and config
+An easier way to manage data has been introduced. The pillar, grains, and config
 execution modules have been extended with the new ``get`` function. This
 function works much in the same way as the get method in a python dict, but with
 an enhancement, nested dict components can be extracted using a `:` delimiter.

@@ -8,13 +8,16 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import datetime
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import psutil
 
@@ -22,6 +25,7 @@ try:
     PSUTIL2 = psutil.version_info >= (2, 0)
 except ImportError:
     HAS_PSUTIL = False
+# pylint: enable=import-error
 
 
 def __virtual__():
@@ -91,7 +95,7 @@ def _get_proc_pid(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.pid() if PSUTIL2 else proc.pid
+    return proc.pid
 
 
 def top(num_processes=5, interval=3):
@@ -119,7 +123,7 @@ def top(num_processes=5, interval=3):
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
-    for process, start in start_usage.items():
+    for process, start in six.iteritems(start_usage):
         try:
             user, system = process.get_cpu_times()
         except psutil.NoSuchProcess:
@@ -143,9 +147,9 @@ def top(num_processes=5, interval=3):
                 'cpu': {},
                 'mem': {},
         }
-        for key, value in process.get_cpu_times()._asdict().items():
+        for key, value in six.iteritems(process.get_cpu_times()._asdict()):
             info['cpu'][key] = value
-        for key, value in process.get_memory_info()._asdict().items():
+        for key, value in six.iteritems(process.get_memory_info()._asdict()):
             info['mem'][key] = value
         result.append(info)
 
@@ -163,6 +167,32 @@ def get_pid_list():
         salt '*' ps.get_pid_list
     '''
     return psutil.get_pid_list()
+
+
+def proc_info(pid, attrs=None):
+    '''
+    Return a dictionary of information for a process id (PID).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.proc_info 2322
+        salt '*' ps.proc_info 2322 attrs='["pid", "name"]'
+
+    pid
+        PID of process to query.
+
+    attrs
+        Optional list of desired process attributes.  The list of possible
+        attributes can be found here:
+        http://pythonhosted.org/psutil/#psutil.Process
+    '''
+    try:
+        proc = psutil.Process(pid)
+        return proc.as_dict(attrs)
+    except (psutil.NoSuchProcess, psutil.AccessDenied, AttributeError) as exc:
+        raise CommandExecutionError(exc)
 
 
 def kill_pid(pid, signal=15):
@@ -347,12 +377,19 @@ def virtual_memory():
 
     Return a dict that describes statistics about system memory usage.
 
+    .. note::
+
+        This function is only available in psutil version 0.6.0 and above.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ps.virtual_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'virtual_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     return dict(psutil.virtual_memory()._asdict())
 
 
@@ -362,12 +399,19 @@ def swap_memory():
 
     Return a dict that describes swap memory statistics.
 
+    .. note::
+
+        This function is only available in psutil version 0.6.0 and above.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' ps.swap_memory
     '''
+    if psutil.version_info < (0, 6, 0):
+        msg = 'swap_memory is only available in psutil 0.6.0 or greater'
+        raise CommandExecutionError(msg)
     return dict(psutil.swap_memory()._asdict())
 
 
@@ -554,7 +598,7 @@ def get_users():
         # get_users is only present in psutil > v0.5.0
         # try utmp
         try:
-            import utmp
+            import utmp  # pylint: disable=import-error
 
             result = []
             while True:
@@ -569,18 +613,3 @@ def get_users():
                                    'started': started, 'host': rec[5]})
         except ImportError:
             return False
-
-# This is a possible last ditch method
-# result = []
-#        w = __salt__['cmd.run'](
-#            'who', env='{"LC_ALL": "en_US.UTF-8"}').splitlines()
-#        for u in w:
-#            u = u.split()
-#            started = __salt__['cmd.run'](
-#                'date --d "{0} {1}" +%s'.format(u[2], u[3])).strip()
-#            rec = {'name': u[0], 'terminal': u[1],
-#                   'started': started, 'host': None}
-#            if len(u) > 4:
-#                rec['host'] = u[4][1:-1]
-#            result.append(rec)
-#        return result

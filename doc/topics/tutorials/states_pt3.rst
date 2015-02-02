@@ -88,8 +88,7 @@ The Salt module functions are also made available in the template context as
 .. code-block:: jinja
 
     moe:
-      user:
-        - present
+      user.present:
         - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
 
 Note that for the above example to work, ``some_group_that_exists`` must exist

@@ -122,7 +122,7 @@ The existing file will be backed up, just in case, as can be seen if
 Deleting
 --------
 
-Deleting backups can be done using mod:`file.delete_backup
+Deleting backups can be done using :mod:`file.delete_backup
 <salt.modules.file.delete_backup>`:
 
 .. code-block:: bash

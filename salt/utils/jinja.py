@@ -4,13 +4,15 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 '''
 
 # Import python libs
-from os import path
-import logging
+from __future__ import absolute_import
 import json
 import pprint
+import logging
+from os import path
 from functools import wraps
 
 # Import third party libs
+import salt.ext.six as six
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.ext import Extension
@@ -22,7 +24,6 @@ import yaml
 import salt
 import salt.fileclient
 from salt.utils.odict import OrderedDict
-from salt._compat import string_types
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None):
+    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None, pillar_rend=False):
         if env is not None:
             salt.utils.warn_until(
                 'Boron',
@@ -64,20 +65,23 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
-        if opts.get('file_client', 'remote') == 'local':
+        if self.opts['file_roots'] is self.opts['pillar_roots']:
             self.searchpath = opts['file_roots'][saltenv]
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: {0!r}'.format(self.searchpath))
         self._file_client = None
         self.cached = []
+        self.pillar_rend = pillar_rend
 
     def file_client(self):
         '''
         Return a file client. Instantiates on first call.
         '''
         if not self._file_client:
-            self._file_client = salt.fileclient.get_file_client(self.opts)
+            self._file_client = salt.fileclient.get_file_client(
+                    self.opts,
+                    self.pillar_rend)
         return self._file_client
 
     def cache_file(self, template):
@@ -145,8 +149,8 @@ class PrintableDict(OrderedDict):
     '''
     def __str__(self):
         output = []
-        for key, value in self.items():
-            if isinstance(value, string_types):
+        for key, value in six.iteritems(self):
+            if isinstance(value, six.string_types):
                 # keeps quotes around strings
                 output.append('{0!r}: {1!r}'.format(key, value))
             else:
@@ -156,7 +160,7 @@ class PrintableDict(OrderedDict):
 
     def __repr__(self):  # pylint: disable=W0221
         output = []
-        for key, value in self.items():
+        for key, value in six.iteritems(self):
             output.append('{0!r}: {1!r}'.format(key, value))
         return '{' + ', '.join(output) + '}'
 
@@ -194,8 +198,8 @@ def ensure_sequence_filter(data):
 
 
 @jinja2.contextfunction
-def show_full_context(c):
-    return c
+def show_full_context(ctx):
+    return ctx
 
 
 class SerializerExtension(Extension, object):
@@ -232,7 +236,7 @@ class SerializerExtension(Extension, object):
 
     .. code-block:: jinja
 
-        {{ data|yaml(False)}}
+        {{ data|yaml(False) }}
 
     will be rendered as:
 
@@ -255,7 +259,7 @@ class SerializerExtension(Extension, object):
     .. code-block:: jinja
 
         {%- set yaml_src = "{foo: it works}"|load_yaml %}
-        {%- set json_src = "{'bar': 'for real'}"|load_yaml %}
+        {%- set json_src = "{'bar': 'for real'}"|load_json %}
         Dude, {{ yaml_src.foo }} {{ json_src.bar }}!
 
     will be rendered has::
@@ -355,14 +359,14 @@ class SerializerExtension(Extension, object):
         '''
         def explore(data):
             if isinstance(data, (dict, OrderedDict)):
-                return PrintableDict([(key, explore(value)) for key, value in data.items()])
+                return PrintableDict([(key, explore(value)) for key, value in six.iteritems(data)])
             elif isinstance(data, (list, tuple, set)):
                 return data.__class__([explore(value) for value in data])
             return data
         return explore(data)
 
-    def format_json(self, value):
-        return Markup(json.dumps(value, sort_keys=True).strip())
+    def format_json(self, value, sort_keys=True):
+        return Markup(json.dumps(value, sort_keys=sort_keys).strip())
 
     def format_yaml(self, value, flow_style=True):
         return Markup(yaml.dump(value, default_flow_style=flow_style,

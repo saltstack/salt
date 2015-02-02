@@ -5,6 +5,7 @@ powerpath support.
 Assumes RedHat
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -84,7 +85,7 @@ def add_license(key):
         return result
 
     cmd = '/sbin/emcpreg -add {0}'.format(key)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
 
     result['retcode'] = ret['retcode']
 
@@ -112,7 +113,7 @@ def remove_license(key):
         return result
 
     cmd = '/sbin/emcpreg -remove {0}'.format(key)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
 
     result['retcode'] = ret['retcode']
 

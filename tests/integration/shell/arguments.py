@@ -3,6 +3,9 @@
     Test Salt's argument parser
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, requires_salt_modules
 
@@ -18,7 +21,7 @@ class ArgumentTestCase(integration.ModuleCase):
         '''
         Test passing a non-supported keyword argument. The relevant code that
         checks for invalid kwargs is located in salt/minion.py, within the
-        'parse_args_and_kwargs' function.
+        'load_args_and_kwargs' function.
         '''
         self.assertIn(
             ("ERROR executing 'test.ping': The following keyword arguments"),

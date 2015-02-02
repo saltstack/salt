@@ -2,6 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -67,20 +68,19 @@ def _publish(
             'form': form,
             'id': __opts__['id']}
 
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     try:
-        peer_data = sreq.send(load)
+        peer_data = channel.send(load)
     except SaltReqTimeoutError:
         return '{0!r} publish timed out'.format(fun)
     if not peer_data:
         return {}
     # CLI args are passed as strings, re-cast to keep time.sleep happy
     time.sleep(float(timeout))
-    sreq = salt.transport.Channel.factory(__opts__)
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
             'jid': str(peer_data['jid'])}
-    ret = sreq.send(load)
+    ret = channel.send(load)
     if form == 'clean':
         cret = {}
         for host in ret:
@@ -201,8 +201,8 @@ def runner(fun, arg=None, timeout=5):
             'tmo': timeout,
             'id': __opts__['id']}
 
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     try:
-        return sreq.send(load)
+        return channel.send(load)
     except SaltReqTimeoutError:
         return '{0!r} runner publish timed out'.format(fun)

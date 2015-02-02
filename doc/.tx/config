@@ -4598,18 +4598,6 @@ source_file = _build/locale/security/index.pot
 source_lang = en
 source_name = security/index.rst
 
-[salt.ref--modules--all--salt_modules_syslog_ng]
-file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.syslog_ng.po
-source_file = _build/locale/ref/modules/all/salt.modules.syslog_ng.pot
-source_lang = en
-source_name = ref/modules/all/salt.modules.syslog_ng.rst
-
-[salt.ref--states--all--salt_states_syslog_ng]
-file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.syslog_ng.po
-source_file = _build/locale/ref/states/all/salt.states.syslog_ng.pot
-source_lang = en
-source_name = ref/states/all/salt.states.syslog_ng.rst
-
 [salt.ref--states--global_state_arguments]
 file_filter = locale/<lang>/LC_MESSAGES/ref/states/global_state_arguments.po
 source_file = _build/locale/ref/states/global_state_arguments.pot
@@ -4652,9 +4640,237 @@ source_file = _build/locale/ref/modules/all/salt.modules.twilio_notify.pot
 source_lang = en
 source_name = ref/modules/all/salt.modules.twilio_notify.rst
 
+[salt.ref--modules--all--salt_modules_hashutil]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.hashutil.po
+source_file = _build/locale/ref/modules/all/salt.modules.hashutil.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.hashutil.rst
+
+[salt.ref--modules--all--salt_modules_logadm]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.logadm.po
+source_file = _build/locale/ref/modules/all/salt.modules.logadm.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.logadm.rst
+
+[salt.ref--modules--all--salt_modules_mod_random]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.mod_random.po
+source_file = _build/locale/ref/modules/all/salt.modules.mod_random.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.mod_random.rst
+
+[salt.ref--modules--all--salt_modules_oracle]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.oracle.po
+source_file = _build/locale/ref/modules/all/salt.modules.oracle.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.oracle.rst
+
+[salt.ref--modules--all--salt_modules_pyenv]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.pyenv.po
+source_file = _build/locale/ref/modules/all/salt.modules.pyenv.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.pyenv.rst
+
+[salt.ref--modules--all--salt_modules_raet_publish]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.raet_publish.po
+source_file = _build/locale/ref/modules/all/salt.modules.raet_publish.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.raet_publish.rst
+
+[salt.ref--modules--all--salt_modules_schedule]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.schedule.po
+source_file = _build/locale/ref/modules/all/salt.modules.schedule.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.schedule.rst
+
+[salt.ref--modules--all--salt_modules_sensors]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.sensors.po
+source_file = _build/locale/ref/modules/all/salt.modules.sensors.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.sensors.rst
+
+[salt.ref--modules--all--salt_modules_win_update]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.win_update.po
+source_file = _build/locale/ref/modules/all/salt.modules.win_update.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.win_update.rst
+
+[salt.ref--pillar--all--salt_pillar_cmd_yamlex]
+file_filter = locale/<lang>/LC_MESSAGES/ref/pillar/all/salt.pillar.cmd_yamlex.po
+source_file = _build/locale/ref/pillar/all/salt.pillar.cmd_yamlex.pot
+source_lang = en
+source_name = ref/pillar/all/salt.pillar.cmd_yamlex.rst
+
+[salt.ref--pillar--all--salt_pillar_s3]
+file_filter = locale/<lang>/LC_MESSAGES/ref/pillar/all/salt.pillar.s3.po
+source_file = _build/locale/ref/pillar/all/salt.pillar.s3.pot
+source_lang = en
+source_name = ref/pillar/all/salt.pillar.s3.rst
+
+[salt.ref--pillar--all--salt_pillar_svn_pillar]
+file_filter = locale/<lang>/LC_MESSAGES/ref/pillar/all/salt.pillar.svn_pillar.po
+source_file = _build/locale/ref/pillar/all/salt.pillar.svn_pillar.pot
+source_lang = en
+source_name = ref/pillar/all/salt.pillar.svn_pillar.rst
+
+[salt.ref--renderers--all--salt_renderers_gpg]
+file_filter = locale/<lang>/LC_MESSAGES/ref/renderers/all/salt.renderers.gpg.po
+source_file = _build/locale/ref/renderers/all/salt.renderers.gpg.pot
+source_lang = en
+source_name = ref/renderers/all/salt.renderers.gpg.rst
+
+[salt.ref--returners--all--salt_returners_couchbase_return]
+file_filter = locale/<lang>/LC_MESSAGES/ref/returners/all/salt.returners.couchbase_return.po
+source_file = _build/locale/ref/returners/all/salt.returners.couchbase_return.pot
+source_lang = en
+source_name = ref/returners/all/salt.returners.couchbase_return.rst
+
+[salt.ref--returners--all--salt_returners_elasticsearch_return]
+file_filter = locale/<lang>/LC_MESSAGES/ref/returners/all/salt.returners.elasticsearch_return.po
+source_file = _build/locale/ref/returners/all/salt.returners.elasticsearch_return.pot
+source_lang = en
+source_name = ref/returners/all/salt.returners.elasticsearch_return.rst
+
+[salt.ref--returners--all--salt_returners_local_cache]
+file_filter = locale/<lang>/LC_MESSAGES/ref/returners/all/salt.returners.local_cache.po
+source_file = _build/locale/ref/returners/all/salt.returners.local_cache.pot
+source_lang = en
+source_name = ref/returners/all/salt.returners.local_cache.rst
+
+[salt.ref--returners--all--salt_returners_multi_returner]
+file_filter = locale/<lang>/LC_MESSAGES/ref/returners/all/salt.returners.multi_returner.po
+source_file = _build/locale/ref/returners/all/salt.returners.multi_returner.pot
+source_lang = en
+source_name = ref/returners/all/salt.returners.multi_returner.rst
+
+[salt.ref--returners--all--salt_returners_odbc]
+file_filter = locale/<lang>/LC_MESSAGES/ref/returners/all/salt.returners.odbc.po
+source_file = _build/locale/ref/returners/all/salt.returners.odbc.pot
+source_lang = en
+source_name = ref/returners/all/salt.returners.odbc.rst
+
+[salt.ref--runners--all--salt_runners_queue]
+file_filter = locale/<lang>/LC_MESSAGES/ref/runners/all/salt.runners.queue.po
+source_file = _build/locale/ref/runners/all/salt.runners.queue.pot
+source_lang = en
+source_name = ref/runners/all/salt.runners.queue.rst
+
+[salt.ref--states--all--salt_states_pyenv]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.pyenv.po
+source_file = _build/locale/ref/states/all/salt.states.pyenv.pot
+source_lang = en
+source_name = ref/states/all/salt.states.pyenv.rst
+
+[salt.ref--states--all--salt_states_schedule]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.schedule.po
+source_file = _build/locale/ref/states/all/salt.states.schedule.pot
+source_lang = en
+source_name = ref/states/all/salt.states.schedule.rst
+
+[salt.ref--states--all--salt_states_win_update]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.win_update.po
+source_file = _build/locale/ref/states/all/salt.states.win_update.pot
+source_lang = en
+source_name = ref/states/all/salt.states.win_update.rst
+
+[salt.ref--states--all--salt_states_winrepo]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.winrepo.po
+source_file = _build/locale/ref/states/all/salt.states.winrepo.pot
+source_lang = en
+source_name = ref/states/all/salt.states.winrepo.rst
+
+[salt.ref--states--all--salt_states_zk_concurrency]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.zk_concurrency.po
+source_file = _build/locale/ref/states/all/salt.states.zk_concurrency.pot
+source_lang = en
+source_name = ref/states/all/salt.states.zk_concurrency.rst
+
+[salt.topics--releases--2014_1_10]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.10.po
+source_file = _build/locale/topics/releases/2014.1.10.pot
+source_lang = en
+source_name = topics/releases/2014.1.10.rst
+
+[salt.topics--releases--2014_1_8]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.8.po
+source_file = _build/locale/topics/releases/2014.1.8.pot
+source_lang = en
+source_name = topics/releases/2014.1.8.rst
+
+[salt.topics--releases--2014_1_9]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.9.po
+source_file = _build/locale/topics/releases/2014.1.9.pot
+source_lang = en
+source_name = topics/releases/2014.1.9.rst
+
 [salt.topics--tutorials--multimaster_pki]
 file_filter = locale/<lang>/LC_MESSAGES/topics/tutorials/multimaster_pki.po
 source_file = _build/locale/topics/tutorials/multimaster_pki.pot
 source_lang = en
 source_name = topics/tutorials/multimaster_pki.rst
+
+[salt.ref--output--all--salt_output_newline_values_only]
+file_filter = locale/<lang>/LC_MESSAGES/ref/output/all/salt.output.newline_values_only.po
+source_file = _build/locale/ref/output/all/salt.output.newline_values_only.pot
+source_lang = en
+source_name = ref/output/all/salt.output.newline_values_only.rst
+
+[salt.topics--releases--releasecandidate]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/releasecandidate.po
+source_file = _build/locale/topics/releases/releasecandidate.pot
+source_lang = en
+source_name = topics/releases/releasecandidate.rst
+
+[salt.topics--targeting--range]
+file_filter = locale/<lang>/LC_MESSAGES/topics/targeting/range.po
+source_file = _build/locale/topics/targeting/range.pot
+source_lang = en
+source_name = topics/targeting/range.rst
+
+[salt.ref--modules--all--salt_modules_boto_cloudwatch]
+file_filter = locale/<lang>/LC_MESSAGES/ref/modules/all/salt.modules.boto_cloudwatch.po
+source_file = _build/locale/ref/modules/all/salt.modules.boto_cloudwatch.pot
+source_lang = en
+source_name = ref/modules/all/salt.modules.boto_cloudwatch.rst
+
+[salt.ref--states--all--salt_states_boto_cloudwatch_alarm]
+file_filter = locale/<lang>/LC_MESSAGES/ref/states/all/salt.states.boto_cloudwatch_alarm.po
+source_file = _build/locale/ref/states/all/salt.states.boto_cloudwatch_alarm.pot
+source_lang = en
+source_name = ref/states/all/salt.states.boto_cloudwatch_alarm.rst
+
+[salt.topics--releases--2014_1_11]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.11.po
+source_file = _build/locale/topics/releases/2014.1.11.pot
+source_lang = en
+source_name = topics/releases/2014.1.11.rst
+
+[salt.ref--cli--salt-unity]
+file_filter = locale/<lang>/LC_MESSAGES/ref/cli/salt-unity.po
+source_file = _build/locale/ref/cli/salt-unity.pot
+source_lang = en
+source_name = ref/cli/salt-unity.rst
+
+[salt.topics--development--architecture]
+file_filter = locale/<lang>/LC_MESSAGES/topics/development/architecture.po
+source_file = _build/locale/topics/development/architecture.pot
+source_lang = en
+source_name = topics/development/architecture.rst
+
+[salt.topics--releases--2014_1_12]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.12.po
+source_file = _build/locale/topics/releases/2014.1.12.pot
+source_lang = en
+source_name = topics/releases/2014.1.12.rst
+
+[salt.topics--releases--2014_1_13]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.1.13.po
+source_file = _build/locale/topics/releases/2014.1.13.pot
+source_lang = en
+source_name = topics/releases/2014.1.13.rst
+
+[salt.topics--releases--2014_7_1]
+file_filter = locale/<lang>/LC_MESSAGES/topics/releases/2014.7.1.po
+source_file = _build/locale/topics/releases/2014.7.1.pot
+source_lang = en
+source_name = topics/releases/2014.7.1.rst
 

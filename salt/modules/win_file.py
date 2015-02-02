@@ -7,6 +7,7 @@ data
             - win32file
             - win32security
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -15,6 +16,7 @@ import os.path
 import logging
 import struct
 # pylint: disable=W0611
+import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
@@ -26,8 +28,10 @@ import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
+from salt.ext.six import string_types  # do not remove, used in imported file.py functions
+# do not remove, used in imported file.py functions
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
-import salt._compat  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
@@ -45,7 +49,7 @@ except ImportError:
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
-        check_managed, check_perms, remove, source_list,
+        check_managed, check_managed_changes, check_perms, remove, source_list,
         touch, append, contains, contains_regex, contains_regex_multiline,
         contains_glob, find, psed, get_sum, _get_bkroot,
         get_hash, manage_file, file_exists, get_diff, list_backups,
@@ -53,7 +57,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
-        lstat, path_exists_glob, HASHES)
+        lstat, path_exists_glob, write, pardir, join, HASHES)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -71,8 +75,8 @@ def __virtual__():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs_, file_exists
-            global check_managed, check_file_meta, remove, append, _error
-            global directory_exists, touch, contains
+            global check_managed, check_managed_changes, check_file_meta
+            global remove, append, _error, directory_exists, touch, contains
             global contains_regex, contains_regex_multiline, contains_glob
             global find, psed, get_sum, check_hash, get_hash, delete_backup
             global get_diff, _get_flags, extract_hash
@@ -80,6 +84,7 @@ def __virtual__():
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global path_exists_glob
+            global write, pardir, join
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -96,6 +101,7 @@ def __virtual__():
             check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
             check_managed = _namespaced_function(check_managed, globals())
+            check_managed_changes = _namespaced_function(check_managed_changes, globals())
             check_file_meta = _namespaced_function(check_file_meta, globals())
             makedirs_perms = _namespaced_function(makedirs_perms, globals())
             makedirs_ = _namespaced_function(makedirs_, globals())
@@ -128,6 +134,9 @@ def __virtual__():
             rename = _namespaced_function(rename, globals())
             lstat = _namespaced_function(lstat, globals())
             path_exists_glob = _namespaced_function(path_exists_glob, globals())
+            write = _namespaced_function(write, globals())
+            pardir = _namespaced_function(pardir, globals())
+            join = _namespaced_function(join, globals())
 
             return __virtualname__
     return False
@@ -347,7 +356,7 @@ def get_pgid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     group_sid = secdesc.GetSecurityDescriptorGroup()
@@ -543,7 +552,7 @@ def get_uid(path, follow_symlinks=True):
         return 'S-1-1-0'
     except pywinerror as exc:
         # Incorrect function error (win2k8+)
-        if exc.winerror == 1:
+        if exc.winerror == 1 or exc.winerror == 50:
             return 'S-1-1-0'
         raise
     owner_sid = secdesc.GetSecurityDescriptorOwner()
@@ -925,7 +934,7 @@ def get_attributes(path):
     attributes['mountedVolume'] = False
     if attributes['reparsePoint'] is True and attributes['directory'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA0000003:
             attributes['mountedVolume'] = True
     # check if it's a soft (symbolic) link
@@ -937,7 +946,7 @@ def get_attributes(path):
     attributes['symbolicLink'] = False
     if attributes['reparsePoint'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA000000C:
             attributes['symbolicLink'] = True
 

@@ -2,10 +2,10 @@ include AUTHORS
 include HACKING.rst
 include LICENSE
 include README.rst
-include _requirements.txt
-include raet-requirements.txt
-include cloud-requirements.txt
-include zeromq-requirements.txt
+include requirements/base.txt
+include requirements/raet.txt
+include requirements/cloud.txt
+include requirements/zeromq.txt
 include tests/*.py
 recursive-include tests *
 include tests/integration/modules/files/*
@@ -16,4 +16,6 @@ recursive-include scripts *
 include conf/*
 recursive-include pkg *
 recursive-include salt *.jinja
-include salt/templates/git/ssh-id-wrapper
+recursive-include salt *.flo
+include salt/templates/git/*
+include salt/templates/lxc/*

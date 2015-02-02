@@ -25,22 +25,27 @@ does.
 
 See (admittedly degenerate and probably not complete) example:
 
+.. code-block:: yaml
 
-```
-classes:
-  - basepackages
-  - database
-```
+    classes:
+      - basepackages
+      - database
 
-The above essentially is the same as a top.sls containing
+The above essentially is the same as a top.sls containing the following:
 
-```
-base:
-  '*':
-    - basepackages
-    - database
+.. code-block:: yaml
 
+    base:
+      '*':
+        - basepackages
+        - database
+
+    base:
+      '*':
+        - basepackages
+        - database
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

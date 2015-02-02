@@ -150,7 +150,7 @@ def present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Incron {0} updated'.format(name, user)
+        ret['comment'] = 'Incron {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Incron {0} for user {1} failed to commit with error \n{2}'

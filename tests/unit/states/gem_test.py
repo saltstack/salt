@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -29,8 +32,9 @@ class TestGemState(TestCase):
                 ret = gem.installed('quux')
                 self.assertEqual(True, ret['result'])
                 gem_install_succeeds.assert_called_once_with(
-                    'quux', ruby=None, runas=None, version=None, rdoc=False,
-                    ri=False
+                    'quux', pre_releases=False, ruby=None, runas=None,
+                    version=None, proxy=None, rdoc=False, ri=False,
+                    gem_bin=None
                 )
 
             with patch.dict(gem.__salt__,
@@ -38,8 +42,9 @@ class TestGemState(TestCase):
                 ret = gem.installed('quux')
                 self.assertEqual(False, ret['result'])
                 gem_install_fails.assert_called_once_with(
-                    'quux', ruby=None, runas=None, version=None, rdoc=False,
-                    ri=False
+                    'quux', pre_releases=False, ruby=None, runas=None,
+                    version=None, proxy=None, rdoc=False, ri=False,
+                    gem_bin=None
                 )
 
     def test_removed(self):
@@ -55,14 +60,14 @@ class TestGemState(TestCase):
                 ret = gem.removed('foo')
                 self.assertEqual(True, ret['result'])
                 gem_uninstall_succeeds.assert_called_once_with(
-                    'foo', None, runas=None)
+                    'foo', None, runas=None, gem_bin=None)
 
             with patch.dict(gem.__salt__,
                             {'gem.uninstall': gem_uninstall_fails}):
                 ret = gem.removed('bar')
                 self.assertEqual(False, ret['result'])
                 gem_uninstall_fails.assert_called_once_with(
-                    'bar', None, runas=None)
+                    'bar', None, runas=None, gem_bin=None)
 
 
 if __name__ == '__main__':

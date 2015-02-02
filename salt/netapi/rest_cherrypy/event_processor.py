@@ -1,7 +1,14 @@
 # encoding: utf-8
+
+# Import python libs
+from __future__ import absolute_import
 import json
 import logging
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+# Import Salt libs
 import salt.netapi
 
 logger = logging.getLogger(__name__)
@@ -31,7 +38,7 @@ class SaltInfo(object):
         '''
         minions = []
 
-        for minion, minion_info in self.minions.iteritems():
+        for minion, minion_info in six.iteritems(self.minions):
             curr_minion = {}
             curr_minion.update(minion_info)
             curr_minion.update({'id': minion})
@@ -82,7 +89,7 @@ class SaltInfo(object):
         minion.update({'success': event_info['success']})
 
         job_complete = all([minion['success'] for mid, minion
-                            in job['minions'].iteritems()])
+                            in six.iteritems(job['minions'])])
 
         if job_complete:
             job['state'] = 'complete'
@@ -138,7 +145,7 @@ class SaltInfo(object):
 
         self.publish_minions()
 
-    def process_presense_events(self, event_data, token, opts):
+    def process_presence_events(self, event_data, token, opts):
         '''
         Check if any minions have connected or dropped.
         Send a message to the client if they have.
@@ -147,7 +154,7 @@ class SaltInfo(object):
         event_info = event_data['data']
 
         minions_detected = event_info['present']
-        curr_minions = self.minions.keys()
+        curr_minions = six.iterkeys(self.minions)
 
         changed = False
 
@@ -200,5 +207,5 @@ class SaltInfo(object):
                     self.process_minion_update(salt_data)
         if parts[1] == 'key':
             self.process_key_event(salt_data)
-        if parts[1] == 'presense':
-            self.process_presense_events(salt_data, token, opts)
+        if parts[1] == 'presence':
+            self.process_presence_events(salt_data, token, opts)

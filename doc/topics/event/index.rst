@@ -43,9 +43,9 @@ The following code will check for a single event:
 
     data = event.get_event()
 
-Events will also use a "tag". Tags allow for events to be filtered. By
-default all events will be returned. If only authentication events are
-desired, then pass the tag "auth".
+Events will also use a "tag". Tags allow for events to be filtered by prefix.
+By default all events will be returned. If only authentication events are
+desired, then pass the tag "salt/auth".
 
 The ``get_event`` method has a default poll time assigned of 5 seconds. To
 change this time set the "wait" option.
@@ -59,7 +59,22 @@ instead of the default 5.
 
     event = salt.utils.event.MasterEvent('/var/run/salt/master')
 
-    data = event.get_event(wait=10, tag='auth')
+    data = event.get_event(wait=10, tag='salt/auth')
+
+To retrieve the tag as well as the event data, pass ``full=True``:
+
+.. code-block:: python
+
+    import salt.utils.event
+
+    event = salt.utils.event.MasterEvent('/var/run/salt/master')
+
+    evdata = event.get_event(wait=10, tag='salt/job', full=True)
+
+    tag, data = evdata['tag'], evdata['data']
+
+    # tag == 'salt/job/JOBID/ret/MINIONNAME
+
 
 Instead of looking for a single event, the ``iter_events`` method can be used to
 make a generator which will continually yield salt events.
@@ -72,7 +87,7 @@ The iter_events method also accepts a tag but not a wait time:
 
     event = salt.utils.event.MasterEvent('/var/run/salt/master')
 
-    for data in event.iter_events(tag='auth'):
+    for data in event.iter_events(tag='salt/auth'):
         print(data)
 
 
@@ -97,9 +112,19 @@ To fire an event to be sent to the master, from the minion:
 If a process is listening on the minion, it may be useful for a user on the
 master to fire an event to it:
 
+.. code-block:: python
+
+    # Job on minion
+    import salt.utils.event
+
+    event = salt.utils.event.MinionEvent(**__opts__)
+
+    for evdata in event.iter_events(tag='customtag/'):
+        return evdata # do your processing here...
+
 .. code-block:: bash
 
-    salt minionname event.fire '{"data": "message for the minion"}' 'tag'
+    salt minionname event.fire '{"data": "message for the minion"}' 'customtag/african/unladen'
 
 
 Firing Events From Code
@@ -126,11 +151,14 @@ dictionary should be sent instead.
 
     # Import the proper library
     import salt.utils.event
+    # bring in the system configuration
+    import salt.config
+    cfg = salt.config.minion_config("/etc/salt/minion")
     # Fire deploy action
     sock_dir = '/var/run/salt/minion'
     payload = {'sample-msg': 'this is a test',
                'example': 'this is the same test'}
-    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event = salt.utils.event.SaltEvent('master', sock_dir, opts=cfg)
     event.fire_event(payload, 'tag')
 
 It should be noted that this code can be used in 3rd party applications as well.
@@ -152,3 +180,19 @@ programmatically, without having to make other calls to Salt.
 A 3rd party process can listen to the event bus on the master and another 3rd party
 process can fire events to the process on the master, which Salt will happily
 pass along.
+
+To fire an event to be sent to the master, from the minion, from code:
+
+.. code-block:: python
+    
+    import salt.utils.event
+    import salt.config
+    cfg = salt.config.minion_config("/etc/salt/minion")
+    sock_dir = '/var/run/salt/minion'
+    tag = "tag"
+    payload = {'sample-msg": "this is a test'}
+    # The message wrapper
+    # Create an event interface
+    event = salt.utils.event.SaltEvent("minion", sock_dir, opts=cfg)
+    # Fire the event across
+    event.fire_master(payload, tag)

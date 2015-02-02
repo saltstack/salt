@@ -20,6 +20,7 @@ import jinja2.ext
 
 # Import salt libs
 import salt.utils
+import salt.utils.yamlencoding
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
@@ -28,7 +29,8 @@ from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
 from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
-from salt._compat import string_types
+from salt.ext.six import string_types
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +60,17 @@ def wrap_tmpl_func(render_str):
         assert 'opts' in context
         assert 'saltenv' in context
 
+        if 'sls' in context:
+            slspath = context['sls'].replace('.', '/')
+            if tmplpath is not None:
+                context['tplpath'] = tmplpath
+                if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
+                    slspath = os.path.dirname(slspath)
+            context['slsdotpath'] = slspath.replace('/', '.')
+            context['slscolonpath'] = slspath.replace('/', ':')
+            context['sls_path'] = slspath.replace('/', '_')
+            context['slspath'] = slspath
+
         if isinstance(tmplsrc, string_types):
             if from_str:
                 tmplstr = tmplsrc
@@ -78,7 +91,7 @@ def wrap_tmpl_func(render_str):
                         'Exception occurred while reading file '
                         '{0}: {1}'.format(tmplsrc, exc),
                         # Show full traceback if debug logging is enabled
-                        exc_info=log.isEnabledFor(logging.DEBUG)
+                        exc_info_on_loglevel=logging.DEBUG
                     )
                     raise exc
         else:  # assume tmplsrc is file-like.
@@ -91,6 +104,7 @@ def wrap_tmpl_func(render_str):
                 output = os.linesep.join(output.splitlines())
 
         except SaltRenderError as exc:
+            log.error("Rendering exception occurred :{0}".format(exc))
             #return dict(result=False, data=str(exc))
             raise
         except Exception:
@@ -203,7 +217,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     loader = None
     newline = False
 
-    if tmplstr and not isinstance(tmplstr, unicode):
+    if tmplstr and not isinstance(tmplstr, six.text_type):
         # http://jinja.pocoo.org/docs/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
@@ -212,7 +226,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             #
             # XXX: FileSystemLoader is not being properly instantiated here is
             # it? At least it ain't according to:
@@ -221,7 +235,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(
                 context, os.path.dirname(tmplpath))
     else:
-        loader = JinjaSaltCacheLoader(opts, saltenv)
+        loader = JinjaSaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
     env_args = {'extensions': [], 'loader': loader}
 
@@ -252,30 +266,28 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
+    jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
+    jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
+    jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context
 
-    unicode_context = {}
-    for key, value in context.iteritems():
+    decoded_context = {}
+    for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
-            unicode_context[key] = value
+            decoded_context[key] = value
             continue
 
-        # Let's try UTF-8 and fail if this still fails, that's why this is not
-        # wrapped in a try/except
-        if isinstance(value, unicode):
-            unicode_context[key] = value
-        else:
-            unicode_context[key] = unicode(value, 'utf-8')
+        decoded_context[key] = salt.utils.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
-        template.globals.update(unicode_context)
-        output = template.render(**unicode_context)
+        template.globals.update(decoded_context)
+        output = template.render(**decoded_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
@@ -283,7 +295,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                               tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        out = _get_jinja_error(trace, context=unicode_context)[1]
+        out = _get_jinja_error(trace, context=decoded_context)[1]
         tmplstr = ''
         # Don't include the line number, since it is misreported
         # https://github.com/mitsuhiko/jinja2/issues/276
@@ -293,7 +305,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             buf=tmplstr)
     except (SaltInvocationError, CommandExecutionError) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         raise SaltRenderError(
@@ -304,11 +316,18 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     except Exception as exc:
         tracestr = traceback.format_exc()
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
+        log.debug("Jinja Error")
+        log.debug("Exception: {0}".format(exc))
+        log.debug("Out: {0}".format(out))
+        log.debug("Line: {0}".format(line))
+        log.debug("TmplStr: {0}".format(tmplstr))
+        log.debug("TraceStr: {0}".format(tracestr))
+
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
                               tmplstr,
@@ -331,7 +350,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     lookup = None
     if not saltenv:
         if tmplpath:
-            # ie, the template is from a file outside the state tree
+            # i.e., the template is from a file outside the state tree
             from mako.lookup import TemplateLookup
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:
@@ -350,6 +369,45 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
 def render_wempy_tmpl(tmplstr, context, tmplpath=None):
     from wemplate.wemplate import TemplateParser as Template
     return Template(tmplstr).render(**context)
+
+
+def render_genshi_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Genshi template. A method should be passed in as part of the
+    context. If no method is passed in, xml is assumed. Valid methods are:
+
+    .. code-block:
+
+        - xml
+        - xhtml
+        - html
+        - text
+        - newtext
+        - oldtext
+
+    Note that the ``text`` method will call ``NewTextTemplate``. If ``oldtext``
+    is desired, it must be called explicitly
+    '''
+    method = context.get('method', 'xml')
+    if method == 'text' or method == 'newtext':
+        from genshi.template import NewTextTemplate
+        tmpl = NewTextTemplate(tmplstr)
+    elif method == 'oldtext':
+        from genshi.template import OldTextTemplate
+        tmpl = OldTextTemplate(tmplstr)
+    else:
+        from genshi.template import MarkupTemplate
+        tmpl = MarkupTemplate(tmplstr)
+
+    return tmpl.generate(**context).render(method)
+
+
+def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
+    '''
+    Render a Cheetah template.
+    '''
+    from Cheetah.Template import Template
+    return str(Template(tmplstr, searchList=[context]))
 
 
 def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
@@ -398,10 +456,14 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
 JINJA = wrap_tmpl_func(render_jinja_tmpl)
 MAKO = wrap_tmpl_func(render_mako_tmpl)
 WEMPY = wrap_tmpl_func(render_wempy_tmpl)
+GENSHI = wrap_tmpl_func(render_genshi_tmpl)
+CHEETAH = wrap_tmpl_func(render_cheetah_tmpl)
 
 TEMPLATE_REGISTRY = {
     'jinja': JINJA,
     'mako': MAKO,
     'py': py,
     'wempy': WEMPY,
+    'genshi': GENSHI,
+    'cheetah': CHEETAH,
 }

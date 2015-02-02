@@ -3,9 +3,11 @@
 Tests to try out salt key.RaetKey Potentially ephemeral
 
 '''
+from __future__ import absolute_import
 # pylint: skip-file
 # pylint: disable=C0103
 import sys
+from salt.ext.six.moves import map
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -68,13 +70,15 @@ class BasicTestCase(unittest.TestCase):
         self.sockDirpath = os.path.join(self.saltDirpath, 'sock')
 
         self.opts = dict(
-                     pki_dir=pkiDirpath,
-                     sock_dir=self.sockDirpath,
-                     cachedir=self.cacheDirpath,
-                     open_mode=False,
-                     auto_accept=True,
-                     transport='raet',
-                     )
+                        __role='master',
+                        id='master',
+                        pki_dir=pkiDirpath,
+                        sock_dir=self.sockDirpath,
+                        cachedir=self.cacheDirpath,
+                        open_mode=False,
+                        auto_accept=True,
+                        transport='raet',
+                        )
 
         self.mainKeeper = RaetKey(opts=self.opts)
         self.baseDirpath = tempfile.mkdtemp(prefix="salt",  suffix="base", dir='/tmp')
@@ -136,9 +140,9 @@ class BasicTestCase(unittest.TestCase):
         other1 = self.createRoadData(name='other1', base=self.baseDirpath)
         other2 = self.createRoadData(name='other2', base=self.baseDirpath)
 
-        status = self.mainKeeper.status(other1['name'], 2, other1['pubhex'], other1['verhex'])
+        status = self.mainKeeper.status(other1['name'], other1['pubhex'], other1['verhex'])
         self.assertEqual(status, 'accepted')
-        status = self.mainKeeper.status(other2['name'], 3, other2['pubhex'], other2['verhex'])
+        status = self.mainKeeper.status(other2['name'], other2['pubhex'], other2['verhex'])
         self.assertEqual(status, 'accepted')
 
         allkeys = self.mainKeeper.all_keys()
@@ -148,16 +152,14 @@ class BasicTestCase(unittest.TestCase):
                                 'rejected': []} )
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
-        self.assertDictEqual(remotekeys, {   'device_id': 2,
-                                             'minion_id': 'other1',
+        self.assertDictEqual(remotekeys, {   'minion_id': 'other1',
                                              'pub': other1['pubhex'],
                                              'verify': other1['verhex']} )
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        self.assertDictEqual(remotekeys, {   'device_id': 3,
-                                               'minion_id': 'other2',
-                                               'pub': other2['pubhex'],
-                                               'verify': other2['verhex']} )
+        self.assertDictEqual(remotekeys, {  'minion_id': 'other2',
+                                            'pub': other2['pubhex'],
+                                            'verify': other2['verhex']} )
 
         listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
@@ -170,14 +172,13 @@ class BasicTestCase(unittest.TestCase):
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
                                                   'acceptance': 'accepted',
-                                                  'pub': other1['pubhex'],
-                                                  'device_id': 2},
+                                                  'pub': other1['pubhex'],},
                                              'other2':
                                                  {'verify': other2['verhex'],
                                                   'minion_id': 'other2',
                                                   'acceptance': 'accepted',
-                                                  'pub': other2['pubhex'],
-                                                  'device_id': 3}})
+                                                  'pub': other2['pubhex'],}
+                                            })
 
 
     def testManualAccept(self):
@@ -209,9 +210,9 @@ class BasicTestCase(unittest.TestCase):
         other1 = self.createRoadData(name='other1', base=self.baseDirpath)
         other2 = self.createRoadData(name='other2', base=self.baseDirpath)
 
-        status = self.mainKeeper.status(other1['name'], 2, other1['pubhex'], other1['verhex'])
+        status = self.mainKeeper.status(other1['name'], other1['pubhex'], other1['verhex'])
         self.assertEqual(status, 'pending')
-        status = self.mainKeeper.status(other2['name'], 3, other2['pubhex'], other2['verhex'])
+        status = self.mainKeeper.status(other2['name'], other2['pubhex'], other2['verhex'])
         self.assertEqual(status, 'pending')
 
         allkeys = self.mainKeeper.all_keys()
@@ -237,14 +238,13 @@ class BasicTestCase(unittest.TestCase):
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
                                                   'acceptance': 'pending',
-                                                  'pub': other1['pubhex'],
-                                                  'device_id': 2},
+                                                  'pub': other1['pubhex'],},
                                              'other2':
                                                  {'verify': other2['verhex'],
                                                   'minion_id': 'other2',
                                                   'acceptance': 'pending',
-                                                  'pub': other2['pubhex'],
-                                                  'device_id': 3}})
+                                                  'pub': other2['pubhex'],}
+                                            })
 
         self.mainKeeper.accept_all()
 
@@ -255,16 +255,14 @@ class BasicTestCase(unittest.TestCase):
                                 'rejected': []} )
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
-        self.assertDictEqual(remotekeys, {   'device_id': 2,
-                                             'minion_id': 'other1',
+        self.assertDictEqual(remotekeys, {   'minion_id': 'other1',
                                              'pub': other1['pubhex'],
                                              'verify': other1['verhex']} )
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        self.assertDictEqual(remotekeys, {   'device_id': 3,
-                                               'minion_id': 'other2',
-                                               'pub': other2['pubhex'],
-                                               'verify': other2['verhex']} )
+        self.assertDictEqual(remotekeys, {  'minion_id': 'other2',
+                                            'pub': other2['pubhex'],
+                                            'verify': other2['verhex']} )
 
         listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
@@ -277,14 +275,13 @@ class BasicTestCase(unittest.TestCase):
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
                                                   'acceptance': 'accepted',
-                                                  'pub': other1['pubhex'],
-                                                  'device_id': 2},
+                                                  'pub': other1['pubhex'],},
                                              'other2':
                                                  {'verify': other2['verhex'],
                                                   'minion_id': 'other2',
                                                   'acceptance': 'accepted',
-                                                  'pub': other2['pubhex'],
-                                                  'device_id': 3}})
+                                                  'pub': other2['pubhex'],}
+                                            })
 
     def testDelete(self):
         '''
@@ -315,9 +312,9 @@ class BasicTestCase(unittest.TestCase):
         other1 = self.createRoadData(name='other1', base=self.baseDirpath)
         other2 = self.createRoadData(name='other2', base=self.baseDirpath)
 
-        status = self.mainKeeper.status(other1['name'], 2, other1['pubhex'], other1['verhex'])
+        status = self.mainKeeper.status(other1['name'], other1['pubhex'], other1['verhex'])
         self.assertEqual(status, 'accepted')
-        status = self.mainKeeper.status(other2['name'], 3, other2['pubhex'], other2['verhex'])
+        status = self.mainKeeper.status(other2['name'], other2['pubhex'], other2['verhex'])
         self.assertEqual(status, 'accepted')
 
         allkeys = self.mainKeeper.all_keys()
@@ -327,16 +324,14 @@ class BasicTestCase(unittest.TestCase):
                                 'rejected': []} )
 
         remotekeys = self.mainKeeper.read_remote(other1['name'])
-        self.assertDictEqual(remotekeys, {   'device_id': 2,
-                                             'minion_id': 'other1',
+        self.assertDictEqual(remotekeys, {   'minion_id': 'other1',
                                              'pub': other1['pubhex'],
                                              'verify': other1['verhex']} )
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        self.assertDictEqual(remotekeys, {   'device_id': 3,
-                                               'minion_id': 'other2',
-                                               'pub': other2['pubhex'],
-                                               'verify': other2['verhex']} )
+        self.assertDictEqual(remotekeys, {  'minion_id': 'other2',
+                                            'pub': other2['pubhex'],
+                                            'verify': other2['verhex']} )
 
         listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': ['other1', 'other2'],
@@ -349,14 +344,13 @@ class BasicTestCase(unittest.TestCase):
                                                  {'verify': other1['verhex'],
                                                   'minion_id': 'other1',
                                                   'acceptance': 'accepted',
-                                                  'pub': other1['pubhex'],
-                                                  'device_id': 2},
+                                                  'pub': other1['pubhex']},
                                              'other2':
                                                  {'verify': other2['verhex'],
                                                   'minion_id': 'other2',
                                                   'acceptance': 'accepted',
-                                                  'pub': other2['pubhex'],
-                                                  'device_id': 3}})
+                                                  'pub': other2['pubhex'],}
+                                            })
 
         self.mainKeeper.delete_key(match=other1['name'])
 
@@ -370,10 +364,9 @@ class BasicTestCase(unittest.TestCase):
         self.assertDictEqual(remotekeys, {} )
 
         remotekeys = self.mainKeeper.read_remote(other2['name'])
-        self.assertDictEqual(remotekeys, {   'device_id': 3,
-                                               'minion_id': 'other2',
-                                               'pub': other2['pubhex'],
-                                               'verify': other2['verhex']} )
+        self.assertDictEqual(remotekeys, {  'minion_id': 'other2',
+                                            'pub': other2['pubhex'],
+                                            'verify': other2['verhex']} )
 
         listkeys = self.mainKeeper.list_keys()
         self.assertDictEqual(listkeys, {'accepted': [ 'other2'],
@@ -387,8 +380,8 @@ class BasicTestCase(unittest.TestCase):
                                                  {'verify': other2['verhex'],
                                                   'minion_id': 'other2',
                                                   'acceptance': 'accepted',
-                                                  'pub': other2['pubhex'],
-                                                  'device_id': 3}})
+                                                  'pub': other2['pubhex'],}
+                                             })
 
 
 
@@ -409,7 +402,7 @@ def runSome():
              'testManualAccept',
              'testDelete']
 
-    tests.extend(map(BasicTestCase, names))
+    tests.extend(list(list(map(BasicTestCase, names))))
 
     suite = unittest.TestSuite(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)

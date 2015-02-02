@@ -50,7 +50,7 @@ os vs script
 ============
 
 In a cloud profile, you need to specify which deploy script to use to install
-Salt on the newly-provisioned VM. The option for this has always been 'os', 
+Salt on the newly-provisioned VM. The option for this has always been 'os',
 which has been confusing to some. As of this release, you may now specify
 'script' instead of 'os'. If you specify both, the value for 'script' will be
 used. See the SmartOS Deploy Script below for an example.
@@ -154,4 +154,3 @@ can also configure that in the same place:
 
 Check salt-cloud --help for a list of logging levels, which can also be
 specified from the command line.
-
