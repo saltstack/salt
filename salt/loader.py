@@ -761,7 +761,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
-                 ):
+                 ):  # pylint: disable=@0231
         self.opts = self.__prep_mod_opts(opts)
 
     # an init for the singleton instance to call
@@ -818,13 +818,12 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         for (suffix, mode, kind) in imp.get_suffixes():
             self.suffix_map[suffix] = (suffix, mode, kind)
 
-
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport # pylint: disable=import-error
+                import pyximport  # pylint: disable=import-error
                 pyximport.install()
                 # add to suffix_map so file_mapping will pick it up
-                self.suffix_map['.pyx'] = typle()
+                self.suffix_map['.pyx'] = tuple()
             except ImportError:
                 log.info('Cython is enabled in the options but not present '
                     'in the system path. Skipping Cython modules.')
@@ -913,7 +912,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
             if mod_name not in k:
                 yield k
 
-    def _reload_submodules(self, mod):
+    def _reload_submodules(self, name, mod):
         submodules = [
             getattr(mod, sname) for sname in dir(mod) if
             isinstance(getattr(mod, sname), mod.__class__)
@@ -943,7 +942,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         self.loaded_files.append(name)
         try:
             if suffix == '.pyx':
-                mod = pyximport.load_module(name, full, tempfile.gettempdir())
+                mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
             else:
                 desc = self.suffix_map[suffix]
                 with open(fpath, desc[1]) as fn_:
@@ -956,7 +955,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                         ), fn_, fpath, desc)
                 # reload all submodules if necessary
                 if not self.initial_load and False:
-                    self._reload_submodules(mod)
+                    self._reload_submodules(name, mod)
 
         except IOError:
             raise
@@ -1236,7 +1235,6 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                     ))
 
                     if not hasattr(mod, '__virtualname__'):
-                        '''
                         salt.utils.warn_until(
                             'Hydrogen',
                             'The {0!r} module is renaming itself in it\'s '
@@ -1249,7 +1247,6 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                                 virtual
                             )
                         )
-                        '''
 
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's
