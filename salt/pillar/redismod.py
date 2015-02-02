@@ -30,6 +30,7 @@ Configuring the Redis ext_pillar
           - redis: {function: key_value}
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
@@ -50,13 +51,15 @@ def ext_pillar(minion_id, pillar, function, **kwargs):
     '''
     Grabs external pillar data based on configured function
     '''
-    if function.startswith('_') or function not in globals().keys():
+    if function.startswith('_') or function not in globals():
         return {}
     # Call specified function to pull redis data
     return globals()[function](minion_id, pillar, **kwargs)
 
 
-def key_value(minion_id, pillar, pillar_key='redis_pillar'):
+def key_value(minion_id,
+              pillar,  # pylint: disable=W0613
+              pillar_key='redis_pillar'):
     '''
     Looks for key in redis matching minion_id, returns a structure based on the
     data type of the redis key. String for string type, dict for hash type and
@@ -89,7 +92,9 @@ def key_value(minion_id, pillar, pillar_key='redis_pillar'):
     return {}
 
 
-def key_json(minion_id, pillar, pillar_key=None):
+def key_json(minion_id,
+             pillar,  # pylint: disable=W0613
+             pillar_key=None):
     '''
     Pulls a string from redis and deserializes it from json. Deserialized
     dictionary data loaded directly into top level if pillar_key is not set.

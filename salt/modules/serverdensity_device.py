@@ -5,9 +5,16 @@ Wrapper around Server Density API
 
 .. versionadded:: 2014.7.0
 '''
-import requests
+
+# Import Python libs
+from __future__ import absolute_import
 import json
 import logging
+
+# Import 3rd-party libs
+import requests
+import salt.ext.six as six
+from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 from salt.exceptions import CommandExecutionError
 
@@ -43,7 +50,7 @@ def _clean_salt_variables(params, variable_prefix="__"):
     '''
     Pops out variables from params which starts with `variable_prefix`.
     '''
-    map(params.pop, [k for k in params if k.startswith(variable_prefix)])
+    list(list(map(params.pop, [k for k in params if k.startswith(variable_prefix)])))
     return params
 
 
@@ -142,8 +149,8 @@ def ls(**params):
         endpoint = 'resources'
 
     # Convert all ints to strings:
-    for k, v in params.items():
-        params[k] = str(v)
+    for key, val in six.iteritems(params):
+        params[key] = str(val)
 
     api_response = requests.get(
         'https://api.serverdensity.io/inventory/{0}'.format(endpoint),
@@ -220,7 +227,7 @@ def install_agent(agent_key):
     account_url = get_sd_auth('account_url')
 
     __salt__['cmd.run'](
-        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh > install.sh',
+        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh -o install.sh',
         cwd=work_dir
     )
     __salt__['cmd.run'](cmd='chmod +x install.sh', cwd=work_dir)

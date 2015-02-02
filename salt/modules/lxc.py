@@ -9,7 +9,7 @@ lxc >= 1.0 (even beta alpha) is required
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import traceback
 import datetime
 import pipes
@@ -30,14 +30,18 @@ import salt.utils.dictupdate
 from salt.utils import vt
 import salt.utils.cloud
 import salt.config
-import salt._compat
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Set up logging
 log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
 __func_alias__ = {
-    'list_': 'list'
+    'list_': 'list',
+    'ls_': 'ls'
 }
 
 
@@ -70,13 +74,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     - because you find the argument to give easier here
       than using directly lxc.init
 
-    WARNING: BE REALLY CAREFUL CHANGING DEFAULTS !!!
-             IT'S A RETRO COMPATIBLE INTERFACE WITH
-             THE SALT CLOUD DRIVER (ask kiorky).
-
-    CLI Example::
-
-        salt '*' lxc.cloud_init_interface foo
+    .. warning::
+        BE REALLY CAREFUL CHANGING DEFAULTS !!!
+        IT'S A RETRO COMPATIBLE INTERFACE WITH
+        THE SALT CLOUD DRIVER (ask kiorky).
 
     name
         name of the lxc container to create
@@ -116,9 +117,27 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         netmask for the primary nic (24)
         = ``vm_.get('netmask', '24')``
     bridge
-        bridge^for the primary nic (lxcbr0)
+        bridge for the primary nic (lxcbr0)
     gateway
         network gateway for the container
+    additional_ips
+        additional ips which will be wired on the main bridge (br0)
+        which is connected to internet.
+        Be aware that you may use manual virtual mac addresses
+        provided by you provider (online, ovh, etc).
+        This is a list of mappings ``{ip: '', mac: '',netmask:''}``
+        Set gateway to ``None`` and an interface with a gateway
+        to escape from another interface that's eth0.
+        e.g.:
+
+        .. code-block:: python
+
+            {'mac': '00:16:3e:01:29:40',
+             'gateway': None, #default
+             'link': 'br0', #default
+             'netmask': '', #default
+             'ip': '22.1.4.25'}
+
     unconditional_install
         given to lxc.bootstrap (see relative doc)
     force_install
@@ -134,6 +153,13 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     users
         administrative users for the container
         default: [root] and [root, ubuntu] on ubuntu
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.cloud_init_interface foo
+
     '''
     if vm_ is None:
         vm_ = {}
@@ -214,6 +240,23 @@ def cloud_init_interface(name, vm_=None, **kwargs):
             eth0['hwaddr'] = mac
         if bridge:
             eth0['link'] = bridge
+    for ix, iopts in enumerate(vm_.get("additional_ips", [])):
+        ifh = "eth{0}".format(ix+1)
+        ethx = nic_opts.setdefault(ifh, {})
+        gw = iopts.get('gateway', None)
+        if gw:
+            ethx['gateway'] = gw
+            vm_['gateway'] = gateway = None
+        ethx['link'] = iopts.get('link', 'br0')
+        ethx['ipv4'] = iopts['ip']
+        nm = iopts.get('netmask', '')
+        if nm:
+            ethx['ipv4'] += '/{0}'.format(nm)
+        for i in ['mac', 'hwaddr']:
+            if i in iopts:
+                ethx['hwaddr'] = iopts[i]
+        if 'hwaddr' not in ethx:
+            raise ValueError('No mac for {0}'.format(ifh))
     gateway = vm_.get('gateway', 'auto')
     #
     lxc_init_interface = {}
@@ -239,7 +282,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     )
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
-    lxc_init_interface['bootstrap_shell'] = '/bin/bash'
+    lxc_init_interface['bootstrap_shell'] = 'sh'
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
@@ -277,7 +320,7 @@ def _lxc_profile(profile):
 
     Profiles can be defined in the config or pillar, e.g.:
 
-    Profile can be a string to be retrieven in config
+    Profile can be a string to be retrieved in config
     or a mapping.
 
     If is is a mapping and it contains a name, the name will
@@ -351,10 +394,17 @@ def _get_network_conf(conf_tuples=None, **kwargs):
 
     if nic:
         nicp = __salt__['config.get']('lxc.nic', {}).get(
-            nic, DEFAULT_NIC_PROFILE
-        )
-        nic_opts = kwargs.pop('nic_opts', None)
-        for dev, args in nicp.items():
+            nic, DEFAULT_NIC_PROFILE)
+        nic_opts = kwargs.pop('nic_opts', {})
+        if nic_opts:
+            for dev, args in six.iteritems(nic_opts):
+                ethx = nicp.setdefault(dev, {})
+                ethx = salt.utils.dictupdate.update(ethx, args)
+        ifs = [a for a in nicp]
+        ifs.sort()
+        gateway_set = False
+        for dev in ifs:
+            args = nicp[dev]
             ret.append({'lxc.network.type': args.pop('type', '')})
             ret.append({'lxc.network.name': dev})
             ret.append({'lxc.network.flags': args.pop('flags', 'up')})
@@ -373,40 +423,55 @@ def _get_network_conf(conf_tuples=None, **kwargs):
                 ret.append({'lxc.network.ipv4': ipv4})
             if ipv6:
                 ret.append({'lxc.network.ipv6': ipv6})
-            for k, v in args.items():
-                if k == 'link' and bridge:
-                    v = bridge
-                v = opts.get(k, v)
-                ret.append({'lxc.network.{0}'.format(k): v})
-        # gateway (in automode) must be appended following network conf !
-        if gateway is not None:
+            for key, val in six.iteritems(args):
+                if key == 'link' and bridge:
+                    val = bridge
+                val = opts.get(key, val)
+                if key in ['gateway', 'mac']:
+                    continue
+                ret.append({'lxc.network.{0}'.format(key): val})
+            # gateway (in automode) must be appended following network conf !
+            if not gateway:
+                gateway = args.get('gateway', None)
+            if gateway is not None and not gateway_set:
+                ret.append({'lxc.network.ipv4.gateway': gateway})
+                # only one network gateway ;)
+                gateway_set = True
+        # normally, this wont happen
+        # set the gateway if specified even if we did
+        # not managed the network underlying
+        if gateway is not None and not gateway_set:
             ret.append({'lxc.network.ipv4.gateway': gateway})
+            # only one network gateway ;)
+            gateway_set = True
 
     old = _get_veths(conf_tuples)
     new = _get_veths(ret)
     # verify that we did not loose the mac settings
     for iface in [a for a in new]:
+        ndata = new[iface]
+        nmac = ndata.get('lxc.network.hwaddr', '')
+        ntype = ndata.get('lxc.network.type', '')
+        omac, otype = '', ''
         if iface in old:
-            ndata = new[iface]
             odata = old[iface]
             omac = odata.get('lxc.network.hwaddr', '')
-            nmac = ndata.get('lxc.network.hwaddr', '')
             otype = odata.get('lxc.network.type', '')
-            ntype = ndata.get('lxc.network.type', '')
-            # default for network type is setted here
-            # attention not to change the network type
-            # without a good and explicit reason to.
-            if otype and not ntype:
-                ntype = otype
-            if not ntype:
-                ntype = 'veth'
-            new[iface]['lxc.network.type'] = ntype
-            if omac and not nmac:
-                new[iface]['lxc.network.hwaddr'] = omac
+        # default for network type is setted here
+        # attention not to change the network type
+        # without a good and explicit reason to.
+        if otype and not ntype:
+            ntype = otype
+        if not ntype:
+            ntype = 'veth'
+        new[iface]['lxc.network.type'] = ntype
+        if omac and not nmac:
+            new[iface]['lxc.network.hwaddr'] = omac
+
     ret = []
-    for v in new.values():
-        for row in v:
-            ret.append({row: v[row]})
+    for val in six.itervalues(new):
+        for row in val:
+            ret.append({row: val[row]})
     return ret
 
 
@@ -463,7 +528,7 @@ def _config_list(conf_tuples=None, **kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = []
     default_data = _get_lxc_default_data(**kwargs)
-    for k, val in default_data.items():
+    for k, val in six.iteritems(default_data):
         ret.append({k: val})
     net_datas = _get_network_conf(conf_tuples=conf_tuples, **kwargs)
     ret.extend(net_datas)
@@ -472,14 +537,14 @@ def _config_list(conf_tuples=None, **kwargs):
 
 def _get_veths(net_data):
     '''Parse the nic setup inside lxc conf tuples back
-    to a dictionnary indexed by network interface'''
+    to a dictionary indexed by network interface'''
     if isinstance(net_data, dict):
-        net_data = net_data.items()
+        net_data = list(net_data.items())
     nics = salt.utils.odict.OrderedDict()
     current_nic = salt.utils.odict.OrderedDict()
     for item in net_data:
         if item and isinstance(item, dict):
-            item = item.items()[0]
+            item = list(item.items())[0]
         if item[0] == 'lxc.network.type':
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
@@ -502,74 +567,67 @@ class _LXCConfig(object):
         if self.name:
             self.path = '/var/lib/lxc/{0}/config'.format(self.name)
             if os.path.isfile(self.path):
-                with open(self.path) as f:
-                    for l in f.readlines():
-                        match = self.pattern.findall((l.strip()))
+                with salt.utils.fopen(self.path) as fhr:
+                    for line in fhr.readlines():
+                        match = self.pattern.findall((line.strip()))
                         if match:
                             self.data.append((match[0][0], match[0][-1]))
                         match = self.non_interpretable_pattern.findall(
-                            (l.strip()))
+                            (line.strip()))
                         if match:
                             self.data.append(('', match[0][0]))
         else:
             self.path = None
 
-        def _replace(k, v):
-            if v:
-                self._filter_data(k)
-                self.data.append((k, v))
+        def _replace(key, val):
+            if val:
+                self._filter_data(key)
+                self.data.append((key, val))
 
         default_data = _get_lxc_default_data(**kwargs)
-        for k, val in default_data.items():
-            _replace(k, val)
+        for key, val in six.iteritems(default_data):
+            _replace(key, val)
         old_net = self._filter_data('lxc.network')
         net_datas = _get_network_conf(conf_tuples=old_net, **kwargs)
         if net_datas:
             for row in net_datas:
-                self.data.extend(row.items())
+                self.data.extend(list(row.items()))
 
         # be sure to reset harmful settings
-        for i in ['lxc.cgroup.memory.limit_in_bytes']:
-            if not default_data.get(i):
-                self._filter_data(i)
+        for idx in ['lxc.cgroup.memory.limit_in_bytes']:
+            if not default_data.get(idx):
+                self._filter_data(idx)
 
     def as_string(self):
-        chunks = []
-
-        def _process(item):
-            sep = ' = '
-            if not item[0]:
-                sep = ''
-            chunks.append('{0[0]}{1}{0[1]}'.format(item, sep))
-        map(_process, self.data)
+        chunks = ('{0[0]}{1}{0[1]}'.format(item, (' = ' if item[0] else '')) for item in self.data)
         return '\n'.join(chunks) + '\n'
 
     def write(self):
         if self.path:
             content = self.as_string()
             # 2 step rendering to be sure not to open/wipe the config
-            # before as_string suceeds.
-            with open(self.path, 'w') as fic:
+            # before as_string succeeds.
+            with salt.utils.fopen(self.path, 'w') as fic:
                 fic.write(content)
                 fic.flush()
 
     def tempfile(self):
         # this might look like the function name is shadowing the
         # module, but it's not since the method belongs to the class
-        f = tempfile.NamedTemporaryFile()
-        f.write(self.as_string())
-        f.flush()
-        return f
+        ntf = tempfile.NamedTemporaryFile()
+        ntf.write(self.as_string())
+        ntf.flush()
+        return ntf
 
     def _filter_data(self, pat):
         removed = []
-        x = []
-        for i in self.data:
-            if not re.match('^' + pat, i[0]):
-                x.append(i)
+        filtered = []
+        for item in self.data:
+            if not re.match('^' + pat, item[0]):
+                filtered.append(item)
             else:
-                removed.append(i)
-        self.data = x
+                removed.append(item)
+        self.data = filtered
         return removed
 
 
@@ -589,10 +647,10 @@ def get_base(**kwargs):
                 [seed=(True|False)] [install=(True|False)] \\
                 [config=minion_config]
     '''
-    cntrs = __salt__['lxc.ls']()
+    cntrs = ls_()
     if kwargs.get('image'):
         image = kwargs.get('image')
-        proto = salt._compat.urlparse(image).scheme
+        proto = _urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
         img_name = os.path.basename(img_tar)
         hash_ = salt.utils.get_hash(
@@ -600,19 +658,19 @@ def get_base(**kwargs):
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
         if name not in cntrs:
-            __salt__['lxc.create'](name, **kwargs)
+            create(name, **kwargs)
             if kwargs.get('vgname'):
                 rootfs = os.path.join('/dev', kwargs['vgname'], name)
-                lxc_info = __salt__['lxc.info'](name)
+                lxc_info = info(name)
                 edit_conf(lxc_info['config'], **{'lxc.rootfs': rootfs})
         return name
     elif kwargs.get('template'):
         name = '__base_{0}'.format(kwargs['template'])
         if name not in cntrs:
-            __salt__['lxc.create'](name, **kwargs)
+            create(name, **kwargs)
             if kwargs.get('vgname'):
                 rootfs = os.path.join('/dev', kwargs['vgname'], name)
-                lxc_info = __salt__['lxc.info'](name)
+                lxc_info = info(name)
                 edit_conf(lxc_info['config'], **{'lxc.rootfs': rootfs})
         return name
     return ''
@@ -648,6 +706,87 @@ def init(name,
     file but much of the hard work will be escaped as
     markers will prevent re-execution of harmful tasks.
 
+    name
+        Name of the container.
+    cpus
+        Select a random number of cpu cores and assign it to the cpuset, if the
+        cpuset option is set then this option will be ignored
+    cpuset
+        Explicitly define the cpus this container will be bound to
+    cpushare
+        cgroups cpu shares.
+    autostart
+        autostart container on reboot
+    memory
+        cgroups memory limit, in MB.
+        (0 for nolimit, None for old default 1024MB)
+    gateway
+        the ipv4 gateway to use
+        the default does nothing more than lxcutils does
+    bridge
+        the bridge to use
+        the default does nothing more than lxcutils does
+    nic
+        Network interfaces profile (defined in config or pillar).
+    users
+        Sysadmins users to set the administrative password to
+        e.g. [root, ubuntu, sysadmin], default [root] and [root, ubuntu]
+        on ubuntu
+    password
+        Set the initial password for default sysadmin users, at least root
+        but also can be used for sudoers, e.g. [root, ubuntu, sysadmin]
+    profile
+        A LXC profile (defined in config or pillar).
+        This can be either a real profile mapping or a string
+        to retrieve it in configuration
+    nic_opts
+        Extra options for network interfaces. E.g.:
+
+        .. code-block:: bash
+
+            {"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}
+
+        or
+
+        .. code-block:: bash
+
+            {"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}
+    start
+        Start the newly created container.
+    dnsservers
+        list of dns servers to set in the container, default [] (no setting)
+    seed
+        Seed the container with the minion config. Default: ``True``
+    install
+        If salt-minion is not already installed, install it. Default: ``True``
+    config
+        Optional config parameters. By default, the id is set to
+        the name of the container.
+    pub_key
+        Explicit public key to preseed the minion with (optional).
+        This can be either a filepath or a string representing the key
+    priv_key
+        Explicit private key to preseed the minion with (optional).
+        This can be either a filepath or a string representing the key
+    approve_key
+        If explicit preseeding is not used;
+        Attempt to request key approval from the master. Default: ``True``
+    clone
+        Original from which to use a clone operation to create the container.
+        Default: ``None``
+    bootstrap_url
+        See lxc.bootstrap
+    bootstrap_shell
+        See lxc.bootstrap
+    bootstrap_args
+        See lxc.bootstrap
+    force_install
+        Force installation even if salt-minion is detected,
+        this is the way to run vendor bootstrap scripts even
+        if a salt minion is already present in the container
+    unconditional_install
+        Run the script even if the container seems seeded
+
     CLI Example:
 
     .. code-block:: bash
@@ -664,108 +803,6 @@ def init(name,
                 [dnsservers[dns1,dns2]] \\
                 [users=[foo]] password='secret'
 
-    name
-        Name of the container.
-
-    cpus
-        Select a random number of cpu cores and assign it to the cpuset, if the
-        cpuset option is set then this option will be ignored
-
-    cpuset
-        Explicitly define the cpus this container will be bound to
-
-    cpushare
-        cgroups cpu shares.
-
-    autostart
-        autostart container on reboot
-
-    memory
-        cgroups memory limit, in MB.
-        (0 for nolimit, None for old default 1024MB)
-
-    gateway
-        the ipv4 gateway to use
-        the default does nothing more than lxcutils does
-
-    bridge
-        the bridge to use
-        the default does nothing more than lxcutils does
-
-    nic
-        Network interfaces profile (defined in config or pillar).
-
-    users
-        Sysadmins users to set the administrative password to
-        e.g. [root, ubuntu, sysadmin], default [root] and [root, ubuntu]
-        on ubuntu
-
-    password
-        Set the initial password for default sysadmin users, at least root
-        but also can be used for sudoers, e.g. [root, ubuntu, sysadmin]
-
-    profile
-        A LXC profile (defined in config or pillar).
-        This can be either a real profile mapping or a string
-        to retrieve it in configuration
-
-    nic_opts
-        Extra options for network interfaces. E.g:
-
-        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
-
-        or
-
-        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}``
-
-    start
-        Start the newly created container.
-
-    dnsservers
-        list of dns servers to set in the container, default [] (no setting)
-
-    seed
-        Seed the container with the minion config. Default: ``True``
-
-    install
-        If salt-minion is not already installed, install it. Default: ``True``
-
-    config
-        Optional config parameters. By default, the id is set to
-        the name of the container.
-
-    pub_key
-        Explicit public key to preseed the minion with (optional).
-        This can be either a filepath or a string representing the key
-
-    priv_key
-        Explicit private key to preseed the minion with (optional).
-        This can be either a filepath or a string representing the key
-
-    approve_key
-        If explicit preseeding is not used;
-        Attempt to request key approval from the master. Default: ``True``
-
-    clone
-        Original from which to use a clone operation to create the container.
-        Default: ``None``
-
-    bootstrap_url
-        See lxc.bootstrap
-        *
-    bootstrap_shell
-        See lxc.bootstrap
-
-    bootstrap_args
-        See lxc.bootstrap
-
-    force_install
-        Force installation even if salt-minion is detected,
-        this is the way to run vendor bootstrap scripts even
-        if a salt minion is already present in the container
-
-    unconditional_install
-        Run the script even if the container seems seeded
     '''
     kwargs = copy.deepcopy(kwargs)
     comment = ''
@@ -774,10 +811,8 @@ def init(name,
     if users is None:
         users = []
     dusers = ['root']
-    if (
-        __grains__['os'] in ['Ubuntu']
-        and 'ubuntu' not in users
-    ):
+    if (__grains__['os'] in ['Ubuntu']
+            and 'ubuntu' not in users):
         dusers.append('ubuntu')
     for user in dusers:
         if user not in users:
@@ -786,13 +821,13 @@ def init(name,
         profile = _lxc_profile(profile)
     profile = copy.deepcopy(profile)
 
-    def select(k, default=None):
-        kw = kwargs.pop(k, _marker)
-        p = profile.pop(k, default)
+    def select(key, default=None):
+        kwarg = kwargs.pop(key, _marker)
+        prof = profile.pop(key, default)
         # let kwargs be really be the preferred choice
-        if kw is _marker:
-            kw = p
-        return kw
+        if kwarg is _marker:
+            kwarg = prof
+        return kwarg
 
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
@@ -811,7 +846,7 @@ def init(name,
         clone_from = get_base(vgname=vgname, **kwargs)
         if not kwargs.get('snapshot') is False:
             kwargs['snapshot'] = True
-    does_exist = __salt__['lxc.exists'](name)
+    does_exist = exists(name)
     to_reboot = False
     remove_seed_marker = False
     if does_exist:
@@ -819,7 +854,7 @@ def init(name,
     elif clone_from:
         remove_seed_marker = True
         ret.update(
-            __salt__['lxc.clone'](name, clone_from,
+            clone(name, clone_from,
                                   profile=profile, **kwargs))
         if not ret.get('cloned', False):
             return ret
@@ -827,9 +862,9 @@ def init(name,
                          bridge=bridge, gateway=gateway,
                          autostart=autostart,
                          cpuset=cpuset, cpushare=cpushare, memory=memory)
-        old_chunks = __salt__['lxc.read_conf'](cfg.path)
+        old_chunks = read_conf(cfg.path)
         cfg.write()
-        chunks = __salt__['lxc.read_conf'](cfg.path)
+        chunks = read_conf(cfg.path)
         if old_chunks != chunks:
             to_reboot = True
     else:
@@ -839,26 +874,25 @@ def init(name,
                          autostart=autostart,
                          cpushare=cpushare, memory=memory)
         with cfg.tempfile() as cfile:
-            ret.update(
-                __salt__['lxc.create'](name, config=cfile.name,
-                                       profile=profile, **kwargs))
+            ret.update(create(name, config=cfile.name,
+                              profile=profile, **kwargs))
         if not ret.get('created', False):
             return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
         old_chunks = []
         if os.path.exists(path):
-            old_chunks = __salt__['lxc.read_conf'](path)
+            old_chunks = read_conf(path)
         for comp in _config_list(conf_tuples=old_chunks,
                                  cpu=cpu,
                                  nic=nic, nic_opts=nic_opts, bridge=bridge,
                                  cpuset=cpuset, cpushare=cpushare,
                                  memory=memory):
             edit_conf(path, **comp)
-        chunks = __salt__['lxc.read_conf'](path)
+        chunks = read_conf(path)
         if old_chunks != chunks:
             to_reboot = True
     if remove_seed_marker:
-        lxcret = __salt__['lxc.run_cmd'](
+        lxcret = run_cmd(
             name, 'rm -f \"{0}\"'.format(SEED_MARKER),
             stdout=False, stderr=False)
 
@@ -869,9 +903,9 @@ def init(name,
                      cpuset=cpuset, cpushare=cpushare, memory=memory)
     old_chunks = []
     if os.path.exists(cfg.path):
-        old_chunks = __salt__['lxc.read_conf'](cfg.path)
+        old_chunks = read_conf(cfg.path)
     cfg.write()
-    chunks = __salt__['lxc.read_conf'](cfg.path)
+    chunks = read_conf(cfg.path)
     if old_chunks != chunks:
         comment += 'Container configuration updated\n'
         to_reboot = True
@@ -879,7 +913,7 @@ def init(name,
         if not to_reboot:
             comment += 'Container already correct\n'
     if to_reboot:
-        __salt__['lxc.stop'](name)
+        stop(name)
     if clone_from:
         inner = 'cloned'
         comment += 'Container cloned\n'
@@ -891,27 +925,27 @@ def init(name,
         not does_exist
         or (
             does_exist
-            and __salt__['lxc.state'](name) != 'running'
+            and state(name) != 'running'
         )
     ):
-        ret['state'] = __salt__['lxc.start'](name)
-    ret['state'] = __salt__['lxc.state'](name)
+        ret['state'] = start(name)
+    ret['state'] = state(name)
 
     # set the default user/password, only the first time
     if password:
         changes['250_password'] = 'Passwords in place\n'
-        gid = '/.lxc.initial_pass'.format(name)
+        gid = '/.lxc.initial_pass'
         gids = [gid,
                 '/lxc.initial_pass',
                 '/.lxc.{0}.initial_pass'.format(name)]
         lxcrets = []
         for ogid in gids:
             lxcrets.append(
-                bool(__salt__['lxc.run_cmd'](
+                bool(run_cmd(
                     name, 'test -e {0}'.format(gid),
                     stdout=False, stderr=False)))
         if True not in lxcrets:
-            cret = __salt__['lxc.set_pass'](name,
+            cret = set_pass(name,
                                             password=password, users=users)
             changes['250_password'] = 'Password updated\n'
             if not cret['result']:
@@ -919,7 +953,7 @@ def init(name,
                 changes['250_password'] = 'Failed to update passwords\n'
             try:
                 lxcret = int(
-                    __salt__['lxc.run_cmd'](
+                    run_cmd(
                         name,
                         'sh -c \'touch "{0}"; '
                         'test -e "{0}";echo ${{?}}\''.format(gid)))
@@ -944,18 +978,18 @@ def init(name,
         lxcrets = []
         for ogid in gids:
             lxcrets.append(bool(
-                __salt__['lxc.run_cmd'](
+                run_cmd(
                     name, 'test -e {0}'.format(ogid),
                     stdout=False, stderr=False)))
         if True not in lxcrets:
-            cret = __salt__['lxc.set_dns'](name, dnsservers=dnsservers)
+            cret = set_dns(name, dnsservers=dnsservers)
             changes['350_dns'] = 'DNS updated\n'
             if not cret['result']:
                 ret['result'] = False
-                changes['350_dns'] = 'DNS provisionning error\n'
+                changes['350_dns'] = 'DNS provisioning error\n'
             try:
                 lxcret = int(
-                    __salt__['lxc.run_cmd'](
+                    run_cmd(
                         name,
                         'sh -c \'touch "{0}"; '
                         'test -e "{0}";echo ${{?}}\''.format(gid)))
@@ -972,7 +1006,7 @@ def init(name,
     if seed or seed_cmd:
         changes['450_seed'] = 'Container seeded\n'
         if seed:
-            ret['seeded'] = __salt__['lxc.bootstrap'](
+            ret['seeded'] = bootstrap(
                 name, config=salt_config,
                 approve_key=approve_key,
                 pub_key=pub_key, priv_key=priv_key,
@@ -1012,23 +1046,49 @@ def cloud_init(name, vm_=None, **kwargs):
     '''
     Thin wrapper to lxc.init to be used from the saltcloud lxc driver
 
-    CLI Example::
-
-        salt '*' lxc.cloud_init foo
     name
         Name of the container
         may be None and then guessed from saltcloud mapping
-    ``vm_``
+    `vm_`
         saltcloud mapping defaults for the vm
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.cloud_init foo
     '''
-    init_interface = __salt__['lxc.cloud_init_interface'](name, vm_, **kwargs)
+    init_interface = cloud_init_interface(name, vm_, **kwargs)
     name = init_interface.pop('name', name)
-    return __salt__['lxc.init'](name, **init_interface)
+    return init(name, **init_interface)
 
 
 def create(name, config=None, profile=None, options=None, **kwargs):
     '''
     Create a new container.
+
+    name
+        Name of the container.
+    config
+        The config file to use for the container. Defaults to system-wide
+        config (usually in /etc/lxc/lxc.conf).
+    profile
+        A LXC profile (defined in config or pillar).
+    template
+        The template to use. E.g., 'ubuntu' or 'fedora'.
+    backing
+        The type of storage to use. Set to 'lvm' to use an LVM group. Defaults
+        to filesystem within /var/lib/lxc/.
+    vgname
+        Name of the LVM volume group in which to create the volume for this
+        container. Only applicable if backing=lvm. Defaults to 'lxc'.
+    fstype
+        fstype to use on LVM lv.
+    size
+        Size of the volume to create. Only applicable if backing=lvm.
+        Defaults to 1G.
+    options
+        Template specific options to pass to the lxc-create command.
 
     CLI Example:
 
@@ -1039,36 +1099,6 @@ def create(name, config=None, profile=None, options=None, **kwargs):
                 [backing=backing_store] [vgname=volume_group] \\
                 [size=filesystem_size] [options=template_options]
 
-    name
-        Name of the container.
-
-    config
-        The config file to use for the container. Defaults to system-wide
-        config (usually in /etc/lxc/lxc.conf).
-
-    profile
-        A LXC profile (defined in config or pillar).
-
-    template
-        The template to use. E.g., 'ubuntu' or 'fedora'.
-
-    backing
-        The type of storage to use. Set to 'lvm' to use an LVM group. Defaults
-        to filesystem within /var/lib/lxc/.
-
-    vgname
-        Name of the LVM volume group in which to create the volume for this
-        container. Only applicable if backing=lvm. Defaults to 'lxc'.
-
-    fstype
-        fstype to use on LVM lv.
-
-    size
-        Size of the volume to create. Only applicable if backing=lvm.
-        Defaults to 1G.
-
-    options
-        Template specific options to pass to the lxc-create command.
     '''
     kwargs = copy.deepcopy(kwargs)
     if exists(name):
@@ -1080,13 +1110,13 @@ def create(name, config=None, profile=None, options=None, **kwargs):
         profile = _lxc_profile(profile)
     profile = copy.deepcopy(profile)
 
-    def select(k, default=None):
-        kw = kwargs.pop(k, _marker)
-        p = profile.pop(k, default)
+    def select(key, default=None):
+        kwarg = kwargs.pop(key, _marker)
+        prof = profile.pop(key, default)
         # let kwargs be really be the preferred choice
-        if kw is _marker:
-            kw = p
-        return kw
+        if kwarg is _marker:
+            kwarg = prof
+        return kwarg
 
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
@@ -1137,17 +1167,17 @@ def create(name, config=None, profile=None, options=None, **kwargs):
 
     if options:
         cmd += ' --'
-        for k, v in options.items():
-            cmd += ' --{0} {1}'.format(k, v)
+        for key, val in six.iteritems(options):
+            cmd += ' --{0} {1}'.format(key, val)
 
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] == 0 and exists(name):
         return {'created': True}
     else:
         if exists(name):
             # destroy the container if it was partially created
             cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd)
+            __salt__['cmd.retcode'](cmd, python_shell=False)
         log.warn('lxc-create failed to create container')
         return {'created': False, 'error':
                 'container could not be created with cmd "{0}": {1}'.format(cmd, ret['stderr'])}
@@ -1159,39 +1189,29 @@ def clone(name,
           profile=None,
           **kwargs):
     '''
-    Create a new container.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'minion' lxc.clone name orig [snapshot=(True|False)] \\
-                [size=filesystem_size] [vgname=volume_group] \\
-                [profile=profile_name]
+    Clone a container.
 
     name
         Name of the container.
-
     orig
         Name of the cloned original container
-
     snapshot
         Do we use Copy On Write snapshots (LVM)
-
     size
         Size of the container
-
     vgname
         LVM volume group(lxc)
-
     profile
         A LXC profile (defined in config or pillar).
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' lxc.clone myclone ubuntu "snapshot=True"
+        salt 'minion' lxc.clone name orig [snapshot=(True|False)] \\
+                [size=filesystem_size] [vgname=volume_group] \\
+                [profile=profile_name]
     '''
     if not isinstance(profile, dict):
         profile = _lxc_profile(profile)
@@ -1209,13 +1229,13 @@ def clone(name,
         return {'cloned': False,
                 'error': 'original container \'{0}\' is running'.format(orig)}
 
-    def select(k, default=None):
-        kw = kwargs.pop(k, _marker)
-        p = profile.pop(k, default)
+    def select(key, default=None):
+        kwarg = kwargs.pop(key, _marker)
+        prof = profile.pop(key, default)
         # let kwargs be really be the preferred choice
-        if kw is _marker:
-            kw = p
-        return kw
+        if kwarg is _marker:
+            kwarg = prof
+        return kwarg
 
     backing = select('backing')
     if backing in ['dir']:
@@ -1234,14 +1254,14 @@ def clone(name,
     if backing:
         cmd += ' -B {0}'.format(backing)
 
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] == 0 and exists(name):
         return {'cloned': True}
     else:
         if exists(name):
             # destroy the container if it was partially created
             cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd)
+            __salt__['cmd.retcode'](cmd, python_shell=False)
         log.warn('lxc-clone failed to create container')
         return {'cloned': False, 'error': (
             'container could not be created'
@@ -1249,7 +1269,7 @@ def clone(name,
         ).format(cmd, ret['stderr'])}
 
 
-def ls():
+def ls_():
     '''
     Return just a list of the containers available
 
@@ -1259,7 +1279,7 @@ def ls():
 
         salt '*' lxc.ls
     '''
-    return __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
+    return __salt__['cmd.run']('lxc-ls | sort -u', python_shell=True).splitlines()
 
 
 def list_(extra=False):
@@ -1267,23 +1287,28 @@ def list_(extra=False):
     List defined containers classified by status.
     Status can be running, stopped, and frozen.
 
-        extra
-            Also get per container specific info at once.
-            Warning: it will not return a collection of list
+    extra
+        Also get per container specific info at once.
+
+        .. warning::
+
+            It will not return a collection of list
             but a collection of mappings by status and then per
-            container name::
+            container name:
+
+            .. code-block:: python
 
                 {'running': ['foo']} # normal mode
                 {'running': {'foo': {'info1': 'bar'}} # extra mode
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' lxc.list
         salt '*' lxc.list extra=True
     '''
-    ctnrs = __salt__['cmd.run']('lxc-ls | sort -u').splitlines()
+    ctnrs = __salt__['cmd.run']('lxc-ls | sort -u', python_shell=True).splitlines()
 
     if extra:
         stopped = {}
@@ -1300,7 +1325,7 @@ def list_(extra=False):
 
     for container in ctnrs:
         c_infos = __salt__['cmd.run'](
-                'lxc-info -n {0}'.format(container)).splitlines()
+                'lxc-info -n {0}'.format(container), python_shell=False).splitlines()
         log.debug(c_infos)
         c_state = None
         for c_info in c_infos:
@@ -1311,7 +1336,7 @@ def list_(extra=False):
                 break
         if extra:
             try:
-                infos = __salt__['lxc.info'](container)
+                infos = info(container)
             except Exception:
                 trace = traceback.format_exc()
                 infos = {'error': 'Error while getting extra infos',
@@ -1337,25 +1362,24 @@ def list_(extra=False):
 
 
 def _change_state(cmd, name, expected):
-    s1 = state(name)
-    if s1 is None:
+    state1 = state(name)
+    if state1 is None:
         return {'state': None, 'change': False}
-    elif s1 == expected:
+    elif state1 == expected:
         return {'state': expected, 'change': False}
 
     cmd = '{0} -n {1}'.format(cmd, name)
-    err = __salt__['cmd.run_stderr'](cmd)
+    err = __salt__['cmd.run_stderr'](cmd, python_shell=False)
     if err:
-        s2 = state(name)
-        r = {'state': s2, 'change': s1 != s2, 'error': err}
+        state2 = state(name)
+        return {'state': state2, 'change': state1 != state2, 'error': err}
     else:
         if expected is not None:
             # some commands do not wait, so we will
             cmd = 'lxc-wait -n {0} -s {1}'.format(name, expected.upper())
-            __salt__['cmd.run'](cmd, timeout=30)
-        s2 = state(name)
-        r = {'state': s2, 'change': s1 != s2}
-    return r
+            __salt__['cmd.run'](cmd, timeout=30, python_shell=True)
+        state2 = state(name)
+        return {'state': state2, 'change': state1 != state2}
 
 
 def _ensure_running(name, no_start=False):
@@ -1363,18 +1387,18 @@ def _ensure_running(name, no_start=False):
     If the container is not currently running, start it. This function returns
     the state that the container was in before changing
     '''
-    prior_state = __salt__['lxc.state'](name)
+    prior_state = state(name)
     if not prior_state:
         return None
     res = {}
     if prior_state == 'stopped':
         if no_start:
             return False
-        res = __salt__['lxc.start'](name)
+        res = start(name)
     elif prior_state == 'frozen':
         if no_start:
             return False
-        res = __salt__['lxc.unfreeze'](name)
+        res = unfreeze(name)
     if res.get('error'):
         log.warn('Failed to run command: {0}'.format(res['error']))
         return False
@@ -1396,19 +1420,19 @@ def start(name, restart=False):
            'result': True,
            'comment': 'Started'}
     try:
-        does_exist = __salt__['lxc.exists'](name)
+        does_exist = exists(name)
         if not does_exist:
             return {'name': name,
                     'result': False,
                     'comment': 'Container does not exist'}
         if restart:
-            __salt__['lxc.stop'](name)
+            stop(name)
         ret.update(_change_state('lxc-start -d', name, 'running'))
-        infos = __salt__['lxc.info'](name)
+        infos = info(name)
         ret['result'] = infos['state'] == 'running'
         if ret['change']:
             ret['changes']['started'] = 'started'
-    except Exception, ex:
+    except Exception as ex:
         trace = traceback.format_exc()
         ret['result'] = False
         ret['comment'] = 'Error in starting container'
@@ -1434,18 +1458,18 @@ def stop(name, kill=True):
            'result': True,
            'comment': 'Stopped'}
     try:
-        does_exist = __salt__['lxc.exists'](name)
+        does_exist = exists(name)
         if not does_exist:
             return {'name': name,
                     'result': False,
                     'changes': {},
                     'comment': 'Container does not exist'}
         ret.update(_change_state('lxc-stop', name, 'stopped'))
-        infos = __salt__['lxc.info'](name)
+        infos = info(name)
         ret['result'] = infos['state'] == 'stopped'
         if ret['change']:
             ret['changes']['stopped'] = 'stopped'
-    except Exception, ex:
+    except Exception as ex:
         trace = traceback.format_exc()
         ret['result'] = False
         ret['comment'] = 'Error in stopping container'
@@ -1505,8 +1529,8 @@ def exists(name):
 
         salt '*' lxc.exists name
     '''
-    l = list_()
-    return name in l['running'] + l['stopped'] + l['frozen']
+    _list = list_()
+    return name in _list['running'] + _list['stopped'] + _list['frozen']
 
 
 def state(name):
@@ -1523,7 +1547,7 @@ def state(name):
         return None
 
     cmd = 'lxc-info -n {0}'.format(name)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
@@ -1551,7 +1575,7 @@ def get_parameter(name, parameter):
         return None
 
     cmd = 'lxc-cgroup -n {0} {1}'.format(name, parameter)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
@@ -1572,7 +1596,7 @@ def set_parameter(name, parameter, value):
         return None
 
     cmd = 'lxc-cgroup -n {0} {1} {2}'.format(name, parameter, value)
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         return False
     else:
@@ -1609,27 +1633,28 @@ def info(name):
 
         salt '*' lxc.info name
     '''
-    f = '/var/lib/lxc/{0}/config'.format(name)
-    if not os.path.isfile(f):
+    fname = '/var/lib/lxc/{0}/config'.format(name)
+    if not os.path.isfile(fname):
         return None
 
     ret = {}
 
-    config = [(v[0].strip(), v[1].strip()) for v in
-              [l.split('#', 1)[0].strip().split('=', 1) for l in
-               open(f).readlines()] if len(v) == 2]
+    with salt.utils.fopen(fname) as fhr:
+        config = [(v[0].strip(), v[1].strip()) for v in
+                  [l.split('#', 1)[0].strip().split('=', 1) for l in
+                   fhr.readlines()] if len(v) == 2]
 
     ifaces = []
     current = None
 
-    for k, v in config:
-        if k == 'lxc.network.type':
-            current = {'type': v}
+    for key, val in config:
+        if key == 'lxc.network.type':
+            current = {'type': val}
             ifaces.append(current)
         elif not current:
             continue
-        elif k.startswith('lxc.network.'):
-            current[k.replace('lxc.network.', '', 1)] = v
+        elif key.startswith('lxc.network.'):
+            current[key.replace('lxc.network.', '', 1)] = val
     if ifaces:
         ret['nics'] = ifaces
 
@@ -1645,7 +1670,7 @@ def info(name):
     ret['ipv4_ips'] = []
     ret['ipv6_ips'] = []
     ret['size'] = None
-    ret['config'] = f
+    ret['config'] = fname
 
     if ret['state'] == 'running':
         try:
@@ -1662,10 +1687,10 @@ def info(name):
         ret['memory_limit'] = limit
         ret['memory_free'] = free
         ret['size'] = __salt__['cmd.run'](
-            ('lxc-attach -n \'{0}\' -- env -i '
-             'df /|tail -n1|awk \'{{print $2}}\'').format(name))
+            ('lxc-attach --clear-env -n {0} -- '
+             'df /|tail -n1|awk \'{{print $2}}\'').format(pipes.quote(name)), python_shell=True)
         ipaddr = __salt__['cmd.run'](
-            'lxc-attach -n \'{0}\' -- env -i ip addr show'.format(name))
+            'lxc-attach --clear-env -n {0} -- ip addr show'.format(pipes.quote(name)), python_shell=False)
         for line in ipaddr.splitlines():
             if 'inet' in line:
                 line = line.split()
@@ -1716,20 +1741,20 @@ def set_pass(name, users, password):
     if users:
         try:
             cmd = (
-                "lxc-attach -n \"{0}\" -- "
-                " /bin/sh -c \""
-                "").format(name)
+                "lxc-attach --clear-env -n {0} -- "
+                " sh -c \""
+                "").format(pipes.quote(name))
             for i in users:
                 cmd += "echo {0}:{1}|chpasswd && ".format(
                     pipes.quote(i),
                     pipes.quote(password),
                 )
-            cmd += " /bin/true\""
-            cret = __salt__['cmd.run_all'](cmd)
+            cmd += " true\""
+            cret = __salt__['cmd.run_all'](cmd, python_shell=False)
             if cret['retcode'] != 0:
                 raise ValueError('Can\'t change passwords')
             ret['comment'] = 'Password updated for {0}'.format(users)
-        except ValueError, ex:
+        except ValueError as ex:
             trace = traceback.format_exc()
             ret['result'] = False
             ret['comment'] = 'Error in setting base password\n'
@@ -1747,15 +1772,15 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
     .. code-block:: bash
 
-        salt-call -lall lxc.update_lxc_conf ubuntu \
-                lxc_conf="[{'network.ipv4.ip':'10.0.3.5'}]" \
+        salt-call -lall lxc.update_lxc_conf ubuntu \\
+                lxc_conf="[{'network.ipv4.ip':'10.0.3.5'}]" \\
                 lxc_conf_unset="['lxc.utsname']"
 
     '''
     changes = {'edited': [], 'added': [], 'removed': []}
     ret = {'changes': changes, 'result': True, 'comment': ''}
     lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
-    if not __salt__['lxc.exists'](name):
+    if not exists(name):
         ret['result'] = False
         ret['comment'] = 'Container does not exist: {0}'.format(name)
     elif not os.path.exists(lxc_conf_p):
@@ -1763,14 +1788,18 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
         ret['comment'] = (
             'Configuration does not exist: {0}'.format(lxc_conf_p))
     else:
-        with open(lxc_conf_p, 'r') as fic:
+        with salt.utils.fopen(lxc_conf_p, 'r') as fic:
             filtered_lxc_conf = []
             for row in lxc_conf:
                 if not row:
                     continue
                 for conf in row:
-                    filtered_lxc_conf.append((conf.strip(),
-                                              row[conf].strip()))
+                    try:
+                        filtered_lxc_conf.append((conf.strip(),
+                                                  row[conf].strip()))
+                    except AttributeError:
+                        filtered_lxc_conf.append((conf.strip(),
+                                                  str(row[conf]).strip()))
             ret['comment'] = 'lxc.conf is up to date'
             lines = []
             orig_config = fic.read()
@@ -1820,12 +1849,10 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
             conf_changed = conf != orig_config
             chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
             if conf_changed:
-                wfic = open('{0}.{1}'.format(lxc_conf_p, chrono), 'w')
-                wfic.write(conf)
-                wfic.close()
-                wfic = open(lxc_conf_p, 'w')
-                wfic.write(conf)
-                wfic.close()
+                with salt.utils.fopen('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
+                    wfic.write(conf)
+                with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
+                    wfic.write(conf)
                 ret['comment'] = 'Updated'
                 ret['result'] = True
     if (
@@ -1858,23 +1885,23 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns.extend(['search {0}'.format(d) for d in searchdomains])
     dns = "\n".join(dns)
     has_resolvconf = not int(
-        __salt__['cmd.run'](('lxc-attach -n \'{0}\' -- '
-                             '/usr/bin/test -e /etc/resolvconf/resolv.conf.d/base;'
-                             'echo ${{?}}').format(name)))
+        __salt__['cmd.run'](('lxc-attach --clear-env -n {0} -- '
+                             'test -e /etc/resolvconf/resolv.conf.d/base;'
+                             'echo ${{?}}').format(pipes.quote(name))))
     if has_resolvconf:
         cret = __salt__['cmd.run_all']((
-            'lxc-attach -n \'{0}\' -- '
+            'lxc-attach --clear-env -n {0} -- '
             'rm /etc/resolvconf/resolv.conf.d/base &&'
-            'echo \'{1}\'|lxc-attach -n \'{0}\' -- '
+            'echo {1}|lxc-attach --clear-env -n {0} -- '
             'tee /etc/resolvconf/resolv.conf.d/base'
-        ).format(name, dns))
+        ).format(pipes.quote(name), pipes.quote(dns)))
         if not cret['retcode']:
             ret['result'] = True
     cret = __salt__['cmd.run_all']((
-        'lxc-attach -n \'{0}\' -- rm /etc/resolv.conf &&'
-        'echo \'{1}\'|lxc-attach -n \'{0}\' -- '
+        'lxc-attach --clear-env -n {0} -- rm /etc/resolv.conf &&'
+        'echo {1}|lxc-attach --clear-env -n {0} -- '
         'tee /etc/resolv.conf'
-    ).format(name, dns))
+    ).format(pipes.quote(name), pipes.quote(dns)), python_shell=True)
     if not cret['retcode']:
         ret['result'] = True
     return ret
@@ -1890,11 +1917,6 @@ def bootstrap(name, config=None, approve_key=True,
               bootstrap_shell=None):
     '''
     Install and configure salt in a container.
-
-    .. code-block:: bash
-
-        salt 'minion' lxc.bootstrap name [config=config_data] \\
-                [approve_key=(True|False)] [install=(True|False)]
 
     config
         Minion configuration options. By default, the ``master`` option is set
@@ -1934,14 +1956,16 @@ def bootstrap(name, config=None, approve_key=True,
     unconditional_install
         Run the script even if the container seems seeded
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' lxc.bootstrap ubuntu
+        salt 'minion' lxc.bootstrap name [config=config_data] \\
+                [approve_key=(True|False)] [install=(True|False)]
     '''
 
-    infos = __salt__['lxc.info'](name)
+    infos = info(name)
     if not infos:
         return None
     # default set here as we cannot set them
@@ -1960,11 +1984,13 @@ def bootstrap(name, config=None, approve_key=True,
           'else exit 1; fi"'
     if not force_install:
         # no need to run this cmd in force mode
-        needs_install = bool(__salt__['lxc.run_cmd'](name, cmd, stdout=False))
+        needs_install = bool(run_cmd(name, cmd, stdout=False))
     else:
         needs_install = True
-    seeded = not __salt__['lxc.run_cmd'](
-        name, 'test -e \"{0}\"'.format(SEED_MARKER), stdout=False, stderr=False)
+    seeded = not run_cmd(
+        name,
+        'test -e \"{0}\"'.format(SEED_MARKER),
+        stdout=False, stderr=False)
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         res = True
@@ -1980,7 +2006,19 @@ def bootstrap(name, config=None, approve_key=True,
                 run_cmd(name, 'install -m 0700 -d {0}'.format(configdir))
                 bs_ = __salt__['config.gather_bootstrap_script'](
                     bootstrap=bootstrap_url)
-                cp(name, bs_, '/tmp/bootstrap.sh')
+                dest_dir = os.path.join('/tmp', rstr)
+                for cmd in [
+                    'mkdir -p {0}'.format(dest_dir),
+                    'chmod 700 {0}'.format(dest_dir),
+                ]:
+                    if run_cmd(name, cmd, stdout=True):
+                        log.error(
+                            ('tmpdir {0} creation'
+                             ' failed ({1}').format(dest_dir, cmd))
+                        return False
+                cp(name,
+                   bs_,
+                   '{0}/bootstrap.sh'.format(dest_dir))
                 cp(name, cfg_files['config'],
                    os.path.join(configdir, 'minion'))
                 cp(name, cfg_files['privkey'],
@@ -1988,13 +2026,15 @@ def bootstrap(name, config=None, approve_key=True,
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('PATH=$PATH:/bin:/sbin:/usr/sbin'
-                       ' {0} /tmp/bootstrap.sh {1}').format(
-                           bootstrap_shell, bootstrap_args)
+                cmd = ("{0} -c 'PATH=$PATH:/bin:/sbin:/usr/sbin"
+                       " {0} {2}/bootstrap.sh {1}'").format(
+                           bootstrap_shell,
+                           bootstrap_args.replace("'", "''"),
+                           dest_dir)
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
                 log.info('Running {0} in lxc {1}'.format(cmd, name))
-                res = not __salt__['lxc.run_cmd'](
+                res = not run_cmd(
                     name, cmd,
                     stdout=True, stderr=True, use_vt=True)['retcode']
             else:
@@ -2010,12 +2050,12 @@ def bootstrap(name, config=None, approve_key=True,
             res = True
         shutil.rmtree(tmp)
         if prior_state == 'stopped':
-            __salt__['lxc.stop'](name)
+            stop(name)
         elif prior_state == 'frozen':
-            __salt__['lxc.freeze'](name)
-        # mark seeded upon sucessful install
+            freeze(name)
+        # mark seeded upon successful install
         if res:
-            __salt__['lxc.run_cmd'](
+            run_cmd(
                 name, 'sh -c \'touch "{0}";\''.format(SEED_MARKER))
     return res
 
@@ -2031,8 +2071,8 @@ def attachable(name):
 
         salt 'minion' lxc.attachable ubuntu
     '''
-    cmd = 'lxc-attach -n {0} -- /usr/bin/env'.format(name)
-    data = __salt__['cmd.run_all'](cmd)
+    cmd = 'lxc-attach -n {0} -- true'.format(pipes.quote(name))
+    data = __salt__['cmd.run_all'](cmd, python_shell=False)
     if not data['retcode']:
         return True
     if data['stderr'].startswith('lxc-attach: failed to get the init pid'):
@@ -2042,9 +2082,34 @@ def attachable(name):
 
 def run_cmd(name, cmd, no_start=False, preserve_state=True,
             stdout=True, stderr=False, use_vt=False,
-            keep_env='http_proxy,https_proxy'):
+            keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     Run a command inside the container.
+
+    name
+        Name of the container on which to operate.
+    cmd
+        Command to run
+    no_start
+        If the container is not running, don't start it. Default: ``False``
+    preserve_state
+        After running the command, return the container to its previous
+        state. Default: ``True``
+    stdout:
+        Return stdout. Default: ``True``
+    stderr:
+        Return stderr. Default: ``False``
+    use_vt
+        use saltstack utils.vt to stream output to console
+    keep_env
+        A list of env vars to preserve. May be passed as comma-delimited list.
+        Defaults to http_proxy,https_proxy.
+
+    .. note::
+
+        If stderr and stdout are both ``False``, the return code is returned.
+        If stderr and stdout are both ``True``, the pid and return code are
+        also returned.
 
     CLI Example:
 
@@ -2054,54 +2119,22 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                 [preserve_state=(True|False)] [stdout=(True|False)] \\
                 [stderr=(True|False)]
 
-    name
-        Name of the container on which to operate.
-
-    cmd
-        Command to run
-
-    no_start
-        If the container is not running, don't start it. Default: ``False``
-
-    preserve_state
-        After running the command, return the container to its previous
-        state. Default: ``True``
-
-    stdout:
-        Return stdout. Default: ``True``
-
-    stderr:
-        Return stderr. Default: ``False``
-
-    use_vt
-        use saltstack utils.vt to stream output to console
-
-    keep_env
-        A list of env vars to preserve. May be passed as commma-delimited list.
-        Defaults to http_proxy,https_proxy.
-
-    .. note::
-
-        If stderr and stdout are both ``False``, the return code is returned.
-        If stderr and stdout are both ``True``, the pid and return code are
-        also returned.
     '''
     prior_state = _ensure_running(name, no_start=no_start)
     if not prior_state:
         return prior_state
     if attachable(name):
-        if isinstance(keep_env, basestring):
+        if isinstance(keep_env, six.string_types):
             keep_env = keep_env.split(',')
-        if keep_env:
-            env = ' '.join('{0}=${0}'.format(x) for x in keep_env)
-        else:
-            env = ''
+        env = ' '.join('--set-var {0}={1}'.format(
+                       x, pipes.quote(os.environ[x]))
+                       for x in keep_env if x in os.environ)
+        cmd = 'lxc-attach --clear-env {0} -n {1} -- {2}'.format(env, pipes.quote(name), cmd)
 
-        cmd = 'lxc-attach -n \'{0}\' -- env -i {1} {2}'.format(name, env, cmd)
         if not use_vt:
-            res = __salt__['cmd.run_all'](cmd)
+            res = __salt__['cmd.run_all'](cmd, python_shell=False)
         else:
-            stdout, stderr = '', ''
+            stdout_buffer, stderr_buffer = '', ''
             try:
                 proc = vt.Terminal(cmd,
                                    shell=True,
@@ -2113,7 +2146,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                                    stream_stdout=True,
                                    stream_stderr=True)
                 # consume output
-                while 1:
+                while proc.has_unread_data:
                     try:
                         time.sleep(0.5)
                         try:
@@ -2121,44 +2154,37 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                         except IOError:
                             cstdout, cstderr = '', ''
                         if cstdout:
-                            stdout += cstdout
+                            stdout_buffer += cstdout
                         else:
                             cstdout = ''
                         if cstderr:
-                            stderr += cstderr
+                            stderr_buffer += cstderr
                         else:
                             cstderr = ''
-                        # done by vt itself
-                        # if stdout:
-                        #     log.debug(stdout)
-                        # if stderr:
-                        #     log.debug(stderr)
-                        if not cstdout and not cstderr and not proc.isalive():
-                            break
                     except KeyboardInterrupt:
                         break
                 res = {'retcode': proc.exitstatus,
                        'pid': 2,
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_buffer,
+                       'stderr': stderr_buffer}
             except vt.TerminalException:
                 trace = traceback.format_exc()
                 log.error(trace)
                 res = {'retcode': 127,
                        'pid': '2',
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_buffer,
+                       'stderr': stderr_buffer}
             finally:
-                proc.terminate()
+                proc.close(terminate=True, kill=True)
     else:
         rootfs = info(name).get('rootfs')
-        res = __salt__['cmd.run_chroot'](rootfs, cmd)
+        res = __salt__['cmd.run_chroot'](rootfs, cmd, python_shell=False)
 
     if preserve_state:
         if prior_state == 'stopped':
-            __salt__['lxc.stop'](name)
+            stop(name)
         elif prior_state == 'frozen':
-            __salt__['lxc.freeze'](name)
+            freeze(name)
 
     if stdout and stderr:
         return res
@@ -2197,13 +2223,13 @@ def cp(name, src, dest):
 
     # before touching to existing file which may disturb any running
     # process, check that the md5sum are different
-    cmd = 'md5sum {0} 2> /dev/null'.format(src)
-    csrcmd5 = __salt__['cmd.run_all'](cmd)
+    cmd = 'md5sum {0}'.format(src)
+    csrcmd5 = __salt__['cmd.run_all'](cmd, python_shell=False)
     srcmd5 = csrcmd5['stdout'].split()[0]
 
-    cmd = 'lxc-attach -n {0} -- env -i md5sum {1} 2> /dev/null'.format(
+    cmd = 'lxc-attach --clear-env -n {0} -- md5sum {1}'.format(
         name, dest)
-    cdestmd5 = __salt__['cmd.run_all'](cmd)
+    cdestmd5 = __salt__['cmd.run_all'](cmd, python_shell=False)
     if not cdestmd5['retcode']:
         try:
             destmd5 = cdestmd5['stdout'].split()[0]
@@ -2218,10 +2244,10 @@ def cp(name, src, dest):
         'stderr': '',
     }
     if srcmd5 != destmd5:
-        cmd = 'cat {0} | lxc-attach -n {1} -- env -i tee {2} > /dev/null'.format(
-            src, name, dest)
+        cmd = 'cat {0} | lxc-attach --clear-env -n {1} -- tee {2} > /dev/null'.format(
+            pipes.quote(src), pipes.quote(name), pipes.quote(dest))
         log.info(cmd)
-        ret = __salt__['cmd.run_all'](cmd)
+        ret = __salt__['cmd.run_all'](cmd, python_shell=True)
     return ret
 
 
@@ -2236,8 +2262,7 @@ def read_conf(conf_file, out_format='simple'):
     .. code-block:: bash
 
         salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf
-        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf \
-            out_format=commented
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf out_format=commented
     '''
     ret_commented = []
     ret_simple = {}
@@ -2274,7 +2299,9 @@ def write_conf(conf_file, conf):
     must match that which is returned from ``lxc.read_conf()``, with
     ``out_format`` set to ``commented``.
 
-    An example might look like::
+    An example might look like:
+
+    .. code-block:: python
 
         [
             {'lxc.utsname': '$CONTAINER_NAME'},
@@ -2292,26 +2319,26 @@ def write_conf(conf_file, conf):
             {'lxc.network.name': '$CONTAINER_DEVICENAME'},
         ]
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'minion' lxc.write_conf /etc/lxc/mycontainer.conf \\
             out_format=commented
     '''
-    if type(conf) is not list:
+    if not isinstance(conf, list):
         return {'Error': 'conf must be passed in as a list'}
 
     with salt.utils.fopen(conf_file, 'w') as fp_:
         for line in conf:
-            if type(line) is str:
+            if isinstance(line, str):
                 fp_.write(line)
-            elif type(line) is dict:
-                key = line.keys()[0]
+            elif isinstance(line, dict):
+                key = next(iter(list(line.keys())))
                 out_line = None
-                if type(line[key]) is str:
+                if isinstance(line[key], str):
                     out_line = ' = '.join((key, line[key]))
-                elif type(line[key]) is dict:
+                elif isinstance(line[key], dict):
                     out_line = ' = '.join((key, line[key]['value']))
                     if 'comment' in line[key]:
                         out_line = ' # '.join((out_line, line[key]['comment']))
@@ -2334,26 +2361,26 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
     ``commented`` will return a data structure which accurately represents the
     order and content of the file.
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
-        salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \
+        salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \\
             out_format=commented lxc.network.type=veth
     '''
     data = []
 
     try:
-        conf = __salt__['lxc.read_conf'](conf_file, out_format='commented')
+        conf = read_conf(conf_file, out_format='commented')
     except Exception:
         conf = []
 
     for line in conf:
-        if type(line) is not dict:
+        if not isinstance(line, dict):
             data.append(line)
             continue
         else:
-            key = line.keys()[0]
+            key = next(iter(list(line.keys())))
             if key not in kwargs:
                 data.append(line)
                 continue
@@ -2365,5 +2392,5 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
             continue
         data.append({kwarg: kwargs[kwarg]})
 
-    __salt__['lxc.write_conf'](conf_file, data)
+    write_conf(conf_file, data)
     return read_conf(conf_file, out_format)

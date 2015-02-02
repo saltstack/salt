@@ -9,6 +9,7 @@ Please read :ref:`core config documentation <config_lxc>`.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import os
 import logging
@@ -22,12 +23,15 @@ import salt.utils
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 import salt.client
 import salt.runner
 import salt.syspaths
 
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -170,7 +174,7 @@ def _salt(fun, *args, **kw):
                 pings = conn.cmd(tgt=target,
                                  timeout=10,
                                  fun='test.ping')
-                values = pings.values()
+                values = list(pings.values())
                 if not values:
                     ping = False
                 for v in values:
@@ -270,8 +274,8 @@ def list_nodes(conn=None, call=None):
         return
     lxclist = _salt('lxc.list', extra=True)
     nodes = {}
-    for state, lxcs in lxclist.items():
-        for lxcc, linfos in lxcs.items():
+    for state, lxcs in six.iteritems(lxclist):
+        for lxcc, linfos in six.iteritems(lxcs):
             info = {
                 'id': lxcc,
                 'image': None,
@@ -335,7 +339,7 @@ def _checkpoint(ret):
     sret = '''
 id: {name}
 last message: {comment}'''.format(**ret)
-    keys = ret['changes'].items()
+    keys = list(ret['changes'].items())
     keys.sort()
     for ch, comment in keys:
         sret += (

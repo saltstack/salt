@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage IAM roles.
-=================
+Manage IAM roles
 
 .. versionadded:: 2014.7.0
 
@@ -41,6 +40,8 @@ with the role. This is the default behavior of the AWS console.
             - region: us-east-1
             - key: GKTADJGHEIQSXMKKRBJ08H
             - keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            - policies_from_pillars:
+                - shared_iam_bootstrap_policy
             - policies:
                 MySQSPolicy:
                     Statement:
@@ -72,7 +73,9 @@ with the role. This is the default behavior of the AWS console.
                 key: GKTADJGHEIQSXMKKRBJ08H
                 keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -87,6 +90,7 @@ def present(
         policy_document=None,
         path=None,
         policies=None,
+        policies_from_pillars=None,
         region=None,
         key=None,
         keyid=None,
@@ -106,6 +110,15 @@ def present(
     policies
         A dict of IAM role policies.
 
+    policies_from_pillars
+        A list of pillars that contain role policy dicts. Policies in the
+        pillars will be merged in the order defined in the list and key
+        conflicts will be handled by later defined keys overriding earlier
+        defined keys. The policies defined here will be merged with the
+        policies defined in the policies argument. If keys conflict, the keys
+        in the policies argument will override the keys defined in
+        policies_from_pillars.
+
     region
         Region to connect to.
 
@@ -119,33 +132,42 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _role_present(name, policy_document, path, region, key, keyid,
                          profile)
+    if not policies:
+        policies = {}
+    if not policies_from_pillars:
+        policies_from_pillars = []
+    _policies = {}
+    for policy in policies_from_pillars:
+        _policy = __salt__['pillar.get'](policy)
+        _policies.update(_policy)
+    _policies.update(policies)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _instance_profile_present(name, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _instance_profile_associated(name, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _policies_present(name, policies, region, key, keyid, profile)
+    _ret = _policies_present(name, _policies, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
     return ret
 
@@ -158,18 +180,18 @@ def _role_present(
         key=None,
         keyid=None,
         profile=None):
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_iam.role_exists'](name, region, key, keyid,
                                               profile)
     if not exists:
-        ret['comment'] = 'IAM role {0} is set to be created.'.format(name)
         if __opts__['test']:
+            ret['comment'] = 'IAM role {0} is set to be created.'.format(name)
+            ret['result'] = None
             return ret
         created = __salt__['boto_iam.create_role'](name, policy_document,
                                                    path, region, key,
                                                    keyid, profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = {'role': None}
             ret['changes']['new'] = {'role': name}
             ret['comment'] = 'IAM role {0} created.'.format(name)
@@ -187,13 +209,13 @@ def _instance_profile_present(
         key=None,
         keyid=None,
         profile=None):
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_iam.instance_profile_exists'](name, region, key,
                                                           keyid, profile)
     if not exists:
-        msg = 'Instance profile {0} is set to be created.'
-        ret['comment'] = msg.format(name)
         if __opts__['test']:
+            msg = 'Instance profile {0} is set to be created.'
+            ret['comment'] = msg.format(name)
             ret['result'] = None
             return ret
         created = __salt__['boto_iam.create_instance_profile'](name, region,
@@ -216,14 +238,14 @@ def _instance_profile_associated(
         key=None,
         keyid=None,
         profile=None):
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
     is_associated = __salt__['boto_iam.profile_associated'](name, name, region,
                                                             key, keyid,
                                                             profile)
     if not is_associated:
-        msg = 'Instance profile {0} is set to be associated.'
-        ret['comment'] = msg.format(name)
         if __opts__['test']:
+            msg = 'Instance profile {0} is set to be associated.'
+            ret['comment'] = msg.format(name)
             ret['result'] = None
             return ret
         associated = __salt__['boto_iam.associate_profile_to_role'](name, name,
@@ -236,7 +258,7 @@ def _instance_profile_associated(
             ret['comment'] = 'Instance profile {0} associated.'.format(name)
         else:
             ret['result'] = False
-            msg = 'Failed to associate {0} instance profile with {1} role.'
+            msg = 'Failed to associate {0} instance profile with {0} role.'
             ret['comment'] = msg.format(name)
     return ret
 
@@ -248,12 +270,10 @@ def _policies_present(
         key=None,
         keyid=None,
         profile=None):
-    ret = {'result': None, 'comment': '', 'changes': {}}
-    if not policies:
-        policies = {}
+    ret = {'result': True, 'comment': '', 'changes': {}}
     policies_to_create = {}
     policies_to_delete = []
-    for policy_name, policy in policies.iteritems():
+    for policy_name, policy in six.iteritems(policies):
         _policy = __salt__['boto_iam.get_role_policy'](name, policy_name,
                                                        region, key, keyid,
                                                        profile)
@@ -265,16 +285,15 @@ def _policies_present(
         if policy_name not in policies:
             policies_to_delete.append(policy_name)
     if policies_to_create or policies_to_delete:
-        msg = '{0} policies to be modified on role {1}.'
         _to_modify = list(policies_to_delete)
         _to_modify.extend(policies_to_create)
-        ret['comment'] = msg.format(', '.join(_to_modify), name)
         if __opts__['test']:
+            msg = '{0} policies to be modified on role {1}.'
+            ret['comment'] = msg.format(', '.join(_to_modify), name)
             ret['result'] = None
             return ret
         ret['changes']['old'] = {'policies': _list}
-        ret['result'] = True
-        for policy_name, policy in policies_to_create.iteritems():
+        for policy_name, policy in six.iteritems(policies_to_create):
             policy_set = __salt__['boto_iam.create_role_policy'](name,
                                                                  policy_name,
                                                                  policy,
@@ -338,32 +357,32 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _policies_absent(name, region, key, keyid, profile)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _instance_profile_disassociated(name, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _instance_profile_absent(name, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
     _ret = _role_absent(name, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if _ret['result'] is not None:
+    if not _ret['result']:
         ret['result'] = _ret['result']
     return ret
 
@@ -374,20 +393,19 @@ def _role_absent(
         key=None,
         keyid=None,
         profile=None):
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
 
     exists = __salt__['boto_iam.role_exists'](name, region, key, keyid,
                                               profile)
     if exists:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'IAM role {0} is set to be removed.'.format(
                 name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_iam.delete_role'](name, region, key, keyid,
                                                    profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = {'role': name}
             ret['changes']['new'] = {'role': None}
             ret['comment'] = 'IAM role {0} removed.'.format(name)
@@ -405,21 +423,20 @@ def _instance_profile_absent(
         key=None,
         keyid=None,
         profile=None):
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
 
     exists = __salt__['boto_iam.instance_profile_exists'](name, region, key,
                                                           keyid, profile)
     if exists:
         if __opts__['test']:
-            ret['result'] = None
             msg = 'Instance profile {0} is set to be removed.'
             ret['comment'] = msg.format(name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_iam.delete_instance_profile'](name, region,
                                                                key, keyid,
                                                                profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = {'instance_profile': name}
             ret['changes']['new'] = {'instance_profile': None}
             ret['comment'] = 'Instance profile {0} removed.'.format(name)
@@ -438,20 +455,19 @@ def _policies_absent(
         key=None,
         keyid=None,
         profile=None):
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
     _list = __salt__['boto_iam.list_role_policies'](name, region, key, keyid,
                                                     profile)
     if not _list:
         msg = 'No policies in role {0}.'.format(name)
         ret['comment'] = msg
         return ret
-    msg = '{0} policies to be removed from role {1}.'
-    ret['comment'] = msg.format(', '.join(_list), name)
     if __opts__['test']:
+        msg = '{0} policies to be removed from role {1}.'
+        ret['comment'] = msg.format(', '.join(_list), name)
         ret['result'] = None
         return ret
     ret['changes']['old'] = {'policies': _list}
-    ret['result'] = True
     for policy_name in _list:
         policy_unset = __salt__['boto_iam.delete_role_policy'](name,
                                                                policy_name,
@@ -481,14 +497,14 @@ def _instance_profile_disassociated(
         key=None,
         keyid=None,
         profile=None):
-    ret = {'result': None, 'comment': '', 'changes': {}}
+    ret = {'result': True, 'comment': '', 'changes': {}}
     is_associated = __salt__['boto_iam.profile_associated'](name, name, region,
                                                             key, keyid,
                                                             profile)
     if is_associated:
-        msg = 'Instance profile {0} is set to be disassociated.'
-        ret['comment'] = msg.format(name)
         if __opts__['test']:
+            msg = 'Instance profile {0} is set to be disassociated.'
+            ret['comment'] = msg.format(name)
             ret['result'] = None
             return ret
         associated = __salt__['boto_iam.disassociate_profile_from_role'](name, name, region, key, keyid, profile)
@@ -499,6 +515,6 @@ def _instance_profile_disassociated(
             ret['comment'] = msg
         else:
             ret['result'] = False
-            msg = 'Failed to disassociate {0} instance profile from {1} role.'
+            msg = 'Failed to disassociate {0} instance profile from {0} role.'
             ret['comment'] = msg.format(name)
     return ret

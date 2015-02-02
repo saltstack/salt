@@ -2,6 +2,7 @@
 '''
 Manage launchd plist files
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -44,10 +45,8 @@ def write_launchd_plist(program):
         sys.stderr.write('Supported programs: {0!r}\n'.format(supported_programs))
         sys.exit(-1)
 
-    sys.stdout.write(
-        plist_sample_text.format(
+        return plist_sample_text.format(
             program=program,
             python=sys.executable,
             script=os.path.join(os.path.dirname(sys.executable), program)
         )
-    )

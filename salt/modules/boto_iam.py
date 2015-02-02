@@ -28,15 +28,18 @@ Connection module for Amazon IAM
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import urllib
 import json
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+# pylint: disable=import-error
+from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.parse import unquote as _unquote  # pylint: disable=no-name-in-module
 try:
     import boto
     import boto.iam
@@ -44,9 +47,9 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+# pylint: enable=import-error
 
 # Import salt libs
-from salt._compat import string_types
 import salt.utils.odict as odict
 
 
@@ -255,12 +258,12 @@ def associate_profile_to_role(profile_name, role_name, region=None, key=None,
     else:
         try:
             conn.add_role_to_instance_profile(profile_name, role_name)
-            msg = 'Added {0} instance profile to {0} role.'
+            msg = 'Added {0} instance profile to {1} role.'
             log.info(msg.format(profile_name, role_name))
             return True
         except boto.exception.BotoServerError as e:
             log.debug(e)
-            msg = 'Failed to add {0} instance profile to {0} role.'
+            msg = 'Failed to add {0} instance profile to {1} role.'
             log.error(msg.format(profile_name, role_name))
             return False
 
@@ -293,12 +296,12 @@ def disassociate_profile_from_role(profile_name, role_name, region=None,
     else:
         try:
             conn.remove_role_from_instance_profile(profile_name, role_name)
-            msg = 'Removed {0} instance profile from {0} role.'
+            msg = 'Removed {0} instance profile from {1} role.'
             log.info(msg.format(profile_name, role_name))
             return True
         except boto.exception.BotoServerError as e:
             log.debug(e)
-            msg = 'Failed to remove {0} instance profile from {0} role.'
+            msg = 'Failed to remove {0} instance profile from {1} role.'
             log.error(msg.format(profile_name, role_name))
             return False
 
@@ -341,7 +344,7 @@ def get_role_policy(role_name, policy_name, region=None, key=None,
         # I _hate_ you for not giving me an object boto.
         _policy = _policy.get_role_policy_response.policy_document
         # Policy is url encoded
-        _policy = urllib.unquote(_policy)
+        _policy = _unquote(_policy)
         _policy = json.loads(_policy, object_pairs_hook=odict.OrderedDict)
         return _policy
     except boto.exception.BotoServerError:
@@ -411,6 +414,25 @@ def delete_role_policy(role_name, policy_name, region=None, key=None,
         msg = 'Failed to delete {0} policy for role {1}.'
         log.error(msg.format(policy_name, role_name))
         return False
+
+
+def get_account_id(region=None, key=None, keyid=None, profile=None):
+    '''
+    Get a the AWS account id associated with the used credentials.
+
+    CLI example::
+
+        salt myminion boto_iam.get_account_id
+    '''
+    cache_key = 'boto_iam.account_id'
+    if cache_key not in __context__:
+        conn = _get_conn(region, key, keyid, profile)
+        ret = conn.get_user()
+        # the get_user call returns an user ARN:
+        #    arn:aws:iam::027050522557:user/salt-test
+        arn = ret['get_user_response']['get_user_result']['user']['arn']
+        __context__[cache_key] = arn.split(':')[4]
+    return __context__[cache_key]
 
 
 def _get_conn(region, key, keyid, profile):

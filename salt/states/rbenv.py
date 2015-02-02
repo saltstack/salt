@@ -3,11 +3,13 @@
 Managing Ruby installations with rbenv
 ======================================
 
-This module is used to install and manage ruby installations with rbenv.
-Different versions of ruby can be installed, and uninstalled. Rbenv will
-be installed automatically the first time it is needed and can be updated
-later. This module will *not* automatically install packages which rbenv
-will need to compile the versions of ruby.
+This module is used to install and manage ruby installations with rbenv and the
+ruby-build plugin. Different versions of ruby can be installed, and uninstalled.
+Rbenv will be installed automatically the first time it is needed and can be
+updated later. This module will *not* automatically install packages which rbenv
+will need to compile the versions of ruby. If your version of ruby fails to
+install, refer to the ruby-build documentation to verify you are not missing any
+dependencies: https://github.com/sstephenson/ruby-build/wiki
 
 If rbenv is run as the root user then it will be installed to /usr/local/rbenv,
 otherwise it will be installed to the users ~/.rbenv directory. To make
@@ -16,37 +18,45 @@ directories to the users PATH. If you are installing as root and want other
 users to be able to access rbenv then you will need to add RBENV_ROOT to
 their environment.
 
-This is how a state configuration could look like:
+The following state configuration demonstrates how to install Ruby 1.9.x
+and 2.x using rbenv on Ubuntu/Debian:
 
 .. code-block:: yaml
 
     rbenv-deps:
       pkg.installed:
-        - pkgs:
+        - names:
           - bash
           - git
           - openssl
-          - gmake
+          - libssl-dev
+          - make
           - curl
+          - autoconf
+          - bison
+          - build-essential
+          - libffi-dev
+          - libyaml-dev
+          - libreadline6-dev
+          - zlib1g-dev
+          - libncurses5-dev
 
-    ruby-1.9.3-p392:
+    ruby-1.9.3-p429:
       rbenv.absent:
         - require:
           - pkg: rbenv-deps
 
-    ruby-1.9.3-p429:
+    ruby-2.0.0-p598:
       rbenv.installed:
         - default: True
         - require:
           - pkg: rbenv-deps
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import copy
-
-# Import salt libs
-import salt.utils
 
 
 def _check_rbenv(ret, user=None):
@@ -96,7 +106,7 @@ def _check_and_install_ruby(ret, ruby, default=False, user=None):
     return ret
 
 
-def installed(name, default=False, runas=None, user=None):
+def installed(name, default=False, user=None):
     '''
     Verify that the specified ruby is installed with rbenv. Rbenv is
     installed if necessary.
@@ -107,11 +117,6 @@ def installed(name, default=False, runas=None, user=None):
     default : False
         Whether to make this ruby the default.
 
-    runas: None
-        The user to run rbenv as.
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user to run rbenv as.
 
@@ -121,30 +126,6 @@ def installed(name, default=False, runas=None, user=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     rbenv_installed_ret = copy.deepcopy(ret)
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if name.startswith('ruby-'):
         name = re.sub(r'^ruby-', '', name)
@@ -187,18 +168,13 @@ def _check_and_uninstall_ruby(ret, ruby, user=None):
     return ret
 
 
-def absent(name, runas=None, user=None):
+def absent(name, user=None):
     '''
     Verify that the specified ruby is not installed with rbenv. Rbenv
     is installed if necessary.
 
     name
         The version of ruby to uninstall
-
-    runas: None
-        The user to run rbenv as.
-
-        .. deprecated:: 0.17.0
 
     user: None
         The user to run rbenv as.
@@ -208,30 +184,6 @@ def absent(name, runas=None, user=None):
     .. versionadded:: 0.16.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if name.startswith('ruby-'):
         name = re.sub(r'^ruby-', '', name)

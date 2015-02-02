@@ -7,6 +7,8 @@ The Linode cloud module is used to control access to the Linode VPS system
 
 Use of this module only requires the ``apikey`` parameter.
 
+:depends: libcloud >= 0.13.2
+
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/linode.conf``:
 
@@ -18,22 +20,25 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       provider: linode
 
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
 import copy
 import pprint
 import logging
+from os.path import exists, expanduser
 
 # Import libcloud
 try:
-    from libcloud.compute.base import NodeAuthPassword
+    from libcloud.compute.base import NodeAuthPassword, NodeAuthSSHKey
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
 
 # Import salt cloud libs
 import salt.config as config
+from salt.cloud.exceptions import SaltCloudConfigError
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
 
@@ -126,6 +131,43 @@ def get_password(vm_):
     )
 
 
+def get_pubkey(vm_):
+    '''
+    Return the SSH pubkey to use
+    '''
+    return config.get_cloud_config_value(
+        'ssh_pubkey', vm_, __opts__, search_global=False)
+
+
+def get_auth(vm_):
+    '''
+    Return either NodeAuthSSHKey or NodeAuthPassword, preferring
+    NodeAuthSSHKey if both are provided.
+    '''
+    if get_pubkey(vm_) is not None:
+        return NodeAuthSSHKey(get_pubkey(vm_))
+    elif get_password(vm_) is not None:
+        return NodeAuthPassword(get_password(vm_))
+    else:
+        raise SaltCloudConfigError(
+            'The Linode driver requires either a password or ssh_pubkey with '
+            'corresponding ssh_private_key.')
+
+
+def get_ssh_key_filename(vm_):
+    '''
+    Return path to filename if get_auth() returns a NodeAuthSSHKey.
+    '''
+    key_filename = config.get_cloud_config_value(
+        'ssh_key_file', vm_, __opts__,
+        default=config.get_cloud_config_value(
+            'ssh_pubkey', vm_, __opts__, search_global=False
+        ), search_global=False)
+    if key_filename is not None and exists(expanduser(key_filename)):
+        return expanduser(key_filename)
+    return None
+
+
 def get_private_ip(vm_):
     '''
     Return True if a private ip address is requested
@@ -167,7 +209,7 @@ def create(vm_):
         'image': get_image(conn, vm_),
         'size': get_size(conn, vm_),
         'location': get_location(conn, vm_),
-        'auth': NodeAuthPassword(get_password(vm_)),
+        'auth': get_auth(vm_),
         'ex_private': get_private_ip(vm_),
         'ex_rsize': get_disk_size(vm_, get_size(conn, vm_), get_swap(vm_)),
         'ex_swap': get_swap(vm_)
@@ -197,10 +239,10 @@ def create(vm_):
             'Error creating {0} on LINODE\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -249,8 +291,12 @@ def create(vm_):
                 'script_args', vm_, __opts__
             ),
             'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
+            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_),
+            'has_ssh_agent': False
         }
+
+        if get_ssh_key_filename(vm_) is not None and get_pubkey(vm_) is not None:
+            deploy_kwargs['key_filename'] = get_ssh_key_filename(vm_)
 
         # Deploy salt-master files, if necessary
         if config.get_cloud_config_value('make_master', vm_, __opts__) is True:

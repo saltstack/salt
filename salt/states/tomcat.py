@@ -116,7 +116,7 @@ def war_deployed(name,
             ret['comment'] = ('{0} in version {1} is already deployed'.
                     format(name, version))
             if webapps[name]['mode'] != 'running':
-                ret['changes']['start'] = 'starting {0}'.format(name, version)
+                ret['changes']['start'] = 'starting {0}'.format(name)
                 status = False
             else:
                 return ret
@@ -187,21 +187,18 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     .. code-block:: yaml
 
         tomcat-service:
-          service:
-            - running
+          service.running:
             - name: tomcat
             - enable: True
 
         wait-for-tomcatmanager:
-          tomcat:
-            - wait
+          tomcat.wait:
             - timeout: 300
             - require:
               - service: tomcat-service
 
         jenkins:
-          tomcat:
-            - war_deployed
+          tomcat.war_deployed:
             - name: /ran
             - war: salt://jenkins-1.2.4.war
             - require:

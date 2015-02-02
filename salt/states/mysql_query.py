@@ -20,8 +20,16 @@ Its output may be stored in a file or in a grain.
         - output:   "/tmp/query_id.txt"
 '''
 
+# Import python libs
+from __future__ import absolute_import
 import sys
 import os.path
+
+# Import Salt libs
+import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -70,7 +78,7 @@ def run(name,
         grain to store the output (need output=grain)
 
     key:
-        the specified grain will be treated as a dictionnary, the result
+        the specified grain will be treated as a dictionary, the result
         of this state will be stored under the specified key.
 
     overwrite:
@@ -137,6 +145,7 @@ def run(name,
     elif __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Query would execute, not storing result'
+        return ret
 
     # The database is present, execute the query
     query_result = __salt__['mysql.query'](database, query, **connection_args)
@@ -149,7 +158,7 @@ def run(name,
             mapped_results.append(mapped_line)
         query_result['results'] = mapped_results
 
-    ret['comment'] = query_result
+    ret['comment'] = str(query_result)
 
     if output == 'grain':
         if grain is not None and key is None:
@@ -167,10 +176,10 @@ def run(name,
                                     + grain + ":" + key
     elif output is not None:
         ret['changes']['query'] = "Executed. Output into " + output
-        with open(output, 'w') as output_file:
+        with salt.utils.fopen(output, 'w') as output_file:
             if 'results' in query_result:
                 for res in query_result['results']:
-                    for col, val in res:
+                    for col, val in six.iteritems(res):
                         output_file.write(col + ':' + val + '\n')
             else:
                 output_file.write(str(query_result))

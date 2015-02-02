@@ -2,6 +2,7 @@
 '''
 Load up the libvirt keys into Pillar for a given minion if said keys have been generated using the libvirt key runner
 '''
+from __future__ import absolute_import
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx
 # autosummary pulls only the first line for its description.
@@ -14,7 +15,9 @@ import subprocess
 import salt.utils
 
 
-def ext_pillar(minion_id, pillar, command):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               command):  # pylint: disable=W0613
     '''
     Read in the generated libvirt keys
     '''

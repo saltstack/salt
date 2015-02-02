@@ -3,15 +3,23 @@
 GNOME implementations
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+import re
+import logging
 try:
     import pwd
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
+
+# Import 3rd-party libs
+try:
     from gi.repository import Gio, GLib  # pylint: disable=W0611
     HAS_GLIB = True
 except ImportError:
     HAS_GLIB = False
 
-import logging
-import re
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +36,7 @@ def __virtual__():
     '''
     Only load if the Gio and Glib modules are available
     '''
-    if HAS_GLIB:
+    if HAS_PWD and HAS_GLIB:
         return __virtualname__
     return False
 
@@ -56,7 +64,7 @@ class _GSettings(object):
         cmd = 'dbus-launch --exit-with-session gsettings get {0} {1}'.format(self.SCHEMA, self.KEY)
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
-        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
+        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)
 
         if 'stdout' in result:
             if 'uint32' in result['stdout']:
@@ -84,7 +92,7 @@ class _GSettings(object):
         cmd = 'dbus-launch --exit-with-session gsettings set {0} {1} "{2}"'.format(self.SCHEMA, self.KEY, str(value))
         environ = {}
         environ['XDG_RUNTIME_DIR'] = '/run/user/{0}'.format(uid)
-        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ)
+        result = __salt__['cmd.run_all'](cmd, runas=user, env=environ, python_shell=False)
         return result
 
 
