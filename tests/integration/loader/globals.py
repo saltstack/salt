@@ -47,7 +47,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
         # Now, test each module!
         for item in global_vars:
             for name in names:
-                self.assertIn(name, item)
+                self.assertIn(name, item.keys())
 
     def test_auth(self):
         '''
