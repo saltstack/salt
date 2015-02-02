@@ -271,9 +271,9 @@ from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
 
 # our import regexes
-FROM_RE = r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$'
-IMPORT_RE = r'^\s*import\s+(salt:\/\/.*)$'
-FROM_AS_RE = r'^(.*) as (.*)$'
+FROM_RE = re.compile(r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$')
+IMPORT_RE = re.compile(r'^\s*import\s+(salt:\/\/.*)$')
+FROM_AS_RE = re.compile(r'^(.*) as (.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -389,7 +389,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
         line = line.rstrip('\r\n')
         matched = False
         for RE in (IMPORT_RE, FROM_RE):
-            matches = re.match(RE, line)
+            matches = RE.match(line)
             if not matches:
                 continue
 
@@ -412,12 +412,12 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             exec_(state_contents, _globals, state_locals)
 
             if imports is None:
-                imports = list(state_locals.keys())
+                imports = list(state_locals)
 
             for name in imports:
                 name = alias = name.strip()
 
-                matches = re.match(FROM_AS_RE, name)
+                matches = FROM_AS_RE.match(name)
                 if matches is not None:
                     name = matches.group(1).strip()
                     alias = matches.group(2).strip()
