@@ -401,7 +401,6 @@ def render(opts, functions, states=None):
         raise LoaderError(err)
     return rend
 
-grains_data = None
 def grains(opts, force_refresh=False):
     '''
     Return the functions for the dynamic grains and the values for the static
@@ -416,10 +415,8 @@ def grains(opts, force_refresh=False):
         __grains__ = salt.loader.grains(__opts__)
         print __grains__['id']
     '''
-    # globally cache grains data (todo: wrap grains_data in a class?)
-    global grains_data
-    # if we hae no grains, lets try loading from disk (TODO: remove this...)
-    if grains_data is None and not force_refresh:
+    # if we hae no grains, lets try loading from disk (TODO: move to decorator?)
+    if not force_refresh:
         if opts.get('grains_cache', False):
             cfn = os.path.join(
                 opts['cachedir'],
@@ -434,7 +431,7 @@ def grains(opts, force_refresh=False):
                         serial = salt.payload.Serial(opts)
                         with salt.utils.fopen(cfn, 'rb') as fp_:
                             cached_grains = serial.load(fp_)
-                        grains_data = cached_grains
+                        return cached_grains
                     except (IOError, OSError):
                         pass
                 else:
@@ -449,9 +446,6 @@ def grains(opts, force_refresh=False):
                                   ))
             else:
                 log.debug('Grains cache file does not exist.')
-
-    if grains_data is not None and not force_refresh:
-        return grains_data
 
     if opts.get('skip_grains', False):
         return {}
@@ -719,7 +713,11 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 whitelist=None,
                 virtual_enable=True,
                 ):
-        key = (tag, virtual_enable, 'proxy' in opts)
+        key = (tag,
+               virtual_enable,
+               'proxy' in opts,
+               opts.get('id'),
+               )
         if key not in NewLazyLoader.instances:
             log.debug('Initializing new NewLazyLoader for {0}'.format(key))
             NewLazyLoader.instances[key] = object.__new__(cls)
