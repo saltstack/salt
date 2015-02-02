@@ -548,9 +548,13 @@ def netdev():
         '''
         freebsd specific implementation of netdev
         '''
-        # Enables assigning nested dicts on non-existent keys
-        dict_tree = lambda: defaultdict(dict_tree)
-        ret = dict_tree()
+
+        def _dict_tree():
+            '''
+            Helper function to recursively create nested dicts on demand
+            '''
+            return defaultdict(_dict_tree)
+        ret = _dict_tree()
         netstat = __salt__['cmd.run']('netstat -i -n -4 -b -d').splitlines()
         netstat += __salt__['cmd.run']('netstat -i -n -6 -b -d').splitlines()[1:]
         header = netstat[0].split()
