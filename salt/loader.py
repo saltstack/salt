@@ -553,9 +553,12 @@ def runner(opts):
     '''
     Directly call a function inside a loader directory
     '''
+    pack = {'name': '__salt__',
+            'value': minion_mods(opts)}
     return NewLazyLoader(_module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
                      opts,
                      tag='runners',
+                     pack=pack
                      )
 
 
