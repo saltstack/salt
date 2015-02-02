@@ -30,6 +30,7 @@ file, in order to use this module to manage packages, like so:
       pkg: pkgng
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -39,6 +40,7 @@ import os
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -168,7 +170,7 @@ def version(*names, **kwargs):
     origins = __context__.get('pkg.origin', {})
     return dict([
         (x, {'origin': origins.get(x, ''), 'version': y})
-        for x, y in ret.iteritems()
+        for x, y in six.iteritems(ret)
     ])
 
 # Support pkg.info get version info, since this is the CLI usage
@@ -211,7 +213,8 @@ def refresh_db(jail=None, chroot=None, force=False):
     if force:
         opts += ' -f'
     return __salt__['cmd.retcode'](
-        '{0} update{1}'.format(_pkg(jail, chroot), opts)) == 0
+        '{0} update{1}'.format(_pkg(jail, chroot), opts),
+        python_shell=False) == 0
 
 
 # Support pkg.update to refresh the db, since this is the CLI usage
@@ -249,7 +252,7 @@ def latest_version(*names, **kwargs):
         cmd = '{0} search {1}'.format(_pkg(jail, chroot), name)
         pkgver = _get_version(
             name,
-            __salt__['cmd.run'](cmd, output_loglevel='trace')
+            __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
         )
         if pkgver is not None:
             installed = pkgs.get(name, [])
@@ -322,14 +325,17 @@ def list_pkgs(versions_as_list=False,
             origins = __context__.get(contextkey_origins, {})
             return dict([
                 (x, {'origin': origins.get(x, ''), 'version': y})
-                for x, y in ret.iteritems()
+                for x, y in six.iteritems(ret)
             ])
         return ret
 
     ret = {}
     origins = {}
     cmd = '{0} info -ao'.format(_pkg(jail, chroot))
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run_stdout'](
+            cmd,
+            python_shell=False,
+            output_loglevel='trace')
     for line in out.splitlines():
         if not line:
             continue
@@ -349,7 +355,7 @@ def list_pkgs(versions_as_list=False,
     if salt.utils.is_true(with_origin):
         return dict([
             (x, {'origin': origins.get(x, ''), 'version': y})
-            for x, y in ret.iteritems()
+            for x, y in six.iteritems(ret)
         ])
     return ret
 
@@ -437,6 +443,7 @@ def stats(local=False, remote=False, jail=None, chroot=None):
 
     res = __salt__['cmd.run'](
         '{0} stats {1}'.format(_pkg(jail, chroot), opts),
+        python_shell=False,
         output_loglevel='trace'
     )
     res = [x.strip("\t") for x in res.split("\n")]
@@ -478,6 +485,7 @@ def backup(file_name, jail=None, chroot=None):
     '''
     res = __salt__['cmd.run'](
         '{0} backup -d {1!r}'.format(_pkg(jail, chroot), file_name),
+        python_shell=False,
         output_loglevel='trace'
     )
     return res.split('...')[1]
@@ -517,7 +525,8 @@ def restore(file_name, jail=None, chroot=None):
             salt '*' pkg.restore /tmp/pkg chroot=/path/to/chroot
     '''
     return __salt__['cmd.run'](
-        '{0} backup -r {0!r}'.format(_pkg(jail, chroot), file_name),
+        '{0} backup -r {1!r}'.format(_pkg(jail, chroot), file_name),
+        python_shell=False,
         output_loglevel='trace'
     )
 
@@ -553,6 +562,7 @@ def audit(jail=None, chroot=None):
     '''
     return __salt__['cmd.run'](
         '{0} audit -F'.format(_pkg(jail, chroot)),
+        python_shell=False,
         output_loglevel='trace'
     )
 
@@ -721,7 +731,7 @@ def install(name=None,
         opts += 'q'
     if salt.utils.is_true(reinstall_requires):
         opts += 'R'
-    if salt.utils.is_true(fromrepo):
+    if fromrepo:
         repo_opts += 'r {0}'.format(fromrepo)
     if salt.utils.is_true(regex):
         opts += 'x'
@@ -736,7 +746,7 @@ def install(name=None,
 
     if pkg_type == 'file':
         pkg_cmd = 'add'
-        targets = pkg_params.keys()
+        targets = list(pkg_params.keys())
     elif pkg_type == 'repository':
         pkg_cmd = 'install'
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
@@ -744,7 +754,7 @@ def install(name=None,
             # comma-separated list
             pkg_params = {name: kwargs.get('version')}
         targets = []
-        for param, version_num in pkg_params.iteritems():
+        for param, version_num in six.iteritems(pkg_params):
             if version_num is None:
                 targets.append(param)
             else:
@@ -753,7 +763,7 @@ def install(name=None,
     cmd = '{0} {1} {2} {3} {4}'.format(
         _pkg(jail, chroot), pkg_cmd, repo_opts, opts, ' '.join(targets)
     )
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot)
@@ -895,7 +905,7 @@ def remove(name=None,
     cmd = '{0} delete {1} {2}'.format(
         _pkg(jail, chroot), opts, ' '.join(targets)
     )
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot)
@@ -970,6 +980,11 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
             salt '*' pkg.upgrade dryrun=True
     '''
+    ret = {'changes': {},
+           'result': True,
+           'comment': '',
+           }
+
     opts = ''
     if force:
         opts += 'f'
@@ -982,10 +997,23 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
     if opts:
         opts = '-' + opts
 
-    return __salt__['cmd.run'](
+    old = list_pkgs()
+    call = __salt__['cmd.run_all'](
         '{0} upgrade {1}'.format(_pkg(jail, chroot), opts),
+        python_shell=False,
         output_loglevel='trace'
     )
+    if call['retcode'] != 0:
+        ret['result'] = False
+        if 'stderr' in call:
+            ret['comment'] += call['stderr']
+        if 'stdout' in call:
+            ret['comment'] += call['stdout']
+    else:
+        __context__.pop('pkg.list_pkgs', None)
+        new = list_pkgs()
+        ret['changes'] = salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def clean(jail=None, chroot=None):
@@ -1002,6 +1030,7 @@ def clean(jail=None, chroot=None):
     '''
     return __salt__['cmd.run'](
         '{0} clean'.format(_pkg(jail, chroot)),
+        python_shell=False,
         output_loglevel='trace'
     )
 
@@ -1033,6 +1062,7 @@ def autoremove(jail=None, chroot=None, dryrun=False):
         opts = '-' + opts
     return __salt__['cmd.run'](
         '{0} autoremove {1}'.format(_pkg(jail, chroot), opts),
+        python_shell=False,
         output_loglevel='trace'
     )
 
@@ -1109,6 +1139,7 @@ def check(jail=None,
 
     return __salt__['cmd.run'](
         '{0} check {1}'.format(_pkg(jail, chroot), opts),
+        python_shell=False,
         output_loglevel='trace'
     )
 
@@ -1170,6 +1201,7 @@ def which(path, jail=None, chroot=None, origin=False, quiet=False):
         opts = '-' + opts
     return __salt__['cmd.run'](
         '{0} which {1} {2}'.format(_pkg(jail, chroot), opts, path),
+        python_shell=False,
         output_loglevel='trace'
     )
 
@@ -1357,6 +1389,7 @@ def search(name,
 
     return __salt__['cmd.run'](
         '{0} search {1} {2}'.format(_pkg(jail, chroot), opts, name),
+        python_shell=False,
         output_loglevel='trace'
     )
 
@@ -1495,12 +1528,13 @@ def fetch(name,
     if opts:
         opts = '-' + opts
     if repo_opts:
-        opts = '-' + repo_opts
+        repo_opts = '-' + repo_opts
 
     return __salt__['cmd.run'](
         '{0} fetch -y {1} {2} {3}'.format(
-            _pkg(jail, chroot), repo_opts, opts, name
+            _pkg(jail, chroot), opts, repo_opts, name
         ),
+        python_shell=False,
         output_loglevel='trace'
     )
 
@@ -1567,5 +1601,6 @@ def updating(name,
 
     return __salt__['cmd.run'](
         '{0} updating {1} {2}'.format(_pkg(jail, chroot), opts, name),
+        python_shell=False,
         output_loglevel='trace'
     )

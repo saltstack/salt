@@ -68,3 +68,36 @@ def present(name, value, vtype='REG_DWORD', reflection=True):
         ret['comment'] = 'could not configure the registry key'
 
     return ret
+
+
+def absent(name):
+    '''
+    Remove a registry key
+
+    Example::
+
+        'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':
+          reg.absent
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+    hive, path, key = _parse_key(name)
+    if not __salt__['reg.read_key'](hive, path, key):
+        ret['comment'] = '{0} is already absent'.format(name)
+        return ret
+    else:
+        ret['changes'] = {'reg': 'Removed {0}'.format(name)}
+
+    if __opts__['test']:
+        ret['result'] = None
+        return ret
+
+    ret['result'] = __salt__['reg.delete_key'](hive, path, key)
+    if not ret['result']:
+        ret['changes'] = {}
+        ret['comment'] = 'failed to remove registry key {0}'.format(name)
+
+    return ret

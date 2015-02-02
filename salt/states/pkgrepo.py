@@ -62,11 +62,13 @@ these states. Here is some example SLS:
     ``python-apt`` will need to be manually installed if it is not present.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
 
 # Import salt libs
+from salt.exceptions import CommandExecutionError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -193,6 +195,10 @@ def managed(name, **kwargs):
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
 
+    clean_file
+       If set to true, empty file before config repo, dangerous if use
+       multiple sources in one file.
+
     refresh_db
        If set to false this will skip refreshing the apt package database on
        debian based systems.
@@ -236,14 +242,29 @@ def managed(name, **kwargs):
                 kwargs['repo'],
                 ppa_auth=kwargs.get('ppa_auth', None)
         )
-    except Exception:
-        pass
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = \
+            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+        return ret
+
+    # aptpkg supports "disabled", yumpkg supports "enabled"
+    # lets just provide both to everyone.
+    if 'enabled' in kwargs and 'disabled' not in kwargs:
+        kw_enabled = kwargs['enabled'] in (['true', 'True', 'TRUE', True, 1])
+        kwargs['disabled'] = not kw_enabled
+    if 'disabled' in kwargs and 'enabled' not in kwargs:
+        kw_disabled = kwargs['disabled'] in (['true', 'True', 'TRUE', True, 1])
+        kwargs['enabled'] = not kw_disabled
 
     # this is because of how apt-sources works.  This pushes distro logic
     # out of the state itself and into a module that it makes more sense
     # to use.  Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    sanitizedkwargs = __salt__['pkg.expand_repo_def'](kwargs)
+    if 'pkg.expand_repo_def' in __salt__:
+        sanitizedkwargs = __salt__['pkg.expand_repo_def'](kwargs)
+    else:
+        sanitizedkwargs = kwargs
     if __grains__['os_family'] == 'Debian':
         kwargs['repo'] = _strip_uri(kwargs['repo'])
 
@@ -252,7 +273,7 @@ def managed(name, **kwargs):
         for kwarg in sanitizedkwargs:
             if kwarg == 'repo':
                 pass
-            elif kwarg not in repo.keys():
+            elif kwarg not in repo:
                 notset = True
             elif kwarg == 'comps':
                 if sorted(sanitizedkwargs[kwarg]) != sorted(repo[kwarg]):
@@ -273,6 +294,10 @@ def managed(name, **kwargs):
             ret['comment'] = ('Package repo {0!r} already configured'
                               .format(name))
             return ret
+
+    if kwargs.get('clean_file', False):
+        open(kwargs['file'], 'w').close()
+
     if __opts__['test']:
         ret['comment'] = ('Package repo {0!r} will be configured. This may '
                           'cause pkg states to behave differently than stated '
@@ -366,8 +391,12 @@ def absent(name, **kwargs):
         repo = __salt__['pkg.get_repo'](
             name, ppa_auth=kwargs.get('ppa_auth', None)
         )
-    except Exception:
-        pass
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = \
+            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+        return ret
+
     if not repo:
         ret['comment'] = 'Package repo {0} is absent'.format(name)
         ret['result'] = True
@@ -381,7 +410,7 @@ def absent(name, **kwargs):
         return ret
     __salt__['pkg.del_repo'](repo=name, **kwargs)
     repos = __salt__['pkg.list_repos']()
-    if name not in repos.keys():
+    if name not in repos:
         ret['result'] = True
         ret['changes'] = {'repo': name}
         ret['comment'] = 'Removed package repo {0}'.format(name)

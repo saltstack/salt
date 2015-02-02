@@ -4,14 +4,18 @@ Execute puppet routines
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
-import yaml
 import datetime
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -101,7 +105,7 @@ class _Puppet(object):
             [' --{0}'.format(k) for k in self.args]  # single spaces
         )
         args += ''.join([
-            ' --{0} {1}'.format(k, v) for k, v in self.kwargs.items()]
+            ' --{0} {1}'.format(k, v) for k, v in six.iteritems(self.kwargs)]
         )
 
         return '{0} {1}'.format(cmd, args)
@@ -167,7 +171,7 @@ def run(*args, **kwargs):
 
     puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
 
-    return __salt__['cmd.run_all'](repr(puppet))
+    return __salt__['cmd.run_all'](repr(puppet), python_shell=False)
 
 
 def noop(*args, **kwargs):
@@ -198,7 +202,7 @@ def enable():
 
     .. code-block:: bash
 
-        salt '*' puppet.disable
+        salt '*' puppet.enable
     '''
 
     _check_puppet()
@@ -378,7 +382,9 @@ def fact(name, puppet=False):
     _check_facter()
 
     opt_puppet = '--puppet' if puppet else ''
-    ret = __salt__['cmd.run']('facter {0} {1}'.format(opt_puppet, name))
+    ret = __salt__['cmd.run'](
+            'facter {0} {1}'.format(opt_puppet, name),
+            python_shell=False)
     if not ret:
         return ''
     return ret
