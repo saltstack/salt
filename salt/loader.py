@@ -552,15 +552,21 @@ def grains(opts, force_refresh=False):
     return grains_data
 
 
+# TODO: get rid of? Does anyone use this? You should use raw() instead
 def call(fun, **kwargs):
     '''
     Directly call a function inside a loader directory
     '''
     args = kwargs.get('args', [])
     dirs = kwargs.get('dirs', [])
-    module_dirs = [os.path.join(SALT_BASE_PATH, 'modules')] + dirs
-    load = Loader(module_dirs)
-    return load.call(fun, args)
+
+    funcs = NewLazyLoader([os.path.join(SALT_BASE_PATH, 'modules')] + dirs,
+                          None,
+                          tag='modules',
+                          loaded_base_name='module',
+                          virtual_enable=False,
+                          )
+    return funcs[fun](*args)
 
 
 def runner(opts):
