@@ -119,7 +119,6 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
     ret = NewLazyLoader(_module_dirs(opts, 'modules', 'module'),
                          opts,
                          tag='modules',
-                         loaded_base_name='module',
                          whitelist=whitelist,
                          )
     # only add the pack once
@@ -151,7 +150,6 @@ def raw_mod(opts, _, functions, mod='modules'):
     return NewLazyLoader(_module_dirs(opts, mod, 'rawmodule'),
                         opts,
                         tag=mod,
-                        loaded_base_name='rawmodule',
                         virtual_enable=False,
                         pack=pack,
                         )
@@ -166,7 +164,6 @@ def proxy(opts, functions, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
                          opts,
                          tag='proxy',
-                         loaded_base_name='proxy',
                          whitelist=whitelist,
                          pack=pack
                          )
@@ -181,7 +178,6 @@ def returners(opts, functions, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'returners', 'returner'),
                          opts,
                          tag='returners',
-                         loaded_base_name='returner',
                          whitelist=whitelist,
                          pack=pack,
                          )
@@ -194,7 +190,6 @@ def utils(opts, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'utils', 'utils', ext_type_dirs='utils_dirs'),
                          opts,
                          tag='utils',
-                         loaded_base_name='utils',
                          whitelist=whitelist,
                          )
 
@@ -209,7 +204,6 @@ def pillars(opts, functions):
     ret = NewLazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
                         opts,
                         tag='pillar',
-                        loaded_base_name='pillar',
                         pack=pack,
                         )
     return FilterDictWrapper(ret, '.ext_pillar')
@@ -225,7 +219,6 @@ def tops(opts):
     ret = NewLazyLoader(_module_dirs(opts, 'tops', 'top'),
                         opts,
                         tag='tops',
-                        loaded_base_name='top',
                         whitelist=whitelist,
                         )
     return FilterDictWrapper(ret, '.top')
@@ -238,7 +231,6 @@ def wheels(opts, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'wheel', 'wheel'),
                          opts,
                          tag='wheel',
-                         loaded_base_name='wheel',
                          whitelist=whitelist,
                          )
 
@@ -250,7 +242,6 @@ def outputters(opts):
     ret = NewLazyLoader(_module_dirs(opts, 'output', 'output', ext_type_dirs='outputter_dirs'),
                         opts,
                         tag='output',
-                        loaded_base_name='output',
                         )
     wrapped_ret = FilterDictWrapper(ret, '.output')
     if ret.pack is None:
@@ -267,7 +258,6 @@ def auth(opts, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'auth', 'auth'),
                          opts,
                          tag='auth',
-                         loaded_base_name='auth',
                          whitelist=whitelist,
                          )
 
@@ -279,7 +269,6 @@ def fileserver(opts, backends):
     return NewLazyLoader(_module_dirs(opts, 'fileserver', 'fileserver'),
                          opts,
                          tag='fileserver',
-                         loaded_base_name='fileserver',
                          whitelist=backends,
                          )
 
@@ -291,7 +280,6 @@ def roster(opts, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'roster', 'roster'),
                          opts,
                          tag='roster',
-                         loaded_base_name='roster',
                          whitelist=whitelist,
                          )
 
@@ -313,7 +301,6 @@ def states(opts, functions, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'states', 'states'),
                          opts,
                          tag='states',
-                         loaded_base_name='states',
                          pack=pack,
                          whitelist=whitelist,
                          )
@@ -330,7 +317,6 @@ def beacons(opts, context=None):
     return NewLazyLoader(_module_dirs(opts, 'beacons', 'beacons'),
                          opts,
                          tag='beacons',
-                         loaded_base_name='beacons',
                          pack=pack,
                          )
 
@@ -344,7 +330,6 @@ def search(opts, returners, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'search', 'search'),
                          opts,
                          tag='search',
-                         loaded_base_name='search',
                          whitelist=whitelist,
                          pack=pack,
                          )
@@ -361,7 +346,6 @@ def log_handlers(opts):
                                      base_path=os.path.join(SALT_BASE_PATH, 'log')),
                         opts,
                         tag='log_handlers',
-                        loaded_base_name='log_handlers',
                         )
     return FilterDictWrapper(ret, '.setup_handlers')
 
@@ -384,7 +368,6 @@ def ssh_wrapper(opts, functions=None, context=None):
                                       base_path=os.path.join(SALT_BASE_PATH, os.path.join('client','ssh'))),
                          opts,
                          tag='wrapper',
-                         loaded_base_name='wrapper',
                          pack=pack,
                          )
 
@@ -404,7 +387,6 @@ def render(opts, functions, states=None):
                                      ext_type_dirs='render_dirs'),
                         opts,
                         tag='renderers',
-                        loaded_base_name='render',
                         pack=pack,
                         )
     rend = FilterDictWrapper(ret, '.render')
@@ -497,7 +479,6 @@ def grains(opts, force_refresh=False):
     funcs = NewLazyLoader(_module_dirs(opts, 'grains', 'grain', ext_type_dirs='grains_dirs'),
                      opts,
                      tag='grains',
-                     loaded_base_name='grain',
                      )
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
@@ -563,7 +544,6 @@ def call(fun, **kwargs):
     funcs = NewLazyLoader([os.path.join(SALT_BASE_PATH, 'modules')] + dirs,
                           None,
                           tag='modules',
-                          loaded_base_name='module',
                           virtual_enable=False,
                           )
     return funcs[fun](*args)
@@ -576,7 +556,6 @@ def runner(opts):
     return NewLazyLoader(_module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
                      opts,
                      tag='runners',
-                     loaded_base_name='runner',
                      )
 
 
@@ -587,7 +566,6 @@ def queues(opts):
     return NewLazyLoader(_module_dirs(opts, 'queues', 'queue', ext_type_dirs='queue_dirs'),
                      opts,
                      tag='queues',
-                     loaded_base_name='queue',
                      )
 
 
@@ -600,7 +578,6 @@ def sdb(opts, functions=None, whitelist=None):
     return NewLazyLoader(_module_dirs(opts, 'sdb', 'sdb'),
                      opts,
                      tag='sdb',
-                     loaded_base_name='sdb',
                      pack=pack,
                      whitelist=whitelist,
                      )
@@ -624,7 +601,6 @@ def clouds(opts):
                                            int_type='clouds'),
                               opts,
                               tag='clouds',
-                              loaded_base_name='cloud',
                               pack=pack,
                               )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
@@ -645,7 +621,6 @@ def netapi(opts):
     return NewLazyLoader(_module_dirs(opts, 'netapi', 'netapi'),
                      opts,
                      tag='netapi',
-                     loaded_base_name='netapi',
                      )
 
 
