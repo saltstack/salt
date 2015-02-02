@@ -333,3 +333,37 @@ Reference information on pillar and the external pillar interface can be found
 in the Salt documentation:
 
 :doc:`Pillar </topics/pillar/index>`
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
+
+This is very convenient when you need some dynamic configuration change that
+you want to be applied on the fly. For example, there is a chicken and the egg
+problem if you do this:
+
+.. code-block:: yaml
+
+    mysql-admin-passwd:
+      mysql_user.present:
+        - name: root
+        - password: somepasswd
+
+    mydb:
+      mysql_db.present
+
+The second state will fail, because you changed the root password and the
+minion didn't notice it. Setting mysql.pass in the pillar, will help to sort
+out the issue. But always change the root admin password in the first place.
+
+This is very helpful for any module that needs credentials to apply state
+changes: mysql, keystone, etc.
+
