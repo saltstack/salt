@@ -58,6 +58,7 @@ django_auth_class = None
 
 __virtualname__ = 'django'
 
+
 def __virtual__():
     if HAS_DJANGO:
         return __virtualname__
