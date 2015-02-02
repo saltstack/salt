@@ -58,7 +58,7 @@ def cpuload():
 
     #pull in the information from WMIC
     cmd = list2cmdline(['wmic', 'cpu'])
-    info = __salt__['cmd.run'](cmd).splitlines()
+    info = __salt__['cmd.run'](cmd).split('\r\n')
 
     #find the location of LoadPercentage
     column = info[0].index('LoadPercentage')
@@ -177,7 +177,7 @@ def uptime(human_readable=False):
 
     #get the line that has when the computer started in it:
     stats_line = ''
-    for line in outs[0].split('\r\n'):
+    for line in outs.split('\r\n'):
         if "Statistics since" in line:
             stats_line = line
 
