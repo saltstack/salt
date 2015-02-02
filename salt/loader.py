@@ -207,12 +207,12 @@ def pillars(opts, functions):
     pack = {'name': '__salt__',
             'value': functions}
 
-    ret =  NewLazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
-                         opts,
-                         tag='pillar',
-                         loaded_base_name='pillar',
-                         pack=pack,
-                         )
+    ret = NewLazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
+                        opts,
+                        tag='pillar',
+                        loaded_base_name='pillar',
+                        pack=pack,
+                        )
     return FilterDictWrapper(ret, '.ext_pillar')
 
 
@@ -223,12 +223,12 @@ def tops(opts):
     if 'master_tops' not in opts:
         return {}
     whitelist = opts['master_tops'].keys()
-    ret =  NewLazyLoader(_module_dirs(opts, 'tops', 'top'),
-                         opts,
-                         tag='tops',
-                         loaded_base_name='top',
-                         whitelist=whitelist,
-                         )
+    ret = NewLazyLoader(_module_dirs(opts, 'tops', 'top'),
+                        opts,
+                        tag='tops',
+                        loaded_base_name='top',
+                        whitelist=whitelist,
+                        )
     return FilterDictWrapper(ret, '.top')
 
 
@@ -248,11 +248,11 @@ def outputters(opts):
     '''
     Returns the outputters modules
     '''
-    ret =  NewLazyLoader(_module_dirs(opts, 'output', 'output', ext_type_dirs='outputter_dirs'),
-                         opts,
-                         tag='output',
-                         loaded_base_name='output',
-                         )
+    ret = NewLazyLoader(_module_dirs(opts, 'output', 'output', ext_type_dirs='outputter_dirs'),
+                        opts,
+                        tag='output',
+                        loaded_base_name='output',
+                        )
     wrapped_ret = FilterDictWrapper(ret, '.output')
     if ret.pack is None:
         # TODO: this name seems terrible... __salt__ should always be execution mods
@@ -355,15 +355,15 @@ def log_handlers(opts):
     '''
     Returns the custom logging handler modules
     '''
-    ret =  NewLazyLoader(_module_dirs(opts,
-                                      'log_handlers',
-                                      'log_handlers',
-                                      int_type='handlers',
-                                      base_path=os.path.join(SALT_BASE_PATH, 'log')),
-                         opts,
-                         tag='log_handlers',
-                         loaded_base_name='log_handlers',
-                         )
+    ret = NewLazyLoader(_module_dirs(opts,
+                                     'log_handlers',
+                                     'log_handlers',
+                                     int_type='handlers',
+                                     base_path=os.path.join(SALT_BASE_PATH, 'log')),
+                        opts,
+                        tag='log_handlers',
+                        loaded_base_name='log_handlers',
+                        )
     return FilterDictWrapper(ret, '.setup_handlers')
 
 
@@ -399,15 +399,15 @@ def render(opts, functions, states=None):
             ]
     if states:
         pack.append({'name': '__states__', 'value': states})
-    ret =  NewLazyLoader(_module_dirs(opts,
-                                      'renderers',
-                                      'render',
-                                      ext_type_dirs='render_dirs'),
-                         opts,
-                         tag='renderers',
-                         loaded_base_name='render',
-                         pack=pack,
-                         )
+    ret = NewLazyLoader(_module_dirs(opts,
+                                     'renderers',
+                                     'render',
+                                     ext_type_dirs='render_dirs'),
+                        opts,
+                        tag='renderers',
+                        loaded_base_name='render',
+                        pack=pack,
+                        )
     rend = FilterDictWrapper(ret, '.render')
 
     if not check_render_pipe_str(opts['renderer'], rend):
@@ -612,16 +612,16 @@ def clouds(opts):
         'name': '__active_provider_name__',
         'value': None
     }
-    functions =  NewLazyLoader(_module_dirs(opts,
-                                            'clouds',
-                                            'cloud',
-                                            base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
-                                            int_type='clouds'),
-                               opts,
-                               tag='clouds',
-                               loaded_base_name='cloud',
-                               pack=pack,
-                               )
+    functions = NewLazyLoader(_module_dirs(opts,
+                                           'clouds',
+                                           'cloud',
+                                           base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
+                                           int_type='clouds'),
+                              opts,
+                              tag='clouds',
+                              loaded_base_name='cloud',
+                              pack=pack,
+                              )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
             '{0!r} has been marked as not supported. Removing from the list '
