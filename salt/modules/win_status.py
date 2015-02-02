@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Module for returning various status data about a minion.
-These data can be useful for compiling into stats later, 
+These data can be useful for compiling into stats later,
 or for problem solving if your minion is having problems.
 
 :depends:   - pythoncom
@@ -15,7 +15,6 @@ import salt.utils
 import os
 import ctypes
 import sys
-import subprocess
 import time
 
 log = logging.getLogger(__name__)
@@ -29,7 +28,6 @@ except ImportError:
         log.exception('pywin32 and wmi python packages are required '
                       'in order to use the status module.')
     has_required_packages = False
-
 
 __opts__ = {}
 
@@ -46,35 +44,7 @@ def __virtual__():
     return False
 
 
-def procs(count=False):
-    '''
-    Return the process data
-    for quick use, the argument count tells you how many processes there are.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' status.procs
-        salt '*' status.procs count
-    '''
-    with salt.utils.winapi.Com():
-        wmi_obj = wmi.WMI()
-        processes = wmi_obj.win32_process()
-
-    #this short circuit's the function to get a short simple proc count.
-    if count:
-        return len(processes)
-
-    #a propper run of the function, creating a nonsensically long out put.
-    process_info = {}
-    for proc in processes:
-        process_info[proc.ProcessId] = _get_process_info(proc)
-
-    return process_info
-
-
-def cpu_load():
+def cpuload():
     '''
     Return the processor load as a percentage.
 
@@ -85,14 +55,9 @@ def cpu_load():
        salt '*' status.cpu_load
     '''
 
-    #open up a subprocess to get information from WMIC
-    proc = subprocess.Popen('wmic cpu', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
     #pull in the information from WMIC
-    outs = proc.communicate()
-
-    #split that out the information into tuples.
-    info = outs[0].split('\n')
+    cmd = list2cmdline(['wmic', 'cpu'])
+    info = __salt__['cmd.run'](cmd).splitlines()
 
     #find the location of LoadPercentage
     column = info[0].index('LoadPercentage')
@@ -104,69 +69,7 @@ def cpu_load():
     return int(info[1][column:end])
 
 
-def uptime(human_readable=False):
-    '''
-    Return the system uptime for this machine in seconds
-
-    human_readable translates the seconds into something a little
-    easier to understand, but not necessarily useful to a machine.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-       salt '*' status.uptime
-       salt '*' status.uptime human_readable
-    '''
-
-    #open up a subprocess to get information from WMIC
-    proc = subprocess.Popen('net stats srv', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    #pull in the information from WMIC
-    outs = proc.communicate()
-
-    #get the line that has when the computer started in it:
-    stats_line = ''
-    for line in outs[0].split('\r\n'):
-        if "Statistics since" in line:
-            stats_line = line
-
-    #extract the time string from the line and parse
-    startup_time = stats_line[len('Statistics Since '):]  #get string
-    startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')  #convert to struct
-    startup_time = time.mktime(startup_time)  #convert to seconds since epoch
-
-    #subtract startup time from current time to get the uptime of the system.
-    uptime = time.time() - startup_time
-
-    if human_readable:
-        #pull out the majority of the uptime tuple. h:m:s
-        uptime = int(uptime)
-        seconds = uptime % 60
-        uptime /= 60
-        minutes = uptime % 60
-        uptime /= 60
-        hours = uptime % 24
-        uptime /= 24
-
-        #translate the h:m:s from above into HH:MM:SS format.
-        ret = '{0:0>2}:{1:0>2}:{2:0>2}'.format(hours, minutes, seconds)
-
-        #If the minion has been on for days, add that in.
-        if uptime > 0:
-            ret = 'Days: {0} {1}'.format(uptime%365, ret)
-
-        #if you have a Windows minion that has been up for years, my hat is off to you sir.
-        if uptime > 365:
-            ret = 'Years: {0} {1}'.format(uptime/365, ret)
-            
-        return ret
-
-    else:
-        return uptime
-
-
-def disk_usage(human_readable=False, path=None):
+def diskusage(human_readable=False, path=None):
     '''
     return the disk usage for this minion
 
@@ -199,10 +102,38 @@ def disk_usage(human_readable=False, path=None):
         fstr = _byte_calc(free.value)
         return 'Total: {0}, Used: {1}, Free: {2}'.format(tstr, ustr, fstr)
     else:
-        return {'total':total.value, 'used':used, 'free':free.value}
+        return {'total' : total.value, 'used' : used, 'free' : free.value}
 
 
-def salt_mem(human_readable=False):
+def procs(count=False):
+    '''
+    Return the process data
+    for quick use, the argument count tells you how many processes there are.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.procs
+        salt '*' status.procs count
+    '''
+    with salt.utils.winapi.Com():
+        wmi_obj = wmi.WMI()
+        processes = wmi_obj.win32_process()
+
+    #this short circuit's the function to get a short simple proc count.
+    if count:
+        return len(processes)
+
+    #a propper run of the function, creating a nonsensically long out put.
+    process_info = {}
+    for proc in processes:
+        process_info[proc.ProcessId] = _get_process_info(proc)
+
+    return process_info
+
+
+def saltmem(human_readable=False):
     '''
     Returns the amount of memory that salt is using.
 
@@ -222,6 +153,71 @@ def salt_mem(human_readable=False):
         if human_readable:
             return _byte_calc(mem)
         return mem
+
+
+def uptime(human_readable=False):
+    '''
+    Return the system uptime for this machine in seconds
+
+    human_readable translates the seconds into something a little
+    easier to understand, but not necessarily useful to a machine.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' status.uptime
+       salt '*' status.uptime human_readable
+    '''
+
+    #open up a subprocess to get information from WMIC
+    proc = subprocess.Popen('net stats srv', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    #pull in the information from WMIC
+    outs = proc.communicate()
+
+    #get the line that has when the computer started in it:
+    stats_line = ''
+    for line in outs[0].split('\r\n'):
+        if "Statistics since" in line:
+            stats_line = line
+
+    #extract the time string from the line and parse
+    #get string
+    startup_time = stats_line[len('Statistics Since '):]
+    #convert to struct
+    startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')
+    #convert to seconds since epoch
+    startup_time = time.mktime(startup_time)  
+
+    #subtract startup time from current time to get the uptime of the system.
+    uptime = time.time() - startup_time
+
+    if human_readable:
+        #pull out the majority of the uptime tuple. h:m:s
+        uptime = int(uptime)
+        seconds = uptime % 60
+        uptime /= 60
+        minutes = uptime % 60
+        uptime /= 60
+        hours = uptime % 24
+        uptime /= 24
+
+        #translate the h:m:s from above into HH:MM:SS format.
+        ret = '{0:0>2}:{1:0>2}:{2:0>2}'.format(hours, minutes, seconds)
+
+        #If the minion has been on for days, add that in.
+        if uptime > 0:
+            ret = 'Days: {0} {1}'.format(uptime % 365, ret)
+
+        #if you have a Windows minion that has been up for years, my hat is off to you sir.
+        if uptime > 365:
+            ret = 'Years: {0} {1}'.format(uptime / 365, ret)
+
+        return ret
+
+    else:
+        return uptime
 
 
 def _get_process_info(proc):
