@@ -25,7 +25,12 @@ except ImportError:
         from backports.ssl_match_hostname import match_hostname
         HAS_MATCHHOSTNAME = True
     except ImportError:
-        HAS_MATCHHOSTNAME = False
+        try:
+            from salt.ext.ssl_match_hostname import CertificateError
+            from salt.ext.ssl_match_hostname import match_hostname
+            HAS_MATCHHOSTNAME = True
+        except ImportError:
+            HAS_MATCHHOSTNAME = False
 import socket
 import urllib2
 import httplib
