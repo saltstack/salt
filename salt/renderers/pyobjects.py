@@ -289,7 +289,7 @@ def load_states():
     '''
     states = {}
 
-    # the loader expects to find pillar & grian data
+    # the loader expects to find pillar & grain data
     __opts__['grains'] = __grains__
     __opts__['pillar'] = __pillar__
 
