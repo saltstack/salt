@@ -1061,7 +1061,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         self._dict.update(funcs)
 
         # enforce depends
-        Depends.enforce_dependencies(self._dict, self.loaded_base_name)
+        Depends.enforce_dependencies(self._dict, self.tag)
         return True
 
     def _load(self, key):
