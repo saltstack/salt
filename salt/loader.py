@@ -255,10 +255,13 @@ def auth(opts, whitelist=None):
     '''
     Returns the auth modules
     '''
+    pack = {'name': '__salt__',
+            'value': minion_mods(opts)}
     return NewLazyLoader(_module_dirs(opts, 'auth', 'auth'),
                          opts,
                          tag='auth',
                          whitelist=whitelist,
+                         pack=pack,
                          )
 
 
@@ -683,16 +686,15 @@ class FilterDictWrapper(MutableMapping):
         del self._dict[key]
 
     def __getitem__(self, key):
-        '''
-        '''
-        key = key + self.suffix
-        return self._dict[key]
+        return self._dict[key + self.suffix]
 
     def __len__(self):
         return len(self._dict)
 
     def __iter__(self):
-        return iter(self._dict)
+        for key in self._dict:
+            if key.endswith(self.suffix):
+                yield key.replace(self.suffix, '')
 
 
 class NewLazyLoader(salt.utils.lazy.LazyDict):
