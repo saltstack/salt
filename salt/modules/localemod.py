@@ -223,7 +223,7 @@ def avail(locale):
 
 
 @decorators.which('locale-gen')
-def gen_locale(locale, charmap=None):
+def gen_locale(locale):
     '''
     Generate a locale.
 
@@ -232,31 +232,27 @@ def gen_locale(locale, charmap=None):
     :param locale: Any locale listed in /usr/share/i18n/locales or
         /usr/share/i18n/SUPPORTED for debian and gentoo based distros
 
-    :param charmap: debian and gentoo based systems require the charmap to be
-        specified independently of the locale.
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' locale.gen_locale en_US.UTF-8
-        salt '*' locale.gen_locale en_US.UTF-8 UTF-8  # debian and gentoo only
+        salt '*' locale.gen_locale 'en_IE@euro ISO-8859-15'
     '''
     on_debian = __grains__.get('os') == 'Debian'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
 
     if on_debian or on_gentoo:
-        if not charmap:
-            log.error('On debian and gentoo systems you must provide a charmap')
-            return False
-
         search = '/usr/share/i18n/SUPPORTED'
-        locale_format = '{0} {1}'.format(locale, charmap)
-        valid = __salt__['file.search'](search, '^{0}$'.format(locale_format))
+        valid = __salt__['file.search'](search, '^{0}$'.format(locale))
     else:
+        parts = _split_locale(locale)
+        parts['codeset'] = ''
+        parts['charmap'] = ''
+        search_locale = _join_locale(parts)
+
         search = '/usr/share/i18n/locales'
-        locale_format = locale
-        valid = locale_format in os.listdir(search)
+        valid = search_locale in os.listdir(search)
 
     if not valid:
         log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
@@ -265,14 +261,14 @@ def gen_locale(locale, charmap=None):
     if on_debian or on_gentoo:
         __salt__['file.replace'](
             '/etc/locale.gen',
-            r'^#\s*{0}$'.format(locale_format),
-            '{0}'.format(locale_format),
+            r'^#\s*{0}$'.format(locale),
+            '{0}'.format(locale),
             append_if_not_found=True
         )
 
     cmd = ['locale-gen']
     if on_gentoo:
         cmd.append('--generate')
-    cmd.append(locale_format)
+    cmd.append(locale)
 
     return __salt__['cmd.retcode'](cmd, python_shell=False)
