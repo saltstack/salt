@@ -15,7 +15,7 @@ from salt.ext.six.moves import shlex_quote as _cmd_quote
 # pylint: enable=import-error
 
 # Import salt libs
-from .systemd import _sd_booted
+from salt.modules.systemd import _sd_booted
 
 __func_alias__ = {
     'reload_': 'reload'

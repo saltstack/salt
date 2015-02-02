@@ -7,7 +7,8 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
-:depends:   - CherryPy Python module
+:depends:   - CherryPy Python module (strongly recommend 3.2.x versions due to
+    an as yet unknown SSL error).
 :optdepends:    - ws4py Python module for websockets support.
 :configuration: All authentication is done through Salt's :ref:`external auth
     <acl-eauth>` system which requires additional configuration not described
@@ -102,8 +103,52 @@ Tokens are generated via the :py:class:`Login` URL.
 The token may be sent in one of two ways:
 
 * Include a custom header named :mailheader:`X-Auth-Token`.
+
+  For example, using curl:
+
+  .. code-block:: bash
+
+      curl -sSk https://localhost:8000/login \
+            -H 'Accept: application/x-yaml' \
+            -d username=saltdev \
+            -d password=saltdev \
+            -d eauth=auto
+
+  Copy the ``token`` value from the output and include it in subsequent
+  requests:
+
+  .. code-block:: bash
+
+  curl -sSk https://localhost:8000 \
+            -H 'Accept: application/x-yaml' \
+            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\
+            -d client=local \
+            -d tgt='*' \
+            -d fun=test.ping
+
 * Sent via a cookie. This option is a convenience for HTTP clients that
   automatically handle cookie support (such as browsers).
+
+  For example, using curl:
+
+  .. code-block:: bash
+
+      # Write the cookie file:
+      curl -sSk https://localhost:8000/login \
+            -c ~/cookies.txt \
+            -H 'Accept: application/x-yaml' \
+            -d username=saltdev \
+            -d password=saltdev \
+            -d eauth=auto
+
+      # Read the cookie file:
+      curl -sSk https://localhost:8000 \
+            -b ~/cookies.txt \
+            -H 'Accept: application/x-yaml' \
+            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\
+            -d client=local \
+            -d tgt='*' \
+            -d fun=test.ping
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
 
@@ -125,20 +170,15 @@ requests to the URLs detailed below.
 
 Data sent in :http:method:`post` and :http:method:`put` requests  must be in
 the format of a list of lowstate dictionaries. This allows multiple commands to
-be executed in a single HTTP request.
+be executed in a single HTTP request. The order of commands in the request
+corresponds to the return for each command in the response.
 
-.. glossary::
+Lowstate, broadly, is a dictionary of values that are mapped to a function
+call. This pattern is used pervasively throughout Salt. The functions called
+from netapi modules are described in :ref:`Client Interfaces <netapi-clients>`.
 
-    lowstate
-        A dictionary containing various keys that instruct Salt which command
-        to run, where that command lives, any parameters for that command, any
-        authentication credentials, what returner to use, etc.
-
-        Salt uses the lowstate data format internally in many places to pass
-        command data between functions. Salt also uses lowstate for the
-        :ref:`LocalClient() <python-api>` Python API interface.
-
-The following example (in JSON format) causes Salt to execute two commands::
+The following example (in JSON format) causes Salt to execute two commands, a
+command sent to minions as well as a runner function on the master::
 
     [{
         "client": "local",
@@ -681,13 +721,12 @@ class LowDataAdapter(object):
 
         .. code-block:: bash
 
-            curl -si https://localhost:8000 \\
+            curl -sSik https://localhost:8000 \\
                     -H "Accept: application/x-yaml" \\
-                    -H "X-Auth-Token: d40d1e1e" \\
+                    -H "X-Auth-Token: d40d1e1e<...snip...>" \\
                     -d client=local \\
                     -d tgt='*' \\
                     -d fun='test.ping' \\
-                    -d arg
 
         .. code-block:: http
 
@@ -698,7 +737,7 @@ class LowDataAdapter(object):
             Content-Length: 36
             Content-Type: application/x-www-form-urlencoded
 
-            fun=test.ping&arg&client=local&tgt=*
+            fun=test.ping&client=local&tgt=*
 
         **Example response:**
 
@@ -715,6 +754,51 @@ class LowDataAdapter(object):
                 ms-2: true
                 ms-3: true
                 ms-4: true
+
+        **Other examples**:
+
+        .. code-block:: bash
+
+            # Sending multiple positional args with urlencoded:
+            curl -sSik https://localhost:8000 \\
+                    -d client=local \\
+                    -d tgt='*' \\
+                    -d fun='cmd.run' \\
+                    -d arg='du -sh .' \\
+                    -d arg='/path/to/dir'
+
+            # Sending posiitonal args and Keyword args with JSON:
+            echo '[
+                {
+                    "client": "local",
+                    "tgt": "*",
+                    "fun": "cmd.run",
+                    "arg": [
+                        "du -sh .",
+                        "/path/to/dir"
+                    ],
+                    "kwarg": {
+                        "shell": "/bin/sh",
+                        "template": "jinja"
+                    }
+                }
+            ]' | curl -sSik https://localhost:8000 \\
+                    -H 'Content-type: application/json' \\
+                    -d@-
+
+            # Calling runner functions:
+            curl -sSik https://localhost:8000 \\
+                    -d client=runner \\
+                    -d fun='jobs.lookup_jid' \\
+                    -d jid='20150129182456704682' \\
+                    -d outputter=highstate
+
+            # Calling wheel functions:
+            curl -sSik https://localhost:8000 \\
+                    -d client=wheel \\
+                    -d fun='key.gen_accept' \\
+                    -d id_=dave \\
+                    -d keysize=4096
         '''
         return {
             'return': list(self.exec_lowstate(
@@ -1068,7 +1152,7 @@ class Keys(LowDataAdapter):
 
             %post
             mkdir -p /etc/salt/pki/minion
-            curl -sS http://localhost:8000/keys \
+            curl -sSk https://localhost:8000/keys \
                     -d mid=jerry \
                     -d username=kickstart \
                     -d password=kickstart \
@@ -1093,7 +1177,7 @@ class Keys(LowDataAdapter):
 
         .. code-block:: bash
 
-            curl -sS http://localhost:8000/keys \
+            curl -sSk https://localhost:8000/keys \
                     -d mid=jerry \
                     -d username=kickstart \
                     -d password=kickstart \
@@ -1684,12 +1768,12 @@ class WebsocketEndpoint(object):
 
         **Example request:**
 
-            curl -NsS \\
+            curl -NsSk \\
                 -H 'X-Auth-Token: ffedf49d' \\
                 -H 'Host: localhost:8000' \\
                 -H 'Connection: Upgrade' \\
                 -H 'Upgrade: websocket' \\
-                -H 'Origin: http://localhost:8000' \\
+                -H 'Origin: https://localhost:8000' \\
                 -H 'Sec-WebSocket-Version: 13' \\
                 -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
                 localhost:8000/ws
@@ -1700,7 +1784,7 @@ class WebsocketEndpoint(object):
             Connection: Upgrade
             Upgrade: websocket
             Host: localhost:8000
-            Origin: http://localhost:8000
+            Origin: https://localhost:8000
             Sec-WebSocket-Version: 13
             Sec-WebSocket-Key: s65VsgHigh7v/Jcf4nXHnA==
             X-Auth-Token: ffedf49d
@@ -1853,7 +1937,10 @@ class Webhook(object):
         language: python
         script: python -m unittest tests
         after_success:
-            - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
+            - |
+                curl -sSk https://saltapi-url.example.com:8000/hook/travis/build/success \
+                        -d branch="${TRAVIS_BRANCH}" \
+                        -d commit="${TRAVIS_COMMIT}"
 
     .. seealso:: :ref:`events`, :ref:`reactor`
     '''
@@ -1920,7 +2007,7 @@ class Webhook(object):
 
         As a practical example, an internal continuous-integration build
         server could send an HTTP POST request to the URL
-        ``http://localhost:8000/hook/mycompany/build/success`` which contains
+        ``https://localhost:8000/hook/mycompany/build/success`` which contains
         the result of a build and the SHA of the version that was built as
         JSON. That would then produce the following event in Salt that could be
         used to kick off a deployment via Salt's Reactor::

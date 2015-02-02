@@ -50,13 +50,19 @@ log = logging.getLogger(__name__)
 
 try:
     import django
-    import django.conf
-    import django.contrib.auth
     HAS_DJANGO = True
 except ImportError:
     HAS_DJANGO = False
 
 django_auth_class = None
+
+__virtualname__ = 'django'
+
+
+def __virtual__():
+    if HAS_DJANGO:
+        return __virtualname__
+    return False
 
 
 def django_auth_setup():
@@ -84,6 +90,7 @@ def auth(username, password):
     '''
     Simple Django auth
     '''
+    import django.contrib.auth
 
     global django_auth_class
 

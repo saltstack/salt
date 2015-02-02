@@ -24,6 +24,12 @@ import os.path
 
 __PLATFORM = sys.platform.lower()
 
+# These variables are always relative to salt's install directory and are not
+# configurable
+INSTALL_DIR = os.path.dirname(os.path.realpath(THIS_FILE))
+CLOUD_DIR = os.path.join(INSTALL_DIR, 'cloud')
+BOOTSTRAP = os.path.join(CLOUD_DIR, 'deploy', 'bootstrap-salt.sh')
+
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
