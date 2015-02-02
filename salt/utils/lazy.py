@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 import logging
-
-from collections import MutableMapping
+import collections
 
 log = logging.getLogger(__name__)
 
 
-class LazyDict(MutableMapping):
+class LazyDict(collections.MutableMapping):
     '''
     A base class of dict which will lazily load keys once they are needed
 
