@@ -126,6 +126,8 @@ def _sort_hostnames(hostname_list):
         'localhost',
         'ip6-localhost',
         'ip6-loopback',
+        'ipv6-localhost',
+        'ipv6-loopback',
         '127.0.2.1',
         '127.0.1.1',
         '127.0.0.1',
