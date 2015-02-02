@@ -16,6 +16,7 @@ import os
 import ctypes
 import sys
 import time
+from subprocess import list2cmdline
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ def diskusage(human_readable=False, path=None):
         fstr = _byte_calc(free.value)
         return 'Total: {0}, Used: {1}, Free: {2}'.format(tstr, ustr, fstr)
     else:
-        return {'total' : total.value, 'used' : used, 'free' : free.value}
+        return {'total': total.value, 'used': used, 'free': free.value}
 
 
 def procs(count=False):
@@ -171,10 +172,8 @@ def uptime(human_readable=False):
     '''
 
     #open up a subprocess to get information from WMIC
-    proc = subprocess.Popen('net stats srv', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    #pull in the information from WMIC
-    outs = proc.communicate()
+    cmd = list2cmdline(['net', 'stats', 'srv'])
+    outs = __salt__['cmd.run'](cmd)
 
     #get the line that has when the computer started in it:
     stats_line = ''
@@ -188,7 +187,7 @@ def uptime(human_readable=False):
     #convert to struct
     startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')
     #convert to seconds since epoch
-    startup_time = time.mktime(startup_time)  
+    startup_time = time.mktime(startup_time)
 
     #subtract startup time from current time to get the uptime of the system.
     uptime = time.time() - startup_time
@@ -227,8 +226,8 @@ def _get_process_info(proc):
     cmd = (proc.CommandLine or '').encode('utf-8')
     name = proc.Name.encode('utf-8')
     info = dict(
-        cmd=cmd, 
-        name=name, 
+        cmd=cmd,
+        name=name,
         **_get_process_owner(proc)
     )
     return info
