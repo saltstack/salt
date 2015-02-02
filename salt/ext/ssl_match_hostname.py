@@ -6,6 +6,12 @@ instead, as the system copy may be more current. If it is not available, then
 this copy will be used.
 '''
 
+# **************************
+# This file included in salt to prevent version dep issues for match_hostname.
+# When updating the bundled match_hostname include this message and the disable
+# pylint: skip-file
+# **************************
+
 import re
 
 __version__ = '3.4.0.2'
