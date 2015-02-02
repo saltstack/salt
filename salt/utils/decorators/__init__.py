@@ -62,7 +62,8 @@ class Depends(object):
         class wide depandancy_dict
         '''
         module = inspect.getmodule(inspect.stack()[1][0])
-        kind = module.__name__.split('.', 1)[0]
+        # module name is something like salt.loaded.int.modules.test
+        kind = module.__name__.rsplit('.', 2)[1]
         for dep in self.dependencies:
             self.dependency_dict[kind][dep].add(
                 (module, function, self.fallback_function)
