@@ -28,6 +28,7 @@ except ImportError:
         HAS_MATCHHOSTNAME = False
 import socket
 import urllib2
+import httplib
 
 # Import salt libs
 import salt.utils
@@ -60,7 +61,7 @@ def query(url,
           header_file=None,
           username=None,
           password=None,
-          decode=True,
+          decode=False,
           decode_type='auto',
           status=False,
           headers=False,
@@ -83,9 +84,12 @@ def query(url,
           requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
+          cert=None,
           text_out=None,
           headers_out=None,
           decode_out=None,
+          stream=False,
+          handle=False,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -117,11 +121,14 @@ def query(url,
         requests_log = logging.getLogger('requests')
         requests_log.setLevel(logging.WARNING)
 
+    if ca_bundle is None:
+        ca_bundle = get_ca_bundle(opts)
+
     if verify_ssl is None:
         verify_ssl = opts.get('verify_ssl', True)
 
-    if ca_bundle is None:
-        ca_bundle = get_ca_bundle(opts)
+    if cert is None:
+        cert = opts.get('cert', None)
 
     if data_file is not None:
         data = _render(
@@ -200,15 +207,42 @@ def query(url,
             ret['test'] = True
 
     if requests_lib is True:
+        req_kwargs = {}
+        if stream is True:
+            if requests.__version__[0] == '0':
+                # 'stream' was called 'prefetch' before 1.0, with flipped meaning
+                req_kwargs['prefetch'] = False
+            else:
+                req_kwargs['stream'] = True
+
         result = sess.request(
-            method, url, params=params, data=data
+            method, url, params=params, data=data, **req_kwargs
         )
+        if stream is True or handle is True:
+            return {'handle': result}
+
+        # Client-side cert handling
+        if cert is not None:
+            if isinstance(cert, string_types):
+                if os.path.exists(cert):
+                    req_kwargs['cert'] = cert
+            elif isinstance(cert, tuple):
+                if os.path.exists(cert[0]) and os.path.exists(cert[1]):
+                    req_kwargs['cert'] = cert
+            else:
+                log.error('The client-side certificate path that was passed is '
+                          'not valid: {0}'.format(cert))
+
         result_status_code = result.status_code
         result_headers = result.headers
         result_text = result.text
         result_cookies = result.cookies
     else:
         request = urllib2.Request(url)
+        handlers = (
+            urllib2.HTTPHandler,
+            urllib2.HTTPCookieProcessor(sess_cookies)
+        )
 
         if url.startswith('https') or port == 443:
             if not HAS_MATCHHOSTNAME:
@@ -237,14 +271,41 @@ def query(url,
                     )
                     return ret
 
-        opener = urllib2.build_opener(
-            urllib2.HTTPHandler,
-            urllib2.HTTPCookieProcessor(sess_cookies)
-        )
+                # Client-side cert handling
+                if cert is not None:
+                    cert_chain = None
+                    if isinstance(cert, string_types):
+                        if os.path.exists(cert):
+                            cert_chain = (cert)
+                    elif isinstance(cert, tuple):
+                        if os.path.exists(cert[0]) and os.path.exists(cert[1]):
+                            cert_chain = cert
+                    else:
+                        log.error('The client-side certificate path that was '
+                                  'passed is not valid: {0}'.format(cert))
+                        return
+                    if hasattr(ssl, 'SSLContext'):
+                        # Python >= 2.7.9
+                        context = ssl.SSLContext.load_cert_chain(*cert_chain)
+                        handlers.append(urllib2.HTTPSHandler(context=context))  # pylint: disable=E1123
+                    else:
+                        # Python < 2.7.9
+                        cert_kwargs = {
+                            'host': request.get_host(),
+                            'port': port,
+                            'cert_file': cert[0]
+                        }
+                        if len(cert) > 1:
+                            cert_kwargs['key_file'] = cert[1]
+                        handlers[0] = httplib.HTTPSConnection(**cert_kwargs)
+
+        opener = urllib2.build_opener(*handlers)
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
         result = opener.open(request)
+        if stream is True or handle is True:
+            return {'handle': result}
 
         result_status_code = result.code
         result_headers = result.headers.headers
@@ -266,11 +327,11 @@ def query(url,
         log.trace(('Cannot Trace Log Response Text: {0}. This may be due to '
                   'incompatibilities between requests and logging.').format(exc))
 
-    if os.path.exists(text_out):
+    if text_out is not None and os.path.exists(text_out):
         with salt.utils.fopen(text_out, 'w') as tof:
             tof.write(result_text)
 
-    if os.path.exists(headers_out):
+    if headers_out is not None and os.path.exists(headers_out):
         with salt.utils.fopen(headers_out, 'w') as hof:
             hof.write(result_headers)
 
@@ -352,13 +413,15 @@ def get_ca_bundle(opts=None):
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
-    file_roots = opts.get('file_roots', '/srv/salt')
+    file_roots = opts.get('file_roots', {'base': [syspaths.SRV_ROOT_DIR]})
+    salt_root = file_roots['base'][0]
+    log.debug('file_roots is {0}'.format(salt_root))
 
     # Please do not change the order without good reason
     for path in (
         # Check Salt first
-        os.path.join(file_roots, 'cacert.pem'),
-        os.path.join(file_roots, 'ca-bundle.crt'),
+        os.path.join(salt_root, 'cacert.pem'),
+        os.path.join(salt_root, 'ca-bundle.crt'),
         # Debian has paths that often exist on other distros
         '/etc/ssl/certs/ca-certificates.crt',
         # RedHat is also very common
@@ -401,8 +464,6 @@ def update_ca_bundle(
     '''
     if opts is None:
         opts = {}
-
-    file_roots = opts.get('file_roots', '/srv/salt')
 
     if target is None:
         target = get_ca_bundle(opts)
