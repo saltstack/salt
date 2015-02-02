@@ -144,21 +144,59 @@ def set_locale(locale):
     return True
 
 
-def _normalize_locale(locale):
-    # depending on the environment, the provided locale will also contain a charmap
-    # (e.g. 'en_US.UTF-8 UTF-8' instead of only the locale 'en_US.UTF-8')
-    # drop the charmap
-    locale = locale.split()[0]
+def _split_locale(locale):
+    '''
+    Split a locale specifier.  The general format is
 
-    lang_encoding = locale.split('.')
-    lang_split = lang_encoding[0].split('_')
-    if len(lang_split) > 1:
-        lang_split[1] = lang_split[1].upper()
-    lang_encoding[0] = '_'.join(lang_split)
-    if len(lang_encoding) > 1:
-        if len(lang_split) > 1:
-            lang_encoding[1] = lang_encoding[1].lower().replace('-', '')
-    return '.'.join(lang_encoding)
+    language[_territory][.codeset][@modifier] [charmap]
+
+    For example:
+
+    ca_ES.UTF-8@valencia UTF-8
+    '''
+    def split(st, char):
+        '''
+        Split a string `st` once by `char`; always return a two-element list
+        even if the second element is empty.
+        '''
+        split_st = st.split(char, 1)
+        if len(split_st) == 1:
+            split_st.append('')
+        return split_st
+
+    parts = {}
+    work_st, parts['charmap'] = split(locale, ' ')
+    work_st, parts['modifier'] = split(work_st, '@')
+    work_st, parts['codeset'] = split(work_st, '.')
+    parts['language'], parts['territory'] = split(work_st, '_')
+    return parts
+
+
+def _join_locale(parts):
+    '''
+    Join a locale specifier split in the format returned by _split_locale.
+    '''
+    locale = parts['language']
+    if parts.get('territory'):
+        locale += '_' + parts['territory']
+    if parts.get('codeset'):
+        locale += '.' + parts['codeset']
+    if parts.get('modifier'):
+        locale += '@' + parts['modifier']
+    if parts.get('charmap'):
+        locale += ' ' + parts['charmap']
+    return locale
+
+
+def _normalize_locale(locale):
+    '''
+    Format a locale specifier according to the format returned by `locale -a`.
+    '''
+    parts = _split_locale(locale)
+    parts['territory'] = parts['territory'].upper()
+    parts['codeset'] = parts['codeset'].lower().replace('-', '')
+    parts['charmap'] = ''
+    return _join_locale(parts)
 
 
 def avail(locale):
