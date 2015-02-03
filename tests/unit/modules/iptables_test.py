@@ -207,7 +207,7 @@ class IptablesTestCase(TestCase):
 
         _rule = 'm state --state RELATED,ESTABLISHED -j ACCEPT'
         mock = MagicMock(side_effect=[True, False])
-        with patch.dict(iptables.__salt__, {'cmd.run': mock,}):
+        with patch.dict(iptables.__salt__, {'cmd.run': mock}):
             self.assertTrue(iptables.check(table='filter', chain='INPUT',
                                             rule=_rule, family='ipv4'))
 
