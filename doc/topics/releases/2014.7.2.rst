@@ -10,3 +10,8 @@ Version 2014.7.2 is a bugfix release for :doc:`2014.7.0
 - Fix erroneous warnings for systemd service enabled check (:issue:`19606`)
 - Fix FreeBSD kernel module loading, listing, and persistence
   :mod:`kmod <salt.modules.freebsdkmod>` (:issue:`197151`, :issue:`19682`)
+- Allow case-sensitive npm package names in the :py:mod:`npm state
+  <salt.states.npm>`.  This may break behavior for people expecting the state
+  to lowercase their npm package names for them.  The :py:mod:`npm module
+  <salt.modules.npm>` was never affected by mandatory lowercasing.
+  (:issue:`20329`)

@@ -55,6 +55,10 @@ def installed(name,
     name
         The package to install
 
+        .. versionchanged:: 2014.7.2
+            This parameter is no longer lowercased by salt so that
+            case-sensitive NPM package names will work.
+
     pkgs
         A list of packages to install with a single npm invocation; specifying
         this argument will ignore the ``name`` argument
