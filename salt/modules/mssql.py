@@ -21,7 +21,6 @@ Module to provide MS SQL Server compatibility to salt.
     configs or pillars.
 '''
 
-
 import logging
 from json import JSONEncoder, loads
 
@@ -65,7 +64,8 @@ def _get_connection(**kwargs):
 
 
 class _MssqlEncoder(JSONEncoder):
-    def default(self, o):
+    # E0202: 68:_MssqlEncoder.default: An attribute inherited from JSONEncoder hide this method
+    def default(self, o):  # pylint: disable-msg=E0202
         return str(o)
 
 
@@ -86,7 +86,7 @@ def tsql_query(query, **kwargs):
         return loads(_MssqlEncoder().encode({'resultset': cur.fetchall()}))['resultset']
     except Exception as e:
         # Trying to look like the output of cur.fetchall()
-        return (('Could not run the query',),(str(e),))
+        return (('Could not run the query', ), (str(e), ))
 
 
 def version(**kwargs):
