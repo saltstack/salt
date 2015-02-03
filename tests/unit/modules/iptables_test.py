@@ -205,21 +205,22 @@ class IptablesTestCase(TestCase):
                                                    family='ipv4'),
                          'Error: Rule needs to be specified')
 
-        _rule = 'm state --state RELATED,ESTABLISHED -j ACCEPT'
-        mock = MagicMock(side_effect=[True, False])
-        with patch.dict(iptables.__salt__, {'cmd.run': mock}):
-            self.assertTrue(iptables.check(table='filter', chain='INPUT',
-                                            rule=_rule, family='ipv4'))
-
-            self.assertTrue(iptables.check(table='filter', chain='INPUT',
-                                            rule=_rule, family='ipv4'))
+        mock_rule = 'm state --state RELATED,ESTABLISHED -j ACCEPT'
+        mock_chain = 'INPUT'
+        mock_uuid = 31337
+        mock_cmd = MagicMock(return_value='-A {0}\n-A {1}'.format(mock_chain,
+                                                                 hex(mock_uuid)))
+        with patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)):
+            with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
+                self.assertTrue(iptables.check(table='filter', chain=mock_chain,
+                                                rule=mock_rule, family='ipv4'))
 
         mock = MagicMock(return_value='')
         with patch.object(salt_cmd, 'run', mock):
             mock_cmd = MagicMock(return_value='')
             with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
                 self.assertFalse(iptables.check(table='filter', chain='INPUT',
-                                            rule=_rule, family='ipv4'))
+                                            rule=mock_rule, family='ipv4'))
 
             mock_uuid = MagicMock(return_value=1234)
             with patch.object(uuid, 'getnode', mock_uuid):
@@ -227,7 +228,7 @@ class IptablesTestCase(TestCase):
                 with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
                     self.assertTrue(iptables.check(table='filter',
                                                     chain='0x4d2',
-                                                    rule=_rule, family='ipv4'))
+                                                    rule=mock_rule, family='ipv4'))
 
     # 'check_chain' function tests: 1
 
