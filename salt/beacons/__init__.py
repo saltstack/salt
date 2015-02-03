@@ -40,5 +40,7 @@ class Beacon(object):
                 for data in raw:
                     if 'tag' in data:
                         tag += data.pop('tag')
+                    if 'id' not in data:
+                        data['id'] = self.opts['id']
                     ret.append({'tag': tag, 'data': data})
         return ret

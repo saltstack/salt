@@ -44,11 +44,70 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
 ])
 
 
+class ClientFuncsDict(collections.MutableMapping):
+    '''
+    Class to make a read-only dict for accessing runner funcs "directly"
+    '''
+    def __init__(self, client):
+        self.client = client
+
+    def __setitem__(self, key, val):
+        raise NotImplementedError()
+
+    def __delitem__(self, key):
+        raise NotImplementedError()
+
+    def __getitem__(self, key):
+        '''
+        Return a function that you can call with regular func params, but
+        will do all the _proc_function magic
+        '''
+        if key not in self.client.functions:
+            raise KeyError
+
+        def wrapper(*args, **kwargs):
+            low = {'fun': key,
+                   'args': args,
+                   'kwargs': kwargs,
+                   }
+            pub_data = {}
+            # pull out pub_data if you have it
+            for k, v in kwargs.items():
+                if k.startswith('__pub_'):
+                    pub_data[k] = kwargs.pop(k)
+
+            async_pub = self.client._gen_async_pub(pub_data.get('__pub_jid'))
+
+            user = salt.utils.get_specific_user()
+            return self.client._proc_function(key,
+                   low,
+                   user,
+                   async_pub['tag'],  # TODO: fix
+                   async_pub['jid'],  # TODO: fix
+                   False,  # Don't daemonize
+                   )
+        return wrapper
+
+    def __len__(self):
+        return len(self.client.functions)
+
+    def __iter__(self):
+        return iter(self.client.functions)
+
+
 class SyncClientMixin(object):
     '''
     A mixin for *Client interfaces to abstract common function execution
     '''
     functions = ()
+
+    def functions_dict(self):
+        '''
+        Return a dict that will mimic the "functions" dict used all over salt.
+        It creates a wrapper around the function allowing **kwargs, and if pub_data
+        is passed in as kwargs, will re-use the JID passed in
+        '''
+        return ClientFuncsDict(self)
 
     def _verify_fun(self, fun):
         '''
@@ -354,8 +413,9 @@ class AsyncClientMixin(object):
         '''
         return self.master_call(**low)
 
-    def _gen_async_pub(self):
-        jid = salt.utils.jid.gen_jid()
+    def _gen_async_pub(self, jid=None):
+        if jid is None:
+            jid = salt.utils.jid.gen_jid()
         tag = tagify(jid, prefix=self.tag_prefix)
         return {'tag': tag, 'jid': jid}
 
@@ -377,6 +437,10 @@ class AsyncClientMixin(object):
         '''
         Print all of the events with the prefix 'tag'
         '''
+        # if we are "quiet", don't print
+        if self.opts.get('quiet', False):
+            return
+
         # some suffixes we don't want to print
         if suffix in ('new', ):
             return
