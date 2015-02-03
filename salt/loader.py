@@ -206,7 +206,6 @@ def pillars(opts, functions):
                         opts,
                         tag='pillar',
                         pack=pack,
-                        singleton=False,  # TODO: re-enable
                         )
     return FilterDictWrapper(ret, '.ext_pillar')
 
@@ -393,7 +392,6 @@ def render(opts, functions, states=None):
                         opts,
                         tag='renderers',
                         pack=pack,
-                        singleton=False,  # TODO: re-enable
                         )
     rend = FilterDictWrapper(ret, '.render')
 
@@ -717,7 +715,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 pack=None,
                 whitelist=None,
                 virtual_enable=True,
-                singleton=True,
+                singleton=False,
                 ):
         def new_object():
             ret = object.__new__(cls)
