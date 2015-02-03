@@ -3,7 +3,7 @@
 # Import Python Libs
 import json
 import time
-from distutils.version import StrictVersion
+from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Libs
 from salt.netapi.rest_tornado import saltnado
