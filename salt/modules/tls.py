@@ -278,7 +278,7 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
                 certp = fic.read()
     return certp
 
-def get_ca_signed_certificate(ca_name, CN='localhost', as_text=False, cacert_path=None):
+def get_ca_signed_cert(ca_name, CN='localhost', as_text=False, cacert_path=None):
     '''
     Get the certificate path or content
 
@@ -295,7 +295,7 @@ def get_ca_signed_certificate(ca_name, CN='localhost', as_text=False, cacert_pat
 
     .. code-block:: bash
 
-        salt '*' tls.get_signed_certificate test_ca CN=localhost as_text=False cacert_path=/etc/certs
+        salt '*' tls.get_ca_signed_cert test_ca CN=localhost as_text=False cacert_path=/etc/certs
     '''
     set_ca_path(cacert_path)
     certp = '{0}/{1}/certs/{2}.crt'.format(
@@ -327,7 +327,7 @@ def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None):
 
     .. code-block:: bash
 
-        salt '*' tls.get_signed_key test_ca CN=localhost as_text=False cacert_path=/etc/certs
+        salt '*' tls.get_ca_signed_key test_ca CN=localhost as_text=False cacert_path=/etc/certs
     '''
     set_ca_path(cacert_path)
     keyp = '{0}/{1}/certs/{2}.key'.format(
