@@ -152,6 +152,7 @@ Full list of builtin execution modules
     monit
     moosefs
     mount
+    mssql
     munin
     mysql
     nagios
