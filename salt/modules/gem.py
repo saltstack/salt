@@ -6,6 +6,12 @@ from __future__ import absolute_import
 
 # Import python libs
 import re
+import logging
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 __func_alias__ = {
     'list_': 'list'
