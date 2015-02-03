@@ -786,11 +786,11 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
         salt '*' tls.create_ca_signed_cert test localhost
     '''
     set_ca_path(cacert_path)
-    if os.path.exists(
-            '{0}/{1}/{2}.crt'.format(cert_base_path(),
-                                     ca_name, CN)
-    ):
-        return 'Certificate "{0}" already exists'.format(ca_name)
+
+    crt_f = '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
+                                           ca_name, CN)
+    if os.path.exists(crt_f):
+        return 'Certificate "{0}" already exists'.format(CN)
 
     try:
         maybe_fix_ssl_version(ca_name)
