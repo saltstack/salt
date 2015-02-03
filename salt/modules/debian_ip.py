@@ -1165,6 +1165,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if enabled:
         adapters[iface]['enabled'] = True
 
+    if opts.get('hotplug', False):
+        adapters[iface]['hotplug'] = True
+
     iface_data['inet']['addrfam'] = 'inet'
 
     if iface_type not in ['bridge']:
