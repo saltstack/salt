@@ -813,8 +813,10 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         '''
         # map of suffix to description for imp
         self.suffix_map = {}
+        suffix_order = []  # local list to determine precedence of extensions
         for (suffix, mode, kind) in imp.get_suffixes():
             self.suffix_map[suffix] = (suffix, mode, kind)
+            suffix_order.append(suffix)
 
         if self.opts.get('cython_enable', True) is True:
             try:
@@ -836,11 +838,15 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                     # make sure it is a suffix we support
                     if ext not in self.suffix_map:
                         continue
+                    fpath = os.path.join(mod_dir, filename)
+                    # if we don't have it, we want it
                     if f_noext not in self.file_mapping:
-                        fpath = os.path.join(mod_dir, filename)
-                        self.file_mapping[f_noext] = (fpath,
-                                                      os.path.splitext(fpath)[1],
-                                                      )
+                        self.file_mapping[f_noext] = (fpath, ext)
+                    # if we do, we want it if we have a higher precidence ext
+                    else:
+                        curr_ext = self.file_mapping[f_noext][1]
+                        if suffix_order.index(ext) < suffix_order.index(curr_ext):
+                            self.file_mapping[f_noext] = (fpath, ext)
             except OSError:
                 continue
 
