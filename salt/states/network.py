@@ -261,6 +261,11 @@ def managed(name, type, enabled=True, **kwargs):
         ret['comment'] = str(error)
         return ret
 
+    # Debian based system can have a type of source
+    # in the interfaces file, we don't ifup or ifdown it
+    if type == 'source':
+        return ret
+
     # Setup up bond modprobe script if required
     if type == 'bond':
         try:
