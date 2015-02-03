@@ -294,8 +294,20 @@ def load_states():
     __opts__['grains'] = __grains__
     __opts__['pillar'] = __pillar__
 
+    # TODO: honor __virtual__? The old one didn't...
+    # create our own loader that ignores __virtual__()
+    pack = {'name': '__salt__',
+            'value': __salt__}
+    lazy_states = salt.loader.NewLazyLoader(
+        salt.loader._module_dirs(__opts__, 'states', 'states'),
+        __opts__,
+        tag='states',
+        pack=pack,
+        virtual_enable=False,
+    )
+
     # TODO: some way to lazily do this? This requires loading *all* state modules
-    for key, func in salt.loader.states(__opts__, __salt__).iteritems():
+    for key, func in lazy_states.iteritems():
         mod_name, func_name = key.split('.', 1)
         if mod_name not in states:
             states[mod_name] = {}
