@@ -270,6 +270,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         if isinstance(ret, str):
             self.exit(2, '{0}\n'.format(ret))
         for host in ret:
+            if ret[host] == 'Minion did not return. [Not connected]':
+                continue
             for fun in ret[host]:
                 if fun not in docs:
                     if ret[host][fun]:
