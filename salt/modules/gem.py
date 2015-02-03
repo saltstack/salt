@@ -42,7 +42,8 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
     if ret['retcode'] == 0:
         return ret['stdout']
     else:
-        return False
+        logger.error(ret['stderr'])
+        raise CommandExecutionError(ret['stderr'])
 
 
 def install(gems,           # pylint: disable=C0103
@@ -210,9 +211,7 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
                   ruby,
                   gem_bin=gem_bin,
                   runas=runas)
-    lines = []
-    if isinstance(stdout, str):
-        lines = stdout.splitlines()
+    lines = stdout.splitlines()
     for line in lines:
         match = re.match(r'^([^ ]+) \((.+)\)', line)
         if match:
