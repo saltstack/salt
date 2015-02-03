@@ -1185,7 +1185,8 @@ class AESFuncs(object):
             load['id'],
             load.get('saltenv', load.get('env')),
             load.get('ext'),
-            self.mminion.functions)
+            self.mminion.functions,
+            load.get('pillar_override', {}))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
