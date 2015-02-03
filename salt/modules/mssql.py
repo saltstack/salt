@@ -102,6 +102,60 @@ def version(**kwargs):
     return tsql_query('SELECT @@version', **kwargs)
 
 
+def db_list(**kwargs):
+    '''
+    Return the databse list created on a MS SQL server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.db_list
+    '''
+    return [ row[0] for row in tsql_query('SELECT name FROM sys.databases', as_dict=False, **kwargs) ]
+
+
+def db_exists(database_name, **kwargs):
+    '''
+    Find if a specific database exists on the MS SQL server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.db_exists database_name='DBNAME'
+    '''
+    # We should get one, and only one row
+    return len( tsql_query("SELECT database_id FROM sys.databases WHERE NAME='%s'" % database_name, **kwargs) ) == 1
+
+
+def db_remove(database_name, **kwargs):
+    '''
+    Drops a specific database from the MS SQL server.
+    It will not drop any of 'master','model','msdb' or 'tempdb'.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.db_remove database_name='DBNAME'
+    '''
+    try:
+        if db_exists(database_name) and database_name not in ['master','model','msdb','tempdb']:
+            conn = _get_connection(**kwargs)
+            conn.autocommit(True)
+            cur = conn.cursor()
+            cur.execute('ALTER DATABASE %s SET SINGLE_USER WITH ROLLBACK IMMEDIATE' % (database_name))
+            cur.execute('DROP DATABASE %s' % (database_name))
+            conn.autocommit(False)
+            conn.close()
+            return True
+        else:
+            return False
+    except Exception as e:
+        return 'Could not find the database: {0}'.format(e)
+
+
 def role_list(**kwargs):
 
     '''
@@ -180,3 +234,117 @@ def role_remove(role, **kwargs):
     except Exception as e:
         return 'Could not create the role: {0}'.format(e)
 
+
+def login_exists(login, **kwargs):
+    '''
+    Find if a login exists in the MS SQL server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.login_exists 'LOGIN'
+    '''
+    try:
+        # We should get one, and only one row
+        return len(tsql_query(query="SELECT name FROM sys.syslogins WHERE name='%s'" % (login), **kwargs)) == 1
+
+    except Exception as e:
+        return 'Could not find the login: {0}'.format(e)
+
+
+def user_exists(username, **kwargs):
+    '''
+    Find if an user exists in a specific database on the MS SQL server.
+    
+    Note:
+        *database* argument is mandatory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.user_exists 'USERNAME' [database='DBNAME']
+    '''
+    # 'database' argument is mandatory
+    if 'database' not in kwargs:
+        return False
+
+    # We should get one, and only one row
+    return len(tsql_query(query="SELECT name FROM sysusers WHERE name='%s'" % (username), **kwargs)) == 1
+
+
+def user_list(**kwargs):
+    '''
+    Get the user list for a specific database on the MS SQL server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.user_list [database='DBNAME']
+    '''
+    return [ row[0] for row in tsql_query("SELECT name FROM sysusers where issqluser=1 or isntuser=1", as_dict=False, **kwargs) ]
+    
+
+def user_create(username, new_login_password=None, **kwargs):
+    '''
+    Creates a new user.
+    If new_login_password is not specified, the user will be created without a login.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.user_create USERNAME database=DBNAME [new_login_password=PASSWORD]
+    '''
+    # 'database' argument is mandatory
+    if 'database' not in kwargs:
+        return False
+    if user_exists(username, **kwargs):
+        return False
+
+    try:
+        conn = _get_connection(**kwargs)
+        conn.autocommit(True)
+        cur = conn.cursor()
+
+        if new_login_password:
+            if login_exists(username, **kwargs):
+                conn.close()
+                return False
+            cur.execute("CREATE LOGIN %s WITH PASSWORD='%s',check_policy = off" % (username, new_login_password))
+            cur.execute("CREATE USER %s FOR LOGIN %s" % (username, username))
+        else:  # new_login_password is not specified
+            cur.execute("CREATE USER %s WITHOUT LOGIN" % (username))
+
+        conn.autocommit(False)
+        conn.close()
+        return True
+    except Exception as e:
+        return 'Could not create the user: {0}'.format(e)
+
+
+def user_remove(username, **kwargs):
+    '''
+    Removes an user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt minion mssql.user_remove USERNAME database=DBNAME
+    '''
+    # 'database' argument is mandatory
+    if 'database' not in kwargs:
+        return False
+    try:
+        conn = _get_connection(**kwargs)
+        conn.autocommit(True)
+        cur = conn.cursor()
+        cur.execute("DROP USER %s" % (username))
+        conn.autocommit(False)
+        conn.close()
+        return True
+    except Exception as e:
+        return 'Could not create the user: {0}'.format(e)
