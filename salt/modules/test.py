@@ -23,7 +23,7 @@ __proxyenabled__ = ['*']
 
 
 @depends('non_existantmodulename')
-def depends():
+def missing_func():
     return 'foo'
 
 
