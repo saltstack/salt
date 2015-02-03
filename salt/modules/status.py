@@ -8,6 +8,7 @@ These data can be useful for compiling into stats later.
 import os
 import re
 import fnmatch
+import collections
 
 # Import salt libs
 import salt.utils
@@ -505,39 +506,66 @@ def netdev():
 
         salt '*' status.netdev
     '''
-    procf = '/proc/net/dev'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        if line.find(':') < 0:
-            continue
-        comps = line.split()
-        # Fix lines like eth0:9999..'
-        comps[0] = line.split(':')[0].strip()
-        # Support lines both like eth0:999 and eth0: 9999
-        comps.insert(1, line.split(':')[1].strip().split()[0])
-        ret[comps[0]] = {'iface': comps[0],
-                         'rx_bytes': _number(comps[1]),
-                         'rx_compressed': _number(comps[7]),
-                         'rx_drop': _number(comps[4]),
-                         'rx_errs': _number(comps[3]),
-                         'rx_fifo': _number(comps[5]),
-                         'rx_frame': _number(comps[6]),
-                         'rx_multicast': _number(comps[8]),
-                         'rx_packets': _number(comps[2]),
-                         'tx_bytes': _number(comps[9]),
-                         'tx_carrier': _number(comps[15]),
-                         'tx_colls': _number(comps[14]),
-                         'tx_compressed': _number(comps[16]),
-                         'tx_drop': _number(comps[12]),
-                         'tx_errs': _number(comps[11]),
-                         'tx_fifo': _number(comps[13]),
-                         'tx_packets': _number(comps[10])}
-    return ret
+    def linux_netdev():
+        '''
+        linux specific implementation of netdev
+        '''
+        procf = '/proc/net/dev'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            if line.find(':') < 0:
+                continue
+            comps = line.split()
+            # Fix lines like eth0:9999..'
+            comps[0] = line.split(':')[0].strip()
+            # Support lines both like eth0:999 and eth0: 9999
+            comps.insert(1, line.split(':')[1].strip().split()[0])
+            ret[comps[0]] = {'iface': comps[0],
+                             'rx_bytes': _number(comps[1]),
+                             'rx_compressed': _number(comps[7]),
+                             'rx_drop': _number(comps[4]),
+                             'rx_errs': _number(comps[3]),
+                             'rx_fifo': _number(comps[5]),
+                             'rx_frame': _number(comps[6]),
+                             'rx_multicast': _number(comps[8]),
+                             'rx_packets': _number(comps[2]),
+                             'tx_bytes': _number(comps[9]),
+                             'tx_carrier': _number(comps[15]),
+                             'tx_colls': _number(comps[14]),
+                             'tx_compressed': _number(comps[16]),
+                             'tx_drop': _number(comps[12]),
+                             'tx_errs': _number(comps[11]),
+                             'tx_fifo': _number(comps[13]),
+                             'tx_packets': _number(comps[10])}
+        return ret
+
+    def freebsd_netdev():
+        '''
+        freebsd specific implementation of netdev
+        '''
+        _dict_tree = lambda: collections.defaultdict(_dict_tree)
+        ret = _dict_tree()
+        netstat = __salt__['cmd.run']('netstat -i -n -4 -b -d').splitlines()
+        netstat += __salt__['cmd.run']('netstat -i -n -6 -b -d').splitlines()[1:]
+        header = netstat[0].split()
+        for line in netstat[1:]:
+            comps = line.split()
+            for i in range(4, 13):  # The columns we want
+                ret[comps[0]][comps[2]][comps[3]][header[i]] = _number(comps[i])
+        return ret
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_netdev,
+        'FreeBSD': freebsd_netdev,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def w():  # pylint: disable=C0103
