@@ -182,7 +182,7 @@ from __future__ import absolute_import
 import difflib
 import salt.utils
 import salt.utils.network
-from salt.loader import _create_loader
+import salt.loader
 
 # Set up logging
 import logging
@@ -334,8 +334,8 @@ def managed(name, type, enabled=True, **kwargs):
         ret['comment'] = str(error)
         return ret
 
-    load = _create_loader(__opts__, 'grains', 'grain', ext_dirs=False)
-    grains_info = load.gen_grains()
+    # TODO: create saltutil.refresh_grains that fires events to the minion daemon
+    grains_info = salt.loader.grains(__opts__, True)
     __grains__.update(grains_info)
     __salt__['saltutil.refresh_modules']()
     return ret
