@@ -35,7 +35,6 @@ except ImportError:
         except ImportError:
             HAS_MATCHHOSTNAME = False
 import socket
-import httplib
 
 # Import salt libs
 import salt.utils
@@ -45,6 +44,7 @@ import salt.config
 import salt.version
 from salt.template import compile_template
 from salt import syspaths
+import salt.ext.six.moves.http_client
 
 # Import 3rd party libs
 try:
@@ -324,7 +324,7 @@ def query(url,
                         }
                         if len(cert_chain) > 1:
                             cert_kwargs['key_file'] = cert_chain[1]
-                        handlers[0] = httplib.HTTPSConnection(**cert_kwargs)
+                        handlers[0] = salt.ext.six.moves.http_client.HTTPSConnection(**cert_kwargs)
 
         opener = urllib.build_opener(*handlers)
         for header in header_dict:
