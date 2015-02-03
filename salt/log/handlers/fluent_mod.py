@@ -313,7 +313,6 @@ class FluentSender(object):
 
         self.socket = None
         self.pendings = None
-        self.packer = msgpack.Packer()
         self.lock = threading.Lock()
 
         try:
@@ -338,7 +337,7 @@ class FluentSender(object):
         packet = (tag, timestamp, data)
         if self.verbose:
             print(packet)
-        return self.packer.pack(packet)
+        return msgpack.packb(packet)
 
     def _send(self, bytes_):
         self.lock.acquire()
