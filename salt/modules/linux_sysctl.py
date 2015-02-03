@@ -34,6 +34,12 @@ def __virtual__():
     return __virtualname__
 
 
+def _name_to_path(name):
+    return '/proc/sys/{0}'.format(
+        '/'.join([part.replace('/', '.') for part in name.split('.')])
+    )
+
+
 def default_config():
     '''
     Linux hosts using systemd 207 or later ignore ``/etc/sysctl.conf`` and only
@@ -113,7 +119,7 @@ def assign(name, value):
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
     value = str(value)
-    sysctl_file = '/proc/sys/{0}'.format(name.replace('.', '/'))
+    sysctl_file = _name_to_path(name)
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
