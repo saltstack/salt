@@ -222,7 +222,8 @@ def present(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        wait_for_sync=True):
     '''
     Ensure the IAM role exists.
 
@@ -284,6 +285,9 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    wait_for_sync
+        Wait for an INSYNC change status from Route53.
     '''
 
     # load data from attributes_from_pillar and merge with attributes
@@ -317,7 +321,8 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _cnames_present(name, cnames, region, key, keyid, profile)
+    _ret = _cnames_present(name, cnames, region, key, keyid, profile,
+                           wait_for_sync)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -747,7 +752,8 @@ def _cnames_present(
         region,
         key,
         keyid,
-        profile):
+        profile,
+        wait_for_sync):
     ret = {'result': True, 'comment': '', 'changes': {}}
     if not cnames:
         cnames = []
