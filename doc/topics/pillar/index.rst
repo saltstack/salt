@@ -375,3 +375,17 @@ to ``False``:
 .. code-block:: yaml
 
     pillar_opts: False
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module, set the following pillar
+variable:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
+
