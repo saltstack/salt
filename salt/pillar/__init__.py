@@ -5,10 +5,10 @@ Render the pillar data
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import os
 import collections
 import logging
-from copy import copy
 
 # Import salt libs
 import salt.loader
@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 
 def merge_recurse(obj_a, obj_b):
-    copied = copy(obj_a)
+    copied = copy.copy(obj_a)
     return update(copied, obj_b)
 
 
@@ -45,7 +45,8 @@ def merge_overwrite(obj_a, obj_b):
     return merge_recurse(obj_a, obj_b)
 
 
-def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None):
+def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
+               pillar=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -57,24 +58,32 @@ def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None):
         )
         # Backwards compatibility
         saltenv = env
-
-    return {
-            'remote': RemotePillar,
-            'local': Pillar
-            }.get(opts['file_client'], Pillar)(opts, grains, id_, saltenv, ext, functions=funcs)
+    ptype = {
+        'remote': RemotePillar,
+        'local': Pillar
+    }.get(opts['file_client'], Pillar)
+    return ptype(opts, grains, id_, saltenv, ext, functions=funcs,
+                 pillar=pillar)
 
 
 class RemotePillar(object):
     '''
     Get the pillar from the master
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None):
+    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None,
+                 pillar=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
         self.grains = grains
         self.id_ = id_
         self.channel = salt.transport.Channel.factory(opts)
+        self.pillar_override = {}
+        if pillar is not None:
+            if isinstance(pillar, dict):
+                self.pillar_override = pillar
+            else:
+                log.error('Pillar data must be a dictionary')
 
     def compile_pillar(self):
         '''
@@ -83,6 +92,7 @@ class RemotePillar(object):
         load = {'id': self.id_,
                 'grains': self.grains,
                 'saltenv': self.opts['environment'],
+                'pillar_override': self.pillar_override,
                 'ver': '2',
                 'cmd': '_pillar'}
         if self.ext:
@@ -104,7 +114,8 @@ class Pillar(object):
     '''
     Read over the pillar top files and render the pillar data
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None):
+    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None,
+                 pillar=None):
         # Store the file_roots path so we can restore later. Issue 5449
         self.actual_file_roots = opts['file_roots']
         # use the local file client
@@ -134,6 +145,13 @@ class Pillar(object):
             self.merge_strategy = opts['pillar_source_merging_strategy']
 
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
+        self.pillar_override = {}
+        if pillar is not None:
+            if isinstance(pillar, dict):
+                self.pillar_override = pillar
+            else:
+                log.error('Pillar data must be a dictionary')
+
 
     def __valid_ext(self, ext):
         '''
@@ -435,7 +453,7 @@ class Pillar(object):
         Extract the sls pillar files from the matches and render them into the
         pillar
         '''
-        pillar = {}
+        pillar = copy.copy(self.pillar_override)
         errors = []
         for saltenv, pstates in matches.items():
             mods = set()
@@ -501,6 +519,8 @@ class Pillar(object):
             log.critical('The "ext_pillar" option is malformed')
             return pillar
         ext = None
+        # Bring in CLI pillar data
+        pillar.update(self.pillar_override)
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
@@ -569,7 +589,7 @@ class Pillar(object):
         '''
         Render the pillar data and return
         '''
-        top, terrors = self.get_top()
+        top, top_errors = self.get_top()
         if ext:
             if self.opts.get('ext_pillar_first', False):
                 self.opts['pillar'] = self.ext_pillar({}, pillar_dirs)
@@ -583,7 +603,7 @@ class Pillar(object):
         else:
             matches = self.top_matches(top)
             pillar, errors = self.render_pillar(matches)
-        errors.extend(terrors)
+        errors.extend(top_errors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)
             if 'grains' in mopts:
