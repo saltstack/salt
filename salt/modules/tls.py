@@ -278,6 +278,7 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
                 certp = fic.read()
     return certp
 
+
 def get_ca_signed_cert(ca_name, CN='localhost', as_text=False, cacert_path=None, cert_filename=None):
     '''
     Get the certificate path or content
@@ -315,6 +316,7 @@ def get_ca_signed_cert(ca_name, CN='localhost', as_text=False, cacert_path=None,
                 certp = fic.read()
     return certp
 
+
 def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None, key_filename=None):
     '''
     Get the certificate path or content
@@ -351,6 +353,7 @@ def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None, 
             with salt.utils.fopen(keyp) as fic:
                 keyp = fic.read()
     return keyp
+    
 
 def create_ca(ca_name,
               bits=2048,
