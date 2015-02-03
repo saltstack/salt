@@ -238,8 +238,8 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to the passed number, and the
-    timeit took to compute in seconds. Used for performance tests
+    Return a Fibonacci sequence up to but not including the passed number,
+    and the time it took to compute in seconds. Used for performance tests.
 
     CLI Example:
 
