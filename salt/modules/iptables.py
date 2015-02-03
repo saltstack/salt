@@ -15,7 +15,6 @@ import shlex
 import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
-import salt.modules.cmdmod as salt_cmd
 
 
 def __virtual__():
@@ -486,23 +485,24 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Chain needs to be specified'
     if not rule:
         return 'Error: Rule needs to be specified'
+    ipt_cmd = _iptables_cmd(family)
 
     HAS_CHECK = False
-    if '--check' in salt_cmd.run('iptables --help', output_loglevel='quiet'):
+    if '--check' in __salt__['cmd.run']('{0} --help'.format(ipt_cmd), output_loglevel='quiet'):
         HAS_CHECK = True
 
     if HAS_CHECK is False:
         _chain_name = hex(uuid.getnode())
 
         # Create temporary table
-        __salt__['cmd.run']('{0} -t {1} -N {2}'.format(_iptables_cmd(family), table, _chain_name))
-        __salt__['cmd.run']('{0} -t {1} -A {2} {3}'.format(_iptables_cmd(family), table, _chain_name, rule))
+        __salt__['cmd.run']('{0} -t {1} -N {2}'.format(ipt_cmd, table, _chain_name))
+        __salt__['cmd.run']('{0} -t {1} -A {2} {3}'.format(ipt_cmd, table, _chain_name, rule))
 
-        out = __salt__['cmd.run']('{0}-save'.format(_iptables_cmd(family)))
+        out = __salt__['cmd.run']('{0}-save'.format(ipt_cmd))
 
         # Clean up temporary table
-        __salt__['cmd.run']('{0} -t {1} -F {2}'.format(_iptables_cmd(family), table, _chain_name))
-        __salt__['cmd.run']('{0} -t {1} -X {2}'.format(_iptables_cmd(family), table, _chain_name))
+        __salt__['cmd.run']('{0} -t {1} -F {2}'.format(ipt_cmd, table, _chain_name))
+        __salt__['cmd.run']('{0} -t {1} -X {2}'.format(ipt_cmd, table, _chain_name))
 
         for i in out.splitlines():
             if i.startswith('-A {0}'.format(_chain_name)):
@@ -511,7 +511,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
 
         return False
     else:
-        cmd = '{0} -t {1} -C {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
+        cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
         out = __salt__['cmd.run'](cmd)
 
     if not out:
