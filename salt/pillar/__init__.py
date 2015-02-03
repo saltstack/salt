@@ -217,17 +217,19 @@ class Pillar(object):
                         ]
             else:
                 for saltenv in self._get_envs():
-                    tops[saltenv].append(
-                            compile_template(
-                                self.client.cache_file(
-                                    self.opts['state_top'],
-                                    saltenv
-                                    ),
-                                self.rend,
-                                self.opts['renderer'],
-                                saltenv=saltenv
-                                )
+                    top = self.client.cache_file(
+                            self.opts['state_top'],
+                            saltenv
                             )
+                    if top:
+                        tops[saltenv].append(
+                                compile_template(
+                                    top,
+                                    self.rend,
+                                    self.opts['renderer'],
+                                    saltenv=saltenv
+                                    )
+                                )
         except Exception as exc:
             errors.append(
                     ('Rendering Primary Top file failed, render error:\n{0}'
