@@ -278,7 +278,7 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
                 certp = fic.read()
     return certp
 
-def get_signed_certificate(ca_name, CN='localhost', as_text=False, cacert_path=None):
+def get_ca_signed_certificate(ca_name, CN='localhost', as_text=False, cacert_path=None):
     '''
     Get the certificate path or content
 
@@ -310,7 +310,7 @@ def get_signed_certificate(ca_name, CN='localhost', as_text=False, cacert_path=N
                 certp = fic.read()
     return certp
 
-def get_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None):
+def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None):
     '''
     Get the certificate path or content
 
