@@ -21,7 +21,7 @@ Module to provide MS SQL Server compatibility to salt.
     configs or pillars.
 '''
 
-import logging
+# Import python libs
 from json import JSONEncoder, loads
 
 try:
@@ -29,9 +29,6 @@ try:
     HAS_ALL_IMPORTS = True
 except ImportError:
     HAS_ALL_IMPORTS = False
-
-
-log = logging.getLogger(__name__)
 
 
 _DEFAULTS = {
@@ -65,7 +62,7 @@ def _get_connection(**kwargs):
 
 class _MssqlEncoder(JSONEncoder):
     # E0202: 68:_MssqlEncoder.default: An attribute inherited from JSONEncoder hide this method
-    def default(self, o):  # pylint: disable-msg=E0202
+    def default(self, o):  # pylint: disable=E0202
         return str(o)
 
 
