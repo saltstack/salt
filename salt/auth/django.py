@@ -100,7 +100,7 @@ def auth(username, password):
     '''
     Simple Django auth
     '''
-    import django.contrib.auth
+    import django.contrib.auth  # pylint: disable=import-error
 
     django_auth_setup()
     user = django.contrib.auth.authenticate(username=username, password=password)
