@@ -152,7 +152,6 @@ class Pillar(object):
             else:
                 log.error('Pillar data must be a dictionary')
 
-
     def __valid_ext(self, ext):
         '''
         Check to see if the on demand external pillar is allowed
