@@ -395,7 +395,7 @@ class SaltEvent(object):
         if not self.cpush:
             self.connect_pull(timeout=timeout)
 
-        data['_stamp'] = datetime.datetime.now().isoformat()
+        data['_stamp'] = datetime.datetime.utcnow().isoformat()
 
         tagend = ''
         if len(tag) <= 20:  # old style compatible tag
