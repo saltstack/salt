@@ -146,21 +146,59 @@ def set_locale(locale):
     return True
 
 
-def _normalize_locale(locale):
-    # depending on the environment, the provided locale will also contain a charmap
-    # (e.g. 'en_US.UTF-8 UTF-8' instead of only the locale 'en_US.UTF-8')
-    # drop the charmap
-    locale = locale.split()[0]
+def _split_locale(locale):
+    '''
+    Split a locale specifier.  The general format is
 
-    lang_encoding = locale.split('.')
-    lang_split = lang_encoding[0].split('_')
-    if len(lang_split) > 1:
-        lang_split[1] = lang_split[1].upper()
-    lang_encoding[0] = '_'.join(lang_split)
-    if len(lang_encoding) > 1:
-        if len(lang_split) > 1:
-            lang_encoding[1] = lang_encoding[1].lower().replace('-', '')
-    return '.'.join(lang_encoding)
+    language[_territory][.codeset][@modifier] [charmap]
+
+    For example:
+
+    ca_ES.UTF-8@valencia UTF-8
+    '''
+    def split(st, char):
+        '''
+        Split a string `st` once by `char`; always return a two-element list
+        even if the second element is empty.
+        '''
+        split_st = st.split(char, 1)
+        if len(split_st) == 1:
+            split_st.append('')
+        return split_st
+
+    parts = {}
+    work_st, parts['charmap'] = split(locale, ' ')
+    work_st, parts['modifier'] = split(work_st, '@')
+    work_st, parts['codeset'] = split(work_st, '.')
+    parts['language'], parts['territory'] = split(work_st, '_')
+    return parts
+
+
+def _join_locale(parts):
+    '''
+    Join a locale specifier split in the format returned by _split_locale.
+    '''
+    locale = parts['language']
+    if parts.get('territory'):
+        locale += '_' + parts['territory']
+    if parts.get('codeset'):
+        locale += '.' + parts['codeset']
+    if parts.get('modifier'):
+        locale += '@' + parts['modifier']
+    if parts.get('charmap'):
+        locale += ' ' + parts['charmap']
+    return locale
+
+
+def _normalize_locale(locale):
+    '''
+    Format a locale specifier according to the format returned by `locale -a`.
+    '''
+    parts = _split_locale(locale)
+    parts['territory'] = parts['territory'].upper()
+    parts['codeset'] = parts['codeset'].lower().replace('-', '')
+    parts['charmap'] = ''
+    return _join_locale(parts)
 
 
 def avail(locale):
@@ -187,7 +225,7 @@ def avail(locale):
 
 
 @decorators.which('locale-gen')
-def gen_locale(locale, charmap=None):
+def gen_locale(locale):
     '''
     Generate a locale.
 
@@ -196,31 +234,27 @@ def gen_locale(locale, charmap=None):
     :param locale: Any locale listed in /usr/share/i18n/locales or
         /usr/share/i18n/SUPPORTED for debian and gentoo based distros
 
-    :param charmap: debian and gentoo based systems require the charmap to be
-        specified independently of the locale.
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' locale.gen_locale en_US.UTF-8
-        salt '*' locale.gen_locale en_US.UTF-8 UTF-8  # debian and gentoo only
+        salt '*' locale.gen_locale 'en_IE@euro ISO-8859-15'
     '''
     on_debian = __grains__.get('os') == 'Debian'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
 
     if on_debian or on_gentoo:
-        if not charmap:
-            log.error('On debian and gentoo systems you must provide a charmap')
-            return False
-
         search = '/usr/share/i18n/SUPPORTED'
-        locale_format = '{0} {1}'.format(locale, charmap)
-        valid = __salt__['file.search'](search, '^{0}$'.format(locale_format))
+        valid = __salt__['file.search'](search, '^{0}$'.format(locale))
     else:
+        parts = _split_locale(locale)
+        parts['codeset'] = ''
+        parts['charmap'] = ''
+        search_locale = _join_locale(parts)
+
         search = '/usr/share/i18n/locales'
-        locale_format = locale
-        valid = locale_format in os.listdir(search)
+        valid = search_locale in os.listdir(search)
 
     if not valid:
         log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
@@ -229,8 +263,8 @@ def gen_locale(locale, charmap=None):
     if on_debian or on_gentoo:
         __salt__['file.replace'](
             '/etc/locale.gen',
-            r'^#\s*{0}$'.format(locale_format),
-            '{0}'.format(locale_format),
+            r'^#\s*{0}$'.format(locale),
+            '{0}'.format(locale),
             append_if_not_found=True
         )
     elif __grains__.get('os') == 'Ubuntu':
@@ -248,6 +282,6 @@ def gen_locale(locale, charmap=None):
     cmd = ['locale-gen']
     if on_gentoo:
         cmd.append('--generate')
-    cmd.append(locale_format)
+    cmd.append(locale)
 
     return __salt__['cmd.retcode'](cmd, python_shell=False)

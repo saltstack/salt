@@ -59,7 +59,7 @@ def default_config():
 
         salt -G 'kernel:Linux' sysctl.default_config
     '''
-    if _sd_booted():
+    if _sd_booted(__context__):
         for line in __salt__['cmd.run_stdout'](
             'systemctl --version'
         ).splitlines():
