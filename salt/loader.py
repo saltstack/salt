@@ -206,6 +206,7 @@ def pillars(opts, functions):
                         opts,
                         tag='pillar',
                         pack=pack,
+                        singleton=False,  # TODO: re-enable
                         )
     return FilterDictWrapper(ret, '.ext_pillar')
 
@@ -392,6 +393,7 @@ def render(opts, functions, states=None):
                         opts,
                         tag='renderers',
                         pack=pack,
+                        singleton=False,  # TODO: re-enable
                         )
     rend = FilterDictWrapper(ret, '.render')
 
@@ -702,6 +704,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
 
     # TODO:
         - move modules_max_memory into here
+        - re-enable singletons
     '''
     instances = {}
 
@@ -714,24 +717,34 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                 pack=None,
                 whitelist=None,
                 virtual_enable=True,
+                singleton=True,
                 ):
+        def new_object():
+            ret = object.__new__(cls)
+            ret.__singleton_init__(module_dirs,
+                                   opts=opts,
+                                   tag=tag,
+                                   loaded_base_name=loaded_base_name,
+                                   mod_type_check=mod_type_check,
+                                   pack=pack,
+                                   whitelist=whitelist,
+                                   virtual_enable=virtual_enable,
+                                   singleton=singleton,
+                                   )
+            return ret
+
+        if not singleton:
+            return new_object()
+
         key = (tag,
                virtual_enable,
                'proxy' in opts,
                opts.get('id'),
                )
+
         if key not in NewLazyLoader.instances:
             log.debug('Initializing new NewLazyLoader for {0}'.format(key))
-            NewLazyLoader.instances[key] = object.__new__(cls)
-            NewLazyLoader.instances[key].__singleton_init__(module_dirs,
-                                                            opts=opts,
-                                                            tag=tag,
-                                                            loaded_base_name=loaded_base_name,
-                                                            mod_type_check=mod_type_check,
-                                                            pack=pack,
-                                                            whitelist=whitelist,
-                                                            virtual_enable=virtual_enable,
-                                                            )
+            NewLazyLoader.instances[key] = new_object()
         else:
             log.debug('Re-using NewLazyLoader for {0}'.format(key))
         return NewLazyLoader.instances[key]
@@ -746,6 +759,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
+                 singleton=True,
                  ):  # pylint: disable=W0231
         self.opts = self.__prep_mod_opts(opts)
 
@@ -759,6 +773,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
+                 singleton=True,
                  ):
         super(NewLazyLoader, self).__init__()  # init the lazy loader
         self.opts = self.__prep_mod_opts(opts)
