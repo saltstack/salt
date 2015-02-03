@@ -17,10 +17,11 @@ import salt
 import salt.version
 import salt.loader
 import salt.ext.six as six
+from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
 
-from salt.utils.decorators import depends
+
 @depends('non_existantmodulename')
 def depends():
     return 'foo'
