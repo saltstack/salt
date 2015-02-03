@@ -17,6 +17,7 @@ from salt.modules import keyboard
 
 # Globals
 keyboard.__salt__ = {}
+keyboard.__grains__ = {'os_family': ''}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
