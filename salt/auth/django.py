@@ -49,8 +49,6 @@ import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import django
-    import django.conf
-    import django.contrib.auth
     HAS_DJANGO = True
 except Exception as exc:
     # If Django is installed and is not detected, uncomment
@@ -62,6 +60,14 @@ except Exception as exc:
 DJANGO_AUTH_CLASS = None
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'django'
+
+
+def __virtual__():
+    if HAS_DJANGO:
+        return __virtualname__
+    return False
 
 
 def django_auth_setup():
@@ -94,6 +100,7 @@ def auth(username, password):
     '''
     Simple Django auth
     '''
+    import django.contrib.auth
 
     django_auth_setup()
     user = django.contrib.auth.authenticate(username=username, password=password)
