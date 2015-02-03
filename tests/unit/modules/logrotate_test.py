@@ -37,8 +37,8 @@ class LogrotateTestCase(TestCase):
     # 'set_' function tests: 2
 
     @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value={'include files': {'include':'A'},
-                                   'rotate': {'salt':'A'}}))
+           MagicMock(return_value={'include files': {'include': 'A'},
+                                   'rotate': {'salt': 'A'}}))
     def test_set(self):
         '''
         Test if it set a new value for a specific configuration line
@@ -50,7 +50,7 @@ class LogrotateTestCase(TestCase):
         self.assertEqual(logrotate.set_('rotate', '2'), ret)
 
     @patch('salt.modules.logrotate._parse_conf',
-           MagicMock(return_value={'include files': {'include':'A'},
+           MagicMock(return_value={'include files': {'include': 'A'},
                                    'rotate': 'salt'}))
     def test_set_setting(self):
         '''
