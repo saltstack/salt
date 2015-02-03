@@ -90,7 +90,7 @@ def auth(username, password):
     '''
     Simple Django auth
     '''
-    import django.contrib.auth
+    import django.contrib.auth  # pylint: disable=import-error
 
     global django_auth_class
 
