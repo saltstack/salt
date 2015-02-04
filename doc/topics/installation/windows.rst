@@ -263,14 +263,20 @@ Setting up a Windows build environment
 
         pip install esky
 
-24. Install Salt
+24. Install certifi
+
+    .. code-block:: bash
+
+        pip install certifi
+
+25. Install Salt
 
     .. code-block:: bash
 
         cd salt
         python setup.py install
 
-25. Build a frozen binary distribution of Salt
+26. Build a frozen binary distribution of Salt
 
     .. code-block:: bash
 
