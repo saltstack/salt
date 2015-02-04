@@ -123,6 +123,7 @@ def _present_test(user, name, enc, comment, options, source, config):
 
     return result, comment
 
+
 def _absent_test(user, name, enc, comment, options, source, config):
     '''
     Run checks for "absent"
@@ -186,6 +187,7 @@ def _absent_test(user, name, enc, comment, options, source, config):
         comment = ('Key is already absent')
 
     return result, comment
+
 
 def present(
         name,
@@ -278,13 +280,13 @@ def present(
         key = __salt__['cp.get_file_str'](
                 source,
                 saltenv=__env__)
-        fileHasOptions = False
+        filehasoptions = False
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(ssh\-|ecds).*')
         key = key.rstrip().split('\n')
         for keyline in key:
-            fileHasOptions = sshre.match(keyline)
-            if not fileHasOptions:
+            filehasoptions = sshre.match(keyline)
+            if not filehasoptions:
                 data = __salt__['ssh.set_auth_key_from_file'](
                         user,
                         source,
@@ -379,18 +381,18 @@ def absent(name,
            'result': True,
            'comment': ''}
 
-    #Extract Key from file if source is present
+    # Extract Key from file if source is present
     if source != '':
         key = __salt__['cp.get_file_str'](
                 source,
                 saltenv=__env__)
-        fileHasOptions = False
+        filehasoptions = False
         # check if this is of form {options} {enc} {key} {comment}
         sshre = re.compile(r'^(ssh\-|ecds).*')
         key = key.rstrip().split('\n')
         for keyline in key:
-            fileHasOptions = sshre.match(keyline)
-            if not fileHasOptions:
+            filehasoptions = sshre.match(keyline)
+            if not filehasoptions:
                 ret['comment'] = __salt__['ssh.rm_auth_key_from_file'](user,
                                                                        source,
                                                                        config,

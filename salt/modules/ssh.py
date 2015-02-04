@@ -393,11 +393,12 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
         return 'add'
     return 'exists'
 
+
 def rm_auth_key_from_file(user,
-			 source,
-			 config='.ssh/authorized_keys',
-			 saltenv='base',
-			 env=None):
+             source,
+             config='.ssh/authorized_keys',
+             saltenv='base',
+             env=None):
     '''
     Remove an authorized key from the specified user's authorized key file, using a file as source
 
@@ -450,6 +451,7 @@ def rm_auth_key_from_file(user,
             return 'Key removed'
         else:
             return 'Key not present'
+
 
 def rm_auth_key(user, key, config='.ssh/authorized_keys'):
     '''
