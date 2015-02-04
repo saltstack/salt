@@ -117,7 +117,7 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
         context = {}
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
-    ret = NewLazyLoader(_module_dirs(opts, 'modules', 'module'),
+    ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
                          opts,
                          tag='modules',
                          whitelist=whitelist,
@@ -148,7 +148,7 @@ def raw_mod(opts, _, functions, mod='modules'):
     '''
     pack = {'name': '__salt__',
             'value': functions}
-    return NewLazyLoader(_module_dirs(opts, mod, 'rawmodule'),
+    return LazyLoader(_module_dirs(opts, mod, 'rawmodule'),
                         opts,
                         tag=mod,
                         virtual_enable=False,
@@ -162,7 +162,7 @@ def proxy(opts, functions, whitelist=None):
     '''
     pack = {'name': '__proxy__',
             'value': functions}
-    return NewLazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
+    return LazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
                          opts,
                          tag='proxy',
                          whitelist=whitelist,
@@ -176,7 +176,7 @@ def returners(opts, functions, whitelist=None):
     '''
     pack = {'name': '__salt__',
             'value': functions}
-    return NewLazyLoader(_module_dirs(opts, 'returners', 'returner'),
+    return LazyLoader(_module_dirs(opts, 'returners', 'returner'),
                          opts,
                          tag='returners',
                          whitelist=whitelist,
@@ -188,7 +188,7 @@ def utils(opts, whitelist=None):
     '''
     Returns the utility modules
     '''
-    return NewLazyLoader(_module_dirs(opts, 'utils', 'utils', ext_type_dirs='utils_dirs'),
+    return LazyLoader(_module_dirs(opts, 'utils', 'utils', ext_type_dirs='utils_dirs'),
                          opts,
                          tag='utils',
                          whitelist=whitelist,
@@ -202,7 +202,7 @@ def pillars(opts, functions):
     pack = {'name': '__salt__',
             'value': functions}
 
-    ret = NewLazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
+    ret = LazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
                         opts,
                         tag='pillar',
                         pack=pack,
@@ -217,7 +217,7 @@ def tops(opts):
     if 'master_tops' not in opts:
         return {}
     whitelist = opts['master_tops'].keys()
-    ret = NewLazyLoader(_module_dirs(opts, 'tops', 'top'),
+    ret = LazyLoader(_module_dirs(opts, 'tops', 'top'),
                         opts,
                         tag='tops',
                         whitelist=whitelist,
@@ -229,7 +229,7 @@ def wheels(opts, whitelist=None):
     '''
     Returns the wheels modules
     '''
-    return NewLazyLoader(_module_dirs(opts, 'wheel', 'wheel'),
+    return LazyLoader(_module_dirs(opts, 'wheel', 'wheel'),
                          opts,
                          tag='wheel',
                          whitelist=whitelist,
@@ -240,7 +240,7 @@ def outputters(opts):
     '''
     Returns the outputters modules
     '''
-    ret = NewLazyLoader(_module_dirs(opts, 'output', 'output', ext_type_dirs='outputter_dirs'),
+    ret = LazyLoader(_module_dirs(opts, 'output', 'output', ext_type_dirs='outputter_dirs'),
                         opts,
                         tag='output',
                         )
@@ -258,7 +258,7 @@ def auth(opts, whitelist=None):
     '''
     pack = {'name': '__salt__',
             'value': minion_mods(opts)}
-    return NewLazyLoader(_module_dirs(opts, 'auth', 'auth'),
+    return LazyLoader(_module_dirs(opts, 'auth', 'auth'),
                          opts,
                          tag='auth',
                          whitelist=whitelist,
@@ -270,7 +270,7 @@ def fileserver(opts, backends):
     '''
     Returns the file server modules
     '''
-    return NewLazyLoader(_module_dirs(opts, 'fileserver', 'fileserver'),
+    return LazyLoader(_module_dirs(opts, 'fileserver', 'fileserver'),
                          opts,
                          tag='fileserver',
                          whitelist=backends,
@@ -281,7 +281,7 @@ def roster(opts, whitelist=None):
     '''
     Returns the roster modules
     '''
-    return NewLazyLoader(_module_dirs(opts, 'roster', 'roster'),
+    return LazyLoader(_module_dirs(opts, 'roster', 'roster'),
                          opts,
                          tag='roster',
                          whitelist=whitelist,
@@ -302,7 +302,7 @@ def states(opts, functions, whitelist=None):
     '''
     pack = {'name': '__salt__',
             'value': functions}
-    return NewLazyLoader(_module_dirs(opts, 'states', 'states'),
+    return LazyLoader(_module_dirs(opts, 'states', 'states'),
                          opts,
                          tag='states',
                          pack=pack,
@@ -318,7 +318,7 @@ def beacons(opts, context=None):
         context = {}
     pack = {'name': '__context__',
             'value': context}
-    return NewLazyLoader(_module_dirs(opts, 'beacons', 'beacons'),
+    return LazyLoader(_module_dirs(opts, 'beacons', 'beacons'),
                          opts,
                          tag='beacons',
                          pack=pack,
@@ -331,7 +331,7 @@ def search(opts, returners, whitelist=None):
     '''
     pack = {'name': '__ret__',
             'value': returners}
-    return NewLazyLoader(_module_dirs(opts, 'search', 'search'),
+    return LazyLoader(_module_dirs(opts, 'search', 'search'),
                          opts,
                          tag='search',
                          whitelist=whitelist,
@@ -343,7 +343,7 @@ def log_handlers(opts):
     '''
     Returns the custom logging handler modules
     '''
-    ret = NewLazyLoader(_module_dirs(opts,
+    ret = LazyLoader(_module_dirs(opts,
                                      'log_handlers',
                                      'log_handlers',
                                      int_type='handlers',
@@ -366,7 +366,7 @@ def ssh_wrapper(opts, functions=None, context=None):
              'value': functions},
             {'name': '__context__',
              'value': context}]
-    return NewLazyLoader(_module_dirs(opts,
+    return LazyLoader(_module_dirs(opts,
                                       'wrapper',
                                       'wrapper',
                                       base_path=os.path.join(SALT_BASE_PATH, os.path.join('client', 'ssh'))),
@@ -385,7 +385,7 @@ def render(opts, functions, states=None):
             ]
     if states:
         pack.append({'name': '__states__', 'value': states})
-    ret = NewLazyLoader(_module_dirs(opts,
+    ret = LazyLoader(_module_dirs(opts,
                                      'renderers',
                                      'render',
                                      ext_type_dirs='render_dirs'),
@@ -475,7 +475,7 @@ def grains(opts, force_refresh=False):
         opts['grains'] = {}
 
     grains_data = {}
-    funcs = NewLazyLoader(_module_dirs(opts, 'grains', 'grain', ext_type_dirs='grains_dirs'),
+    funcs = LazyLoader(_module_dirs(opts, 'grains', 'grain', ext_type_dirs='grains_dirs'),
                      opts,
                      tag='grains',
                      )
@@ -540,7 +540,7 @@ def call(fun, **kwargs):
     args = kwargs.get('args', [])
     dirs = kwargs.get('dirs', [])
 
-    funcs = NewLazyLoader([os.path.join(SALT_BASE_PATH, 'modules')] + dirs,
+    funcs = LazyLoader([os.path.join(SALT_BASE_PATH, 'modules')] + dirs,
                           None,
                           tag='modules',
                           virtual_enable=False,
@@ -554,7 +554,7 @@ def runner(opts):
     '''
     pack = {'name': '__salt__',
             'value': minion_mods(opts)}
-    return NewLazyLoader(_module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
+    return LazyLoader(_module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
                      opts,
                      tag='runners',
                      pack=pack
@@ -565,7 +565,7 @@ def queues(opts):
     '''
     Directly call a function inside a loader directory
     '''
-    return NewLazyLoader(_module_dirs(opts, 'queues', 'queue', ext_type_dirs='queue_dirs'),
+    return LazyLoader(_module_dirs(opts, 'queues', 'queue', ext_type_dirs='queue_dirs'),
                      opts,
                      tag='queues',
                      )
@@ -577,7 +577,7 @@ def sdb(opts, functions=None, whitelist=None):
     '''
     pack = {'name': '__sdb__',
             'value': functions}
-    return NewLazyLoader(_module_dirs(opts, 'sdb', 'sdb'),
+    return LazyLoader(_module_dirs(opts, 'sdb', 'sdb'),
                      opts,
                      tag='sdb',
                      pack=pack,
@@ -596,7 +596,7 @@ def clouds(opts):
         'name': '__active_provider_name__',
         'value': None
     }
-    functions = NewLazyLoader(_module_dirs(opts,
+    functions = LazyLoader(_module_dirs(opts,
                                            'clouds',
                                            'cloud',
                                            base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
@@ -620,7 +620,7 @@ def netapi(opts):
     '''
     Return the network api functions
     '''
-    return NewLazyLoader(_module_dirs(opts, 'netapi', 'netapi'),
+    return LazyLoader(_module_dirs(opts, 'netapi', 'netapi'),
                      opts,
                      tag='netapi',
                      )
@@ -693,7 +693,7 @@ class FilterDictWrapper(MutableMapping):
                 yield key.replace(self.suffix, '')
 
 
-class NewLazyLoader(salt.utils.lazy.LazyDict):
+class LazyLoader(salt.utils.lazy.LazyDict):
     '''
     Goals here:
         - lazy loading
@@ -740,12 +740,12 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                opts.get('id'),
                )
 
-        if key not in NewLazyLoader.instances:
-            log.debug('Initializing new NewLazyLoader for {0}'.format(key))
-            NewLazyLoader.instances[key] = new_object()
+        if key not in LazyLoader.instances:
+            log.debug('Initializing new LazyLoader for {0}'.format(key))
+            LazyLoader.instances[key] = new_object()
         else:
-            log.debug('Re-using NewLazyLoader for {0}'.format(key))
-        return NewLazyLoader.instances[key]
+            log.debug('Re-using LazyLoader for {0}'.format(key))
+        return LazyLoader.instances[key]
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self,
@@ -773,7 +773,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
                  virtual_enable=True,
                  singleton=True,
                  ):
-        super(NewLazyLoader, self).__init__()  # init the lazy loader
+        super(LazyLoader, self).__init__()  # init the lazy loader
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
@@ -854,7 +854,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         '''
         Clear the dict
         '''
-        super(NewLazyLoader, self).clear()  # clear the lazy loader
+        super(LazyLoader, self).clear()  # clear the lazy loader
         self.loaded_files = []
         self.missing_modules = []
         self.initial_load = False
@@ -886,7 +886,7 @@ class NewLazyLoader(salt.utils.lazy.LazyDict):
         This might be problematic, since this means they change after __virtual__,
         but its been doing this for a while... so it must be fine :/
         '''
-        mod = super(NewLazyLoader, self).__getitem__(key)
+        mod = super(LazyLoader, self).__getitem__(key)
 
         if '__opts__' in mod.__globals__:
             mod.__globals__['__opts__'].update(self.opts)
