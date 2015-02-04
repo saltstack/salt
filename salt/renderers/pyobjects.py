@@ -296,13 +296,11 @@ def load_states():
 
     # TODO: honor __virtual__? The old one didn't...
     # create our own loader that ignores __virtual__()
-    pack = {'name': '__salt__',
-            'value': __salt__}
     lazy_states = salt.loader.LazyLoader(
         salt.loader._module_dirs(__opts__, 'states', 'states'),
         __opts__,
         tag='states',
-        pack=pack,
+        pack={'__salt__': __salt__},
         virtual_enable=False,
     )
 
