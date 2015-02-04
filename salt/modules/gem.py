@@ -221,6 +221,44 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
     return gems
 
 
+def list_upgrades(ruby=None,
+                  runas=None,
+                  gem_bin=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Check if an upgrade is available for installed gems
+
+    gem_bin : None
+        Full path to ``gem`` binary to use.
+    ruby : None
+        If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
+    runas : None
+        The user to run gem as.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' gem.list_upgrades
+    '''
+    result = _gem('outdated',
+                  ruby,
+                  gem_bin=gem_bin,
+                  runas=runas)
+    outdated = {}
+    for line in result.splitlines():
+        match = re.search(r'(\S+) \(\S+ < (\S+)\)', line)
+        if match:
+            name, version = match.groups()
+        else:
+            logger.error('Can\'t parse line {0!r}'.format(line))
+            continue
+        outdated[name] = version
+    return outdated
+
+
 def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
     '''
     Add a gem source.
