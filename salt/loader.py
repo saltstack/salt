@@ -392,7 +392,7 @@ def grains(opts, force_refresh=False):
         if opts.get('grains_cache', False):
             cfn = os.path.join(
                 opts['cachedir'],
-                '{0}.cache.p'.format('grains')
+                'grains.cache.p'
             )
             if os.path.isfile(cfn):
                 grains_cache_age = int(time.time() - os.path.getmtime(cfn))
