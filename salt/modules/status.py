@@ -306,7 +306,7 @@ def cpuinfo():
 
     def freebsd_cpuinfo():
         '''
-        freebds specific cpuinfo implementation
+        freebsd specific cpuinfo implementation
         '''
         freebsd_cmd = 'sysctl hw.model hw.ncpu'
         ret = {}
@@ -471,29 +471,59 @@ def netstats():
 
         salt '*' status.netstats
     '''
-    procf = '/proc/net/netstat'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    headers = ['']
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        if comps[0] == headers[0]:
-            index = len(headers) - 1
-            row = {}
-            for field in range(index):
-                if field < 1:
-                    continue
-                else:
-                    row[headers[field]] = _number(comps[field])
-            rowname = headers[0].replace(':', '')
-            ret[rowname] = row
-        else:
-            headers = comps
-    return ret
+    def linux_netstats():
+        '''
+        freebsd specific netstats implementation
+        '''
+        procf = '/proc/net/netstat'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        headers = ['']
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            if comps[0] == headers[0]:
+                index = len(headers) - 1
+                row = {}
+                for field in range(index):
+                    if field < 1:
+                        continue
+                    else:
+                        row[headers[field]] = _number(comps[field])
+                rowname = headers[0].replace(':', '')
+                ret[rowname] = row
+            else:
+                headers = comps
+        return ret
+
+    def freebsd_netstats():
+        '''
+        freebsd specific netstats implementation
+        '''
+        ret = {}
+        for line in __salt__['cmd.run']('netstat -s').splitlines():
+            if line.startswith('\t\t'): continue  # Skip, too detailed
+            if not line.startswith('\t'):
+                key = line.split()[0]
+                ret[key] = {}
+            else:
+                comps = line.split()
+                if comps[0].isdigit():
+                    ret[key][' '.join(comps[1:])] = comps[0]
+        return ret
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_netstats,
+        'FreeBSD': freebsd_netstats,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
+
 
 
 def netdev():
