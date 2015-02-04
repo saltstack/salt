@@ -11,6 +11,7 @@ class LazyDict(collections.MutableMapping):
 
     TODO: negative caching? If you ask for 'foo' and it doesn't exist it will
     look EVERY time unless someone calls load_all()
+    As of now this is left to the class which inherits from this base
     '''
     def __init__(self):
         self.clear()
