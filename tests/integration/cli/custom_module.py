@@ -70,6 +70,7 @@ class SSHCustomModuleTest(integration.SSHCase):
             "module_|-regular-module_|-test.echo_|-run": 'hello',
             "module_|-custom-module_|-test.recho_|-run": 'olleh'}
         cmd = self.run_function('state.sls', arg=['custom_module'])
+        print (cmd)
         for key in cmd:
             if not cmd[key]['result']:
                 raise AssertionError(cmd[key]['comment'])

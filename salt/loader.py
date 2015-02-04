@@ -343,13 +343,13 @@ def log_handlers(opts):
     Returns the custom logging handler modules
     '''
     ret = LazyLoader(_module_dirs(opts,
-                                     'log_handlers',
-                                     'log_handlers',
-                                     int_type='handlers',
-                                     base_path=os.path.join(SALT_BASE_PATH, 'log')),
-                        opts,
-                        tag='log_handlers',
-                        )
+                                  'log_handlers',
+                                  'log_handlers',
+                                  int_type='handlers',
+                                  base_path=os.path.join(SALT_BASE_PATH, 'log')),
+                     opts,
+                     tag='log_handlers',
+                     )
     return FilterDictWrapper(ret, '.setup_handlers')
 
 
@@ -366,13 +366,13 @@ def ssh_wrapper(opts, functions=None, context=None):
             {'name': '__context__',
              'value': context}]
     return LazyLoader(_module_dirs(opts,
-                                      'wrapper',
-                                      'wrapper',
-                                      base_path=os.path.join(SALT_BASE_PATH, os.path.join('client', 'ssh'))),
-                         opts,
-                         tag='wrapper',
-                         pack=pack,
-                         )
+                                   'wrapper',
+                                   'wrapper',
+                                   base_path=os.path.join(SALT_BASE_PATH, os.path.join('client', 'ssh'))),
+                      opts,
+                      tag='wrapper',
+                      pack=pack,
+                      )
 
 
 def render(opts, functions, states=None):
@@ -385,13 +385,13 @@ def render(opts, functions, states=None):
     if states:
         pack.append({'name': '__states__', 'value': states})
     ret = LazyLoader(_module_dirs(opts,
-                                     'renderers',
-                                     'render',
-                                     ext_type_dirs='render_dirs'),
-                        opts,
-                        tag='renderers',
-                        pack=pack,
-                        )
+                                  'renderers',
+                                  'render',
+                                  ext_type_dirs='render_dirs'),
+                     opts,
+                     tag='renderers',
+                     pack=pack,
+                     )
     rend = FilterDictWrapper(ret, '.render')
 
     if not check_render_pipe_str(opts['renderer'], rend):
