@@ -49,7 +49,12 @@ try:
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-import msgpack
+
+try:
+    import msgpack
+    HAS_MSGPACK = True
+except ImportError:
+    HAS_MSGPACK = False
 
 log = logging.getLogger(__name__)
 JARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.txt')
@@ -159,7 +164,7 @@ def query(url,
     if header_list is None:
         header_list = []
 
-    if persist_session is True:
+    if persist_session is True and HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
@@ -343,7 +348,7 @@ def query(url,
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True:
+    if persist_session is True and HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
             with salt.utils.fopen(session_cookie_jar, 'w') as fh_:
