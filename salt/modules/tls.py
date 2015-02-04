@@ -647,7 +647,7 @@ def create_csr(ca_name,
                     csr_filename
                     )
     ret += 'Created CSR for "{0}": "{1}/{2}/certs/{3}.csr."'.format(
-                    ca_name,
+                    CN,
                     cert_base_path(),
                     ca_name,
                     csr_filename
@@ -933,7 +933,7 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
 
     return ('Created Certificate for "{0}": '
             '"{1}/{2}/certs/{3}.crt"').format(
-                    ca_name,
+                    CN,
                     cert_base_path(),
                     ca_name,
                     cert_filename
