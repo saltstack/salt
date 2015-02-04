@@ -18,31 +18,13 @@ import salt.crypt
 import salt.transport
 from salt.ext.six import string_types
 from salt.template import compile_template
-from salt.utils.dictupdate import update
-from salt.utils.serializers.yamlex import merge_recursive
+from salt.utils.dictupdate import merge
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
 import salt.ext.six as six
 
 
 log = logging.getLogger(__name__)
-
-
-def merge_recurse(obj_a, obj_b):
-    copied = copy.copy(obj_a)
-    return update(copied, obj_b)
-
-
-def merge_aggregate(obj_a, obj_b):
-    return merge_recursive(obj_a, obj_b, level=1)
-
-
-def merge_overwrite(obj_a, obj_b):
-    for obj in obj_b:
-        if obj in obj_a:
-            obj_a[obj] = obj_b[obj]
-            return obj_a
-    return merge_recurse(obj_a, obj_b)
 
 
 def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
@@ -441,7 +423,8 @@ class Pillar(object):
                                         key: nstate
                                     }
 
-                                state = self.merge_sources(state, nstate)
+                                state = merge(state, nstate,
+                                              self.merge_strategy)
 
                             if err:
                                 errors += err
@@ -474,7 +457,7 @@ class Pillar(object):
                             )
                         )
                         continue
-                    pillar = self.merge_sources(pillar, pstate)
+                    pillar = merge(pillar, pstate, self.merge_strategy)
 
         return pillar, errors
 
@@ -556,33 +539,9 @@ class Pillar(object):
                                 )
                             )
             if ext:
-                pillar = self.merge_sources(pillar, ext)
+                pillar = merge(pillar, ext, self.merge_strategy)
                 ext = None
         return pillar
-
-    def merge_sources(self, obj_a, obj_b):
-        strategy = self.merge_strategy
-
-        if strategy == 'smart':
-            renderer = self.opts.get('renderer', 'yaml')
-            if renderer == 'yamlex' or renderer.startswith('yamlex_'):
-                strategy = 'aggregate'
-            else:
-                strategy = 'recurse'
-
-        if strategy == 'recurse':
-            merged = merge_recurse(obj_a, obj_b)
-        elif strategy == 'aggregate':
-            #: level = 1 merge at least root data
-            merged = merge_aggregate(obj_a, obj_b)
-        elif strategy == 'overwrite':
-            merged = merge_overwrite(obj_a, obj_b)
-        else:
-            log.warning('unknown merging strategy {0}, '
-                        'fallback to recurse'.format(strategy))
-            merged = merge_recurse(obj_a, obj_b)
-
-        return merged
 
     def compile_pillar(self, ext=True, pillar_dirs=None):
         '''
@@ -594,7 +553,8 @@ class Pillar(object):
                 self.opts['pillar'] = self.ext_pillar({}, pillar_dirs)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
-                pillar = self.merge_sources(pillar, self.opts['pillar'])
+                pillar = merge(pillar, self.opts['pillar'],
+                               self.merge_strategy)
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
