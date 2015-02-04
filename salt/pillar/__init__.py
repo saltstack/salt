@@ -423,8 +423,11 @@ class Pillar(object):
                                         key: nstate
                                     }
 
-                                state = merge(state, nstate,
-                                              self.merge_strategy)
+                                state = merge(
+                                    state,
+                                    nstate,
+                                    self.merge_strategy,
+                                    self.opts.get('renderer', 'yaml'))
 
                             if err:
                                 errors += err
@@ -457,7 +460,11 @@ class Pillar(object):
                             )
                         )
                         continue
-                    pillar = merge(pillar, pstate, self.merge_strategy)
+                    pillar = merge(
+                        pillar,
+                        pstate,
+                        self.merge_strategy,
+                        self.opts.get('renderer', 'yaml'))
 
         return pillar, errors
 
@@ -539,7 +546,11 @@ class Pillar(object):
                                 )
                             )
             if ext:
-                pillar = merge(pillar, ext, self.merge_strategy)
+                pillar = merge(
+                    pillar,
+                    ext,
+                    self.merge_strategy,
+                    self.opts.get('renderer', 'yaml'))
                 ext = None
         return pillar
 
@@ -553,8 +564,10 @@ class Pillar(object):
                 self.opts['pillar'] = self.ext_pillar({}, pillar_dirs)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
-                pillar = merge(pillar, self.opts['pillar'],
-                               self.merge_strategy)
+                pillar = merge(pillar,
+                               self.opts['pillar'],
+                               self.merge_strategy,
+                               self.opts.get('renderer', 'yaml'))
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
