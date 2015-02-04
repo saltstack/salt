@@ -606,6 +606,7 @@ def backup_minion(path, bkroot):
     shutil.copyfile(path, bkpath)
     if not salt.utils.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
+        os.chmod(bkpath, fstat.st_mode)
 
 
 def path_join(*parts):
