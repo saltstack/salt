@@ -435,17 +435,40 @@ def vmstats():
 
         salt '*' status.vmstats
     '''
-    procf = '/proc/vmstat'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        ret[comps[0]] = _number(comps[1])
-    return ret
+    def linux_vmstats():
+        '''
+        linux specific implementation of vmstats
+        '''
+        procf = '/proc/vmstat'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            ret[comps[0]] = _number(comps[1])
+        return ret
+
+    def freebsd_vmstats():
+        '''
+        freebsd specific implementation of vmstats
+        '''
+        ret = {}
+        for line in __salt__['cmd.run']('vmstat -s').splitlines():
+            comps = line.split()
+            if comps[0].isdigit():
+                ret[' '.join(comps[1:])] = _number(comps[0])
+        return ret
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_vmstats,
+        'FreeBSD': freebsd_vmstats,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def nproc():
