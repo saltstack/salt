@@ -298,7 +298,7 @@ def load_states():
     # create our own loader that ignores __virtual__()
     pack = {'name': '__salt__',
             'value': __salt__}
-    lazy_states = salt.loader.NewLazyLoader(
+    lazy_states = salt.loader.LazyLoader(
         salt.loader._module_dirs(__opts__, 'states', 'states'),
         __opts__,
         tag='states',
