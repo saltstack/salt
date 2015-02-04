@@ -233,6 +233,7 @@ from salt.utils.process import os_is_running
 # Import 3rd-party libs
 import yaml
 import salt.ext.six as six
+
 # pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
@@ -522,7 +523,7 @@ class Schedule(object):
         argspec = salt.utils.args.get_function_argspec(self.functions[func])
         if argspec.keywords:
             # this function accepts **kwargs, pack in the publish data
-            for key, val in ret.iteritems():
+            for key, val in six.iteritems(ret):
                 kwargs['__pub_{0}'.format(key)] = val
 
         try:
