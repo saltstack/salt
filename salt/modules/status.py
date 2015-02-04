@@ -505,7 +505,8 @@ def netstats():
         '''
         ret = {}
         for line in __salt__['cmd.run']('netstat -s').splitlines():
-            if line.startswith('\t\t'): continue  # Skip, too detailed
+            if line.startswith('\t\t'):
+                continue  # Skip, too detailed
             if not line.startswith('\t'):
                 key = line.split()[0]
                 ret[key] = {}
@@ -523,7 +524,6 @@ def netstats():
 
     errmsg = 'This method is unsupported on the current operating system!'
     return get_version.get(__grains__['kernel'], lambda: errmsg)()
-
 
 
 def netdev():
