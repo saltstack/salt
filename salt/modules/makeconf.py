@@ -179,7 +179,7 @@ def get_var(var):
     makeconf = _get_makeconf()
     # Open makeconf
     with salt.utils.fopen(makeconf) as fn_:
-        conf_file = fn_.readlines()
+        conf_file = fn_.read().splitlines()
     for line in conf_file:
         if line.startswith(var):
             ret = line.split('=', 1)[1].replace('"', '')
