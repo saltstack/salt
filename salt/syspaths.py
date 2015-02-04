@@ -62,7 +62,7 @@ ROOT_DIR = __generated_syspaths.ROOT_DIR
 if ROOT_DIR is None:
     # The installation time value was not provided, let's define the default
     if __PLATFORM.startswith('win'):
-        ROOT_DIR = r'c:\salt' or '/'
+        ROOT_DIR = r'c:\salt'
     else:
         ROOT_DIR = '/'
 
