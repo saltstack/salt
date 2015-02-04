@@ -229,7 +229,7 @@ def mounted(name,
                     if opt not in active[real_name]['opts'] \
                     and opt not in active[real_name]['superopts'] \
                     and opt not in mount_invisible_options \
-                    and opt not in mount_ignore_fs_keys.get(fstype, []) :
+                    and opt not in mount_ignore_fs_keys.get(fstype, []):
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options ({0}) changed".format(opt)
