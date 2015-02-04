@@ -1068,14 +1068,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
             funcs['{0}.{1}'.format(module_name, funcname)] = func
             self._apply_outputter(func, mod)
-        # TODO: verify context??
-        try:
-            context = sys.modules[
-                self._dict[next(self._dict.iterkeys())].__module__
-            ].__context__
-        except (AttributeError, StopIteration):
-            context = {}
-        mod.__context__ = context
+        # TODO: global context to actually share? Right now a few people pass
+        # it in "pack" which seems bad...
+        # if you don't have context, try to find someone who does
+        if not hasattr(mod, '__context__'):
+            try:
+                context = sys.modules[
+                    self._dict[next(self._dict.iterkeys())].__module__
+                ].__context__
+            except (AttributeError, StopIteration):
+                context = {}
+            mod.__context__ = context
         self._dict.update(funcs)
 
         # enforce depends
