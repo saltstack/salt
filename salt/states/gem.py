@@ -185,3 +185,72 @@ def removed(name, ruby=None, runas=None, user=None):
         ret['result'] = False
         ret['comment'] = 'Could not remove gem.'
     return ret
+
+def sources_add(name, ruby=None, user=None):
+    '''
+    Make sure that a gem source is added.
+
+    name
+        The URL of the gem source to be added
+
+    ruby: None
+        For RVM or rbenv installations: the ruby version and gemset to target.
+
+    user: None
+        The user under which to run the ``gem`` command
+
+        .. versionadded:: 0.17.0
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if name in __salt__['gem.sources_list'](ruby, runas=user):
+       ret['result'] = True
+       ret['comment'] = 'Gem source is already added.'
+       return ret
+    if __opts__['test']:
+       ret['comment'] = 'The gem source {0} would have been removed.'.format(name)
+       return ret
+    if __salt__['gem.sources_add'](source_uri=name, ruby=ruby, runas=user):
+       ret['result'] = True
+       ret['changes'][name] = 'Installed'
+       ret['comment'] = 'Gem source was successfully added.'
+    else:
+       ret['result'] = False
+       ret['comment'] = 'Could not add gem source.'
+    return ret
+
+def sources_remove(name, ruby=None, user=None):
+    '''
+    Make sure that a gem source is removed.
+
+    name
+        The URL of the gem source to be removed
+
+    ruby: None
+        For RVM or rbenv installations: the ruby version and gemset to target.
+
+    user: None
+        The user under which to run the ``gem`` command
+
+        .. versionadded:: 0.17.0
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if name not in __salt__['gem.sources_list'](ruby, runas=user):
+       ret['result'] = True
+       ret['comment'] = 'Gem source is already removed.'
+       return ret
+
+    if __opts__['test']:
+       ret['comment'] = 'The gem source would have been removed'
+       return ret
+
+    if __salt__['gem.sources_remove'](source_uri=name, ruby=ruby, runas=user):
+       ret['result'] = True
+       ret['changes'][name] = 'Removed'
+       ret['comment'] = 'Gem source was successfully removed.'
+    else:
+       ret['result'] = False
+       ret['comment'] = 'Could not remove gem source.'
+    return ret
+
