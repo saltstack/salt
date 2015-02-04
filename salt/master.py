@@ -2159,7 +2159,7 @@ class ClearFuncs(object):
             if name in self.opts['external_auth'][extra['eauth']]:
                 auth_list = self.opts['external_auth'][extra['eauth']][name]
             if group_auth_match:
-                auth_list.append(self.ckminions.gather_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list))
+                auth_list = self.ckminions.fill_auth_list_from_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list)
 
             good = self.ckminions.auth_check(
                 auth_list,

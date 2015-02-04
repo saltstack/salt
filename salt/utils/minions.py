@@ -630,23 +630,18 @@ class CkMinions(object):
             return False
         return False
 
-    def gather_groups(self, auth_provider, user_groups, auth_list):
+    def fill_auth_list_from_groups(self, auth_provider, user_groups, auth_list):
         '''
-        Returns the list of groups, if any, for a given authentication provider type
-
-        Groups are defined as any dict in which a key has a trailing '%'
+        Returns a list of authorisation matchers that a user is eligible for.
+        This list is a combination of the provided personal matchers plus the
+        matchers of any group the user is in.
         '''
-        group_perm_keys = filter(lambda(item): item.endswith('%'), auth_provider)
-        groups = {}
-        if group_perm_keys:
-            for group_perm in group_perm_keys:
-                for matcher in auth_provider[group_perm]:
-                    if group_perm[:-1] in user_groups:
-                        groups[group_perm] = matcher
-        else:
-            return None
-        for item in groups.itervalues():
-            auth_list.append(item)
+        group_names = [item for item in auth_provider if item.endswith('%')]
+        if group_names:
+            for group_name in group_names:
+                if group_name.rstrip("%") in user_groups:
+                    for matcher in auth_provider[group_name]:
+                        auth_list.append(matcher)
         return auth_list
 
     def wheel_check(self, auth_list, fun):
