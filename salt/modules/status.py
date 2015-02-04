@@ -378,7 +378,7 @@ def diskstats():
             comps = line.split()
             ret[comps[0]] = {}
             for metric, value in zip(header.split()[1:], comps[1:]):
-                ret[comps[0]][metric] = value
+                ret[comps[0]][metric] = _number(value)
         return ret
 
     # dict that return a function that does the right thing per platform
