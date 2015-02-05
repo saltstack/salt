@@ -732,8 +732,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
 
-        self.initial_load = True
-
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = []
         self.loaded_files = []  # TODO: just remove them from file_mapping?
@@ -796,7 +794,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         super(LazyLoader, self).clear()  # clear the lazy loader
         self.loaded_files = []
         self.missing_modules = []
-        self.initial_load = False
 
     def __prep_mod_opts(self, opts):
         '''
@@ -860,30 +857,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if mod_name not in k:
                 yield k
 
-    def _reload_submodules(self, name, mod):
-        submodules = [
-            getattr(mod, sname) for sname in dir(mod) if
-            isinstance(getattr(mod, sname), mod.__class__)
-        ]
-
-        # reload only custom "sub"modules i.e. is a submodule in
-        # parent module that are still available on disk (i.e. not
-        # removed during sync_modules)
-        for submodule in submodules:
-            try:
-                smname = '{0}.{1}.{2}'.format(
-                    self.loaded_base_name,
-                    self.tag,
-                    name,
-                )
-                smfile = '{0}.py'.format(
-                    os.path.splitext(submodule.__file__)[0],
-                )
-                if submodule.__name__.startswith(smname) and os.path.isfile(smfile):
-                    reload(submodule)
-            except AttributeError:
-                continue
-
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name]
@@ -901,11 +874,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             self.tag,
                             name
                         ), fn_, fpath, desc)
-                # TODO: enable? This isn't useful until we allow "sub"modules
-                # which we don't today
-                # reload all submodules if necessary
-                if not self.initial_load and False:
-                    self._reload_submodules(name, mod)
 
         except IOError:
             raise
