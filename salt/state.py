@@ -57,6 +57,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'order',
     'prereq',
     'prereq_in',
+    'prerequired',
     'reload_modules',
     'reload_grains',
     'reload_pillar',
@@ -78,6 +79,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     '__pub_tgt',
     '__pub_ret',
     '__pub_tgt_type',
+    '__prereq__',
 ])
 
 
