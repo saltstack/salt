@@ -20,8 +20,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import match
-import __builtin__
-
+import salt.ext.six.moves.builtins as __builtin__
 
 # Globals
 match.__grains__ = {}
