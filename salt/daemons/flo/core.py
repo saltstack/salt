@@ -1338,20 +1338,6 @@ class SaltRaetRouterMinion(SaltRaetRouter):
         return list(set(minions) &
                     set((name.rstrip(suffix) for name in self.availables.value)))
 
-    def action(self):
-        '''
-        Process the messages!
-        '''
-        while self.road_stack.value.rxMsgs:
-            msg, sender = self.road_stack.value.rxMsgs.popleft()
-            self._process_udp_rxmsg(msg=msg, sender=sender)
-        while self.laters.value:  # process requeued LaneMsgs
-            msg, sender = self.laters.value.popleft()
-            self.lane_stack.value.rxMsgs.append((msg, sender))
-        while self.lane_stack.value.rxMsgs:
-            msg, sender = self.lane_stack.value.rxMsgs.popleft()
-            self._process_uxd_rxmsg(msg=msg, sender=sender)
-
 
 class SaltRaetEventer(ioflo.base.deeding.Deed):
     '''
