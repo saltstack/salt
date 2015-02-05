@@ -146,6 +146,7 @@ class Pillar(object):
             self.merge_strategy = opts['pillar_source_merging_strategy']
 
         self.ext_pillars = salt.loader.pillars(ext_pillar_opts, self.functions)
+        self.ignored_pillars = {}
         self.pillar_override = {}
         if pillar is not None:
             if isinstance(pillar, dict):
