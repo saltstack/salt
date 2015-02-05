@@ -700,6 +700,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  singleton=True,
                  ):  # pylint: disable=W0231
         self.opts = self.__prep_mod_opts(opts)
+        self.singleton = singleton
 
     # an init for the singleton instance to call
     def __singleton_init__(self,
@@ -826,6 +827,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         mod = super(LazyLoader, self).__getitem__(key)
 
+        # if we aren't a singleton, we don't have to worry about these changing
+        if not self.singleton:
+            return mod
+
         if '__opts__' in mod.__globals__:
             mod.__globals__['__opts__'].update(self.opts)
         else:
@@ -895,6 +900,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             self.tag,
                             name
                         ), fn_, fpath, desc)
+                # TODO: enable? This isn't useful until we allow "sub"modules
+                # which we don't today
                 # reload all submodules if necessary
                 if not self.initial_load and False:
                     self._reload_submodules(name, mod)
