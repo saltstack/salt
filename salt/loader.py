@@ -61,8 +61,7 @@ def _module_dirs(
         ext_dirs=True,
         ext_type_dirs=None,
         base_path=None,
-        loaded_base_name=None,
-        mod_type_check=None):
+        ):
     sys_types = os.path.join(base_path or SALT_BASE_PATH, int_type or ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
 
@@ -85,12 +84,6 @@ def _module_dirs(
         maybe_dir = os.path.join(_dir, '_{0}'.format(ext_type))
         if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
-
-    if loaded_base_name is None:
-        loaded_base_name = LOADED_BASE_NAME
-
-    if mod_type_check is None:
-        mod_type_check = _mod_type
 
     return cli_module_dirs + ext_type_types + [ext_types, sys_types]
 
