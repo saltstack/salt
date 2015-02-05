@@ -381,9 +381,6 @@ def diskusage(*args):
         salt '*' status.diskusage ext?    # usage for ext[234] filesystems
         salt '*' status.diskusage / ext?  # usage for / and all ext filesystems
     '''
-    procf = '/proc/mounts'
-    if not os.path.isfile(procf):
-        return {}
     selected = set()
     fstypes = set()
     if not args:
@@ -405,14 +402,22 @@ def diskusage(*args):
                 fnmatch.translate(fstype).format('(%s)') for fstype in fstypes
             )
         )
-        with salt.utils.fopen(procf, 'r') as ifile:
-            for line in ifile:
-                comps = line.split()
-                if len(comps) >= 3:
-                    mntpt = comps[1]
-                    fstype = comps[2]
-                    if regex.match(fstype):
-                        selected.add(mntpt)
+        # ifile source of data varies with OS, otherwise all the same
+        if __grains__['kernel'] == 'Linux':
+            procf = '/proc/mounts'
+            if not os.path.isfile(procf):
+                return {}
+            ifile = salt.utils.fopen(procf, 'r').readlines()
+        elif __grains__['kernel'] == 'FreeBSD':
+            ifile = __salt__['cmd.run']('mount -p').splitlines()
+
+        for line in ifile:
+            comps = line.split()
+            if len(comps) >= 3:
+                mntpt = comps[1]
+                fstype = comps[2]
+                if regex.match(fstype):
+                    selected.add(mntpt)
 
     # query the filesystems disk usage
     ret = {}
