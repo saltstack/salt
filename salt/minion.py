@@ -2426,7 +2426,7 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
-        if not isinstance(tgt, str):
+        if not isinstance(tgt, basestring):
             return False
 
         return fnmatch.fnmatch(self.opts['id'], tgt)
