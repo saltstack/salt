@@ -94,6 +94,11 @@ from   salt://map.sls  import     Samba
 Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
 '''
 
+import_as_template = '''#!pyobjects
+from salt://map.sls import Samba as Other
+Pkg.removed("samba-imported", names=[Other.server, Other.client])
+'''
+
 
 class StateTests(TestCase):
     def setUp(self):
@@ -301,6 +306,7 @@ class RendererTests(RendererMixin, TestCase):
         self.write_template_file("map.sls", map_template)
         render_and_assert(import_template)
         render_and_assert(from_import_template)
+        render_and_assert(import_as_template)
 
 
 class MapTests(RendererMixin, TestCase):
