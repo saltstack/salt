@@ -642,7 +642,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     # TODO:
         - move modules_max_memory into here
-        - re-enable singletons
+        - re-enable singletons (TODO: tests)
     '''
     instances = {}
 
@@ -1041,7 +1041,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         while True:
             try:
                 ret = _inner_load(mod_name)
-                if not reloaded:
+                if not reloaded and ret is not True:
                     self.refresh_file_mapping()
                     reloaded = True
                     continue
