@@ -940,7 +940,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self.missing_modules.append(module_name)
                 self.missing_modules.append(name)
                 # If a module has information about why it could not be loaded, record it
-                return False  # TODO Support virtual_errors here
+                return False
 
         # If this is a proxy minion then MOST modules cannot work. Therefore, require that
         # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
