@@ -338,30 +338,57 @@ def diskstats():
 
         salt '*' status.diskstats
     '''
-    procf = '/proc/diskstats'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        ret[comps[2]] = {'major': _number(comps[0]),
-                         'minor': _number(comps[1]),
-                         'device': _number(comps[2]),
-                         'reads_issued': _number(comps[3]),
-                         'reads_merged': _number(comps[4]),
-                         'sectors_read': _number(comps[5]),
-                         'ms_spent_reading': _number(comps[6]),
-                         'writes_completed': _number(comps[7]),
-                         'writes_merged': _number(comps[8]),
-                         'sectors_written': _number(comps[9]),
-                         'ms_spent_writing': _number(comps[10]),
-                         'io_in_progress': _number(comps[11]),
-                         'ms_spent_in_io': _number(comps[12]),
-                         'weighted_ms_spent_in_io': _number(comps[13])}
-    return ret
+    def linux_diskstats():
+        '''
+        linux specific implementation of diskstats
+        '''
+        procf = '/proc/diskstats'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            ret[comps[2]] = {'major': _number(comps[0]),
+                             'minor': _number(comps[1]),
+                             'device': _number(comps[2]),
+                             'reads_issued': _number(comps[3]),
+                             'reads_merged': _number(comps[4]),
+                             'sectors_read': _number(comps[5]),
+                             'ms_spent_reading': _number(comps[6]),
+                             'writes_completed': _number(comps[7]),
+                             'writes_merged': _number(comps[8]),
+                             'sectors_written': _number(comps[9]),
+                             'ms_spent_writing': _number(comps[10]),
+                             'io_in_progress': _number(comps[11]),
+                             'ms_spent_in_io': _number(comps[12]),
+                             'weighted_ms_spent_in_io': _number(comps[13])}
+        return ret
+
+    def freebsd_diskstats():
+        '''
+        freebsd specific implementation of diskstats
+        '''
+        ret = {}
+        iostat = __salt__['cmd.run']('iostat -xzd').splitlines()
+        header = iostat[1]
+        for line in iostat[2:]:
+            comps = line.split()
+            ret[comps[0]] = {}
+            for metric, value in zip(header.split()[1:], comps[1:]):
+                ret[comps[0]][metric] = _number(value)
+        return ret
+
+    # dict that return a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_diskstats,
+        'FreeBSD': freebsd_diskstats,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def diskusage(*args):
