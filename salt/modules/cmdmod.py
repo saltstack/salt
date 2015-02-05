@@ -698,7 +698,7 @@ def shell(cmd,
 
     .. code-block:: bash
 
-        salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
+        salt '*' cmd.shell "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
@@ -706,13 +706,13 @@ def shell(cmd,
 
     .. code-block:: bash
 
-        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+        salt '*' cmd.shell template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     Specify an alternate shell with the shell parameter:
 
     .. code-block:: bash
 
-        salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
+        salt '*' cmd.shell "Get-ChildItem C:\\ " shell='powershell'
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
@@ -720,7 +720,7 @@ def shell(cmd,
 
     .. code-block:: bash
 
-        salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
+        salt '*' cmd.shell "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -729,9 +729,9 @@ def shell(cmd,
 
     .. code-block:: bash
 
-        salt '*' cmd.run cmd='sed -e s/=/:/g'
+        salt '*' cmd.shell cmd='sed -e s/=/:/g'
     '''
-    run(cmd,
+    return run(cmd,
         cwd=cwd,
         stdin=stdin,
         runas=runas,
