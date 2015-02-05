@@ -185,7 +185,12 @@ def get_var(var):
         conf_file = fn_.readlines()
     for line in conf_file:
         if line.startswith(var):
-            ret = line.split('=', 1)[1].replace('"', '')
+            ret = line.split('=', 1)[1]
+            if '"' in ret:
+                ret = ret.split('"')[1]
+            elif '#' in ret:
+                ret = ret.split('#')[0]
+            ret = ret.strip()
             return ret
     return None
 
