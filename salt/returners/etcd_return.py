@@ -116,7 +116,7 @@ def get_load(jid):
     Return the load data that marks a specified jid
     '''
     client, path = _get_conn(__opts__)
-    return json.loads(client.get('/'.join(path, 'jobs', jid, '.load.p')))
+    return json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
 
 
 def get_jid(jid):
