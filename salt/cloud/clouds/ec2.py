@@ -1116,13 +1116,7 @@ def _create_eni_if_necessary(interface):
             'No such subnet <{0}>'.format(interface['SubnetId'])
         )
 
-    if 'AssociatePublicIpAddress' in interface:
-        # Associating a public address in a VPC only works when the interface is not
-        # created beforehand, but as a part of the machine creation request.
-        return interface
-
-    params = {'Action': 'CreateNetworkInterface',
-              'SubnetId': interface['SubnetId']}
+    params = {'SubnetId': interface['SubnetId']}
 
     for k in ('Description', 'PrivateIpAddress',
               'SecondaryPrivateIpAddressCount'):
@@ -1132,6 +1126,17 @@ def _create_eni_if_necessary(interface):
     for k in ('PrivateIpAddresses', 'SecurityGroupId'):
         if k in interface:
             params.update(_param_from_config(k, interface[k]))
+
+    if 'AssociatePublicIpAddress' in interface:
+        # Associating a public address in a VPC only works when the interface is not
+        # created beforehand, but as a part of the machine creation request.
+        for k in ('DeviceIndex', 'AssociatePublicIpAddress', 'NetworkInterfaceId'):
+            if k in interface:
+                params[k] = interface[k]
+        params['DeleteOnTermination'] = interface.get('delete_interface_on_terminate', True)
+        return params
+
+    params['Action'] = 'CreateNetworkInterface'
 
     result = aws.query(params,
                        return_root=True,
