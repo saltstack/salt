@@ -138,10 +138,24 @@ class LazyLoaderWhitelistTest(TestCase):
         with self.assertRaises(KeyError):
             self.loader['grains.get']
 
+
 module_template = '''
-test_module = True
+__load__ = ['test']
+from salt.utils.decorators import depends
+
 def test():
     return {count}
+
+def test2():
+    return True
+
+@depends('non_existantmodulename')
+def test3():
+    return True
+
+@depends('non_existantmodulename', fallback_function=test)
+def test4():
+    return True
 '''
 
 
@@ -175,7 +189,8 @@ class LazyLoaderReloadingTest(TestCase):
             os.fsync(fh.fileno())  # flush to disk
 
         # pyc files don't like it when we change the original quickly
-        # TODO: don't write them?
+        # since the header bytes only contain the timestamp (granularity of seconds)
+        # TODO: don't write them? Is *much* slower on re-load (~3x)
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
         try:
             os.unlink(self.module_path + 'c')
@@ -184,10 +199,24 @@ class LazyLoaderReloadingTest(TestCase):
 
     def rm_module(self):
         os.unlink(self.module_path)
+        os.unlink(self.module_path + 'c')
 
     @property
     def module_path(self):
         return os.path.join(self.tmp_dir, '{0}.py'.format(self.module_name))
+
+    def test_clear(self):
+        self.assertTrue(inspect.isfunction(self.loader['test.ping']))
+        self.update_module()  # write out out custom module
+        self.loader.clear()  # clear the loader dict
+
+        # force a load of our module
+        self.assertTrue(inspect.isfunction(self.loader[self.module_key]))
+
+        # make sure we only loaded our custom module
+        # which means that we did correctly refresh the file mapping
+        for k, v in self.loader._dict.iteritems():
+            self.assertTrue(k.startswith(self.module_name))
 
     def test_load(self):
         # ensure it doesn't exist
@@ -196,6 +225,25 @@ class LazyLoaderReloadingTest(TestCase):
 
         self.update_module()
         self.assertTrue(inspect.isfunction(self.loader[self.module_key]))
+
+    def test__load__(self):
+        '''
+        If a module specifies __load__ we should only load/expose those modules
+        '''
+        self.update_module()
+        # ensure it doesn't exist
+        with self.assertRaises(KeyError):
+            self.loader[self.module_key + '2']
+
+    def test__load__and_depends(self):
+        '''
+        If a module specifies __load__ we should only load/expose those modules
+        '''
+        self.update_module()
+        # ensure it doesn't exist
+        with self.assertRaises(KeyError):
+            self.loader[self.module_key + '3']
+            self.loader[self.module_key + '4']
 
     def test_reload(self):
         # ensure it doesn't exist
