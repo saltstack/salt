@@ -733,7 +733,6 @@ def hardlink(
         name,
         target,
         force=False,
-        backupname=None,
         makedirs=False,
         user=None,
         group=None,
@@ -760,12 +759,6 @@ def hardlink(
         True, the file or directory in the way of the hard link file
         will be deleted to make room for the hard link, unless
         backupname is set, when it will be renamed
-
-    backupname
-        If the name of the hard link exists, it will be
-        renamed to the backupname. If the backupname already
-        exists and force is False, the state will fail. Otherwise, the
-        backupname will be removed first.
 
     makedirs
         If the location of the hard link does not already have a parent directory
@@ -851,48 +844,25 @@ def hardlink(
                     os.path.dirname(name)
                 )
             )
-    if __salt__['file.is_link'](name):
-        # The link exists, verify that it matches the target
-        if __salt__['file.readlink'](name) != target:
-            # The target is wrong, delete the link
-            os.remove(name)
+
+        if _check_hardlink_ownership(name, user, group):
+            # The link looks good!
+            ret['comment'] = ('hard link {0} is present and owned by '
+                              '{1}:{2}'.format(name, user, group))
         else:
-            if _check_hardlink_ownership(name, user, group):
-                # The link looks good!
-                ret['comment'] = ('hard link {0} is present and owned by '
+            if _set_hardlink_ownership(name, user, group):
+                ret['comment'] = ('Set ownership of hard link {0} to '
                                   '{1}:{2}'.format(name, user, group))
+                ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
             else:
-                if _set_hardlink_ownership(name, user, group):
-                    ret['comment'] = ('Set ownership of hard link {0} to '
-                                      '{1}:{2}'.format(name, user, group))
-                    ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
-                else:
-                    ret['result'] = False
-                    ret['comment'] += (
-                        'Failed to set ownership of hard link {0} to '
-                        '{1}:{2}'.format(name, user, group)
-                    )
+                ret['result'] = False
+                ret['comment'] += (
+                    'Failed to set ownership of hard link {0} to '
+                    '{1}:{2}'.format(name, user, group)
+                )
             return ret
 
     elif os.path.isfile(name) or os.path.isdir(name):
-        # It is not a link, but a file or dir
-        if backupname is not None:
-            # Make a backup first
-            if os.path.lexists(backupname):
-                if not force:
-                    return _error(ret, ((
-                        'File exists where the backup target {0} should go'
-                    ).format(backupname)))
-                elif os.path.isfile(backupname):
-                    os.remove(backupname)
-                elif os.path.isdir(backupname):
-                    shutil.rmtree(backupname)
-                else:
-                    return _error(ret, ((
-                        'Something exists where the backup target {0}'
-                        'should go'
-                    ).format(backupname)))
-            os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
             if os.path.isfile(name):
@@ -4367,3 +4337,4 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
 
     # No reason to stop, return True
     return True
+    
