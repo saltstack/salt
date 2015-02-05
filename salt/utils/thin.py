@@ -34,12 +34,12 @@ except ImportError:
 
 try:
     # Older python where the backport from pypi is installed
-    from backports.ssl_match_hostname import match_hostname
+    from backports import ssl_match_hostname
     HAS_SSL_MATCH_HOSTNAME = True
 except ImportError:
     # Other older python we use our bundled copy
     try:
-        from salt.ext.ssl_match_hostname import match_hostname
+        from salt.ext import ssl_match_hostname
         HAS_SSL_MATCH_HOSTNAME = True
     except ImportError:
         HAS_SSL_MATCH_HOSTNAME = False
