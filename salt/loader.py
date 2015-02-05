@@ -445,7 +445,7 @@ def grains(opts, force_refresh=False):
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
-    for key, fun in funcs.iteritems():
+    for key, fun in six.iteritems(funcs):
         if not key.startswith('core.'):
             continue
         ret = fun()
@@ -454,7 +454,7 @@ def grains(opts, force_refresh=False):
         grains_data.update(ret)
 
     # Run the rest of the grains
-    for key, fun in funcs.iteritems():
+    for key, fun in six.iteritems(funcs):
         if key.startswith('core.') or key == '_errors':
             continue
         try:
@@ -749,8 +749,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         if self.opts.get('cython_enable', True) is True:
             try:
-                import pyximport  # pylint: disable=import-error
-                pyximport.install()
+                self.pyximport = __import__('pyximport')  # pylint: disable=import-error
+                self.pyximport.install()
                 # add to suffix_map so file_mapping will pick it up
                 self.suffix_map['.pyx'] = tuple()
             except ImportError:
@@ -859,7 +859,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.loaded_files.append(name)
         try:
             if suffix == '.pyx':
-                mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
+                mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
             else:
                 desc = self.suffix_map[suffix]
                 with open(fpath, desc[1]) as fn_:
@@ -908,7 +908,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         mod.__pillar__ = self.pillar
 
         # pack whatever other globals we were asked to
-        for p_name, p_value in self.pack.iteritems():
+        for p_name, p_value in six.iteritems(self.pack):
             setattr(mod, p_name, p_value)
 
         # Call a module's initialization method if it exists
