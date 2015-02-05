@@ -55,6 +55,10 @@ def installed(name,
     name
         The package to install
 
+        .. versionchanged:: 2014.7.2
+            This parameter is no longer lowercased by salt so that
+            case-sensitive NPM package names will work.
+
     pkgs
         A list of packages to install with a single npm invocation; specifying
         this argument will ignore the ``name`` argument
@@ -128,14 +132,14 @@ def installed(name,
         ret['comment'] = 'Error looking up {0!r}: {1}'.format(name, err)
         return ret
     else:
-        installed_pkgs = dict((p.lower(), info)
+        installed_pkgs = dict((p, info)
                 for p, info in installed_pkgs.items())
 
     pkgs_satisfied = []
     pkgs_to_install = []
     for pkg in pkg_list:
         pkg_name, _, pkg_ver = pkg.partition('@')
-        pkg_name = pkg_name.strip().lower()
+        pkg_name = pkg_name.strip()
 
         if force_reinstall is True:
             pkgs_to_install.append(pkg)
