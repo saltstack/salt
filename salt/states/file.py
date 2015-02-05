@@ -732,7 +732,7 @@ def _get_template_texts(source_list=None,
 def hardlink(
         name,
         target,
-        force=False
+        force=False,
         backupname=None,
         makedirs=False,
         user=None,
