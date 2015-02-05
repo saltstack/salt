@@ -392,8 +392,8 @@ class merger(object):
                         crd[ret[nk]] = []
                     crd[ret[nk]].append(ret[self.num_fields-1])
                 else:
-                    # No clobber checks then
-                    crd[ret[nk]] = ret[self.num_fields-1]
+                    if not self.ignore_null or ret[self.num_fields-1] is not None:
+                        crd[ret[nk]] = ret[self.num_fields-1]
             else:
                 # Otherwise, the field name is the key but we have a spare.
                 # The spare results because of {c: d} vs {c: {"d": d, "e": e }}
@@ -426,7 +426,8 @@ class merger(object):
                         else:
                             crd[nk] = [crd[nk], ret[i]]
                     else:
-                        crd[nk] = ret[i]
+                        if not self.ignore_null or ret[i] is not None:
+                            crd[nk] = ret[i]
         # Get key list and work backwards.  This is inner-out processing
         ks = listify_dicts.keys()
         ks.reverse()
