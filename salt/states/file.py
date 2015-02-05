@@ -548,11 +548,26 @@ def _get_symlink_ownership(path):
     )
 
 
+def _get_hardlink_ownership(path):
+    return (
+        __salt__['file.get_user'](path),
+        __salt__['file.get_group'](path)
+    )
+
+
 def _check_symlink_ownership(path, user, group):
     '''
     Check if the symlink ownership matches the specified user and group
     '''
     cur_user, cur_group = _get_symlink_ownership(path)
+    return (cur_user == user) and (cur_group == group)
+
+
+def _check_hardlink_ownership(path, user, group):
+    '''
+    Check if the hard link ownership matches the specified user and group
+    '''
+    cur_user, cur_group = _get_hardlink_ownership(path)
     return (cur_user == user) and (cur_group == group)
 
 
@@ -566,6 +581,18 @@ def _set_symlink_ownership(path, user, group):
     except OSError:
         pass
     return _check_symlink_ownership(path, user, group)
+
+
+def _set_hardlink_ownership(path, user, group):
+    '''
+    Set the ownership of a hardlink and return a boolean indicating
+    success/failure
+    '''
+    try:
+        __salt__['file.lchown'](path, user, group)
+    except OSError:
+        pass
+    return _check_hardlink_ownership(path, user, group)
 
 
 def _symlink_check(name, target, force, user, group):
@@ -705,6 +732,7 @@ def _get_template_texts(source_list=None,
 def hardlink(
         name,
         target,
+        force=False
         backupname=None,
         makedirs=False,
         user=None,
@@ -805,7 +833,7 @@ def hardlink(
         return _error(ret, msg)
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = _hard link_check(name, target, force,
+        ret['result'], ret['comment'] = _hardlink_check(name, target, force,
                                                        user, group)
         return ret
 
@@ -829,12 +857,12 @@ def hardlink(
             # The target is wrong, delete the link
             os.remove(name)
         else:
-            if _check_hard link_ownership(name, user, group):
+            if _check_hardlink_ownership(name, user, group):
                 # The link looks good!
                 ret['comment'] = ('hard link {0} is present and owned by '
                                   '{1}:{2}'.format(name, user, group))
             else:
-                if _set_hard link_ownership(name, user, group):
+                if _set_hardlink_ownership(name, user, group):
                     ret['comment'] = ('Set ownership of hard link {0} to '
                                       '{1}:{2}'.format(name, user, group))
                     ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
@@ -897,8 +925,8 @@ def hardlink(
                               '{1}'.format(name, target))
             ret['changes']['new'] = name
 
-        if not _check_hard link_ownership(name, user, group):
-            if not _set_hard link_ownership(name, user, group):
+        if not _check_hardlink_ownership(name, user, group):
+            if not _set_hardlink_ownership(name, user, group):
                 ret['result'] = False
                 ret['comment'] += (', but was unable to set ownership to '
                                    '{0}:{1}'.format(user, group))
