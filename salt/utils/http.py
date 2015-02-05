@@ -42,6 +42,7 @@ import salt.loader
 import salt.config
 from salt.template import compile_template
 from salt import syspaths
+from salt import version
 
 # Import 3rd party libs
 try:
@@ -59,6 +60,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 JARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.txt')
 SESSIONJARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.session.p')
+USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
 
 
 def query(url,
@@ -100,6 +102,7 @@ def query(url,
           decode_out=None,
           stream=False,
           handle=False,
+          agent=USERAGENT,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -208,6 +211,10 @@ def query(url,
             sess_cookies.save()
         else:
             sess_cookies.load()
+
+    if agent == USERAGENT:
+        agent = '{0} http.query()'.format(agent)
+    header_dict['User-agent'] = agent
 
     if test is True:
         if test_url is None:
