@@ -793,6 +793,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         super(LazyLoader, self).clear()  # clear the lazy loader
         self.loaded_files = []
         self.missing_modules = []
+        # if we have been loaded before, lets clear the file mapping since
+        # we obviously want a re-do
+        if hasattr(self, 'opts'):
+            self.refresh_file_mapping()
 
     def __prep_mod_opts(self, opts):
         '''
