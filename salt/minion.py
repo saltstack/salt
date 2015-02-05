@@ -287,7 +287,8 @@ class SMinion(object):
             self.opts['environment']
         ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
-        self.function_errors = self.functions.pop('_errors')  # Keep the funcs clean
+        # TODO: remove
+        self.function_errors = {}  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
@@ -857,6 +858,9 @@ class Minion(MinionBase):
         if '_errors' in functions:
             errors = functions['_errors']
             functions.pop('_errors')
+
+        functions.clear()
+        returners.clear()
 
         # we're done, reset the limits!
         if modules_max_memory is True:

@@ -281,22 +281,22 @@ class SyncClientMixin(object):
 
         func_globals['__jid_event__'].fire_event(data, 'new')
 
-        # Inject some useful globals to *all* the funciton's global namespace
-        # only once per module-- not per func
-        completed_funcs = []
-        for mod_name in six.iterkeys(self.functions):
-            mod, _ = mod_name.split('.', 1)
-            if mod in completed_funcs:
-                continue
-            completed_funcs.append(mod)
-            for global_key, value in six.iteritems(func_globals):
-                if six.PY3:
-                    self.functions[fun].__globals__[global_key] = value
-                else:
-                    self.functions[fun].func_globals[global_key] = value  # pylint: disable=incompatible-py3-code
-
         try:
             self._verify_fun(fun)
+
+            # Inject some useful globals to *all* the funciton's global namespace
+            # only once per module-- not per func
+            completed_funcs = []
+            for mod_name in six.iterkeys(self.functions):
+                mod, _ = mod_name.split('.', 1)
+                if mod in completed_funcs:
+                    continue
+                completed_funcs.append(mod)
+                for global_key, value in six.iteritems(func_globals):
+                    if six.PY3:
+                        self.functions[fun].__globals__[global_key] = value
+                    else:
+                        self.functions[fun].func_globals[global_key] = value  # pylint: disable=incompatible-py3-code
 
             # There are some descrepencies of what a "low" structure is
             # in the publisher world it is a dict including stuff such as jid,

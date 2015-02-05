@@ -17,8 +17,14 @@ import salt
 import salt.version
 import salt.loader
 import salt.ext.six as six
+from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
+
+
+@depends('non_existantmodulename')
+def missing_func():
+    return 'foo'
 
 
 def echo(text):
