@@ -140,11 +140,15 @@ class LazyLoaderWhitelistTest(TestCase):
 
 
 module_template = '''
-__load__ = ['test']
+__load__ = ['test', 'test_alias']
+__func_alias__ = dict(test_alias='working_alias')
 from salt.utils.decorators import depends
 
 def test():
     return {count}
+
+def test_alias():
+    return True
 
 def test2():
     return True
@@ -204,6 +208,19 @@ class LazyLoaderReloadingTest(TestCase):
     @property
     def module_path(self):
         return os.path.join(self.tmp_dir, '{0}.py'.format(self.module_name))
+
+    def test_alias(self):
+        '''
+        Make sure that you can access alias-d modules
+        '''
+        # ensure it doesn't exist
+        with self.assertRaises(KeyError):
+            self.loader[self.module_key]
+
+        self.update_module()
+        with self.assertRaises(KeyError):
+            self.assertTrue(inspect.isfunction(self.loader['{0}.test_alias'.format(self.module_name)]))
+        self.assertTrue(inspect.isfunction(self.loader['{0}.working_alias'.format(self.module_name)]))
 
     def test_clear(self):
         self.assertTrue(inspect.isfunction(self.loader['test.ping']))
