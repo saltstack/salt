@@ -952,9 +952,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # if virtual modules are enabled, we need to look for the
         # __virtual__() function inside that module and run it.
         if self.virtual_enable:
-            (virtual_ret, module_name, _) = self.process_virtual(
-                                                                mod,
-                                                                module_name)
+            (virtual_ret, module_name, virtual_err) = self.process_virtual(
+                mod,
+                module_name,
+            )
+            if virtual_err is not None:
+                log.error('Error loading {0}.{1}: {2}'.format(self.tag,
+                                                              module_name,
+                                                              virtual_err,
+                                                              ))
 
             # if process_virtual returned a non-True value then we are
             # supposed to not process this module
@@ -1015,10 +1021,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         mod_name, _ = key.split('.', 1)
         if mod_name in self.missing_modules:
             return True
-        if self.whitelist:
-            # if the modulename isn't in the whitelist, don't bother
-            if mod_name not in self.whitelist:
-                raise KeyError
+        # if the modulename isn't in the whitelist, don't bother
+        if self.whitelist and mod_name not in self.whitelist:
+            raise KeyError
 
         def _inner_load(mod_name):
             for name in self._iter_files(mod_name):
@@ -1097,13 +1102,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # if they are not intended to run on the given platform or are missing
         # dependencies.
         try:
-            error_reasons = []
+            error_reason = None
             if hasattr(mod, '__virtual__') and inspect.isfunction(mod.__virtual__):
                 if self.opts.get('virtual_timer', False):
                     start = time.time()
                     virtual = mod.__virtual__()
                     if isinstance(virtual, tuple):
-                        error_reasons = virtual[1]
+                        error_reason = virtual[1]
                         virtual = virtual[0]
                     end = time.time() - start
                     msg = 'Virtual function took {0} seconds for {1}'.format(
@@ -1112,7 +1117,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 else:
                     virtual = mod.__virtual__()
                     if isinstance(virtual, tuple):
-                        error_reasons = virtual[1]
+                        error_reason = virtual[1]
                         virtual = virtual[0]
                 # Get the module's virtual name
                 virtualname = getattr(mod, '__virtualname__', virtual)
@@ -1134,7 +1139,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             )
                         )
 
-                    return (False, module_name, error_reasons)
+                    return (False, module_name, error_reason)
 
                 # At this point, __virtual__ did not return a
                 # boolean value, let's check for deprecated usage
@@ -1216,6 +1221,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
-            return (False, module_name, error_reasons)
+            return (False, module_name, error_reason)
 
-        return (True, module_name, [])
+        return (True, module_name, None)
