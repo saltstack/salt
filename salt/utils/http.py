@@ -40,9 +40,9 @@ import salt.utils
 import salt.utils.xmlutil as xml
 import salt.loader
 import salt.config
+import salt.version
 from salt.template import compile_template
 from salt import syspaths
-from salt import version
 
 # Import 3rd party libs
 try:
