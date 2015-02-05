@@ -38,6 +38,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
                          self.opts,
                          tag='modules',
                          )
+
     def test_basic(self):
         '''
         Ensure that it only loads stuff when needed
@@ -101,8 +102,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(func_globals['__foo__'], 'bar')
 
     def test_virtual(self):
-        with self.assertRaises(KeyError):
-            self.loader['test_virtual.ping']
+        self.assertNotIn('test_virtual.ping', self.loader)
 
 
 class LazyLoaderVirtualDisabledTest(TestCase):
@@ -116,6 +116,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
                          tag='modules',
                          virtual_enable=False,
                          )
+
     def test_virtual(self):
         self.assertTrue(inspect.isfunction(self.loader['test_virtual.ping']))
 
@@ -131,12 +132,12 @@ class LazyLoaderWhitelistTest(TestCase):
                          tag='modules',
                          whitelist=['test', 'pillar']
                          )
+
     def test_whitelist(self):
         self.assertTrue(inspect.isfunction(self.loader['test.ping']))
         self.assertTrue(inspect.isfunction(self.loader['pillar.get']))
 
-        with self.assertRaises(KeyError):
-            self.loader['grains.get']
+        self.assertNotIn('grains.get', self.loader)
 
 
 module_template = '''
@@ -169,6 +170,7 @@ class LazyLoaderReloadingTest(TestCase):
     '''
     module_name = 'loadertest'
     module_key = 'loadertest.test'
+
     def setUp(self):
         self.opts = _config = minion_config(None)
         self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
@@ -214,12 +216,10 @@ class LazyLoaderReloadingTest(TestCase):
         Make sure that you can access alias-d modules
         '''
         # ensure it doesn't exist
-        with self.assertRaises(KeyError):
-            self.loader[self.module_key]
+        self.assertNotIn(self.module_key, self.loader)
 
         self.update_module()
-        with self.assertRaises(KeyError):
-            self.assertTrue(inspect.isfunction(self.loader['{0}.test_alias'.format(self.module_name)]))
+        self.assertNotIn('{0}.test_alias'.format(self.module_name), self.loader)
         self.assertTrue(inspect.isfunction(self.loader['{0}.working_alias'.format(self.module_name)]))
 
     def test_clear(self):
@@ -237,8 +237,7 @@ class LazyLoaderReloadingTest(TestCase):
 
     def test_load(self):
         # ensure it doesn't exist
-        with self.assertRaises(KeyError):
-            self.loader[self.module_key]
+        self.assertNotIn(self.module_key, self.loader)
 
         self.update_module()
         self.assertTrue(inspect.isfunction(self.loader[self.module_key]))
@@ -248,9 +247,9 @@ class LazyLoaderReloadingTest(TestCase):
         If a module specifies __load__ we should only load/expose those modules
         '''
         self.update_module()
+
         # ensure it doesn't exist
-        with self.assertRaises(KeyError):
-            self.loader[self.module_key + '2']
+        self.assertNotIn(self.module_key + '2', self.loader)
 
     def test__load__and_depends(self):
         '''
@@ -258,14 +257,12 @@ class LazyLoaderReloadingTest(TestCase):
         '''
         self.update_module()
         # ensure it doesn't exist
-        with self.assertRaises(KeyError):
-            self.loader[self.module_key + '3']
-            self.loader[self.module_key + '4']
+        self.assertNotIn(self.module_key + '3', self.loader)
+        self.assertNotIn(self.module_key + '4', self.loader)
 
     def test_reload(self):
         # ensure it doesn't exist
-        with self.assertRaises(KeyError):
-            self.loader[self.module_key]
+        self.assertNotIn(self.module_key, self.loader)
 
         # make sure it updates correctly
         for x in xrange(1, 3):
@@ -277,5 +274,4 @@ class LazyLoaderReloadingTest(TestCase):
         # make sure that even if we remove the module, its still loaded until a clear
         self.assertEqual(self.loader[self.module_key](), self.count)
         self.loader.clear()
-        with self.assertRaises(KeyError):
-            self.loader[self.module_key]
+        self.assertNotIn(self.module_key, self.loader)

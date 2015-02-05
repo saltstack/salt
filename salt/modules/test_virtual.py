@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Module for running arbitrary tests
+Module for running arbitrary tests with a __virtual__ function
 '''
 from __future__ import absolute_import
 
-# expose all of the same functions as test
-from salt.modules.test import *
 
 def __virtual__():
     return False
 
+
+def test():
+    return True

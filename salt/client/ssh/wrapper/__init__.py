@@ -49,7 +49,7 @@ class FunctionWrapper(object):
         __getitem__ keys 0 and up until IndexError
         '''
         try:
-            self[key]
+            self[key]  # pylint: disable=W0104
             return True
         except KeyError:
             return False
