@@ -61,6 +61,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __pillar__
             - __grains__
             - __salt__
+            - __context__
         '''
         self._verify_globals(salt.loader.auth(self.master_opts))
 
@@ -71,6 +72,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __salt__
             - __opts__
             - __grains__
+            - __context__
         '''
         self._verify_globals(salt.loader.runner(self.master_opts))
 
@@ -81,6 +83,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __opts__
             - __pillar__
             - __grains__
+            - __context__
         '''
         self._verify_globals(salt.loader.returners(self.master_opts, {}))
 
@@ -91,6 +94,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __opts__
             - __pillar__
             - __grains__
+            - __context__
         '''
         self._verify_globals(salt.loader.pillars(self.master_opts, {}))
 
@@ -106,6 +110,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __opts__
             - __pillar__
             - __grains__
+            - __context__
         '''
         self._verify_globals(salt.loader.outputters(self.master_opts))
 
@@ -116,16 +121,18 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __salt__
             - __opts__
             - __grains__
+            - __context__
         '''
         self._verify_globals(salt.loader.states(self.master_opts, {}))
 
     def test_renderers(self):
         '''
         Test that renderers have:
-            - __salt__  # Execution functions (i.e. __salt__['test.echo']('foo'))
-            - __grains__ # Grains (i.e. __grains__['os'])
-            - __pillar__ # Pillar data (i.e. __pillar__['foo'])
-            - __opts__ # Minion configuration options
+            - __salt__    # Execution functions (i.e. __salt__['test.echo']('foo'))
+            - __grains__  # Grains (i.e. __grains__['os'])
+            - __pillar__  # Pillar data (i.e. __pillar__['foo'])
+            - __opts__    # Minion configuration options
+            - __context__ # Context dict shared amongst all modules of the same type
         '''
         self._verify_globals(salt.loader.render(self.master_opts, {}))
 
