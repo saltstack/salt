@@ -723,8 +723,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.tag = tag
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
-        if self.opts.get('grains_cache', False):
-            self.serial = salt.payload.Serial(self.opts)
 
         self.pack = {} if pack is None else pack
         if '__context__' not in self.pack:
@@ -742,10 +740,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.refresh_file_mapping()
 
         # create all of the import namespaces
-
-        if mod_type_check is None:
-            mod_type_check = _mod_type
-
         _generate_module('{0}.int'.format(self.loaded_base_name))
         _generate_module('{0}.int.{1}'.format(self.loaded_base_name, tag))
         _generate_module('{0}.ext'.format(self.loaded_base_name))
@@ -823,6 +817,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             mod_opts[key] = val
         return mod_opts
 
+    # TODO: stop this? seems bad...
     def __getitem__(self, key):
         '''
         When you get a module, make sure to pack the most recent opts/grains/pillar
@@ -952,7 +947,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_init(self.opts)
             except TypeError:
                 pass
-        funcs = {}
         module_name = mod.__name__.rsplit('.', 1)[-1]
 
         # if virtual modules are enabled, we need to look for the
@@ -1004,10 +998,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # It default's of course to the found callable attribute name
             # if no alias is defined.
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
-            funcs['{0}.{1}'.format(module_name, funcname)] = func
+            self._dict['{0}.{1}'.format(module_name, funcname)] = func
             self._apply_outputter(func, mod)
-
-        self._dict.update(funcs)
 
         # enforce depends
         Depends.enforce_dependencies(self._dict, self.tag)
