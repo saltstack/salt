@@ -138,8 +138,8 @@ renderer will take care of fetching the file for you, parsing it with all of
 the pyobjects features available and then place the requested objects in the
 global scope of the template being rendered.
 
-This works for both types of import statements, ``import X`` and
-``from X import Y``.
+This works for all types of import statements; ``import X``,
+``from X import Y``, and ``from X import Y as Z``.
 
 .. code-block:: python
    :linenos:
@@ -148,17 +148,16 @@ This works for both types of import statements, ``import X`` and
 
     import salt://myfile.sls
     from salt://something/data.sls import Object
+    from salt://something/data.sls import Object as Other
 
 
 See the Map Data section for a more practical use.
 
 Caveats:
 
-* You cannot use the ``as`` syntax, you can only import objects using their
-  existing name.
-
 * Imported objects are ALWAYS put into the global scope of your template,
   regardless of where your import statement is.
+
 
 Salt object
 ^^^^^^^^^^^
