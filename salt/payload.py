@@ -199,11 +199,11 @@ class SREQ(object):
         if hasattr(self, '_socket'):
             sockets = copy.copy(self.poller.sockets)
             if isinstance(self.poller.sockets, dict):
-                for socket in six.iterkeys(self.poller.sockets):
+                for socket in six.iterkeys(sockets):
                     log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket)
             else:
-                for socket in self.poller.sockets:
+                for socket in sockets:
                     log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket[0])
             del self._socket
@@ -244,7 +244,7 @@ class SREQ(object):
     def destroy(self):
         sockets = copy.copy(self.poller.sockets)
         if isinstance(sockets, dict):
-            for socket in six.iterkeys(self.poller.sockets):
+            for socket in six.iterkeys(sockets):
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()
