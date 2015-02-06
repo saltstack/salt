@@ -409,9 +409,12 @@ class TestDaemon(object):
 
         with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
-            ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
-            ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
-            ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
+            if not keygen_dsa_err:
+                ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
+            if not keygen_escda_err:
+                ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
+            if not keygen_ed25519_err:
+                ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
 
         self.sshd_pidfile = os.path.join(TMP_CONF_DIR, 'sshd.pid')
         self.sshd_process = subprocess.Popen(
