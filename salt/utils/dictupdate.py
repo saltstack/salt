@@ -8,9 +8,12 @@ from __future__ import absolute_import
 # Import python libs
 import collections
 import copy
+import logging
 import salt.ext.six as six
 from salt.utils.serializers.yamlex \
     import merge_recursive as _yamlex_merge_recursive
+
+log = logging.getLogger(__name__)
 
 
 def update(dest, upd):
