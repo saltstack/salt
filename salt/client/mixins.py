@@ -72,7 +72,7 @@ class ClientFuncsDict(collections.MutableMapping):
                    }
             pub_data = {}
             # pull out pub_data if you have it
-            for k, v in six.iteritems(list(kwargs.items())):
+            for k, v in six.iteritems(dict(kwargs)):
                 if k.startswith('__pub_'):
                     pub_data[k] = kwargs.pop(k)
 
