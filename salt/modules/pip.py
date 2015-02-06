@@ -266,6 +266,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     activate
         Activates the virtual environment, if given via bin_env,
         before running install.
+
+        .. deprecated:: 2014.7.2
+            If `bin_env` is given, pip will already be sourced from that
+            virualenv, making `activate` effectively a noop.
+
     pre_releases
         Include pre-releases in the available versions
     cert
@@ -314,6 +319,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             'This functionality will be removed in Salt Boron.'
         )
         bin_env = env
+
+    if activate:
+        salt.utils.warn_until(
+                'Boron',
+                'Passing \'activate\' to the pip module is deprecated. If '
+                'bin_env refers to a virtualenv, there is no need to activate '
+                'that virtualenv before using pip to install packages in it.'
+        )
 
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
