@@ -208,6 +208,7 @@ def gen_locale(locale, charmap=None):
     '''
     on_debian = __grains__.get('os') == 'Debian'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
+    on_suse = __grains__.get('os_family') == 'Suse'
 
     if on_debian or on_gentoo:
         if not charmap:
@@ -218,9 +219,15 @@ def gen_locale(locale, charmap=None):
         locale_format = '{0} {1}'.format(locale, charmap)
         valid = __salt__['file.search'](search, '^{0}$'.format(locale_format))
     else:
-        search = '/usr/share/i18n/locales'
+       if on_suse:
+            search = '/usr/share/locales'
+       else:
+             search = '/usr/share/i18n/locales'
         locale_format = locale
-        valid = locale_format in os.listdir(search)
+       try:
+            valid = locale_format in os.listdir(search)
+       except OSError:
+           return False
 
     if not valid:
         log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
