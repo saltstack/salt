@@ -383,11 +383,22 @@ class SSH(object):
             for host in running:
                 if not running[host]['thread'].is_alive():
                     if host not in returned:
-                        error = ('Target \'{0}\' did not return any data, '
-                                 'probably due to an error.').format(host)
-                        ret = {'id': host,
-                               'ret': error}
-                        log.error(error)
+                        # Try to get any returns that came through since we
+                        # last checked
+                        try:
+                            while True:
+                                ret = que.get(False)
+                                if 'id' in ret:
+                                    returned.add(ret['id'])
+                        except Exception:
+                            pass
+
+                        if host not in returned:
+                            error = ('Target \'{0}\' did not return any data, '
+                                     'probably due to an error.').format(host)
+                            ret = { 'id': host,
+                                    'ret': error }
+                            log.error(error)
                     running[host]['thread'].join()
                     rets.add(host)
             for host in rets:
