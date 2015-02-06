@@ -50,7 +50,6 @@ DEFAULT_NIC_PROFILE = {'eth0': {'link': 'br0', 'type': 'veth', 'flags': 'up'}}
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
-_marker = object()
 
 
 def __virtual__():
@@ -369,8 +368,25 @@ def get_container_profile(name=None, **kwargs):
     else:
         profile_match = \
             __salt__['config.get'](
-                'lxc.container_profile.{0}'.format(name), {}
+                'lxc.container_profile:{0}'.format(name),
+                default=None,
+                merge='recurse'
             )
+        if profile_match is None:
+            # Try legacy profile location
+            profile_match = \
+                __salt__['config.get']('lxc.profile:{0}'.format(name), None)
+            if profile_match is not None:
+                salt.utils.warn_until(
+                    'Boron',
+                    'lxc.profile has been deprecated, please configure LXC '
+                    'container profiles under lxc.container_profile instead'
+                )
+            else:
+                # No matching profile, make the profile an empty dict so that
+                # overrides can be applied below.
+                profile_match = {}
+
     if not isinstance(profile_match, dict):
         raise CommandExecutionError('Container profile must be a dictionary')
 
@@ -426,13 +442,26 @@ def get_network_profile(name=None):
 
         salt-call lxc.get_network_profile default
     '''
-    # Legacy location (lxc.nic)
-    net_profile = __salt__['config.get']('lxc.nic', {}).get(name)
-    if net_profile is not None:
-        return net_profile
-    net_profile = __salt__['config.get'](
-        'lxc.network_profile.{0}'.format(name)
-    )
+    if name is None:
+        net_profile = None
+    else:
+        net_profile = \
+            __salt__['config.get'](
+                'lxc.network_profile:{0}'.format(name),
+                default=None,
+                merge='recurse'
+            )
+        if net_profile is None:
+            # Try legacy profile location
+            net_profile = \
+                __salt__['config.get']('lxc.nic:{0}'.format(name), None)
+            if net_profile is not None:
+                salt.utils.warn_until(
+                    'Boron',
+                    'lxc.nic has been deprecated, please configure LXC '
+                    'network profiles under lxc.network_profile instead'
+                )
+
     return net_profile if net_profile is not None else DEFAULT_NIC_PROFILE
 
 
@@ -719,17 +748,23 @@ def _get_base(**kwargs):
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, _marker)
+        kw_overrides_match = kw_overrides.pop(key, None)
         profile_match = profile.pop(key, default)
         # let kwarg overrides be the preferred choice
-        if kw_overrides_match is _marker:
+        if kw_overrides_match is None:
             return profile_match
         return kw_overrides_match
 
     cntrs = ls_()
+
+    template = select('template')
     image = select('image')
     vgname = select('vgname')
-    template = select('template')
+    # remove the above three variables from kwargs, if they exist, to avoid
+    # duplicates if create() is invoked below.
+    for param in ('image', 'vgname', 'template'):
+        kwargs.pop(param, None)
+
     if image:
         proto = _urlparse(image).scheme
         img_tar = __salt__['cp.cache_file'](image)
@@ -739,15 +774,17 @@ def _get_base(**kwargs):
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
         if name not in cntrs:
-            create(name, **kwargs)
+            create(name, template=template, image=image,
+                   vgname=vgname, **kwargs)
             if vgname:
                 rootfs = os.path.join('/dev', vgname, name)
                 edit_conf(info(name)['config'], **{'lxc.rootfs': rootfs})
         return name
     elif template:
-        name = '__base_{0}'.format(kwargs['template'])
+        name = '__base_{0}'.format(template)
         if name not in cntrs:
-            create(name, **kwargs)
+            create(name, template=template, image=image,
+                   vgname=vgname, **kwargs)
             if vgname:
                 rootfs = os.path.join('/dev', vgname, name)
                 edit_conf(info(name)['config'], **{'lxc.rootfs': rootfs})
@@ -981,10 +1018,10 @@ def init(name,
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, _marker)
+        kw_overrides_match = kw_overrides.pop(key, None)
         profile_match = profile.pop(key, default)
         # let kwarg overrides be the preferred choice
-        if kw_overrides_match is _marker:
+        if kw_overrides_match is None:
             return profile_match
         return kw_overrides_match
 
@@ -3233,7 +3270,7 @@ def cp(name, source, dest, makedirs=False):
         __salt__['cmd.run_stdout'](
             'cat "{0}" | lxc-attach --clear-env --set-var {1} -n {2} -- '
             'tee "{3}"'.format(source, PATH, name, dest),
-            python_shell=False
+            python_shell=True
         )
         return source_md5 == _get_md5(name, dest)
     # Checksums matched, no need to copy, just return True
