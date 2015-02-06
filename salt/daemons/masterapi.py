@@ -683,7 +683,8 @@ class RemoteFuncs(object):
                 load['id'],
                 load.get('saltenv', load.get('env')),
                 load.get('ext'),
-                self.mminion.functions)
+                self.mminion.functions,
+                pillar=load.get('pillar_override', {}))
         pillar_dirs = {}
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):

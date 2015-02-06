@@ -23,7 +23,12 @@ except ImportError:
         from backports.ssl_match_hostname import match_hostname
         HAS_MATCHHOSTNAME = True
     except ImportError:
-        HAS_MATCHHOSTNAME = False
+        try:
+            from salt.ext.ssl_match_hostname import CertificateError
+            from salt.ext.ssl_match_hostname import match_hostname
+            HAS_MATCHHOSTNAME = True
+        except ImportError:
+            HAS_MATCHHOSTNAME = False
 import socket
 import urllib2
 
@@ -32,6 +37,7 @@ import salt.utils
 import salt.utils.xmlutil as xml
 import salt.loader
 import salt.config
+import salt.version
 from salt.template import compile_template
 from salt import syspaths
 
@@ -46,11 +52,17 @@ try:
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-import msgpack
+
+try:
+    import msgpack
+    HAS_MSGPACK = True
+except ImportError:
+    HAS_MSGPACK = False
 
 log = logging.getLogger(__name__)
 JARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.txt')
 SESSIONJARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.session.p')
+USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
 
 
 def query(url,
@@ -92,6 +104,7 @@ def query(url,
           decode_out=None,
           stream=False,
           handle=False,
+          agent=USERAGENT,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -156,7 +169,7 @@ def query(url,
     if header_list is None:
         header_list = []
 
-    if persist_session is True:
+    if persist_session is True and HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
@@ -200,6 +213,10 @@ def query(url,
             sess_cookies.save()
         else:
             sess_cookies.load()
+
+    if agent == USERAGENT:
+        agent = '{0} http.query()'.format(agent)
+    header_dict['User-agent'] = agent
 
     if test is True:
         if test_url is None:
@@ -340,7 +357,7 @@ def query(url,
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True:
+    if persist_session is True and HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
             with salt.utils.fopen(session_cookie_jar, 'w') as fh_:

@@ -37,7 +37,7 @@ def store_job(opts, load, event=None, mminion=None):
     elif salt.utils.jid.is_jid(load['jid']):
         # Store the jid
         jidstore_fstr = '{0}.prep_jid'.format(opts['master_job_cache'])
-        mminion.returners[jidstore_fstr](passed_jid=load['jid'])
+        mminion.returners[jidstore_fstr](False, passed_jid=load['jid'])
     if event:
         # If the return data is invalid, just ignore it
         log.info('Got return from {id} for job {jid}'.format(**load))
