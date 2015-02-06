@@ -11,7 +11,6 @@ from __future__ import absolute_import
 import inspect
 import tempfile
 import shutil
-import os.path
 import os
 
 # Import Salt Testing libs
@@ -20,9 +19,10 @@ from salttesting.helpers import ensure_in_syspath
 
 import integration
 
-ensure_in_syspath('../..')
+ensure_in_syspath('../../')
 
 # Import Salt libs
+import salt.ext.six as six
 from salt.config import minion_config
 
 from salt.loader import LazyLoader, _module_dirs
@@ -35,9 +35,8 @@ class LazyLoaderVirtualEnabledTest(TestCase):
     def setUp(self):
         self.opts = _config = minion_config(None)
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
-                         self.opts,
-                         tag='modules',
-                         )
+                                 self.opts,
+                                 tag='modules')
 
     def test_basic(self):
         '''
@@ -49,7 +48,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertTrue(inspect.isfunction(self.loader['test.ping']))
 
         # make sure we only loaded "test" functions
-        for key, val in self.loader._dict.iteritems():
+        for key, val in six.iteritems(self.loader._dict):
             self.assertEqual(key.split('.', 1)[0], 'test')
 
         # make sure the depends thing worked (double check of the depends testing,
@@ -72,7 +71,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         '''
         self.assertEqual(self.loader._dict, {})
         # force a load all
-        for key, func in self.loader.iteritems():
+        for key, func in six.iteritems(self.loader):
             break
         self.assertNotEqual(self.loader._dict, {})
 
@@ -93,7 +92,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(func_globals['__grains__'], self.opts.get('grains', {}))
         self.assertEqual(func_globals['__pillar__'], self.opts.get('pillar', {}))
         # the opts passed into modules is at least a subset of the whole opts
-        for key, val in func_globals['__opts__'].iteritems():
+        for key, val in six.iteritems(func_globals['__opts__']):
             self.assertEqual(self.opts[key], val)
 
     def test_pack(self):
@@ -112,10 +111,9 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     def setUp(self):
         self.opts = _config = minion_config(None)
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
-                         self.opts,
-                         tag='modules',
-                         virtual_enable=False,
-                         )
+                                 self.opts,
+                                 tag='modules',
+                                 virtual_enable=False)
 
     def test_virtual(self):
         self.assertTrue(inspect.isfunction(self.loader['test_virtual.ping']))
@@ -128,10 +126,9 @@ class LazyLoaderWhitelistTest(TestCase):
     def setUp(self):
         self.opts = _config = minion_config(None)
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
-                         self.opts,
-                         tag='modules',
-                         whitelist=['test', 'pillar']
-                         )
+                                 self.opts,
+                                 tag='modules',
+                                 whitelist=['test', 'pillar'])
 
     def test_whitelist(self):
         self.assertTrue(inspect.isfunction(self.loader['test.ping']))
@@ -180,9 +177,8 @@ class LazyLoaderReloadingTest(TestCase):
         dirs = _module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
         self.loader = LazyLoader(dirs,
-                         self.opts,
-                         tag='modules',
-                         )
+                                 self.opts,
+                                 tag='modules')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
@@ -232,7 +228,7 @@ class LazyLoaderReloadingTest(TestCase):
 
         # make sure we only loaded our custom module
         # which means that we did correctly refresh the file mapping
-        for k, v in self.loader._dict.iteritems():
+        for k, v in six.iteritems(self.loader._dict):
             self.assertTrue(k.startswith(self.module_name))
 
     def test_load(self):
@@ -265,7 +261,7 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertNotIn(self.module_key, self.loader)
 
         # make sure it updates correctly
-        for x in xrange(1, 3):
+        for x in range(1, 3):
             self.update_module()
             self.loader.clear()
             self.assertEqual(self.loader[self.module_key](), self.count)
