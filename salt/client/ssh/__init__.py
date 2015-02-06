@@ -398,10 +398,15 @@ class SSH(object):
             except Exception:
                 pass
             for host in running:
-                if host in returned:
-                    if not running[host]['thread'].is_alive():
-                        running[host]['thread'].join()
-                        rets.add(host)
+                if not running[host]['thread'].is_alive():
+                    if host not in returned:
+                        error = ('Target \'{0}\' did not return any data, '
+                                 'probably due to an error.').format(host)
+                        ret = {'id': host,
+                               'ret': error}
+                        log.error(error)
+                    running[host]['thread'].join()
+                    rets.add(host)
             for host in rets:
                 if host in running:
                     running.pop(host)
