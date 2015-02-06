@@ -1048,7 +1048,7 @@ class Keys(LowDataAdapter):
 
     .. versionadded:: 2014.7.0
 
-    These URLs wrap the functionality provided by the :py:module:`key wheel
+    These URLs wrap the functionality provided by the :py:mod:`key wheel
     module <salt.wheel.key>` functions.
     '''
 
