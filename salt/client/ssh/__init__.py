@@ -378,6 +378,7 @@ class SSH(object):
                 ret = que.get(False)
                 if 'id' in ret:
                     returned.add(ret['id'])
+                    yield {ret['id']: ret['ret']}
             except Exception:
                 pass
             for host in running:
@@ -390,6 +391,7 @@ class SSH(object):
                                 ret = que.get(False)
                                 if 'id' in ret:
                                     returned.add(ret['id'])
+                                    yield {ret['id']: ret['ret']}
                         except Exception:
                             pass
 
@@ -399,15 +401,12 @@ class SSH(object):
                             ret = { 'id': host,
                                     'ret': error }
                             log.error(error)
+                            yield {ret['id']: ret['ret']}
                     running[host]['thread'].join()
                     rets.add(host)
             for host in rets:
                 if host in running:
                     running.pop(host)
-            if ret:
-                if not isinstance(ret, dict):
-                    continue
-                yield {ret['id']: ret['ret']}
             if len(rets) >= len(self.targets):
                 break
 
