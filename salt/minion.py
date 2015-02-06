@@ -20,10 +20,13 @@ import traceback
 import multiprocessing
 from random import randint, shuffle
 
-# Import third party libs
+# Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
+from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
+
+# Import third party libs
 try:
     import zmq
     HAS_ZMQ = True

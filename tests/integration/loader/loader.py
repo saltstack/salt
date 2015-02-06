@@ -17,13 +17,16 @@ import os
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
-import integration
-
 ensure_in_syspath('../../')
 
+import integration
+
 # Import Salt libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
+from salt.ext.six.moves import range
 from salt.config import minion_config
+# pylint: enable=no-name-in-module,redefined-builtin
 
 from salt.loader import LazyLoader, _module_dirs
 
