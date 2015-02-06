@@ -67,6 +67,7 @@ import salt.utils.jid
 import salt.pillar
 import salt.utils.args
 import salt.utils.event
+import salt.utils.lazy
 import salt.utils.minion
 import salt.utils.schedule
 import salt.utils.error
@@ -280,12 +281,13 @@ class SMinion(object):
         '''
         Load all of the modules for the minion
         '''
-        self.opts['pillar'] = salt.pillar.get_pillar(
+        pillar_obj = self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment']
-        ).compile_pillar()
+        )
+        self.opts['pillar'] = salt.utils.lazy.LazyAllDict(pillar_obj.compile_pillar)
         self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
@@ -627,12 +629,13 @@ class Minion(MinionBase):
                                           timeout,
                                           safe)
 
-        self.opts['pillar'] = salt.pillar.get_pillar(
-            opts,
-            opts['grains'],
-            opts['id'],
-            opts['environment']
-        ).compile_pillar()
+        pillar_obj = self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment']
+        )
+        self.opts['pillar'] = salt.utils.lazy.LazyAllDict(pillar_obj.compile_pillar)
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
@@ -1445,12 +1448,13 @@ class Minion(MinionBase):
         Refresh the pillar
         '''
         log.debug('Refreshing pillar')
-        self.opts['pillar'] = salt.pillar.get_pillar(
+        pillar_obj = self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
-            self.opts['environment'],
-        ).compile_pillar()
+            self.opts['environment']
+        )
+        self.opts['pillar'] = salt.utils.lazy.LazyAllDict(pillar_obj.compile_pillar)
         self.module_refresh(force_refresh)
 
     def manage_schedule(self, package):
@@ -2692,12 +2696,13 @@ class ProxyMinion(Minion):
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
-        self.opts['pillar'] = salt.pillar.get_pillar(
-            opts,
-            opts['grains'],
-            opts['id'],
-            opts['environment']
-        ).compile_pillar()
+        pillar_obj = self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment']
+        )
+        self.opts['pillar'] = salt.utils.lazy.LazyAllDict(pillar_obj.compile_pillar)
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
