@@ -450,8 +450,7 @@ class AsyncClientMixin(object):
         # people use more events that don't quite fit into this mold
         if suffix == 'ret':  # for "ret" just print out return
             if isinstance(event['return'], dict):
-                outputter = event['return'].get('outputter', None)
-                event['return'].pop('outputter', None)
+                outputter = event['return'].pop('outputter', None)
             else:
                 outputter = None
             salt.output.display_output(event['return'], outputter, self.opts)
