@@ -9,7 +9,6 @@ in here
 from __future__ import absolute_import
 import logging
 import gc
-import copy
 
 # Import salt libs
 import salt.log
@@ -197,13 +196,13 @@ class SREQ(object):
         delete socket if you have it
         '''
         if hasattr(self, '_socket'):
-            sockets = copy.copy(self.poller.sockets)
             if isinstance(self.poller.sockets, dict):
-                for socket in six.iterkeys(sockets):
+                sockets = list(self.poller.sockets.keys())
+                for socket in sockets:
                     log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket)
             else:
-                for socket in sockets:
+                for socket in self.poller.sockets:
                     log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket[0])
             del self._socket
@@ -242,15 +241,15 @@ class SREQ(object):
         return self.send(enc, load, tries, timeout)
 
     def destroy(self):
-        sockets = copy.copy(self.poller.sockets)
-        if isinstance(sockets, dict):
-            for socket in six.iterkeys(sockets):
+        if isinstance(self.poller.sockets, dict):
+            sockets = list(self.poller.sockets.keys())
+            for socket in sockets:
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()
                 self.poller.unregister(socket)
         else:
-            for socket in sockets:
+            for socket in self.poller.sockets:
                 if socket[0].closed is False:
                     socket[0].setsockopt(zmq.LINGER, 1)
                     socket[0].close()
