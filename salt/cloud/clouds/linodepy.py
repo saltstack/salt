@@ -328,11 +328,11 @@ def start(*args, **kwargs):
     result = conn.linode_boot(LinodeID=node['id'])
 
     if waitfor_job(LinodeID=node['id'], JobID=result['JobID']):
-        return {'state': 'Running', 
-                'action': 'start', 
+        return {'state': 'Running',
+                'action': 'start',
                 'success': True}
     else:
-        return {'action': 'start', 
+        return {'action': 'start',
                 'success': False}
 
 
