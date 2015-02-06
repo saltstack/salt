@@ -258,17 +258,18 @@ TODO
 * Interface for working with reactor files
 '''
 
+# Import Python Libs
 from __future__ import absolute_import
-
 import logging
 import re
-from salt.ext.six import exec_
 
+# Import Salt Libs
+from salt.ext.six import exec_
 import salt.utils
 import salt.loader
-
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
+import salt.ext.six as six
 
 # our import regexes
 FROM_RE = re.compile(r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$')
@@ -304,7 +305,7 @@ def load_states():
     )
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
-    for key, func in lazy_states.iteritems():
+    for key, func in six.iteritems(lazy_states):
         mod_name, func_name = key.split('.', 1)
         if mod_name not in states:
             states[mod_name] = {}
