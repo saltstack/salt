@@ -17,9 +17,9 @@ import os
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
-import integration
-
 ensure_in_syspath('../../')
+
+import integration
 
 # Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
