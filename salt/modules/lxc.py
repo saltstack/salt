@@ -826,22 +826,6 @@ def init(name,
     will reset a bit the lxc configuration file but much of the hard work will
     be escaped as markers will prevent re-execution of harmful tasks.
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt 'minion' lxc.init name [cpuset=cgroups_cpuset] \\
-                [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
-                [profile=lxc_profile] [network_proflile=network_profile] \\
-                [nic_opts=nic_opts] [start=(True|False)] [seed=(True|False)] \\
-                [install=(True|False)] [config=minion_config] \\
-                [approve_key=(True|False) [clone_from=original] \\
-                [autostart=True] [priv_key=/path_or_content] \\
-                [pub_key=/path_or_content] [bridge=lxcbr0] \\
-                [gateway=10.0.3.1] [dnsservers[dns1,dns2]] \\
-                [users=[foo]] [password='secret'] \\
-                [password_encrypted=(True|False)]
-
     name
         Name of the container
 
@@ -967,7 +951,7 @@ def init(name,
                 [nic_opts=nic_opts] [start=(True|False)] \\
                 [seed=(True|False)] [install=(True|False)] \\
                 [config=minion_config] [approve_key=(True|False) \\
-                [clone=original] [autostart=True] \\
+                [clone_from=original] [autostart=True] \\
                 [priv_key=/path_or_content] [pub_key=/path_or_content] \\
                 [bridge=lxcbr0] [gateway=10.0.3.1] \\
                 [dnsservers[dns1,dns2]] \\
@@ -1555,7 +1539,6 @@ def create(name,
 
 def clone(name,
           orig,
-          clone_from=None,
           profile=None,
           **kwargs):
     '''
@@ -1566,12 +1549,6 @@ def clone(name,
 
     orig
         Name of the original container to be cloned
-
-    clone_from
-        Name of the original container to be cloned (added for consistency,
-        does the same thing as ``orig``)
-
-        .. versionadded:: 2015.2.0
 
     profile
         Profile to use in container cloning (see
@@ -1604,16 +1581,10 @@ def clone(name,
             'Container \'{0}\' already exists'.format(name)
         )
 
-    if clone_from and orig:
-        log.warning('Both \'clone_from\' and \'orig\' were passed, ignoring '
-                    '\'orig\'')
-    elif orig and not clone_from:
-        clone_from = orig
-
-    _ensure_exists(clone_from)
-    if state(clone_from) != 'stopped':
+    _ensure_exists(orig)
+    if state(orig) != 'stopped':
         raise CommandExecutionError(
-            'Container \'{0}\' must be stopped to be cloned'.format(clone_from)
+            'Container \'{0}\' must be stopped to be cloned'.format(orig)
         )
 
     profile = get_container_profile(copy.deepcopy(profile))
@@ -1640,7 +1611,7 @@ def clone(name,
     if backing in ('dir', 'overlayfs', 'btrfs'):
         size = None
 
-    cmd = 'lxc-clone {0} -o {1} -n {2}'.format(snapshot, clone_from, name)
+    cmd = 'lxc-clone {0} -o {1} -n {2}'.format(snapshot, orig, name)
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
