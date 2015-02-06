@@ -148,28 +148,28 @@ class BuildoutTestCase(Base):
         #self.assertEqual(ret1['status'], True)
         #self.assertEqual(ret1['logs_by_level']['warn'], ['wbar'])
         #self.assertEqual(ret1['comment'], '')
-        self.assertTrue(
-            u''
-            u'OUTPUT:\n'
-            u'foo\n'
-            u''
-            # These lines are throwing pylint errors - disabling for now since we are skipping
-            # these tests
+        # These lines are throwing pylint errors - disabling for now since we are skipping
+        # these tests
+        #self.assertTrue(
+            # u''
+            # u'OUTPUT:\n'
+            # u'foo\n'
+            # u''
             #in ret1['outlog']
-        )
+        #)
 
         # These lines are throwing pylint errors - disabling for now since we are skipping
         # these tests
         #self.assertTrue(u'Log summary:\n' in ret1['outlog'])
-        self.assertTrue(
-            u'INFO: ibar\n'
-            u'WARN: wbar\n'
-            u'DEBUG: dbar\n'
-            u'ERROR: ebar\n'
-            # These lines are throwing pylint errors - disabling for now since we are skipping
-            # these tests
+        # These lines are throwing pylint errors - disabling for now since we are skipping
+        # these tests
+        # self.assertTrue(
+            # u'INFO: ibar\n'
+            # u'WARN: wbar\n'
+            # u'DEBUG: dbar\n'
+            # u'ERROR: ebar\n'
             #in ret1['outlog']
-        )
+        #)
         # These lines are throwing pylint errors - disabling for now since we are skipping
         # these tests
         #self.assertTrue('by level' in ret1['outlog_by_level'])
