@@ -198,7 +198,7 @@ class SREQ(object):
                     log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket)
             else:
-                for socket in sockets:
+                for socket in self.poller.sockets:
                     log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket[0])
             del self._socket
@@ -237,9 +237,9 @@ class SREQ(object):
         return self.send(enc, load, tries, timeout)
 
     def destroy(self):
-        sockets = copy.copy(self.poller.sockets)
-        if isinstance(sockets, dict):
-            for socket in six.iterkeys(sockets):
+        if isinstance(self.poller.sockets, dict):
+            sockets = list(self.poller.sockets.keys())
+            for socket in sockets:
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()
