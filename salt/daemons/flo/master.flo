@@ -148,6 +148,10 @@ framer presence be inactive first start
 # Publisher framer
 framer publish be inactive first start
     frame start
+        let me if .salt.etc.dummy_pub
+        # start dummy
+        do salt dummy publisher
+    frame raet_publisher
         do salt raet publisher
 
 # Manager framer
