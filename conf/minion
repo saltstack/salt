@@ -142,7 +142,7 @@
 
 # If authentication fails due to SaltReqTimeoutError, continue without stopping the
 # minion.
-#auth_safemode: True
+#auth_safemode: False
 
 # If the minion hits an error that is recoverable, restart the minion.
 #restart_on_error: False
