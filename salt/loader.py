@@ -720,6 +720,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
+        self.initial_load = True
 
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = []
@@ -755,6 +756,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             except ImportError:
                 log.info('Cython is enabled in the options but not present '
                     'in the system path. Skipping Cython modules.')
+        # allow for module dirs
+        self.suffix_map[''] = ('', '', imp.PKG_DIRECTORY)
 
         # create mapping of filename (without suffix) to (path, suffix)
         self.file_mapping = {}
@@ -778,8 +781,21 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         )
                         continue
                     fpath = os.path.join(mod_dir, filename)
+                    # if its a directory, lets allow us to load that
+                    if ext == '':
+                        # is there something __init__?
+                        subfiles = os.listdir(fpath)
+                        sub_path = None
+                        for suffix in suffix_order:
+                            init_file = '__init__{0}'.format(suffix)
+                            if init_file in subfiles:
+                                sub_path = os.path.join(fpath, init_file)
+                                break
+                        if sub_path is not None:
+                            self.file_mapping[f_noext] = (fpath, ext)
+
                     # if we don't have it, we want it
-                    if f_noext not in self.file_mapping:
+                    elif f_noext not in self.file_mapping:
                         self.file_mapping[f_noext] = (fpath, ext)
                     # if we do, we want it if we have a higher precidence ext
                     else:
@@ -800,6 +816,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # we obviously want a re-do
         if hasattr(self, 'opts'):
             self.refresh_file_mapping()
+        self.initial_load = False
 
     def __prep_mod_opts(self, opts):
         '''
@@ -863,6 +880,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if mod_name not in k:
                 yield k
 
+    def _reload_submodules(self, mod, name):
+        submodules = (
+            getattr(mod, sname) for sname in dir(mod) if
+            isinstance(getattr(mod, sname), mod.__class__)
+        )
+
+        # reload only custom "sub"modules
+        for submodule in submodules:
+            # it is a submodule if the name is in a namespace under mod
+            if submodule.__name__.startswith(mod.__name__ + '.'):
+                reload(submodule)
+
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name]
@@ -872,14 +901,27 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
             else:
                 desc = self.suffix_map[suffix]
-                with open(fpath, desc[1]) as fn_:
+                # if it is a directory, we dont open a file
+                if suffix == '':
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(
                             self.loaded_base_name,
                             self.mod_type_check(fpath),
                             self.tag,
                             name
-                        ), fn_, fpath, desc)
+                        ), None, fpath, desc)
+                    # reload all submodules if necessary
+                    if not self.initial_load:
+                        self._reload_submodules(mod, name)
+                else:
+                    with open(fpath, desc[1]) as fn_:
+                        mod = imp.load_module(
+                            '{0}.{1}.{2}.{3}'.format(
+                                self.loaded_base_name,
+                                self.mod_type_check(fpath),
+                                self.tag,
+                                name
+                            ), fn_, fpath, desc)
 
         except IOError:
             raise
