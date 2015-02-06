@@ -1347,13 +1347,13 @@ class SaltRaetRouterMinion(SaltRaetRouter):
         '''
         while self.road_stack.value.rxMsgs:
             msg, sender = self.road_stack.value.rxMsgs.popleft()
-            self._process_udp_rxmsg(msg=msg, sender=sender)
+            self._process_road_rxmsg(msg=msg, sender=sender)
         while self.laters.value:  # process requeued LaneMsgs
             msg, sender = self.laters.value.popleft()
             self.lane_stack.value.rxMsgs.append((msg, sender))
         while self.lane_stack.value.rxMsgs:
             msg, sender = self.lane_stack.value.rxMsgs.popleft()
-            self._process_uxd_rxmsg(msg=msg, sender=sender)
+            self._process_lane_rxmsg(msg=msg, sender=sender)
 
 
 class SaltRaetEventer(ioflo.base.deeding.Deed):
