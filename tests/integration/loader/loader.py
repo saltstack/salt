@@ -289,6 +289,7 @@ def test():
     return {count}
 '''
 
+
 class LazyLoaderSubmodReloadingTest(TestCase):
     '''
     Test the loader of salt with changing modules
