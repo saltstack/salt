@@ -2131,9 +2131,9 @@ def info(name):
             free = limit - usage
             ret['memory_limit'] = limit
             ret['memory_free'] = free
-            ret['size'] = cmd_run_stdout(name,
-                                        'df /|tail -n1|awk \'{{print $2}}\'',
-                                         python_shell=False)
+            size = cmd_run_stdout(name, 'df /', python_shell=False)
+            # The size is the 2nd column of the last line
+            ret['size'] = size.splitlines()[-1].split()[1]
 
             # First try iproute2
             ip_cmd = cmd_run_all(name, 'ip link show', python_shell=False)
