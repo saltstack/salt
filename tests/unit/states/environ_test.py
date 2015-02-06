@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import absolute_import
+import os
+
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -9,8 +13,18 @@ ensure_in_syspath('../../')
 import salt.states.environ as envstate
 import salt.modules.environ as envmodule
 
+setup_env = {}
+
 
 class TestEnvironState(TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        setup_env = os.environ
+
+    @classmethod
+    def tearDownClass(cls):
+        os.environ = setup_env
 
     def setUp(self):
         envstate.__env__ = 'base'
