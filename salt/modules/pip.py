@@ -340,10 +340,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     cmd = [_get_pip_bin(bin_env), 'install']
 
-    if activate and bin_env:
-        if not salt.utils.is_windows():
-            cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
-
     cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
                                                         saltenv=saltenv, user=user,
                                                         no_chown=no_chown)
