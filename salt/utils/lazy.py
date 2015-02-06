@@ -81,3 +81,29 @@ class LazyDict(collections.MutableMapping):
         if not self.loaded:
             self._load_all()
         return iter(self._dict)
+
+    def __repr__(self):
+        if not self.loaded:
+            self._load_all()  # load all, just in case
+        return dict.__repr__(self._dict)
+
+
+class LazyAllDict(LazyDict):
+    '''
+    A subclass of LazyDict, where everything is loaded at once from a single
+    function call. This is used to defer loading of things until they are
+    actually used.
+    '''
+    def __init__(self, func, args=None, kwargs=None):
+        super(LazyAllDict, self).__init__()  # init the lazy loader
+        self.func = func
+        self.args = args if args is not None else tuple()
+        self.kwargs = kwargs if kwargs is not None else {}
+
+    def _load(self, key):
+        self._load_all()
+        return True
+
+    def _load_all(self):
+        self.loaded = True
+        self._dict.update(self.func(*self.args, **self.kwargs))
