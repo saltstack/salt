@@ -4,9 +4,8 @@ IoFlo behaviors for running a ZeroMQ based master
 '''
 # pylint: disable=W0232
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import hashlib
@@ -20,10 +19,34 @@ try:
     import salt.master
     import salt.crypt
     import salt.daemons.masterapi
+    HAS_ZMQ = True
 except ImportError:
-    pass
+    HAS_ZMQ = False
 
 log = logging.getLogger(__name__)
+
+
+class SaltZmqSetup(ioflo.base.deeding.Deed):
+    '''
+    do salt zmq setup at enter
+
+    Setup shares
+    .salt.var.zmq.master_key
+    .salt.var.zmq.aet share
+
+    This behavior must be run before any other zmq related
+    '''
+    Ioinits = {'opts': '.salt.opts',
+           'mkey': '.salt.var.zmq.master_key',
+           'aes': '.salt.var.zmq.aes'}
+
+    def action(self):
+        '''
+        Assign master key to .salt.var.zmq.master_key
+        Copy opts['aes'] to .salt.var.zmq.aes
+        '''
+        self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
+        self.aes.value = self.opts.value['aes']
 
 
 class SaltZmqRetFork(ioflo.base.deeding.Deed):
@@ -33,13 +56,6 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'mkey': '.salt.var.zmq.master_key',
                'aes': '.salt.var.zmq.aes'}
-
-    def postinitio(self):
-        '''
-        Init the cryptographic keys
-        '''
-        self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
-        self.aes.value = self.opts.value['aes']
 
     def action(self):
         '''
@@ -84,9 +100,38 @@ class SaltZmqRetFork(ioflo.base.deeding.Deed):
                 raise exc
 
 
+class SaltZmqCrypticleSetup(ioflo.base.deeding.Deed):
+    '''
+    Setup the crypticle for the salt zmq publisher behavior
+
+    do salt zmq crypticle setup at enter
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'aes': '.salt.var.zmq.aes',
+               'crypticle': '.salt.var.zmq.crypticle'}
+
+    def action(self):
+        '''
+        Initializes zmq
+        Put here so only runs initialization if we want multi-headed master
+
+        '''
+        self.crypticle.value = salt.crypt.Crypticle(
+                                                    self.opts.value,
+                                                    self.opts.value.get('aes'))
+
+
 class SaltZmqPublisher(ioflo.base.deeding.Deed):
     '''
     The zeromq publisher
+
+    do salt zmq publisher
+
+    Must run the deed
+
+    do salt zmq publisher setup
+
+    before this deed
     '''
     Ioinits = {'opts': '.salt.opts',
                'publish': '.salt.var.publish',
@@ -94,14 +139,11 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
                'aes': '.salt.var.zmq.aes',
                'crypticle': '.salt.var.zmq.crypticle'}
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Set up tracking value(s)
         '''
         self.created = False
-        self.crypticle.value = salt.crypt.Crypticle(
-                self.opts.value,
-                self.opts.value['aes'])
         self.serial = salt.payload.Serial(self.opts.value)
 
     def action(self):
@@ -169,7 +211,7 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
                'key': '.salt.access_keys',
                'aes': '.salt.var.zmq.aes'}
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Create the initial seting value for the worker
         '''
@@ -182,7 +224,7 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
         '''
         if not self.created:
             crypticle = salt.crypt.Crypticle(self.opts.value, self.aes.value)
-            self.worker = FloMWorker(
+            self.worker = salt.master.FloMWorker(
                     self.opts.value,
                     self.mkey.value,
                     self.key.value,
@@ -191,61 +233,3 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
             self.created = True
             log.info('Started ZMQ worker')
         self.worker.handle_request()
-
-
-
-class FloMWorker(salt.master.MWorker):
-    '''
-    Change the run and bind to be ioflo friendly
-    '''
-    def __init__(self,
-                 opts,
-                 mkey,
-                 key,
-                 crypticle):
-        salt.master.MWorker.__init__(self, opts, mkey, key, crypticle)
-
-    def setup(self):
-        '''
-        Prepare the needed objects and socket for iteration within ioflo
-        '''
-        salt.utils.appendproctitle(self.__class__.__name__)
-        self.clear_funcs = salt.master.ClearFuncs(
-                self.opts,
-                self.key,
-                self.mkey,
-                self.crypticle)
-        self.aes_funcs = salt.master.AESFuncs(self.opts, self.crypticle)
-        self.context = zmq.Context(1)
-        self.socket = self.context.socket(zmq.REP)
-        self.w_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'workers.ipc')
-                )
-        log.info('ZMQ Worker binding to socket {0}'.format(self.w_uri))
-        self.poller = zmq.Poller()
-        self.poller.register(self.socket, zmq.POLLIN)
-        self.socket.connect(self.w_uri)
-
-    def handle_request(self):
-        '''
-        Handle a single request
-        '''
-        try:
-            polled = self.poller.poll(1)
-            if polled:
-                package = self.socket.recv()
-                self._update_aes()
-                payload = self.serial.loads(package)
-                ret = self.serial.dumps(self._handle_payload(payload))
-                self.socket.send(ret)
-        except KeyboardInterrupt:
-            raise
-        except Exception as exc:
-            # Properly handle EINTR from SIGUSR1
-            if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
-                return
-            log.critical('Unexpected Error in Mworker',
-                    exc_info=True)
-            del self.socket
-            self.socket = self.context.socket(zmq.REP)
-            self.socket.connect(self.w_uri)

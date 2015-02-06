@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Import Python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import re
 import time
@@ -11,6 +10,7 @@ import salt.config
 import salt.payload
 
 # Import third party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import zmq
     HAS_ZMQ = True
@@ -136,10 +136,10 @@ class CacheRegex(object):
             self.clear()
             self.timestamp = time.time()
         else:
-            paterns = self.cache.values()
+            paterns = list(self.cache.values())
             paterns.sort()
-            for i in xrange(self.clear_size):
-                del self.cache[paterns[i][2]]
+            for idx in range(self.clear_size):
+                del self.cache[paterns[idx][2]]
 
     def get(self, pattern):
         '''

@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import zip
@@ -196,9 +197,11 @@ def percent(args=None):
         return ret
 
 
+@decorators.which('blkid')
 def blkid(device=None):
     '''
-    Return block device attributes: UUID, LABEL, etc.
+    Return block device attributes: UUID, LABEL, etc.  This function only works
+    on systems where blkid is available.
 
     CLI Example:
 
@@ -213,6 +216,8 @@ def blkid(device=None):
 
     ret = {}
     for line in __salt__['cmd.run_stdout']('blkid' + args, python_shell=False).split('\n'):
+        if not line:
+            continue
         comps = line.split()
         device = comps[0][:-1]
         info = {}

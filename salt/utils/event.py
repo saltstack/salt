@@ -53,15 +53,16 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import hashlib
-import errno
-import logging
 import time
+import errno
+import hashlib
+import logging
 import datetime
 import multiprocessing
 from collections import MutableMapping
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -76,6 +77,7 @@ import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.process
 import salt.utils.zeromq
+
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -130,7 +132,8 @@ def get_master_event(opts, sock_dir, listen=True):
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen)
+            opts=opts, sock_dir=sock_dir, listen=listen
+        )
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -174,10 +177,6 @@ class SaltEvent(object):
         self.subscribe()
         self.pending_events = []
         self.__load_cache_regex()
-
-        # since ZMQ connect()  has no guarantees about the socket actually being
-        # connected this is a hack to attempt to do so.
-        self.get_event(wait=1)
 
     @classmethod
     def __load_cache_regex(cls):
@@ -524,7 +523,7 @@ class SaltEvent(object):
         # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets.keys():
+            for socket in six.iterkeys(self.poller.sockets):
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, linger)
                     socket.close()
@@ -554,7 +553,7 @@ class SaltEvent(object):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in SUB_EVENT:
                 try:
-                    for tag, data in load.get('return', {}).items():
+                    for tag, data in six.iteritems(load.get('return', {})):
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
                         if data.get('result') is False:
@@ -612,11 +611,14 @@ class NamespacedEvent(object):
     '''
     A wrapper for sending events within a specific base namespace
     '''
-    def __init__(self, event, base):
+    def __init__(self, event, base, print_func=None):
         self.event = event
         self.base = base
+        self.print_func = print_func
 
     def fire_event(self, data, tag):
+        if self.print_func is not None:
+            self.print_func(tag, data)
         self.event.fire_event(data, tagify(tag, base=self.base))
 
 

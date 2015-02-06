@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 
@@ -13,6 +14,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -485,7 +489,7 @@ fi
         Normalize the return to the format that we'll use for result checking
         '''
         result = {}
-        for item, descr in ret.iteritems():
+        for item, descr in six.iteritems(ret):
             result[item] = {
                 '__run_num__': descr['__run_num__'],
                 'comment': descr['comment'],
@@ -804,7 +808,7 @@ fi
         # TODO issue #8235 & #8774 some examples are still commented in the test file
         ret = self.run_function('state.sls', mods='requisites.use')
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
+        for item, descr in six.iteritems(ret):
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
         # TODO: issue #8802 : use recursions undetected

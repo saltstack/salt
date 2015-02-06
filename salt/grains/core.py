@@ -9,9 +9,9 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import socket
 import sys
@@ -23,7 +23,6 @@ import locale
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
-import salt.ext.six as six
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle')
 
@@ -31,11 +30,13 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
-from salt.ext.six import string_types
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
@@ -49,7 +50,7 @@ if salt.utils.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
-        import wmi
+        import wmi  # pylint: disable=import-error
         import salt.utils.winapi
         HAS_WMI = True
     except ImportError:
@@ -295,9 +296,9 @@ def _bsd_cpudata(osdata):
         cmds['cpu_model'] = '{0} -n machdep.cpu.brand_string'.format(sysctl)
         cmds['cpu_flags'] = '{0} -n machdep.cpu.features'.format(sysctl)
 
-    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
+    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in six.iteritems(cmds)])
 
-    if 'cpu_flags' in grains and isinstance(grains['cpu_flags'], string_types):
+    if 'cpu_flags' in grains and isinstance(grains['cpu_flags'], six.string_types):
         grains['cpu_flags'] = grains['cpu_flags'].split(' ')
 
     if osdata['kernel'] == 'NetBSD':
@@ -978,7 +979,7 @@ def os_data():
 
         # Add lsb grains on any distro with lsb-release
         try:
-            import lsb_release
+            import lsb_release  # pylint: disable=import-error
             release = lsb_release.get_distro_information()
             for key, value in six.iteritems(release):
                 key = key.lower()
@@ -1185,6 +1186,12 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'].partition('.')[0])
+    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+            os=grains['os'],
+            ver=grains['osrelease'])
 
     if grains.get('osrelease', ''):
         osrelease_info = grains['osrelease'].split('.')
@@ -1481,7 +1488,7 @@ def zmqversion():
     #   zmqversion
     try:
         import zmq
-        return {'zmqversion': zmq.zmq_version()}
+        return {'zmqversion': zmq.zmq_version()}  # pylint: disable=no-member
     except ImportError:
         return {}
 
@@ -1615,7 +1622,7 @@ def _hw_data(osdata):
                 'productname': 'smbios.system.product',
                 'biosreleasedate': 'smbios.bios.reldate',
             }
-            for key, val in fbsd_hwdata.items():
+            for key, val in six.iteritems(fbsd_hwdata):
                 grains[key] = __salt__['cmd.run']('{0} {1}'.format(kenv, val))
     elif osdata['kernel'] == 'OpenBSD':
         sysctl = salt.utils.which('sysctl')
@@ -1623,7 +1630,7 @@ def _hw_data(osdata):
                   'manufacturer': 'hw.vendor',
                   'productname': 'hw.product',
                   'serialnumber': 'hw.serialno'}
-        for key, oid in hwdata.items():
+        for key, oid in six.iteritems(hwdata):
             value = __salt__['cmd.run']('{0} -n {1}'.format(sysctl, oid))
             if not value.endswith(' value is not available'):
                 grains[key] = value
@@ -1636,7 +1643,7 @@ def _hw_data(osdata):
             'productname': 'machdep.dmi.system-product',
             'biosreleasedate': 'machdep.dmi.bios-date',
         }
-        for key, oid in nbsd_hwdata.items():
+        for key, oid in six.iteritems(nbsd_hwdata):
             result = __salt__['cmd.run_all']('{0} -n {1}'.format(sysctl, oid))
             if result['retcode'] == 0:
                 grains[key] = result['stdout']

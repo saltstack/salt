@@ -2,6 +2,21 @@
 '''
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
+# Import Python libs
+from __future__ import absolute_import
+
+
+# Import python libs
+import contextlib
+import textwrap
+import json
+try:
+    import dns.query
+    import dns.tsigkeyring
+    HAS_DNS = True
+except ImportError:
+    HAS_DNS = False
+
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -16,19 +31,12 @@ from salttesting.mock import (
 # Import Salt Libs
 from salt.modules import ddns
 
-try:
-    import dns.query
-    import dns.tsigkeyring
-    dns_support = True
-except ImportError as e:
-    dns_support = False
-
-import json
 # Globals
 ddns.__grains__ = {}
 ddns.__salt__ = {}
 
 
+@skipIf(HAS_DNS is False, 'dnspython libs not installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DDNSTestCase(TestCase):
     '''
@@ -66,45 +74,64 @@ class DDNSTestCase(TestCase):
         '''
         Test to add, replace, or update a DNS record.
         '''
-        file_data = json.dumps({'A': 'B'})
-        with patch('dns.message.make_query', return_value=True):
-            with patch('dns.rdatatype.from_text', return_value=True):
-                with patch('dns.rdata.from_text', return_value=True):
-                    mock = MagicMock(return_value=True)
-                    with patch.dict(ddns.__salt__, {'config.option': mock}):
-                        mock = MagicMock(return_value=True)
-                        with patch.dict(ddns.__salt__,
-                                        {'file.file_exists': mock}):
-                            with patch('salt.utils.fopen',
-                                       mock_open(read_data=file_data),
-                                       create=True):
-                                with patch.object(dns.tsigkeyring, 'from_text',
-                                                  return_value=True):
-                                    with patch.object(dns.query, 'udp') as mock:
-                                        mock.answer = [{'address': 'localhost'}]
-                                        self.assertFalse(ddns.update(zone='A',
-                                                                     name='B',
-                                                                     ttl=1,
-                                                                     rdtype='C',
-                                                                     data='D'))
+        mock_request = textwrap.dedent('''\
+            id 29380
+            opcode QUERY
+            rcode NOERROR
+            flags RD
+            ;QUESTION
+            name.zone. IN AAAA
+            ;ANSWER
+            ;AUTHORITY
+            ;ADDITIONAL''')
+        mock_rdtype = 28  # rdtype of AAAA record
+
+        class MockRrset(object):
+            def __init__(self):
+                self.items = [{'address': 'localhost'}]
+                self.ttl = 2
+
+        class MockAnswer(object):
+            def __init__(self, *args, **kwargs):
+                self.answer = [MockRrset()]
+
+            def rcode(self):
+                return 0
+
+        def mock_udp_query(*args, **kwargs):
+            return MockAnswer
+
+        with contextlib.nested(
+                patch.object(dns.message, 'make_query', MagicMock(return_value=mock_request)),
+                patch.object(dns.query, 'udp', mock_udp_query()),
+                patch.object(dns.rdatatype, 'from_text', MagicMock(return_value=mock_rdtype)),
+                patch.object(ddns, '_get_keyring', return_value=None),
+                patch.object(ddns, '_config', return_value=None)):
+            self.assertTrue(ddns.update('zone', 'name', 1, 'AAAA', '::1'))
 
     def test_delete(self):
         '''
         Test to delete a DNS record.
         '''
         file_data = json.dumps({'A': 'B'})
-        with patch.object(dns.query, 'udp') as mock:
-            mock.answer = [{'address': 'localhost'}]
-            mock = MagicMock(return_value=True)
-            with patch.dict(ddns.__salt__, {'config.option': mock}):
-                mock = MagicMock(return_value=True)
-                with patch.dict(ddns.__salt__, {'file.file_exists': mock}):
-                    with patch('salt.utils.fopen',
-                               mock_open(read_data=file_data),
-                               create=True):
-                        with patch.object(dns.tsigkeyring, 'from_text',
-                                          return_value=True):
-                            self.assertFalse(ddns.delete(zone='A', name='B'))
+
+        class MockAnswer(object):
+            def __init__(self, *args, **kwargs):
+                self.answer = [{'address': 'localhost'}]
+
+            def rcode(self):
+                return 0
+
+        def mock_udp_query(*args, **kwargs):
+            return MockAnswer
+
+        with contextlib.nested(
+                patch.object(dns.query, 'udp', mock_udp_query()),
+                patch('salt.utils.fopen', mock_open(read_data=file_data), create=True),
+                patch.object(dns.tsigkeyring, 'from_text', return_value=True),
+                patch.object(ddns, '_get_keyring', return_value=None),
+                patch.object(ddns, '_config', return_value=None)):
+            self.assertTrue(ddns.delete(zone='A', name='B'))
 
 if __name__ == '__main__':
     from integration import run_tests

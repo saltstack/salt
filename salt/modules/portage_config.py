@@ -12,6 +12,8 @@ import shutil
 import salt.utils
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import portage
     HAS_PORTAGE = True
@@ -27,6 +29,7 @@ except ImportError:
             HAS_PORTAGE = True
         except ImportError:
             pass
+# pylint: enable=import-error
 
 
 BASE_PATH = '/etc/portage/package.{0}'
@@ -220,11 +223,11 @@ def _merge_flags(*args):
         else:
             flags[flag] = True
     tmp = []
-    for k, v in flags.items():
-        if v:
-            tmp.append(k)
+    for key, val in six.iteritems(flags):
+        if val:
+            tmp.append(key)
         else:
-            tmp.append('-' + k)
+            tmp.append('-' + key)
 
     # Next sort is just aesthetic, can be commented for a small performance
     # boost

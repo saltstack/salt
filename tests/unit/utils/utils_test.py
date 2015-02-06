@@ -3,6 +3,9 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -28,8 +31,9 @@ import zmq
 from collections import namedtuple
 
 # Import 3rd-party libs
+import salt.ext.six as six
 try:
-    import timelib  # pylint: disable=W0611
+    import timelib  # pylint: disable=import-error,unused-import
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False
@@ -135,10 +139,12 @@ class UtilsTestCase(TestCase):
 
     @skipIf(os.path.exists('/tmp/no_way_this_is_a_file_nope.sh'), 'Test file exists! Skipping safe_rm_exceptions test!')
     def test_safe_rm_exceptions(self):
+        error = False
         try:
             utils.safe_rm('/tmp/no_way_this_is_a_file_nope.sh')
         except (IOError, OSError):
-            self.assertTrue(False, "utils.safe_rm raised exception when it should not have")
+            error = True
+        self.assertFalse(error, 'utils.safe_rm raised exception when it should not have')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.utils.arg_lookup')
@@ -152,10 +158,6 @@ class UtilsTestCase(TestCase):
 
         # Make sure we raise an error if we don't pass in the requisite number of arguments
         self.assertRaises(SaltInvocationError, utils.format_call, dummy_func, {'1': 2})
-
-        # Make sure we warn on invalid kwargs
-        ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3})
-        self.assertGreaterEqual(len(ret['warnings']), 1)
 
         ret = utils.format_call(dummy_func, {'first': 2, 'second': 2, 'third': 3},
                                 expected_extra_kws=('first', 'second', 'third'))
@@ -370,7 +372,7 @@ class UtilsTestCase(TestCase):
                 ]))
             ])
         }
-        for test, data in test_valid_false_states.items():
+        for test, data in six.iteritems(test_valid_false_states):
             self.assertFalse(
                 utils.check_state_result(data),
                 msg='{0} failed'.format(test))
@@ -421,7 +423,7 @@ class UtilsTestCase(TestCase):
                  ]))
             ])
         }
-        for test, data in test_valid_true_states.items():
+        for test, data in six.iteritems(test_valid_true_states):
             self.assertTrue(
                 utils.check_state_result(data),
                 msg='{0} failed'.format(test))
@@ -484,8 +486,6 @@ class UtilsTestCase(TestCase):
             self.assertEqual(now, utils.date_cast(None))
         self.assertEqual(now, utils.date_cast(now))
         try:
-            import timelib
-
             ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
             expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
             self.assertEqual(ret, expected_ret)

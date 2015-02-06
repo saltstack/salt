@@ -3,6 +3,9 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.modules import cmdmod
 from salt.exceptions import CommandExecutionError
@@ -215,7 +218,7 @@ class CMDMODTestCase(TestCase):
         '''
         Tests end result when a command is not found
         '''
-        ret = cmdmod._run('foo').get('stderr')
+        ret = cmdmod._run('foo', use_vt=True).get('stderr')
         self.assertIn('foo', ret)
 
     @patch('salt.utils.is_windows', MagicMock(return_value=True))

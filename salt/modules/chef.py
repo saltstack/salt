@@ -2,15 +2,18 @@
 '''
 Execute chef in server or solo mode
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import
 import logging
 import os
 
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -198,8 +201,8 @@ def _exec_cmd(*args, **kwargs):
     cmd_args = ' '.join(args)
     cmd_kwargs = ''.join([
          ' --{0} {1}'.format(k, v)
-         for k, v in kwargs.items() if not k.startswith('__')]
-    )
+         for k, v in six.iteritems(kwargs) if not k.startswith('__')
+    ])
     cmd_exec = '{0}{1}'.format(cmd_args, cmd_kwargs)
     log.debug('Chef command: {0}'.format(cmd_exec))
 

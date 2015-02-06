@@ -16,6 +16,7 @@ Full list of builtin pillar modules
     cobbler
     django_orm
     etcd_pillar
+    file_tree
     foreman
     git_pillar
     hiera
@@ -29,4 +30,5 @@ Full list of builtin pillar modules
     redismod
     s3
     svn_pillar
+    varstack_pillar
     virtkey

@@ -4,12 +4,16 @@ Extract an archive
 
 .. versionadded:: 2014.1.0
 '''
-from __future__ import absolute_import
 
-import logging
+# Import Python libs
+from __future__ import absolute_import
 import os
+import logging
 import tarfile
 from contextlib import closing
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -161,7 +165,7 @@ def extracted(name,
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:
-            file_result = file_result[next(file_result.iterkeys())]
+            file_result = file_result[next(six.iterkeys(file_result))]
         except AttributeError:
             pass
 
@@ -197,7 +201,23 @@ def extracted(name,
         else:
             log.debug('Untar {0} in {1}'.format(filename, name))
 
-            tar_cmd = ['tar', 'x{0}'.format(tar_options), '-f', repr(filename)]
+            tar_opts = tar_options.split(' ')
+
+            tar_cmd = ['tar']
+            tar_shortopts = 'x'
+            tar_longopts = []
+
+            for opt in tar_opts:
+                if not opt.startswith('-'):
+                    if opt not in ['x', 'f']:
+                        tar_shortopts = tar_shortopts + opt
+                else:
+                    tar_longopts.append(opt)
+
+            tar_cmd.append(tar_shortopts)
+            tar_cmd.extend(tar_longopts)
+            tar_cmd.extend(['-f', filename])
+
             results = __salt__['cmd.run_all'](tar_cmd, cwd=name, python_shell=False)
             if results['retcode'] != 0:
                 ret['result'] = False

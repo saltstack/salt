@@ -12,17 +12,16 @@ The data sent to the state calls is as follows:
       }
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import copy
 import site
 import fnmatch
 import logging
-import traceback
 import datetime
+import traceback
 
 # Import salt libs
 import salt.utils
@@ -33,13 +32,15 @@ import salt.fileclient
 import salt.utils.event
 import salt.syspaths as syspaths
 from salt.utils import context, immutabletypes
-from salt.ext.six import string_types
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
 
 # Import third party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
 from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'order',
     'prereq',
     'prereq_in',
+    'prerequired',
     'reload_modules',
     'reload_grains',
     'reload_pillar',
@@ -77,6 +79,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     '__pub_tgt',
     '__pub_ret',
     '__pub_tgt_type',
+    '__prereq__',
 ])
 
 
@@ -183,11 +186,11 @@ def format_log(ret):
                     msg = 'No changes made for {0[name]}'.format(ret)
             elif isinstance(chg, dict):
                 if 'diff' in chg:
-                    if isinstance(chg['diff'], string_types):
+                    if isinstance(chg['diff'], six.string_types):
                         msg = 'File changed:\n{0}'.format(chg['diff'])
-                if all([isinstance(x, dict) for x in chg.values()]):
+                if all([isinstance(x, dict) for x in six.itervalues(chg)]):
                     if all([('old' in x and 'new' in x)
-                            for x in chg.values()]):
+                            for x in six.itervalues(chg)]):
                         # This is the return data from a package install
                         msg = 'Installed Packages:\n'
                         for pkg in chg:
@@ -253,7 +256,7 @@ class Compiler(object):
         '''
         for name in high:
             if not isinstance(high[name], dict):
-                if isinstance(high[name], string_types):
+                if isinstance(high[name], six.string_types):
                     # Is this is a short state? It needs to be padded!
                     if '.' in high[name]:
                         comps = high[name].split('.')
@@ -261,8 +264,8 @@ class Compiler(object):
                             # Merge the comps
                             comps[1] = '.'.join(comps[1:len(comps)])
                         high[name] = {
-                            #'__sls__': template,
-                            #'__env__': None,
+                            # '__sls__': template,
+                            # '__env__': None,
                             comps[0]: [comps[1]]
                         }
                         continue
@@ -304,10 +307,10 @@ class Compiler(object):
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
-        for name, body in high.items():
+        for name, body in six.iteritems(high):
             if name.startswith('__'):
                 continue
-            if not isinstance(name, string_types):
+            if not isinstance(name, six.string_types):
                 errors.append(
                     'ID {0!r} in SLS {1!r} is not formed as a string, but is '
                     'a {2}'.format(name, body['__sls__'], type(name).__name__)
@@ -330,7 +333,7 @@ class Compiler(object):
                     if '.' in state:
                         fun += 1
                     for arg in body[state]:
-                        if isinstance(arg, string_types):
+                        if isinstance(arg, six.string_types):
                             fun += 1
                             if ' ' in arg.strip():
                                 errors.append(('The function "{0}" in state '
@@ -469,10 +472,10 @@ class Compiler(object):
         the individual state executor structures
         '''
         chunks = []
-        for name, body in high.items():
+        for name, body in six.iteritems(high):
             if name.startswith('__'):
                 continue
-            for state, run in body.items():
+            for state, run in six.iteritems(body):
                 funcs = set()
                 names = set()
                 if state.startswith('__'):
@@ -485,11 +488,11 @@ class Compiler(object):
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
                 for arg in run:
-                    if isinstance(arg, string_types):
+                    if isinstance(arg, six.string_types):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
-                        for key, val in arg.items():
+                        for key, val in six.iteritems(arg):
                             if key == 'names':
                                 names.update(val)
                                 continue
@@ -500,7 +503,7 @@ class Compiler(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = next(iter(entry.keys()))
+                            low_name = next(six.iterkeys(entry))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -536,7 +539,7 @@ class Compiler(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = next(iter(exc.keys()))
+                key = next(six.iterkeys(exc))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -544,7 +547,7 @@ class Compiler(object):
         # Now the excludes have been simplified, use them
         if ex_sls:
             # There are sls excludes, find the associtaed ids
-            for name, body in high.items():
+            for name, body in six.iteritems(high):
                 if name.startswith('__'):
                     continue
                 if body.get('__sls__', '') in ex_sls:
@@ -572,6 +575,7 @@ class State(object):
         self.pre = {}
         self.__run_num = 0
         self.jid = jid
+        self.instance_id = str(id(self))
 
     def _gather_pillar(self):
         '''
@@ -800,7 +804,7 @@ class State(object):
             errors.append('Missing "fun" data')
         if 'name' not in data:
             errors.append('Missing "name" data')
-        if data['name'] and not isinstance(data['name'], string_types):
+        if data['name'] and not isinstance(data['name'], six.string_types):
             errors.append(
                 'ID {0!r} in SLS {1!r} is not formed as a string, but is '
                 'a {2}'.format(
@@ -881,13 +885,13 @@ class State(object):
         if not isinstance(high, dict):
             errors.append('High data is not a dictionary and is invalid')
         reqs = {}
-        for name, body in high.items():
+        for name, body in six.iteritems(high):
             try:
                 if name.startswith('__'):
                     continue
             except AttributeError:
                 pass
-            if not isinstance(name, string_types):
+            if not isinstance(name, six.string_types):
                 errors.append(
                     'ID {0!r} in SLS {1!r} is not formed as a string, but '
                     'is a {2}. It may need to be quoted.'.format(
@@ -919,7 +923,7 @@ class State(object):
                     if '.' in state:
                         fun += 1
                     for arg in body[state]:
-                        if isinstance(arg, string_types):
+                        if isinstance(arg, six.string_types):
                             fun += 1
                             if ' ' in arg.strip():
                                 errors.append(('The function "{0}" in state '
@@ -1075,10 +1079,10 @@ class State(object):
         the individual state executor structures
         '''
         chunks = []
-        for name, body in high.items():
+        for name, body in six.iteritems(high):
             if name.startswith('__'):
                 continue
-            for state, run in body.items():
+            for state, run in six.iteritems(body):
                 funcs = set()
                 names = set()
                 if state.startswith('__'):
@@ -1091,18 +1095,18 @@ class State(object):
                     chunk['__env__'] = body['__env__']
                 chunk['__id__'] = name
                 for arg in run:
-                    if isinstance(arg, string_types):
+                    if isinstance(arg, six.string_types):
                         funcs.add(arg)
                         continue
                     if isinstance(arg, dict):
-                        for key, val in arg.items():
+                        for key, val in six.iteritems(arg):
                             if key == 'names':
                                 names.update(val)
                             elif key == 'state':
                                 # Don't pass down a state override
                                 continue
                             elif (key == 'name' and
-                                  not isinstance(val, string_types)):
+                                  not isinstance(val, six.string_types)):
                                 # Invalid name, fall back to ID
                                 chunk[key] = name
                             else:
@@ -1112,7 +1116,7 @@ class State(object):
                     for entry in names:
                         live = copy.deepcopy(chunk)
                         if isinstance(entry, dict):
-                            low_name = next(iter(entry.keys()))
+                            low_name = next(six.iterkeys(entry))
                             live['name'] = low_name
                             live.update(entry[low_name][0])
                         else:
@@ -1139,7 +1143,7 @@ class State(object):
             return high, errors
         ext = high.pop('__extend__')
         for ext_chunk in ext:
-            for name, body in ext_chunk.items():
+            for name, body in six.iteritems(ext_chunk):
                 if name not in high:
                     state_type = next(
                         x for x in body if not x.startswith('__')
@@ -1161,7 +1165,7 @@ class State(object):
                                 body.get('__sls__', 'base'))
                             )
                         continue
-                for state, run in body.items():
+                for state, run in six.iteritems(body):
                     if state.startswith('__'):
                         continue
                     if state not in high[name]:
@@ -1171,8 +1175,8 @@ class State(object):
                     for arg in run:
                         update = False
                         for hind in range(len(high[name][state])):
-                            if (isinstance(arg, string_types) and
-                            isinstance(high[name][state][hind], string_types)):
+                            if (isinstance(arg, six.string_types) and
+                            isinstance(high[name][state][hind], six.string_types)):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
@@ -1223,7 +1227,7 @@ class State(object):
                 # Explicitly declared exclude
                 if len(exc) != 1:
                     continue
-                key = next(iter(exc.keys()))
+                key = next(six.iterkeys(exc))
                 if key == 'sls':
                     ex_sls.add(exc['sls'])
                 elif key == 'id':
@@ -1231,7 +1235,7 @@ class State(object):
         # Now the excludes have been simplified, use them
         if ex_sls:
             # There are sls excludes, find the associated ids
-            for name, body in high.items():
+            for name, body in six.iteritems(high):
                 if name.startswith('__'):
                     continue
                 sls = body.get('__sls__', '')
@@ -1268,10 +1272,10 @@ class State(object):
                     ]))
         extend = {}
         errors = []
-        for id_, body in high.items():
+        for id_, body in six.iteritems(high):
             if not isinstance(body, dict):
                 continue
-            for state, run in body.items():
+            for state, run in six.iteritems(body):
                 if state.startswith('__'):
                     continue
                 for arg in run:
@@ -1290,7 +1294,7 @@ class State(object):
                         items = arg[key]
                         if isinstance(items, dict):
                             # Formatted as a single req_in
-                            for _state, name in items.items():
+                            for _state, name in six.iteritems(items):
 
                                 # Not a use requisite_in
                                 found = False
@@ -1395,9 +1399,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if next(iter(arg.keys())) == 'name':
+                                        if next(six.iterkeys(arg)) == 'name':
                                             continue
-                                        if next(iter(arg.keys())) == 'names':
+                                        if next(six.iterkeys(arg)) == 'names':
                                             continue
                                         extend[ext_id][_state].append(arg)
                                     continue
@@ -1421,9 +1425,9 @@ class State(object):
                                         if next(iter(arg)) in ignore_args:
                                             continue
                                         # Don't use name or names
-                                        if next(iter(arg.keys())) == 'name':
+                                        if next(six.iterkeys(arg)) == 'name':
                                             continue
-                                        if next(iter(arg.keys())) == 'names':
+                                        if next(six.iterkeys(arg)) == 'names':
                                             continue
                                         extend[id_][state].append(arg)
                                     continue
@@ -1449,7 +1453,7 @@ class State(object):
                                         {rkey: [{state: id_}]}
                                         )
         high['__extend__'] = []
-        for key, val in extend.items():
+        for key, val in six.iteritems(extend):
             high['__extend__'].append({key: val})
         req_in_high, req_in_errors = self.reconcile_extend(high)
         errors.extend(req_in_errors)
@@ -1505,6 +1509,7 @@ class State(object):
             # state module to change these at runtime.
             '__low__': immutabletypes.freeze(low),
             '__running__': immutabletypes.freeze(running) if running else {},
+            '__instance_id__': self.instance_id,
             '__lowstate__': immutabletypes.freeze(chunks) if chunks else {}
         }
 
@@ -1526,7 +1531,7 @@ class State(object):
 
             if 'saltenv' in low:
                 inject_globals['__env__'] = str(low['saltenv'])
-            elif isinstance(cdata['kwargs'].get('env', None), string_types):
+            elif isinstance(cdata['kwargs'].get('env', None), six.string_types):
                 # User is using a deprecated env setting which was parsed by
                 # format_call.
                 # We check for a string type since module functions which
@@ -1682,7 +1687,7 @@ class State(object):
                     if not found:
                         return 'unmet', ()
         fun_stats = set()
-        for r_state, chunks in reqs.items():
+        for r_state, chunks in six.iteritems(reqs):
             if r_state == 'prereq':
                 run_dict = self.pre
             else:
@@ -1798,7 +1803,7 @@ class State(object):
                         lost[requisite].append(req)
             if lost['require'] or lost['watch'] or lost['prereq'] or lost['onfail'] or lost['onchanges'] or lost.get('prerequired'):
                 comment = 'The following requisites were not found:\n'
-                for requisite, lreqs in lost.items():
+                for requisite, lreqs in six.iteritems(lost):
                     if not lreqs:
                         continue
                     comment += \
@@ -1874,7 +1879,7 @@ class State(object):
                 # a nice error message
                 comment_dict = {}
                 # look at all requisite types for a failure
-                for req_type, req_lows in reqs.iteritems():
+                for req_lows in six.itervalues(reqs):
                     for req_low in req_lows:
                         req_tag = _gen_tag(req_low)
                         req_ret = self.pre.get(req_tag, running.get(req_tag))
@@ -1949,22 +1954,24 @@ class State(object):
                 listeners.append({(chunk['state'], chunk['name']): chunk['listen']})
             if 'listen_in' in chunk:
                 for l_in in chunk['listen_in']:
-                    for key, val in l_in.items():
+                    for key, val in six.iteritems(l_in):
                         listeners.append({(key, val): [{chunk['state']: chunk['name']}]})
         mod_watchers = []
         errors = {}
         for l_dict in listeners:
-            for key, val in l_dict.items():
+            for key, val in six.iteritems(l_dict):
                 for listen_to in val:
                     if not isinstance(listen_to, dict):
                         continue
-                    for lkey, lval in listen_to.items():
+                    for lkey, lval in six.iteritems(listen_to):
                         if (lkey, lval) not in crefs:
                             rerror = {_l_tag(lkey, lval):
-                                         {'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
+                                      {
+                                          'comment': 'Referenced state {0}: {1} does not exist'.format(lkey, lval),
                                           'name': 'listen_{0}:{1}'.format(lkey, lval),
                                           'result': False,
-                                          'changes': {}}}
+                                          'changes': {}
+                                      }}
                             errors.update(rerror)
                             continue
                         to_tag = _gen_tag(crefs[(lkey, lval)])
@@ -2044,6 +2051,23 @@ class State(object):
             return errors
         ret = dict(list(disabled.items()) + list(self.call_chunks(chunks).items()))
         ret = self.call_listen(chunks, ret)
+
+        def _cleanup_accumulator_data():
+            accum_data_path = os.path.join(
+                salt.utils.get_accumulator_dir(self.opts['cachedir']),
+                self.instance_id
+            )
+            try:
+                os.remove(accum_data_path)
+                log.debug('Deleted accumulator data file {0}'.format(
+                    accum_data_path)
+                )
+            except OSError:
+                log.debug('File {0} does not exist, no need to cleanup.'.format(
+                    accum_data_path)
+                )
+        _cleanup_accumulator_data()
+
         return ret
 
     def render_template(self, high, template):
@@ -2068,13 +2092,13 @@ class State(object):
 
         for name in high:
             if not isinstance(high[name], dict):
-                if isinstance(high[name], string_types):
+                if isinstance(high[name], six.string_types):
                     # Is this is a short state, it needs to be padded
                     if '.' in high[name]:
                         comps = high[name].split('.')
                         high[name] = {
-                            #'__sls__': template,
-                            #'__env__': None,
+                            # '__sls__': template,
+                            # '__env__': None,
                             comps[0]: [comps[1]]
                         }
                         continue
@@ -2207,8 +2231,8 @@ class BaseHighState(object):
                 opts['state_top'] = os.path.join('salt://', mopts['state_top'])
             opts['nodegroups'] = mopts.get('nodegroups', {})
             opts['state_auto_order'] = mopts.get(
-                    'state_auto_order',
-                    opts['state_auto_order'])
+                'state_auto_order',
+                opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
             opts['state_events'] = mopts.get('state_events')
             opts['state_aggregate'] = mopts.get('state_aggregate', opts.get('state_aggregate', False))
@@ -2232,35 +2256,49 @@ class BaseHighState(object):
         tops = DefaultOrderedDict(list)
         include = DefaultOrderedDict(list)
         done = DefaultOrderedDict(list)
+        found = 0  # did we find any contents in the top files?
         # Gather initial top files
         if self.opts['environment']:
+            contents = self.client.cache_file(
+                self.opts['state_top'],
+                self.opts['environment']
+            )
+            if contents:
+                found = 1
             tops[self.opts['environment']] = [
+                compile_template(
+                    contents,
+                    self.state.rend,
+                    self.state.opts['renderer'],
+                    env=self.opts['environment']
+                )
+            ]
+        else:
+            found = 0
+            for saltenv in self._get_envs():
+                contents = self.client.cache_file(
+                    self.opts['state_top'],
+                    saltenv
+                )
+                if contents:
+                    found = found + 1
+                else:
+                    log.debug('No contents loaded for env: {0}'.format(saltenv))
+
+                tops[saltenv].append(
                     compile_template(
-                        self.client.cache_file(
-                            self.opts['state_top'],
-                            self.opts['environment']
-                            ),
+                        contents,
                         self.state.rend,
                         self.state.opts['renderer'],
-                        env=self.opts['environment']
-                        )
-                    ]
-        else:
-            for saltenv in self._get_envs():
-                tops[saltenv].append(
-                        compile_template(
-                            self.client.cache_file(
-                                self.opts['state_top'],
-                                saltenv
-                                ),
-                            self.state.rend,
-                            self.state.opts['renderer'],
-                            saltenv=saltenv
-                            )
-                        )
+                        saltenv=saltenv
+                    )
+                )
+
+        if found == 0:
+            log.error('No contents found in top file')
 
         # Search initial top files for includes
-        for saltenv, ctops in tops.items():
+        for saltenv, ctops in six.iteritems(tops):
             for ctop in ctops:
                 if 'include' not in ctop:
                     continue
@@ -2270,7 +2308,7 @@ class BaseHighState(object):
         # Go through the includes and pull out the extra tops and add them
         while include:
             pops = []
-            for saltenv, states in include.items():
+            for saltenv, states in six.iteritems(include):
                 pops.append(saltenv)
                 if not states:
                     continue
@@ -2279,16 +2317,16 @@ class BaseHighState(object):
                         if sls in done[saltenv]:
                             continue
                         tops[saltenv].append(
-                                compile_template(
-                                    self.client.get_state(
-                                        sls,
-                                        saltenv
-                                        ).get('dest', False),
-                                    self.state.rend,
-                                    self.state.opts['renderer'],
-                                    saltenv=saltenv
-                                    )
-                                )
+                            compile_template(
+                                self.client.get_state(
+                                    sls,
+                                    saltenv
+                                ).get('dest', False),
+                                self.state.rend,
+                                self.state.opts['renderer'],
+                                saltenv=saltenv
+                            )
+                        )
                         done[saltenv].append(sls)
             for saltenv in pops:
                 if saltenv in include:
@@ -2300,9 +2338,9 @@ class BaseHighState(object):
         Cleanly merge the top files
         '''
         top = DefaultOrderedDict(OrderedDict)
-        for ctops in tops.values():
+        for ctops in six.itervalues(tops):
             for ctop in ctops:
-                for saltenv, targets in ctop.items():
+                for saltenv, targets in six.iteritems(ctop):
                     if saltenv == 'include':
                         continue
                     try:
@@ -2315,7 +2353,7 @@ class BaseHighState(object):
                             for comp in top[saltenv][tgt]:
                                 if isinstance(comp, dict):
                                     matches.append(comp)
-                                if isinstance(comp, string_types):
+                                if isinstance(comp, six.string_types):
                                     states.add(comp)
                             top[saltenv][tgt] = matches
                             top[saltenv][tgt].extend(list(states))
@@ -2332,10 +2370,10 @@ class BaseHighState(object):
             errors.append('Top data was not formed as a dict')
             # No further checks will work, bail out
             return errors
-        for saltenv, matches in tops.items():
+        for saltenv, matches in six.iteritems(tops):
             if saltenv == 'include':
                 continue
-            if not isinstance(saltenv, string_types):
+            if not isinstance(saltenv, six.string_types):
                 errors.append(
                     'Environment {0} in top file is not formed as a '
                     'string'.format(saltenv)
@@ -2347,7 +2385,7 @@ class BaseHighState(object):
                     'The top file matches for saltenv {0} are not '
                     'formatted as a dict'.format(saltenv)
                 )
-            for slsmods in matches.values():
+            for slsmods in six.itervalues(matches):
                 if not isinstance(slsmods, list):
                     errors.append('Malformed topfile (state declarations not '
                                   'formed as a list)')
@@ -2355,7 +2393,7 @@ class BaseHighState(object):
                 for slsmod in slsmods:
                     if isinstance(slsmod, dict):
                         # This value is a match option
-                        for val in slsmod.values():
+                        for val in six.itervalues(slsmod):
                             if not val:
                                 errors.append(
                                     'Improperly formatted top file matcher '
@@ -2364,7 +2402,7 @@ class BaseHighState(object):
                                         val
                                     )
                                 )
-                    elif isinstance(slsmod, string_types):
+                    elif isinstance(slsmod, six.string_types):
                         # This is a sls module
                         if not slsmod:
                             errors.append(
@@ -2391,13 +2429,13 @@ class BaseHighState(object):
         '''
         matches = {}
         # pylint: disable=cell-var-from-loop
-        for saltenv, body in top.items():
+        for saltenv, body in six.iteritems(top):
             if self.opts['environment']:
                 if saltenv != self.opts['environment']:
                     continue
-            for match, data in body.items():
+            for match, data in six.iteritems(body):
                 def _filter_matches(_match, _data, _opts):
-                    if isinstance(_data, string_types):
+                    if isinstance(_data, six.string_types):
                         _data = [_data]
                     if self.matcher.confirm_top(
                             _match,
@@ -2409,9 +2447,9 @@ class BaseHighState(object):
                         for item in _data:
                             if 'subfilter' in item:
                                 _tmpdata = item.pop('subfilter')
-                                for match, data in _tmpdata.items():
+                                for match, data in six.iteritems(_tmpdata):
                                     _filter_matches(match, data, _opts)
-                            if isinstance(item, string_types):
+                            if isinstance(item, six.string_types):
                                 matches[saltenv].append(item)
                 _filter_matches(match, data, self.opts['nodegroups'])
         ext_matches = self.client.ext_nodes()
@@ -2607,7 +2645,7 @@ class BaseHighState(object):
         if self.opts['state_auto_order']:
             for name in state:
                 for s_dec in state[name]:
-                    if not isinstance(s_dec, string_types):
+                    if not isinstance(s_dec, six.string_types):
                         # PyDSL OrderedDict?
                         continue
 
@@ -2625,7 +2663,7 @@ class BaseHighState(object):
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
                             if len(arg) > 0:
-                                if next(iter(arg.keys())) == 'order':
+                                if next(six.iterkeys(arg)) == 'order':
                                     found = True
                     if not found:
                         if not isinstance(state[name][s_dec], list):
@@ -2648,7 +2686,7 @@ class BaseHighState(object):
                 if name == '__exclude__':
                     continue
 
-                if isinstance(state[name], string_types):
+                if isinstance(state[name], six.string_types):
                     # Is this is a short state, it needs to be padded
                     if '.' in state[name]:
                         comps = state[name].split('.')
@@ -2748,7 +2786,7 @@ class BaseHighState(object):
         all_errors = []
         mods = set()
         statefiles = []
-        for saltenv, states in matches.items():
+        for saltenv, states in six.iteritems(matches):
             for sls_match in states:
                 try:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
@@ -2786,7 +2824,7 @@ class BaseHighState(object):
     def clean_duplicate_extends(self, highstate):
         if '__extend__' in highstate:
             highext = []
-            for items in (ext.items() for ext in highstate['__extend__']):
+            for items in (six.iteritems(ext) for ext in highstate['__extend__']):
                 for item in items:
                     if item not in highext:
                         highext.append(item)
@@ -2996,6 +3034,15 @@ class HighState(BaseHighState):
         self.stack.append(self)
 
     @classmethod
+    def clear_active(cls):
+        # Nuclear option
+        #
+        # Blow away the entire stack. Used primarily by the test runner but also
+        # useful in custom wrappers of the HighState class, to reset the stack
+        # to a fresh state.
+        cls.stack = []
+
+    @classmethod
     def pop_active(cls):
         cls.stack.pop()
 
@@ -3039,7 +3086,7 @@ class MasterHighState(HighState):
     def __init__(self, master_opts, minion_opts, grains, id_,
                  saltenv=None,
                  env=None):
-        if isinstance(env, string_types):
+        if isinstance(env, six.string_types):
             salt.utils.warn_until(
                 'Boron',
                 'Passing a salt environment should be done using \'saltenv\' '

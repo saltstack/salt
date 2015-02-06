@@ -558,6 +558,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['dns'] = opts['dns']
         result['peerdns'] = 'yes'
 
+    if 'mtu' in opts:
+        try:
+            result['mtu'] = int(opts['mtu'])
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
+
     if iface_type not in ['bridge']:
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:

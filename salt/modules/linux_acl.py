@@ -184,7 +184,22 @@ def wipefacls(*args, **kwargs):
     return True
 
 
-def modfacl(acl_type, acl_name, perms, *args, **kwargs):
+def _acl_prefix(acl_type):
+    prefix = ''
+    if acl_type.startswith('d'):
+        prefix = 'd:'
+        acl_type = acl_type.replace('default:', '')
+        acl_type = acl_type.replace('d:', '')
+    if acl_type == 'user' or acl_type == 'u':
+        prefix += 'u'
+    elif acl_type == 'group' or acl_type == 'g':
+        prefix += 'g'
+    elif acl_type == 'mask' or acl_type == 'm':
+        prefix += 'm'
+    return prefix
+
+
+def modfacl(acl_type, acl_name='', perms='', *args, **kwargs):
     '''
     Add or modify a FACL for the specified file(s)
 
@@ -206,16 +221,7 @@ def modfacl(acl_type, acl_name, perms, *args, **kwargs):
     if recursive:
         cmd += ' -R'
 
-    prefix = ''
-    if acl_type.startswith('d'):
-        prefix = 'd:'
-        acl_type = acl_type.replace('default:', '')
-        acl_type = acl_type.replace('d:', '')
-    if acl_type == 'user' or acl_type == 'u':
-        prefix += 'u'
-    elif acl_type == 'group' or acl_type == 'g':
-        prefix += 'g'
-    cmd = '{0} {1}:{2}:{3}'.format(cmd, prefix, acl_name, perms)
+    cmd = '{0} {1}:{2}:{3}'.format(cmd, _acl_prefix(acl_type), acl_name, perms)
 
     for dentry in args:
         cmd += ' {0}'.format(dentry)
@@ -223,7 +229,7 @@ def modfacl(acl_type, acl_name, perms, *args, **kwargs):
     return True
 
 
-def delfacl(acl_type, acl_name, *args, **kwargs):
+def delfacl(acl_type, acl_name='', *args, **kwargs):
     '''
     Remove specific FACL from the specified file(s)
 
@@ -245,16 +251,7 @@ def delfacl(acl_type, acl_name, *args, **kwargs):
     if recursive:
         cmd += ' -R'
 
-    prefix = ''
-    if acl_type.startswith('d'):
-        prefix = 'd:'
-        acl_type = acl_type.replace('default:', '')
-        acl_type = acl_type.replace('d:', '')
-    if acl_type == 'user' or acl_type == 'u':
-        prefix += 'u'
-    elif acl_type == 'group' or acl_type == 'g':
-        prefix += 'g'
-    cmd = '{0} {1}:{2}'.format(cmd, prefix, acl_name)
+    cmd = '{0} {1}:{2}'.format(cmd, _acl_prefix(acl_type), acl_name)
 
     for dentry in args:
         cmd += ' {0}'.format(dentry)

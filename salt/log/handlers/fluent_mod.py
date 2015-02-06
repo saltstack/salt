@@ -44,10 +44,9 @@
     .. _`fluent-logger-python`: https://github.com/fluent/fluent-logger-python
 
 '''
-from __future__ import absolute_import
-from __future__ import print_function
 
 # Import python libs
+from __future__ import absolute_import, print_function
 import logging
 import logging.handlers
 import time
@@ -57,12 +56,12 @@ import threading
 
 
 # Import salt libs
-from salt._compat import string_types
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.network
 
 # Import Third party libs
+import salt.ext.six as six
 try:
     import simplejson as json
 except ImportError:
@@ -201,7 +200,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             )
 
         # Add any extra attributes to the message field
-        for key, value in record.__dict__.items():
+        for key, value in six.iteritems(record.__dict__):
             if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
@@ -214,7 +213,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict['@fields'][key] = value
                 continue
 
-            if isinstance(value, (string_types, bool, dict, float, int, list)):
+            if isinstance(value, (six.string_types, bool, dict, float, int, list)):
                 message_dict['@fields'][key] = value
                 continue
 
@@ -245,7 +244,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             )
 
         # Add any extra attributes to the message field
-        for key, value in record.__dict__.items():
+        for key, value in six.iteritems(record.__dict__):
             if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
@@ -258,7 +257,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict[key] = value
                 continue
 
-            if isinstance(value, (string_types, bool, dict, float, int, list)):
+            if isinstance(value, (six.string_types, bool, dict, float, int, list)):
                 message_dict[key] = value
                 continue
 
@@ -314,7 +313,6 @@ class FluentSender(object):
 
         self.socket = None
         self.pendings = None
-        self.packer = msgpack.Packer()
         self.lock = threading.Lock()
 
         try:
@@ -339,7 +337,7 @@ class FluentSender(object):
         packet = (tag, timestamp, data)
         if self.verbose:
             print(packet)
-        return self.packer.pack(packet)
+        return msgpack.packb(packet)
 
     def _send(self, bytes_):
         self.lock.acquire()

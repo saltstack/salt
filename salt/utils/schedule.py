@@ -207,9 +207,9 @@ dictionary, othewise it will be ignored.
             foo: bar
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import time
 import datetime
@@ -220,6 +220,21 @@ import logging
 import errno
 import random
 
+# Import Salt libs
+import salt.utils
+import salt.utils.jid
+import salt.utils.process
+import salt.utils.args
+import salt.payload
+import salt.syspaths
+from salt.utils.odict import OrderedDict
+from salt.utils.process import os_is_running
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
+
+# pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
     _WHEN_SUPPORTED = True
@@ -233,14 +248,7 @@ try:
     _CRON_SUPPORTED = True
 except ImportError:
     _CRON_SUPPORTED = False
-
-# Import Salt libs
-import salt.utils
-import salt.utils.jid
-import salt.utils.process
-from salt.utils.odict import OrderedDict
-from salt.utils.process import os_is_running
-import salt.payload
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -260,6 +268,7 @@ class Schedule(object):
             self.returners = returners
         else:
             self.returners = returners.loader.gen_functions()
+        self.time_offset = self.functions.get('timezone.get_offset', lambda: '0000')()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint
@@ -273,11 +282,24 @@ class Schedule(object):
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
+    def persist(self):
+        '''
+        Persist the modified schedule into <<configdir>>/minion.d/_schedule.conf
+        '''
+        schedule_conf = os.path.join(
+                salt.syspaths.CONFIG_DIR,
+                'minion.d',
+                '_schedule.conf')
+        try:
+            with salt.utils.fopen(schedule_conf, 'w+') as fp_:
+                fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
+        except (IOError, OSError):
+            log.error('Failed to persist the updated schedule')
+
     def delete_job(self, name, where=None):
         '''
         Deletes a job from the scheduler.
         '''
-
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
             if name in self.opts['schedule']:
@@ -306,7 +328,7 @@ class Schedule(object):
         if not len(data) == 1:
             raise ValueError('You can only schedule one new job at a time.')
 
-        new_job = next(data.iterkeys())
+        new_job = next(six.iterkeys(data))
 
         if new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
@@ -314,6 +336,7 @@ class Schedule(object):
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
         self.opts['schedule'].update(data)
+        self.persist()
 
     def enable_job(self, name, where=None):
         '''
@@ -429,6 +452,8 @@ class Schedule(object):
         if 'metadata' in data:
             if isinstance(data['metadata'], dict):
                 ret['metadata'] = data['metadata']
+                ret['metadata']['_TOS'] = self.time_offset
+                ret['metadata']['_TS'] = time.ctime()
             else:
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
@@ -486,26 +511,23 @@ class Schedule(object):
             with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
-        args = None
+        args = tuple()
         if 'args' in data:
             args = data['args']
 
-        kwargs = None
+        kwargs = {}
         if 'kwargs' in data:
             kwargs = data['kwargs']
+        # if the func support **kwargs, lets pack in the pub data we have
+        # TODO: pack the *same* pub data as a minion?
+        argspec = salt.utils.args.get_function_argspec(self.functions[func])
+        if argspec.keywords:
+            # this function accepts **kwargs, pack in the publish data
+            for key, val in six.iteritems(ret):
+                kwargs['__pub_{0}'.format(key)] = val
 
         try:
-            if args and kwargs:
-                ret['return'] = self.functions[func](*args, **kwargs)
-
-            if args and not kwargs:
-                ret['return'] = self.functions[func](*args)
-
-            if kwargs and not args:
-                ret['return'] = self.functions[func](**kwargs)
-
-            if not kwargs and not args:
-                ret['return'] = self.functions[func]()
+            ret['return'] = self.functions[func](*args, **kwargs)
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
@@ -536,7 +558,7 @@ class Schedule(object):
                 mret['jid'] = 'req'
                 channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
                 load = {'cmd': '_return', 'id': self.opts['id']}
-                for key, value in mret.items():
+                for key, value in six.iteritems(mret):
                     load[key] = value
                 channel.send(load)
 
@@ -568,7 +590,7 @@ class Schedule(object):
             raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
-        for job, data in schedule.items():
+        for job, data in six.iteritems(schedule):
             if job == 'enabled':
                 continue
             # Job is disabled, continue

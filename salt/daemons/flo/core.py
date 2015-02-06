@@ -4,21 +4,19 @@ The core behaviors used by minion and master
 '''
 # pylint: disable=W0232
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import time
 import types
-import logging
-import multiprocessing
-import traceback
-import itertools
-from collections import deque
 import random
-import salt.ext.six as six
-from salt.ext.six.moves import range
+import logging
+import threading
+import itertools
+import traceback
+import multiprocessing
+from collections import deque
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -46,6 +44,7 @@ from ioflo.base.consoling import getConsole
 console = getConsole()
 
 # Import Third Party Libs
+# pylint: disable=import-error
 HAS_PSUTIL = False
 try:
     import psutil
@@ -59,6 +58,11 @@ try:
     HAS_RESOURCE = True
 except ImportError:
     pass
+# pylint: disable=no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
+
 log = logging.getLogger(__name__)
 
 
@@ -102,6 +106,110 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
                     raise
 
 
+class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
+    '''
+    Updates value of share .salt.road.manor.cluster.clustered
+    Twith opts['cluster_mode']
+
+    FloScript:
+
+    do salt raet road clustered
+    go next if .salt.road.manor.cluster.clustered
+
+    '''
+    Ioinits = odict(inode=".salt.road.manor.",
+                    clustered=odict(ipath='cluster.clustered', ival=False),
+                    opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Update .cluster.clustered share from opts
+        '''
+        self.clustered.update(value=self.opts.value.get('cluster_mode', False))
+
+
+class SaltRaetRoadUsherMinionSetup(ioflo.base.deeding.Deed):
+    '''
+    Set up .ushers which is initial list of masters to bootstrap
+    into road
+
+    FloScript:
+
+    do salt raet road usher minion setup at enter
+
+    '''
+    Ioinits = odict(
+        inode=".salt.road.manor.",
+        ushers='ushers',
+        opts='.salt.opts')
+
+    def action(self):
+        '''
+        Assign .ushers by parsing opts
+        '''
+        masters = 'master'
+        port = None
+        if self.opts.value.get('cluster_mode', False):
+            masters = 'cluster_masters'
+
+        self.ushers.value = daemons.extract_masters(self.opts.value,
+                                                    masters=masters,
+                                                    port=port)
+
+
+class SaltRaetRoadUsherMasterSetup(ioflo.base.deeding.Deed):
+    '''
+    Set up .ushers which is initial list of masters to bootstrap
+    into road
+
+    FloScript:
+
+    do salt raet road usher master setup at enter
+
+    '''
+    Ioinits = odict(
+        inode=".salt.road.manor.",
+        ushers='ushers',
+        opts='.salt.opts')
+
+    def action(self):
+        '''
+        Assign .ushers by parsing opts
+        '''
+        masters = 'cluster_masters'
+        port = 'raet_port'
+
+        self.ushers.value = daemons.extract_masters(self.opts.value,
+                                                    masters=masters,
+                                                    port=port,
+                                                    raise_if_empty=False)
+
+
+class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
+    '''
+    Sets up cluster.masters for load balancing
+
+    FloScript:
+
+    do salt raet road cluster load setup at enter
+
+    '''
+    Ioinits = odict(
+        inode='.salt.road.manor.',
+        masters={'ipath': 'cluster.masters', 'ival': odict()},
+        stack='stack',
+        opts='.salt.opts',)
+
+    def action(self, **kwa):
+        '''
+        Populate loads from masters in stack.remotes
+        '''
+        if self.opts.value.get('cluster_mode'):
+            for remote in six.itervalues(self.stack.value.remotes):
+                if remote.kind == kinds.applKinds.master:
+                    self.masters.value[remote.name] = odict(load=0.0, expire=self.store.stamp)
+
+
 class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
     '''
     Initialize and run raet udp stack for Salt
@@ -127,7 +235,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'prihex': None}},
             }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Assign class defaults
         '''
@@ -138,7 +246,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         '''
         enter action
         should only run once to setup road stack.
-        moved from postinitio so can do clean up before stack is initialized
+        moved from _prepare so can do clean up before stack is initialized
 
         do salt raet road stack setup at enter
         '''
@@ -195,7 +303,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      offset=0.5)
 
         if self.opts.value.get('raet_clear_remotes'):
-            for remote in self.stack.value.remotes.values():
+            for remote in six.itervalues(self.stack.value.remotes):
                 self.stack.value.removeRemote(remote, clear=True)
             self.stack.puid = self.stack.value.Uid  # reset puid
 
@@ -222,20 +330,21 @@ class SaltRaetRoadStackCloser(ioflo.base.deeding.Deed):
 
 class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
     '''
-    Initiates join transaction with master
+    Initiates join transaction with master(s)
     FloScript:
 
     do salt raet road stack joiner at enter
+
+    assumes that prior the following has been run to setup .masters
+
+    do salt raet road usher minion setup
 
     '''
     Ioinits = odict(
                     inode=".salt.road.manor.",
                     stack='stack',
+                    ushers='ushers',
                     opts='.salt.opts')
-
-    def postinitio(self):
-        self.masters = daemons.extract_masters(self.opts.value)
-        # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
 
     def action(self, **kwa):
         '''
@@ -243,24 +352,35 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            # minion should default
-            refresh = (self.opts.value.get('raet_clear_remotes', True) or
+            refresh_masters = (self.opts.value.get('raet_clear_remote_masters',
+                                       True) or not stack.remotes)
+
+            refresh_all = (self.opts.value.get('raet_clear_remotes', True) or
                        not stack.remotes)
 
-            if refresh:
-                for remote in stack.remotes.values():
+            if refresh_masters:  # clear all remote masters
+                for remote in six.itervalues(stack.remotes):
+                    if remote.kind == kinds.applKinds.master:
+                        stack.removeRemote(remote, clear=True)
+
+            if refresh_all:  # clear all remotes
+                for remote in six.itervalues(stack.remotes):
                     stack.removeRemote(remote, clear=True)
 
+            if refresh_all or refresh_masters:
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
-                for master in self.masters:
+                for master in self.ushers.value:
                     mha = master['external']
                     stack.addRemote(RemoteEstate(stack=stack,
                                                  fuid=0,  # vacuous join
                                                  sid=0,  # always 0 for join
-                                                 ha=mha))
-            for remote in stack.remotes.values():
-                stack.join(uid=remote.uid, timeout=0.0)
+                                                 ha=mha,
+                                                 kind=kinds.applKinds.master))
+
+            for remote in six.itervalues(stack.remotes):
+                if remote.kind == kinds.applKinds.master:
+                    stack.join(uid=remote.uid, timeout=0.0)
 
 
 class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
@@ -289,8 +409,8 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         joined = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    joined = any([remote.joined for remote in stack.remotes.values()])
+                joined = any([remote.joined for remote in six.itervalues(stack.remotes)
+                              if remote.kind == kinds.applKinds.master])
         self.status.update(joined=joined)
 
 
@@ -320,9 +440,9 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    rejected = all([remote.acceptance == raeting.acceptances.rejected
-                                    for remote in stack.remotes.values()])
+                rejected = all([remote.acceptance == raeting.acceptances.rejected
+                                for remote in six.itervalues(stack.remotes)
+                                if remote.kind == kinds.applKinds.master])
             else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
@@ -347,8 +467,9 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            stack.allow(timeout=0.0)
-        return None
+            for remote in six.itervalues(stack.remotes):
+                if remote.kind == kinds.applKinds.master:
+                    stack.allow(uid=remote.uid, timeout=0.0)
 
 
 class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
@@ -377,8 +498,8 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         allowed = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    allowed = any([remote.allowed for remote in stack.remotes.values()])
+                allowed = any([remote.allowed for remote in six.itervalues(stack.remotes)
+                               if remote.kind == kinds.applKinds.master])
         self.status.update(allowed=allowed)
 
 
@@ -496,7 +617,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                'module_refresh': '.salt.var.module_refresh',
                'returners': '.salt.loader.returners'}
 
-    def postinitio(self):
+    def _prepare(self):
         self._load_modules()
 
     def action(self):
@@ -536,6 +657,9 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
         self.modules.value = salt.loader.minion_mods(self.opts.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
 
+        self.modules.value.clear()
+        self.returners.value.clear()
+
         # we're done, reset the limits!
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
@@ -561,10 +685,10 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         Initial pillar
         '''
         # default master is the first remote that is allowed
-        available_masters = [remote for remote in self.road_stack.value.remotes.values()
+        available_masters = [remote for remote in six.itervalues(self.road_stack.value.remotes)
                                                if remote.allowed]
         while not available_masters:
-            available_masters = [remote for remote in self.road_stack.value.remotes.values()
+            available_masters = [remote for remote in six.itervalues(self.road_stack.value.remotes)
                                                            if remote.allowed]
             time.sleep(0.1)
 
@@ -612,7 +736,7 @@ class SaltSchedule(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Map opts and make the schedule object
         '''
@@ -656,7 +780,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                           'ival': {'lanename': 'master'}},
             }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Set up required objects and queues
         '''
@@ -708,7 +832,6 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             for index in range(self.opts.value['worker_threads']):
                 worker_seed.append('worker{0}'.format(index + 1))
             self.workers.value = itertools.cycle(worker_seed)
-        return True
 
 
 class SaltRaetLaneStackCloser(ioflo.base.deeding.Deed):  # pylint: disable=W0232
@@ -834,11 +957,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
     '''
     Routes the communication in and out of Road and Lane connections
 
-    This is the initial static salt router, we want to create a dynamic
-    router that takes a map that defines where packets are send
-    FloScript:
-
-    do salt raet router
+    This is a base class
 
     '''
     Ioinits = {'opts': '.salt.opts',
@@ -856,9 +975,86 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'road_stack': '.salt.road.manor.stack',
                'master_estate_name': '.salt.track.master_estate_name',
                'laters': {'ipath': '.salt.lane.manor.laters',  # requeuing when not yet routable
-                          'ival': deque()}, }
+                          'ival': deque()}}
 
-    def _process_udp_rxmsg(self, msg, sender):
+    def _process_road_rxmsg(self, msg, sender):
+        '''
+        Send to the right queue
+        msg is the message body dict
+        sender is the unique name of the remote estate that sent the message
+        '''
+        pass
+
+    def _process_lane_rxmsg(self, msg, sender):
+        '''
+        Send uxd messages tot he right queue or forward them to the correct
+        yard etc.
+
+        msg is message body dict
+        sender is unique name  of remote that sent the message
+        '''
+        pass
+
+    def _get_master_estate_name(self, clustered=False):
+        '''
+        Assign and return the name of the estate for the default master or empty if none
+        If the default master is no longer available then selects one of the available
+        masters
+
+        If clustered is True then use load balancing algorithm to select master
+        '''
+        opts = self.opts.value
+        master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
+        if not master or not master.alived:  # select a different master
+            available_masters = [remote for remote in
+                                 six.Iterator(self.road_stack.value.remotes)
+                                                       if remote.alived]
+            if available_masters:
+                random_master = opts.get('random_master')
+                if random_master:
+                    master = available_masters[random.randint(0, len(available_masters) - 1)]
+                else:
+                    master = available_masters[0]
+            else:
+                master = None
+
+        self.master_estate_name.value = master.name if master else ''
+
+        return self.master_estate_name.value
+
+    def _availablize(self, minions):
+        '''
+        Return set that is intersection of associated minion estates for
+        roles in minions and the set of available minion estates.
+        '''
+        suffix = '_{0}'.format(kinds.APPL_KIND_NAMES[kinds.applKinds.minion])
+        return list(set(minions) &
+                    set((name.rstrip(suffix) for name in self.availables.value)))
+
+    def action(self):
+        '''
+        Process the messages!
+        '''
+        while self.road_stack.value.rxMsgs:
+            msg, sender = self.road_stack.value.rxMsgs.popleft()
+            self._process_road_rxmsg(msg=msg, sender=sender)
+        while self.laters.value:  # process requeued LaneMsgs
+            msg, sender = self.laters.value.popleft()
+            self.lane_stack.value.rxMsgs.append((msg, sender))
+        while self.lane_stack.value.rxMsgs:
+            msg, sender = self.lane_stack.value.rxMsgs.popleft()
+            self._process_lane_rxmsg(msg=msg, sender=sender)
+
+
+class SaltRaetRouterMaster(SaltRaetRouter):
+    '''
+    Routes the communication in and out of Road and Lane connections
+    Specific to Master
+
+    do salt raet router master
+
+    '''
+    def _process_road_rxmsg(self, msg, sender):
         '''
         Send to the right queue
         msg is the message body dict
@@ -876,26 +1072,29 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
 
         log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
                   "   msg= {3}\n".format(
-                                            self.opts.value['id'],
-                                            self.road_stack.value.local.name,
-                                            self.lane_stack.value.local.name,
-                                            msg))
+                      self.opts.value['id'],
+                      self.road_stack.value.local.name,
+                      self.lane_stack.value.local.name,
+                      msg))
 
         if d_estate is not None and d_estate != self.road_stack.value.local.name:
             log.error(
-                    'Road Router Received message for wrong estate: {0}'.format(d_estate))
+                'Road Router Received message for wrong estate: {0}'.format(d_estate))
             return
 
         if d_yard is not None:
             # Meant for another yard, send it off!
             if d_yard in self.lane_stack.value.nameRemotes:
                 self.lane_stack.value.transmit(msg,
-                        self.lane_stack.value.nameRemotes[d_yard].uid)
-                return
+                                               self.lane_stack.value.nameRemotes[d_yard].uid)
             return
         if d_share is None:
             # No queue destination!
             log.error('Received message without share: {0}'.format(msg))
+            return
+        elif d_share == 'event_fire':  # rebroadcast events from other masters
+            self.event.value.append(msg)
+            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
             return
         elif d_share == 'local_cmd':
             # Refuse local commands over the wire
@@ -907,12 +1106,9 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 role = self.road_stack.value.nameRemotes[sender].role
                 msg['load']['id'] = role  # sender # should this be role XXXX
                 self.lane_stack.value.transmit(msg,
-                        self.lane_stack.value.fetchUidByName(next(self.workers.value)))
-        elif d_share == 'fun':
-            if self.road_stack.value.kind == kinds.applKinds.minion:
-                self.fun.value.append(msg)
+                                               self.lane_stack.value.fetchUidByName(next(self.workers.value)))
 
-    def _process_uxd_rxmsg(self, msg, sender):
+    def _process_lane_rxmsg(self, msg, sender):
         '''
         Send uxd messages tot he right queue or forward them to the correct
         yard etc.
@@ -936,10 +1132,10 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
 
         log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
                   "   msg={3}\n".format(
-                                        self.opts.value['id'],
-                                        self.road_stack.value.local.name,
-                                        self.lane_stack.value.local.name,
-                                        msg))
+                      self.opts.value['id'],
+                      self.road_stack.value.local.name,
+                      self.lane_stack.value.local.name,
+                      msg))
 
         if d_estate is None:
             pass
@@ -947,7 +1143,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             # Forward to the correct estate
             if d_estate in self.road_stack.value.nameRemotes:
                 self.road_stack.value.message(msg,
-                        self.road_stack.value.nameRemotes[d_estate].uid)
+                                              self.road_stack.value.nameRemotes[d_estate].uid)
             return
 
         if d_share == 'pub_ret':
@@ -962,8 +1158,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             # Meant for another yard, send it off!
             if d_yard in self.lane_stack.value.nameRemotes:
                 self.lane_stack.value.transmit(msg,
-                        self.lane_stack.value.nameRemotes[d_yard].uid)
-                return
+                                               self.lane_stack.value.nameRemotes[d_yard].uid)
             return
         if d_share is None:
             # No queue destination!
@@ -971,7 +1166,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
             return
         elif d_share == 'local_cmd':
             self.lane_stack.value.transmit(msg,
-                    self.lane_stack.value.fetchUidByName(next(self.workers.value)))
+                                           self.lane_stack.value.fetchUidByName(next(self.workers.value)))
         elif d_share == 'event_req':
             self.event_req.value.append(msg)
             #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
@@ -981,13 +1176,126 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         elif d_share == 'presence_req':
             self.presence_req.value.append(msg)
             #log.debug("\n**** Presence Request \n {0}\n".format(msg))
+
+
+class SaltRaetRouterMinion(SaltRaetRouter):
+    '''
+    Routes the communication in and out of Road and Lane connections
+    Specific to Minions
+
+    do salt raet router minion
+
+    '''
+    def _process_road_rxmsg(self, msg, sender):
+        '''
+        Send to the right queue
+        msg is the message body dict
+        sender is the unique name of the remote estate that sent the message
+        '''
+        try:
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
+        except (ValueError, IndexError):
+            log.error('Received invalid message: {0}'.format(msg))
+            return
+
+        if s_estate is None:  # drop
+            return
+
+        log.debug("**** Road Router rxMsg **** id={0} estate={1} yard={2}\n"
+                  "   msg= {3}\n".format(
+                      self.opts.value['id'],
+                      self.road_stack.value.local.name,
+                      self.lane_stack.value.local.name,
+                      msg))
+
+        if d_estate is not None and d_estate != self.road_stack.value.local.name:
+            log.error(
+                'Road Router Received message for wrong estate: {0}'.format(d_estate))
+            return
+
+        if d_yard is not None:
+            # Meant for another yard, send it off!
+            if d_yard in self.lane_stack.value.nameRemotes:
+                self.lane_stack.value.transmit(msg,
+                                               self.lane_stack.value.nameRemotes[d_yard].uid)
+                return
+            return
+        if d_share is None:
+            # No queue destination!
+            log.error('Received message without share: {0}'.format(msg))
+            return
+
+        elif d_share == 'fun':
+            if self.road_stack.value.kind == kinds.applKinds.minion:
+                self.fun.value.append(msg)
+
+    def _process_lane_rxmsg(self, msg, sender):
+        '''
+        Send uxd messages tot he right queue or forward them to the correct
+        yard etc.
+
+        msg is message body dict
+        sender is unique name  of remote that sent the message
+        '''
+        try:
+            s_estate, s_yard, s_share = msg['route']['src']
+            d_estate, d_yard, d_share = msg['route']['dst']
+        except (ValueError, IndexError):
+            log.error('Lane Router Received invalid message: {0}'.format(msg))
+            return
+
+        if s_yard is None:
+            return  # drop message
+
+        if s_estate is None:  # substitute local estate
+            s_estate = self.road_stack.value.local.name
+            msg['route']['src'] = (s_estate, s_yard, s_share)
+
+        log.debug("**** Lane Router rxMsg **** id={0} estate={1} yard={2}\n"
+                  "   msg={3}\n".format(
+                      self.opts.value['id'],
+                      self.road_stack.value.local.name,
+                      self.lane_stack.value.local.name,
+                      msg))
+
+        if d_estate is None:
+            pass
+        elif d_estate != self.road_stack.value.local.name:
+            # Forward to the correct estate
+            if d_estate in self.road_stack.value.nameRemotes:
+                self.road_stack.value.message(msg,
+                                              self.road_stack.value.nameRemotes[d_estate].uid)
+            return
+
+        if d_yard is None:
+            pass
+        elif d_yard != self.lane_stack.value.local.name:
+            # Meant for another yard, send it off!
+            if d_yard in self.lane_stack.value.nameRemotes:
+                self.lane_stack.value.transmit(msg,
+                                               self.lane_stack.value.nameRemotes[d_yard].uid)
+                return
+            return
+        if d_share is None:
+            # No queue destination!
+            log.error('Lane Router Received message without share: {0}'.format(msg))
+            return
+
+        elif d_share == 'event_req':
+            self.event_req.value.append(msg)
+            #log.debug("\n**** Event Subscribe \n {0}\n".format(msg))
+        elif d_share == 'event_fire':
+            self.event.value.append(msg)
+            #log.debug("\n**** Event Fire \n {0}\n".format(msg))
+
         elif d_share == 'remote_cmd':  # assume  minion to master or salt-call
             if not self.road_stack.value.remotes:
                 log.error("**** Lane Router: Missing joined master. Unable to route "
                           "remote_cmd. Requeuing".format())
                 self.laters.value.append((msg, sender))
                 return
-            d_estate = self._get_master_estate_name()
+            d_estate = self._get_master_estate_name(clustered=self.opts.get('cluster_mode', False))
             if not d_estate:
                 log.error("**** Lane Router: No available destination estate for 'remote_cmd'."
                           "Unable to route. Requeuing".format())
@@ -995,11 +1303,11 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                 return
             msg['route']['dst'] = (d_estate, d_yard, d_share)
             log.debug("**** Lane Router: Missing destination estate for 'remote_cmd'. "
-                    "Using default route={0}.".format(msg['route']['dst']))
+                      "Using default route={0}.".format(msg['route']['dst']))
             self.road_stack.value.message(msg,
-                    self.road_stack.value.nameRemotes[d_estate].uid)
+                                          self.road_stack.value.nameRemotes[d_estate].uid)
 
-    def _get_master_estate_name(self):
+    def _get_master_estate_name(self, clustered=False):
         '''
         Assign and return the name of the estate for the default master or empty if none
         If the default master is no longer available then selects one of the available
@@ -1009,7 +1317,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
         if not master or not master.alived:  # select a different master
             available_masters = [remote for remote in
-                                 self.road_stack.value.remotes.values()
+                                 six.itervalues(self.road_stack.value.remotes)
                                                        if remote.alived]
             if available_masters:
                 random_master = opts.get('random_master')
@@ -1062,7 +1370,9 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
                'event_req': '.salt.event.event_req',
                'module_refresh': '.salt.var.module_refresh',
                'pillar_refresh': '.salt.var.pillar_refresh',
-               'lane_stack': '.salt.lane.manor.stack'}
+               'lane_stack': '.salt.lane.manor.stack',
+               'road_stack': '.salt.road.manor.stack',
+               'availables': '.salt.var.presence.availables', }
 
     def _register_event_yard(self, msg):
         '''
@@ -1104,6 +1414,35 @@ class SaltRaetEventer(ioflo.base.deeding.Deed):
             self._forward_event(
                     self.event.value.popleft()
                     )
+
+
+class SaltRaetEventerMaster(SaltRaetEventer):
+    '''
+    Fire events!
+    FloScript:
+
+    do salt raet eventer master
+
+    '''
+    def _forward_event(self, msg):
+        '''
+        Forward an event message to all subscribed yards
+        Event message has a route
+        Also rebroadcast to all masters in cluster
+        '''
+        super(SaltRaetEventerMaster, self)._forward_event(msg)
+        if self.opts.value.get('cluster_mode'):
+            if msg.get('origin') is None:
+                masters = (self.availables.value &
+                           set((remote.name for remote in six.itervalues(self.road_stack.value.remotes)
+                                if remote.kind == kinds.applKinds.master)))
+                for name in masters:
+                    remote = self.road_stack.value.nameRemotes[name]
+                    msg['origin'] = self.road_stack.value.name
+                    s_estate, s_yard, s_share = msg['route']['src']
+                    msg['route']['src'] = (self.road_stack.value.name, s_yard, s_share)
+                    msg['route']['dst'] = (remote.name, None, 'event_fire')
+                    self.road_stack.value.message(msg, remote.uid)
 
 
 class SaltRaetPresenter(ioflo.base.deeding.Deed):
@@ -1204,7 +1543,7 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         # only publish to available minions by intersecting sets
 
         minions = (self.availables.value &
-                   set((remote.name for remote in stack.remotes.values()
+                   set((remote.name for remote in six.itervalues(stack.remotes)
                             if remote.kind in [kinds.applKinds.minion,
                                                kinds.applKinds.syndic])))
         for minion in minions:
@@ -1226,6 +1565,153 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
                     )
 
 
+class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
+    '''
+    Create the Beacon subsystem
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'beacon': '.salt.beacon'}
+
+    def action(self):
+        '''
+        Run the beacons
+        '''
+        self.beacon.value = salt.beacons.Beacon(self.opts.value)
+
+
+class SaltRaetBeacon(ioflo.base.deeding.Deed):
+    '''
+    Run the beacons
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'modules': '.salt.loader.modules',
+               'master_events': '.salt.var.master_events',
+               'beacon': '.salt.beacon'}
+
+    def action(self):
+        '''
+        Run the beacons
+        '''
+        if 'config.merge' in self.modules.value:
+            b_conf = self.modules.value['config.merge']('beacons')
+            if b_conf:
+                try:
+                    self.master_events.value.extend(self.beacon.value.process(b_conf))
+                except Exception:
+                    log.error('Error in the beacon system: ', exc_info=True)
+        return []
+
+
+class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
+    '''
+    Take the events off the master event que and send them to the master to
+    be fired
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'road_stack': '.salt.road.manor.stack',
+               'master_events': '.salt.var.master_events'}
+
+    def postinitio(self):
+        self.master_events.value = deque()
+
+    def action(self):
+        if not self.master_events.value:
+            return
+        events = []
+        for master in self.road_stack.value.remotes:
+            master_uid = master
+        while self.master_events.value:
+            events.append(self.master_events.value.popleft())
+        route = {'src': (self.road_stack.value.local.name, None, None),
+                 'dst': (next(six.itervalues(self.road_stack.value.remotes)).name, None, 'remote_cmd')}
+        load = {'id': self.opts.value['id'],
+                'events': events,
+                'cmd': '_minion_event'}
+        self.road_stack.value.transmit({'route': route, 'load': load},
+                                       uid=master_uid)
+
+
+class SaltRaetSetupMatcher(ioflo.base.deeding.Deed):
+    '''
+    Make the matcher object
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'modules': '.salt.loader.modules',
+               'matcher': '.salt.matcher'}
+
+    def action(self):
+        self.matcher.value = salt.minion.Matcher(
+                self.opts.value,
+                self.modules.value)
+
+
+class SaltRaetThreadShellJobber(ioflo.base.deeding.Deed):
+    '''
+    Execute a jobber via shelling out to salt call
+
+    This bahavior is a fallback option for windows platforms
+    and should not be called on any *NIX platform
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'grains': '.salt.grains',
+               'modules': '.salt.modules',
+               'fun': '.salt.var.fun',
+               'matcher': '.salt.matcher',
+               'threads': '.salt.var.threads',
+               }
+
+    def postinitio(self):
+        self.threads.value = deque()
+
+    def action(self):
+        '''
+        Evaluate the fun options and execute them via salt-call
+        '''
+        while self.fun.value:
+            msg = self.fun.value.popleft()
+            data = msg.get('pub')
+            match = getattr(
+                    self.matcher.value,
+                    '{0}_match'.format(
+                        data.get('tgt_type', 'glob')
+                        )
+                    )(data['tgt'])
+            if not match:
+                continue
+            fun = data['fun']
+            if fun in self.modules.value:
+                func = self.modules.value[fun]
+            else:
+                continue
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                func,
+                salt.utils.args.parse_input(data['arg']),
+                data)
+            cmd = ['salt-call',
+                   '--out', 'json',
+                   '--metadata',
+                   '-c', salt.syspaths.CONFIG_DIR]
+            if 'return' in data:
+                cmd.append('--return')
+                cmd.append(data['return'])
+            cmd.append(fun)
+            for arg in args:
+                cmd.append(arg)
+            for key in kwargs:
+                cmd.append('{0}={1}'.format(key, kwargs[key]))
+            self.threads.value.append(threading.Thread(
+                    target=self.shell_thread,
+                    kwargs={'cmd': cmd}
+                ))
+            self.threads.value[-1].start()
+
+    def _shell_thread(self, cmd):
+        '''
+        Execute the jobber via a call to salt call
+        '''
+        self.modules.value['cmd.run'](cmd, python_shell=False)
+
+
 class SaltRaetNixJobber(ioflo.base.deeding.Deed):
     '''
     Execute a function call job on a minion on a *nix based system
@@ -1239,17 +1725,15 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners',
                'fun': '.salt.var.fun',
+               'matcher': '.salt.matcher',
                'executors': '.salt.track.executors',
                'road_stack': '.salt.road.manor.stack', }
 
-    def postinitio(self):
+    def _prepare(self):
         '''
         Map opts for convenience
         '''
         self.opts = self.opts_store.value
-        self.matcher = salt.minion.Matcher(
-                self.opts,
-                self.modules.value)
         self.proc_dir = salt.minion.get_proc_dir(self.opts['cachedir'])
         self.serial = salt.payload.Serial(self.opts)
         self.executors.value = {}
@@ -1323,7 +1807,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
             msg = self.fun.value.popleft()
             data = msg.get('pub')
             match = getattr(
-                    self.matcher,
+                    self.matcher.value,
                     '{0}_match'.format(
                         data.get('tgt_type', 'glob')
                         )
@@ -1376,7 +1860,16 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                     salt.utils.args.parse_input(data['arg']),
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
-                return_data = func(*args, **kwargs)
+                if self.opts.get('sudo_user', ''):
+                    sudo_runas = self.opts.get('sudo_user')
+                    if 'sudo.salt_call' in self.modules.value:
+                        return_data = self.modules.value['sudo.salt_call'](
+                                sudo_runas,
+                                data['fun'],
+                                *args,
+                                **kwargs)
+                else:
+                    return_data = func(*args, **kwargs)
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}

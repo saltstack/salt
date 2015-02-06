@@ -13,9 +13,6 @@ Databases can be set as either absent or present
 '''
 from __future__ import absolute_import
 
-# Import salt libs
-import salt.utils
-
 
 def __virtual__():
     '''
@@ -83,13 +80,6 @@ def present(name,
            'changes': {},
            'result': True,
            'comment': 'Database {0} is already present'.format(name)}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
 
     db_args = {
         'maintenance_db': maintenance_db,

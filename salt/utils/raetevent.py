@@ -4,9 +4,9 @@ Manage events
 
 This module is used to manage events via RAET
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import time
@@ -17,12 +17,15 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
-from salt import transport
 from salt.utils import kinds
+from salt import transport
 from salt import syspaths
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -222,7 +225,7 @@ class RAETEvent(object):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in salt.utils.event.SUB_EVENT:
                 try:
-                    for tag, data in load.get('return', {}).items():
+                    for tag, data in six.iteritems(load.get('return', {})):
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
                         if data.get('result') is False:

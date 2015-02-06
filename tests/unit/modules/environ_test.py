@@ -2,6 +2,8 @@
 '''
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -34,11 +36,11 @@ class EnvironTestCase(TestCase):
         on success.
         '''
         mock = MagicMock(return_value=None)
-        with patch.object(os.environ, 'pop', mock):
+        with patch.dict(os.environ, {}):
             self.assertEqual(environ.setval('key', False, True), None)
 
         mock = MagicMock(side_effect=Exception())
-        with patch.object(os.environ, 'pop', mock):
+        with patch.dict(os.environ, {}):
             self.assertFalse(environ.setval('key', False, True))
 
         mock_environ = {}
@@ -53,14 +55,16 @@ class EnvironTestCase(TestCase):
         Set multiple salt process environment variables from a dict.
         Returns a dict.
         '''
-        self.assertFalse(environ.setenv('environ'))
-
-        self.assertFalse(environ.setenv({'A': True},
-                                        False,
-                                        True,
-                                        False))
-
         mock_environ = {'key': 'value'}
+        with patch.dict(os.environ, mock_environ):
+            self.assertFalse(environ.setenv('environ'))
+
+        with patch.dict(os.environ, mock_environ):
+            self.assertFalse(environ.setenv({'A': True},
+                                            False,
+                                            True,
+                                            False))
+
         with patch.dict(os.environ, mock_environ):
             mock_setval = MagicMock(return_value=None)
             with patch.object(environ, 'setval', mock_setval):
@@ -107,7 +111,7 @@ class EnvironTestCase(TestCase):
         '''
         Return a dict of the entire environment set for the salt process
         '''
-        self.assertTrue(environ.items())
+        self.assertNotEqual(list(environ.items()), [])
 
 
 if __name__ == '__main__':

@@ -21,14 +21,14 @@ import logging
 import yaml
 import jinja2
 import jinja2.exceptions
+from xml.dom import minidom
 import salt.ext.six as six
 from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 try:
     import libvirt  # pylint: disable=import-error
-    from xml.dom import minidom
-    HAS_ALL_IMPORTS = True
+    HAS_LIBVIRT = True
 except ImportError:
-    HAS_ALL_IMPORTS = False
+    HAS_LIBVIRT = False
 
 # Import salt libs
 import salt.utils
@@ -58,7 +58,7 @@ VIRT_DEFAULT_HYPER = 'kvm'
 
 
 def __virtual__():
-    if not HAS_ALL_IMPORTS:
+    if not HAS_LIBVIRT:
         return False
     return 'virt'
 
@@ -249,7 +249,7 @@ def _gen_xml(name,
 
     context['disks'] = {}
     for i, disk in enumerate(diskp):
-        for disk_name, args in disk.items():
+        for disk_name, args in six.iteritems(disk):
             context['disks'][disk_name] = {}
             fn_ = '{0}.{1}'.format(disk_name, args['format'])
             context['disks'][disk_name]['file_name'] = fn_
@@ -317,7 +317,7 @@ def _qemu_image_info(path):
     match_map = {'size': r'virtual size: \w+ \((\d+) byte[s]?\)',
                  'format': r'file format: (\w+)'}
 
-    for info, search in match_map.items():
+    for info, search in six.iteritems(match_map):
         try:
             ret[info] = re.search(search, out).group(1)
         except AttributeError:
@@ -397,7 +397,7 @@ def _disk_profile(profile, hypervisor, **kwargs):
         overlay = {}
 
     disklist = __salt__['config.get']('virt:disk', {}).get(profile, default)
-    for key, val in overlay.items():
+    for key, val in six.iteritems(overlay):
         for i, disks in enumerate(disklist):
             for disk in disks:
                 if key not in disks[disk]:
@@ -430,7 +430,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     interfaces = []
 
     def append_dict_profile_to_interface_list(profile_dict):
-        for interface_name, attributes in profile_dict.items():
+        for interface_name, attributes in six.iteritems(profile_dict):
             attributes['name'] = interface_name
             interfaces.append(attributes)
 
@@ -493,7 +493,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
         attributes['source'] = attributes.get('source', None)
 
     def _apply_default_overlay(attributes):
-        for key, value in overlays[hypervisor].items():
+        for key, value in six.iteritems(overlays[hypervisor]):
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
@@ -553,7 +553,7 @@ def init(name,
 
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
-        disk_name = next(diskp[0].iterkeys())
+        disk_name = next(six.iterkeys(diskp[0]))
         disk_type = diskp[0][disk_name]['format']
         disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
@@ -600,7 +600,7 @@ def init(name,
         else:
             # assume libvirt manages disks for us
             for disk in diskp:
-                for disk_name, args in disk.items():
+                for disk_name, args in six.iteritems(disk):
                     xml = _gen_vol_xml(name,
                                        disk_name,
                                        args['size'],
@@ -1410,7 +1410,7 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     '''
-    for _, data in disks.items():
+    for _, data in six.iteritems(disks):
         fn_ = data['file']
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
@@ -1588,12 +1588,9 @@ def is_hyper():
 
         salt '*' virt.is_hyper
     '''
-    try:
-        import libvirt  # pylint: disable=import-error
-    except ImportError:
-        # not a usable hypervisor without libvirt module
-        return False
-    return is_xen_hyper() or is_kvm_hyper()
+    if HAS_LIBVIRT:
+        return is_xen_hyper() or is_kvm_hyper()
+    return False
 
 
 def vm_cputime(vm_=None):

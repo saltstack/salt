@@ -4,12 +4,11 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
-import glob
 import re
+import glob
 import logging
 
 # Import salt libs
@@ -19,6 +18,8 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 from salt._compat import string_types
 
+# Import 3rd-party libs
+import salt.ext.six as six
 HAS_RANGE = False
 try:
     import seco.range  # pylint: disable=import-error
@@ -380,16 +381,17 @@ class CkMinions(object):
                     matcher_args = ['@'.join(comps[1:])]
                     if comps[0] in ('G', 'P', 'I'):
                         matcher_args.append(delimiter)
+                    matcher_args.append(True)
 
                     if not matcher:
                         # If an unknown matcher is called at any time, fail out
                         return []
                     if unmatched and unmatched[-1] == '-':
-                        results.append(str(set(matcher('@'.join(comps[1:]), True))))
+                        results.append(str(set(matcher(*matcher_args))))
                         results.append(')')
                         unmatched.pop()
                     else:
-                        results.append(str(set(matcher('@'.join(comps[1:]), True))))
+                        results.append(str(set(matcher(*matcher_args))))
                 elif match in opers:
                     # We didn't match a target, so append a boolean operator or
                     # subexpression
@@ -633,7 +635,7 @@ class CkMinions(object):
                         if len(ind) != 1:
                             # Invalid argument
                             continue
-                        valid = next(iter(ind.keys()))
+                        valid = next(six.iterkeys(ind))
                         # Check if minions are allowed
                         if self.validate_tgt(
                                 valid,
@@ -651,23 +653,18 @@ class CkMinions(object):
             return False
         return False
 
-    def gather_groups(self, auth_provider, user_groups, auth_list):
+    def fill_auth_list_from_groups(self, auth_provider, user_groups, auth_list):
         '''
-        Returns the list of groups, if any, for a given authentication provider type
-
-        Groups are defined as any dict in which a key has a trailing '%'
+        Returns a list of authorisation matchers that a user is eligible for.
+        This list is a combination of the provided personal matchers plus the
+        matchers of any group the user is in.
         '''
-        group_perm_keys = [item for item in auth_provider if item.endswith('%')]
-        groups = {}
-        if group_perm_keys:
-            for group_perm in group_perm_keys:
-                for matcher in auth_provider[group_perm]:
-                    if group_perm[:-1] in user_groups:
-                        groups[group_perm] = matcher
-        else:
-            return None
-        for item in groups.values():
-            auth_list.append(item)
+        group_names = [item for item in auth_provider if item.endswith('%')]
+        if group_names:
+            for group_name in group_names:
+                if group_name.rstrip("%") in user_groups:
+                    for matcher in auth_provider[group_name]:
+                        auth_list.append(matcher)
         return auth_list
 
     def wheel_check(self, auth_list, fun):
@@ -690,7 +687,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = next(iter(ind.keys()))
+                valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
@@ -721,7 +718,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = next(iter(ind.keys()))
+                valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
@@ -755,7 +752,7 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = next(iter(ind.keys()))
+                valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
                     if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):

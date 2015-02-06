@@ -53,7 +53,6 @@ def create(path,
            symlinks=None,
            upgrade=None,
            user=None,
-           runas=None,
            use_vt=False,
            saltenv='base'):
     '''
@@ -106,25 +105,6 @@ def create(path,
         venv_bin = __opts__.get('venv_bin') or __pillar__.get('venv_bin')
     # raise CommandNotFoundError if venv_bin is missing
     salt.utils.check_or_die(venv_bin)
-
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise salt.exceptions.CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
 
     cmd = [venv_bin]
 

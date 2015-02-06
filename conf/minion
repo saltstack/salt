@@ -151,7 +151,6 @@
 #    auth_tries: 10
 #    auth_safemode: False
 #    ping_interval: 90
-#    restart_on_error: True
 #
 # Minions won't know master is missing until a ping fails. After the ping fail,
 # the minion will attempt authentication and likely fails out and cause a restart.

@@ -5,9 +5,24 @@ Azure Cloud Module
 
 The Azure cloud module is used to control access to Microsoft Azure
 
-Use of this module only requires the ``apikey`` parameter. Set up the cloud
-configuration at ``/etc/salt/cloud.providers`` or
-``/etc/salt/cloud.providers.d/azure.conf``:
+:depends:
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/0.9.0>`_
+:configuration:
+    Required provider parameters:
+
+    * ``apikey``
+    * ``certificate_path``
+    * ``subscription_id``
+
+    A Management Certificate (.pem and .crt files) must be created and the .pem
+    file placed on the same machine that salt-cloud is run from. Information on
+    creating the pem file to use, and uploading the associated cer file can be
+    found at:
+
+    http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
+
+Example ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/azure.conf`` configuration:
 
 .. code-block:: yaml
 
@@ -16,15 +31,8 @@ configuration at ``/etc/salt/cloud.providers`` or
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       certificate_path: /etc/salt/azure.pem
       management_host: management.core.windows.net
-
-Information on creating the pem file to use, and uploading the associated cer
-file can be found at:
-
-http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
 '''
 # pylint: disable=E0102
-
-from __future__ import absolute_import
 
 # Import python libs
 from __future__ import absolute_import
@@ -33,11 +41,14 @@ import logging
 import pprint
 import time
 
-# Import salt cloud libs
+# Import salt libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+
+# Import 3rd-party libs
 import yaml
+import salt.ext.six as six
 
 # Import azure libs
 HAS_LIBS = False
@@ -45,7 +56,8 @@ try:
     import azure
     import azure.servicemanagement
     from azure import (WindowsAzureConflictError,
-                       WindowsAzureMissingResourceError)
+                       WindowsAzureMissingResourceError,
+                       WindowsAzureError)
     HAS_LIBS = True
 except ImportError:
     pass
@@ -266,24 +278,34 @@ def list_nodes_full(conn=None, call=None):
     for service in services:
         for deployment in services[service]['deployments']:
             deploy_dict = services[service]['deployments'][deployment]
-            ret[deployment] = deploy_dict
-            ret[deployment]['id'] = deployment
-            ret[deployment]['hosted_service'] = service
-            ret[deployment]['state'] = ret[deployment]['status']
-            ret[deployment]['private_ips'] = []
-            ret[deployment]['public_ips'] = []
-            role_instances = deploy_dict['role_instance_list']
-            for role_instance in role_instances:
-                ip_address = role_instances[role_instance]['ip_address']
-                if ip_address:
-                    if salt.utils.cloud.is_public_ip(ip_address):
-                        ret[deployment]['public_ips'].append(ip_address)
-                    else:
-                        ret[deployment]['private_ips'].append(ip_address)
-                ret[deployment]['size'] = role_instances[role_instance]['instance_size']
+            deploy_dict_no_role_info = copy.deepcopy(deploy_dict)
+            del deploy_dict_no_role_info['role_list']
+            del deploy_dict_no_role_info['role_instance_list']
             roles = deploy_dict['role_list']
             for role in roles:
-                ret[deployment]['image'] = roles[role]['role_info']['os_virtual_hard_disk']['source_image_name']
+                role_instances = deploy_dict['role_instance_list']
+                ret[role] = roles[role]
+                ret[role].update(role_instances[role])
+                ret[role]['id'] = role
+                ret[role]['hosted_service'] = service
+                if role_instances[role]['power_state'] == 'Started':
+                    ret[role]['state'] = 'running'
+                elif role_instances[role]['power_state'] == 'Stopped':
+                    ret[role]['state'] = 'stopped'
+                else:
+                    ret[role]['state'] = 'pending'
+                ret[role]['private_ips'] = []
+                ret[role]['public_ips'] = []
+                ret[role]['deployment'] = deploy_dict_no_role_info
+                ret[role]['url'] = deploy_dict['url']
+                ip_address = role_instances[role]['ip_address']
+                if ip_address:
+                    if salt.utils.cloud.is_public_ip(ip_address):
+                        ret[role]['public_ips'].append(ip_address)
+                    else:
+                        ret[role]['private_ips'].append(ip_address)
+                ret[role]['size'] = role_instances[role]['instance_size']
+                ret[role]['image'] = roles[role]['role_info']['os_virtual_hard_disk']['source_image_name']
     return ret
 
 
@@ -408,6 +430,9 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
+    # Find under which cloud service the name is listed, if any
+    if name not in nodes:
+        return {}
     salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
 
@@ -531,7 +556,7 @@ def create(vm_):
     try:
         conn.create_hosted_service(**service_kwargs)
     except WindowsAzureConflictError:
-        log.debug("Cloud service already exists")
+        log.debug('Cloud service already exists')
     except Exception as exc:
         error = 'The hosted service name is invalid.'
         if error in str(exc):
@@ -557,13 +582,15 @@ def create(vm_):
             )
         return False
     try:
-        conn.create_virtual_machine_deployment(**vm_kwargs)
+        result = conn.create_virtual_machine_deployment(**vm_kwargs)
+        _wait_for_async(conn, result.request_id)
     except WindowsAzureConflictError:
-        log.debug("Conflict error. The deployment may already exist, trying add_role")
+        log.debug('Conflict error. The deployment may already exist, trying add_role')
         # Deleting two useless keywords
         del vm_kwargs['deployment_slot']
         del vm_kwargs['label']
-        conn.add_role(**vm_kwargs)
+        result = conn.add_role(**vm_kwargs)
+        _wait_for_async(conn, result.request_id)
     except Exception as exc:
         error = 'The hosted service name is invalid.'
         if error in str(exc):
@@ -598,8 +625,8 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         try:
-            conn.get_role(service_name, service_name, vm_["name"])
-            data = show_instance(service_name, call='action')
+            conn.get_role(service_name, service_name, vm_['name'])
+            data = show_instance(vm_['name'], call='action')
             if 'url' in data and data['url'] != str(''):
                 return data['url']
         except WindowsAzureMissingResourceError:
@@ -632,7 +659,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': hostname,
-            'port': ssh_port,
+            'port': int(ssh_port),
             'username': ssh_username,
             'password': ssh_password,
             'script': deploy_script,
@@ -762,7 +789,7 @@ def create(vm_):
         )
         ret['Attached Volumes'] = created
 
-    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+    for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
 
     data = show_instance(vm_['name'], call='action')
@@ -881,6 +908,115 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     return ret
 
 
+def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
+    '''
+    Create and attach volumes to created node
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_attach_volumes action must be called with '
+            '-a or --action.'
+        )
+
+    if isinstance(kwargs['volumes'], str):
+        volumes = yaml.safe_load(kwargs['volumes'])
+    else:
+        volumes = kwargs['volumes']
+
+    # From the Azure .NET SDK doc
+    #
+    # The Create Data Disk operation adds a data disk to a virtual
+    # machine. There are three ways to create the data disk using the
+    # Add Data Disk operation.
+    #    Option 1 - Attach an empty data disk to
+    # the role by specifying the disk label and location of the disk
+    # image. Do not include the DiskName and SourceMediaLink elements in
+    # the request body. Include the MediaLink element and reference a
+    # blob that is in the same geographical region as the role. You can
+    # also omit the MediaLink element. In this usage, Azure will create
+    # the data disk in the storage account configured as default for the
+    # role.
+    #    Option 2 - Attach an existing data disk that is in the image
+    # repository. Do not include the DiskName and SourceMediaLink
+    # elements in the request body. Specify the data disk to use by
+    # including the DiskName element. Note: If included the in the
+    # response body, the MediaLink and LogicalDiskSizeInGB elements are
+    # ignored.
+    #    Option 3 - Specify the location of a blob in your storage
+    # account that contain a disk image to use. Include the
+    # SourceMediaLink element. Note: If the MediaLink element
+    # isincluded, it is ignored.  (see
+    # http://msdn.microsoft.com/en-us/library/windowsazure/jj157199.aspx
+    # for more information)
+    #
+    # Here only option 1 is implemented
+    conn = get_conn()
+    ret = []
+    for volume in volumes:
+        if "disk_name" in volume:
+            log.error("You cannot specify a disk_name. Only new volumes are allowed")
+            return False
+        # Use the size keyword to set a size, but you can use the
+        # azure name too. If neither is set, the disk has size 100GB
+        volume.setdefault("logical_disk_size_in_gb", volume.get("size", 100))
+        volume.setdefault("host_caching", "ReadOnly")
+        volume.setdefault("lun", 0)
+        # The media link is vm_name-disk-[0-15].vhd
+        volume.setdefault("media_link",
+                          kwargs["media_link"][:-4] + "-disk-{0}.vhd".format(volume["lun"]))
+        volume.setdefault("disk_label",
+                          kwargs["role_name"] + "-disk-{0}".format(volume["lun"]))
+        volume_dict = {
+            'volume_name': volume["lun"],
+            'disk_label': volume["disk_label"]
+        }
+
+        # Preparing the volume dict to be passed with **
+        kwargs_add_data_disk = ["lun", "host_caching", "media_link",
+                                "disk_label", "disk_name",
+                                "logical_disk_size_in_gb",
+                                "source_media_link"]
+        for key in set(volume.keys()) - set(kwargs_add_data_disk):
+            del volume[key]
+
+        result = conn.add_data_disk(kwargs["service_name"],
+                                    kwargs["deployment_name"],
+                                    kwargs["role_name"],
+                                    **volume)
+        _wait_for_async(conn, result.request_id)
+
+        msg = (
+                '{0} attached to {1} (aka {2})'.format(
+                    volume_dict['volume_name'],
+                    kwargs['role_name'],
+                    name)
+               )
+        log.info(msg)
+        ret.append(msg)
+    return ret
+
+
+# Helper function for azure tests
+def _wait_for_async(conn, request_id):
+    '''
+    Helper function for azure tests
+    '''
+    count = 0
+    log.debug('Waiting for asynchronous operation to complete')
+    result = conn.get_operation_status(request_id)
+    while result.status == 'InProgress':
+        count = count + 1
+        if count > 120:
+            raise ValueError('Timed out waiting for async operation to complete.')
+        time.sleep(5)
+        result = conn.get_operation_status(request_id)
+
+    if result.status != 'Succeeded':
+        raise WindowsAzureError('Operation failed. {message} ({code})'
+                                .format(message=result.error.message,
+                                        code=result.error.code))
+
+
 def destroy(name, conn=None, call=None, kwargs=None):
     '''
     Destroy a VM
@@ -902,15 +1038,19 @@ def destroy(name, conn=None, call=None, kwargs=None):
     if kwargs is None:
         kwargs = {}
 
-    service_name = kwargs.get('service_name', name)
+    instance_data = show_instance(name, call='action')
+    service_name = instance_data['deployment']['name']
 
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
-    del_vm = conn.delete_deployment(service_name=service_name, deployment_name=name)
-    del_service = conn.delete_hosted_service
+    try:
+        result = conn.delete_role(service_name, service_name, name)
+    except WindowsAzureError:
+        result = conn.delete_deployment(service_name, service_name)
+    _wait_for_async(conn, result.request_id)
     ret[name] = {
-        'request_id': del_vm.request_id,
+        'request_id': result.request_id,
     }
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)

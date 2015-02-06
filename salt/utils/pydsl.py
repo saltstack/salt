@@ -59,7 +59,6 @@ Example of a ``cmd`` state calling a python function::
     state('hello').cmd.call(hello, 'pydsl!')
 
 '''
-from __future__ import absolute_import
 
 # Implementation note:
 #  - There's a bit of terminology mix-up here:
@@ -70,7 +69,7 @@ from __future__ import absolute_import
 #    - and a state function is a function declaration.
 
 
-#TODOs:
+# TODOs:
 #
 #  - support exclude declarations
 #
@@ -85,13 +84,15 @@ from __future__ import absolute_import
 #
 
 # Import python libs
+from __future__ import absolute_import
 from uuid import uuid4 as _uuid
 
 # Import salt libs
 from salt.utils.odict import OrderedDict
 from salt.utils import warn_until
 from salt.state import HighState
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 
@@ -256,14 +257,14 @@ class Sls(object):
                     modname, funcname = modname.rsplit('.', 1)
                 else:
                     funcname = next((
-                        x for x in args if isinstance(x, string_types)
+                        x for x in args if isinstance(x, six.string_types)
                     ))
                     args.remove(funcname)
                 mod = getattr(s, modname)
                 named_args = {}
                 for x in args:
                     if isinstance(x, dict):
-                        k, v = next(x.iteritems())
+                        k, v = next(six.iteritems(x))
                         named_args[k] = v
                 mod(funcname, **named_args)
 

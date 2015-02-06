@@ -446,6 +446,11 @@ def install(name=None,
 
         .. versionadded:: Lithium
 
+    only_upgrade
+        Only upgrade the packages, if they are already installed. Default is False.
+
+        .. versionadded:: Lithium
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -466,7 +471,7 @@ def install(name=None,
             refreshdb = False
             for pkg in pkgs:
                 if isinstance(pkg, dict):
-                    _name = next(pkg.iterkeys())
+                    _name = next(six.iterkeys(pkg))
                     _latest_version = latest_version(_name, refresh=False, show_installed=True)
                     _version = pkg[_name]
                     # If the versions don't match, refresh is True, otherwise no need to refresh
@@ -530,6 +535,8 @@ def install(name=None,
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
         if 'install_recommends' in kwargs and not kwargs['install_recommends']:
             cmd.append('--no-install-recommends')
+        if 'only_upgrade' in kwargs and kwargs['only_upgrade']:
+            cmd.append('--only-upgrade')
         if skip_verify:
             cmd.append('--allow-unauthenticated')
         if fromrepo:
@@ -1525,6 +1532,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if not keyid or not keyserver:
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
+        if isinstance(keyid, int):  # yaml can make this an int, we need the hex version
+            keyid = hex(keyid)
         cmd = 'apt-key export {0}'.format(_cmd_quote(keyid))
         output = __salt__['cmd.run_stdout'](cmd, **kwargs)
         imported = output.startswith('-----BEGIN PGP')
@@ -1954,6 +1963,8 @@ def owner(*paths):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename
     '''
@@ -1968,5 +1979,5 @@ def owner(*paths):
         if 'no path found' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return next(ret.itervalues())
+        return next(six.itervalues(ret))
     return ret

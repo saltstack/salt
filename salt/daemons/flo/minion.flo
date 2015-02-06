@@ -14,6 +14,14 @@ framer minionudpstack be active first setup
     # Load the minion mods
     frame loadmodules
         do salt load modules at enter
+        go setupmatcher
+
+    frame setupmatcher
+        do salt raet setup matcher at enter
+        go setupbeacon
+
+    frame setupbeacon
+        do salt raet setup beacon at enter
         go start
 
     # OK, let's start the minion up
@@ -28,6 +36,7 @@ framer minionudpstack be active first setup
         bid start functionmanager
         # Start the outbound framer
         bid start outbound
+        # Start the scheduler
         bid start scheduler
 
         # Cleanup on exit
@@ -41,7 +50,24 @@ framer inbound be inactive first start
         do salt raet road stack service rx
         do salt raet lane stack service rx
 
-framer bootstrap be inactive first join
+framer bootstrap be inactive first setup
+
+    frame setup
+        enter
+            do salt raet road clustered per inode ".salt.road.manor."
+            do salt raet road usher minion setup per inode ".salt.road.manor."
+        go clustermaster
+        go multimaster
+
+    frame clustermaster
+        let if salt.road.manor.cluster.clustered
+        print Setting Up Master Cluster ....
+        go join
+
+    frame multimaster
+        print Setting Up Master or MultiMaster
+        go join
+
     frame join
         print Joining...
         enter
@@ -52,7 +78,6 @@ framer bootstrap be inactive first join
 
         go next if joined in .salt.road.manor.status
         go abort if rejected in .salt.road.manor.status
-        #go abort if elapsed >= 10
 
     frame joined
         print Joined
@@ -66,11 +91,15 @@ framer bootstrap be inactive first join
             do salt raet road stack allowed per inode ".salt.road.manor."
 
         go next if allowed in .salt.road.manor.status
-        #go abort if elapsed >= 5
 
     frame allowed
         print Allowed
         go next if elapsed >= 0.5
+
+    frame clustering
+        print Cluster Setup ...
+        do salt raet road cluster load setup
+        go next
 
     frame pillar
         print Pillaring
@@ -82,12 +111,20 @@ framer bootstrap be inactive first join
         print Loading
         enter
             do salt load modules
+        go latestart
+
+    frame latestart
+        # Start late frames that need the pillar/modules to be available
+        # Start the master events loop
+        bid start masterevents
+        # Start Beacon
+        bid start beacon
         go router
 
     frame router
         # start the manager framer
         bid start manager #start alive presence from minion side
-        do salt raet router
+        do salt raet router minion
         go pillar if .salt.var.pillar_refresh
         go loading if .salt.var.module_refresh
 
@@ -104,7 +141,15 @@ framer functionmanager be inactive first checkexec
 
 framer manager be inactive first start at 10.0
     frame start
-         do salt raet road stack manager per inode ".salt.road.manor"
+        do salt raet road stack manager per inode ".salt.road.manor"
+
+framer beacon be inactive first start
+    frame start
+        do salt raet beacon
+
+framer masterevents be inactive first start
+    frame start
+        do salt raet master events
 
 # Framer for handling outbound traffic
 framer outbound be inactive first start

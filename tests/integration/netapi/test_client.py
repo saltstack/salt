@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 # Import Python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -79,7 +80,7 @@ class NetapiClientTest(TestCase):
         data.pop('_stamp', None)
 
         self.maxDiff = None
-        self.assertEqual(ret, {
+        self.assertEqual({
             'data': {
                 'return': {
                     'minions_pre': [],
@@ -93,7 +94,7 @@ class NetapiClientTest(TestCase):
                 'success': True,
                 'user': 'saltdev_auto',
                 'fun': 'wheel.key.list_all'
-            }})
+            }}, ret)
 
     def test_wheel_async(self):
         low = {'client': 'wheel_async', 'fun': 'key.list_all'}

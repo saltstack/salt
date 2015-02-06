@@ -5,7 +5,7 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import re
 import sys
@@ -23,12 +23,10 @@ import subprocess
 import multiprocessing
 from hashlib import md5
 from datetime import datetime, timedelta
-from six import string_types
 try:
     import pwd
 except ImportError:
     pass
-
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
@@ -67,11 +65,12 @@ from salt.utils.immutabletypes import freeze
 try:
     import salt.master
 except ImportError:
-    # Not required fro raet tests
+    # Not required for raet tests
     pass
 
 # Import 3rd-party libs
 import yaml
+import salt.ext.six as six
 
 if os.uname()[0] == 'Darwin':
     SYS_TMP_DIR = '/tmp'
@@ -96,7 +95,7 @@ log = logging.getLogger(__name__)
 
 def cleanup_runtime_config_instance(to_cleanup):
     # Explicit and forced cleanup
-    for key in to_cleanup.keys():
+    for key in list(to_cleanup.keys()):
         instance = to_cleanup.pop(key)
         del instance
 
@@ -810,7 +809,7 @@ class TestDaemon(object):
             list(targets), 'saltutil.running', expr_form='list'
         )
         return [
-            k for (k, v) in running.iteritems() if v and v[0]['jid'] == jid
+            k for (k, v) in six.iteritems(running) if v and v[0]['jid'] == jid
         ]
 
     def wait_for_minion_connections(self, targets, timeout):
@@ -914,13 +913,13 @@ class TestDaemon(object):
         while syncing:
             rdata = self.client.get_full_returns(jid_info['jid'], syncing, 1)
             if rdata:
-                for name, output in rdata.iteritems():
+                for name, output in six.iteritems(rdata):
                     if not output['ret']:
                         # Already synced!?
                         syncing.remove(name)
                         continue
 
-                    if isinstance(output['ret'], string_types):
+                    if isinstance(output['ret'], six.string_types):
                         # An errors has occurred
                         print(
                             ' {LIGHT_RED}*{ENDC} {0} Failed to sync {2}: '
@@ -1101,7 +1100,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, string_types):
+                if not isinstance(item, six.string_types):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
@@ -1172,12 +1171,13 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         arg_str = '-c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0}{async_flag} {1}'.format(self.get_config_dir(),
+        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(self.get_config_dir(),
                                                   arg_str,
+                                                  timeout=timeout,
                                                   async_flag=' --async' if async else '')
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
@@ -1331,8 +1331,8 @@ class SaltReturnAssertsMixIn(object):
         if isinstance(keys, tuple):
             # If it's a tuple, turn it into a list
             keys = list(keys)
-        elif isinstance(keys, basestring):
-            # If it's a basestring , make it a one item list
+        elif isinstance(keys, six.string_types):
+            # If it's a string, make it a one item list
             keys = [keys]
         elif not isinstance(keys, list):
             # If we've reached here, it's a bad type passed to keys
@@ -1343,7 +1343,7 @@ class SaltReturnAssertsMixIn(object):
         self.assertReturnNonEmptySaltType(ret)
         keys = self.__return_valid_keys(keys)
         okeys = keys[:]
-        for part in ret.itervalues():
+        for part in six.itervalues(ret):
             try:
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
@@ -1371,7 +1371,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not True. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(six.itervalues(ret)[0])
                     )
                 )
             except (AttributeError, IndexError):
@@ -1389,7 +1389,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not False. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(six.itervalues(ret)[0])
                     )
                 )
             except (AttributeError, IndexError):
@@ -1405,7 +1405,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not None. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(six.itervalues(ret)[0])
                     )
                 )
             except (AttributeError, IndexError):

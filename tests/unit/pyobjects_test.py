@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 
+# Import Pytohn libs
+from __future__ import absolute_import
 import os
 import shutil
 import tempfile
 import uuid
 
+# Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
 
+# Import Salt libs
 import integration
 import salt.config
 import salt.state
@@ -88,6 +92,11 @@ from_import_template = '''#!pyobjects
 from   salt://map.sls  import     Samba
 
 Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
+'''
+
+import_as_template = '''#!pyobjects
+from salt://map.sls import Samba as Other
+Pkg.removed("samba-imported", names=[Other.server, Other.client])
 '''
 
 
@@ -297,6 +306,7 @@ class RendererTests(RendererMixin, TestCase):
         self.write_template_file("map.sls", map_template)
         render_and_assert(import_template)
         render_and_assert(from_import_template)
+        render_and_assert(import_as_template)
 
 
 class MapTests(RendererMixin, TestCase):

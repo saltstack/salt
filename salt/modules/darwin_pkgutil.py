@@ -4,9 +4,13 @@ Installer support for OS X.
 
 Installer is the native .pkg/.mpkg package manager for OS X.
 '''
+
+# Import Python libs
+from __future__ import absolute_import
 import os.path
 
-from salt.ext.six.moves import urllib
+# Import 3rd-party libs
+from salt.ext.six.moves import urllib  # pylint: disable=import-error
 
 
 PKGUTIL = "/usr/sbin/pkgutil"

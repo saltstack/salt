@@ -4,8 +4,7 @@ Execute salt convenience routines
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import logging
 
 # Import salt libs
@@ -40,7 +39,12 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     def __init__(self, opts):
         self.opts = opts
-        self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
+
+    @property
+    def functions(self):
+        if not hasattr(self, '_functions'):
+            self._functions = salt.loader.runner(self.opts)  # Must be self.functions for mixin to work correctly :-/
+        return self._functions
 
     def _reformat_low(self, low):
         '''
@@ -107,7 +111,6 @@ class Runner(RunnerClient):
         super(Runner, self).__init__(opts)
         self.returners = salt.loader.returners(opts, self.functions)
         self.outputters = salt.loader.outputters(opts)
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
 
     def print_docs(self):
         '''
@@ -124,7 +127,7 @@ class Runner(RunnerClient):
         '''
         Execute the runner sequence
         '''
-        ret = {}
+        ret, async_pub = {}, {}
         if self.opts.get('doc', False):
             self.print_docs()
         else:
@@ -137,22 +140,27 @@ class Runner(RunnerClient):
                 low['args'] = args
                 low['kwargs'] = kwargs
 
-                async_pub = self.async(self.opts['fun'], low)
+                user = salt.utils.get_specific_user()
+
                 # Run the runner!
                 if self.opts.get('async', False):
-                    log.info('Running in async mode. Results of this execution may '
+                    async_pub = self.async(self.opts['fun'], low, user=user)
+                    # by default: info will be not enougth to be printed out !
+                    log.warn('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured. '
                              'This execution is running under tag {tag}'.format(**async_pub))
                     return async_pub['jid']  # return the jid
 
-                # output rets if you have some
-                for suffix, event in self.get_async_returns(async_pub['tag'], event=self.event):
-                    if not self.opts.get('quiet', False):
-                        self.print_async_event(suffix, event)
-                    if suffix == 'ret':
-                        ret = event['return']
-
+                # otherwise run it in the main process
+                async_pub = self._gen_async_pub()
+                ret = self._proc_function(self.opts['fun'],
+                                           low,
+                                           user,
+                                           async_pub['tag'],
+                                           async_pub['jid'],
+                                           False,  # Don't daemonize
+                                           )
             except salt.exceptions.SaltException as exc:
                 ret = str(exc)
                 if not self.opts.get('quiet', False):

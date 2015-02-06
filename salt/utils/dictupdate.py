@@ -3,10 +3,12 @@
 Alex Martelli's soulution for recursive dict update from
 http://stackoverflow.com/a/3233356
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import collections
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 
@@ -22,9 +24,9 @@ def update(dest, upd):
 
 def merge(d1, d2):
     md = {}
-    for k, v in d1.iteritems():
-        if k in d2:
-            md[k] = [v, d2[k]]
+    for key, val in six.iteritems(d1):
+        if key in d2:
+            md[key] = [val, d2[key]]
         else:
-            md[k] = v
+            md[key] = val
     return md

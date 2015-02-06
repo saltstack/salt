@@ -36,26 +36,20 @@ details can be found at:
 
 .. _`SmartDataCenter`: https://github.com/joyent/sdc
 
-This requires that an api_host_suffix is set. The default value for this is
+Using SDC requires that an api_host_suffix is set. The default value for this is
 `.api.joyentcloud.com`. All characters, including the leading `.`, should be
 included:
 
 .. code-block:: yaml
 
       api_host_suffix: .api.myhostname.com
-
-:depends: requests
 '''
-from __future__ import absolute_import
-# pylint: disable=E0102
-
-# The import section is mostly libcloud boilerplate
+# pylint: disable=invalid-name,function-redefined
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import copy
-import salt.ext.six.moves.http_client  # pylint: disable=E0611
-import requests
 import json
 import logging
 import base64
@@ -64,9 +58,10 @@ import inspect
 import yaml
 
 # Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 
 # Import salt.cloud libs
+import salt.utils.http
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
@@ -76,6 +71,10 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-name-in-module
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -100,10 +99,10 @@ DEFAULT_LOCATION = 'us-east-1'
 POLL_ALL_LOCATIONS = True
 
 VALID_RESPONSE_CODES = [
-    salt.ext.six.moves.http_client.OK,
-    salt.ext.six.moves.http_client.ACCEPTED,
-    salt.ext.six.moves.http_client.CREATED,
-    salt.ext.six.moves.http_client.NO_CONTENT
+    http_client.OK,
+    http_client.ACCEPTED,
+    http_client.CREATED,
+    http_client.NO_CONTENT
 ]
 
 
@@ -198,7 +197,7 @@ def create(vm_):
         )
     )
 
-    ## added . for fqdn hostnames
+    # added . for fqdn hostnames
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
         'name': vm_['name'],
@@ -757,7 +756,7 @@ def reformat_node(item=None, full=False):
 
     # remove all the extra key value pairs to provide a brief listing
     if not full:
-        for key in item.keys():  # iterate over a copy of the keys
+        for key in six.iterkeys(item):  # iterate over a copy of the keys
             if key not in desired_keys:
                 del item[key]
 
@@ -831,15 +830,41 @@ def list_nodes_select(call=None):
     )
 
 
+def _get_proto():
+    '''
+    Checks configuration to see whether the user has SSL turned on. Default is:
+
+    .. code-block:: yaml
+
+        use_ssl: True
+    '''
+    use_ssl = config.get_cloud_config_value(
+        'use_ssl',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=True
+    )
+    if use_ssl is True:
+        return 'https'
+    return 'http'
+
+
 def avail_images(call=None):
     '''
-    get list of available images
+    Get list of available images
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud --list-images
+
+    Can use a custom URL for images. Default is:
+
+    .. code-block:: yaml
+
+        image_url: images.joyent.com/image
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -847,9 +872,32 @@ def avail_images(call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    img_url = 'https://images.joyent.com/images'
-    result = requests.get(img_url)
-    content = result.text
+    img_url = config.get_cloud_config_value(
+        'image_url',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='images.joyent.com/images'
+    )
+
+    if not img_url.startswith('http://') and not img_url.startswith('https://'):
+        img_url = '{0}://{1}'.format(_get_proto(), img_url)
+
+    verify_ssl = config.get_cloud_config_value(
+        'verify_ssl', get_configured_provider(), __opts__,
+        search_global=False, default=True
+    )
+
+    result = salt.utils.http.query(
+        img_url,
+        decode=False,
+        text=True,
+        status=True,
+        headers=True,
+        verify=verify_ssl,
+        opts=__opts__,
+    )
+    content = result['text']
 
     ret = {}
     for image in yaml.safe_load(content):
@@ -1007,11 +1055,15 @@ def get_location_path(location=DEFAULT_LOCATION, api_host_suffix=JOYENT_API_HOST
     :param location: joyent data center location
     :return: url
     '''
-    return 'https://{0}{1}'.format(location, api_host_suffix)
+    return '{0}://{1}{2}'.format(_get_proto(), location, api_host_suffix)
 
 
-def query(action=None, command=None, args=None, method='GET', location=None,
-           data=None):
+def query(action=None,
+          command=None,
+          args=None,
+          method='GET',
+          location=None,
+          data=None):
     '''
     Make a web call to Joyent
     '''
@@ -1022,6 +1074,11 @@ def query(action=None, command=None, args=None, method='GET', location=None,
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__,
         search_global=False
+    )
+
+    verify_ssl = config.get_cloud_config_value(
+        'verify_ssl', get_configured_provider(), __opts__,
+        search_global=False, default=True
     )
 
     if not location:
@@ -1047,7 +1104,8 @@ def query(action=None, command=None, args=None, method='GET', location=None,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Api-Version': JOYENT_API_VERSION,
-        'Authorization': 'Basic {0}'.format(auth_key)}
+        'Authorization': 'Basic {0}'.format(auth_key)
+    }
 
     if not isinstance(args, dict):
         args = {}
@@ -1057,25 +1115,26 @@ def query(action=None, command=None, args=None, method='GET', location=None,
         data = json.dumps({})
 
     return_content = None
-    try:
-
-        result = requests.request(method, path, params=args, headers=headers, data=data)
-        log.debug(
-            'Joyent Response Status Code: {0}'.format(
-                result.status_code
-            )
+    result = salt.utils.http.query(
+        path,
+        method,
+        params=args,
+        header_dict=headers,
+        data=data,
+        decode=False,
+        text=True,
+        status=True,
+        headers=True,
+        verify=verify_ssl,
+        opts=__opts__,
+    )
+    log.debug(
+        'Joyent Response Status Code: {0}'.format(
+            result['status']
         )
-        if 'content-length' in result.headers:
-            content = result.text
-            return_content = yaml.safe_load(content)
+    )
+    if 'Content-Length' in result['headers']:
+        content = result['text']
+        return_content = yaml.safe_load(content)
 
-        return [result.status_code, return_content]
-
-    except requests.exceptions.HTTPError as exc:
-        log.error(
-            'Joyent Response Status Code: {0}'.format(
-                str(exc)
-            )
-        )
-        log.error(exc)
-        return [0, {'error': exc}]
+    return [result['status'], return_content]

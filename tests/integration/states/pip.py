@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import pwd
 import glob
@@ -27,6 +28,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
@@ -48,9 +52,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertSaltFalseReturn(ret)
             self.assertSaltCommentRegexpMatches(
                 ret,
-                'Error installing \'supervisor\':(?:.*)'
-                '/tmp/pip-installed-errors(?:.*)'
-                '([nN]o such file or directory|not found)'
+                'Error installing \'supervisor\':'
             )
 
             # We now create the missing virtualenv
@@ -101,7 +103,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # We cannot use assertInSaltComment here because we need to skip
             # some of the state return parts
-            for key in ret.keys():
+            for key in six.iterkeys(ret):
                 self.assertTrue(ret[key]['result'])
                 if ret[key]['comment'] == 'Created new virtualenv':
                     continue
@@ -188,7 +190,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         # ----- Using runas ------------------------------------------------->
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -200,7 +202,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         # Using the package name.
         try:
             ret = self.run_state(
-                'pip.installed', name='pep8', runas=username, bin_env=venv_dir
+                'pip.installed', name='pep8', user=username, bin_env=venv_dir
             )
             self.assertSaltTrueReturn(ret)
             uinfo = pwd.getpwnam(username)
@@ -218,7 +220,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Using a requirements file
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -234,7 +236,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         try:
             ret = self.run_state(
-                'pip.installed', name='', runas=username, bin_env=venv_dir,
+                'pip.installed', name='', user=username, bin_env=venv_dir,
                 requirements='salt://issue-6912-requirements.txt'
             )
             self.assertSaltTrueReturn(ret)
@@ -255,7 +257,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # ----- Using user -------------------------------------------------->
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -285,7 +287,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Using a requirements file
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(

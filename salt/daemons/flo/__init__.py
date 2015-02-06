@@ -17,6 +17,8 @@ opts['ioflo_realtime']
 opts['ioflo_verbose']
 opts['caller_floscript']
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 import os
 
@@ -31,8 +33,9 @@ __all__ = ['core', 'worker', 'maint', 'zero']
 # Import salt libs
 import salt.daemons.masterapi
 
-# Import ioflo libs
+# Import 3rd-party libs
 import ioflo.app.run
+import salt.ext.six as six
 
 
 def explode_opts(opts):
@@ -40,7 +43,7 @@ def explode_opts(opts):
     Explode the opts into a preloads list
     '''
     preloads = [('.salt.opts', dict(value=opts))]
-    for key, val in opts.items():
+    for key, val in six.iteritems(opts):
         ukey = key.replace('.', '_')
         preloads.append(('.salt.etc.{0}'.format(ukey), dict(value=val)))
     preloads.append(('.salt.etc.id', dict(value=opts['id'])))

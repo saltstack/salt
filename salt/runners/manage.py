@@ -14,6 +14,7 @@ import tempfile
 import time
 
 # Import 3rd-party libs
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
@@ -23,7 +24,6 @@ import salt.utils
 import salt.utils.minions
 import salt.wheel
 import salt.version
-import salt.ext.six as six
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -47,8 +47,6 @@ def status(output=True):
     ret = {}
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
-    if output:
-        __jid_event__.fire_event({'message': ret}, 'progress')
     return ret
 
 
@@ -436,7 +434,7 @@ def safe_accept(target, expr_form='glob'):
     ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
 
     failures = {}
-    for minion, finger in ret.items():
+    for minion, finger in six.iteritems(ret):
         if not FINGERPRINT_REGEX.match(finger):
             failures[minion] = finger
         else:
@@ -553,7 +551,7 @@ def bootstrap(version='develop',
         # deployment easier on existing hosts (i.e. use salt.utils.vt,
         # pass better options to ssh, etc)
         subprocess.call(['ssh',
-                        'root@' if root_user else '' + host,
+                        ('root@' if root_user else '') + host,
                         'python -c \'import urllib; '
                         'print urllib.urlopen('
                         '\'' + script + '\''

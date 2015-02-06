@@ -2,6 +2,8 @@
 """
 Raet Ioflo Behavior Unittests
 """
+# pylint: skip-file
+# pylint: disable=C0103
 
 import sys
 if sys.version_info < (2, 7):
@@ -41,43 +43,12 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         Call super if override so House Framer and Frame are setup correctly
         """
         super(PresenterTestCase, self).setUp()
-        self.addBenterDeed("PresenterTestOptsSetup")
-        self.addBenterDeed("SaltRaetManorLaneSetup")
-        self.addBenterDeed("PresenterTestSetup")
-
-        self.act = self.addEnterDeed("SaltRaetPresenter")
-        self.assertIn(self.act, self.frame.enacts)
-        self.assertEqual(self.act.actor, "SaltRaetPresenter")
-
-        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
-        self.frame.checkEnter()
-        self.assertDictEqual(self.act.actor.Ioinits,
-                             {'opts': '.salt.opts',
-                              'presence_req': '.salt.presence.event_req',
-                              'lane_stack': '.salt.lane.manor.stack',
-                              'alloweds': '.salt.var.presence.alloweds',
-                              'aliveds': '.salt.var.presence.aliveds',
-                              'reapeds': '.salt.var.presence.reapeds',
-                              'availables': '.salt.var.presence.availables'})
-
-        self.assertTrue(hasattr(self.act.actor, 'opts'))
-        self.assertTrue(hasattr(self.act.actor, 'presence_req'))
-        self.assertTrue(hasattr(self.act.actor, 'lane_stack'))
-        self.assertTrue(hasattr(self.act.actor, 'alloweds'))
-        self.assertTrue(hasattr(self.act.actor, 'aliveds'))
-        self.assertTrue(hasattr(self.act.actor, 'reapeds'))
-        self.assertTrue(hasattr(self.act.actor, 'availables'))
-        self.assertIsInstance(self.act.actor.lane_stack.value, LaneStack)
 
 
     def tearDown(self):
         """
         Call super if override so House Framer and Frame are torn down correctly
         """
-        self.act.actor.lane_stack.value.server.close()
-        testStack = self.store.fetch('.salt.test.lane.stack').value
-        testStack.server.close()
-
         super(PresenterTestCase, self).tearDown()
 
 
@@ -98,11 +69,69 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         availables.value.add(name)
 
 
+    def testContextSetup(self):
+        """
+        Test the context setup procedure used in all the consequence tests works as expected
+        This test intended to avoid some checks in other tests
+        """
+        console.terse("{0}\n".format(self.testContextSetup.__doc__))
+
+        act = self.addEnterDeed("PresenterTestOptsSetup")
+        self.assertIn(act, self.frame.enacts)
+        self.assertEqual(act.actor, "PresenterTestOptsSetup")
+        act = self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.assertIn(act, self.frame.enacts)
+        self.assertEqual(act.actor, "SaltRaetManorLaneSetup")
+        act = self.addEnterDeed("PresenterTestSetup")
+        self.assertIn(act, self.frame.enacts)
+        self.assertEqual(act.actor, "PresenterTestSetup")
+
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.assertIn(act, self.frame.reacts)
+        self.assertEqual(act.actor, "SaltRaetPresenter")
+
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+
+        self.frame.enter()
+        self.assertDictEqual(act.actor.Ioinits,
+                             {'opts': '.salt.opts',
+                              'presence_req': '.salt.presence.event_req',
+                              'lane_stack': '.salt.lane.manor.stack',
+                              'alloweds': '.salt.var.presence.alloweds',
+                              'aliveds': '.salt.var.presence.aliveds',
+                              'reapeds': '.salt.var.presence.reapeds',
+                              'availables': '.salt.var.presence.availables'})
+
+        self.assertTrue(hasattr(act.actor, 'opts'))
+        self.assertTrue(hasattr(act.actor, 'presence_req'))
+        self.assertTrue(hasattr(act.actor, 'lane_stack'))
+        self.assertTrue(hasattr(act.actor, 'alloweds'))
+        self.assertTrue(hasattr(act.actor, 'aliveds'))
+        self.assertTrue(hasattr(act.actor, 'reapeds'))
+        self.assertTrue(hasattr(act.actor, 'availables'))
+        self.assertIsInstance(act.actor.lane_stack.value, LaneStack)
+        self.frame.recur()
+
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
+
     def testPresenceAvailable(self):
         """
         Test Presenter 'available' request (A1, B*)
         """
         console.terse("{0}\n".format(self.testPresenceAvailable.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add available minions
@@ -136,7 +165,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
 
         # Test
         # process 5 requests at once
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -152,12 +181,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                        'data': {'present': {'alpha': '1.1.1.1',
                                                             'beta': '1.2.3.4'}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceJoined(self):
         """
         Test Presenter 'joined' request (A2)
         """
         console.terse("{0}\n".format(self.testPresenceJoined.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add joined minions
@@ -174,7 +217,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         presenceReq.append(msg)
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -189,12 +232,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                    'data': {'joined': {'alpha': '1.1.1.1',
                                                        'beta': '1.2.3.4'}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceAllowed(self):
         """
         Test Presenter 'allowed' request (A3)
         """
         console.terse("{0}\n".format(self.testPresenceAllowed.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add allowed minions
@@ -210,7 +267,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         presenceReq.append(msg)
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -225,12 +282,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                    'data': {'allowed': {'alpha': '1.1.1.1',
                                                         'beta': '1.2.3.4'}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceAlived(self):
         """
         Test Presenter 'alived' request (A4)
         """
         console.terse("{0}\n".format(self.testPresenceAlived.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add alived minions
@@ -246,7 +317,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         presenceReq.append(msg)
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -261,12 +332,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                    'data': {'alived': {'alpha': '1.1.1.1',
                                                        'beta': '1.2.3.4'}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceReaped(self):
         """
         Test Presenter 'reaped' request (A5)
         """
         console.terse("{0}\n".format(self.testPresenceReaped.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add reaped minions
@@ -282,7 +367,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         presenceReq.append(msg)
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -297,6 +382,12 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                    'data': {'reaped': {'alpha': '1.1.1.1',
                                                        'beta': '1.2.3.4'}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceNoRequest(self):
         """
@@ -304,8 +395,16 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         """
         console.terse("{0}\n".format(self.testPresenceNoRequest.__doc__))
 
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
+
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         testStack = self.store.fetch('.salt.test.lane.stack').value
@@ -313,12 +412,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         testStack.serviceAll()
         self.assertEqual(len(testStack.rxMsgs), 0)
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceUnknownSrc(self):
         """
         Test Presenter handles request from unknown (disconnected) source (C2)
         """
         console.terse("{0}\n".format(self.testPresenceUnknownSrc.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add presence request
@@ -332,12 +445,18 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         presenceReq.append(msg)
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
         testStack.serviceAll()
         self.assertEqual(len(testStack.rxMsgs), 0)
+
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
 
 
     def testPresenceAvailableNoMinions(self):
@@ -345,6 +464,14 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         Test Presenter 'available' request with no minions in the state (D1)
         """
         console.terse("{0}\n".format(self.testPresenceAvailableNoMinions.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add presence request
@@ -356,7 +483,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                             'data': {'state': 'available'}})
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -370,12 +497,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                    'tag': tag,
                                    'data': {'present': {}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceAvailableOneMinion(self):
         """
         Test Presenter 'available' request with one minion in the state (D2)
         """
         console.terse("{0}\n".format(self.testPresenceAvailableOneMinion.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add available minions
@@ -390,7 +531,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                             'data': {'state': 'available'}})
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -404,12 +545,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                    'tag': tag,
                                    'data': {'present': {'alpha': '1.1.1.1'}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceAvailableSomeIpUnknown(self):
         """
         Test Presenter 'available' request with some minion addresses aren't known (D3)
         """
         console.terse("{0}\n".format(self.testPresenceAvailableSomeIpUnknown.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add available minions
@@ -427,7 +582,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                             'data': {'state': 'available'}})
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -443,12 +598,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                                         'beta': None,
                                                         'gamma': None}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceAllowedNoMinions(self):
         """
         Test Presenter 'allowed' request with no minions in the state (D4)
         """
-        console.terse("{0}\n".format(self.testPresenceAllowed.__doc__))
+        console.terse("{0}\n".format(self.testPresenceAllowedNoMinions.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add presence request
@@ -461,7 +630,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         presenceReq.append(msg)
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -475,12 +644,26 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                    'tag': tag,
                                    'data': {'allowed': {}}})
 
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
+
 
     def testPresenceAllowedOneMinion(self):
         """
         Test Presenter 'allowed' request with one minion in the state (D5)
         """
-        console.terse("{0}\n".format(self.testPresenceAllowed.__doc__))
+        console.terse("{0}\n".format(self.testPresenceAllowedOneMinion.__doc__))
+
+        # Bootstrap
+        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("SaltRaetManorLaneSetup")
+        self.addEnterDeed("PresenterTestSetup")
+        act = self.addRecurDeed("SaltRaetPresenter")
+        self.resolve()  # resolve House, Framer, Frame, Acts, Actors
+        self.frame.enter()
 
         # Prepare
         # add allowed minions
@@ -495,7 +678,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         presenceReq.append(msg)
 
         # Test
-        self.frame.enter()  # run in frame
+        self.frame.recur()  # run in frame
 
         # Check
         self.assertEqual(len(testStack.rxMsgs), 0)
@@ -508,6 +691,12 @@ class PresenterTestCase(testing.FrameIofloTestCase):
                                              'dst': [None, None, 'event_fire']},
                                    'tag': tag,
                                    'data': {'allowed': {'alpha': '1.1.1.1'}}})
+
+        # Close active stacks servers
+        act.actor.lane_stack.value.server.close()
+        testStack = self.store.fetch('.salt.test.lane.stack')
+        if testStack:
+            testStack.value.server.close()
 
 
 def runOne(test):
@@ -523,6 +712,7 @@ def runSome():
     """ Unittest runner """
     tests = []
     names = [
+        'testContextSetup',
         'testPresenceAvailable',
         'testPresenceJoined',
         'testPresenceAllowed',
@@ -533,6 +723,8 @@ def runSome():
         'testPresenceAvailableNoMinions',
         'testPresenceAvailableOneMinion',
         'testPresenceAvailableSomeIpUnknown',
+        'testPresenceAllowedNoMinions',
+        'testPresenceAllowedOneMinion',
         ]
     tests.extend(map(PresenterTestCase, names))
     suite = unittest.TestSuite(tests)

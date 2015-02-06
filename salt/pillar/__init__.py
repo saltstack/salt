@@ -2,9 +2,9 @@
 '''
 Render the pillar data
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import collections
 import logging
@@ -16,12 +16,13 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 import salt.transport
-from salt.ext.six import string_types
 from salt.template import compile_template
 from salt.utils.dictupdate import update
 from salt.utils.serializers.yamlex import merge_recursive
 from salt.utils.odict import OrderedDict
 from salt.version import __version__
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 
@@ -129,9 +130,6 @@ class Pillar(object):
         # location of file_roots. Issue 5951
         ext_pillar_opts = dict(self.opts)
         ext_pillar_opts['file_roots'] = self.actual_file_roots
-        # TODO: consolidate into "sanitize opts"
-        if 'aes' in ext_pillar_opts:
-            ext_pillar_opts.pop('aes')
         self.merge_strategy = 'smart'
         if opts.get('pillar_source_merging_strategy'):
             self.merge_strategy = opts['pillar_source_merging_strategy']
@@ -165,7 +163,6 @@ class Pillar(object):
             saltenv = env
         opts = dict(opts_in)
         opts['file_roots'] = opts['pillar_roots']
-        opts['__pillar'] = True
         opts['file_client'] = 'local'
         if not grains:
             opts['grains'] = {}
@@ -220,24 +217,28 @@ class Pillar(object):
                         ]
             else:
                 for saltenv in self._get_envs():
-                    tops[saltenv].append(
-                            compile_template(
-                                self.client.cache_file(
-                                    self.opts['state_top'],
-                                    saltenv
-                                    ),
-                                self.rend,
-                                self.opts['renderer'],
-                                saltenv=saltenv
-                                )
+                    top = self.client.cache_file(
+                            self.opts['state_top'],
+                            saltenv
                             )
+                    if top:
+                        tops[saltenv].append(
+                                compile_template(
+                                    top,
+                                    self.rend,
+                                    self.opts['renderer'],
+                                    saltenv=saltenv
+                                    )
+                                )
         except Exception as exc:
             errors.append(
                     ('Rendering Primary Top file failed, render error:\n{0}'
                         .format(exc)))
+            log.error('Pillar rendering failed for minion {0}: '.format(self.opts['id']),
+                    exc_info=True)
 
         # Search initial top files for includes
-        for saltenv, ctops in tops.items():
+        for saltenv, ctops in six.iteritems(tops):
             for ctop in ctops:
                 if 'include' not in ctop:
                     continue
@@ -247,7 +248,7 @@ class Pillar(object):
         # Go through the includes and pull out the extra tops and add them
         while include:
             pops = []
-            for saltenv, states in include.items():
+            for saltenv, states in six.iteritems(include):
                 pops.append(saltenv)
                 if not states:
                     continue
@@ -285,7 +286,7 @@ class Pillar(object):
         orders = collections.defaultdict(OrderedDict)
         for ctops in six.itervalues(tops):
             for ctop in ctops:
-                for saltenv, targets in ctop.items():
+                for saltenv, targets in six.iteritems(ctop):
                     if saltenv == 'include':
                         continue
                     for tgt in targets:
@@ -307,10 +308,10 @@ class Pillar(object):
                                     orders[saltenv][tgt] = order
                                 if comp.get('ignore_missing', False):
                                     ignore_missing = True
-                            if isinstance(comp, string_types):
+                            if isinstance(comp, six.string_types):
                                 states[comp] = True
                         if ignore_missing:
-                            self.ignored_pillars[saltenv] = states.keys()
+                            self.ignored_pillars[saltenv] = list(states.keys())
                         top[saltenv][tgt] = matches
                         top[saltenv][tgt].extend(states)
         return self.sort_top_targets(top, orders)
@@ -321,7 +322,7 @@ class Pillar(object):
         '''
         sorted_top = collections.defaultdict(OrderedDict)
         # pylint: disable=cell-var-from-loop
-        for saltenv, targets in top.items():
+        for saltenv, targets in six.iteritems(top):
             sorted_targets = sorted(targets,
                     key=lambda target: orders[saltenv][target])
             for target in sorted_targets:
@@ -350,11 +351,11 @@ class Pillar(object):
         {'saltenv': ['state1', 'state2', ...]}
         '''
         matches = {}
-        for saltenv, body in top.items():
+        for saltenv, body in six.iteritems(top):
             if self.opts['environment']:
                 if saltenv != self.opts['environment']:
                     continue
-            for match, data in body.items():
+            for match, data in six.iteritems(body):
                 if self.matcher.confirm_top(
                         match,
                         data,
@@ -363,7 +364,7 @@ class Pillar(object):
                     if saltenv not in matches:
                         matches[saltenv] = []
                     for item in data:
-                        if isinstance(item, string_types):
+                        if isinstance(item, six.string_types):
                             matches[saltenv].append(item)
         return matches
 
@@ -420,7 +421,7 @@ class Pillar(object):
                     else:
                         for sub_sls in state.pop('include'):
                             if isinstance(sub_sls, dict):
-                                sub_sls, v = next(sub_sls.iteritems())
+                                sub_sls, v = next(six.iteritems(sub_sls))
                                 defaults = v.get('defaults', {})
                                 key = v.get('key', None)
                             else:
@@ -451,7 +452,7 @@ class Pillar(object):
         '''
         pillar = {}
         errors = []
-        for saltenv, pstates in matches.items():
+        for saltenv, pstates in six.iteritems(matches):
             mods = set()
             for sls in pstates:
                 pstate, mods, err = self.render_pstate(sls, saltenv, mods)
@@ -519,7 +520,7 @@ class Pillar(object):
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
                 return {}
-            for key, val in run.items():
+            for key, val in six.iteritems(run):
                 if key not in self.ext_pillars:
                     err = ('Specified ext_pillar interface {0} is '
                            'unavailable').format(key)
@@ -600,11 +601,8 @@ class Pillar(object):
         errors.extend(terrors)
         if self.opts.get('pillar_opts', True):
             mopts = dict(self.opts)
-            # TODO: consolidate into sanitize function
             if 'grains' in mopts:
                 mopts.pop('grains')
-            if 'aes' in mopts:
-                mopts.pop('aes')
             # Restore the actual file_roots path. Issue 5449
             mopts['file_roots'] = self.actual_file_roots
             mopts['saltversion'] = __version__

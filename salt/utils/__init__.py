@@ -2,15 +2,14 @@
 '''
 Some of the utils used by salt
 '''
-from __future__ import absolute_import
-from __future__ import print_function
 
 # Import python libs
+from __future__ import absolute_import, print_function
 import contextlib
 import copy
 import collections
 import datetime
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import errno
 import fnmatch
 import hashlib
@@ -32,12 +31,16 @@ import types
 import warnings
 import string
 import locale
-from salt.ext.six import string_types
-from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=E0611
+from calendar import month_abbr as months
+
+# Import 3rd-party libs
 import salt.ext.six as six
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
+# pylint: disable=import-error,redefined-builtin
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -105,8 +108,6 @@ from salt.exceptions import (
     SaltInvocationError
 )
 
-# Import third party libs
-import yaml
 
 log = logging.getLogger(__name__)
 _empty = object()
@@ -137,6 +138,8 @@ def get_color_theme(theme):
     '''
     Return the color theme to use
     '''
+    # Keep the heavy lifting out of the module space
+    import yaml
     if not os.path.isfile(theme):
         log.warning('The named theme {0} if not available'.format(theme))
     try:
@@ -252,6 +255,20 @@ def get_user():
         return pwd.getpwuid(os.geteuid()).pw_name
     else:
         return getpass.getuser()
+
+
+def get_specific_user():
+    '''
+    Get a user name for publishing. If you find the user is "root" attempt to be
+    more specific
+    '''
+    user = get_user()
+    env_vars = ('SUDO_USER',)
+    if user == 'root':
+        for evar in env_vars:
+            if evar in os.environ:
+                return 'sudo_{0}'.format(os.environ[evar])
+    return user
 
 
 def daemonize(redirect_out=True):
@@ -536,6 +553,18 @@ def required_modules_error(name, docstring):
     return msg.format(filename, ', '.join(modules))
 
 
+def get_accumulator_dir(cachedir):
+    '''
+    Return the directory that accumulator data is stored in, creating it if it
+    doesn't exist.
+    '''
+    fn_ = os.path.join(cachedir, 'accumulator')
+    if not os.path.isdir(fn_):
+        # accumulator_dir is not present, create it
+        os.makedirs(fn_)
+    return fn_
+
+
 def check_or_die(command):
     '''
     Simple convenience function for modules to use for gracefully blowing up
@@ -577,6 +606,7 @@ def backup_minion(path, bkroot):
     shutil.copyfile(path, bkpath)
     if not salt.utils.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
+        os.chmod(bkpath, fstat.st_mode)
 
 
 def path_join(*parts):
@@ -701,7 +731,7 @@ def format_call(fun,
 
     aspec = salt.utils.args.get_function_argspec(fun)
 
-    args, kwargs = iter(arg_lookup(fun).values())
+    args, kwargs = six.itervalues(arg_lookup(fun))
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
@@ -739,7 +769,7 @@ def format_call(fun,
     if aspec.keywords:
         # The function accepts **kwargs, any non expected extra keyword
         # arguments will made available.
-        for key, value in data.items():
+        for key, value in six.iteritems(data):
             if key in expected_extra_kws:
                 continue
             ret['kwargs'][key] = value
@@ -751,21 +781,10 @@ def format_call(fun,
     # Did not return yet? Lets gather any remaining and unexpected keyword
     # arguments
     extra = {}
-    for key, value in data.items():
+    for key, value in six.iteritems(data):
         if key in expected_extra_kws:
             continue
         extra[key] = copy.deepcopy(value)
-
-    # We'll be showing errors to the users until Salt Lithium comes out, after
-    # which, errors will be raised instead.
-    warn_until(
-        'Lithium',
-        'It\'s time to start raising `SaltInvocationError` instead of '
-        'returning warnings',
-        # Let's not show the deprecation warning on the console, there's no
-        # need.
-        _dont_call_warnings=True
-    )
 
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
@@ -790,20 +809,14 @@ def format_call(fun,
                     '{0}.{1}'.format(fun.__module__, fun.__name__)
                 )
             )
-
-        # Return a warning to the user explaining what's going on
-        ret.setdefault('warnings', []).append(
+        raise SaltInvocationError(
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs. Your approach will work until Salt Lithium '
-            'is out.{1}'.format(
+            '\'key: value\' pairs.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
         )
-
-        # Lets pack the current extra kwargs as template context
-        ret.setdefault('context', {}).update(extra)
     return ret
 
 
@@ -1169,7 +1182,7 @@ def clean_kwargs(**kwargs):
     passing the kwargs forward wholesale.
     '''
     ret = {}
-    for key, val in list(kwargs.items()):
+    for key, val in six.iteritems(kwargs):
         if not key.startswith('__pub'):
             ret[key] = val
     return ret
@@ -1327,7 +1340,7 @@ def check_state_result(running):
         return False
 
     ret = True
-    for state_result in running.values():
+    for state_result in six.itervalues(running):
         if not isinstance(state_result, dict):
             # return false when hosts return a list instead of a dict
             ret = False
@@ -1354,7 +1367,7 @@ def test_mode(**kwargs):
     "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
     etc) contains a True value (as determined by salt.utils.is_true).
     '''
-    for arg, value in kwargs.items():
+    for arg, value in six.iteritems(kwargs):
         try:
             if arg.lower() == 'test' and is_true(value):
                 return True
@@ -1385,7 +1398,7 @@ def is_true(value=None):
     # Now check for truthiness
     if isinstance(value, (int, float)):
         return value > 0
-    elif isinstance(value, string_types):
+    elif isinstance(value, six.string_types):
         return str(value).lower() == 'true'
     else:
         return bool(value)
@@ -1623,7 +1636,7 @@ def date_cast(date):
 
     # fuzzy date
     try:
-        if isinstance(date, string_types):
+        if isinstance(date, six.string_types):
             try:
                 if HAS_TIMELIB:
                     return timelib.strtodatetime(date)
@@ -1637,7 +1650,7 @@ def date_cast(date):
                 date = float(date)
 
         return datetime.datetime.fromtimestamp(date)
-    except Exception as e:
+    except Exception:
         if HAS_TIMELIB:
             raise ValueError('Unable to parse {0}'.format(date))
 
@@ -1701,7 +1714,7 @@ def warn_until(version,
                                 checks to raise a ``RuntimeError``.
     '''
     if not isinstance(version, (tuple,
-                                string_types,
+                                six.string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
             'The \'version\' argument should be passed as a tuple, string or '
@@ -1709,7 +1722,7 @@ def warn_until(version,
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, string_types):
+    elif isinstance(version, six.string_types):
         version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
@@ -1794,7 +1807,7 @@ def kwargs_warn_until(kwargs,
                                 checks to raise a ``RuntimeError``.
     '''
     if not isinstance(version, (tuple,
-                                string_types,
+                                six.string_types,
                                 salt.version.SaltStackVersion)):
         raise RuntimeError(
             'The \'version\' argument should be passed as a tuple, string or '
@@ -1802,7 +1815,7 @@ def kwargs_warn_until(kwargs,
         )
     elif isinstance(version, tuple):
         version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, string_types):
+    elif isinstance(version, six.string_types):
         version = salt.version.SaltStackVersion.from_name(version)
 
     if stacklevel is None:
@@ -1838,6 +1851,7 @@ def version_cmp(pkg1, pkg2):
     making the comparison.
     '''
     try:
+        # pylint: disable=no-member
         if distutils.version.LooseVersion(pkg1) < \
                 distutils.version.LooseVersion(pkg2):
             return -1
@@ -1847,8 +1861,9 @@ def version_cmp(pkg1, pkg2):
         elif distutils.version.LooseVersion(pkg1) > \
                 distutils.version.LooseVersion(pkg2):
             return 1
-    except Exception as e:
-        log.exception(e)
+        # pylint: disable=no-member
+    except Exception as exc:
+        log.exception(exc)
     return None
 
 
@@ -1975,7 +1990,7 @@ def decode_dict(data):
     JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = {}
-    for key, value in data.items():
+    for key, value in six.iteritems(data):
         if isinstance(key, six.text_type):
             key = key.encode('utf-8')
         if isinstance(value, six.text_type):
@@ -2048,7 +2063,7 @@ def repack_dictlist(data):
     Takes a list of one-element dicts (as found in many SLS schemas) and
     repacks into a single dictionary.
     '''
-    if isinstance(data, string_types):
+    if isinstance(data, six.string_types):
         try:
             import yaml
             data = yaml.safe_load(data)
@@ -2057,13 +2072,13 @@ def repack_dictlist(data):
             return {}
     if not isinstance(data, list) \
             or [x for x in data
-                if not isinstance(x, (string_types, int, float, dict))]:
+                if not isinstance(x, (six.string_types, int, float, dict))]:
         log.error('Invalid input: {0}'.format(pprint.pformat(data)))
         log.error('Input must be a list of strings/dicts')
         return {}
     ret = {}
     for element in data:
-        if isinstance(element, (string_types, int, float)):
+        if isinstance(element, (six.string_types, int, float)):
             ret[element] = None
         else:
             if len(element) != 1:
@@ -2086,7 +2101,7 @@ def get_group_list(user=None, include_default=True):
         return []
     group_names = None
     ugroups = set()
-    if not isinstance(user, string_types):
+    if not isinstance(user, six.string_types):
         raise Exception
     if hasattr(os, 'getgrouplist'):
         # Try os.getgrouplist, available in python >= 3.3
@@ -2158,7 +2173,10 @@ def get_gid_list(user=None, include_default=True):
         # We don't work on platforms that don't have grp and pwd
         # Just return an empty list
         return []
-    gid_list = [gid for (group, gid) in list(salt.utils.get_group_dict(user, include_default=include_default).items())]
+    gid_list = [
+            gid for (group, gid) in
+            six.iteritems(salt.utils.get_group_dict(user, include_default=include_default))
+    ]
     return sorted(set(gid_list))
 
 
@@ -2212,7 +2230,7 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = dict((k, v) for k, v in group_list.items()
+        group_list = dict((k, v) for k, v in six.iteritems(group_list)
                           if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]

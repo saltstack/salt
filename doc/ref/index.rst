@@ -30,3 +30,4 @@ Reference
     tops/index
     tops/all/index
     wheel/all/index
+    beacons/all/index

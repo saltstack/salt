@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import sys
 import re
 
@@ -18,6 +19,7 @@ import salt.utils
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
 
 config.__grains__ = {}
 config.__opts__ = {}
@@ -485,7 +487,7 @@ class VirtTestCase(TestCase):
         mock_config = yaml.load(yaml_config)
         salt.modules.config.__opts__ = mock_config
 
-        for name in mock_config['virt.nic'].keys():
+        for name in six.iterkeys(mock_config['virt.nic']):
             profile = salt.modules.virt._nic_profile(name, 'kvm')
             self.assertEqual(len(profile), 2)
 

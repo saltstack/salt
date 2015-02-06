@@ -3,9 +3,8 @@
 Helpful decorators module writing
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import inspect
 import logging
 from functools import wraps
@@ -14,6 +13,9 @@ from collections import defaultdict
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandNotFoundError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -24,8 +26,8 @@ class Depends(object):
     dependencies passed in are in the globals of the module. If not, it will
     cause the function to be unloaded (or replaced)
     '''
-    # Dependency -> list of things that depend on it
-    dependency_dict = defaultdict(set)
+    # kind -> Dependency -> list of things that depend on it
+    dependency_dict = defaultdict(lambda: defaultdict(set))
 
     def __init__(self, *dependencies, **kwargs):
         '''
@@ -60,21 +62,23 @@ class Depends(object):
         class wide depandancy_dict
         '''
         module = inspect.getmodule(inspect.stack()[1][0])
+        # module name is something like salt.loaded.int.modules.test
+        kind = module.__name__.rsplit('.', 2)[1]
         for dep in self.dependencies:
-            self.dependency_dict[dep].add(
+            self.dependency_dict[kind][dep].add(
                 (module, function, self.fallback_function)
             )
         return function
 
     @classmethod
-    def enforce_dependencies(cls, functions):
+    def enforce_dependencies(cls, functions, kind):
         '''
         This is a class global method to enforce the dependencies that you
         currently know about.
         It will modify the "functions" dict and remove/replace modules that
         are missing dependencies.
         '''
-        for dependency, dependent_set in cls.dependency_dict.items():
+        for dependency, dependent_set in six.iteritems(cls.dependency_dict[kind]):
             # check if dependency is loaded
             for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
@@ -183,7 +187,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         '<string>',
         'exec'
     )
-    exec(function_def, context)
+    six.exec_(function_def, context)
     return wraps(original_function)(context[original_function.__name__])
 
 

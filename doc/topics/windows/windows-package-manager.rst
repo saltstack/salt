@@ -165,8 +165,20 @@ project's wiki_:
         uninstaller: salt://win/repo/7zip/7z920-x64.msi
         uninstall_flags: ' /qn'
 
+Add ``cache_dir: True`` when the installer requires multiple source files. The
+directory containing the installer file will be recursively cached on the minion.
+Only applies to salt: installer URLs.
 
+.. code-block:: yaml
 
+    sqlexpress:
+      12.0.2000.8:
+        installer: 'salt://win/repo/sqlexpress/setup.exe'
+        full_name: Microsoft SQL Server 2014 Setup (English)
+        reboot: False
+        install_flags: ' /ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
+        cache_dir: True
+       
 Generate Repo Cache File
 ========================
 

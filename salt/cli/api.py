@@ -9,7 +9,6 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function
-import sys
 import os.path
 import logging
 
@@ -48,20 +47,6 @@ class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0
         '''
         import salt.client.netapi
         self.parse_args()
-        try:
-            if self.config['verify_env']:
-                logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith('tcp://') \
-                        and not logfile.startswith('udp://') \
-                        and not logfile.startswith('file://'):
-                    # Logfile is not using Syslog, verify
-                    salt.utils.verify.verify_files(
-                        [logfile], self.config['user']
-                    )
-        except OSError as err:
-            log.error(err)
-            sys.exit(err.errno)
-
         self.setup_logfile_logger()
         client = salt.client.netapi.NetapiClient(self.config)
         self.daemonize_if_required()

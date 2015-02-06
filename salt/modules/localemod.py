@@ -7,10 +7,12 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import re
+import os
 
 # Import salt libs
 import salt.utils
 import salt.ext.six as six
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
@@ -173,41 +175,62 @@ def avail(locale):
 
         salt '*' locale.avail 'en_US.UTF-8'
     '''
-    normalized_locale = _normalize_locale(locale)
+    try:
+        normalized_locale = _normalize_locale(locale)
+    except IndexError:
+        log.error('Unable to validate locale "{0}"'.format(locale))
+        return False
     avail_locales = __salt__['locale.list_avail']()
     locale_exists = next((True for x in avail_locales
        if _normalize_locale(x.strip()) == normalized_locale), False)
     return locale_exists
 
 
-def gen_locale(locale):
+@decorators.which('locale-gen')
+def gen_locale(locale, charmap=None):
     '''
     Generate a locale.
 
     .. versionadded:: 2014.7.0
 
+    :param locale: Any locale listed in /usr/share/i18n/locales or
+        /usr/share/i18n/SUPPORTED for debian and gentoo based distros
+
+    :param charmap: debian and gentoo based systems require the charmap to be
+        specified independently of the locale.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' locale.gen_locale 'en_US.UTF-8'
+        salt '*' locale.gen_locale en_US.UTF-8
+        salt '*' locale.gen_locale en_US.UTF-8 UTF-8  # debian and gentoo only
     '''
-    # validate the supplied locale
-    valid = __salt__['file.replace'](
-        '/usr/share/i18n/SUPPORTED',
-        '^{0}$'.format(locale),
-        '^{0}$'.format(locale),
-        search_only=True
-    )
+    on_debian = __grains__.get('os') == 'Debian'
+    on_gentoo = __grains__.get('os_family') == 'Gentoo'
+
+    if on_debian or on_gentoo:
+        if not charmap:
+            log.error('On debian and gentoo systems you must provide a charmap')
+            return False
+
+        search = '/usr/share/i18n/SUPPORTED'
+        locale_format = '{0} {1}'.format(locale, charmap)
+        valid = __salt__['file.search'](search, '^{0}$'.format(locale_format))
+    else:
+        search = '/usr/share/i18n/locales'
+        locale_format = locale
+        valid = locale_format in os.listdir(search)
+
     if not valid:
-        log.error('The provided locale "{0}" is invalid'.format(locale))
+        log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
         return False
 
-    if __grains__.get('os') == 'Debian' or __grains__.get('os_family') == 'Gentoo':
+    if on_debian or on_gentoo:
         __salt__['file.replace'](
             '/etc/locale.gen',
-            '# {0} '.format(locale),
-            '{0} '.format(locale),
+            r'^#\s*{0}$'.format(locale_format),
+            '{0}'.format(locale_format),
             append_if_not_found=True
         )
     elif __grains__.get('os') == 'Ubuntu':
@@ -222,13 +245,9 @@ def gen_locale(locale):
             'locale-gen'
         )
 
-    if __grains__.get('os_family') == 'Gentoo':
-        return __salt__['cmd.retcode'](
-            'locale-gen --generate "{0}"'.format(locale),
-            python_shell=False
-        )
-    else:
-        return __salt__['cmd.retcode'](
-            'locale-gen "{0}"'.format(locale),
-            python_shell=False
-        )
+    cmd = ['locale-gen']
+    if on_gentoo:
+        cmd.append('--generate')
+    cmd.append(locale_format)
+
+    return __salt__['cmd.retcode'](cmd, python_shell=False)

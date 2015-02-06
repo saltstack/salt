@@ -66,7 +66,7 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sns.get_all_topics
     '''
-    cache_key = 'boto_sns.topics_cache'
+    cache_key = _cache_get_key()
     try:
         return __context__[cache_key]
     except KeyError:
@@ -93,9 +93,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     topics = get_all_topics(region=region, key=key, keyid=keyid,
                             profile=profile)
     if name.startswith('arn:aws:sns:'):
-        return name in topics.values()
+        return name in list(topics.values())
     else:
-        return name in topics.keys()
+        return name in list(topics.keys())
 
 
 def create(name, region=None, key=None, keyid=None, profile=None):
@@ -109,6 +109,7 @@ def create(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     conn.create_topic(name)
     log.info('Created SNS topic {0}'.format(name))
+    _invalidate_cache()
     return True
 
 
@@ -123,6 +124,45 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     conn.delete_topic(get_arn(name, region, key, keyid, profile))
     log.info('Deleted SNS topic {0}'.format(name))
+    _invalidate_cache()
+    return True
+
+
+def get_all_subscriptions_by_topic(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get list of all subscriptions to a specific topic.
+
+    CLI example to delete a topic::
+
+        salt myminion boto_sns.get_all_subscriptions_by_topic mytopic region=us-east-1
+    '''
+    cache_key = _subscriptions_cache_key(name)
+    try:
+        return __context__[cache_key]
+    except KeyError:
+        pass
+
+    conn = _get_conn(region, key, keyid, profile)
+    ret = conn.get_all_subscriptions_by_topic(get_arn(name, region, key, keyid, profile))
+    __context__[cache_key] = ret['ListSubscriptionsByTopicResponse']['ListSubscriptionsByTopicResult']['Subscriptions']
+    return __context__[cache_key]
+
+
+def subscribe(topic, protocol, endpoint, region=None, key=None, keyid=None, profile=None):
+    '''
+    Subscribe to a Topic.
+
+    CLI example to delete a topic::
+
+        salt myminion boto_sns.subscribe mytopic https https://www.example.com/sns-endpoint region=us-east-1
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    conn.subscribe(get_arn(topic, region, key, keyid, profile), protocol, endpoint)
+    log.info('Subscribe {0} {1} to {2} topic'.format(protocol, endpoint, topic))
+    try:
+        del __context__[_subscriptions_cache_key(topic)]
+    except KeyError:
+        pass
     return True
 
 
@@ -136,7 +176,9 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
     '''
     if name.startswith('arn:aws:sns:'):
         return name
-    account_id = __salt__['boto_iam.get_account_id']()
+    account_id = __salt__['boto_iam.get_account_id'](
+        region=region, key=key, keyid=keyid, profile=profile
+    )
     return 'arn:aws:sns:{0}:{1}:{2}'.format(_get_region(region), account_id,
                                             name)
 
@@ -173,3 +215,18 @@ def _get_conn(region, key, keyid, profile):
                                       aws_access_key_id=keyid,
                                       aws_secret_access_key=key)
     return conn
+
+
+def _subscriptions_cache_key(name):
+    return '{0}_{1}_subscriptions'.format(_cache_get_key(), name)
+
+
+def _invalidate_cache():
+    try:
+        del __context__[_cache_get_key()]
+    except KeyError:
+        pass
+
+
+def _cache_get_key():
+    return 'boto_sns.topics_cache'

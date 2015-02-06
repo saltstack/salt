@@ -19,14 +19,16 @@ The data structure needs to be:
 # 4. How long do we wait for all of the replies?
 #
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import time
-import logging
+import copy
 import errno
+import logging
 from datetime import datetime
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
+
 
 # Import salt libs
 import salt.config
@@ -43,9 +45,10 @@ import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
 )
-import salt.ext.six as six
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import zmq
     HAS_ZMQ = True
@@ -59,6 +62,7 @@ try:
     HAS_RANGE = True
 except ImportError:
     pass
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +125,7 @@ class LocalClient(object):
                 )
             self.opts = salt.config.client_config(c_path)
         self.serial = salt.payload.Serial(self.opts)
-        self.salt_user = self.__get_user()
+        self.salt_user = salt.utils.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
         self.event = salt.utils.event.get_event(
@@ -157,20 +161,6 @@ class LocalClient(object):
             # Fall back to eauth
             return ''
 
-    def __get_user(self):
-        '''
-        Determine the current user running the salt command
-        '''
-        user = salt.utils.get_user()
-        # if our user is root, look for other ways to figure out
-        # who we are
-        env_vars = ('SUDO_USER',)
-        if user == 'root' or user == self.opts['user']:
-            for evar in env_vars:
-                if evar in os.environ:
-                    return 'sudo_{0}'.format(os.environ[evar])
-        return user
-
     def _convert_range_to_list(self, tgt):
         '''
         convert a seco.range range into a list target
@@ -190,7 +180,7 @@ class LocalClient(object):
             return self.opts['timeout']
         if isinstance(timeout, int):
             return timeout
-        if isinstance(timeout, string_types):
+        if isinstance(timeout, six.string_types):
             try:
                 return int(timeout)
             except ValueError:
@@ -351,7 +341,7 @@ class LocalClient(object):
         '''
         group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
         f_tgt = []
-        for minion, ret in group.items():
+        for minion, ret in six.iteritems(group):
             if len(f_tgt) >= sub:
                 break
             if fun in ret:
@@ -407,7 +397,7 @@ class LocalClient(object):
                 'ret': ret,
                 'batch': batch,
                 'raw': kwargs.get('raw', False)}
-        for key, val in self.opts.items():
+        for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
         batch = salt.cli.batch.Batch(opts, quiet=True)
@@ -543,7 +533,7 @@ class LocalClient(object):
                 **kwargs):
 
             if fn_ret:
-                for mid, data in fn_ret.items():
+                for mid, data in six.iteritems(fn_ret):
                     ret[mid] = data.get('ret', {})
 
         return ret
@@ -846,7 +836,7 @@ class LocalClient(object):
         :returns: all of the information for the JID
         '''
         if not isinstance(minions, set):
-            if isinstance(minions, string_types):
+            if isinstance(minions, six.string_types):
                 minions = set([minions])
             elif isinstance(minions, (list, tuple)):
                 minions = set(list(minions))
@@ -860,11 +850,14 @@ class LocalClient(object):
 
         found = set()
         # Check to see if the jid is real, if not return the empty dict
-        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-            log.warning('jid does not exist')
-            yield {}
-            # stop the iteration, since the jid is invalid
-            raise StopIteration()
+        try:
+            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
+                log.warning('jid does not exist')
+                yield {}
+                # stop the iteration, since the jid is invalid
+                raise StopIteration()
+        except salt.exceptions.SaltMasterError as exc:
+            log.warning('Returner unavailable: {exc}'.format(exc=exc))
         # Wait for the hosts to check in
         syndic_wait = 0
         last_time = False
@@ -1352,7 +1345,7 @@ class LocalClient(object):
             payload_kwargs['kwargs'] = kwargs
 
         # If we have a salt user, add it to the payload
-        if self.opts['order_masters'] and 'user' in kwargs:
+        if self.opts['syndic_master'] and 'user' in kwargs:
             payload_kwargs['user'] = kwargs['user']
         elif self.salt_user:
             payload_kwargs['user'] = self.salt_user

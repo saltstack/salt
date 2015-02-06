@@ -727,7 +727,7 @@ def create_self_signed_cert(tls_dir='tls',
     return ret
 
 
-def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha256'):
+def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha256', **extensions):
     '''
     Create a Certificate (CERT) signed by a named Certificate Authority (CA)
 
@@ -754,6 +754,9 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
         For example, "md5" or "sha1". Default: 'sha256'
+
+    **extensions
+        X509 V3 certificate extension
 
     Writes out a Certificate (CERT). If the file already
     exists, the function just returns assuming the CERT already exists.
@@ -783,11 +786,11 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
         salt '*' tls.create_ca_signed_cert test localhost
     '''
     set_ca_path(cacert_path)
-    if os.path.exists(
-            '{0}/{1}/{2}.crt'.format(cert_base_path(),
-                                     ca_name, CN)
-    ):
-        return 'Certificate "{0}" already exists'.format(ca_name)
+
+    crt_f = '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
+                                           ca_name, CN)
+    if os.path.exists(crt_f):
+        return 'Certificate "{0}" already exists'.format(CN)
 
     try:
         maybe_fix_ssl_version(ca_name)
@@ -842,6 +845,15 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
     cert.set_serial_number(_new_serial(ca_name, CN))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
+    extensions_list = []
+    for name in extensions:
+        log.debug("name: {0}, critical: {1}, options: {2}".format(
+            name, extensions[name]['critical'], extensions[name]['options']))
+        extensions_list.append(OpenSSL.crypto.X509Extension(
+            name,
+            extensions[name]['critical'],
+            extensions[name]['options']))
+    cert.add_extensions(extensions_list)
     cert.sign(ca_key, digest)
 
     with salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(cert_base_path(),

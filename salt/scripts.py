@@ -3,22 +3,19 @@
 This module contains the function calls to execute command line scripts
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
-import traceback
+import time
 import logging
 import threading
-import time
+import traceback
 from random import randint
 
 # Import salt libs
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
-
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +78,7 @@ def minion_process(queue):
         minion = salt.cli.daemons.Minion()
         minion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
-        log.error(exc)
+        log.error('Minion failed to start: ', exc_info=True)
         restart = True
     except SystemExit as exc:
         restart = False
@@ -114,15 +111,6 @@ def salt_minion():
         minion = salt.cli.daemons.Minion()
         minion.start()
         return
-
-    if '-d' in sys.argv or '--daemon' in sys.argv:
-        # disable daemonize on sub processes
-        if '-d' in sys.argv:
-            sys.argv.remove('-d')
-        if '--daemon' in sys.argv:
-            sys.argv.remove('--daemon')
-        # daemonize current process
-        salt.utils.daemonize()
 
     # keep one minion subprocess running
     while True:

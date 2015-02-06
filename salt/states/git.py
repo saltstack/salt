@@ -201,7 +201,7 @@ def latest(name,
             branch = __salt__['git.current_branch'](target, user=user)
             # We're only interested in the remote branch if a branch
             # (instead of a hash, for example) was provided for rev.
-            if branch != 'HEAD' and branch == rev:
+            if (branch != 'HEAD' and branch == rev) or rev is None:
                 remote_rev = __salt__['git.ls_remote'](target,
                                                        repository=name,
                                                        branch=branch,

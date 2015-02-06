@@ -5,9 +5,9 @@ how executions are run in the salt-ssh system, this allows for state routines
 to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import copy
 
@@ -15,6 +15,9 @@ import copy
 import salt.loader
 import salt.utils
 import salt.client.ssh
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class FunctionWrapper(object):
@@ -41,6 +44,18 @@ class FunctionWrapper(object):
                        'host': host}
         self.fsclient = fsclient
         self.kwargs.update(kwargs)
+
+    def __contains__(self, key):
+        '''
+        We need to implement a __contains__ method, othwerwise when someone
+        does a contains comparison python assumes this is a sequence, and does
+        __getitem__ keys 0 and up until IndexError
+        '''
+        try:
+            self[key]  # pylint: disable=W0104
+            return True
+        except KeyError:
+            return False
 
     def __getitem__(self, cmd):
         '''
@@ -78,7 +93,7 @@ class FunctionWrapper(object):
             '''
             argv = [cmd]
             argv.extend([str(arg) for arg in args])
-            argv.extend(['{0}={1}'.format(key, val) for key, val in kwargs.items()])
+            argv.extend(['{0}={1}'.format(key, val) for key, val in six.iteritems(kwargs)])
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,

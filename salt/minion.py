@@ -3,27 +3,28 @@
 Routines to set up a minion
 '''
 # Import python libs
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+import os
+import re
+import sys
 import copy
+import time
 import errno
+import types
+import signal
 import fnmatch
 import hashlib
 import logging
-import multiprocessing
-import os
-import re
-import salt
-import signal
-import sys
 import threading
-import time
 import traceback
-import types
+import multiprocessing
 from random import randint, shuffle
-from salt.ext.six.moves import range
 
 # Import third party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import range
+# pylint: enable=no-name-in-module,redefined-builtin
 try:
     import zmq
     HAS_ZMQ = True
@@ -51,17 +52,16 @@ try:
     HAS_RESOURCE = True
 except ImportError:
     pass
+# pylint: enable=import-error
 
 # Import salt libs
-from salt.exceptions import (
-    AuthenticationError, CommandExecutionError, CommandNotFoundError,
-    SaltInvocationError, SaltReqTimeoutError, SaltClientError,
-    SaltSystemExit, SaltSyndicMasterError
-)
+import salt
 import salt.client
 import salt.crypt
 import salt.loader
+import salt.beacons
 import salt.payload
+import salt.syspaths
 import salt.utils
 import salt.utils.jid
 import salt.pillar
@@ -72,12 +72,15 @@ import salt.utils.schedule
 import salt.utils.error
 import salt.utils.zeromq
 import salt.defaults.exitcodes
-
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.ext.six import string_types
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
-import salt.syspaths
+from salt.exceptions import (
+    AuthenticationError, CommandExecutionError, CommandNotFoundError,
+    SaltInvocationError, SaltReqTimeoutError, SaltClientError,
+    SaltSystemExit, SaltSyndicMasterError
+)
+
 
 log = logging.getLogger(__name__)
 
@@ -180,7 +183,7 @@ def load_args_and_kwargs(func, args, data=None):
     invalid_kwargs = []
 
     for arg in args:
-        if isinstance(arg, string_types):
+        if isinstance(arg, six.string_types):
             string_arg, string_kwarg = salt.utils.args.parse_input([arg], condition=False)  # pylint: disable=W0632
             if string_arg:
                 # Don't append the version that was just derived from parse_cli
@@ -194,7 +197,7 @@ def load_args_and_kwargs(func, args, data=None):
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
                 )
-                if argspec.keywords or next(iter(string_kwarg.keys())) in argspec.args:
+                if argspec.keywords or next(six.iterkeys(string_kwarg)) in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
                     _kwargs.update(string_kwarg)
@@ -207,7 +210,7 @@ def load_args_and_kwargs(func, args, data=None):
 
         # if the arg is a dict with __kwarg__ == True, then its a kwarg
         elif isinstance(arg, dict) and arg.pop('__kwarg__', False) is True:
-            for key, val in arg.items():
+            for key, val in six.iteritems(arg):
                 if argspec.keywords or key in argspec.args:
                     # Function supports **kwargs or is a positional argument to
                     # the function.
@@ -230,7 +233,7 @@ def load_args_and_kwargs(func, args, data=None):
 
     if argspec.keywords and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
-        for key, val in data.items():
+        for key, val in six.iteritems(data):
             _kwargs['__pub_{0}'.format(key)] = val
 
     return _args, _kwargs
@@ -284,7 +287,8 @@ class SMinion(object):
             self.opts['environment']
         ).compile_pillar()
         self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
-        self.function_errors = self.functions.pop('_errors')  # Keep the funcs clean
+        # TODO: remove
+        self.function_errors = {}  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions)
         self.rend = salt.loader.render(self.opts, self.functions)
@@ -295,6 +299,7 @@ class SMinion(object):
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
+        self.beacons = salt.beacons.Beacon(opts)
 
     def _init_context_and_poller(self):
         self.context = zmq.Context()
@@ -408,6 +413,17 @@ class MinionBase(object):
             )
         return loop_interval
 
+    def process_beacons(self, functions):
+        '''
+        Evaluate all of the configured beacons, grab the config again in case
+        the pillar or grains changed
+        '''
+        if 'config.merge' in functions:
+            b_conf = functions['config.merge']('beacons')
+            if b_conf:
+                return self.beacons.process(b_conf)
+        return []
+
 
 class MasterMinion(object):
     '''
@@ -517,7 +533,7 @@ class MultiMinion(MinionBase):
 
         while True:
             package = None
-            for minion in minions.values():
+            for minion in six.itervalues(minions):
                 if isinstance(minion, dict):
                     minion = minion['minion']
                 if not hasattr(minion, 'schedule'):
@@ -803,7 +819,7 @@ class Minion(MinionBase):
         Returns a copy of the opts with key bits stripped out
         '''
         mod_opts = {}
-        for key, val in self.opts.items():
+        for key, val in six.iteritems(self.opts):
             if key == 'logger':
                 continue
             mod_opts[key] = val
@@ -843,6 +859,9 @@ class Minion(MinionBase):
             errors = functions['_errors']
             functions.pop('_errors')
 
+        functions.clear()
+        returners.clear()
+
         # we're done, reset the limits!
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
@@ -865,14 +884,13 @@ class Minion(MinionBase):
         elif not data and tag:
             load['data'] = {}
             load['tag'] = tag
-
         else:
             return
         channel = salt.transport.Channel.factory(self.opts)
         try:
             result = channel.send(load)
         except Exception:
-            log.info("fire_master failed: {0}".format(traceback.format_exc()))
+            log.info('fire_master failed: {0}'.format(traceback.format_exc()))
 
     def _handle_payload(self, payload):
         '''
@@ -963,7 +981,7 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         '''
-        if isinstance(data['fun'], string_types):
+        if isinstance(data['fun'], six.string_types):
             if data['fun'] == 'sys.reload_modules':
                 self.functions, self.returners, self.function_errors = self._load_modules()
                 self.schedule.functions = self.functions
@@ -1032,7 +1050,16 @@ class Minion(MinionBase):
                     data['arg'],
                     data)
                 sys.modules[func.__module__].__context__['retcode'] = 0
-                return_data = func(*args, **kwargs)
+                if opts.get('sudo_user', ''):
+                    sudo_runas = opts.get('sudo_user')
+                    if 'sudo.salt_call' in minion_instance.functions:
+                        return_data = minion_instance.functions['sudo.salt_call'](
+                                sudo_runas,
+                                data['fun'],
+                                *args,
+                                **kwargs)
+                else:
+                    return_data = func(*args, **kwargs)
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}
@@ -1213,18 +1240,18 @@ class Minion(MinionBase):
                     'fun': fun,
                     'load': ret.get('__load__')}
             load['return'] = {}
-            for key, value in ret.items():
+            for key, value in six.iteritems(ret):
                 if key.startswith('__'):
                     continue
                 load['return'][key] = value
         else:
             load = {'cmd': ret_cmd,
                     'id': self.opts['id']}
-            for key, value in list(ret.items()):
+            for key, value in six.iteritems(ret):
                 load[key] = value
 
         if 'out' in ret:
-            if isinstance(ret['out'], string_types):
+            if isinstance(ret['out'], six.string_types):
                 load['out'] = ret['out']
             else:
                 log.error('Invalid outputter {0}. This is likely a bug.'
@@ -1235,7 +1262,7 @@ class Minion(MinionBase):
             except (KeyError, AttributeError, TypeError):
                 pass
             else:
-                if isinstance(oput, string_types):
+                if isinstance(oput, six.string_types):
                     load['out'] = oput
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
@@ -1750,6 +1777,13 @@ class Minion(MinionBase):
                     'An exception occurred while polling the minion',
                     exc_info=True
                 )
+            # Process Beacons
+            try:
+                beacons = self.process_beacons(self.functions)
+            except Exception:
+                log.critical('The beacon errored: ', exec_info=True)
+            if beacons:
+                self._fire_master(events=beacons)
 
     def tune_in_no_block(self):
         '''
@@ -1821,7 +1855,7 @@ class Minion(MinionBase):
         self._running = False
         if getattr(self, 'poller', None) is not None:
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets.keys():
+                for socket in six.iterkeys(self.poller.sockets):
                     if socket.closed is False:
                         socket.close()
                     self.poller.unregister(socket)
@@ -2293,7 +2327,7 @@ class MultiSyndic(MinionBase):
                     log.warning('Negative timeout in syndic main loop')
                     socks = {}
                 # check all of your master_syndics, have them do their thing
-                for master_id, syndic_dict in self.master_syndics.items():
+                for master_id, syndic_dict in six.iteritems(self.master_syndics):
                     # if not connected, lets try
                     if 'generator' not in syndic_dict:
                         # if we couldn't connect, lets try later
@@ -2369,7 +2403,7 @@ class MultiSyndic(MinionBase):
                               kwargs={'events': self.raw_events,
                                       'pretag': tagify(self.opts['id'], base='syndic')},
                               )
-        for jid, jid_ret in self.jids.items():
+        for jid, jid_ret in six.iteritems(self.jids):
             self._call_syndic('_return_pub', args=(jid_ret, '_syndic_return'), master_id=jid_ret.get('__master_id__'))
 
         self._reset_event_aggregation()
@@ -2412,7 +2446,7 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
-        if not isinstance(tgt, str):
+        if not isinstance(tgt, basestring):
             return False
 
         return fnmatch.fnmatch(self.opts['id'], tgt)
@@ -2427,7 +2461,7 @@ class Matcher(object):
         '''
         Determines if this host is on the list
         '''
-        if isinstance(tgt, string_types):
+        if isinstance(tgt, six.string_types):
             tgt = tgt.split(',')
         return bool(self.opts['id'] in tgt)
 
@@ -2553,7 +2587,7 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
-        if not isinstance(tgt, string_types):
+        if not isinstance(tgt, six.string_types):
             log.debug('Compound target received that is not a string')
             return False
         ref = {'G': 'grain',
