@@ -430,7 +430,7 @@ class Schedule(object):
                 ret['metadata'] = data['metadata']
                 ret['metadata']['_TOS'] = self.time_offset
                 ret['metadata']['_TS'] = time.ctime()
-                ret['metadata']['_TT'] = time.strftime('%Y %B %d %a %H %m')
+                ret['metadata']['_TT'] = time.strftime('%Y %B %d %a %H %m', time.gmtime())
             else:
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
