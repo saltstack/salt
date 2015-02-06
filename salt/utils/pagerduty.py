@@ -39,7 +39,7 @@ def query(method='GET', profile=None, url=None, path='api/v1',
         opts = {}
 
     if profile is not None:
-        creds = opts.get(profile)
+        creds = opts.get(profile, {})
     else:
         creds = {}
 

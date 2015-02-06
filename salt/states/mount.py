@@ -207,6 +207,10 @@ def mounted(name,
                     'password',
                     'retry',
                 ]
+                # Some filesystems have options which should not force a remount.
+                mount_ignore_fs_keys = {
+                        'ramfs': ['size']
+                        }
 
                 for opt in opts:
                     keyval_option = opt.split('=')[0]
@@ -222,8 +226,11 @@ def mounted(name,
                             converted_size = int(size_match.group('size_value')) * 1024 * 1024
                         opt = "size={0}k".format(converted_size)
 
-                    if opt not in active[real_name]['opts'] and opt not in mount_invisible_options and \
-                        ('superopts' in active[real_name] and opt not in active[real_name]['superopts']):
+                    if opt not in active[real_name]['opts'] \
+                    and ('superopts' in active[real_name]
+                         and opt not in active[real_name]['superopts']) \
+                    and opt not in mount_invisible_options \
+                    and opt not in mount_ignore_fs_keys.get(fstype, []):
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options ({0}) changed".format(opt)

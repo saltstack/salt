@@ -59,12 +59,13 @@ def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):
         Additional options to pass to the run-cmd
     '''
     cmd = ['svn', '--non-interactive', cmd]
+
+    options = list(opts)
     if username:
-        opts.extend(['--username', username])
+        options.extend(['--username', username])
     if password:
-        opts.extend(['--password', password])
-    if opts:
-        cmd.extend(opts)
+        options.extend(['--password', password])
+    cmd.extend(options)
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=cwd, runas=user, **kwargs)
 

@@ -87,28 +87,14 @@ class LocalemodTestCase(TestCase):
                 self.assertTrue(localemod.avail('locale'))
 
     @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
-    def test_gen_locale_debian_no_charmap(self):
-        '''
-        Tests the return of gen_locale on Debian with no charmap provided
-        '''
-        with patch.dict(localemod.__grains__, {'os': 'Debian'}):
-            self.assertFalse(localemod.gen_locale('foo'))
-
-    @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
-    def test_gen_locale_debian_with_charmap_not_valid(self):
-        '''
-        Tests the return of gen_locale on Debian with a charmap provided but it is not valid/found
-        '''
-        with patch.dict(localemod.__grains__, {'os': 'Debian'}):
-            with patch.dict(localemod.__salt__, {'file.search': MagicMock(return_value=False)}):
-                self.assertFalse(localemod.gen_locale('foo', charmap='bar'))
-
-    @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
     def test_gen_locale_not_valid(self):
         '''
         Tests the return of gen_locale when the provided locale is not found
         '''
-        self.assertFalse(localemod.gen_locale('foo'))
+        with patch.dict(localemod.__grains__, {'os': 'Debian'}):
+            with patch.dict(localemod.__salt__,
+                            {'file.search': MagicMock(return_value=False)}):
+                self.assertFalse(localemod.gen_locale('foo'))
 
     @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
     def test_gen_locale_valid_debian(self):
@@ -120,10 +106,10 @@ class LocalemodTestCase(TestCase):
                             {'file.search': MagicMock(return_value=True),
                              'file.replace': MagicMock(return_value=True),
                              'cmd.retcode': MagicMock(return_value='test')}):
-                self.assertEqual(localemod.gen_locale('foo', charmap='bar'), 'test')
+                self.assertEqual(localemod.gen_locale('foo bar'), 'test')
 
     @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
-    @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
+    @patch('os.listdir', MagicMock(return_value=['en_US']))
     def test_gen_locale_ubuntu(self):
         '''
         Test the return of successful gen_locale on Ubuntu system
@@ -147,17 +133,16 @@ class LocalemodTestCase(TestCase):
                             {'file.search': MagicMock(return_value=True),
                              'file.replace': MagicMock(return_value=True),
                              'cmd.retcode': MagicMock(return_value='A')}):
-                self.assertEqual(localemod.gen_locale('en_US.UTF-8', charmap='test'), 'A')
+                self.assertEqual(localemod.gen_locale('en_US.UTF-8 UTF-8'), 'A')
 
     @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
-    @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
+    @patch('os.listdir', MagicMock(return_value=['en_US']))
     def test_gen_locale(self):
         '''
         Tests the return of successful gen_locale
         '''
         with patch.dict(localemod.__salt__,
-                        {'file.replace': MagicMock(return_value=True),
-                         'cmd.retcode': MagicMock(return_value='A')}):
+                        {'cmd.retcode': MagicMock(return_value='A')}):
             self.assertEqual(localemod.gen_locale('en_US.UTF-8'), 'A')
 
 
