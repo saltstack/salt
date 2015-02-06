@@ -56,12 +56,12 @@ container creation, and one for defining the container's network interface(s).
 Container Profiles
 ------------------
 
-In the 2014.7 release cycle and earlier, LXC container profiles were all
-defined underneath the ``lxc.profile`` config option:
+LXC container profiles are defined defined underneath the
+``lxc.container_profile`` config option:
 
 .. code-block:: yaml
 
-    lxc.profile:
+    lxc.container_profile:
       centos:
         template: centos
         backing: lvm
@@ -75,32 +75,46 @@ defined underneath the ``lxc.profile`` config option:
         lvname: lxclv
         size: 20G
 
-However, due to the way that :mod:`config.get <salt.modules.config.get>` works,
-this means that if a ``lxc.profile`` key is defined in both the master config
-file and in a specific minion's config file, that will cause all profiles to be
-overwritten for that minion. For greater flexibility, starting in version
-2015.2.0 each container profile should be configured in its own key, in the
-format ``lxc.container_profile.profile_name``. For example:
+Profiles are retrieved using the :mod:`config.get <salt.modules.config.get>`
+function, with the **recurse** merge strategy. This means that a profile can be
+defined at a lower level (for example, the master config file) and then parts
+of it can be overridden at a higher level (for example, in pillar data).
+Consider the following container profile data:
+
+**In the Master config file:**
 
 .. code-block:: yaml
 
-    lxc.container_profile.centos:
-      template: centos
-      backing: lvm
-      vgname: vg1
-      lvname: lxclv
-      size: 10G
-    lxc.container_profile.centos_big:
-      template: centos
-      backing: lvm
-      vgname: vg1
-      lvname: lxclv
-      size: 20G
+    lxc.container_profile:
+      centos:
+        template: centos
+        backing: lvm
+        vgname: vg1
+        lvname: lxclv
+        size: 10G
 
-This way, the ``centos_big`` profile can be redefined for a single minion
-without also removing the ``centos`` profile. The legacy usage will still be
-supported for a couple release cycles, to allow for some time to update
-configurations.
+**In the Pillar data**
+
+.. code-block:: yaml
+
+    lxc.container_profile:
+      centos:
+        size: 20G
+
+Any minion with the above Pillar data would have the **size** parameter in the
+**centos** profile overriden to 20G, while those minions without the above
+Pillar data would have the 10G **size** value. This is another way of achieving
+the same result as the **centos_big** profile above, without having to define
+another whole profile that differs in just one value.
+
+.. note::
+
+    In the 2014.7.x release cycle and earlier, container profiles are defined
+    under ``lxc.profile``. This parameter will still work in version 2015.2.0,
+    but is deprecated and will be removed in a future release. Please note
+    however that the profile merging feature described above will only work
+    with profiles defined under ``lxc.container_profile``, and only in versions
+    2015.2.0 and later.
 
 Additionally, in version 2015.2.0 container profiles have been expanded to
 support passing template-specific CLI options to :mod:`lxc.create
@@ -130,12 +144,12 @@ Parameter          2015.2.0 and Newer 2014.7.x and Earlier
 Network Profiles
 ----------------
 
-In the 2014.7 release cycle and earlier, LXC network profiles were all
-defined underneath the ``lxc.nic`` config option:
+LXC network profiles are defined defined underneath the ``lxc.network_profile``
+config option:
 
 .. code-block:: yaml
 
-    lxc.nic:
+    lxc.network_profile:
       centos:
         eth0:
           link: br0
@@ -147,30 +161,43 @@ defined underneath the ``lxc.nic`` config option:
           type: veth
           flags: up
 
-However, due to the way that :mod:`config.get <salt.modules.config.get>` works,
-this means that if a ``lxc.nic`` key is defined in both the master config file
-and in a specific minion's config file, that will cause all network profiles to
-be overwritten for that minion. For greater flexibility, starting with version
-2015.2.0 each network profile should be configured in its own key, in the
-format ``lxc.network_profile.profile_name``. For example:
+As with container profiles, network profiles are retrieved using the
+:mod:`config.get <salt.modules.config.get>` function, with the **recurse**
+merge strategy. Consider the following network profile data:
+
+**In the Master config file:**
 
 .. code-block:: yaml
 
-    lxc.network_profile.centos:
-      eth0:
-        link: br0
-        type: veth
-        flags: up
-    lxc.network_profile.ubuntu:
-      eth0:
-        link: lxcbr0
-        type: veth
-        flags: up
+    lxc.network_profile:
+      centos:
+        eth0:
+          link: br0
+          type: veth
+          flags: up
 
-This way, the ``ubuntu`` profile can be redefined for a single minion
-without also removing the ``centos`` profile. The legacy usage will still be
-supported for a couple release cycles, to allow for some time to update
-configurations.
+**In the Pillar data**
+
+.. code-block:: yaml
+
+    lxc.network_profile:
+      centos:
+        eth0:
+          link: lxcbr0
+
+Any minion with the above Pillar data would use the **lxcbr0** interface as the
+bridge interface for any container configured using the **centos** network
+profile, while those minions without the above Pillar data would use the
+**br0** interface for the same.
+
+.. note::
+
+    In the 2014.7.x release cycle and earlier, network profiles are defined
+    under ``lxc.nic``. This parameter will still work in version 2015.2.0, but
+    is deprecated and will be removed in a future release. Please note however
+    that the profile merging feature described above will only work with
+    profiles defined under ``lxc.network_profile``, and only in versions
+    2015.2.0 and later.
 
 The following are parameters which can be configured in network profiles. These
 will directly correspond to a parameter in an LXC configuration file (see ``man
@@ -180,7 +207,7 @@ will directly correspond to a parameter in an LXC configuration file (see ``man
 - **link** - Corresponds to **lxc.network.link**
 - **flags** - Corresponds to **lxc.network.flags**
 
-Interface-specific options (MAC address, IPv4/IPv6, etc.) can be passed on a
+Interface-specific options (MAC address, IPv4/IPv6, etc.) must be passed on a
 container-by-container basis.
 
 
