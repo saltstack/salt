@@ -9,5 +9,5 @@ def __virtual__():
     return False
 
 
-def test():
+def ping():
     return True
