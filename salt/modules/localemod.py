@@ -219,15 +219,15 @@ def gen_locale(locale, charmap=None):
         locale_format = '{0} {1}'.format(locale, charmap)
         valid = __salt__['file.search'](search, '^{0}$'.format(locale_format))
     else:
-       if on_suse:
+        if on_suse:
             search = '/usr/share/locales'
-       else:
-             search = '/usr/share/i18n/locales'
-       locale_format = locale
-       try:
+        else:
+            search = '/usr/share/i18n/locales'
+        locale_format = locale
+        try:
             valid = locale_format in os.listdir(search)
-       except OSError:
-           return False
+        except OSError:
+            return False
 
     if not valid:
         log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
