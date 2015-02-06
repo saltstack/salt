@@ -398,8 +398,8 @@ class SSH(object):
                         if host not in returned:
                             error = ('Target \'{0}\' did not return any data, '
                                      'probably due to an error.').format(host)
-                            ret = { 'id': host,
-                                    'ret': error }
+                            ret = {'id': host,
+                                   'ret': error}
                             log.error(error)
                             yield {ret['id']: ret['ret']}
                     running[host]['thread'].join()
