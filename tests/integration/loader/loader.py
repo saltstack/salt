@@ -279,3 +279,144 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertEqual(self.loader[self.module_key](), self.count)
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
+
+submodule_template = '''
+import lib
+
+def test():
+    return ({count}, lib.test())
+'''
+
+submodule_lib_template = '''
+def test():
+    return {count}
+'''
+
+class LazyLoaderSubmodReloadingTest(TestCase):
+    '''
+    Test the loader of salt with changing modules
+    '''
+    module_name = 'loadertest'
+    module_key = 'loadertest.test'
+
+    def setUp(self):
+        self.opts = _config = minion_config(None)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        os.makedirs(self.module_dir)
+
+        self.count = 0
+        self.lib_count = 0
+
+        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs.append(self.tmp_dir)
+        self.loader = LazyLoader(dirs,
+                                 self.opts,
+                                 tag='module')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+
+    def update_module(self):
+        self.count += 1
+        with open(self.module_path, 'wb') as fh:
+            fh.write(submodule_template.format(count=self.count))
+            fh.flush()
+            os.fsync(fh.fileno())  # flush to disk
+
+        # pyc files don't like it when we change the original quickly
+        # since the header bytes only contain the timestamp (granularity of seconds)
+        # TODO: don't write them? Is *much* slower on re-load (~3x)
+        # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
+        try:
+            os.unlink(self.module_path + 'c')
+        except OSError:
+            pass
+
+    def rm_module(self):
+        os.unlink(self.module_path)
+        os.unlink(self.module_path + 'c')
+
+    def update_lib(self):
+        self.lib_count += 1
+        with open(self.lib_path, 'wb') as fh:
+            fh.write(submodule_lib_template.format(count=self.lib_count))
+            fh.flush()
+            os.fsync(fh.fileno())  # flush to disk
+
+        # pyc files don't like it when we change the original quickly
+        # since the header bytes only contain the timestamp (granularity of seconds)
+        # TODO: don't write them? Is *much* slower on re-load (~3x)
+        # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
+        try:
+            os.unlink(self.lib_path + 'c')
+        except OSError:
+            pass
+
+    def rm_lib(self):
+        os.unlink(self.lib_path)
+        os.unlink(self.lib_path + 'c')
+
+    @property
+    def module_dir(self):
+        return os.path.join(self.tmp_dir, self.module_name)
+
+    @property
+    def module_path(self):
+        return os.path.join(self.module_dir, '__init__.py')
+
+    @property
+    def lib_path(self):
+        return os.path.join(self.module_dir, 'lib.py')
+
+    def test_basic(self):
+        # ensure it doesn't exist
+        self.assertNotIn(self.module_key, self.loader)
+
+        self.update_module()
+        self.update_lib()
+        self.loader.clear()
+        self.assertIn(self.module_key, self.loader)
+
+    def test_reload(self):
+        # ensure it doesn't exist
+        self.assertNotIn(self.module_key, self.loader)
+
+        # update both the module and the lib
+        for x in range(1, 3):
+            self.update_module()
+            self.update_lib()
+            self.loader.clear()
+            self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+
+        # update just the module
+        for x in range(1, 3):
+            self.update_module()
+            self.loader.clear()
+            self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+
+        # update just the lib
+        for x in range(1, 3):
+            self.update_lib()
+            self.loader.clear()
+            self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+
+        self.rm_module()
+        # make sure that even if we remove the module, its still loaded until a clear
+        self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+        self.loader.clear()
+        self.assertNotIn(self.module_key, self.loader)
+
+    def test_reload_missing_lib(self):
+        # ensure it doesn't exist
+        self.assertNotIn(self.module_key, self.loader)
+
+        # update both the module and the lib
+        self.update_module()
+        self.update_lib()
+        self.loader.clear()
+        self.assertEqual(self.loader[self.module_key](), (self.count, self.lib_count))
+
+        # remove the lib, this means we should fail to load the module next time
+        self.rm_lib()
+        self.loader.clear()
+        self.assertNotIn(self.module_key, self.loader)
