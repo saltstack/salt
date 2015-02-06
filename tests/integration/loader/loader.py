@@ -38,7 +38,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
 
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
-                                 tag='modules')
+                                 tag='module')
 
     def test_basic(self):
         '''
@@ -117,7 +117,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
         self.opts = _config = minion_config(None)
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
-                                 tag='modules',
+                                 tag='module',
                                  virtual_enable=False)
 
     def test_virtual(self):
@@ -132,7 +132,7 @@ class LazyLoaderWhitelistTest(TestCase):
         self.opts = _config = minion_config(None)
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
-                                 tag='modules',
+                                 tag='module',
                                  whitelist=['test', 'pillar'])
 
     def test_whitelist(self):
@@ -183,7 +183,7 @@ class LazyLoaderReloadingTest(TestCase):
         dirs.append(self.tmp_dir)
         self.loader = LazyLoader(dirs,
                                  self.opts,
-                                 tag='modules')
+                                 tag='module')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)
