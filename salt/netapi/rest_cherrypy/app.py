@@ -1054,7 +1054,7 @@ class Keys(LowDataAdapter):
 
     .. versionadded:: 2014.7.0
 
-    These URLs wrap the functionality provided by the :py:module:`key wheel
+    These URLs wrap the functionality provided by the :py:mod:`key wheel
     module <salt.wheel.key>` functions.
     '''
 
@@ -1623,6 +1623,11 @@ class Events(object):
 
         **Example response:**
 
+        Note, the ``tag`` field is not part of the spec. SSE compliant clients
+        should ignore unknown fields. This addition allows non-compliant
+        clients to only watch for certain tags without having to deserialze the
+        JSON object each time.
+
         .. code-block:: http
 
             HTTP/1.1 200 OK
@@ -1631,9 +1636,12 @@ class Events(object):
             Content-Type: text/event-stream;charset=utf-8
 
             retry: 400
-            data: {'tag': '', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
 
-            data: {'tag': '20130802115730568475', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
+            tag: salt/job/20130802115730568475/new
+            data: {'tag': 'salt/job/20130802115730568475/new', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
+
+            tag: salt/job/20130802115730568475/ret/jerry
+            data: {'tag': 'salt/job/20130802115730568475/ret/jerry', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
 
         The event stream can be easily consumed via JavaScript:
 
@@ -1642,7 +1650,10 @@ class Events(object):
             var source = new EventSource('/events');
             source.onopen = function() { console.debug('opening') };
             source.onerror = function(e) { console.debug('error!', e) };
-            source.onmessage = function(e) { console.debug(e.data) };
+            source.onmessage = function(e) {
+                console.debug('Tag: ', e.data.tag)
+                console.debug('Data: ', e.data.data)
+            };
 
         Or using CORS:
 
