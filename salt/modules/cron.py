@@ -19,6 +19,13 @@ SALT_CRON_IDENTIFIER = 'SALT_CRON_IDENTIFIER'
 SALT_CRON_NO_IDENTIFIER = 'NO ID SET'
 
 
+def __virtual__():
+    if salt.utils.which('crontab'):
+        return True
+    else:
+        return False
+
+
 def _encode(string):
     if isinstance(string, six.text_type):
         string = string.encode('utf-8')
