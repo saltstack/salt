@@ -14,9 +14,8 @@ import salt.states.environ as envstate
 import salt.modules.environ as envmodule
 
 
-
 class TestEnvironState(TestCase):
-    
+
     @classmethod
     def setUpClass(cls):
         cls.setup_env = os.environ
