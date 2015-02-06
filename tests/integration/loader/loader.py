@@ -33,7 +33,9 @@ class LazyLoaderVirtualEnabledTest(TestCase):
     Test the base loader of salt.
     '''
     def setUp(self):
-        self.opts = _config = minion_config(None)
+        self.opts = minion_config(None)
+        self.opts['disable_modules'] = ['pillar']
+
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
                                  tag='modules')
@@ -54,6 +56,9 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         # make sure the depends thing worked (double check of the depends testing,
         # since the loader does the calling magically
         self.assertFalse('test.missing_func' in self.loader._dict)
+
+    def test_disable(self):
+        self.assertNotIn('pillar.items', self.loader)
 
     def test_len_load(self):
         '''
