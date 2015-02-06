@@ -113,7 +113,7 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
                      opts,
-                     tag='modules',
+                     tag='module',
                      pack={'__context__': context},
                      whitelist=whitelist)
     ret.pack['__salt__'] = ret
@@ -137,7 +137,7 @@ def raw_mod(opts, _, functions, mod='modules'):
     '''
     return LazyLoader(_module_dirs(opts, mod, 'rawmodule'),
                       opts,
-                      tag=mod,
+                      tag='rawmodule',
                       virtual_enable=False,
                       pack={'__salt__': functions})
 
@@ -159,7 +159,7 @@ def returners(opts, functions, whitelist=None):
     '''
     return LazyLoader(_module_dirs(opts, 'returners', 'returner'),
                       opts,
-                      tag='returners',
+                      tag='returner',
                       whitelist=whitelist,
                       pack={'__salt__': functions})
 
@@ -194,7 +194,7 @@ def tops(opts):
     whitelist = list(opts['master_tops'].keys())
     ret = LazyLoader(_module_dirs(opts, 'tops', 'top'),
                      opts,
-                     tag='tops',
+                     tag='top',
                      whitelist=whitelist)
     return FilterDictWrapper(ret, '.top')
 
@@ -340,7 +340,7 @@ def render(opts, functions, states=None):
                                   'render',
                                   ext_type_dirs='render_dirs'),
                      opts,
-                     tag='renderers',
+                     tag='render',
                      pack=pack,
                      )
     rend = FilterDictWrapper(ret, '.render')
@@ -715,6 +715,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.missing_modules = []
         self.loaded_files = []  # TODO: just remove them from file_mapping?
 
+        self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
+
         self.refresh_file_mapping()
 
         # create all of the import namespaces
@@ -750,9 +752,20 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for mod_dir in self.module_dirs:
             try:
                 for filename in os.listdir(mod_dir):
+                    if filename.startswith('_'):
+                        # skip private modules
+                        # log messages omitted for obviousness
+                        continue
                     f_noext, ext = os.path.splitext(filename)
                     # make sure it is a suffix we support
                     if ext not in self.suffix_map:
+                        continue
+                    if f_noext in self.disabled:
+                        log.trace(
+                            'Skipping {0}, it is disabled by configuration'.format(
+                            filename
+                            )
+                        )
                         continue
                     fpath = os.path.join(mod_dir, filename)
                     # if we don't have it, we want it
