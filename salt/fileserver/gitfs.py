@@ -40,23 +40,24 @@ Walkthrough <tutorial-gitfs>`.
 .. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import glob
 import hashlib
 import logging
 import os
 import re
 import shutil
+import stat
 import subprocess
 from datetime import datetime
-from salt.ext.six import text_type as _text_type
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
+SYMLINK_RECURSE_DEPTH = 100
 
 # Auth support (auth params can be global or per-remote, too)
 AUTH_PROVIDERS = ('pygit2',)
@@ -90,11 +91,12 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt.ext.six import string_types
 from salt.exceptions import SaltException
 from salt.utils.event import tagify
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import git
     import gitdb
@@ -117,6 +119,7 @@ try:
     HAS_DULWICH = True
 except ImportError:
     HAS_DULWICH = False
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -139,9 +142,11 @@ def _verify_gitpython(quiet=False):
         if HAS_DULWICH and not quiet:
             log.error(_RECOMMEND_DULWICH)
         return False
+    # pylint: disable=no-member
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
     minver = distutils.version.LooseVersion(minver_str)
+    # pylint: enable=no-member
     errors = []
     if gitver < minver:
         errors.append(
@@ -169,8 +174,8 @@ def _verify_gitpython(quiet=False):
 
 def _verify_pygit2(quiet=False):
     '''
-    Check if pygit2/libgit2 are available and at a compatible version. Both
-    must be at least 0.21.0.
+    Check if pygit2/libgit2 are available and at a compatible version. Pygit2
+    must be at least 0.20.3 and libgit2 must be at least 0.20.0.
     '''
     if not HAS_PYGIT2:
         if not quiet:
@@ -184,6 +189,7 @@ def _verify_pygit2(quiet=False):
             log.error(_RECOMMEND_DULWICH)
         return False
 
+    # pylint: disable=no-member
     pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
     pygit2_minver_str = '0.20.3'
     pygit2_minver = distutils.version.LooseVersion(pygit2_minver_str)
@@ -191,6 +197,7 @@ def _verify_pygit2(quiet=False):
     libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
     libgit2_minver_str = '0.20.0'
     libgit2_minver = distutils.version.LooseVersion(libgit2_minver_str)
+    # pylint: enable=no-member
 
     errors = []
     if pygit2ver < pygit2_minver:
@@ -230,14 +237,36 @@ def _verify_dulwich(quiet=False):
     if not HAS_DULWICH:
         if not quiet:
             log.error(
-                'Git fileserver backend is enabled in master config file, but '
-                'could not be loaded, is Dulwich installed?'
+                'Git fileserver backend is enabled in the master config file, '
+                'but could not be loaded. Is Dulwich installed?'
             )
         if HAS_GITPYTHON and not quiet:
             log.error(_RECOMMEND_GITPYTHON)
         if HAS_PYGIT2 and not quiet:
             log.error(_RECOMMEND_PYGIT2)
         return False
+
+    dulwich_version = dulwich.__version__
+    dulwich_min_version = (0, 9, 4)
+
+    errors = []
+
+    if dulwich_version < dulwich_min_version:
+        errors.append(
+            'Git fileserver backend is enabled in the master config file, but '
+            'the installed version of Dulwich is earlier than {0}. Version {1} '
+            'detected.'.format(dulwich_min_version, dulwich_version)
+        )
+
+        if HAS_PYGIT2 and not quiet:
+            errors.append(_RECOMMEND_PYGIT2)
+        if HAS_GITPYTHON and not quiet:
+            errors.append(_RECOMMEND_GITPYTHON)
+
+        for error in errors:
+            log.error(error)
+        return False
+
     log.info('dulwich gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'dulwich'
     return True
@@ -422,7 +451,7 @@ def _get_tree_dulwich(repo, tgt_env):
                 return repo['repo'].get_object(commit.tree)
 
     # Branch or tag not matched, check if 'tgt_env' is a commit. This is more
-    # difficult with Dulwich because of its inability to deal with tgt_envened
+    # difficult with Dulwich because of its inability to deal with shortened
     # SHA-1 hashes.
     if not _env_is_exposed(tgt_env):
         return None
@@ -620,7 +649,7 @@ def init():
     per_remote_defaults = {}
     for param in override_params:
         per_remote_defaults[param] = \
-            _text_type(__opts__['gitfs_{0}'.format(param)])
+            six.text_type(__opts__['gitfs_{0}'.format(param)])
 
     for remote in __opts__['gitfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
@@ -628,8 +657,8 @@ def init():
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
             per_remote_conf = dict(
-                [(key, _text_type(val)) for key, val in
-                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+                [(key, six.text_type(val)) for key, val in
+                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
@@ -672,7 +701,7 @@ def init():
         else:
             repo_url = remote
 
-        if not isinstance(repo_url, string_types):
+        if not isinstance(repo_url, six.string_types):
             log.error(
                 'Invalid gitfs remote {0}. Remotes must be strings, you may '
                 'need to enclose the URL in quotes'.format(repo_url)
@@ -1173,14 +1202,39 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
         if repo['root']:
             repo_path = os.path.join(repo['root'], repo_path)
 
+        blob = None
+        depth = 0
         if provider == 'gitpython':
             tree = _get_tree_gitpython(repo, tgt_env)
             if not tree:
                 # Branch/tag/SHA not found in repo, try the next
                 continue
-            try:
-                blob = tree / repo_path
-            except KeyError:
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
+                try:
+                    file_blob = tree / repo_path
+                    if stat.S_ISLNK(file_blob.mode):
+                        # Path is a symlink. The blob data corresponding to
+                        # this path's object ID will be the target of the
+                        # symlink. Follow the symlink and set repo_path to the
+                        # location indicated in the blob data.
+                        stream = six.StringIO()
+                        file_blob.stream_data(stream)
+                        stream.seek(0)
+                        link_tgt = stream.read()
+                        stream.close()
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        blob = file_blob
+                        break
+                except KeyError:
+                    # File not found or repo_path points to a directory
+                    break
+            if blob is None:
                 continue
             blob_hexsha = blob.hexsha
 
@@ -1189,25 +1243,57 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             if not tree:
                 # Branch/tag/SHA not found in repo, try the next
                 continue
-            try:
-                oid = tree[repo_path].oid
-                blob = repo['repo'][oid]
-            except KeyError:
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
+                try:
+                    if stat.S_ISLNK(tree[repo_path].filemode):
+                        # Path is a symlink. The blob data corresponding to this
+                        # path's object ID will be the target of the symlink. Follow
+                        # the symlink and set repo_path to the location indicated
+                        # in the blob data.
+                        link_tgt = repo['repo'][tree[repo_path].oid].data
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        oid = tree[repo_path].oid
+                        blob = repo['repo'][oid]
+                except KeyError:
+                    break
+            if blob is None:
                 continue
             blob_hexsha = blob.hex
 
         elif provider == 'dulwich':
-            prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
-            tree = _get_tree_dulwich(repo, tgt_env)
-            tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
-            if not isinstance(tree, dulwich.objects.Tree):
-                # Branch/tag/SHA not found in repo, try the next
-                continue
-            try:
-                # Referencing the path in the tree returns a tuple, the
-                # second element of which is the object ID of the blob
-                blob = repo['repo'].get_object(tree[filename][1])
-            except KeyError:
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
+                prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
+                tree = _get_tree_dulwich(repo, tgt_env)
+                tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
+                if not isinstance(tree, dulwich.objects.Tree):
+                    # Branch/tag/SHA not found in repo
+                    break
+                try:
+                    mode, oid = tree[filename]
+                    if stat.S_ISLNK(mode):
+                        # Path is a symlink. The blob data corresponding to
+                        # this path's object ID will be the target of the
+                        # symlink. Follow the symlink and set repo_path to the
+                        # location indicated in the blob data.
+                        link_tgt = repo['repo'].get_object(oid).as_raw_string()
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        blob = repo['repo'].get_object(oid)
+                        break
+                except KeyError:
+                    break
+            if blob is None:
                 continue
             blob_hexsha = blob.sha().hexdigest()
 
@@ -1352,12 +1438,15 @@ def _file_lists(load, form):
         return cache_match
     if refresh_cache:
         ret = {}
-        ret['files'] = _get_file_list(load)
+        ret['files'], ret['symlinks'] = _get_file_list(load)
         ret['dirs'] = _get_dir_list(load)
         if save_cache:
             salt.fileserver.write_file_list_cache(
                 __opts__, ret, list_cache, w_lock
             )
+        # NOTE: symlinks are organized in a dict instead of a list, however the
+        # 'symlinks' key will be defined above so it will never get to the
+        # default value in the call to ret.get() below.
         return ret.get(form, [])
     # Shouldn't get here, but if we do, this prevents a TypeError
     return []
@@ -1386,48 +1475,60 @@ def _get_file_list(load):
 
     provider = _get_provider()
     if 'saltenv' not in load or load['saltenv'] not in envs():
-        return []
-    ret = set()
+        return [], {}
+    files = set()
+    symlinks = {}
     for repo in init():
+        fl_func = None
         if provider == 'gitpython':
-            ret.update(
-                _file_list_gitpython(repo, load['saltenv'])
-            )
+            fl_func = _file_list_gitpython
         elif provider == 'pygit2':
-            ret.update(
-                _file_list_pygit2(repo, load['saltenv'])
-            )
+            fl_func = _file_list_pygit2
         elif provider == 'dulwich':
-            ret.update(
-                _file_list_dulwich(repo, load['saltenv'])
-            )
-    return sorted(ret)
+            fl_func = _file_list_dulwich
+        try:
+            repo_files, repo_symlinks = fl_func(repo, load['saltenv'])
+        except TypeError:
+            # We should never get here unless the gitfs_provider is not
+            # accounted for in tbe above if/elif block.
+            continue
+        else:
+            files.update(repo_files)
+            symlinks.update(repo_symlinks)
+    return sorted(files), symlinks
 
 
 def _file_list_gitpython(repo, tgt_env):
     '''
     Get file list using GitPython
     '''
-    ret = set()
+    files = set()
+    symlinks = {}
     if tgt_env == 'base':
         tgt_env = repo['base']
     tree = _get_tree_gitpython(repo, tgt_env)
     if not tree:
-        return ret
+        return files, symlinks
     if repo['root']:
         try:
             tree = tree / repo['root']
         except KeyError:
-            return ret
-    for blob in tree.traverse():
-        if not isinstance(blob, git.Blob):
+            return files, symlinks
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
+    for file_blob in tree.traverse():
+        if not isinstance(file_blob, git.Blob):
             continue
-        if repo['root']:
-            path = os.path.relpath(blob.path, repo['root'])
-        else:
-            path = blob.path
-        ret.add(os.path.join(repo['mountpoint'], path))
-    return ret
+        file_path = add_mountpoint(relpath(file_blob.path))
+        files.add(file_path)
+        if stat.S_ISLNK(file_blob.mode):
+            stream = six.StringIO()
+            file_blob.stream_data(stream)
+            stream.seek(0)
+            link_tgt = stream.read()
+            stream.close()
+            symlinks[file_path] = link_tgt
+    return files, symlinks
 
 
 def _file_list_pygit2(repo, tgt_env):
@@ -1437,23 +1538,28 @@ def _file_list_pygit2(repo, tgt_env):
     def _traverse(tree, repo_obj, blobs, prefix):
         '''
         Traverse through a pygit2 Tree object recursively, accumulating all the
-        blob paths within it in the "blobs" list
+        file paths and symlink info in the "blobs" dict
         '''
         for entry in iter(tree):
-            blob = repo_obj[entry.oid]
-            if isinstance(blob, pygit2.Blob):
-                blobs.append(os.path.join(prefix, entry.name))
-            elif isinstance(blob, pygit2.Tree):
-                _traverse(blob,
+            obj = repo_obj[entry.oid]
+            if isinstance(obj, pygit2.Blob):
+                repo_path = os.path.join(prefix, entry.name)
+                blobs.setdefault('files', []).append(repo_path)
+                if stat.S_ISLNK(tree[entry.name].filemode):
+                    link_tgt = repo_obj[tree[entry.name].oid].data
+                    blobs.setdefault('symlinks', {})[repo_path] = link_tgt
+            elif isinstance(obj, pygit2.Tree):
+                _traverse(obj,
                           repo_obj,
                           blobs,
                           os.path.join(prefix, entry.name))
-    ret = set()
+    files = set()
+    symlinks = {}
     if tgt_env == 'base':
         tgt_env = repo['base']
     tree = _get_tree_pygit2(repo, tgt_env)
     if not tree:
-        return ret
+        return files, symlinks
     if repo['root']:
         try:
             # This might need to be changed to account for a root that
@@ -1461,17 +1567,19 @@ def _file_list_pygit2(repo, tgt_env):
             oid = tree[repo['root']].oid
             tree = repo['repo'][oid]
         except KeyError:
-            return ret
+            return files, symlinks
         if not isinstance(tree, pygit2.Tree):
-            return ret
-    blobs = []
+            return files, symlinks
+    blobs = {}
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
-    for blob in blobs:
-        if repo['root']:
-            blob = os.path.relpath(blob, repo['root'])
-        ret.add(os.path.join(repo['mountpoint'], blob))
-    return ret
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
+    for repo_path in blobs.get('files', []):
+        files.add(add_mountpoint(relpath(repo_path)))
+    for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
+        symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
+    return files, symlinks
 
 
 def _file_list_dulwich(repo, tgt_env):
@@ -1481,32 +1589,40 @@ def _file_list_dulwich(repo, tgt_env):
     def _traverse(tree, repo_obj, blobs, prefix):
         '''
         Traverse through a dulwich Tree object recursively, accumulating all the
-        blob paths within it in the "blobs" list
+        file paths and symlink info in the "blobs" dict
         '''
-        for item in tree.items():
+        for item in six.iteritems(tree):
             obj = repo_obj.get_object(item.sha)
             if isinstance(obj, dulwich.objects.Blob):
-                blobs.append(os.path.join(prefix, item.path))
+                repo_path = os.path.join(prefix, item.path)
+                blobs.setdefault('files', []).append(repo_path)
+                mode, oid = tree[item.path]
+                if stat.S_ISLNK(mode):
+                    link_tgt = repo_obj.get_object(oid).as_raw_string()
+                    blobs.setdefault('symlinks', {})[repo_path] = link_tgt
             elif isinstance(obj, dulwich.objects.Tree):
                 _traverse(obj,
                           repo_obj,
                           blobs,
                           os.path.join(prefix, item.path))
-    ret = set()
+    files = set()
+    symlinks = {}
     if tgt_env == 'base':
         tgt_env = repo['base']
     tree = _get_tree_dulwich(repo, tgt_env)
     tree = _dulwich_walk_tree(repo['repo'], tree, repo['root'])
     if not isinstance(tree, dulwich.objects.Tree):
-        return ret
-    blobs = []
+        return files, symlinks
+    blobs = {}
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
-    for blob in blobs:
-        if repo['root']:
-            blob = os.path.relpath(blob, repo['root'])
-        ret.add(os.path.join(repo['mountpoint'], blob))
-    return ret
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
+    for repo_path in blobs.get('files', []):
+        files.add(add_mountpoint(relpath(repo_path)))
+    for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
+        symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
+    return files, symlinks
 
 
 def file_list_emptydirs(load):  # pylint: disable=W0613
@@ -1634,7 +1750,7 @@ def _dir_list_dulwich(repo, tgt_env):
         Traverse through a dulwich Tree object recursively, accumulating all
         the empty directories within it in the "blobs" list
         '''
-        for item in tree.items():
+        for item in six.iteritems(tree):
             obj = repo_obj.get_object(item.sha)
             if not isinstance(obj, dulwich.objects.Tree):
                 continue
@@ -1659,3 +1775,27 @@ def _dir_list_dulwich(repo, tgt_env):
             blob = os.path.relpath(blob, repo['root'])
         ret.add(os.path.join(repo['mountpoint'], blob))
     return ret
+
+
+def symlink_list(load):
+    '''
+    Return a dict of all symlinks based on a given path in the repo
+    '''
+    if 'env' in load:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        load['saltenv'] = load.pop('env')
+
+    if load['saltenv'] not in envs():
+        return {}
+    try:
+        prefix = load['prefix'].strip('/')
+    except KeyError:
+        prefix = ''
+    symlinks = _file_lists(load, 'symlinks')
+    return dict([(key, val)
+                 for key, val in six.iteritems(symlinks)
+                 if key.startswith(prefix)])
