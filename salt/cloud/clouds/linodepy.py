@@ -237,7 +237,7 @@ def get_ips(conn=None, LinodeID=None):
         conn = get_conn()
     ips = conn.linode_ip_list(LinodeID=LinodeID)
 
-    all_ips = {'public_ips':[], 'private_ips':[]}
+    all_ips = {'public_ips': [], 'private_ips': []}
 
     for i in ips:
         if i['ISPUBLIC']:
@@ -292,17 +292,17 @@ def stop(*args, **kwargs):
         node = get_node(LinodeID=args[0])
 
     if node['state'] == 'Powered Off':
-        return {'success': True, 'state': 'Stopped', 
+        return {'success': True, 'state': 'Stopped',
                 'msg': 'Machine already stopped'}
 
     result = conn.linode_shutdown(LinodeID=node['id'])
 
     if waitfor_job(LinodeID=node['id'], JobID=result['JobID']):
-        return {'state': 'Stopped', 
-                'action': 'stop', 
+        return {'state': 'Stopped',
+                'action': 'stop',
                 'success': True}
     else:
-        return {'action': 'stop', 
+        return {'action': 'stop',
                 'success': False}
 
 
@@ -320,9 +320,9 @@ def start(*args, **kwargs):
         return False
 
     if node['state'] == 'Running':
-        return {'success': True, 
-                'action': 'start', 
-                'state': 'Running', 
+        return {'success': True,
+                'action': 'start',
+                'state': 'Running',
                 'msg': 'Machine already running'}
 
     result = conn.linode_boot(LinodeID=node['id'])
@@ -658,14 +658,13 @@ def create_disk_from_distro(vm_=None, LinodeID=None, swapsize=None):
     '''
     Create the disk for the linode
     '''
-    if not conn:
-        conn = get_conn()
+    conn = get_conn()
 
     result = conn.linode_disk_createfromdistribution(
         LinodeID=LinodeID,
-        DistributionID=get_image(c, vm_),
+        DistributionID=get_image(conn, vm_),
         Label='root',
-        Size=get_disk_size(vm_, get_size(c, vm_)['disk'], get_swap(vm_)),
+        Size=get_disk_size(vm_, get_size(conn, vm_)['disk'], get_swap(vm_)),
         rootPass=get_password(vm_),
         rootSSHKey=get_pubkey(vm_)
     )
