@@ -29,7 +29,7 @@ def _get_rvm_location(runas=None):
     if runas:
         runas_home = os.path.expanduser('~{0}'.format(runas))
         rvmpath = '{0}/.rvm/bin/rvm'.format(runas_home)
-        if os.path.isdir(rvmpath):
+        if os.path.exists(rvmpath):
             return rvmpath
     return '/usr/local/rvm/bin/rvm'
 
