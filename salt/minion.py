@@ -23,7 +23,6 @@ from random import randint, shuffle
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
 try:
     import zmq
@@ -2446,7 +2445,7 @@ class Matcher(object):
         '''
         Returns true if the passed glob matches the id
         '''
-        if not isinstance(tgt, basestring):
+        if not isinstance(tgt, six.string_types):
             return False
 
         return fnmatch.fnmatch(self.opts['id'], tgt)

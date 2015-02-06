@@ -11,7 +11,8 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
-ensure_in_syspath('../')
+
+ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -53,7 +54,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
         # Now, test each module!
         for item in global_vars:
             for name in names:
-                self.assertIn(name, item.keys())
+                self.assertIn(name, list(item.keys()))
 
     def test_auth(self):
         '''
