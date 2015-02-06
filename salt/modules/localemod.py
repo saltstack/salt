@@ -223,7 +223,7 @@ def gen_locale(locale, charmap=None):
             search = '/usr/share/locales'
        else:
              search = '/usr/share/i18n/locales'
-        locale_format = locale
+       locale_format = locale
        try:
             valid = locale_format in os.listdir(search)
        except OSError:
