@@ -108,6 +108,7 @@ class NodeAuthSSHKey(object):
     def __repr__(self):
         return '<NodeAuthSSHKey>'
 
+
 class NodeAuthPassword(object):
     """
     A password to be used for authentication to a node.
@@ -124,6 +125,7 @@ class NodeAuthPassword(object):
 
     def __repr__(self):
         return '<NodeAuthPassword>'
+
 
 # Only load in this module if the LINODE configurations are in place
 def __virtual__():
@@ -159,12 +161,15 @@ def get_conn():
                                   get_configured_provider(),
                                   __opts__, search_global=False)
                          )
+
+
 def get_image(conn, vm_):
     '''
     Return a single image from the Linode API
     '''
     images = avail_images(conn)
     return images[vm_['image']]['id']
+
 
 def get_size(conn, vm_):
     '''
@@ -173,12 +178,13 @@ def get_size(conn, vm_):
     sizes = avail_sizes(conn)
     return sizes[vm_['size']]
 
+
 def avail_sizes(conn=None):
     '''
     Return available sizes ("plans" in LinodeSpeak)
     '''
     if not conn:
-       conn = get_conn()
+        conn = get_conn()
     sizes = {}
     for plan in conn.avail_linodeplans():
         key = plan['LABEL']
@@ -190,6 +196,7 @@ def avail_sizes(conn=None):
         sizes[key]['price'] = plan['HOURLY']*24*30
         sizes[key]['ram'] = plan['RAM']
     return sizes
+
 
 def avail_locations(conn=None):
     '''
@@ -205,6 +212,7 @@ def avail_locations(conn=None):
         locations[key]['abbreviation'] = dc['ABBR']
 
     return locations
+
 
 def avail_images(conn=None):
     '''
@@ -228,8 +236,9 @@ def get_ips(conn=None, LinodeID=None):
     if not conn:
         conn = get_conn()
     ips = conn.linode_ip_list(LinodeID=LinodeID)
-    all_ips = {'public_ips':[],
-               'private_ips':[]}
+
+    all_ips = {'public_ips':[], 'private_ips':[]}
+
     for i in ips:
         if i['ISPUBLIC']:
             key = 'public_ips'
@@ -238,6 +247,7 @@ def get_ips(conn=None, LinodeID=None):
         all_ips[key].append(i['IPADDRESS'])
 
     return all_ips
+
 
 def linodes(full=False, include_ips=False, conn=None):
     '''
@@ -269,6 +279,7 @@ def linodes(full=False, include_ips=False, conn=None):
         results[n['LABEL']] = thisnode
     return results
 
+
 def stop(*args, **kwargs):
     '''
     Execute a "stop" action on a VM in Linode.
@@ -281,25 +292,26 @@ def stop(*args, **kwargs):
         node = get_node(LinodeID=args[0])
 
     if node['state'] == 'Powered Off':
-        return {'success':True, 'state': 'Stopped',
-                'msg':'Machine already stopped'}
+        return {'success': True, 'state': 'Stopped', 
+                'msg': 'Machine already stopped'}
 
     result = conn.linode_shutdown(LinodeID=node['id'])
 
     if waitfor_job(LinodeID=node['id'], JobID=result['JobID']):
-        return {'state':'Stopped',
-                'action':'stop',
-                'success':True}
+        return {'state': 'Stopped', 
+                'action': 'stop', 
+                'success': True}
     else:
-        return {'action':'stop',
-                'success':False}
+        return {'action': 'stop', 
+                'success': False}
+
 
 def start(*args, **kwargs):
     '''
     Execute a "start" action on a VM in Linode.
     '''
-    if not conn:
-        conn = get_conn()
+
+    conn = get_conn()
     node = get_node(name=args[0])
     if not node:
         node = get_node(LinodeID=args[0])
@@ -308,25 +320,28 @@ def start(*args, **kwargs):
         return False
 
     if node['state'] == 'Running':
-        return {'success':True,
-                'action':'start',
-                'state':'Running',
-                'msg':'Machine already running'}
+        return {'success': True, 
+                'action': 'start', 
+                'state': 'Running', 
+                'msg': 'Machine already running'}
 
     result = conn.linode_boot(LinodeID=node['id'])
 
     if waitfor_job(LinodeID=node['id'], JobID=result['JobID']):
-        return {'state':'Running',
-                'action':'start',
-                'success':True}
+        return {'state': 'Running', 
+                'action': 'start', 
+                'success': True}
     else:
-        return {'action':'start',
-                'success':False}
+        return {'action': 'start', 
+                'success': False}
+
 
 def clone(*args, **kwargs):
+    '''
+    Clone an existing Linode
+    '''
 
-    if not conn:
-        conn = get_conn()
+    conn = get_conn()
 
     node = get_node(name=args[0], full=True)
     if not node:
@@ -369,21 +384,19 @@ def clone(*args, **kwargs):
     return node_data
 
 
-    return result.update({'boot':bootit})
-
-
-
 def list_nodes():
     '''
     Return basic data on nodes
     '''
     return linodes(full=False, include_ips=True)
 
+
 def list_nodes_full():
     '''
     Return all data on nodes
     '''
     return linodes(full=True, include_ips=True)
+
 
 def get_node(LinodeID=None, name=None, full=False):
     '''
@@ -405,6 +418,7 @@ def get_node(LinodeID=None, name=None, full=False):
 
     return None
 
+
 def get_disk_size(vm_, size, swap):
     '''
     Return the size of of the root disk in MB
@@ -416,10 +430,12 @@ def get_disk_size(vm_, size, swap):
         'disk_size', vm_, __opts__, default=disksize - swap
     )
 
+
 def destroy(vm_):
     conn = get_conn()
     machines = linodes(full=False, include_ips=False)
     return conn.linode_delete(LinodeID=machines[vm_]['id'], skipChecks=True)
+
 
 def get_location(conn, vm_):
     '''
@@ -536,6 +552,7 @@ def get_kernels(conn=None):
         log.error("Linode avail_kernels returned {0}".format(kernel_response['ERRORARRAY']))
         return None
 
+
 def get_one_kernel(conn=None, name=None):
     '''
     Return data on one kernel
@@ -549,10 +566,10 @@ def get_one_kernel(conn=None, name=None):
     if not name:
         name = 'latest 64 bit'
     else:
-        name = lower(name)
+        name = name.lower()
 
     for k, v in kernels:
-        if name in lower(k):
+        if name in k.lower():
             return v
 
     log.error('Did not find a kernel matching {0}'.format(name))
@@ -566,7 +583,7 @@ def waitfor_status(conn=None, LinodeID=None, status=None, timeout=300, quiet=Tru
     if not conn:
         conn = get_conn()
 
-    if status == None:
+    if status is None:
         status = 'Brand New'
 
     interval = 5
@@ -585,6 +602,7 @@ def waitfor_status(conn=None, LinodeID=None, status=None, timeout=300, quiet=Tru
             log.debug('Status for {0} is {1}'.format(LinodeID, result))
 
     return False
+
 
 def waitfor_job(conn=None, LinodeID=None, JobID=None, timeout=300, quiet=True):
 
@@ -616,8 +634,7 @@ def boot(LinodeID=None, configid=None):
     '''
     Execute a boot sequence on a linode
     '''
-    if not conn:
-        conn = get_conn()
+    conn = get_conn()
 
     return conn.linode_boot(LinodeID=LinodeID, ConfigID=configid)
 
@@ -626,15 +643,14 @@ def create_swap_disk(vm_=None, LinodeID=None, swapsize=None):
     '''
     Create the disk for the linode
     '''
-    if not conn:
-        conn = get_conn()
+    conn = get_conn()
     if not swapsize:
         swapsize = get_swap(vm_)
 
     result = conn.linode_disk_create(LinodeID=LinodeID,
-                                  Label='swap',
-                                  Size=swapsize,
-                                  Type='swap')
+                                     Label='swap',
+                                     Size=swapsize,
+                                     Type='swap')
     return result
 
 
@@ -645,21 +661,22 @@ def create_disk_from_distro(vm_=None, LinodeID=None, swapsize=None):
     if not conn:
         conn = get_conn()
 
-    result = conn.linode_disk_createfromdistribution(LinodeID=LinodeID,
-                                                  DistributionID=get_image(c, vm_),
-                                                  Label='root',
-                                                  Size=get_disk_size(vm_,
-                                                                    get_size(c, vm_)['disk'], get_swap(vm_)),
-                                                  rootPass=get_password(vm_),
-                                                  rootSSHKey=get_pubkey(vm_))
+    result = conn.linode_disk_createfromdistribution(
+        LinodeID=LinodeID,
+        DistributionID=get_image(c, vm_),
+        Label='root',
+        Size=get_disk_size(vm_, get_size(c, vm_)['disk'], get_swap(vm_)),
+        rootPass=get_password(vm_),
+        rootSSHKey=get_pubkey(vm_)
+    )
     return result
+
 
 def create_config(vm_, LinodeID=None, root_disk_id=None, swap_disk_id=None):
     '''
     Create a Linode Config
     '''
-    if not conn:
-        conn = get_conn()
+    conn = get_conn()
 
     # 138 appears to always be the latest 64-bit kernel for Linux
     kernelid = 138
@@ -676,6 +693,7 @@ def create_config(vm_, LinodeID=None, root_disk_id=None, swap_disk_id=None):
                                        helper_xen=True,
                                        helper_depmod=True)
     return result
+
 
 def create(vm_):
     '''
@@ -704,7 +722,7 @@ def create(vm_):
             'auth': get_auth(vm_),
             'ex_private': get_private_ip(vm_),
         }
-        node_data = clone(vm_['clonefrom'], {'target':vm_['name']})
+        node_data = clone(vm_['clonefrom'], {'target': vm_['name']})
     else:
         kwargs = {
             'name': vm_['name'],
@@ -784,7 +802,6 @@ def create(vm_):
                            JobID=boot_result['JobID']):
             log.error('Boot failed for {0}.'.format(node_data))
             return False
-
 
         node_data.update(get_node(node_data['LinodeID']))
 
@@ -901,7 +918,6 @@ def create(vm_):
             )
 
     ret.update(node_data)
-
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
