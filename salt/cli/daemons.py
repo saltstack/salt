@@ -5,6 +5,7 @@ Make me some salt!
 
 # Import python libs
 from __future__ import absolute_import
+import grp
 import os
 import sys
 import warnings
@@ -212,6 +213,14 @@ class Minion(parsers.MinionOptionParser):
                     current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
+                    group_name = self.config['log_file_group']
+                    try:
+                        group = grp.getgrnam(group_name)
+                        os.chown(logfile, -1, group.gr_gid)
+                    except ValueError:
+                        logger.error('Failed to get group ID for "{name}" (specified in '
+                                     'log_file_group)'.format(name=group_name))
+
         except OSError as err:
             logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
