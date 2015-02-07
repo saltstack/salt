@@ -27,6 +27,9 @@ import salt.utils.lazy
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet
 }
