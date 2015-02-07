@@ -880,7 +880,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if mod_name not in k:
                 yield k
 
-    def _reload_submodules(self, mod, name):
+    def _reload_submodules(self, mod):
         submodules = (
             getattr(mod, sname) for sname in dir(mod) if
             isinstance(getattr(mod, sname), mod.__class__)
@@ -891,6 +891,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # it is a submodule if the name is in a namespace under mod
             if submodule.__name__.startswith(mod.__name__ + '.'):
                 reload(submodule)
+                self._reload_submodules(submodule)
 
     def _load_module(self, name):
         mod = None
@@ -912,7 +913,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         ), None, fpath, desc)
                     # reload all submodules if necessary
                     if not self.initial_load:
-                        self._reload_submodules(mod, name)
+                        self._reload_submodules(mod)
                 else:
                     with open(fpath, desc[1]) as fn_:
                         mod = imp.load_module(

@@ -12,6 +12,7 @@ import inspect
 import tempfile
 import shutil
 import os
+import collections
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -418,3 +419,96 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.rm_lib()
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
+
+
+deep_init_base = '''
+import top_lib
+import top_lib.mid_lib
+import top_lib.mid_lib.bot_lib
+
+def top():
+    return top_lib.test()
+
+def mid():
+    return top_lib.mid_lib.test()
+
+def bot():
+    return top_lib.mid_lib.bot_lib.test()
+'''
+
+
+class LazyLoaderDeepSubmodReloadingTest(TestCase):
+    module_name = 'loadertestsubmoddeep'
+    libs = ('top_lib', 'mid_lib', 'bot_lib')
+
+    def setUp(self):
+        self.opts = _config = minion_config(None)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        os.makedirs(self.module_dir)
+
+        self.lib_count = collections.defaultdict(int)  # mapping of path -> count
+
+        # bootstrap libs
+        with open(os.path.join(self.module_dir, '__init__.py'), 'w') as fh:
+            fh.write(deep_init_base)
+            fh.flush()
+            os.fsync(fh.fileno())  # flush to disk
+
+        self.lib_paths = {}
+        dir_path = self.module_dir
+        for lib_name in self.libs:
+            dir_path = os.path.join(dir_path, lib_name)
+            self.lib_paths[lib_name] = dir_path
+            os.makedirs(dir_path)
+            self.update_lib(lib_name)
+
+        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs.append(self.tmp_dir)
+        self.loader = LazyLoader(dirs,
+                                 self.opts,
+                                 tag='module')
+
+    @property
+    def module_dir(self):
+        return os.path.join(self.tmp_dir, self.module_name)
+
+    def update_lib(self, lib_name):
+        path = os.path.join(self.lib_paths[lib_name], '__init__.py')
+        self.lib_count[lib_name] += 1
+        with open(path, 'wb') as fh:
+            fh.write(submodule_lib_template.format(count=self.lib_count[lib_name]))
+            fh.flush()
+            os.fsync(fh.fileno())  # flush to disk
+
+        # pyc files don't like it when we change the original quickly
+        # since the header bytes only contain the timestamp (granularity of seconds)
+        # TODO: don't write them? Is *much* slower on re-load (~3x)
+        # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
+        try:
+            os.unlink(path + 'c')
+        except OSError:
+            pass
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+
+    def test_basic(self):
+        self.assertIn('{0}.top'.format(self.module_name), self.loader)
+
+    def _verify_libs(self):
+        for lib in self.libs:
+            self.assertEqual(self.loader['{0}.{1}'.format(self.module_name, lib.replace('_lib', ''))](),
+                             self.lib_count[lib])
+
+    def test_reload(self):
+        '''
+        Make sure that we can reload all libraries of arbitrary depth
+        '''
+        self._verify_libs()
+
+        # update them all
+        for lib in self.libs:
+            for x in xrange(5):
+                self.update_lib(lib)
+                self.loader.clear()
+                self._verify_libs()
