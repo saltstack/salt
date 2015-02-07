@@ -928,6 +928,9 @@ def wait_for_write_lock(filename):
         if salt.utils.is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_UN)
 
+        fhandle.close()
+        os.remove(filename)
+
 
 def update():
     '''
