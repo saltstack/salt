@@ -455,8 +455,8 @@ def query(database, query, time_precision='s', chunked=False, user=None,
     client.switch_database(database)
     return client.query(query, time_precision=time_precision, chunked=chunked)
 
-def login_test(
-        name, password, database=None, host=None, port=None):
+
+def login_test(name, password, database=None, host=None, port=None):
     '''
     Checks if a credential pair can log in at all.
 
@@ -490,5 +490,8 @@ def login_test(
         client = _client(user=name, password=password, host=host, port=port)
         client.get_list_database()
         return True
-    except:
-        return False
+    except InfluxDBClientError as e:
+        if e.status_code == 401:
+            return False
+        else:
+            raise
