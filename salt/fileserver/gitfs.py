@@ -932,8 +932,6 @@ def wait_for_write_lock(filename):
         os.remove(filename)
 
 
-
-
 def update():
     '''
     Execute a git fetch on all of the repos
