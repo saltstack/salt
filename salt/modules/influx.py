@@ -490,7 +490,7 @@ def login_test(name, password, database=None, host=None, port=None):
         client = _client(user=name, password=password, host=host, port=port)
         client.get_list_database()
         return True
-    except InfluxDBClientError as e:
+    except influxdb.client.InfluxDBClientError as e:
         if e.code == 401:
             return False
         else:
