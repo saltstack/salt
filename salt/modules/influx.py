@@ -491,7 +491,7 @@ def login_test(name, password, database=None, host=None, port=None):
         client.get_list_database()
         return True
     except InfluxDBClientError as e:
-        if e.status_code == 401:
+        if e.code == 401:
             return False
         else:
             raise
