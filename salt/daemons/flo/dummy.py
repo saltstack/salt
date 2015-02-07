@@ -19,6 +19,10 @@ import logging
 
 # Import salt libs
 import ioflo.base.deeding
+import salt.daemons.flo.worker
+from raet import raeting
+from raet.lane.stacking import LaneStack
+from raet.lane.yarding import RemoteYard
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +34,8 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
     '''
     Ioinits = {
             'opts': '.salt.opts',
-            'publish': '.salt.var.publish'
+            'publish': '.salt.var.publish',
+            'lane_stack': '.salt.lane.manor.stack',
             }
 
     def action(self):
@@ -39,3 +44,8 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
                 self.publish.value.popleft()
                 )
             )
+            msg = {'load': {'fun_args': [], 'jid': u'20150206163005831312', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': u'test.ping', 'id': 'silver'}, 'route': {'src': (u'silver_minion', u'jobber50e73ccefd052167c7', 'jid_ret'), 'dst': (u'silver_master_master', None, 'remote_cmd')}}
+            log.debug('Dummy publisher faking return with: {0}'.format(msg))
+
+            self.lane_stack.value.transmit(msg, self.lane_stack.value.fetchUidByName('manor'))
+            self.lane_stack.value.serviceAll()
