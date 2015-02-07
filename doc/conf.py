@@ -91,8 +91,6 @@ MOCK_MODULES = [
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',
-    'mako',
-    'mako.template',
     'MySQLdb',
     'MySQLdb.cursors',
     'psutil',
