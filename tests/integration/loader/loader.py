@@ -297,8 +297,8 @@ class LazyLoaderSubmodReloadingTest(TestCase):
     '''
     Test the loader of salt with changing modules
     '''
-    module_name = 'loadertest'
-    module_key = 'loadertest.test'
+    module_name = 'loadertestsubmod'
+    module_key = 'loadertestsubmod.test'
 
     def setUp(self):
         self.opts = _config = minion_config(None)
