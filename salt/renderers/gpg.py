@@ -51,8 +51,8 @@ There are two ways to configure salt for the usage of this renderer:
         .. code-block:: yaml
 
             renderer: jinja | yaml | gpg
-    
-    This will apply the renderers to all pillars and states while requiring 
+
+    This will apply the renderers to all pillars and states while requiring
     ``python-gnupg`` to be installed on all minions since the decryption
     will happen on the minions.
 
