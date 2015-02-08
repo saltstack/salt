@@ -64,7 +64,12 @@ def _get_proc_name(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.name() if PSUTIL2 else proc.name
+    ret = []
+    try:
+        ret = proc.name() if PSUTIL2 else proc.name
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+    return ret
 
 
 def _get_proc_status(proc):
