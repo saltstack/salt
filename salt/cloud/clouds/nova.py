@@ -89,6 +89,9 @@ accept them
 
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
+
+Note: For rackconnect v3, rackconnectv3 needs to be specified with the
+rackconnect v3 cloud network as it's variable
 '''
 from __future__ import absolute_import
 # pylint: disable=E0102
