@@ -353,7 +353,7 @@ def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None, 
             with salt.utils.fopen(keyp) as fic:
                 keyp = fic.read()
     return keyp
-    
+
 
 def create_ca(ca_name,
               bits=2048,
@@ -508,7 +508,7 @@ def create_ca(ca_name,
     _write_cert_to_database(ca_name, ca)
 
     ret = ('Created Private Key: "{1}/{2}/{3}_ca_cert.key." ').format(
-        ca_name, cert_base_path(), ca_name, ca_name)
+        ca_name, cert_base_path(), ca_name)
     ret += ('Created CA "{0}": "{1}/{2}/{3}_ca_cert.crt."').format(
         ca_name, cert_base_path(), ca_name, ca_name)
 
