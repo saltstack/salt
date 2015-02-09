@@ -69,7 +69,9 @@ def pvdisplay(pvname=''):
         salt '*' lvm.pvdisplay /dev/md0
     '''
     ret = {}
-    cmd = 'pvdisplay -c {0}'.format(pvname)
+    cmd = ['pvdisplay', '-c']
+    if pvname:
+        cmd.append(pvname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
@@ -107,7 +109,9 @@ def vgdisplay(vgname=''):
         salt '*' lvm.vgdisplay nova-volumes
     '''
     ret = {}
-    cmd = 'vgdisplay -c {0}'.format(vgname)
+    cmd = ['vgdisplay', '-c']
+    if vgname:
+        cmd.append(vgname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
@@ -150,7 +154,9 @@ def lvdisplay(lvname=''):
         salt '*' lvm.lvdisplay /dev/vg_myserver/root
     '''
     ret = {}
-    cmd = 'lvdisplay -c {0}'.format(lvname)
+    cmd = ['lvdisplay', '-c']
+    if lvname:
+        cmd.append(lvname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
