@@ -140,7 +140,7 @@ def _absent_test(user, name, enc, comment, options, source, config):
                 saltenv=__env__)
         if keys:
             comment = ''
-            for key, status in keys.items():
+            for key, status in list(keys.items()):
                 if status == 'exists':
                     continue
                 comment += 'Set to {0}: {1}\n'.format(status, key)

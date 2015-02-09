@@ -201,13 +201,13 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
     _type = record_type.upper()
     if _type == 'A':
         status = _zone.delete_a(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     elif _type == 'CNAME':
         status = _zone.delete_cname(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     elif _type == 'MX':
         status = _zone.delete_mx(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     else:
         msg = '{0} is an unsupported resource type.'.format(_type)
         log.error(msg)

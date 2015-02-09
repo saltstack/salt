@@ -37,9 +37,12 @@ from __future__ import absolute_import
 # Import python libs
 import copy
 import pprint
-import logging
 import time
 from os.path import exists, expanduser
+
+# Import Salt Libs
+import salt.ext.six as six
+import salt.ext.six.moves.range as range  # pylint: disable=import-error,no-name-in-module
 
 # Import linode-python
 try:
@@ -50,7 +53,6 @@ except ImportError:
     HAS_LINODEPY = False
 
 # Import salt cloud libs
-import salt.config as config
 from salt.cloud.exceptions import SaltCloudConfigError
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
@@ -271,8 +273,8 @@ def linodes(full=False, include_ips=False, conn=None):
         thisnode['state'] = LINODE_STATUS[str(n['STATUS'])]
 
         if include_ips:
-            thisnode = dict(thisnode.items() +
-                            get_ips(conn, n['LINODEID']).items())
+            thisnode = dict(list(thisnode.items()) +
+                            list(get_ips(conn, n['LINODEID']).items()))
 
         if full:
             thisnode['extra'] = n
@@ -406,14 +408,14 @@ def get_node(LinodeID=None, name=None, full=False):
 
     linode_list = linodes(full=full, conn=c)
 
-    for l, d in linode_list.iteritems():
+    for l, d in six.iteritems(linode_list):
         if LinodeID:
             if d['id'] == LinodeID:
-                d = dict(d.items() + get_ips(conn=c, LinodeID=d['id']).items())
+                d = dict(list(d.items()) + list(get_ips(conn=c, LinodeID=d['id']).items()))
                 return d
         if name:
             if d['name'] == name:
-                d = dict(d.items() + get_ips(conn=c, LinodeID=d['id']).items())
+                d = dict(list(d.items()) + list(get_ips(conn=c, LinodeID=d['id']).items()))
                 return d
 
     return None

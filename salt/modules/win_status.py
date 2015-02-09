@@ -11,6 +11,7 @@ from __future__ import absolute_import
 
 import logging
 import salt.utils
+import salt.ext.six as six
 
 import os
 import ctypes
@@ -88,7 +89,7 @@ def diskusage(human_readable=False, path=None):
     #Credit for the source and ideas for this function:
     # http://code.activestate.com/recipes/577972-disk-usage/?in=user-4178764
     _, total, free = ctypes.c_ulonglong(), ctypes.c_ulonglong(), ctypes.c_longlong()
-    if sys.version_info >= (3, ) or isinstance(path, unicode):
+    if sys.version_info >= (3, ) or isinstance(path, six.text_type):
         fun = ctypes.windll.kernel32.GetDiskFreeSpaceExw
     else:
         fun = ctypes.windll.kernel32.GetDiskFreeSpaceExA
