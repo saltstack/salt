@@ -41,7 +41,7 @@ def parse_input(args, condition=True):
     _args = []
     _kwargs = {}
     for arg in args:
-        if isinstance(arg, string_types) and r'\n' not in arg and '\n' not in arg:
+        if isinstance(arg, string_types):
             arg_name, arg_value = parse_kwarg(arg)
             if arg_name:
                 _kwargs[arg_name] = yamlify_arg(arg_value)
