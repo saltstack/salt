@@ -448,6 +448,38 @@ def get_stats(estate=None, stack='road'):
     return stats
 
 
+def road_stats(estate=None):
+    '''
+    Print the estate road stack stats
+
+    estate : None
+        The name of the target estate. Master stats would be requested by default
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.road_stats [estate=alpha_minion]
+    '''
+    return get_stats(estate=estate, stack='road')
+
+
+def lane_stats(estate=None):
+    '''
+    Print the estate manor lane stack stats
+
+    estate : None
+        The name of the target estate. Master stats would be requested by default
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.lane_stats [estate=alpha_minion]
+    '''
+    return get_stats(estate=estate, stack='lane')
+
+
 def safe_accept(target, expr_form='glob'):
     '''
     Accept a minion's public key after checking the fingerprint over salt-ssh
