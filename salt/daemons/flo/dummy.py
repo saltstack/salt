@@ -40,12 +40,32 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
 
     def action(self):
         while self.publish.value:
-            log.debug('Dummy publisher publishing: {0}'.format(
-                self.publish.value.popleft()
-                )
-            )
-            msg = {'load': {'fun_args': [], 'jid': u'20150206163005831312', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': u'test.ping', 'id': 'silver'}, 'route': {'src': (u'silver_minion', u'jobber50e73ccefd052167c7', 'jid_ret'), 'dst': (u'silver_master_master', None, 'remote_cmd')}}
-            log.debug('Dummy publisher faking return with: {0}'.format(msg))
-
+            pub = self.publish.value.popleft()
+            log.debug('Dummy publisher publishing: {0}'.format(pub))
+            msg = self._fill_tmpl(pub)
             self.lane_stack.value.transmit(msg, self.lane_stack.value.fetchUidByName('manor'))
-            self.lane_stack.value.serviceAll()
+
+    def _fill_tmpl(self, pub):
+        '''
+        Takes a template and a job and fills the template with 
+        fake return data associated with the job
+        '''
+        msg = {'load': {
+                    'fun_args': [],
+                    'jid': pub['return']['pub']['jid'],
+                    'return': True,
+                    'retcode': 0,
+                    'success': True,
+                    'cmd': '_return',
+                    'fun': u'test.ping',
+                    'id': 'silver'
+               },
+               'route': {
+                    'src': (u'silver_minion', u'jobber50e73ccefd052167c7', 'jid_ret'),
+                    'dst': (u'silver_master_master', None, 'remote_cmd')
+                }
+               }
+
+        log.debug('Dummy publisher faking return with: {0}'.format(msg))
+        return msg
+
