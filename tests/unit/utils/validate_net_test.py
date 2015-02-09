@@ -46,7 +46,7 @@ class ValidateNetTestCase(TestCase):
             '::1/28',
         ]
 
-        __ip_addr(true_addrs, false_addrs)
+        self.__ip_addr(true_addrs, false_addrs)
 
     def test_ipv6_addr(self):
         '''
@@ -67,7 +67,7 @@ class ValidateNetTestCase(TestCase):
             '::1/129',
         ]
 
-        __ip_addr(true_addrs, false_addrs)
+        self.__ip_addr(true_addrs, false_addrs)
 
 
 if __name__ == '__main__':
