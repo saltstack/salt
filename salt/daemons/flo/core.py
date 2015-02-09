@@ -1542,7 +1542,7 @@ class SaltRaetStatsEventer(ioflo.base.deeding.Deed):
         elif tag == tagify('lane', 'stats'):
             return self.lane_stack.value.stats
         else:
-            log.error('Lane Router Received message missing or invalid tag: {0}'.format(msg))
+            log.error('Missing or invalid tag: {0}'.format(tag))
             return None
 
     def action(self):
@@ -1564,7 +1564,7 @@ class SaltRaetStatsEventerMaster(SaltRaetStatsEventer):
         '''
         y_name = msg['route']['src'][1]
         if y_name not in self.lane_stack.value.nameRemotes:  # subscriber not a remote
-            return # drop msg don't answer
+            return  # drop msg don't answer
 
         stats = self._get_stats(msg.get('tag'))
         if stats is None:
@@ -1587,7 +1587,7 @@ class SaltRaetStatsEventerMinion(SaltRaetStatsEventer):
         '''
         s_estate, s_yard, s_share = msg['route']['src']
         if s_estate not in self.road_stack.value.nameRemotes:  # subscriber not a remote
-            return # drop msg don't answer
+            return  # drop msg don't answer
 
         stats = self._get_stats(msg.get('tag'))
         if stats is None:
