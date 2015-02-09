@@ -1033,7 +1033,7 @@ def list_pkgs(versions_as_list=False,
     return ret
 
 
-def _get_upgradable():
+def _get_upgradable(dist_upgrade=True):
     '''
     Utility function to get upgradable packages
 
@@ -1041,8 +1041,12 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'apt-get --just-print dist-upgrade'
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['apt-get', '--just-print']
+    if dist_upgrade:
+        cmd.append('dist-upgrade')
+    else:
+        cmd.append('upgrade')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
 
     if call['retcode'] != 0:
         comment = ''
@@ -1075,9 +1079,17 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, dist_upgrade=True):
     '''
     List all available package upgrades.
+
+    refresh
+        Whether to refresh the package database before listing upgrades.
+        Default: True.
+
+    dist_upgrade
+        Whether to list the upgrades using dist-upgrade vs upgrade.  Default is
+        to use dist-upgrade.
 
     CLI Example:
 
@@ -1087,7 +1099,7 @@ def list_upgrades(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
-    return _get_upgradable()
+    return _get_upgradable(dist_upgrade)
 
 
 def upgrade_available(name):
