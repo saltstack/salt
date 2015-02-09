@@ -78,7 +78,13 @@ def __virtual__():
     '''
     Makes sure that ZFS is available.
     '''
-    if _check_zfs():
+    kernel_module_chk = {
+    'FreeBSD' : 'kldstat -q -m zfs',
+    }
+    cmd = kernel_module_chk.get(__grains__['kernel'],'')
+    if cmd and salt_cmd.retcode(cmd) == 0:
+        # Build dynamic functions and allow loading module
+        _build_zfs_cmd_list()
         return 'zfs'
     return False
 
@@ -124,21 +130,22 @@ def _make_function(cmd_name, doc):
     # At this point return the function we've just defined.
     return _cmd
 
-# Run through all the available commands
-if _check_zfs():
-    available_cmds = _available_commands()
-    for available_cmd in available_cmds:
+def _build_zfs_cmd_list():
+    # Run through all the available commands
+    if _check_zfs():
+        available_cmds = _available_commands()
+        for available_cmd in available_cmds:
 
-        # Set the output from _make_function to be 'available_cmd_'.
-        # i.e. 'list' becomes 'list_' in local module.
-        setattr(
-                sys.modules[__name__],
-                '{0}_'.format(available_cmd),
-                _make_function(available_cmd, available_cmds[available_cmd])
-                )
+            # Set the output from _make_function to be 'available_cmd_'.
+            # i.e. 'list' becomes 'list_' in local module.
+            setattr(
+                    sys.modules[__name__],
+                    '{0}_'.format(available_cmd),
+                    _make_function(available_cmd, available_cmds[available_cmd])
+                    )
 
-        # Update the function alias so that salt finds the functions properly.
-        __func_alias__['{0}_'.format(available_cmd)] = available_cmd
+            # Update the function alias so that salt finds the functions properly.
+            __func_alias__['{0}_'.format(available_cmd)] = available_cmd
 
 
 def exists(name):
