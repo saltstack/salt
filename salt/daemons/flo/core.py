@@ -205,7 +205,7 @@ class SaltRaetRoadClusterLoadSetup(ioflo.base.deeding.Deed):
         Populate loads from masters in stack.remotes
         '''
         if self.opts.value.get('cluster_mode'):
-            for remote in self.stack.value.remotes.values():
+            for remote in list(self.stack.value.remotes.values()):
                 if remote.kind == kinds.applKinds.master:
                     self.masters.value[remote.name] = odict(load=0.0, expire=self.store.stamp)
 
@@ -303,7 +303,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      offset=0.5)
 
         if self.opts.value.get('raet_clear_remotes'):
-            for remote in self.stack.value.remotes.values():
+            for remote in list(self.stack.value.remotes.values()):
                 self.stack.value.removeRemote(remote, clear=True)
             self.stack.puid = self.stack.value.Uid  # reset puid
 
@@ -359,12 +359,12 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                        not stack.remotes)
 
             if refresh_masters:  # clear all remote masters
-                for remote in stack.remotes.values():
+                for remote in list(stack.remotes.values()):
                     if remote.kind == kinds.applKinds.master:
                         stack.removeRemote(remote, clear=True)
 
             if refresh_all:  # clear all remotes
-                for remote in stack.remotes.values():
+                for remote in list(stack.remotes.values()):
                     stack.removeRemote(remote, clear=True)
 
             if refresh_all or refresh_masters:
@@ -378,7 +378,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                                                  ha=mha,
                                                  kind=kinds.applKinds.master))
 
-            for remote in stack.remotes.values():
+            for remote in list(stack.remotes.values()):
                 if remote.kind == kinds.applKinds.master:
                     stack.join(uid=remote.uid, timeout=0.0)
 
@@ -409,7 +409,7 @@ class SaltRaetRoadStackJoined(ioflo.base.deeding.Deed):
         joined = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                joined = any([remote.joined for remote in stack.remotes.values()
+                joined = any([remote.joined for remote in list(stack.remotes.values())
                               if remote.kind == kinds.applKinds.master])
         self.status.update(joined=joined)
 
@@ -498,7 +498,7 @@ class SaltRaetRoadStackAllowed(ioflo.base.deeding.Deed):
         allowed = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                allowed = any([remote.allowed for remote in stack.remotes.values()
+                allowed = any([remote.allowed for remote in list(stack.remotes.values())
                                if remote.kind == kinds.applKinds.master])
         self.status.update(allowed=allowed)
 
@@ -685,7 +685,7 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         Initial pillar
         '''
         # default master is the first remote that is allowed
-        available_masters = [remote for remote in self.road_stack.value.remotes.values()
+        available_masters = [remote for remote in list(self.road_stack.value.remotes.values())
                                                if remote.allowed]
         while not available_masters:
             available_masters = [remote for remote in self.road_stack.value.remotes.values()
@@ -1317,7 +1317,7 @@ class SaltRaetRouterMinion(SaltRaetRouter):
         master = self.road_stack.value.nameRemotes.get(self.master_estate_name.value)
         if not master or not master.alived:  # select a different master
             available_masters = [remote for remote in
-                                 self.road_stack.value.remotes.values()
+                                 list(self.road_stack.value.remotes.values())
                                                        if remote.alived]
             if available_masters:
                 random_master = opts.get('random_master')
@@ -1420,7 +1420,7 @@ class SaltRaetEventerMaster(SaltRaetEventer):
         if self.opts.value.get('cluster_mode'):
             if msg.get('origin') is None:
                 masters = (self.availables.value &
-                           set((remote.name for remote in self.road_stack.value.remotes.values()
+                           set((remote.name for remote in list(self.road_stack.value.remotes.values())
                                 if remote.kind == kinds.applKinds.master)))
                 for name in masters:
                     remote = self.road_stack.value.nameRemotes[name]
@@ -1529,7 +1529,7 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
         # only publish to available minions by intersecting sets
 
         minions = (self.availables.value &
-                   set((remote.name for remote in stack.remotes.values()
+                   set((remote.name for remote in list(stack.remotes.values())
                             if remote.kind in [kinds.applKinds.minion,
                                                kinds.applKinds.syndic])))
         for minion in minions:
@@ -1609,7 +1609,7 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
         while self.master_events.value:
             events.append(self.master_events.value.popleft())
         route = {'src': (self.road_stack.value.local.name, None, None),
-                 'dst': (next(self.road_stack.value.remotes.values()).name, None, 'remote_cmd')}
+                 'dst': (next(list(self.road_stack.value.remotes.values())).name, None, 'remote_cmd')}
         load = {'id': self.opts.value['id'],
                 'events': events,
                 'cmd': '_minion_event'}
