@@ -70,7 +70,7 @@ def _exit_status(retcode):
     ret = {0: 'Successful completion.',
            1: 'An error occurred.',
            2: 'Usage error.'
-          }[retcode]
+           }[retcode]
     return ret
 
 
@@ -79,10 +79,10 @@ def __virtual__():
     Makes sure that ZFS kernel module is loaded.
     '''
     kernel_module_chk = {
-    'FreeBSD' : 'kldstat -q -m zfs',
-    'Linux' : 'modinfo zfs',
+        'FreeBSD': 'kldstat -q -m zfs',
+        'Linux': 'modinfo zfs',
     }
-    cmd = kernel_module_chk.get(__grains__['kernel'],'')
+    cmd = kernel_module_chk.get(__grains__['kernel'], '')
     if cmd and salt_cmd.retcode(cmd) == 0:
         # Build dynamic functions and allow loading module
         _build_zfs_cmd_list()
@@ -91,6 +91,9 @@ def __virtual__():
 
 
 def _add_doc(func, doc, prefix='\n\n    '):
+    '''
+    Add documentation to a function
+    '''
     if not func.__doc__:
         func.__doc__ = ''
     func.__doc__ += '{0}{1}'.format(prefix, doc)
@@ -131,7 +134,11 @@ def _make_function(cmd_name, doc):
     # At this point return the function we've just defined.
     return _cmd
 
+
 def _build_zfs_cmd_list():
+    '''
+    Run through zfs command options, and build equivalent functions dynamically
+    '''
     # Run through all the available commands
     if _check_zfs():
         available_cmds = _available_commands()
@@ -289,7 +296,8 @@ def list_(name='', **kwargs):
     '''
     .. versionadded:: Lithium
 
-    Return a list of all datasets or a specified dataset on the system and the values of their used, available, referenced, and mountpoint properties.
+    Return a list of all datasets or a specified dataset on the system and the
+    values of their used, available, referenced, and mountpoint properties.
 
     .. note::
 
