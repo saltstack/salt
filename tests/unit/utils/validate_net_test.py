@@ -17,6 +17,13 @@ class ValidateNetTestCase(TestCase):
     TestCase for salt.utils.validate.net module
     '''
 
+    def __ip_addr(self, true_addrs, false_addrs):
+        for addr in true_addrs:
+            self.assertTrue(net.ipv4_addr(addr))
+
+        for addr in false_addrs:
+            self.assertFalse(net.ipv4_addr(addr))
+
     def test_ipv4_addr(self):
         '''
         Test IPv4 address validation
@@ -41,7 +48,6 @@ class ValidateNetTestCase(TestCase):
 
         __ip_addr(true_addrs, false_addrs)
 
-
     def test_ipv6_addr(self):
         '''
         Test IPv6 address validation
@@ -63,13 +69,6 @@ class ValidateNetTestCase(TestCase):
 
         __ip_addr(true_addrs, false_addrs)
 
-
-    def __ip_addr(self, true_addrs=[], false_addrs=[]):
-        for addr in true_addrs:
-            self.assertTrue(net.ipv4_addr(addr))
-
-        for addr in false_addrs:
-            self.assertFalse(net.ipv4_addr(addr))
 
 if __name__ == '__main__':
     from integration import run_tests
