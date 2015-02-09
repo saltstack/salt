@@ -24,6 +24,7 @@ import salt.utils
 import salt.utils.minions
 import salt.wheel
 import salt.version
+from salt.utils.event import tagify
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -157,7 +158,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
     opts = salt.config.client_config(conf_file)
     if opts['transport'] == 'raet':
         event = salt.utils.raetevent.PresenceEvent(__opts__, __opts__['sock_dir'], state=state)
-        data = event.get_event(wait=60, tag=salt.utils.event.tagify('present', 'presence'))
+        data = event.get_event(wait=60, tag=tagify('present', 'presence'))
         key = 'present' if state is None else state
         if not data or key not in data:
             minions = []
@@ -415,6 +416,36 @@ def not_reaped(subset=None, show_ipv4=False):
         salt-run manage.not_reaped
     '''
     return list_not_state(subset=subset, show_ipv4=show_ipv4, state='reaped')
+
+
+def get_stats(estate=None, stack='road'):
+    '''
+    Print the stack stats
+
+    estate : None
+        The name of the target estate. Master stats would be requested by default
+
+    stack : 'road'
+        Show stats on either road or lane stack
+        Allowed values are 'road' or 'lane'.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.get_stats [estate=alpha_minion] [stack=lane]
+    '''
+    conf_file = __opts__['conf_file']
+    opts = salt.config.client_config(conf_file)
+    if opts['transport'] == 'raet':
+        tag = tagify(stack, 'stats')
+        event = salt.utils.raetevent.StatsEvent(__opts__, __opts__['sock_dir'], tag=tag, estate=estate)
+        stats = event.get_event(wait=60, tag=tag)
+    else:
+        #TODO: implement 0MQ analog
+        stats = 'Not implemented'
+
+    return stats
 
 
 def safe_accept(target, expr_form='glob'):
