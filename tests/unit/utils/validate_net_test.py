@@ -17,57 +17,38 @@ class ValidateNetTestCase(TestCase):
     TestCase for salt.utils.validate.net module
     '''
 
-    def __ip_addr(self, true_addrs, false_addrs):
-        for addr in true_addrs:
-            self.assertTrue(net.ipv4_addr(addr))
-
-        for addr in false_addrs:
-            self.assertFalse(net.ipv4_addr(addr))
-
     def test_ipv4_addr(self):
         '''
         Test IPv4 address validation
         '''
-        true_addrs = [
-            '127.0.0.1',
-            '127.0.0.1',
-            '127.0.0.19',
-            '1.1.1.1/28',
-            '127.0.0.11/32',
-        ]
+        self.assertTrue(net.ipv4_addr('127.0.0.1'))
+        self.assertTrue(net.ipv4_addr('127.0.0.1'))
+        self.assertTrue(net.ipv4_addr('127.0.0.19'))
+        self.assertTrue(net.ipv4_addr('1.1.1.1/28'))
+        self.assertTrue(net.ipv4_addr('127.0.0.11/32'))
 
-        false_addrs = [
-            '127.0.0.911',
-            '127.0.0911',
-            '127.0.011',
-            '127.0.011/32',
-            '::1',
-            '::1/128',
-            '::1/28',
-        ]
-
-        self.__ip_addr(true_addrs, false_addrs)
+        self.assertFalse(net.ipv4_addr('127.0.0.911'))
+        self.assertFalse(net.ipv4_addr('127.0.0911'))
+        self.assertFalse(net.ipv4_addr('127.0.011'))
+        self.assertFalse(net.ipv4_addr('127.0.011/32'))
+        self.assertFalse(net.ipv4_addr('::1'))
+        self.assertFalse(net.ipv4_addr('::1/128'))
+        self.assertFalse(net.ipv4_addr('::1/28'))
 
     def test_ipv6_addr(self):
         '''
         Test IPv6 address validation
         '''
-        true_addrs = [
-            '::1',
-            '::1/32',
-            '::1/32',
-            '::1/128',
-            '2a03:4000:c:10aa:1017:f00d:aaaa:a',
-        ]
+        self.assertTrue(net.ipv6_addr('::1'))
+        self.assertTrue(net.ipv6_addr('::1/32'))
+        self.assertTrue(net.ipv6_addr('::1/32'))
+        self.assertTrue(net.ipv6_addr('::1/128'))
+        self.assertTrue(net.ipv6_addr('2a03:4000:c:10aa:1017:f00d:aaaa:a'))
 
-        false_addrs = [
-            '1.1.1.1',
-            '::1/0',
-            '::1/32d',
-            '::1/129',
-        ]
-
-        self.__ip_addr(true_addrs, false_addrs)
+        self.assertFalse(net.ipv6_addr('1.1.1.1'))
+        self.assertFalse(net.ipv6_addr('::1/0'))
+        self.assertFalse(net.ipv6_addr('::1/32d'))
+        self.assertFalse(net.ipv6_addr('::1/129'))
 
 
 if __name__ == '__main__':
