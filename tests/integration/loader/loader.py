@@ -36,10 +36,12 @@ class LazyLoaderVirtualEnabledTest(TestCase):
     Test the base loader of salt.
     '''
     def setUp(self):
-        self.opts = _config = minion_config(None)
+        self.opts = minion_config(None)
+        self.opts['disable_modules'] = ['pillar']
+
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
-                                 tag='modules')
+                                 tag='module')
 
     def test_basic(self):
         '''
@@ -57,6 +59,9 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         # make sure the depends thing worked (double check of the depends testing,
         # since the loader does the calling magically
         self.assertFalse('test.missing_func' in self.loader._dict)
+
+    def test_disable(self):
+        self.assertNotIn('pillar.items', self.loader)
 
     def test_len_load(self):
         '''
@@ -115,7 +120,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
         self.opts = _config = minion_config(None)
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
-                                 tag='modules',
+                                 tag='module',
                                  virtual_enable=False)
 
     def test_virtual(self):
@@ -130,7 +135,7 @@ class LazyLoaderWhitelistTest(TestCase):
         self.opts = _config = minion_config(None)
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
-                                 tag='modules',
+                                 tag='module',
                                  whitelist=['test', 'pillar'])
 
     def test_whitelist(self):
@@ -181,7 +186,7 @@ class LazyLoaderReloadingTest(TestCase):
         dirs.append(self.tmp_dir)
         self.loader = LazyLoader(dirs,
                                  self.opts,
-                                 tag='modules')
+                                 tag='module')
 
     def tearDown(self):
         shutil.rmtree(self.tmp_dir)

@@ -293,10 +293,7 @@ class SyncClientMixin(object):
                     continue
                 completed_funcs.append(mod)
                 for global_key, value in six.iteritems(func_globals):
-                    if six.PY3:
-                        self.functions[fun].__globals__[global_key] = value
-                    else:
-                        self.functions[fun].func_globals[global_key] = value  # pylint: disable=incompatible-py3-code
+                    self.functions[fun].__globals__[global_key] = value
 
             # There are some descrepencies of what a "low" structure is
             # in the publisher world it is a dict including stuff such as jid,
