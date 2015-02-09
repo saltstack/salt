@@ -76,10 +76,11 @@ def _exit_status(retcode):
 
 def __virtual__():
     '''
-    Makes sure that ZFS is available.
+    Makes sure that ZFS kernel module is loaded.
     '''
     kernel_module_chk = {
     'FreeBSD' : 'kldstat -q -m zfs',
+    'Linux' : 'modinfo zfs',
     }
     cmd = kernel_module_chk.get(__grains__['kernel'],'')
     if cmd and salt_cmd.retcode(cmd) == 0:
