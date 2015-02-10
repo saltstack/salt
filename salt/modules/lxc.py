@@ -992,8 +992,6 @@ def init(name,
     if users is None:
         users = []
     dusers = ['root']
-    if __grains__['os'] in ['Ubuntu'] and 'ubuntu' not in users:
-        dusers.append('ubuntu')
     for user in dusers:
         if user not in users:
             users.append(user)
