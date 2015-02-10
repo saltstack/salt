@@ -10,7 +10,7 @@ or use Self-Signed certificates.
 
         ca.cert_base_path: '/etc/pki'
 '''
-
+from __future__ import absolute_import
 # pylint: disable=C0103
 
 # Import python libs
@@ -19,6 +19,7 @@ import time
 import datetime
 import logging
 import hashlib
+from salt.ext.six.moves import range
 
 HAS_SSL = False
 try:
@@ -496,7 +497,7 @@ def create_ca(ca_name,
                 log.info('Saving old CA ssl key in {0}'.format(bck))
                 with salt.utils.fopen(bck, 'w') as bckf:
                     bckf.write(old_key)
-                    os.chmod(bck, 0600)
+                    os.chmod(bck, 0o600)
     if write_key:
         with salt.utils.fopen(ca_keyp, 'w') as ca_key:
             ca_key.write(keycontent)
