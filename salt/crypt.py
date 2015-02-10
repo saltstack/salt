@@ -28,7 +28,7 @@ except ImportError:
 import salt.defaults.exitcodes
 import salt.utils
 import salt.payload
-import salt.transport.channel
+import salt.transport.client
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
@@ -686,7 +686,7 @@ class SAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        channel = salt.transport.channel.ReqChannel.factory(self.opts, crypt='clear')
+        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
 
         try:
             payload = channel.send(

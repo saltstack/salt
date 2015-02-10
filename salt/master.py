@@ -88,7 +88,7 @@ class SMaster(object):
     '''
     Create a simple salt-master, this will generate the top-level master
     '''
-    aes = None
+    secrets = {}  # mapping of key -> {'secret': multiprocessing type, 'reload': FUNCTION}
 
     def __init__(self, opts):
         '''
@@ -97,7 +97,6 @@ class SMaster(object):
         :param dict opts: The salt options dictionary
         '''
         self.opts = opts
-        SMaster.aes = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
 
@@ -243,15 +242,16 @@ class Maintenance(multiprocessing.Process):
 
         if to_rotate:
             log.info('Rotating master AES key')
-            # should be unecessary-- since no one else should be modifying
-            with SMaster.aes.get_lock():
-                SMaster.aes.value = salt.crypt.Crypticle.generate_key_string()
-            self.event.fire_event({'rotate_aes_key': True}, tag='key')
+            for secret_key, secret_map in SMaster.secrets.iteritems():
+                # should be unecessary-- since no one else should be modifying
+                with secret_map['secret'].get_lock():
+                    secret_map['secret'].value = secret_map['reload']()
+                self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
                 # Ping all minions to get them to pick up the new key
                 log.debug('Pinging all connected minions '
-                          'due to AES key rotation')
+                          'due to key rotation')
                 salt.utils.master.ping_all_connected_minions(self.opts)
 
     def handle_pillargit(self):
@@ -442,14 +442,16 @@ class Master(SMaster):
         log.info('Creating master process manager')
         process_manager = salt.utils.process.ProcessManager()
         log.info('Creating master maintenance process')
-        process_manager.add_process(Maintenance, args=(self.opts,))
-        log.info('Creating master publisher process')
         publish_channel = salt.transport.server.PubServerChannel.factory(self.opts)
         publish_channel.pre_fork(process_manager)
-
         log.info('Creating master event publisher process')
         process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
         salt.engines.start_engines(self.opts, process_manager)
+
+        # must be after channels
+        process_manager.add_process(Maintenance, args=(self.opts,))
+        log.info('Creating master publisher process')
+
 
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')

@@ -759,7 +759,7 @@ class Minion(MinionBase):
                     self.opts['master_list'] = local_masters
 
                 try:
-                    self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
+                    self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
                     conn = True
                     break
                 except SaltClientError:
@@ -781,7 +781,7 @@ class Minion(MinionBase):
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
-            self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
+            self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
             # TODO: remove? What is this used for...
             self.tok = self.pub_channel.auth.gen_token('salt')
             self.connected = True
@@ -1456,7 +1456,7 @@ class Minion(MinionBase):
                                  'master {0}'.format(self.opts['master']))
                         del self.pub_channel
                         del self.poller
-                        self.pub_channel = salt.transport.channel.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
+                        self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
                         self.poller.register(self.pub_channel.socket, zmq.POLLIN)
                         self.poller.register(self.epull_sock, zmq.POLLIN)
                         self._fire_master_minion_start()

@@ -6,6 +6,8 @@ import os
 import threading
 import errno
 import hashlib
+import ctypes
+import multiprocessing
 
 from M2Crypto import RSA
 
@@ -323,6 +325,10 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
         '''
         Pre-fork we need to create the zmq router device
         '''
+        salt.master.SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
+                                                            salt.crypt.Crypticle.generate_key_string()),
+                                              'reload': salt.crypt.Crypticle.generate_key_string,
+                                              }
         process_manager.add_process(self.zmq_device)
 
     def post_fork(self):
@@ -339,7 +345,7 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
         self._socket.connect(self.w_uri)
 
         self.serial = salt.payload.Serial(self.opts)
-        self.crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+        self.crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
 
         # other things needed for _auth
         # Create the event manager
@@ -361,8 +367,8 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
         Check to see if a fresh AES key is available and update the components
         of the worker
         '''
-        if self.opts['aes'].value != self.crypticle.key_string:
-            self.crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+        if salt.master.SMaster.secrets['aes']['secret'].value != self.crypticle.key_string:
+            self.crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
             return True
         return False
 
@@ -771,13 +777,13 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
             if 'token' in load:
                 try:
                     mtoken = self.master_key.key.private_decrypt(load['token'], 4)
-                    aes = '{0}_|-{1}'.format(self.opts['aes'].value, mtoken)
+                    aes = '{0}_|-{1}'.format(salt.master.SMaster.secrets['aes']['secret'].value, mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
             else:
-                aes = self.opts['aes'].value
+                aes = salt.master.SMaster.secrets['aes']['secret'].value
 
             ret['aes'] = pub.public_encrypt(aes, 4)
         else:
@@ -792,8 +798,8 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
                     # support older minions
                     pass
 
-            aes = self.opts['aes'].value
-            ret['aes'] = pub.public_encrypt(self.opts['aes'].value, 4)
+            aes = salt.master.SMaster.secrets['aes']['secret'].value
+            ret['aes'] = pub.public_encrypt(salt.master.SMaster.secrets['aes']['secret'].value, 4)
         # Be aggressive about the signature
         digest = hashlib.sha256(aes).hexdigest()
         ret['sig'] = self.master_key.key.private_encrypt(digest, 5)
@@ -902,7 +908,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         payload = {'enc': 'aes'}
 
-        crypticle = salt.crypt.Crypticle(self.opts, self.opts['aes'].value)
+        crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
         payload['load'] = crypticle.dumps(load)
         if self.opts['sign_pub_messages']:
             master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')

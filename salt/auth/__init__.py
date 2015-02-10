@@ -28,7 +28,7 @@ from salt.ext.six.moves import input
 # Import salt libs
 import salt.config
 import salt.loader
-import salt.transport.channel
+import salt.transport.client
 import salt.utils
 import salt.utils.minions
 import salt.payload
@@ -340,13 +340,13 @@ class Resolver(object):
         if self.opts['transport'] == 'zeromq':
             master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                          ':' + str(self.opts['ret_port'])
-            channel = salt.transport.channel.ReqChannel.factory(self.opts,
+            channel = salt.transport.client.ReqChannel.factory(self.opts,
                                                                 crypt='clear',
                                                                 master_uri=master_uri)
             return channel.send(load)
 
         elif self.opts['transport'] == 'raet':
-            channel = salt.transport.channel.ReqChannel.factory(self.opts)
+            channel = salt.transport.client.ReqChannel.factory(self.opts)
             channel.dst = (None, None, 'local_cmd')
             return channel.send(load)
 
