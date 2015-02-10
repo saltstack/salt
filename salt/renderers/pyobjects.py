@@ -138,8 +138,8 @@ renderer will take care of fetching the file for you, parsing it with all of
 the pyobjects features available and then place the requested objects in the
 global scope of the template being rendered.
 
-This works for both types of import statements, ``import X`` and
-``from X import Y``.
+This works for all types of import statements; ``import X``,
+``from X import Y``, and ``from X import Y as Z``.
 
 .. code-block:: python
    :linenos:
@@ -148,17 +148,16 @@ This works for both types of import statements, ``import X`` and
 
     import salt://myfile.sls
     from salt://something/data.sls import Object
+    from salt://something/data.sls import Object as Other
 
 
 See the Map Data section for a more practical use.
 
 Caveats:
 
-* You cannot use the ``as`` syntax, you can only import objects using their
-  existing name.
-
 * Imported objects are ALWAYS put into the global scope of your template,
   regardless of where your import statement is.
+
 
 Salt object
 ^^^^^^^^^^^
@@ -259,16 +258,18 @@ TODO
 * Interface for working with reactor files
 '''
 
+# Import Python Libs
 from __future__ import absolute_import
-
 import logging
 import re
-from salt.ext.six import exec_
 
+# Import Salt Libs
+from salt.ext.six import exec_
 import salt.utils
-from salt.loader import _create_loader
+import salt.loader
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
+import salt.ext.six as six
 
 # our import regexes
 FROM_RE = re.compile(r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$')
@@ -293,23 +294,22 @@ def load_states():
     __opts__['grains'] = __grains__
     __opts__['pillar'] = __pillar__
 
-    # we need to build our own loader so that we can process the virtual names
-    # in our own way.
-    load = _create_loader(__opts__, 'states', 'states')
-    load.load_modules()
-    for mod in load.modules:
-        module_name = mod.__name__.rsplit('.', 1)[-1]
+    # TODO: honor __virtual__? The old one didn't...
+    # create our own loader that ignores __virtual__()
+    lazy_states = salt.loader.LazyLoader(
+        salt.loader._module_dirs(__opts__, 'states', 'states'),
+        __opts__,
+        tag='states',
+        pack={'__salt__': __salt__},
+        virtual_enable=False,
+    )
 
-        (virtual_ret, virtual_name, _) = load.process_virtual(mod, module_name)
-
-        # if the module returned a True value and a new name use that
-        # otherwise use the default module name
-        if virtual_ret and virtual_name != module_name:
-            module_name = virtual_name
-
-        # load our functions from the module, pass None in as the module_name
-        # so that our function names come back unprefixed
-        states[module_name] = load.load_functions(mod, None)
+    # TODO: some way to lazily do this? This requires loading *all* state modules
+    for key, func in six.iteritems(lazy_states):
+        mod_name, func_name = key.split('.', 1)
+        if mod_name not in states:
+            states[mod_name] = {}
+        states[mod_name][func_name] = func
 
     __context__['pyobjects_states'] = states
 
