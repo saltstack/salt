@@ -266,6 +266,55 @@ def get_user():
     else:
         return getpass.getuser()
 
+def get_uid(user=None):
+    """
+    Get the uid for a given user name. If no user given,
+    the current euid will be returned. If the user
+    does not exist, then None will be returned. On
+    systems which do not support pwd, grp or os.geteuid
+    it will return None.
+    """
+    if pwd is None:
+        result =  None
+    elif user is None:
+        try:
+            result = os.geteuid()
+        except:
+            result = None
+    else:
+        try:
+            u_struct = pwd.getpwnam(user)
+        except KeyError:
+            result = None
+        else:
+            result = u_struct.pw_uid
+    return result
+
+def get_gid(group=None):
+    """
+    Get the gid for a given group name. If no group given,
+    the current egid will be returned. If the group
+    does not exist, then None will be returned. On
+    systems which do not support pwd, grp or os.getegid
+    it will return None.
+    """
+    if grp is None:
+        result =  None
+    elif group is None:
+        try:
+            result = os.getegid()
+        except:
+            result = None
+    else:
+        try:
+            g_struct = grp.getgrnam(group)
+        except KeyError:
+            result = None
+        else:
+            result = g_struct.gr_gid
+    return result
+
+
 
 def daemonize(redirect_out=True):
     '''
