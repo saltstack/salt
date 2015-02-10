@@ -42,7 +42,7 @@ from os.path import exists, expanduser
 
 # Import Salt Libs
 import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module
+import salt.ext.six.moves.range as range  # pylint: disable=import-error,no-name-in-module
 
 # Import linode-python
 try:

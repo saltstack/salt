@@ -441,7 +441,7 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
                 rejected = all([remote.acceptance == raeting.acceptances.rejected
-                                for remote in list(stack.remotes.values())
+                                for remote in stack.remotes.values()
                                 if remote.kind == kinds.applKinds.master])
             else:  # no remotes so assume rejected
                 rejected = True
@@ -467,7 +467,7 @@ class SaltRaetRoadStackAllower(ioflo.base.deeding.Deed):
         '''
         stack = self.stack.value
         if stack and isinstance(stack, RoadStack):
-            for remote in list(stack.remotes.values()):
+            for remote in stack.remotes.values():
                 if remote.kind == kinds.applKinds.master:
                     stack.allow(uid=remote.uid, timeout=0.0)
 
@@ -686,10 +686,10 @@ class SaltLoadPillar(ioflo.base.deeding.Deed):
         '''
         # default master is the first remote that is allowed
         available_masters = [remote for remote in list(self.road_stack.value.remotes.values())
-                             if remote.allowed]
+                                               if remote.allowed]
         while not available_masters:
-            available_masters = [remote for remote in list(self.road_stack.value.remotes.values())
-                                 if remote.allowed]
+            available_masters = [remote for remote in self.road_stack.value.remotes.values()
+                                                           if remote.allowed]
             time.sleep(0.1)
 
         random_master = self.opts.value.get('random_master')
