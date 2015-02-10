@@ -446,7 +446,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
 
 @salt.utils.decorators.depends('zipfile', fallback_function=cmd_unzip)
-def unzip(zip_file, dest, excludes=None, template=None, runas=None):
+def unzip(zip_file, dest, excludes=[], template=None, runas=None):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
 
@@ -510,9 +510,6 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
         cleaned_files = []
         with zipfile.ZipFile(zip_file) as zfile:
             files = zfile.namelist()
-            if excludes is None:
-                zfile.extractall(dest)
-                return files
 
             if isinstance(excludes, string_types):
                 excludes = [x.strip() for x in excludes.split(',')]
@@ -522,6 +519,13 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
             cleaned_files.extend([x for x in files if x not in excludes])
             for target in cleaned_files:
                 if target not in excludes:
+                    if salt.utils.is_windows() is False:
+                        info = zfile.getinfo(target)
+                        # Check if zipped file is a symbolic link
+                        if info.external_attr == 2716663808L:
+                            source = zfile.read(target)
+                            os.symlink(source, os.path.join(dest, target))
+                            continue
                     zfile.extract(target, dest)
     except Exception as exc:
         pass
