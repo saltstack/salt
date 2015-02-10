@@ -36,6 +36,8 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
             'opts': '.salt.opts',
             'publish': '.salt.var.publish',
             'lane_stack': '.salt.lane.manor.stack',
+            'workers': '.salt.track.workers',
+            # TODO import vals of workers
             }
 
     def action(self):
@@ -43,7 +45,7 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
             pub = self.publish.value.popleft()
             log.debug('Dummy publisher publishing: {0}'.format(pub))
             msg = self._fill_tmpl(pub)
-            self.lane_stack.value.transmit(msg, self.lane_stack.value.fetchUidByName('manor'))
+            self.lane_stack.value.transmit(msg, self.lane_stack.value.fetchUidByName(next(self.workers.value)))
 
     def _fill_tmpl(self, pub):
         '''
