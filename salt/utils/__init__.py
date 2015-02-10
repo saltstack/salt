@@ -1108,9 +1108,29 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
 
     NB! We still have small race condition between open and fcntl.
+
+    Supported Keyword Arguments:
+
+      lock: lock the file with fcntl
+
+      mode: explicit mode to set. Mode is anything os.makedirs
+            would accept as input for mode. Works only on unix/unix
+            like systems.
+
+      uid: the uid to set, if not set, or it is None or -1 no changes are
+           made. Same applies if the path is already owned by this
+           uid. Must be int. Works only on unix/unix like systems.
+
+      gid: the gid to set, if not set, or it is None or -1 no changes are
+           made. Same applies if the path is already owned by this
+           gid. Must be int. Works only on unix/unix like systems.
+
     '''
-    # Remove lock from kwargs if present
+    # Remove lock, uid, gid and mode from kwargs if present
     lock = kwargs.pop('lock', False)
+    uid = kwargs.pop('uid', False)
+    gid = kwargs.pop('gid', False)
+    mode = kwargs.pop('mode', False)
 
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
@@ -1124,6 +1144,29 @@ def fopen(*args, **kwargs):
         if lock and is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+
+
+    path = args[0]
+    d_stat = os.stat(path)
+
+    if hasattr(os, 'chown'):
+        if uid is None:
+            # -1 means no change to current uid
+            uid = -1
+        if gid is None:
+            # -1 means no change to current gid
+            gid = -1
+
+        # if uid and gid are both -1 then go ahead with
+        # no changes at all
+        if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
+                [i for i in (uid, gid) if i != -1]:
+            os.chown(path, uid, gid)
+
+    if mode is not None:
+        if d_stat.st_mode | mode != d_stat.st_mode:
+            os.chmod(path, d_stat.st_mode | mode)
+
     return fhandle
 
 
