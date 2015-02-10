@@ -112,21 +112,6 @@ class GitFSTest(integration.ModuleCase):
             self.assertIn('testfile', ret)
 
     #@skipIf(True, 'Skipping tests temporarily')
-    def test_find_file(self):
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
-
-            path = os.path.join(self.master_opts['cachedir'],
-                                'gitfs/refs',
-                                LOAD['saltenv'],
-                                'testfile')
-
-            ret = gitfs.find_file('testfile')
-            expected_ret = {'path': path, 'rel': 'testfile'}
-            self.assertDictEqual(ret, expected_ret)
-
-    #@skipIf(True, 'Skipping tests temporarily')
     def test_dir_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
