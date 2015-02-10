@@ -57,13 +57,22 @@ class NovaServer(object):
             'access_ip': server['accessIPv4']
         }
 
-        if 'addresses' in server and 'public' in server['addresses']:
-            self.public_ips = [
-                ip['addr'] for ip in server['addresses']['public']
-            ]
-            self.private_ips = [
-                ip['addr'] for ip in server['addresses']['private']
-            ]
+        if 'addresses' in server:
+            if 'public' in server['addresses']:
+                self.public_ips = [
+                    ip['addr'] for ip in server['addresses']['public']
+                ]
+            else:
+                self.public_ips = []
+
+            if 'private' in server['addresses']:
+                self.private_ips = [
+                    ip['addr'] for ip in server['addresses']['private']
+                ]
+            else:
+                self.private_ips = []
+
+            self.addresses = server['addresses']
 
         if password:
             self.extra['password'] = password
