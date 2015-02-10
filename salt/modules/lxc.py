@@ -1099,7 +1099,7 @@ def init(name,
             to_reboot = True
     if remove_seed_marker:
         cmd_run(name,
-                ['rm', '-f', SEED_MARKER],
+                'rm -f \'{0}\''.format(SEED_MARKER),
                 python_shell=False)
 
     # last time to be sure any of our property is correctly applied
