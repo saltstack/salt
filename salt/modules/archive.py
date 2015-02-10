@@ -446,7 +446,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
 
 @salt.utils.decorators.depends('zipfile', fallback_function=cmd_unzip)
-def unzip(zip_file, dest, excludes=[], template=None, runas=None):
+def unzip(zip_file, dest, excludes=None, template=None, runas=None):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
 
@@ -485,6 +485,8 @@ def unzip(zip_file, dest, excludes=[], template=None, runas=None):
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     '''
+    if not excludes:
+        excludes = []
     if runas:
         euid = os.geteuid()
         egid = os.getegid()
