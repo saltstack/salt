@@ -276,9 +276,11 @@ def bootstrap(vm_, opts):
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
             }
         }
+
     key_filename = salt.config.get_cloud_config_value(
         'key_filename', vm_, opts, search_global=False, default=None
     )
+
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined ssh_keyfile {0!r} does not exist'.format(
@@ -294,11 +296,23 @@ def bootstrap(vm_, opts):
         )
 
     if key_filename is None and ('password' not in vm_ or not vm_['password']):
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
-            'is not set and there is no password set for the vm. '
-            'Check your provider for the \'change_password\' option.'
-        )
+        pw = salt.config.get_cloud_config_value(
+                'password', 
+                vm_, 
+                opts, 
+                default=salt.config.get_cloud_config_value(
+                           'passwd', vm_, opts, search_global=False
+                        ),
+                search_global=False
+             )
+        if not pw:
+            raise SaltCloudSystemExit(
+                'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
+                'is not set and there is no password set for the vm. '
+                'Check your provider for the \'change_password\' option.'
+            )
+        else:
+            vm_['password'] = pw
 
     ret = {}
 
