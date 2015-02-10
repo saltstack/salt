@@ -652,7 +652,10 @@ class Minion(MinionBase):
         self.mod_opts = self._prep_mod_opts()
         self.functions, self.returners = self._load_modules()
         self.matcher = Matcher(self.opts, self.functions)
-        self.proc_dir = get_proc_dir(opts['cachedir'])
+
+        uid = salt.utils.get_uid(opts.get('user', None))
+
+        self.proc_dir = get_proc_dir(opts['cachedir'], uid=uid)
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
