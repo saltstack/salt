@@ -20,6 +20,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
+    # Certain versions of hashlib do not contain
+    # the necessary functions
+    if not hasattr(hashlib, 'algorithms'):
+        return False
     return __virtualname__
 
 
