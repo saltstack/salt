@@ -23,7 +23,9 @@ from salt.modules import btrfs
 from salt.exceptions import CommandExecutionError
 
 # Globals
+btrfs.__grains__ = {}
 btrfs.__salt__ = {}
+btrfs.__context__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -231,10 +233,9 @@ class BtrfsTestCase(TestCase):
         '''
         Test if it convert ext2/3/4 to BTRFS
         '''
-        str1 = "None/ext2_saved/image: ERROR: cannot open "
-        str2 = "`None/ext2_saved/image' (No such file or directory)"
-        ret = {'after': {'ext4_image': 'None/ext2_saved',
-                         'ext4_image_info': '{0}{1}'.format(str1, str2),
+        ret = {'after': {'balance_log': 'Salt',
+                         'ext4_image': 'removed',
+                         'ext4_image_info': 'N/A',
                          'fsck_status': 'N/A',
                          'mount_point': None,
                          'type': 'ext4'},
@@ -245,9 +246,10 @@ class BtrfsTestCase(TestCase):
                                        'stderr': '',
                                        'stdout': 'Salt'})
         with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
-            mock = MagicMock(return_value={'/dev/sda1': {'type': 'ext4'}})
+            mock = MagicMock(return_value={'/dev/sda3': {'type': 'ext4'}})
             with patch.object(salt.utils.fsutils, '_blkid_output', mock):
-                self.assertDictEqual(btrfs.convert('/dev/sda1'), ret)
+                self.assertDictEqual(btrfs.convert('/dev/sda3', permanent=True),
+                                     ret)
 
     def test_convert_device_error(self):
         '''
