@@ -133,8 +133,8 @@ def syslog(server, enable=True):
     '''
     if enable and __execute_cmd('config -g cfgRemoteHosts -o \
                 cfgRhostsSyslogEnable 1'):
-            return __execute_cmd('config -g cfgRemoteHosts -o \
-                    cfgRhostsSyslogServer1 {0}'.format(server))
+        return __execute_cmd('config -g cfgRemoteHosts -o \
+                cfgRhostsSyslogServer1 {0}'.format(server))
 
     return __execute_cmd('config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0')
 
