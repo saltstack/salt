@@ -24,10 +24,6 @@ import logging
 # Import Salt libs
 import salt.utils
 
-# Import 3rd-party libs
-import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-
 log = logging.getLogger(__name__)
 
 
