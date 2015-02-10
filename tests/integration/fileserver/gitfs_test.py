@@ -127,45 +127,5 @@ class GitFSTest(integration.ModuleCase):
             ret = gitfs.envs()
             self.assertIn('base', ret)
 
-    #@skipIf(True, 'Skipping tests temporarily')
-    def test_serve_file(self):
-        '''
-        NOTE: This test requires that gitfs.find_file is executed to ensure
-        that the file exists in the gitfs cache.
-        '''
-        target = 'testfile'
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir'],
-                                         'file_buffer_size': 262144}):
-            tmp_load = copy.deepcopy(LOAD)
-            tmp_load['loc'] = 0
-            tmp_load['path'] = target
-            fnd = {'rel': target,
-                   'path': os.path.join(gitfs.__opts__['cachedir'],
-                                        'gitfs/refs',
-                                        tmp_load['saltenv'],
-                                        tmp_load['path'])}
-
-            gitfs.find_file(tmp_load['path'])
-            ret = gitfs.serve_file(tmp_load, fnd)
-            self.assertDictEqual({
-                'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  '
-                        'ARTHUR:  And this enchanter of whom you speak, he '
-                        'has seen the grail?\n  OLD MAN:  Ha ha he he he '
-                        'he!\n  ARTHUR:  Where does he live?  Old man, where '
-                        'does he live?\n  OLD MAN:  He knows of a cave, a '
-                        'cave which no man has entered.\n  ARTHUR:  And the '
-                        'Grail... The Grail is there?\n  OLD MAN:  Very much '
-                        'danger, for beyond the cave lies the Gorge\n      of '
-                        'Eternal Peril, which no man has ever crossed.\n  '
-                        'ARTHUR:  But the Grail!  Where is the Grail!?\n  OLD '
-                        'MAN:  Seek you the Bridge of Death.\n  ARTHUR:  The '
-                        'Bridge of Death, which leads to the Grail?\n  OLD '
-                        'MAN:  Hee hee ha ha!\n\n',
-                'dest': target},
-                ret)
-
-
 if __name__ == '__main__':
     integration.run_tests(GitFSTest)
