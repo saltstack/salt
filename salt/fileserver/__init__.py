@@ -448,6 +448,8 @@ class Fileserver(object):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # upgrade all set elements to a common encoding
+        ret = [salt.utils.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -474,6 +476,8 @@ class Fileserver(object):
             fstr = '{0}.file_list_emptydirs'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # upgrade all set elements to a common encoding
+        ret = [salt.utils.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -500,6 +504,8 @@ class Fileserver(object):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # upgrade all set elements to a common encoding
+        ret = [salt.utils.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -526,6 +532,10 @@ class Fileserver(object):
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
+        # upgrade all set elements to a common encoding
+        ret = dict([
+            (salt.utils.sdecode(x), salt.utils.sdecode(y)) for x, y in ret.items()
+        ])
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
