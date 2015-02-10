@@ -76,7 +76,8 @@ confidence=
 disable=W0142,
   C0330,
   I0011,
-  I0012
+  I0012,
+  W1202
 #  E8121,
 #  E8122,
 #  E8123,
@@ -94,6 +95,7 @@ disable=W0142,
 # C0330 (bad-continuation)
 # I0011 (locally-disabling)
 # I0012 (locally-enabling)
+# W1202 (logging-format-interpolation)
 
 
 [REPORTS]
