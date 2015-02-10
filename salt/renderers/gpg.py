@@ -43,22 +43,26 @@ To generate a cipher from a secret:
 
    $ echo -n "supersecret" | gpg --homedir ~/.gnupg --armor --encrypt -r <KEY-name>
 
-Set up the renderer on your master by adding something like this line to your
-config:
+There are two ways to configure salt for the usage of this renderer:
 
-.. code-block:: yaml
+1. Set up the renderer on your master by adding something like this line to your
+    config:
 
-    renderer: jinja | yaml | gpg
+        .. code-block:: yaml
 
-Setting a gpg renderer in the master currently requires minions to be
-configured for gpg.  The workaround for this is to add a line to the top of
-any pillar with gpg data in it.
+            renderer: jinja | yaml | gpg
 
-.. code-block:: yaml
+    This will apply the renderers to all pillars and states while requiring
+    ``python-gnupg`` to be installed on all minions since the decryption
+    will happen on the minions.
 
-    #!yaml|gpg
+2. To apply the renderer on a file-by-file basis add the following line to the top of any pillar with gpg data in it:
 
-Now you can include your ciphers in your pillar data like so:
+    .. code-block:: yaml
+
+        #!yaml|gpg
+
+Now with your renderers configured, you can include your ciphers in your pillar data like so:
 
 .. code-block:: yaml
 
