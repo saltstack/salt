@@ -986,11 +986,11 @@ def upgrade(*names, **kwargs):
            'comment': '',
            }
 
-    jail=kwargs.pop('jail', None)
-    chroot=kwargs.pop('chroot', None)
-    force=kwargs.pop('force', False)
-    local=kwargs.pop('local', False)
-    dryrun=kwargs.pop('dryrun', False)
+    jail = kwargs.pop('jail', None)
+    chroot = kwargs.pop('chroot', None)
+    force = kwargs.pop('force', False)
+    local = kwargs.pop('local', False)
+    dryrun = kwargs.pop('dryrun', False)
     opts = ''
     if force:
         opts += 'f'
