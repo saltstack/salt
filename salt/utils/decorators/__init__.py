@@ -24,8 +24,8 @@ class Depends(object):
     dependencies passed in are in the globals of the module. If not, it will
     cause the function to be unloaded (or replaced)
     '''
-    # Dependency -> list of things that depend on it
-    dependency_dict = defaultdict(set)
+    # kind -> Dependency -> list of things that depend on it
+    dependency_dict = defaultdict(lambda: defaultdict(set))
 
     def __init__(self, *dependencies, **kwargs):
         '''
@@ -60,21 +60,23 @@ class Depends(object):
         class wide depandancy_dict
         '''
         module = inspect.getmodule(inspect.stack()[1][0])
+        # module name is something like salt.loaded.int.modules.test
+        kind = module.__name__.rsplit('.', 2)[1]
         for dep in self.dependencies:
-            self.dependency_dict[dep].add(
+            self.dependency_dict[kind][dep].add(
                 (module, function, self.fallback_function)
             )
         return function
 
     @classmethod
-    def enforce_dependencies(cls, functions):
+    def enforce_dependencies(cls, functions, kind):
         '''
         This is a class global method to enforce the dependencies that you
         currently know about.
         It will modify the "functions" dict and remove/replace modules that
         are missing dependencies.
         '''
-        for dependency, dependent_set in cls.dependency_dict.items():
+        for dependency, dependent_set in cls.dependency_dict[kind].items():
             # check if dependency is loaded
             for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
