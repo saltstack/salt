@@ -174,7 +174,7 @@ def get_proc_dir(cachedir, **kwargs):
             if d_stat.st_mode | mode['mode'] != d_stat.st_mode:
                 os.chmod(fn_, d_stat.st_mode | mode['mode'])
 
-    if hasattr(os, 'chmod'):
+    if hasattr(os, 'chown'):
         uid = kwargs.pop('uid', None)
         gid = kwargs.pop('gid', None)
 
