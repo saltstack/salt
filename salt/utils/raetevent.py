@@ -284,3 +284,26 @@ class PresenceEvent(MasterEvent):
                 self.connected = True
             except Exception:
                 pass
+
+
+class StatsEvent(MasterEvent):
+
+    def __init__(self, opts, sock_dir, tag, estate=None, listen=True):
+        super(StatsEvent, self).__init__(opts=opts, sock_dir=sock_dir, listen=listen)
+        self.tag = tag
+        self.estate = estate
+
+    def connect_pub(self):
+        '''
+        Establish the publish connection
+        '''
+        if not self.connected and self.listen:
+            try:
+                route = {'dst': (self.estate, None, 'stats_req'),
+                         'src': (None, self.stack.local.name, None)}
+                msg = {'route': route, 'tag': self.tag}
+                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+                self.stack.serviceAll()
+                self.connected = True
+            except Exception:
+                pass

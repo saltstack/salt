@@ -134,6 +134,7 @@ framer bootstrap be inactive first setup
 framer eventing be inactive first event
     frame event
         do salt raet eventer
+        do salt raet stats eventer minion
 
 framer functionmanager be inactive first checkexec
     frame checkexec
