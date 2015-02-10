@@ -127,3 +127,20 @@ def list_local():
     out = __salt__['cmd.run'](cmd, python_shell=False).split('\n')
     ret = [line.split()[1] for line in out if len(line.split()) > 2]
     return ret
+
+def list_all():
+    '''
+    List all overlays, including remote ones.
+
+    Return a list of available overlays:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' layman.list_all
+    '''
+    cmd = 'layman --quietness=1 --list --nocolor'
+    out = __salt__['cmd.run'](cmd, python_shell=False).split('\n')
+    ret = [line.split()[1] for line in out if len(line.split()) > 2]
+    return ret
