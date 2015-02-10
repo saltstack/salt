@@ -57,6 +57,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'order',
     'prereq',
     'prereq_in',
+    'prerequired',
     'reload_modules',
     'reload_grains',
     'reload_pillar',
@@ -78,6 +79,7 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     '__pub_tgt',
     '__pub_ret',
     '__pub_tgt_type',
+    '__prereq__',
 ])
 
 
@@ -584,6 +586,7 @@ class State(object):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
+                pillar=self._pillar_override
                 )
         ret = pillar.compile_pillar()
         if self._pillar_override and isinstance(self._pillar_override, dict):

@@ -144,18 +144,6 @@ def extracted(name,
             return ret
 
         log.debug('Archive file {0} is not in cache, download it'.format(source))
-        data = {
-            filename: {
-                'file': [
-                    'managed',
-                    {'name': filename},
-                    {'source': source},
-                    {'source_hash': source_hash},
-                    {'makedirs': True},
-                    {'saltenv': __env__}
-                ]
-            }
-        }
         file_result = __salt__['state.single']('file.managed',
                                                filename,
                                                source=source,
@@ -186,13 +174,12 @@ def extracted(name,
             source, name)
         return ret
 
-    __salt__['file.makedirs'](name)
+    __salt__['file.makedirs'](name, user=archive_user)
 
     if archive_format in ('zip', 'rar'):
         log.debug('Extract {0} in {1}'.format(filename, name))
         files = __salt__['archive.un{0}'.format(archive_format)](filename,
-                                                                 name,
-                                                                 runas=archive_user)
+                                                                 name)
     else:
         if tar_options is None:
             with closing(tarfile.open(filename, 'r')) as tar:
@@ -209,8 +196,9 @@ def extracted(name,
 
             for opt in tar_opts:
                 if not opt.startswith('-'):
-                    if opt not in ['x', 'f']:
-                        tar_shortopts = tar_shortopts + opt
+                    for shortopt in opt:
+                        if shortopt not in ['x', 'f']:
+                            tar_shortopts = tar_shortopts + shortopt
                 else:
                     tar_longopts.append(opt)
 
@@ -229,6 +217,16 @@ def extracted(name,
                 files = results['stdout']
             if not files:
                 files = 'no tar output so far'
+
+    if archive_user:
+        # Recursively set the permissions after extracting as we might not have
+        # access to the cachedir
+        dir_result = __salt__['state.single']('file.directory',
+                                               name,
+                                               user=archive_user,
+                                               recurse=['user'])
+        log.debug('file.directory: {0}'.format(dir_result))
+
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]

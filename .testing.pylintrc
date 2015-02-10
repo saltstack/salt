@@ -50,6 +50,9 @@ extension-pkg-whitelist=
 fileperms-default=0644
 fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
+# Py3 Modernize PyLint Plugin Settings
+modernize-nofix = libmodernize.fixes.fix_dict_six
+
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show

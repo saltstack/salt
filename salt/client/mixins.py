@@ -72,7 +72,7 @@ class ClientFuncsDict(collections.MutableMapping):
                    }
             pub_data = {}
             # pull out pub_data if you have it
-            for k, v in six.iteritems(list(kwargs.items())):
+            for k, v in six.iteritems(dict(kwargs)):
                 if k.startswith('__pub_'):
                     pub_data[k] = kwargs.pop(k)
 
@@ -281,22 +281,19 @@ class SyncClientMixin(object):
 
         func_globals['__jid_event__'].fire_event(data, 'new')
 
-        # Inject some useful globals to *all* the funciton's global namespace
-        # only once per module-- not per func
-        completed_funcs = []
-        for mod_name in six.iterkeys(self.functions):
-            mod, _ = mod_name.split('.', 1)
-            if mod in completed_funcs:
-                continue
-            completed_funcs.append(mod)
-            for global_key, value in six.iteritems(func_globals):
-                if six.PY3:
-                    self.functions[fun].__globals__[global_key] = value
-                else:
-                    self.functions[fun].func_globals[global_key] = value  # pylint: disable=incompatible-py3-code
-
         try:
             self._verify_fun(fun)
+
+            # Inject some useful globals to *all* the funciton's global namespace
+            # only once per module-- not per func
+            completed_funcs = []
+            for mod_name in six.iterkeys(self.functions):
+                mod, _ = mod_name.split('.', 1)
+                if mod in completed_funcs:
+                    continue
+                completed_funcs.append(mod)
+                for global_key, value in six.iteritems(func_globals):
+                    self.functions[fun].__globals__[global_key] = value
 
             # There are some descrepencies of what a "low" structure is
             # in the publisher world it is a dict including stuff such as jid,
@@ -449,7 +446,11 @@ class AsyncClientMixin(object):
         # more general, since this will get *really* messy as
         # people use more events that don't quite fit into this mold
         if suffix == 'ret':  # for "ret" just print out return
-            salt.output.display_output(event['return'], None, self.opts)
+            if isinstance(event['return'], dict):
+                outputter = event['return'].pop('outputter', None)
+            else:
+                outputter = None
+            salt.output.display_output(event['return'], outputter, self.opts)
         elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
             print(self.outputters[event['outputter']](event['data']))
         # otherwise fall back on basic printing

@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import os
 import re
 import fnmatch
+import collections
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -21,13 +22,13 @@ import salt.utils
 import salt.utils.event
 from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
+from salt.ext.six.moves import zip
 
 
 __opts__ = {}
 
 
 # TODO: Make this module support windows hosts
-# TODO: Make this module support BSD hosts properly, this is very Linux specific
 def __virtual__():
     if salt.utils.is_windows():
         return False
@@ -311,7 +312,7 @@ def cpuinfo():
 
     def freebsd_cpuinfo():
         '''
-        freebds specific cpuinfo implementation
+        freebsd specific cpuinfo implementation
         '''
         freebsd_cmd = 'sysctl hw.model hw.ncpu'
         ret = {}
@@ -343,30 +344,57 @@ def diskstats():
 
         salt '*' status.diskstats
     '''
-    procf = '/proc/diskstats'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        ret[comps[2]] = {'major': _number(comps[0]),
-                         'minor': _number(comps[1]),
-                         'device': _number(comps[2]),
-                         'reads_issued': _number(comps[3]),
-                         'reads_merged': _number(comps[4]),
-                         'sectors_read': _number(comps[5]),
-                         'ms_spent_reading': _number(comps[6]),
-                         'writes_completed': _number(comps[7]),
-                         'writes_merged': _number(comps[8]),
-                         'sectors_written': _number(comps[9]),
-                         'ms_spent_writing': _number(comps[10]),
-                         'io_in_progress': _number(comps[11]),
-                         'ms_spent_in_io': _number(comps[12]),
-                         'weighted_ms_spent_in_io': _number(comps[13])}
-    return ret
+    def linux_diskstats():
+        '''
+        linux specific implementation of diskstats
+        '''
+        procf = '/proc/diskstats'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            ret[comps[2]] = {'major': _number(comps[0]),
+                             'minor': _number(comps[1]),
+                             'device': _number(comps[2]),
+                             'reads_issued': _number(comps[3]),
+                             'reads_merged': _number(comps[4]),
+                             'sectors_read': _number(comps[5]),
+                             'ms_spent_reading': _number(comps[6]),
+                             'writes_completed': _number(comps[7]),
+                             'writes_merged': _number(comps[8]),
+                             'sectors_written': _number(comps[9]),
+                             'ms_spent_writing': _number(comps[10]),
+                             'io_in_progress': _number(comps[11]),
+                             'ms_spent_in_io': _number(comps[12]),
+                             'weighted_ms_spent_in_io': _number(comps[13])}
+        return ret
+
+    def freebsd_diskstats():
+        '''
+        freebsd specific implementation of diskstats
+        '''
+        ret = {}
+        iostat = __salt__['cmd.run']('iostat -xzd').splitlines()
+        header = iostat[1]
+        for line in iostat[2:]:
+            comps = line.split()
+            ret[comps[0]] = {}
+            for metric, value in zip(header.split()[1:], comps[1:]):
+                ret[comps[0]][metric] = _number(value)
+        return ret
+
+    # dict that return a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_diskstats,
+        'FreeBSD': freebsd_diskstats,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def diskusage(*args):
@@ -386,9 +414,6 @@ def diskusage(*args):
         salt '*' status.diskusage ext?    # usage for ext[234] filesystems
         salt '*' status.diskusage / ext?  # usage for / and all ext filesystems
     '''
-    procf = '/proc/mounts'
-    if not os.path.isfile(procf):
-        return {}
     selected = set()
     fstypes = set()
     if not args:
@@ -410,14 +435,22 @@ def diskusage(*args):
                 fnmatch.translate(fstype).format('(%s)') for fstype in fstypes
             )
         )
-        with salt.utils.fopen(procf, 'r') as ifile:
-            for line in ifile:
-                comps = line.split()
-                if len(comps) >= 3:
-                    mntpt = comps[1]
-                    fstype = comps[2]
-                    if regex.match(fstype):
-                        selected.add(mntpt)
+        # ifile source of data varies with OS, otherwise all the same
+        if __grains__['kernel'] == 'Linux':
+            procf = '/proc/mounts'
+            if not os.path.isfile(procf):
+                return {}
+            ifile = salt.utils.fopen(procf, 'r').readlines()
+        elif __grains__['kernel'] == 'FreeBSD':
+            ifile = __salt__['cmd.run']('mount -p').splitlines()
+
+        for line in ifile:
+            comps = line.split()
+            if len(comps) >= 3:
+                mntpt = comps[1]
+                fstype = comps[2]
+                if regex.match(fstype):
+                    selected.add(mntpt)
 
     # query the filesystems disk usage
     ret = {}
@@ -440,17 +473,40 @@ def vmstats():
 
         salt '*' status.vmstats
     '''
-    procf = '/proc/vmstat'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        ret[comps[0]] = _number(comps[1])
-    return ret
+    def linux_vmstats():
+        '''
+        linux specific implementation of vmstats
+        '''
+        procf = '/proc/vmstat'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            ret[comps[0]] = _number(comps[1])
+        return ret
+
+    def freebsd_vmstats():
+        '''
+        freebsd specific implementation of vmstats
+        '''
+        ret = {}
+        for line in __salt__['cmd.run']('vmstat -s').splitlines():
+            comps = line.split()
+            if comps[0].isdigit():
+                ret[' '.join(comps[1:])] = _number(comps[0])
+        return ret
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_vmstats,
+        'FreeBSD': freebsd_vmstats,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def nproc():
@@ -479,29 +535,59 @@ def netstats():
 
         salt '*' status.netstats
     '''
-    procf = '/proc/net/netstat'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    headers = ['']
-    for line in stats:
-        if not line:
-            continue
-        comps = line.split()
-        if comps[0] == headers[0]:
-            index = len(headers) - 1
-            row = {}
-            for field in range(index):
-                if field < 1:
-                    continue
-                else:
-                    row[headers[field]] = _number(comps[field])
-            rowname = headers[0].replace(':', '')
-            ret[rowname] = row
-        else:
-            headers = comps
-    return ret
+    def linux_netstats():
+        '''
+        freebsd specific netstats implementation
+        '''
+        procf = '/proc/net/netstat'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        headers = ['']
+        for line in stats:
+            if not line:
+                continue
+            comps = line.split()
+            if comps[0] == headers[0]:
+                index = len(headers) - 1
+                row = {}
+                for field in range(index):
+                    if field < 1:
+                        continue
+                    else:
+                        row[headers[field]] = _number(comps[field])
+                rowname = headers[0].replace(':', '')
+                ret[rowname] = row
+            else:
+                headers = comps
+        return ret
+
+    def freebsd_netstats():
+        '''
+        freebsd specific netstats implementation
+        '''
+        ret = {}
+        for line in __salt__['cmd.run']('netstat -s').splitlines():
+            if line.startswith('\t\t'):
+                continue  # Skip, too detailed
+            if not line.startswith('\t'):
+                key = line.split()[0]
+                ret[key] = {}
+            else:
+                comps = line.split()
+                if comps[0].isdigit():
+                    ret[key][' '.join(comps[1:])] = comps[0]
+        return ret
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_netstats,
+        'FreeBSD': freebsd_netstats,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def netdev():
@@ -514,39 +600,66 @@ def netdev():
 
         salt '*' status.netdev
     '''
-    procf = '/proc/net/dev'
-    if not os.path.isfile(procf):
-        return {}
-    stats = salt.utils.fopen(procf, 'r').read().splitlines()
-    ret = {}
-    for line in stats:
-        if not line:
-            continue
-        if line.find(':') < 0:
-            continue
-        comps = line.split()
-        # Fix lines like eth0:9999..'
-        comps[0] = line.split(':')[0].strip()
-        # Support lines both like eth0:999 and eth0: 9999
-        comps.insert(1, line.split(':')[1].strip().split()[0])
-        ret[comps[0]] = {'iface': comps[0],
-                         'rx_bytes': _number(comps[1]),
-                         'rx_compressed': _number(comps[7]),
-                         'rx_drop': _number(comps[4]),
-                         'rx_errs': _number(comps[3]),
-                         'rx_fifo': _number(comps[5]),
-                         'rx_frame': _number(comps[6]),
-                         'rx_multicast': _number(comps[8]),
-                         'rx_packets': _number(comps[2]),
-                         'tx_bytes': _number(comps[9]),
-                         'tx_carrier': _number(comps[15]),
-                         'tx_colls': _number(comps[14]),
-                         'tx_compressed': _number(comps[16]),
-                         'tx_drop': _number(comps[12]),
-                         'tx_errs': _number(comps[11]),
-                         'tx_fifo': _number(comps[13]),
-                         'tx_packets': _number(comps[10])}
-    return ret
+    def linux_netdev():
+        '''
+        linux specific implementation of netdev
+        '''
+        procf = '/proc/net/dev'
+        if not os.path.isfile(procf):
+            return {}
+        stats = salt.utils.fopen(procf, 'r').read().splitlines()
+        ret = {}
+        for line in stats:
+            if not line:
+                continue
+            if line.find(':') < 0:
+                continue
+            comps = line.split()
+            # Fix lines like eth0:9999..'
+            comps[0] = line.split(':')[0].strip()
+            # Support lines both like eth0:999 and eth0: 9999
+            comps.insert(1, line.split(':')[1].strip().split()[0])
+            ret[comps[0]] = {'iface': comps[0],
+                             'rx_bytes': _number(comps[1]),
+                             'rx_compressed': _number(comps[7]),
+                             'rx_drop': _number(comps[4]),
+                             'rx_errs': _number(comps[3]),
+                             'rx_fifo': _number(comps[5]),
+                             'rx_frame': _number(comps[6]),
+                             'rx_multicast': _number(comps[8]),
+                             'rx_packets': _number(comps[2]),
+                             'tx_bytes': _number(comps[9]),
+                             'tx_carrier': _number(comps[15]),
+                             'tx_colls': _number(comps[14]),
+                             'tx_compressed': _number(comps[16]),
+                             'tx_drop': _number(comps[12]),
+                             'tx_errs': _number(comps[11]),
+                             'tx_fifo': _number(comps[13]),
+                             'tx_packets': _number(comps[10])}
+        return ret
+
+    def freebsd_netdev():
+        '''
+        freebsd specific implementation of netdev
+        '''
+        _dict_tree = lambda: collections.defaultdict(_dict_tree)
+        ret = _dict_tree()
+        netstat = __salt__['cmd.run']('netstat -i -n -4 -b -d').splitlines()
+        netstat += __salt__['cmd.run']('netstat -i -n -6 -b -d').splitlines()[1:]
+        header = netstat[0].split()
+        for line in netstat[1:]:
+            comps = line.split()
+            for i in range(4, 13):  # The columns we want
+                ret[comps[0]][comps[2]][comps[3]][header[i]] = _number(comps[i])
+        return ret
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Linux': linux_netdev,
+        'FreeBSD': freebsd_netdev,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def w():  # pylint: disable=C0103

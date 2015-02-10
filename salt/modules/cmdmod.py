@@ -631,20 +631,24 @@ def run(cmd,
 
     if 'pid' in ret and '__pub_jid' in kwargs:
         # Stuff the child pid in the JID file
-        proc_dir = os.path.join(__opts__['cachedir'], 'proc')
-        jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
-        if os.path.isfile(jid_file):
-            serial = salt.payload.Serial(__opts__)
-            with salt.utils.fopen(jid_file, 'rb') as fn_:
-                jid_dict = serial.load(fn_)
+        try:
+            proc_dir = os.path.join(__opts__['cachedir'], 'proc')
+            jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
+            if os.path.isfile(jid_file):
+                serial = salt.payload.Serial(__opts__)
+                with salt.utils.fopen(jid_file, 'rb') as fn_:
+                    jid_dict = serial.load(fn_)
 
-            if 'child_pids' in jid_dict:
-                jid_dict['child_pids'].append(ret['pid'])
-            else:
-                jid_dict['child_pids'] = [ret['pid']]
-            # Rewrite file
-            with salt.utils.fopen(jid_file, 'w+b') as fn_:
-                fn_.write(serial.dumps(jid_dict))
+                if 'child_pids' in jid_dict:
+                    jid_dict['child_pids'].append(ret['pid'])
+                else:
+                    jid_dict['child_pids'] = [ret['pid']]
+                # Rewrite file
+                with salt.utils.fopen(jid_file, 'w+b') as fn_:
+                    fn_.write(serial.dumps(jid_dict))
+        except NameError:
+            # Avoids errors from msgpack not being loaded in salt-ssh
+            pass
 
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
@@ -694,7 +698,7 @@ def shell(cmd,
 
     .. code-block:: bash
 
-        salt '*' cmd.run "ls -l | awk '/foo/{print \\$2}'"
+        salt '*' cmd.shell "ls -l | awk '/foo/{print \\$2}'"
 
     The template arg can be set to 'jinja' or another supported template
     engine to render the command arguments before execution.
@@ -702,13 +706,13 @@ def shell(cmd,
 
     .. code-block:: bash
 
-        salt '*' cmd.run template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+        salt '*' cmd.shell template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
 
     Specify an alternate shell with the shell parameter:
 
     .. code-block:: bash
 
-        salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
+        salt '*' cmd.shell "Get-ChildItem C:\\ " shell='powershell'
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
@@ -716,7 +720,7 @@ def shell(cmd,
 
     .. code-block:: bash
 
-        salt '*' cmd.run "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
+        salt '*' cmd.shell "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -725,9 +729,9 @@ def shell(cmd,
 
     .. code-block:: bash
 
-        salt '*' cmd.run cmd='sed -e s/=/:/g'
+        salt '*' cmd.shell cmd='sed -e s/=/:/g'
     '''
-    run(cmd,
+    return run(cmd,
         cwd=cwd,
         stdin=stdin,
         runas=runas,

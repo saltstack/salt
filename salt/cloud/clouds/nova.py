@@ -89,6 +89,9 @@ accept them
 
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
+
+Note: For rackconnect v3, rackconnectv3 needs to be specified with the
+rackconnect v3 cloud network as it's variable
 '''
 from __future__ import absolute_import
 # pylint: disable=E0102
@@ -610,13 +613,26 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
+        rackconnectv3 = config.get_cloud_config_value(
+            'rackconnectv3', vm_, __opts__, default='False',
+            search_global=False
+        )
+
+        if rackconnectv3:
+            networkname = rackconnectv3
+            for network in node['addresses'].get(networkname, []):
+                if network['version'] is 4:
+                    node['extra']['access_ip'] = network['addr']
+                    break
+            vm_['rackconnect'] = True
+
         if rackconnect(vm_) is True:
             extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
             access_ip = extra.get('access_ip', '')
 
-            if rc_status != 'DEPLOYED':
+            if rc_status != 'DEPLOYED' and not rackconnectv3:
                 log.debug('Waiting for Rackconnect automation to complete')
                 return
 
@@ -663,7 +679,7 @@ def create(vm_):
                         result.append(private_ip)
 
         if rackconnect(vm_) is True:
-            if ssh_interface(vm_) != 'private_ips':
+            if ssh_interface(vm_) != 'private_ips' or rackconnectv3:
                 data.public_ips = access_ip
                 return data
 

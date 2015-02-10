@@ -26,6 +26,7 @@ ensure_in_syspath('../../')
 
 # Globals
 linux_sysctl.__salt__ = {}
+linux_sysctl.__context__ = {}
 systemd.__context__ = {}
 
 
