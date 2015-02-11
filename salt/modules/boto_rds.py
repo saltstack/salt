@@ -37,10 +37,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
-import salt.ext.six as six
 from salt.ext.six import string_types
-import salt.utils.odict as odict
 
 log = logging.getLogger(__name__)
 
@@ -103,7 +100,9 @@ def exists_option_group(name, region=None, key=None, keyid=None, profile=None):
         if rds:
             return True
         else:
-            msg = 'Rds option group does not exist in region {}'.format(region)
+            msg = ('Rds option group does not exist in region '
+                   '{0}'.format(region)
+                   )
             log.debug(msg)
             return False
     except boto.exception.BotoServerError as e:
