@@ -577,43 +577,21 @@ def _network_conf(conf_tuples=None, **kwargs):
     return ret
 
 
-def _get_memory(memory):
-    '''
-    Handle the saltcloud driver and lxc runner memory restriction
-    differences.
-    Runner limits to 1024MB by default
-    SaltCloud does not restrict memory usage by default
-    '''
-    if memory is None:
-        memory = 1024
-    if memory:
-        memory = memory * 1024 * 1024
-    return memory
-
-
-def _get_autostart(autostart):
-    if autostart is None:
-        autostart = True
-    if autostart:
-        autostart = '1'
-    else:
-        autostart = '0'
-    return autostart
-
-
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
-    autostart = _get_autostart(kwargs.pop('autostart', None))
-    ret['lxc.start.auto'] = autostart
-    memory = _get_memory(kwargs.pop('memory', None))
-    if memory:
-        ret['lxc.cgroup.memory.limit_in_bytes'] = memory
-    cpuset = kwargs.pop('cpuset', None)
+    if kwargs.get('autostart', True):
+        ret['lxc.start.auto'] = '1'
+    else:
+        ret['lxc.start.auto'] = '0'
+    memory = kwargs.get('memory')
+    if memory is not None:
+        ret['lxc.cgroup.memory.limit_in_bytes'] = memory * 1024
+    cpuset = kwargs.get('cpuset')
     if cpuset:
         ret['lxc.cgroup.cpuset.cpus'] = cpuset
-    cpushare = kwargs.pop('cpushare', None)
-    cpu = kwargs.pop('cpu', None)
+    cpushare = kwargs.get('cpushare')
+    cpu = kwargs.get('cpu')
     if cpushare:
         ret['lxc.cgroup.cpu.shares'] = cpushare
     if cpu and not cpuset:
@@ -836,18 +814,28 @@ def init(name,
     cpus
         Select a random number of cpu cores and assign it to the cpuset, if the
         cpuset option is set then this option will be ignored
+
     cpuset
         Explicitly define the cpus this container will be bound to
+
     cpushare
-        cgroups cpu shares.
+        cgroups cpu shares
+
     autostart
         autostart container on reboot
+
     memory
-        cgroups memory limit, in MB.
-        (0 for nolimit, None for old default 1024MB)
+        cgroups memory limit, in MB
+
+        .. versionchanged:: 2015.2.0
+            If no value is passed, no limit is set. In earlier Salt versions,
+            not passing this value causes a 1024MB memory limit to be set, and
+            it was necessary to pass ``memory=0`` to set no limit.
+
     gateway
         the ipv4 gateway to use
         the default does nothing more than lxcutils does
+
     bridge
         the bridge to use
         the default does nothing more than lxcutils does
