@@ -917,15 +917,16 @@ delete = remove
 purge = remove
 
 
-def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
+def upgrade(*names, **kwargs):
     '''
-    Upgrade all packages (run a ``pkg upgrade``)
+    Upgrade named or all packages (run a ``pkg upgrade``). If <package name> is
+    ommitted, the operation is executed on all packages.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pkg.upgrade
+        salt '*' pkg.upgrade <package name>
 
     jail
         Audit packages within the specified jail
@@ -934,7 +935,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade jail=<jail name or id>
+            salt '*' pkg.upgrade <package name> jail=<jail name or id>
 
     chroot
         Audit packages within the specified chroot (ignored if ``jail`` is
@@ -944,7 +945,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade chroot=/path/to/chroot
+            salt '*' pkg.upgrade <package name> chroot=/path/to/chroot
 
 
     Any of the below options can also be used with ``jail`` or ``chroot``.
@@ -956,7 +957,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade force=True
+            salt '*' pkg.upgrade <package name> force=True
 
     local
         Do not update the repository catalogs with ``pkg-update(8)``. A value
@@ -967,7 +968,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade local=True
+            salt '*' pkg.upgrade <package name> local=True
 
     dryrun
         Dry-run mode: show what packages have updates available, but do not
@@ -978,13 +979,18 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
         .. code-block:: bash
 
-            salt '*' pkg.upgrade dryrun=True
+            salt '*' pkg.upgrade <package name> dryrun=True
     '''
     ret = {'changes': {},
            'result': True,
            'comment': '',
            }
 
+    jail = kwargs.pop('jail', None)
+    chroot = kwargs.pop('chroot', None)
+    force = kwargs.pop('force', False)
+    local = kwargs.pop('local', False)
+    dryrun = kwargs.pop('dryrun', False)
     opts = ''
     if force:
         opts += 'f'
@@ -999,7 +1005,7 @@ def upgrade(jail=None, chroot=None, force=False, local=False, dryrun=False):
 
     old = list_pkgs()
     call = __salt__['cmd.run_all'](
-        '{0} upgrade {1}'.format(_pkg(jail, chroot), opts),
+        '{0} upgrade {1} {2}'.format(_pkg(jail, chroot), opts, ' '.join(names)),
         python_shell=False,
         output_loglevel='trace'
     )
