@@ -150,7 +150,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         cgroups cpu shares.
 
     memory
-        cgroups memory limit, in MB.
+        cgroups memory limit, in MB
+
+        .. versionchanged:: 2015.2.0
+            If no value is passed, no limit is set. In earlier Salt versions,
+            not passing this value causes a 1024MB memory limit to be set, and
+            it was necessary to pass ``memory=0`` to set no limit.
 
     template
         Name of LXC template on which to base this container
