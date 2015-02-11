@@ -148,122 +148,91 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
     '''
     if 'target' in kwargs:
-        kwargs['jump'] = kwargs['target']
-        del kwargs['target']
+        kwargs['jump'] = kwargs.pop('target')
+
+    # Ignore name and state for this function
+    kwargs.pop('name', None)
+    kwargs.pop('state', None)
 
     for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['chain', 'save', 'table']:
         if ignore in kwargs:
             del kwargs[ignore]
 
+
     rule = ''
     proto = False
     bang_not_pat = re.compile(r'(!|not)\s?')
 
-    if 'if' in kwargs:
-        if kwargs['if'].startswith('!') or kwargs['if'].startswith('not'):
-            kwargs['if'] = re.sub(bang_not_pat, '', kwargs['if'])
-            rule += '! '
+    def maybe_add_negation(arg):
+        '''
+        Will check if the defined argument is intended to be negated,
+        (i.e. prefixed with '!' or 'not'), and add a '! ' to the rule.
 
-        rule += '-i {0} '.format(kwargs['if'])
+        The prefix will be removed from the value in the kwargs dict.
+        '''
+        value = str(kwargs[arg])
+        if value.startswith('!') or value.startswith('not'):
+            kwargs[arg] = re.sub(bang_not_pat, '', value)
+            return '! '
+        return ''
+
+    if 'if' in kwargs:
+        rule += '{0}-i {1} '.format(maybe_add_negation('if'), kwargs['if'])
         del kwargs['if']
 
     if 'of' in kwargs:
-        if kwargs['of'].startswith('!') or kwargs['of'].startswith('not'):
-            kwargs['of'] = re.sub(bang_not_pat, '', kwargs['of'])
-            rule += '! '
-
-        rule += '-o {0} '.format(kwargs['of'])
+        rule += '{0}-o {1} '.format(maybe_add_negation('of'), kwargs['of'])
         del kwargs['of']
 
     if 'proto' in kwargs:
-        if kwargs['proto'].startswith('!') or kwargs['proto'].startswith('not'):
-            kwargs['proto'] = re.sub(bang_not_pat, '', kwargs['proto'])
-            rule += '! '
-
-        rule += '-p {0} '.format(kwargs['proto'])
+        rule += '{0}-p {1} '.format(maybe_add_negation('proto'), kwargs['proto'])
         proto = True
         del kwargs['proto']
 
     if 'match' in kwargs:
-        if not isinstance(kwargs['match'], list):
-            kwargs['match'] = kwargs['match'].split(',')
-        for match in kwargs['match']:
+        match_value = kwargs['match']
+        if not isinstance(match_value, list):
+            match_value = match_value.split(',')
+        for match in match_value:
             rule += '-m {0} '.format(match)
             if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
                 rule += '--name {0} '.format(kwargs['name'])
         del kwargs['match']
 
-    if 'name' in kwargs:
-        del kwargs['name']
-
-    if 'state' in kwargs:
-        del kwargs['state']
-
     if 'connstate' in kwargs:
-        if kwargs['connstate'].startswith('!') or kwargs['connstate'].startswith('not'):
-            kwargs['connstate'] = re.sub(bang_not_pat, '', kwargs['connstate'])
-            rule += '! '
-
-        rule += '--state {0} '.format(kwargs['connstate'])
+        rule += '{0}--state {1} '.format(maybe_add_negation('connstate'), kwargs['connstate'])
         del kwargs['connstate']
 
     if 'dport' in kwargs:
-        if str(kwargs['dport']).startswith('!') or str(kwargs['dport']).startswith('not'):
-            kwargs['dport'] = re.sub(bang_not_pat, '', kwargs['dport'])
-            rule += '! '
-
-        rule += '--dport {0} '.format(kwargs['dport'])
+        rule += '{0}--dport {1} '.format(maybe_add_negation('dport'), kwargs['dport'])
         del kwargs['dport']
 
     if 'sport' in kwargs:
-        if str(kwargs['sport']).startswith('!') or str(kwargs['sport']).startswith('not'):
-            kwargs['sport'] = re.sub(bang_not_pat, '', kwargs['sport'])
-            rule += '! '
-
-        rule += '--sport {0} '.format(kwargs['sport'])
+        rule += '{0}--sport {1} '.format(maybe_add_negation('sport'), kwargs['sport'])
         del kwargs['sport']
 
-    if 'dports' in kwargs:
-        if '-m multiport' not in rule:
-            rule += '-m multiport '
-            if not proto:
-                return 'Error: proto must be specified'
+    for multiport_arg in ('dports', 'sports'):
+        if multiport_arg in kwargs:
+            if '-m multiport' not in rule:
+                rule += '-m multiport '
+                if not proto:
+                    return 'Error: proto must be specified'
 
-        if isinstance(kwargs['dports'], list):
-            if [item for item in kwargs['dports'] if str(item).startswith('!') or str(item).startswith('not')]:
-                kwargs['dports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['dports']]
-                rule += '! '
-            dports = ','.join([str(i) for i in kwargs['dports']])
-        else:
-            if str(kwargs['dports']).startswith('!') or str(kwargs['dports']).startswith('not'):
-                dports = re.sub(bang_not_pat, '', kwargs['dports'])
-                rule += '! '
+            mp_value = kwargs[multiport_arg]
+            if isinstance(mp_value, list):
+                if any(i for i in mp_value if str(i).startswith('!') or str(i).startswith('not')):
+                    mp_value = [re.sub(bang_not_pat, '', str(item)) for item in mp_value]
+                    rule += '! '
+                dports = ','.join(str(i) for i in mp_value)
             else:
-                dports = kwargs['dports']
+                if str(mp_value).startswith('!') or str(mp_value).startswith('not'):
+                    dports = re.sub(bang_not_pat, '', mp_value)
+                    rule += '! '
+                else:
+                    dports = mp_value
 
-        rule += '--dports {0} '.format(dports)
-        del kwargs['dports']
-
-    if 'sports' in kwargs:
-        if '-m multiport' not in rule:
-            rule += '-m multiport '
-            if not proto:
-                return 'Error: proto must be specified'
-
-        if isinstance(kwargs['sports'], list):
-            if [item for item in kwargs['sports'] if str(item).startswith('!') or str(item).startswith('not')]:
-                kwargs['sports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['sports']]
-                rule += '! '
-            sports = ','.join([str(i) for i in kwargs['sports']])
-        else:
-            if str(kwargs['sports']).startswith('!') or str(kwargs['sports']).startswith('not'):
-                sports = re.sub(bang_not_pat, '', kwargs['sports'])
-                rule += '! '
-            else:
-                sports = kwargs['sports']
-
-        rule += '--sports {0} '.format(sports)
-        del kwargs['sports']
+            rule += '--{0} {1} '.format(multiport_arg, dports)
+            del kwargs[multiport_arg]
 
     if 'comment' in kwargs:
         rule += '--comment "{0}" '.format(kwargs['comment'])
@@ -272,11 +241,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     # --set in ipset is deprecated, works but returns error.
     # rewrite to --match-set if not empty, otherwise treat as recent option
     if 'set' in kwargs and kwargs['set']:
-        if kwargs['set'].startswith('!') or kwargs['set'].startswith('not'):
-            kwargs['set'] = re.sub(bang_not_pat, '', kwargs['set'])
-            rule += '! '
-
-        rule += '--match-set {0} '.format(kwargs['set'])
+        rule += '{0}--match-set {1} '.format(maybe_add_negation('set'), kwargs['set'])
         del kwargs['set']
 
     # Jumps should appear last, except for any arguments that are passed to
@@ -308,10 +273,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             del kwargs[after_jump_argument]
 
     for item in kwargs:
-        if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):
-            kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])
-            rule += '! '
-
+        rule += maybe_add_negation(item)
         if len(item) == 1:
             rule += '-{0} {1} '.format(item, kwargs[item])
         else:

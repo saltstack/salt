@@ -54,6 +54,38 @@ class IptablesTestCase(TestCase):
         '''
         self.assertEqual(iptables.build_rule(), '')
 
+        self.assertEqual(iptables.build_rule(name='ignored', state='ignored'),
+                         '',
+                         'build_rule should ignore name and state')
+
+        # Should properly negate bang-prefixed values
+        self.assertEqual(iptables.build_rule(**{'if': '!eth0'}),
+                         '! -i eth0 ')
+
+        # Should properly negate "not"-prefixed values
+        self.assertEqual(iptables.build_rule(**{'if': 'not eth0'}),
+                         '! -i eth0 ')
+
+        self.assertEqual(iptables.build_rule(dports=[80, 443], proto='tcp'),
+                         '-p tcp -m multiport --dports 80,443 ')
+
+        self.assertEqual(iptables.build_rule(dports='80,443', proto='tcp'),
+                         '-p tcp -m multiport --dports 80,443 ')
+
+        # Should it really behave this way?
+        self.assertEqual(iptables.build_rule(dports=['!80', 443],
+                                             proto='tcp'),
+                         '-p tcp -m multiport ! --dports 80,443 ')
+
+        self.assertEqual(iptables.build_rule(dports='!80,443', proto='tcp'),
+                         '-p tcp -m multiport ! --dports 80,443 ')
+
+        self.assertEqual(iptables.build_rule(sports=[80, 443], proto='tcp'),
+                         '-p tcp -m multiport --sports 80,443 ')
+
+        self.assertEqual(iptables.build_rule(sports='80,443', proto='tcp'),
+                         '-p tcp -m multiport --sports 80,443 ')
+
         self.assertEqual(iptables.build_rule('filter', 'INPUT', command='I',
                                              position='3', full=True,
                                              dports='proto', jump='ACCEPT'),
