@@ -27,8 +27,9 @@ from . import core
 from . import worker
 from . import maint
 from . import zero
+from . import dummy
 
-__all__ = ['core', 'worker', 'maint', 'zero']
+__all__ = ['core', 'worker', 'maint', 'zero', 'dummy']
 
 # Import salt libs
 import salt.daemons.masterapi
