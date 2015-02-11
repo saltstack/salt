@@ -120,6 +120,7 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
 
     return ret
 
+    return ret
 
 # TODO: fix this silly unused positional argument
 def raw_mod(opts, _, functions, mod='modules'):
@@ -612,6 +613,22 @@ class FilterDictWrapper(MutableMapping):
             if key.endswith(self.suffix):
                 yield key.replace(self.suffix, '')
 
+    def __setitem__(self, key, val):
+        self._dict[key] = val
+
+    def __delitem__(self, key):
+        del self._dict[key]
+
+    def __getitem__(self, key):
+        return self._dict[key + self.suffix]
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __iter__(self):
+        for key in self._dict:
+            if key.endswith(self.suffix):
+                yield key.replace(self.suffix, '')
 
 class LazyLoader(salt.utils.lazy.LazyDict):
     '''
@@ -924,7 +941,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 exc_info=True
             )
             return mod
-        except Exception as error:
+        except Exception:
             log.error(
                 'Failed to import {0} {1}, this is due most likely to a '
                 'syntax error:\n'.format(
