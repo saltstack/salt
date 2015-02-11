@@ -163,15 +163,16 @@ code-block:: yaml
 
 By default, data about jobs runs from the Salt scheduler is not returned to the
 master.  Because of this information for these jobs will not be listed in the
-jobs.list_jobs runner.  The return_job parameter will return the data back to
-the Salt master, making the job available in this list.
+:py:func:`jobs.list_jobs <salt.runners.jobs.list_jobs>` runner.  The
+``return_job`` parameter will return the data back to the Salt master, making
+the job available in this list.
 
     ... versionadded:: Lithium
 
     schedule:
       job1:
           function: scheduled_job_function
-          job_return: True
+          return_job: True
 
 It can be useful to include specific data to differentiate a job from other
 jobs.  Using the metadata parameter special values can be associated with
