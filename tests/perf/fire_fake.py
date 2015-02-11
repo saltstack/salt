@@ -40,16 +40,14 @@ class SwarmController(object):
         '''
         last_check = 0
         self.start_time = datetime.datetime.now()
+        goal = self.reqs_sec * self.run_time
         while True:
             self.fire_it()
             last_check += 1
             if last_check > self.granularity:
                 self.calibrate()
                 last_check = 0
-            #time.sleep(self.period_sleep)
-            time.sleep(0.001)
-            #if datetime.datetime.now() > (self.start_time + datetime.timedelta(seconds=self.run_time)) or \
-            if self.total_complete > (self.reqs_sec * self.run_time):
+            if self.total_complete > goal:
                 print 'Test complete'
                 break
 
@@ -70,18 +68,7 @@ class SwarmController(object):
         # Figure out what the reqs/sec has been up to this point and then adjust up or down
         runtime_reqs_sec = self.total_complete / elapsed_time.total_seconds()
         print 'Recalibrating. Current reqs/sec: {0}'.format(runtime_reqs_sec)
-        if runtime_reqs_sec > self.reqs_sec:  # We are running too fast
-            print 'Ramping down'
-            self.period_sleep += self.ramp_sleep
-            return
-        elif runtime_reqs_sec < self.reqs_sec:  # We are running too slow
-            if self.period_sleep - self.ramp_sleep >= 0:
-                self.period_sleep -= self.ramp_sleep
-            print 'Ramping up'
-            return
-        else:
-            print 'Running on target!'
-            return
+        return
 
 controller = SwarmController(opts)
 controller.run()
