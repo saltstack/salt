@@ -524,7 +524,7 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
                     if salt.utils.is_windows() is False:
                         info = zfile.getinfo(target)
                         # Check if zipped file is a symbolic link
-                        if info.external_attr == 2716663808L:
+                        if info.external_attr == 2716663808:
                             source = zfile.read(target)
                             os.symlink(source, os.path.join(dest, target))
                             continue
