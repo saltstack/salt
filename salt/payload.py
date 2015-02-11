@@ -105,7 +105,8 @@ class Serial(object):
         '''
         data = fn_.read()
         fn_.close()
-        return self.loads(data)
+        if data:
+            return self.loads(data)
 
     def dumps(self, msg):
         '''
