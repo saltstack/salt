@@ -165,9 +165,8 @@ def exists_subnet_group(name, region=None, key=None, keyid=None,
         return False
 
 
-def create(name, allocated_storage, db_instance_class,
-           engine, master_username, master_user_password, region=None,
-           key=None, keyid=None, profile=None, db_name=None,
+def create(name, allocated_storage, db_instance_class, engine,
+           master_username, master_user_password, db_name=None,
            db_security_groups=None, vpc_security_group_ids=None,
            availability_zone=None, db_subnet_group_name=None,
            preferred_maintenance_window=None, db_parameter_group_name=None,
@@ -175,7 +174,8 @@ def create(name, allocated_storage, db_instance_class,
            port=None, multi_az=None, engine_version=None,
            auto_minor_version_upgrade=None, license_model=None, iops=None,
            option_group_name=None, character_set_name=None,
-           publicly_accessible=None, tags=None):
+           publicly_accessible=None, tags=None, region=None, key=None,
+           keyid=None, profile=None):
     '''
     Create an RDS
 
