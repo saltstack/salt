@@ -301,6 +301,17 @@ def managed(name, type, enabled=True, **kwargs):
     if kwargs['test']:
         return ret
 
+    # For Redhat/Centos ranged network
+    if "range" in name:
+        try:
+            ret['result'] = __salt__['service.restart']('network')
+            ret['comment'] = "network restarted for ranged interfaces"
+            return ret
+        except SaltException as error:
+            ret['result'] = False
+            ret['comment'] = str(err)
+            return ret
+
     # Bring up/shutdown interface
     try:
         # Get Interface current status
