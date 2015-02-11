@@ -133,6 +133,7 @@ def list_local():
     ret = [line.split()[1] for line in out if len(line.split()) > 2]
     return ret
 
+
 def list_all():
     '''
     List all overlays, including remote ones.
