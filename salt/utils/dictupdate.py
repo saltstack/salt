@@ -18,8 +18,10 @@ log = logging.getLogger(__name__)
 
 def update(dest, upd):
     for key, val in six.iteritems(upd):
-        if isinstance(val, collections.Mapping):
-            ret = update(dest.get(key, {}), val)
+        dest_subkey = dest.get(key, {})
+        if isinstance(dest_subkey, collections.Mapping) \
+                and isinstance(val, collections.Mapping):
+            ret = update(dest_subkey, val)
             dest[key] = ret
         else:
             dest[key] = upd[key]
