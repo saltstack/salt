@@ -84,6 +84,11 @@ class IptablesTestCase(TestCase):
                                              **{'to-port': 8080}),
                          '--jump REDIRECT --to-port 8080')
 
+        # Should handle arguments with spaces to f. ex log-prefix
+        self.assertEqual(iptables.build_rule(jump='LOG',
+                                             **{'log-prefix': 'long prefix'}),
+                         '--jump LOG --log-prefix "long prefix"')
+
         ret = '/sbin/iptables --wait -t salt -I INPUT 3 -m state --jump ACCEPT '
         with patch.object(iptables, '_iptables_cmd',
                           MagicMock(return_value='/sbin/iptables')):

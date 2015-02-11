@@ -292,6 +292,11 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         'reject-with',
         'set-mark',
         'set-xmark',
+        'log-level',
+        'log-ip-options',
+        'log-prefix',
+        'log-tcp-options',
+        'log-tcp-sequence',
     )
     for after_jump_argument in after_jump_arguments:
         if after_jump_argument in kwargs:
