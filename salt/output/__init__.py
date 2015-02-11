@@ -82,10 +82,10 @@ def get_printout(out, opts=None, **kwargs):
     if 'output' in opts:
         # new --out option
         out = opts['output']
-        if out == 'text':
-            out = 'txt'
 
-    if out is None:
+    if out == 'text':
+        out = 'txt'
+    elif out is None:
         out = 'nested'
 
     opts.update(kwargs)
