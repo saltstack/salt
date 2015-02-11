@@ -79,7 +79,7 @@ def _find_utmp():
     '''
     result = {}
     # These are the likely locations for the file on Ubuntu
-    for utmp in ('/var/run/utmp', '/run/utmp'):
+    for utmp in '/var/run/utmp', '/run/utmp':
         try:
             result[os.stat(utmp).st_mtime] = utmp
         except Exception:
