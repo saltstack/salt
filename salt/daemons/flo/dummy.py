@@ -19,17 +19,13 @@ import logging
 
 # Import salt libs
 import ioflo.base.deeding
-import salt.daemons.flo.worker
-from raet import raeting
-from raet.lane.stacking import LaneStack
-from raet.lane.yarding import RemoteYard
 
 log = logging.getLogger(__name__)
 
 
 class SaltDummyPublisher(ioflo.base.deeding.Deed):
     '''
-    A dummy publisher that transparently redirects publications to 
+    A dummy publisher that transparently redirects publications to
     a translation system to have them mocked up and sent back into a router
     '''
     Ioinits = {
@@ -37,7 +33,6 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
             'publish': '.salt.var.publish',
             'lane_stack': '.salt.lane.manor.stack',
             'workers': '.salt.track.workers',
-            # TODO import vals of workers
             }
 
     def action(self):
@@ -49,7 +44,7 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
 
     def _fill_tmpl(self, pub):
         '''
-        Takes a template and a job and fills the template with 
+        Takes a template and a job and fills the template with
         fake return data associated with the job
         '''
         msg = {'load': {
@@ -70,4 +65,3 @@ class SaltDummyPublisher(ioflo.base.deeding.Deed):
 
         log.debug('Dummy publisher faking return with: {0}'.format(msg))
         return msg
-
