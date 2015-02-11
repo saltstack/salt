@@ -1251,7 +1251,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                             # this path's object ID will be the target of the
                             # symlink. Follow the symlink and set repo_path to the
                             # location indicated in the blob data.
-                            stream = StringIO()
+                            stream = six.StringIO()
                             file_blob.stream_data(stream)
                             stream.seek(0)
                             link_tgt = stream.read()
