@@ -859,12 +859,20 @@ def init(name,
         ``{"eth0": {"hwaddr": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}``
 
     users
-        Sysadmins users to set the administrative password to
-        e.g. [root, ubuntu, sysadmin], default [root] and [root, ubuntu]
-        on ubuntu
+        Users for which the password defined in the ``password`` param should
+        be set. Can be passed as a comma separated list or a python list.
+        Defaults to just the ``root`` user.
+
     password
-        Set the initial password for default sysadmin users, at least root
-        but also can be used for sudoers, e.g. [root, ubuntu, sysadmin]
+        Set the initial password for the users defined in the ``users``
+        parameter
+
+    password_encrypted : False
+        Set to ``True`` to denote a password hash instead of a plaintext
+        password
+
+        .. versionadded:: 2015.2.0
+
     profile
         A LXC profile (defined in config or pillar).
         This can be either a real profile mapping or a string
