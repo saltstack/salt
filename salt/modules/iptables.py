@@ -158,8 +158,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         if ignore in kwargs:
             del kwargs[ignore]
 
-
-    rule = ''
+    rule = []
     proto = False
     bang_not_pat = re.compile(r'(!|not)\s?')
 
@@ -177,15 +176,15 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         return ''
 
     if 'if' in kwargs:
-        rule += '{0}-i {1} '.format(maybe_add_negation('if'), kwargs['if'])
+        rule.append('{0}-i {1}'.format(maybe_add_negation('if'), kwargs['if']))
         del kwargs['if']
 
     if 'of' in kwargs:
-        rule += '{0}-o {1} '.format(maybe_add_negation('of'), kwargs['of'])
+        rule.append('{0}-o {1}'.format(maybe_add_negation('of'), kwargs['of']))
         del kwargs['of']
 
     if 'proto' in kwargs:
-        rule += '{0}-p {1} '.format(maybe_add_negation('proto'), kwargs['proto'])
+        rule.append('{0}-p {1}'.format(maybe_add_negation('proto'), kwargs['proto']))
         proto = True
         del kwargs['proto']
 
@@ -194,27 +193,27 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         if not isinstance(match_value, list):
             match_value = match_value.split(',')
         for match in match_value:
-            rule += '-m {0} '.format(match)
+            rule.append('-m {0}'.format(match))
             if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
-                rule += '--name {0} '.format(kwargs['name'])
+                rule.append('--name {0}'.format(kwargs['name']))
         del kwargs['match']
 
     if 'connstate' in kwargs:
-        rule += '{0}--state {1} '.format(maybe_add_negation('connstate'), kwargs['connstate'])
+        rule.append('{0}--state {1}'.format(maybe_add_negation('connstate'), kwargs['connstate']))
         del kwargs['connstate']
 
     if 'dport' in kwargs:
-        rule += '{0}--dport {1} '.format(maybe_add_negation('dport'), kwargs['dport'])
+        rule.append('{0}--dport {1}'.format(maybe_add_negation('dport'), kwargs['dport']))
         del kwargs['dport']
 
     if 'sport' in kwargs:
-        rule += '{0}--sport {1} '.format(maybe_add_negation('sport'), kwargs['sport'])
+        rule.append('{0}--sport {1}'.format(maybe_add_negation('sport'), kwargs['sport']))
         del kwargs['sport']
 
     for multiport_arg in ('dports', 'sports'):
         if multiport_arg in kwargs:
             if '-m multiport' not in rule:
-                rule += '-m multiport '
+                rule.append('-m multiport')
                 if not proto:
                     return 'Error: proto must be specified'
 
@@ -222,26 +221,26 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             if isinstance(mp_value, list):
                 if any(i for i in mp_value if str(i).startswith('!') or str(i).startswith('not')):
                     mp_value = [re.sub(bang_not_pat, '', str(item)) for item in mp_value]
-                    rule += '! '
+                    rule.append('!')
                 dports = ','.join(str(i) for i in mp_value)
             else:
                 if str(mp_value).startswith('!') or str(mp_value).startswith('not'):
                     dports = re.sub(bang_not_pat, '', mp_value)
-                    rule += '! '
+                    rule.append('!')
                 else:
                     dports = mp_value
 
-            rule += '--{0} {1} '.format(multiport_arg, dports)
+            rule.append('--{0} {1}'.format(multiport_arg, dports))
             del kwargs[multiport_arg]
 
     if 'comment' in kwargs:
-        rule += '--comment "{0}" '.format(kwargs['comment'])
+        rule.append('--comment "{0}"'.format(kwargs['comment']))
         del kwargs['comment']
 
     # --set in ipset is deprecated, works but returns error.
     # rewrite to --match-set if not empty, otherwise treat as recent option
     if 'set' in kwargs and kwargs['set']:
-        rule += '{0}--match-set {1} '.format(maybe_add_negation('set'), kwargs['set'])
+        rule.append('{0}--match-set {1}'.format(maybe_add_negation('set'), kwargs['set']))
         del kwargs['set']
 
     # Jumps should appear last, except for any arguments that are passed to
@@ -273,13 +272,13 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             del kwargs[after_jump_argument]
 
     for item in kwargs:
-        rule += maybe_add_negation(item)
+        rule.append(maybe_add_negation(item))
         if len(item) == 1:
-            rule += '-{0} {1} '.format(item, kwargs[item])
+            rule.append('-{0} {1}'.format(item, kwargs[item]))
         else:
-            rule += '--{0} {1} '.format(item, kwargs[item])
+            rule.append('--{0} {1}'.format(item, kwargs[item]))
 
-    rule += ' '.join(after_jump)
+    rule += after_jump
 
     if full in ['True', 'true']:
         if not table:
@@ -297,9 +296,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         wait = '--wait' if _has_option('--wait', family) else ''
 
         return '{0} {1} -t {2} {3}{4} {5} {6} {7}'.format(_iptables_cmd(family),
-               wait, table, flag, command, chain, position, rule)
+               wait, table, flag, command, chain, position, ' '.join(rule))
 
-    return rule
+    return ' '.join(rule)
 
 
 def get_saved_rules(conf_file=None, family='ipv4'):
