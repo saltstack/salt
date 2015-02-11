@@ -8,7 +8,6 @@ Extract an archive
 # Import Python libs
 from __future__ import absolute_import
 import os
-import re
 import logging
 import tarfile
 from contextlib import closing
@@ -212,7 +211,7 @@ def extracted(name,
                 ret['result'] = False
                 ret['changes'] = results
                 return ret
-            if re.search('bsdtar', __salt__['cmd.run']('tar --version', python_shell=True)):
+            if 'bsdtar' in __salt__['cmd.run']('tar --version', python_shell=False):
                 files = results['stderr']
             else:
                 files = results['stdout']
