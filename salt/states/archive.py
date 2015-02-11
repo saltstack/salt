@@ -211,7 +211,7 @@ def extracted(name,
                 ret['result'] = False
                 ret['changes'] = results
                 return ret
-            if __salt__['cmd.retcode']('tar --version | grep bsdtar', python_shell=True) == 0:
+            if 'bsdtar' in __salt__['cmd.run']('tar --version', python_shell=False):
                 files = results['stderr']
             else:
                 files = results['stdout']
