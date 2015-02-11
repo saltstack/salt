@@ -677,6 +677,10 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     else:
         result['userctl'] = 'no'
 
+    if 'arpcheck' in opts:
+        if opts['arpcheck'] in _CONFIG_FALSE:
+            result['arpcheck'] = 'no'
+
     return result
 
 
