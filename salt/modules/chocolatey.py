@@ -193,7 +193,7 @@ def bootstrap(force=False):
     return result['stdout']
 
 
-def list_(filter, all_versions=False, pre_versions=False, source=None):
+def list_(filter=None, all_versions=False, pre_versions=False, source=None, local_only=False):
     '''
     Instructs Chocolatey to pull a vague package list from the repository.
 
@@ -210,6 +210,9 @@ def list_(filter, all_versions=False, pre_versions=False, source=None):
         Chocolatey repository (directory, share or remote URL feed) the package
         comes from. Defaults to the official Chocolatey feed.
 
+    local_only
+        Display packages only installed locally
+
     CLI Example:
 
     .. code-block:: bash
@@ -218,13 +221,17 @@ def list_(filter, all_versions=False, pre_versions=False, source=None):
         salt '*' chocolatey.list <filter> all_versions=True
     '''
     choc_path = _find_chocolatey()
-    cmd = [choc_path, 'list', filter]
+    cmd = [choc_path, 'list']
+    if filter:
+        cmd.extend([filter])
     if salt.utils.is_true(all_versions):
         cmd.append('-AllVersions')
     if salt.utils.is_true(pre_versions):
         cmd.append('-Prerelease')
     if source:
         cmd.extend(['-Source', source])
+    if local_only:
+        cmd.extend(['-localonly'])
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
