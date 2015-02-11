@@ -128,41 +128,6 @@ class GitFSTest(integration.ModuleCase):
             self.assertIn('base', ret)
 
     #@skipIf(True, 'Skipping tests temporarily')
-    def test_file_hash_sha1(self):
-        '''
-        NOTE: This test requires that gitfs.find_file is executed to ensure
-        that the file exists in the gitfs cache.
-        '''
-        target = 'testfile'
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
-            # This needs to be in its own patch because we are using a
-            # different hash_type for this test (sha1) from the one the master
-            # is using (md5), which will cause the find_file to fail when the
-            # repo URI is hashed to determine the cachedir.
-            gitfs.find_file(target)
-
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir'],
-                                         'hash_type': 'sha1'}):
-            tmp_load = copy.deepcopy(LOAD)
-            tmp_load['loc'] = 0
-            tmp_load['path'] = target
-            fnd = {'rel': target,
-                   'path': os.path.join(gitfs.__opts__['cachedir'],
-                                        'gitfs/refs',
-                                        tmp_load['saltenv'],
-                                        tmp_load['path'])}
-
-            ret = gitfs.file_hash(tmp_load, fnd)
-            self.assertDictEqual(
-                {'hash_type': 'sha1',
-                 'hsum': '6b18d04b61238ba13b5e4626b13ac5fb7432b5e2'},
-                ret)
-
-    #@skipIf(True, 'Skipping tests temporarily')
     def test_serve_file(self):
         '''
         NOTE: This test requires that gitfs.find_file is executed to ensure
