@@ -2007,23 +2007,22 @@ def state(name):
 
 def get_parameter(name, parameter):
     '''
-    Returns the value of a cgroup parameter for a container.
+    Returns the value of a cgroup parameter for a container
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' lxc.get_parameter name parameter
+        salt '*' lxc.get_parameter container_name memory.limit_in_bytes
     '''
-    if not exists(name):
-        return None
-
+    _ensure_exists(name)
     cmd = 'lxc-cgroup -n {0} {1}'.format(name, parameter)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
-        return False
-    else:
-        return {parameter: ret['stdout'].strip()}
+        raise CommandExecutionError(
+            'Unable to retrieve value for \'{0}\''.format(parameter)
+        )
+    return ret['stdout'].strip()
 
 
 def set_parameter(name, parameter, value):
@@ -2113,14 +2112,12 @@ def info(name):
 
         if ret['state'] == 'running':
             try:
-                limit = int(get_parameter(name, 'memory.limit_in_bytes').get(
-                    'memory.limit_in_bytes'))
-            except (TypeError, ValueError):
+                limit = int(get_parameter(name, 'memory.limit_in_bytes'))
+            except (CommandExecutionError, TypeError, ValueError):
                 limit = 0
             try:
-                usage = int(get_parameter(name, 'memory.usage_in_bytes').get(
-                    'memory.usage_in_bytes'))
-            except (TypeError, ValueError):
+                usage = int(get_parameter(name, 'memory.usage_in_bytes'))
+            except (CommandExecutionError, TypeError, ValueError):
                 usage = 0
             free = limit - usage
             ret['memory_limit'] = limit
