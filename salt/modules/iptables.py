@@ -337,8 +337,10 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         else:
             flag = '--'
 
-        return '{0} -t {1} {2}{3} {4} {5} {6}'.format(_iptables_cmd(family),
-               table, flag, command, chain, position, rule)
+        wait = '--wait' if _has_option('--wait', family) else ''
+
+        return '{0} {1} -t {2} {3}{4} {5} {6} {7}'.format(_iptables_cmd(family),
+               wait, table, flag, command, chain, position, rule)
 
     return rule
 
@@ -445,7 +447,9 @@ def set_policy(table='filter', chain=None, policy=None, family='ipv4'):
     if not policy:
         return 'Error: Policy needs to be specified'
 
-    cmd = '{0} -t {1} -P {2} {3}'.format(_iptables_cmd(family), table, chain, policy)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -P {3} {4}'.format(
+            _iptables_cmd(family), wait, table, chain, policy)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -579,7 +583,9 @@ def new_chain(table='filter', chain=None, family='ipv4'):
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    cmd = '{0} -t {1} -N {2}'.format(_iptables_cmd(family), table, chain)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -N {3}'.format(
+            _iptables_cmd(family), wait, table, chain)
     out = __salt__['cmd.run'](cmd)
 
     if not out:
@@ -606,7 +612,9 @@ def delete_chain(table='filter', chain=None, family='ipv4'):
     if not chain:
         return 'Error: Chain needs to be specified'
 
-    cmd = '{0} -t {1} -X {2}'.format(_iptables_cmd(family), table, chain)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -X {3}'.format(
+            _iptables_cmd(family), wait, table, chain)
     out = __salt__['cmd.run'](cmd)
 
     if not out:
@@ -640,7 +648,9 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
     if not rule:
         return 'Error: Rule needs to be specified'
 
-    cmd = '{0} -t {1} -A {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -A {3} {4}'.format(
+            _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     if len(out) == 0:
         return True
@@ -686,7 +696,9 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         size = len(rules[table][chain]['rules'])
         position = (size + position) + 1
 
-    cmd = '{0} -t {1} -I {2} {3} {4}'.format(_iptables_cmd(family), table, chain, position, rule)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -I {3} {4} {5}'.format(
+            _iptables_cmd(family), wait, table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -722,7 +734,9 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
     if position:
         rule = position
 
-    cmd = '{0} -t {1} -D {2} {3}'.format(_iptables_cmd(family), table, chain, rule)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -D {3} {4}'.format(
+            _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
     return out
 
@@ -742,10 +756,8 @@ def flush(table='filter', chain='', family='ipv4'):
         salt '*' iptables.flush filter INPUT family=ipv6
     '''
 
-    if chain:
-        cmd = '{0} -t {1} -F {2}'.format(_iptables_cmd(family), table, chain)
-    else:
-        cmd = '{0} -t {1} -F'.format(_iptables_cmd(family), table)
+    wait = '--wait' if _has_option('--wait', family) else ''
+    cmd = '{0} {1} -t {2} -F {3}'.format(_iptables_cmd(family), wait, table, chain)
     out = __salt__['cmd.run'](cmd)
     return out
 
