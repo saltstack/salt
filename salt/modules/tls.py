@@ -5,16 +5,12 @@ Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
 
 :depends:   - PyOpenSSL Python module
-:configuration: Add the following values in ``/etc/salt/minion`` for the CA module
-    to function properly:
-
-    .. code-block:: text
+:configuration: Add the following values in /etc/salt/minion for the CA module
+    to function properly::
 
         ca.cert_base_path: '/etc/pki'
 '''
-
 from __future__ import absolute_import
-
 # pylint: disable=C0103
 
 # Import python libs
@@ -51,6 +47,9 @@ def __virtual__():
 def cert_base_path(cacert_path=None):
     '''
     Return the base path for certs from CLI or from options
+
+    cacert_path
+        absolute path to ca certificates root directory
 
     CLI Example:
 
@@ -227,8 +226,6 @@ def ca_exists(ca_name, cacert_path=None):
 
     ca_name
         name of the CA
-    cacert_path
-        absolute path to ca certificates root directory
 
     CLI Example:
 
@@ -283,6 +280,82 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
     return certp
 
 
+def get_ca_signed_cert(ca_name, CN='localhost', as_text=False, cacert_path=None, cert_filename=None):
+    '''
+    Get the certificate path or content
+
+    ca_name
+        name of the CA
+    CN
+        common name of the certificate
+    as_text
+        if true, return the certificate content instead of the path
+    cacert_path
+        absolute path to certificates root directory
+    cert_filename
+        alternative filename for the certificate, useful when using special characters in the CN
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.get_ca_signed_cert test_ca CN=localhost as_text=False cacert_path=/etc/certs
+    '''
+    set_ca_path(cacert_path)
+    if not cert_filename:
+        cert_filename = CN
+
+    certp = '{0}/{1}/certs/{2}.crt'.format(
+            cert_base_path(),
+            ca_name,
+            cert_filename)
+    if not os.path.exists(certp):
+        raise ValueError('Certificate does not exists for {0}'.format(CN))
+    else:
+        if as_text:
+            with salt.utils.fopen(certp) as fic:
+                certp = fic.read()
+    return certp
+
+
+def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None, key_filename=None):
+    '''
+    Get the certificate path or content
+
+    ca_name
+        name of the CA
+    CN
+        common name of the certificate
+    as_text
+        if true, return the certificate content instead of the path
+    cacert_path
+        absolute path to certificates root directory
+    key_filename
+        alternative filename for the key, useful when using special characters in the CN
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.get_ca_signed_key test_ca CN=localhost as_text=False cacert_path=/etc/certs
+    '''
+    set_ca_path(cacert_path)
+    if not key_filename:
+        key_filename = CN
+
+    keyp = '{0}/{1}/certs/{2}.key'.format(
+            cert_base_path(),
+            ca_name,
+            key_filename)
+    if not os.path.exists(keyp):
+        raise ValueError('Certificate does not exists for {0}'.format(CN))
+    else:
+        if as_text:
+            with salt.utils.fopen(keyp) as fic:
+                keyp = fic.read()
+    return keyp
+
+
 def create_ca(ca_name,
               bits=2048,
               days=365,
@@ -302,23 +375,23 @@ def create_ca(ca_name,
     ca_name
         name of the CA
     bits
-        number of RSA key bits, Default is ``2048``
+        number of RSA key bits, default is 2048
     days
-        number of days the CA will be valid, Default is ``365``
+        number of days the CA will be valid, default is 365
     CN
-        common name in the request, Default is ``localhost``
+        common name in the request, default is "localhost"
     C
-        country, Default is ``US``
+        country, default is "US"
     ST
-        state, Default is ``Utah``
+        state, default is "Utah"
     L
-        locality, Default is ``Salt Lake City``
+        locality, default is "Centerville", the city where SaltStack originated
     O
-        organization, Default is ``SaltStack``
+        organization, default is "SaltStack"
     OU
-        organizational unit, Default is ``None``
+        organizational unit, default is None
     emailAddress
-        email address for the CA owner, Default is ``xyz@pdq.net``
+        email address for the CA owner, default is 'xyz@pdq.net'
     cacert_path
         absolute path to ca certificates root directory
     digest
@@ -330,16 +403,12 @@ def create_ca(ca_name,
     already exists, the function just returns assuming the CA certificate
     already exists.
 
-    If the following values were set:
-
-    .. code-block:: bash
+    If the following values were set::
 
         ca.cert_base_path='/etc/pki'
         ca_name='koji'
 
-    the resulting CA, and corresponding key, would be written in the following location:
-
-    .. code-block:: text
+    the resulting CA, and corresponding key, would be written in the following location::
 
         /etc/pki/koji/koji_ca_cert.crt
         /etc/pki/koji/koji_ca_cert.key
@@ -439,10 +508,10 @@ def create_ca(ca_name,
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = ('Created Private Key: "{0}/{1}/{1}_ca_cert.key." ').format(
-        cert_base_path(), ca_name)
-    ret += ('Created CA "{0}": "{1}/{0}/{0}_ca_cert.crt."').format(
-        ca_name, cert_base_path())
+    ret = ('Created Private Key: "{1}/{2}/{3}_ca_cert.key." ').format(
+        ca_name, cert_base_path(), ca_name)
+    ret += ('Created CA "{0}": "{1}/{2}/{3}_ca_cert.crt."').format(
+        ca_name, cert_base_path(), ca_name, ca_name)
 
     return ret
 
@@ -458,6 +527,7 @@ def create_csr(ca_name,
                emailAddress='xyz@pdq.net',
                subjectAltName=None,
                cacert_path=None,
+               csr_filename=None,
                digest='sha256'):
     '''
     Create a Certificate Signing Request (CSR) for a
@@ -466,26 +536,29 @@ def create_csr(ca_name,
     ca_name
         name of the CA
     bits
-        number of RSA key bits, Default is ``2048``
+        number of RSA key bits, default is 2048
     CN
-        common name in the request, Default is ``localhost``
+        common name in the request, default is "localhost"
     C
-        country, Default is ``US``
+        country, default is "US"
     ST
-        state, Default is ``Utah``
+        state, default is "Utah"
     L
-        locality, Default is ``Salt Lake City``
+        locality, default is "Centerville", the city where SaltStack originated
     O
-        organization. Must the same as CA certificate or an error will be raised, Default is ``SaltStack``
+        organization, default is "SaltStack"
+        NOTE: Must the same as CA certificate or an error will be raised
     OU
-        organizational unit, Default is ``None``
+        organizational unit, default is None
     emailAddress
-        email address for the request, Default is ``xyz@pdq.net``
+        email address for the request, default is 'xyz@pdq.net'
     subjectAltName
         valid subjectAltNames in full form, e.g. to add DNS entry you would call
         this function with this value:  **['DNS:myapp.foo.comm']**
     cacert_path
         absolute path to ca certificates root directory
+    csr_filename
+        alternative filename for the csr, useful when using special characters in the CN
     digest
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
@@ -494,18 +567,14 @@ def create_csr(ca_name,
     Writes out a Certificate Signing Request (CSR) If the file already
     exists, the function just returns assuming the CSR already exists.
 
-    If the following values were set:
-
-    .. code-block:: bash
+    If the following values were set::
 
         ca.cert_base_path='/etc/pki'
         ca_name='koji'
         CN='test.egavas.org'
 
     the resulting CSR, and corresponding key, would be written in the
-    following location:
-
-    .. code-block:: text
+    following location::
 
         /etc/pki/koji/certs/test.egavas.org.csr
         /etc/pki/koji/certs/test.egavas.org.key
@@ -528,9 +597,11 @@ def create_csr(ca_name,
     ):
         os.makedirs("{0}/{1}/certs/".format(cert_base_path(),
                                             ca_name))
+    if not csr_filename:
+        csr_filename = CN
 
     csr_f = '{0}/{1}/certs/{2}.csr'.format(cert_base_path(),
-                                           ca_name, CN)
+                                           ca_name, csr_filename)
     if os.path.exists(csr_f):
         return 'Certificate Request "{0}" already exists'.format(csr_f)
 
@@ -558,7 +629,7 @@ def create_csr(ca_name,
     # Write private key and request
     with salt.utils.fopen('{0}/{1}/certs/{2}.key'.format(
                                     cert_base_path(),
-                                    ca_name, CN), 'w+') as priv_key:
+                                    ca_name, csr_filename), 'w+') as priv_key:
         priv_key.write(
                 OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
                 )
@@ -574,13 +645,13 @@ def create_csr(ca_name,
     ret = 'Created Private Key: "{0}/{1}/certs/{2}.key." '.format(
                     cert_base_path(),
                     ca_name,
-                    CN
+                    csr_filename
                     )
     ret += 'Created CSR for "{0}": "{1}/{2}/certs/{3}.csr."'.format(
-                    ca_name,
+                    CN,
                     cert_base_path(),
                     ca_name,
-                    CN
+                    csr_filename
                     )
 
     return ret
@@ -597,30 +668,30 @@ def create_self_signed_cert(tls_dir='tls',
                             OU=None,
                             emailAddress='xyz@pdq.net',
                             cacert_path=None,
+                            cert_filename=None,
                             digest='sha256'):
     '''
     Create a Self-Signed Certificate (CERT)
 
     tls_dir
-        location appended to the ca.cert_base_path, Default is ``tls``
+        location appended to the ca.cert_base_path, default is 'tls'
     bits
-        number of RSA key bits, Default is ``2048``
-    days
-        validity of certificate, Default is ``365``
+        number of RSA key bits, default is 2048
     CN
-        common name in the request, Default is ``localhost``
+        common name in the request, default is "localhost"
     C
-        country, Default is ``US``
+        country, default is "US"
     ST
-        state, Default is ``Utah``
+        state, default is "Utah"
     L
-        locality, Default is ``Salt Lake City``
+        locality, default is "Centerville", the city where SaltStack originated
     O
-        organization. Must the same as CA certificate or an error will be raised, Default is ``SaltStack``
+        organization, default is "SaltStack"
+        NOTE: Must the same as CA certificate or an error will be raised
     OU
-        organizational unit, Default is ``None``
+        organizational unit, default is None
     emailAddress
-        email address for the request, Default is ``xyz@pdq.net``
+        email address for the request, default is 'xyz@pdq.net'
     cacert_path
         absolute path to ca certificates root directory
     digest
@@ -631,27 +702,28 @@ def create_self_signed_cert(tls_dir='tls',
     Writes out a Self-Signed Certificate (CERT). If the file already
     exists, the function just returns.
 
-    If the following values were set:
-
-    .. code-block:: bash
+    If the following values were set::
 
         ca.cert_base_path='/etc/pki'
         tls_dir='koji'
         CN='test.egavas.org'
 
     the resulting CERT, and corresponding key, would be written in the
-    following location:
-
-    .. code-block:: text
+    following location::
 
         /etc/pki/koji/certs/test.egavas.org.crt
         /etc/pki/koji/certs/test.egavas.org.key
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
         salt '*' tls.create_self_signed_cert
+
+    Passing options from the command line:
+
+    .. code-block:: bash
+
         salt 'minion' tls.create_self_signed_cert CN='test.mysite.org'
     '''
     set_ca_path(cacert_path)
@@ -660,11 +732,14 @@ def create_self_signed_cert(tls_dir='tls',
         os.makedirs("{0}/{1}/certs/".format(cert_base_path(),
                                             tls_dir))
 
+    if not cert_filename:
+        cert_filename = CN
+
     if os.path.exists(
             '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
-                                           tls_dir, CN)
+                                           tls_dir, cert_filename)
             ):
-        return 'Certificate "{0}" already exists'.format(CN)
+        return 'Certificate "{0}" already exists'.format(cert_filename)
 
     key = OpenSSL.crypto.PKey()
     key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
@@ -693,7 +768,7 @@ def create_self_signed_cert(tls_dir='tls',
     # Write private key and cert
     with salt.utils.fopen(
                 '{0}/{1}/certs/{2}.key'.format(cert_base_path(),
-                                               tls_dir, CN),
+                                               tls_dir, cert_filename),
                 'w+'
                 ) as priv_key:
         priv_key.write(
@@ -702,7 +777,7 @@ def create_self_signed_cert(tls_dir='tls',
 
     with salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
                                                          tls_dir,
-                                                         CN
+                                                         cert_filename
                                                          ), 'w+') as crt:
         crt.write(
                 OpenSSL.crypto.dump_certificate(
@@ -716,18 +791,18 @@ def create_self_signed_cert(tls_dir='tls',
     ret = 'Created Private Key: "{0}/{1}/certs/{2}.key." '.format(
                     cert_base_path(),
                     tls_dir,
-                    CN
+                    cert_filename
                     )
     ret += 'Created Certificate: "{0}/{1}/certs/{2}.crt."'.format(
                     cert_base_path(),
                     tls_dir,
-                    CN
+                    cert_filename
                     )
 
     return ret
 
 
-def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha256', **extensions):
+def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename=None, digest='sha256'):
     '''
     Create a Certificate (CERT) signed by a named Certificate Authority (CA)
 
@@ -745,35 +820,29 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
         common name matching the certificate signing request
 
     days
-        number of days certificate is valid, Default is ``365`` (1 year)
+        number of days certificate is valid, default is 365 (1 year)
 
     cacert_path
         absolute path to ca certificates root directory
+
+    cert_filename
+        alternative filename for the certificate, useful when using special characters in the CN
 
     digest
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
         For example, "md5" or "sha1". Default: 'sha256'
 
-    **extensions
-        X509 V3 certificate extension
-
-    Writes out a Certificate (CERT). If the file already
-    exists, the function just returns assuming the CERT already exists.
-
-    The CN *must* match an existing CSR generated by create_csr. If it
-    does not, this method does nothing.
-
     If the following values were set:
 
-    .. code-block:: bash
+    .. code-block:: text
 
         ca.cert_base_path='/etc/pki'
         ca_name='koji'
         CN='test.egavas.org'
 
-    the resulting signed certificate would be written in the
-    following location:
+    the resulting signed certificate would be written in the following
+    location:
 
     .. code-block:: text
 
@@ -787,10 +856,14 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
     '''
     set_ca_path(cacert_path)
 
-    crt_f = '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
-                                           ca_name, CN)
-    if os.path.exists(crt_f):
-        return 'Certificate "{0}" already exists'.format(CN)
+    if not cert_filename:
+        cert_filename = CN
+
+    if os.path.exists(
+            '{0}/{1}/{2}.crt'.format(cert_base_path(),
+                                     ca_name, cert_filename)
+    ):
+        return 'Certificate "{0}" already exists'.format(cert_filename)
 
     try:
         maybe_fix_ssl_version(ca_name)
@@ -813,13 +886,13 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
     try:
         with salt.utils.fopen('{0}/{1}/certs/{2}.csr'.format(cert_base_path(),
                                                              ca_name,
-                                                             CN)) as fhr:
+                                                             cert_filename)) as fhr:
             req = OpenSSL.crypto.load_certificate_request(
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
                     )
     except IOError:
-        return 'There is no CSR that matches the CN "{0}"'.format(CN)
+        return 'There is no CSR that matches the CN "{0}"'.format(cert_filename)
 
     exts = []
     try:
@@ -845,20 +918,11 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
     cert.set_serial_number(_new_serial(ca_name, CN))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
-    extensions_list = []
-    for name in extensions:
-        log.debug("name: {0}, critical: {1}, options: {2}".format(
-            name, extensions[name]['critical'], extensions[name]['options']))
-        extensions_list.append(OpenSSL.crypto.X509Extension(
-            name,
-            extensions[name]['critical'],
-            extensions[name]['options']))
-    cert.add_extensions(extensions_list)
     cert.sign(ca_key, digest)
 
     with salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
                                                          ca_name,
-                                                         CN), 'w+') as crt:
+                                                         cert_filename), 'w+') as crt:
         crt.write(
             OpenSSL.crypto.dump_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
@@ -870,10 +934,10 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
 
     return ('Created Certificate for "{0}": '
             '"{1}/{2}/certs/{3}.crt"').format(
-                    ca_name,
+                    CN,
                     cert_base_path(),
                     ca_name,
-                    CN
+                    cert_filename
                     )
 
 
@@ -890,18 +954,14 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None):
     cacert_path
         absolute path to ca certificates root directory
 
-    If the following values were set:
-
-    .. code-block:: bash
+    If the following values were set::
 
         ca.cert_base_path='/etc/pki'
         ca_name='koji'
         CN='test.egavas.org'
 
     the resulting signed certificate would be written in the
-    following location:
-
-    .. code-block:: text
+    following location::
 
         /etc/pki/koji/certs/test.egavas.org.p12
 

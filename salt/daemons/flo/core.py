@@ -773,6 +773,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',
                'presence_req': '.salt.presence.event_req',
+               'stats_req': '.salt.stats.event_req',
                'workers': '.salt.track.workers',
                'inode': '.salt.lane.manor.',
                'stack': 'stack',
@@ -825,6 +826,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         self.event.value = deque()
         self.event_req.value = deque()
         self.presence_req.value = deque()
+        self.stats_req.value = deque()
         self.publish.value = deque()
         self.worker_verify.value = salt.utils.rand_string()
         if self.opts.value.get('worker_threads'):
@@ -968,6 +970,7 @@ class SaltRaetRouter(ioflo.base.deeding.Deed):
                'event': '.salt.event.events',
                'event_req': '.salt.event.event_req',  # deque
                'presence_req': '.salt.presence.event_req',  # deque
+               'stats_req': '.salt.stats.event_req',  # deque
                'availables': '.salt.var.presence.availables',  # set()
                'workers': '.salt.track.workers',
                'worker_verify': '.salt.var.worker_verify',
@@ -1176,6 +1179,9 @@ class SaltRaetRouterMaster(SaltRaetRouter):
         elif d_share == 'presence_req':
             self.presence_req.value.append(msg)
             #log.debug("\n**** Presence Request \n {0}\n".format(msg))
+        elif d_share == 'stats_req':
+            self.stats_req.value.append(msg)
+            #log.debug("\n**** Stats Request \n {0}\n".format(msg))
 
 
 class SaltRaetRouterMinion(SaltRaetRouter):
@@ -1229,6 +1235,9 @@ class SaltRaetRouterMinion(SaltRaetRouter):
         elif d_share == 'fun':
             if self.road_stack.value.kind == kinds.applKinds.minion:
                 self.fun.value.append(msg)
+        elif d_share == 'stats_req':
+            self.stats_req.value.append(msg)
+            #log.debug("\n**** Stats Request \n {0}\n".format(msg))
 
     def _process_lane_rxmsg(self, msg, sender):
         '''
@@ -1504,6 +1513,92 @@ class SaltRaetPresenter(ioflo.base.deeding.Deed):
             self._send_presence(
                 self.presence_req.value.popleft()
             )
+
+
+class SaltRaetStatsEventer(ioflo.base.deeding.Deed):
+    '''
+    Fire stats events
+    FloScript:
+
+    do salt raet state eventer
+
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'stats_req': '.salt.stats.event_req',
+               'lane_stack': '.salt.lane.manor.stack',
+               'road_stack': '.salt.road.manor.stack',
+    }
+
+    def _send_stats(self, msg):
+        '''
+        Forward a stats message to all subscribed yards
+        Stats message has a route
+        '''
+        pass
+
+    def _get_stats(self, tag):
+        if tag == tagify('road', 'stats'):
+            return self.road_stack.value.stats
+        elif tag == tagify('lane', 'stats'):
+            return self.lane_stack.value.stats
+        else:
+            log.error('Missing or invalid tag: {0}'.format(tag))
+            return None
+
+    def action(self):
+        '''
+        Iterate over the registered stats requests and fire!
+        '''
+        while self.stats_req.value:  # stats are msgs with routes
+            self._send_stats(
+                self.stats_req.value.popleft()
+            )
+
+
+class SaltRaetStatsEventerMaster(SaltRaetStatsEventer):
+
+    def _send_stats(self, msg):
+        '''
+        Forward a stats message to all subscribed yards
+        Stats message has a route
+        '''
+        y_name = msg['route']['src'][1]
+        if y_name not in self.lane_stack.value.nameRemotes:  # subscriber not a remote
+            return  # drop msg don't answer
+
+        stats = self._get_stats(msg.get('tag'))
+        if stats is None:
+            return
+
+        route = {'dst': (None, None, 'event_fire'),
+                 'src': (None, self.lane_stack.value.local.name, None)}
+        repl = {'route': route, 'tag': msg.get('tag'), 'data': stats}
+        self.lane_stack.value.transmit(repl,
+                                       self.lane_stack.value.fetchUidByName(y_name))
+        self.lane_stack.value.serviceAll()
+
+
+class SaltRaetStatsEventerMinion(SaltRaetStatsEventer):
+
+    def _send_stats(self, msg):
+        '''
+        Forward a stats message to all subscribed yards
+        Stats message has a route
+        '''
+        s_estate, s_yard, s_share = msg['route']['src']
+        if s_estate not in self.road_stack.value.nameRemotes:  # subscriber not a remote
+            return  # drop msg don't answer
+
+        stats = self._get_stats(msg.get('tag'))
+        if stats is None:
+            return
+
+        route = {'dst': (s_estate, s_yard, 'event_fire'),
+                 'src': (self.road_stack.value.name, self.road_stack.value.local.name, None)}
+        repl = {'route': route, 'tag': msg.get('tag'), 'data': stats}
+        self.road_stack.value.transmit(repl,
+                                       self.road_stack.value.fetchUidByName(s_estate))
+        self.road_stack.value.serviceAll()
 
 
 class SaltRaetPublisher(ioflo.base.deeding.Deed):

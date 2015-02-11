@@ -449,9 +449,6 @@ def _windows_virtual(osdata):
     # Manufacturer: Parallels Software International Inc.
     elif 'Parallels Software' in osdata.get('manufacturer'):
         grains['virtual'] = 'Parallels'
-
-    if HAS_WMI:
-        pass
     return grains
 
 

@@ -29,6 +29,20 @@ mod_random.__context__ = {}
 mod_random.__opts__ = {}
 
 
+def _test_hashlib():
+    try:
+        import hashlib
+    except ImportError:
+        return False
+    if not hasattr(hashlib, 'algorithms'):
+        return False
+    else:
+        return True
+
+SUPPORTED_HASHLIB = _test_hashlib()
+
+
+@skipIf(not SUPPORTED_HASHLIB, 'Hashlib does not contain needed functionality')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ModrandomTestCase(TestCase):
     '''
