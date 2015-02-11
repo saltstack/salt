@@ -55,8 +55,7 @@ def _check_cron(user,
 
     lst = __salt__['incron.list_tab'](user)
     for cron in lst['crons']:
-        if path == cron['path']:
-            if cron['cmd'] == cmd:
+        if path == cron['path'] and cron['cmd'] == cmd:
                 cron_mask = cron['mask'].split(',')
                 cron_mask.sort()
                 if cron_mask == arg_mask:

@@ -131,11 +131,10 @@ def syslog(server, enable=True):
         salt dell drac.syslog [SYSLOG IP] [ENABLE/DISABLE]
         salt dell drac.syslog 0.0.0.0 False
     '''
-    if enable:
-        if __execute_cmd('config -g cfgRemoteHosts -o \
+    if enable and __execute_cmd('config -g cfgRemoteHosts -o \
                 cfgRhostsSyslogEnable 1'):
-            return __execute_cmd('config -g cfgRemoteHosts -o \
-                    cfgRhostsSyslogServer1 {0}'.format(server))
+        return __execute_cmd('config -g cfgRemoteHosts -o \
+                cfgRhostsSyslogServer1 {0}'.format(server))
 
     return __execute_cmd('config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0')
 
