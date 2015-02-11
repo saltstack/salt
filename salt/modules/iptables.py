@@ -282,42 +282,25 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
-
-    if 'jump' in kwargs:
-        after_jump.append('--jump {0} '.format(kwargs['jump']))
-        del kwargs['jump']
-
-    if 'j' in kwargs:
-        after_jump.append('-j {0} '.format(kwargs['j']))
-        del kwargs['j']
-
-    if 'to-port' in kwargs:
-        after_jump.append('--to-port {0} '.format(kwargs['to-port']))
-        del kwargs['to-port']
-
-    if 'to-ports' in kwargs:
-        after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
-        del kwargs['to-ports']
-
-    if 'to-destination' in kwargs:
-        after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
-        del kwargs['to-destination']
-
-    if 'to-source' in kwargs:
-        after_jump.append('--to-source {0} '.format(kwargs['to-source']))
-        del kwargs['to-source']
-
-    if 'reject-with' in kwargs:
-        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
-        del kwargs['reject-with']
-
-    if 'set-mark' in kwargs:
-        after_jump.append('--set-mark {0} '.format(kwargs['set-mark']))
-        del kwargs['set-mark']
-
-    if 'set-xmark' in kwargs:
-        after_jump.append('--set-xmark {0} '.format(kwargs['set-xmark']))
-        del kwargs['set-xmark']
+    after_jump_arguments = (
+        'jump',
+        'j',
+        'to-port',
+        'to-ports',
+        'to-destination',
+        'to-source',
+        'reject-with',
+        'set-mark',
+        'set-xmark',
+    )
+    for after_jump_argument in after_jump_arguments:
+        if after_jump_argument in kwargs:
+            value = kwargs[after_jump_argument]
+            if len(str(value).split()) > 1:
+                after_jump.append('--{0} "{1}"'.format(after_jump_argument, value))
+            else:
+                after_jump.append('--{0} {1}'.format(after_jump_argument, value))
+            del kwargs[after_jump_argument]
 
     for item in kwargs:
         if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):
@@ -329,8 +312,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         else:
             rule += '--{0} {1} '.format(item, kwargs[item])
 
-    for item in after_jump:
-        rule += item
+    rule += ' '.join(after_jump)
 
     if full in ['True', 'true']:
         if not table:
