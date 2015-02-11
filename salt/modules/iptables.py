@@ -37,6 +37,21 @@ def _iptables_cmd(family='ipv4'):
         return salt.utils.which('iptables')
 
 
+def _has_option(option, family='ipv4'):
+    '''
+    Return truth of whether iptables has `option`.  For example:
+
+    .. code-block:: python
+
+        _has_option('--wait')
+        _has_option('--check', family='ipv6')
+    '''
+    cmd = '{0} --help'.format(_iptables_cmd(family))
+    if option in __salt__['cmd.run'](cmd, output_loglevel='quiet'):
+        return True
+    return False
+
+
 def _conf(family='ipv4'):
     '''
     Some distros have a specific location for config files
@@ -487,11 +502,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
     ipt_cmd = _iptables_cmd(family)
 
-    HAS_CHECK = False
-    if '--check' in __salt__['cmd.run']('{0} --help'.format(ipt_cmd), output_loglevel='quiet'):
-        HAS_CHECK = True
-
-    if HAS_CHECK is False:
+    if _has_option('--check', family):
         _chain_name = hex(uuid.getnode())
 
         # Create temporary table
