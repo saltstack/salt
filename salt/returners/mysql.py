@@ -194,7 +194,7 @@ def returner(ret):
             cur.execute(sql, (ret['fun'], ret['jid'],
                               json.dumps(ret['return']),
                               ret['id'],
-                              ret['success'],
+                              ret.get('success', False),
                               json.dumps(ret)))
     except salt.exceptions.SaltMasterError:
         log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
