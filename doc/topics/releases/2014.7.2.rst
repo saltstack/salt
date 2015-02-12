@@ -1,5 +1,5 @@
 ===========================
-Salt 2014.7.1 Release Notes
+Salt 2014.7.2 Release Notes
 ===========================
 
 :release: TBA
