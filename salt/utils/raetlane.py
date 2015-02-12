@@ -118,7 +118,7 @@ def _setup(opts, ryn='manor'):
                       lanename=lanename,
                       sockdirpath=opts['sock_dir'])
 
-    lane_stack.Pk = raeting.packKinds.pack
+    lane_stack.Pk = raeting.PackKind.pack.value
     log.debug("Created new LaneStack and local Yard named {0} at {1}\n"
               "".format(lane_stack.name, lane_stack.ha))
     remote_yard = RemoteYard(stack=lane_stack,

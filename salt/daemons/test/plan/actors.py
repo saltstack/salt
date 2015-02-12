@@ -818,8 +818,8 @@ class StatsMinionTestSetup(ioflo.base.deeding.Deed):
         minionStack.addRemote(minionRemoteMaster)
 
         # Make life easier
-        masterStack.keep.auto = raeting.autoModes.always
-        minionStack.keep.auto = raeting.autoModes.always
+        masterStack.keep.auto = raeting.AutoMode.always.value
+        minionStack.keep.auto = raeting.AutoMode.always.value
 
         minionStack.join(minionRemoteMaster.uid)
         serviceRoads([minionStack, masterStack])
