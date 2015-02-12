@@ -158,7 +158,7 @@ def returners(opts, functions, whitelist=None, context=None):
     Returns the returner modules
     '''
     if context is None:
-        conext = {}
+        context = {}
     return LazyLoader(_module_dirs(opts, 'returners', 'returner'),
                       opts,
                       tag='returner',
