@@ -710,7 +710,7 @@ def _parse_ethtool_pppoe_opts(opts, iface):
             config[opt] = opts[opt]
 
     if 'provider' in opts and not opts['provider']:
-            _raise_error_iface(iface, 'provider', _CONFIG_TRUE + _CONFIG_FALSE)
+        _raise_error_iface(iface, 'provider', _CONFIG_TRUE + _CONFIG_FALSE)
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     for option in ('noipdefault', 'usepeerdns', 'defaultroute', 'hide-password', 'noauth', 'persist', 'noaccomp'):
