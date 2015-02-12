@@ -1725,8 +1725,6 @@ class ClearFuncs(object):
                     self.event.fire_event(eload, tagify(prefix='auth'))
                     return {'enc': 'clear',
                             'load': {'ret': False}}
-                else:
-                    pass
 
         else:
             # Something happened that I have not accounted for, FAIL!
