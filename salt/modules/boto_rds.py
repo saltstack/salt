@@ -84,13 +84,13 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def exists_option_group(name, region=None, key=None, keyid=None, profile=None):
+def option_group_exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if an RDS option group exists.
 
     CLI example::
 
-        salt myminion boto_rds.exists_option_group myoptiongr region=us-east-1
+        salt myminion boto_rds.option_group_exists myoptiongr region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
@@ -110,14 +110,14 @@ def exists_option_group(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def exists_parameter_group(name, region=None, key=None, keyid=None,
+def parameter_group_exists(name, region=None, key=None, keyid=None,
                            profile=None):
     '''
     Check to see if an RDS parameter group exists.
 
     CLI example::
 
-        salt myminion boto_rds.exists_parameter_group myparametergroup \
+        salt myminion boto_rds.parameter_group_exists myparametergroup \
                 region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
@@ -137,14 +137,14 @@ def exists_parameter_group(name, region=None, key=None, keyid=None,
         return False
 
 
-def exists_subnet_group(name, region=None, key=None, keyid=None,
+def subnet_group_exists(name, region=None, key=None, keyid=None,
                         profile=None):
     '''
     Check to see if an RDS subnet group exists.
 
     CLI example::
 
-        salt myminion boto_rds.exists_subnet_group my-param-group \
+        salt myminion boto_rds.subnet_group_exists my-param-group \
                 region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
@@ -231,7 +231,7 @@ def create_option_group(name, engine_name, major_engine_version,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if __salt__['boto_rds.exists_option_group'](name, region, key, keyid,
+    if __salt__['boto_rds.option_group_exists'](name, region, key, keyid,
                                                 profile):
         return True
     try:
@@ -266,7 +266,7 @@ def create_parameter_group(name, db_parameter_group_family, description,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if __salt__['boto_rds.exists_parameter_group'](name, region, key, keyid,
+    if __salt__['boto_rds.parameter_group_exists'](name, region, key, keyid,
                                                    profile):
         return True
     try:
@@ -301,7 +301,7 @@ def create_subnet_group(name, db_subnet_group_description, subnet_ids,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if __salt__['boto_rds.exists_subnet_group'](name, region, key, keyid,
+    if __salt__['boto_rds.subnet_group_exists'](name, region, key, keyid,
                                                 profile):
         return True
     try:
@@ -336,7 +336,7 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if not __salt__['boto_rds.exists_parameter_group'](name, region, key,
+    if not __salt__['boto_rds.parameter_group_exists'](name, region, key,
                                                        keyid, profile):
         return False
     param_list = []
