@@ -225,7 +225,7 @@ def build_schedule_item(name, **kwargs):
             schedule[name][item] = kwargs[item]
 
     if 'return_job' in kwargs:
-        schedule[name]['return_job'] = True
+        schedule[name]['return_job'] = kwargs['return_job']
 
     if 'metadata' in kwargs:
         schedule[name]['metadata'] = kwargs['metadata']
