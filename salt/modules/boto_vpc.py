@@ -257,9 +257,9 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None, tags=None, region=N
         return False
 
 
-def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
+def delete(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Given a VPC ID, delete the VPC.
+    Given a VPC ID or VPC name, delete the VPC.
 
     Returns True if the VPC was deleted and returns False if the VPC was not deleted.
 
@@ -267,7 +267,8 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.delete 'vpc-6b1fe402'
+        salt myminion boto_vpc.delete vpc_id='vpc-6b1fe402'
+        salt myminion boto_vpc.delete name='myvpc'
 
     '''
 
@@ -275,7 +276,13 @@ def delete(vpc_id, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return False
 
+    if not vpc_id and not name:
+        raise SaltInvocationError("Either VPC ID or name needs to be specified.")
+
     try:
+        if not vpc_id:
+            vpc_id = get_id(name=name, tags=tags)
+
         if conn.delete_vpc(vpc_id):
             log.info('VPC {0} was deleted.'.format(vpc_id))
 
