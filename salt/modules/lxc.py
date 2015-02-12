@@ -1450,6 +1450,11 @@ def create(name,
         raise SaltInvocationError(
             'Only one of \'template\' and \'image\' is permitted'
         )
+    elif not any((template, image, profile)):
+        raise SaltInvocationError(
+            'At least one of \'template\', \'image\', and \'profile\' is '
+            'required'
+        )
 
     options = select('options') or {}
     backing = select('backing')
