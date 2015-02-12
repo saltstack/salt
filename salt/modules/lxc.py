@@ -1548,7 +1548,7 @@ def clone(name,
         Profile to use in container cloning (see
         :mod:`lxc.get_container_profile
         <salt.modules.lxc.get_container_profile>`). Values in a profile will be
-        overridden by the **Container Creation Arguments** listed below.
+        overridden by the **Container Cloning Arguments** listed below.
 
     **Container Cloning Arguments**
 
@@ -1956,6 +1956,9 @@ def destroy(name, stop=True):
     .. warning::
 
         Destroys all data associated with the container.
+
+    stop : True
+        If ``False``, do not destroy the container if it is running/frozen.
 
     CLI Examples:
 
