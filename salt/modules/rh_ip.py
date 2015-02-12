@@ -677,6 +677,16 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     else:
         result['userctl'] = 'no'
 
+    # This vlan is in opts, and should be only used in range interface
+    # will affect jinja template for interface generating
+    if 'vlan' in opts:
+        if opts['vlan'] in _CONFIG_TRUE:
+            result['vlan'] = 'yes'
+        elif opts['vlan'] in _CONFIG_FALSE:
+            result['vlan'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['vlan'], valid)
+
     if 'arpcheck' in opts:
         if opts['arpcheck'] in _CONFIG_FALSE:
             result['arpcheck'] = 'no'
