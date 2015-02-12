@@ -38,6 +38,8 @@ def _get_pip_bin(bin_env):
         which_result = __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
+        if salt.utils.is_windows():
+            return which_result.encode('string-escape')
         return which_result
 
     # try to get pip bin from env

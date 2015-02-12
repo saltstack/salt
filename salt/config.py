@@ -282,6 +282,7 @@ VALID_OPTS = {
     'rotate_aes_key': bool,
     'cache_sreqs': bool,
     'cmd_safe': bool,
+    'dummy_publisher': bool,
 }
 
 # default configurations
@@ -622,6 +623,7 @@ DEFAULT_MASTER_OPTS = {
     'con_cache': False,
     'rotate_aes_key': True,
     'cache_sreqs': True,
+    'dummy_pub': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

@@ -70,20 +70,30 @@ def _exit_status(retcode):
     ret = {0: 'Successful completion.',
            1: 'An error occurred.',
            2: 'Usage error.'
-          }[retcode]
+           }[retcode]
     return ret
 
 
 def __virtual__():
     '''
-    Makes sure that ZFS is available.
+    Makes sure that ZFS kernel module is loaded.
     '''
-    if _check_zfs():
+    kernel_module_chk = {
+        'FreeBSD': 'kldstat -q -m zfs',
+        'Linux': 'modinfo zfs',
+    }
+    cmd = kernel_module_chk.get(__grains__['kernel'], '')
+    if cmd and salt_cmd.retcode(cmd) == 0:
+        # Build dynamic functions and allow loading module
+        _build_zfs_cmd_list()
         return 'zfs'
     return False
 
 
 def _add_doc(func, doc, prefix='\n\n    '):
+    '''
+    Add documentation to a function
+    '''
     if not func.__doc__:
         func.__doc__ = ''
     func.__doc__ += '{0}{1}'.format(prefix, doc)
@@ -124,21 +134,26 @@ def _make_function(cmd_name, doc):
     # At this point return the function we've just defined.
     return _cmd
 
-# Run through all the available commands
-if _check_zfs():
-    available_cmds = _available_commands()
-    for available_cmd in available_cmds:
 
-        # Set the output from _make_function to be 'available_cmd_'.
-        # i.e. 'list' becomes 'list_' in local module.
-        setattr(
-                sys.modules[__name__],
-                '{0}_'.format(available_cmd),
-                _make_function(available_cmd, available_cmds[available_cmd])
-                )
+def _build_zfs_cmd_list():
+    '''
+    Run through zfs command options, and build equivalent functions dynamically
+    '''
+    # Run through all the available commands
+    if _check_zfs():
+        available_cmds = _available_commands()
+        for available_cmd in available_cmds:
 
-        # Update the function alias so that salt finds the functions properly.
-        __func_alias__['{0}_'.format(available_cmd)] = available_cmd
+            # Set the output from _make_function to be 'available_cmd_'.
+            # i.e. 'list' becomes 'list_' in local module.
+            setattr(
+                    sys.modules[__name__],
+                    '{0}_'.format(available_cmd),
+                    _make_function(available_cmd, available_cmds[available_cmd])
+                    )
+
+            # Update the function alias so that salt finds the functions properly.
+            __func_alias__['{0}_'.format(available_cmd)] = available_cmd
 
 
 def exists(name):
@@ -281,7 +296,8 @@ def list_(name='', **kwargs):
     '''
     .. versionadded:: Lithium
 
-    Return a list of all datasets or a specified dataset on the system and the values of their used, available, referenced, and mountpoint properties.
+    Return a list of all datasets or a specified dataset on the system and the
+    values of their used, available, referenced, and mountpoint properties.
 
     .. note::
 

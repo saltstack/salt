@@ -485,6 +485,8 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     '''
+    if not excludes:
+        excludes = []
     if runas:
         euid = os.geteuid()
         egid = os.getegid()
@@ -510,9 +512,6 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
         cleaned_files = []
         with zipfile.ZipFile(zip_file) as zfile:
             files = zfile.namelist()
-            if excludes is None:
-                zfile.extractall(dest)
-                return files
 
             if isinstance(excludes, string_types):
                 excludes = [x.strip() for x in excludes.split(',')]
@@ -522,6 +521,13 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
             cleaned_files.extend([x for x in files if x not in excludes])
             for target in cleaned_files:
                 if target not in excludes:
+                    if salt.utils.is_windows() is False:
+                        info = zfile.getinfo(target)
+                        # Check if zipped file is a symbolic link
+                        if info.external_attr == 2716663808:
+                            source = zfile.read(target)
+                            os.symlink(source, os.path.join(dest, target))
+                            continue
                     zfile.extract(target, dest)
     except Exception as exc:
         pass
