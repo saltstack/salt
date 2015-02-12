@@ -1630,22 +1630,37 @@ def clone(name,
         )
 
 
-def ls_():
+def ls_(active=None):
     '''
     Return a list of the containers available on the minion
+
+    active
+        If ``True``, return only active (i.e. running) containers
+
+        .. versionadded:: 2015.2.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lxc.ls
+        salt '*' lxc.ls active=True
     '''
-    try:
-        return __context__['lxc.ls']
-    except KeyError:
-        output = __salt__['cmd.run']('lxc-ls | sort -u', python_shell=True)
-        __context__['lxc.ls'] = output.splitlines()
-    return __context__['lxc.ls']
+    contextvar = 'lxc.ls'
+    if active:
+        contextvar += '.active'
+    if contextvar in __context__:
+        return __context__[contextvar]
+    else:
+        ret = []
+        cmd = 'lxc-ls'
+        if active:
+            cmd += ' --active'
+        output = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        for line in output.splitlines():
+            ret.extend(line.split())
+        __context__[contextvar] = ret
+        return ret
 
 
 def list_(extra=False, limit=None):
