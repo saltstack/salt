@@ -125,6 +125,7 @@ framer uxdrouter be inactive first start
 framer events be inactive first start
     frame start
         do salt raet eventer master
+        do salt raet stats eventer master
 
 # Presence framer
 framer presence be inactive first start
@@ -134,7 +135,6 @@ framer presence be inactive first start
 
     frame raet
        do salt raet presenter
-       do salt raet stats eventer master
 
     frame multiheaded
         let me if .salt.etc.zmq_behavior

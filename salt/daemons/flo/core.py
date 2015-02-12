@@ -1594,7 +1594,7 @@ class SaltRaetStatsEventerMinion(SaltRaetStatsEventer):
             return
 
         route = {'dst': (s_estate, s_yard, 'event_fire'),
-                 'src': (self.road_stack.value.name, self.road_stack.value.local.name, None)}
+                 'src': (self.road_stack.value.name, self.lane_stack.value.name, None)}
         repl = {'route': route, 'tag': msg.get('tag'), 'data': stats}
         self.road_stack.value.transmit(repl,
                                        self.road_stack.value.fetchUidByName(s_estate))
