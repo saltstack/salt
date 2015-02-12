@@ -275,21 +275,21 @@ def delete(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-        
+
     if not vpc_id and not name:
         raise SaltInvocationError("Either VPC ID or name needs to be specified.")
 
     try:
         if not vpc_id:
             vpc_id = get_id(name=name, tags=tags)
-        
+
         if conn.delete_vpc(vpc_id):
             log.info('VPC {0} was deleted.'.format(vpc_id))
 
             return True
         else:
             log.warning('VPC {0} was not deleted.'.format(vpc_id))
-            
+
             return False
     except boto.exception.BotoServerError as exc:
         log.error(exc)
