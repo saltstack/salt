@@ -640,24 +640,21 @@ def import_key(user=None,
         except IOError:
             raise SaltInvocationError('filename does not exist.')
 
-    imported_data = gpg.import_keys(text)
-    log.debug('imported_data {0}'.format(list(imported_data.__dict__.keys())))
-    log.debug('imported_data {0}'.format(imported_data.counts))
+    import_result = gpg.import_keys(text)
+    log.debug('imported_data {0}'.format(list(import_result.__dict__.keys())))
+    log.debug('imported_data {0}'.format(import_result.counts))
 
-    if imported_data.counts:
-        if imported_data.counts['imported'] or imported_data.counts['imported_rsa']:
-            ret['message'] = 'Successfully imported key(s).'
-        elif imported_data.counts['unchanged']:
-            ret['message'] = 'Key(s) already exist in keychain.'
-        elif imported_data.counts['not_imported']:
-            ret['res'] = False
-            ret['message'] = 'Unable to import key.'
-        elif not imported_data.counts['count']:
-            ret['res'] = False
-            ret['message'] = 'Unable to import key.'
-    else:
+    if import_result.imported or import_result.imported_rsa:
+        ret['message'] = 'Successfully imported key(s).'
+    elif import_result.unchanged:
+        ret['message'] = 'Key(s) already exist in keychain.'
+    elif import_result.not_imported:
         ret['res'] = False
         ret['message'] = 'Unable to import key.'
+    elif not import_result.count:
+        ret['res'] = False
+        ret['message'] = 'Unable to import key.'
+
     return ret
 
 
