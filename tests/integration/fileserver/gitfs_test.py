@@ -16,6 +16,12 @@ from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../..')
 
+# Import Python libs
+import os
+import logging
+import pwd
+import shutil
+
 # Import salt libs
 import integration
 from salt.fileserver import gitfs
