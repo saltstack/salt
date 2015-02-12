@@ -110,13 +110,13 @@ class TestWhich(integration.TestCase):
                                      'PATHEXT': '.COM;.EXE;.BAT;.CMD;.VBS;'
                                      '.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY'}):
             # Let's also patch is_windows to return True
-            with patch('salt.utils.is_windows', lambda: True), \
-                    patch('os.path.isfile', lambda x: True):
-                self.assertEqual(
-                    salt.utils.which('this-binary-exists-under-windows'),
-                    # The returned path should return the .exe suffix
-                    '/bin/this-binary-exists-under-windows.CMD'
-                )
+            with patch('salt.utils.is_windows', lambda: True):
+                with patch('os.path.isfile', lambda x: True):
+                    self.assertEqual(
+                        salt.utils.which('this-binary-exists-under-windows'),
+                        # The returned path should return the .exe suffix
+                        '/bin/this-binary-exists-under-windows.CMD'
+                    )
 
 
 if __name__ == '__main__':
