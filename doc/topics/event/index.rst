@@ -26,6 +26,40 @@ Event types
 Listening for Events
 ====================
 
+Salt's Event Bus is used heavily within Salt and it is also written to
+integrate heavily with existings tooling and scripts. There is a variety of
+ways to consume it.
+
+From the CLI
+------------
+
+The quickest way to watch the event bus is by calling the :py:func:`state.event
+runner <salt.runners.state.event>`:
+
+.. code-block:: bash
+
+    salt-run state.event pretty=True
+
+That runner is designed to interact with the event bus from external tools and
+shell scripts. See the documentation for more examples.
+
+Remotely via the REST API
+-------------------------
+
+Salt's event bus can be consumed
+:py:class:`salt.netapi.rest_cherrypy.app.Events` as an HTTP stream from
+external tools or services.
+
+.. code-block:: bash
+
+    curl -SsNk https://salt-api.example.com:8000/events?token=05A3
+
+From Python
+-----------
+
+Python scripts can access the event bus only as the same system user that Salt
+is running as.
+
 The event system is accessed via the event library and can only be accessed
 by the same system user that Salt is running as. To listen to events a
 SaltEvent object needs to be created and then the get_event function needs to
@@ -37,9 +71,16 @@ The following code will check for a single event:
 
 .. code-block:: python
 
+    import salt.config
     import salt.utils.event
 
-    event = salt.utils.event.MasterEvent('/var/run/salt/master')
+    opts = salt.config.client_config('/etc/salt/master')
+
+    event = salt.utils.event.get_event(
+            'master',
+            sock_dir=opts['sock_dir'],
+            transport=opts['transport'],
+            opts=opts)
 
     data = event.get_event()
 
@@ -55,11 +96,16 @@ instead of the default 5.
 
 .. code-block:: python
 
-    import salt.utils.event
+    data = event.get_event(wait=10, tag='salt/auth')
 
-    event = salt.utils.event.MasterEvent('/var/run/salt/master')
+To retrieve the tag as well as the event data, pass ``full=True``:
 
-    data = event.get_event(wait=10, tag='auth')
+.. code-block:: python
+
+    evdata = event.get_event(wait=10, tag='salt/job', full=True)
+
+    tag, data = evdata['tag'], evdata['data']
+
 
 Instead of looking for a single event, the ``iter_events`` method can be used to
 make a generator which will continually yield salt events.
@@ -70,11 +116,34 @@ The iter_events method also accepts a tag but not a wait time:
 
     import salt.utils.event
 
-    event = salt.utils.event.MasterEvent('/var/run/salt/master')
-
-    for data in event.iter_events(tag='auth'):
+    for data in event.iter_events(tag='salt/auth'):
         print(data)
 
+And finally event tags can be globbed, such as they can be in the Reactor,
+using the fnmatch library.
+
+.. code-block:: python
+
+    import fnmatch
+
+    import salt.config
+    import salt.utils.event
+
+    opts = salt.config.client_config('/etc/salt/master')
+
+    sevent = salt.utils.event.get_event(
+            'master',
+            sock_dir=opts['sock_dir'],
+            transport=opts['transport'],
+            opts=opts)
+
+    while True:
+        ret = sevent.get_event(full=True)
+        if ret is None:
+            continue
+
+        if fnmatch.fnmatch(ret['tag'], 'salt/job/*/ret/*'):
+            do_something_with_job_return(ret['data'])
 
 Firing Events
 =============
@@ -82,17 +151,21 @@ Firing Events
 It is possible to fire events on either the minion's local bus or to fire
 events intended for the master.
 
-To fire a local event from the minion, on the command line:
+To fire a local event from the minion on the command line call the
+:py:func:`event.fire <salt.modules.event.fire>` execution function:
 
 .. code-block:: bash
 
     salt-call event.fire '{"data": "message to be sent in the event"}' 'tag'
 
-To fire an event to be sent to the master, from the minion:
+To fire an event to be sent up to the master from the minion call the
+:py:func:`event.send <salt.modules.event.send>` execution function. Remember
+YAML can be used at the CLI in function arguments:
+
 
 .. code-block:: bash
 
-    salt-call event.fire_master '{"data": "message for the master"}' 'tag'
+    salt-call event.send 'myco/mytag/success' '{success: True, message: "It works!"}'
 
 If a process is listening on the minion, it may be useful for a user on the
 master to fire an event to it:
@@ -102,53 +175,50 @@ master to fire an event to it:
     salt minionname event.fire '{"data": "message for the minion"}' 'tag'
 
 
-Firing Events From Code
-=======================
+Firing Events from Python
+=========================
+
+From Salt execution modules
+---------------------------
 
 Events can be very useful when writing execution modules, in order to inform
-various processes on the master when a certain task has taken place. In Salt
-versions previous to 0.17.0, the basic code looks like:
+various processes on the master when a certain task has taken place. This is
+easily done using the normal cross-calling syntax:
 
 .. code-block:: python
 
-    # Import the proper library
-    import salt.utils.event
-    # Fire deploy action
-    sock_dir = '/var/run/salt/minion'
-    event = salt.utils.event.SaltEvent('master', sock_dir)
-    event.fire_event('Message to be sent', 'tag')
+    # /srv/salt/_modules/my_custom_module.py
 
-In Salt version 0.17.0, the ability to send a payload with a more complex data
-structure than a string was added. When using this interface, a Python
-dictionary should be sent instead.
+    def do_something():
+        '''
+        Do something and fire an event to the master when finished
 
-.. code-block:: python
+        CLI Example::
 
-    # Import the proper library
-    import salt.utils.event
-    # Fire deploy action
-    sock_dir = '/var/run/salt/minion'
-    payload = {'sample-msg': 'this is a test',
-               'example': 'this is the same test'}
-    event = salt.utils.event.SaltEvent('master', sock_dir)
-    event.fire_event(payload, 'tag')
+            salt '*' my_custom_module:do_something
+        '''
+        # do something!
+        __salt__['event.send']('myco/my_custom_module/finished', {
+            'finished': True,
+            'message': "The something is finished!",
+        })
 
-It should be noted that this code can be used in 3rd party applications as well.
-So long as the salt-minion process is running, the minion socket can be used:
+From Custom Python Scripts
+--------------------------
+
+Firing events from custom Python code is quite simple and mirrors how it is
+done at the CLI:
 
 .. code-block:: python
 
-    sock_dir = '/var/run/salt/minion'
+    import salt.client
 
-So long as the salt-master process is running, the master socket can be used:
+    caller = salt.client.Caller()
 
-.. code-block:: python
-
-    sock_dir = '/var/run/salt/master'
-
-This allows 3rd party applications to harness the power of the Salt event bus
-programmatically, without having to make other calls to Salt.
-
-A 3rd party process can listen to the event bus on the master and another 3rd party
-process can fire events to the process on the master, which Salt will happily
-pass along.
+    caller.sminion.functions['event.send'](
+        'myco/myevent/success',
+        {
+            'success': True,
+            'message': "It works!",
+        }
+    )
