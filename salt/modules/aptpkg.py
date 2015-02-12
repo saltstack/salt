@@ -78,9 +78,11 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__.get('os_family', False) != 'Debian':
-        return False
-    return __virtualname__
+    if __grains__.get('os_family', False) == 'Kali':
+        return __virtualname__
+    elif __grains__.get('os_family', False) == 'Debian':
+        return __virtualname__
+    return False
 
 
 def __init__():
