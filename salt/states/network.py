@@ -54,10 +54,27 @@ all interfaces are ignored unless specified.
         - clonenum_start: 10
         - mtu: 9000
 
-    .. note::
+    eth1.0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - vlan: True
+        - mtu: 9000
 
-        add support for ranged interfaces (bond and eth) for redhat system,
-        currently not support vlan and type must be eth.
+    bond0.1-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - vlan: True
+        - mtu: 9000
+
+    .. note::
+        add support of ranged interfaces (vlan, bond and eth) for redhat system,
+        Important:type must be eth.
 
     routes:
       network.routes:
