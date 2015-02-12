@@ -43,6 +43,8 @@ SCHEDULE_CONF = [
         'hours',
         'days',
         'enabled',
+        'return_job',
+        'metadata',
         'cron'
 ]
 
@@ -221,6 +223,12 @@ def build_schedule_item(name, **kwargs):
     for item in ['seconds', 'minutes', 'hours', 'days']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
+
+    if 'return_job' in kwargs:
+        schedule[name]['return_job'] = kwargs['return_job']
+
+    if 'metadata' in kwargs:
+        schedule[name]['metadata'] = kwargs['metadata']
 
     if 'job_args' in kwargs:
         schedule[name]['args'] = kwargs['job_args']
