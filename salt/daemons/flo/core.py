@@ -536,6 +536,9 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
         self.modules.value = salt.loader.minion_mods(self.opts.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
 
+        self.modules.value.clear()
+        self.returners.value.clear()
+
         # we're done, reset the limits!
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
