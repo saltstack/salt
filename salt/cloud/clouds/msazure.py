@@ -48,7 +48,6 @@ import salt.utils.cloud
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
 
 # Import azure libs
 HAS_LIBS = False
@@ -788,9 +787,6 @@ def create(vm_):
             call='action'
         )
         ret['Attached Volumes'] = created
-
-    for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
-        ret.setdefault(key, value)
 
     data = show_instance(vm_['name'], call='action')
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
