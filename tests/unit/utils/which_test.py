@@ -55,13 +55,13 @@ class TestWhich(integration.TestCase):
         # Let's patch os.environ to provide a custom PATH variable
         with patch.dict(os.environ, {'PATH': '/bin'}):
             # Let's also patch is_windows to return True
-            with patch('salt.utils.is_windows', lambda: True), \
-                    patch('os.path.isfile', lambda x: True):
-                self.assertEqual(
-                    salt.utils.which('this-binary-exists-under-windows'),
-                    # The returned path should return the .exe suffix
-                    '/bin/this-binary-exists-under-windows.EXE'
-                )
+            with patch('salt.utils.is_windows', lambda: True):
+                with patch('os.path.isfile', lambda x: True):
+                    self.assertEqual(
+                        salt.utils.which('this-binary-exists-under-windows'),
+                        # The returned path should return the .exe suffix
+                        '/bin/this-binary-exists-under-windows.EXE'
+                    )
 
     @patch('os.access')
     def test_missing_binary_in_windows(self, osaccess):
