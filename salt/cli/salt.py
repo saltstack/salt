@@ -84,7 +84,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 batch = salt.cli.batch.Batch(self.config)
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
-                    res
+                    pass
 
         else:
             if self.options.timeout <= 0:
