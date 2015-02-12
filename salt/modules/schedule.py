@@ -43,6 +43,8 @@ SCHEDULE_CONF = [
         'hours',
         'days',
         'enabled',
+        'return_job',
+        'metadata',
         'cron'
 ]
 
