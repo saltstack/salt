@@ -4,7 +4,7 @@ Scheduling routines are located here. To activate the scheduler make the
 schedule option available to the master or minion configurations (master config
 file or for the minion via config or pillar)
 
-code-block:: yaml
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -18,6 +18,8 @@ code-block:: yaml
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour)
 
+.. code-block:: yaml
+
     schedule:
       job1:
         function: state.sls
@@ -30,6 +32,8 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 0 and 15 seconds
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -46,10 +50,12 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-    .. versionadded:: 2014.7.0
+.. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -62,6 +68,8 @@ the python dateutil library.
 
 This will schedule the command: state.sls httpd test=True at 5:00pm minion
 localtime.
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -80,6 +88,8 @@ localtime.
 This will schedule the command: state.sls httpd test=True at 5pm on Monday,
 Wednesday and Friday, and 3pm on Tuesday and Thursday.
 
+.. code-block:: yaml
+
     schedule:
       job1:
         function: state.sls
@@ -96,7 +106,9 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) between the hours of 8am and 5pm.  The range parameter must be a
 dictionary with the date strings using the dateutil format.
 
-    ... versionadded:: 2014.7.0
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -121,7 +133,9 @@ the scheduled job when the minion starts up.  Sometimes this is not the desired
 situation.  Using the 'run_on_start' parameter set to False will cause the
 scheduler to skip this first run and wait until the next scheduled run.
 
-    ... versionadded:: Lithium
+.. versionadded:: Lithium
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -133,7 +147,9 @@ scheduler to skip this first run and wait until the next scheduled run.
         kwargs:
           test: True
 
-    ... versionadded:: 2014.7.0
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -171,7 +187,7 @@ and could step on each other or pile up in case of infrastructure outage.
 
 The default for maxrunning is 1.
 
-code-block:: yaml
+.. code-block:: yaml
 
     schedule:
       long_running_job:
@@ -181,15 +197,16 @@ code-block:: yaml
 
 By default, data about jobs runs from the Salt scheduler is not returned to the
 master.  Because of this information for these jobs will not be listed in the
-jobs.list_jobs runner.  The return_job parameter will return the data back to
-the Salt master, making the job available in this list.
+:py:func:`jobs.list_jobs <salt.runners.jobs.list_jobs>` runner.  The
+``return_job`` parameter will return the data back to the Salt master, making
+the job available in this list.
 
-    ... versionadded:: Lithium
+.. versionadded:: Lithium
 
     schedule:
       job1:
           function: scheduled_job_function
-          job_return: True
+          return_job: True
 
 It can be useful to include specific data to differentiate a job from other
 jobs.  Using the metadata parameter special values can be associated with
@@ -198,7 +215,7 @@ but can be used to search for specific jobs later if combined with the
 return_job parameter.  The metadata parameter must be specified as a
 dictionary, othewise it will be ignored.
 
-    ... versionadded:: Lithium
+.. versionadded:: Lithium
 
     schedule:
       job1:
@@ -592,7 +609,7 @@ class Schedule(object):
         if 'enabled' in schedule and not schedule['enabled']:
             return
         for job, data in six.iteritems(schedule):
-            if job == 'enabled':
+            if job == 'enabled' or not data:
                 continue
             # Job is disabled, continue
             if 'enabled' in data and not data['enabled']:
