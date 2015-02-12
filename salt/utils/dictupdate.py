@@ -18,7 +18,10 @@ log = logging.getLogger(__name__)
 
 def update(dest, upd):
     for key, val in six.iteritems(upd):
-        dest_subkey = dest.get(key, {})
+        try:
+            dest_subkey = dest.get(key, {})
+        except AttributeError:
+            dest_subkey = None
         if isinstance(dest_subkey, collections.Mapping) \
                 and isinstance(val, collections.Mapping):
             ret = update(dest_subkey, val)
