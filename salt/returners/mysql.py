@@ -167,8 +167,7 @@ def _get_serv(ret=None, commit=False):
                                    user=_options.get('user'),
                                    passwd=_options.get('pass'),
                                    db=_options.get('db'),
-                                   port=_options.get('port'),
-                                   pool_size=32)
+                                   port=_options.get('port'))
 
             try:
                 __context__['mysql_returner_conn'] = conn
@@ -189,8 +188,6 @@ def _get_serv(ret=None, commit=False):
             cursor.execute("COMMIT")
         else:
             cursor.execute("ROLLBACK")
-    finally:
-        conn.close()
 
 
 def returner(ret):
