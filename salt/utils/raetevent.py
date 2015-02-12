@@ -98,7 +98,7 @@ class RAETEvent(object):
                 name=name,
                 lanename=lanename,
                 sockdirpath=self.sock_dir)
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack.value
         stack.addRemote(RemoteYard(stack=stack,
                                    lanename=lanename,
                                    name=ryn,

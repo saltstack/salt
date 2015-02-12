@@ -138,7 +138,7 @@ class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):
                                      name=name,
                                      lanename=lanename,
                                      sockdirpath=sockdirpath)
-        self.stack.value.Pk = raeting.packKinds.pack
+        self.stack.value.Pk = raeting.PackKind.pack.value
         manor_yard = RemoteYard(
                                  stack=self.stack.value,
                                  name='manor',
