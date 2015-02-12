@@ -60,11 +60,10 @@ class LazyLoaderVirtualEnabledTest(TestCase):
 
     def test_badkey(self):
         with self.assertRaises(KeyError):
-            self.loader[None]
+            self.loader[None]  # pylint: disable=W0104
 
         with self.assertRaises(KeyError):
-            self.loader[1]
-
+            self.loader[1]  # pylint: disable=W0104
 
     def test_disable(self):
         self.assertNotIn('pillar.items', self.loader)
