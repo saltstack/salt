@@ -677,6 +677,19 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     else:
         result['userctl'] = 'no'
 
+    if 'arpcheck' in opts:
+        if opts['arpcheck'] in _CONFIG_FALSE:
+            result['arpcheck'] = 'no'
+
+    if 'ipaddr_start' in opts:
+        result['ipaddr_start'] = opts['ipaddr_start']
+
+    if 'ipaddr_end' in opts:
+        result['ipaddr_end'] = opts['ipaddr_end']
+
+    if 'clonenum_start' in opts:
+        result['clonenum_start'] = opts['clonenum_start']
+
     return result
 
 
