@@ -1,5 +1,5 @@
 {% if "range" not in name %}DEVICE="{{name}}"
-{%endif}{% if addr %}HWADDR="{{addr}}"
+{%endif%}{% if addr %}HWADDR="{{addr}}"
 {%endif%}{% if userctl %}USERCTL="{{userctl}}"
 {%endif%}{% if master %}MASTER="{{master}}"
 {%endif%}{% if slave %}SLAVE="{{slave}}"
@@ -33,4 +33,3 @@
 {% endif %}{% for server in dns -%}
 DNS{{loop.index}}="{{server}}"
 {% endfor -%}
-

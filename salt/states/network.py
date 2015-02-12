@@ -38,6 +38,27 @@ all interfaces are ignored unless specified.
           - 8.8.8.8
           - 8.8.4.4
 
+    eth0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - mtu: 9000
+
+    bond0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - mtu: 9000
+
+    .. note::
+
+        add support for ranged interfaces (bond and eth) for redhat system,
+        currently not support vlan and type must be eth.
+
     routes:
       network.routes:
         - name: eth0
@@ -292,11 +313,13 @@ def managed(name, type, enabled=True, **kwargs):
                     ret['comment'] = 'Bond interface {0} ' \
                                      'added.'.format(name)
                     ret['changes']['bond'] = 'Added bond {0}.'.format(name)
+                    apply_ranged_setting = True
                 elif old != new:
                     diff = difflib.unified_diff(old, new, lineterm='')
                     ret['comment'] = 'Bond interface {0} ' \
                                      'updated.'.format(name)
                     ret['changes']['bond'] = '\n'.join(diff)
+                    apply_ranged_setting = True
         except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
             ret['result'] = False
