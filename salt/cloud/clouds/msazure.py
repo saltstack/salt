@@ -48,7 +48,6 @@ import salt.utils.cloud
 
 # Import 3rd-party libs
 import yaml
-import salt.ext.six as six
 
 # Import azure libs
 HAS_LIBS = False
