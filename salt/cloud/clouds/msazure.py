@@ -789,9 +789,6 @@ def create(vm_):
         )
         ret['Attached Volumes'] = created
 
-    for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
-        ret.setdefault(key, value)
-
     data = show_instance(vm_['name'], call='action')
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
