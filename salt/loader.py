@@ -1043,7 +1043,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load a single item if you have it
         '''
         # if the key doesn't have a '.' then it isn't valid for this mod dict
-        if key is None or '.' not in key:
+        if type(key) != str or '.' not in key:
             raise KeyError
         mod_name, _ = key.split('.', 1)
         if mod_name in self.missing_modules:

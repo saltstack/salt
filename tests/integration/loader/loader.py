@@ -58,6 +58,14 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         # since the loader does the calling magically
         self.assertFalse('test.missing_func' in self.loader._dict)
 
+    def test_badkey(self):
+        with self.assertRaises(KeyError):
+            self.loader[None]
+
+        with self.assertRaises(KeyError):
+            self.loader[1]
+
+
     def test_disable(self):
         self.assertNotIn('pillar.items', self.loader)
 
