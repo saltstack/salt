@@ -310,7 +310,7 @@ def managed(name, type, enabled=True, **kwargs):
     if "range" in name:
         if apply_ranged_setting:
             try:
-                ret['result'] =  __salt__['service.restart']('network')
+                ret['result'] = __salt__['service.restart']('network')
                 ret['comment'] = "network restarted for change of ranged interfaces"
                 return ret
             except Exception as error:
