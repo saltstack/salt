@@ -54,6 +54,38 @@ class IptablesTestCase(TestCase):
         '''
         self.assertEqual(iptables.build_rule(), '')
 
+        self.assertEqual(iptables.build_rule(name='ignored', state='ignored'),
+                         '',
+                         'build_rule should ignore name and state')
+
+        # Should properly negate bang-prefixed values
+        self.assertEqual(iptables.build_rule(**{'if': '!eth0'}),
+                         '! -i eth0')
+
+        # Should properly negate "not"-prefixed values
+        self.assertEqual(iptables.build_rule(**{'if': 'not eth0'}),
+                         '! -i eth0')
+
+        self.assertEqual(iptables.build_rule(dports=[80, 443], proto='tcp'),
+                         '-p tcp -m multiport --dports 80,443')
+
+        self.assertEqual(iptables.build_rule(dports='80,443', proto='tcp'),
+                         '-p tcp -m multiport --dports 80,443')
+
+        # Should it really behave this way?
+        self.assertEqual(iptables.build_rule(dports=['!80', 443],
+                                             proto='tcp'),
+                         '-p tcp -m multiport ! --dports 80,443')
+
+        self.assertEqual(iptables.build_rule(dports='!80,443', proto='tcp'),
+                         '-p tcp -m multiport ! --dports 80,443')
+
+        self.assertEqual(iptables.build_rule(sports=[80, 443], proto='tcp'),
+                         '-p tcp -m multiport --sports 80,443')
+
+        self.assertEqual(iptables.build_rule(sports='80,443', proto='tcp'),
+                         '-p tcp -m multiport --sports 80,443')
+
         self.assertEqual(iptables.build_rule('filter', 'INPUT', command='I',
                                              position='3', full=True,
                                              dports='proto', jump='ACCEPT'),
@@ -79,7 +111,22 @@ class IptablesTestCase(TestCase):
                                              match='state', jump='ACCEPT'),
                          'Error: Command needs to be specified')
 
-        ret = '/sbin/iptables --wait -t salt -I INPUT 3 -m state --jump ACCEPT '
+        # Test arguments that should appear after the --jump
+        self.assertEqual(iptables.build_rule(jump='REDIRECT',
+                                             **{'to-port': 8080}),
+                         '--jump REDIRECT --to-port 8080')
+
+        # Should quote arguments with spaces, like log-prefix often has
+        self.assertEqual(iptables.build_rule(jump='LOG',
+                                             **{'log-prefix': 'long prefix'}),
+                         '--jump LOG --log-prefix "long prefix"')
+
+        # Should quote arguments with leading or trailing spaces
+        self.assertEqual(iptables.build_rule(jump='LOG',
+                                             **{'log-prefix': 'spam: '}),
+                         '--jump LOG --log-prefix "spam: "')
+
+        ret = '/sbin/iptables --wait -t salt -I INPUT 3 -m state --jump ACCEPT'
         with patch.object(iptables, '_iptables_cmd',
                           MagicMock(return_value='/sbin/iptables')):
             self.assertEqual(iptables.build_rule('salt', 'INPUT', command='I',

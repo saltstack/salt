@@ -10,6 +10,7 @@ import re
 import sys
 import uuid
 import shlex
+import string
 
 # Import salt libs
 import salt.utils
@@ -98,7 +99,7 @@ def version(family='ipv4'):
     return out[1]
 
 
-def build_rule(table=None, chain=None, command=None, position='', full=None, family='ipv4',
+def build_rule(table='filter', chain=None, command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
     Build a well-formatted iptables rule based on kwargs. Long options must be
@@ -148,189 +149,137 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
     '''
     if 'target' in kwargs:
-        kwargs['jump'] = kwargs['target']
-        del kwargs['target']
+        kwargs['jump'] = kwargs.pop('target')
+
+    # Ignore name and state for this function
+    kwargs.pop('name', None)
+    kwargs.pop('state', None)
 
     for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['chain', 'save', 'table']:
         if ignore in kwargs:
             del kwargs[ignore]
 
-    rule = ''
+    rule = []
     proto = False
     bang_not_pat = re.compile(r'(!|not)\s?')
 
-    if 'if' in kwargs:
-        if kwargs['if'].startswith('!') or kwargs['if'].startswith('not'):
-            kwargs['if'] = re.sub(bang_not_pat, '', kwargs['if'])
-            rule += '! '
+    def maybe_add_negation(arg):
+        '''
+        Will check if the defined argument is intended to be negated,
+        (i.e. prefixed with '!' or 'not'), and add a '! ' to the rule.
 
-        rule += '-i {0} '.format(kwargs['if'])
+        The prefix will be removed from the value in the kwargs dict.
+        '''
+        value = str(kwargs[arg])
+        if value.startswith('!') or value.startswith('not'):
+            kwargs[arg] = re.sub(bang_not_pat, '', value)
+            return '! '
+        return ''
+
+    if 'if' in kwargs:
+        rule.append('{0}-i {1}'.format(maybe_add_negation('if'), kwargs['if']))
         del kwargs['if']
 
     if 'of' in kwargs:
-        if kwargs['of'].startswith('!') or kwargs['of'].startswith('not'):
-            kwargs['of'] = re.sub(bang_not_pat, '', kwargs['of'])
-            rule += '! '
-
-        rule += '-o {0} '.format(kwargs['of'])
+        rule.append('{0}-o {1}'.format(maybe_add_negation('of'), kwargs['of']))
         del kwargs['of']
 
     if 'proto' in kwargs:
-        if kwargs['proto'].startswith('!') or kwargs['proto'].startswith('not'):
-            kwargs['proto'] = re.sub(bang_not_pat, '', kwargs['proto'])
-            rule += '! '
-
-        rule += '-p {0} '.format(kwargs['proto'])
+        rule.append('{0}-p {1}'.format(maybe_add_negation('proto'), kwargs['proto']))
         proto = True
         del kwargs['proto']
 
     if 'match' in kwargs:
-        if not isinstance(kwargs['match'], list):
-            kwargs['match'] = kwargs['match'].split(',')
-        for match in kwargs['match']:
-            rule += '-m {0} '.format(match)
+        match_value = kwargs['match']
+        if not isinstance(match_value, list):
+            match_value = match_value.split(',')
+        for match in match_value:
+            rule.append('-m {0}'.format(match))
             if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
-                rule += '--name {0} '.format(kwargs['name'])
+                rule.append('--name {0}'.format(kwargs['name']))
         del kwargs['match']
 
-    if 'name' in kwargs:
-        del kwargs['name']
-
-    if 'state' in kwargs:
-        del kwargs['state']
-
     if 'connstate' in kwargs:
-        if kwargs['connstate'].startswith('!') or kwargs['connstate'].startswith('not'):
-            kwargs['connstate'] = re.sub(bang_not_pat, '', kwargs['connstate'])
-            rule += '! '
-
-        rule += '--state {0} '.format(kwargs['connstate'])
+        rule.append('{0}--state {1}'.format(maybe_add_negation('connstate'), kwargs['connstate']))
         del kwargs['connstate']
 
     if 'dport' in kwargs:
-        if str(kwargs['dport']).startswith('!') or str(kwargs['dport']).startswith('not'):
-            kwargs['dport'] = re.sub(bang_not_pat, '', kwargs['dport'])
-            rule += '! '
-
-        rule += '--dport {0} '.format(kwargs['dport'])
+        rule.append('{0}--dport {1}'.format(maybe_add_negation('dport'), kwargs['dport']))
         del kwargs['dport']
 
     if 'sport' in kwargs:
-        if str(kwargs['sport']).startswith('!') or str(kwargs['sport']).startswith('not'):
-            kwargs['sport'] = re.sub(bang_not_pat, '', kwargs['sport'])
-            rule += '! '
-
-        rule += '--sport {0} '.format(kwargs['sport'])
+        rule.append('{0}--sport {1}'.format(maybe_add_negation('sport'), kwargs['sport']))
         del kwargs['sport']
 
-    if 'dports' in kwargs:
-        if '-m multiport' not in rule:
-            rule += '-m multiport '
-            if not proto:
-                return 'Error: proto must be specified'
+    for multiport_arg in ('dports', 'sports'):
+        if multiport_arg in kwargs:
+            if '-m multiport' not in rule:
+                rule.append('-m multiport')
+                if not proto:
+                    return 'Error: proto must be specified'
 
-        if isinstance(kwargs['dports'], list):
-            if [item for item in kwargs['dports'] if str(item).startswith('!') or str(item).startswith('not')]:
-                kwargs['dports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['dports']]
-                rule += '! '
-            dports = ','.join([str(i) for i in kwargs['dports']])
-        else:
-            if str(kwargs['dports']).startswith('!') or str(kwargs['dports']).startswith('not'):
-                dports = re.sub(bang_not_pat, '', kwargs['dports'])
-                rule += '! '
+            mp_value = kwargs[multiport_arg]
+            if isinstance(mp_value, list):
+                if any(i for i in mp_value if str(i).startswith('!') or str(i).startswith('not')):
+                    mp_value = [re.sub(bang_not_pat, '', str(item)) for item in mp_value]
+                    rule.append('!')
+                dports = ','.join(str(i) for i in mp_value)
             else:
-                dports = kwargs['dports']
+                if str(mp_value).startswith('!') or str(mp_value).startswith('not'):
+                    dports = re.sub(bang_not_pat, '', mp_value)
+                    rule.append('!')
+                else:
+                    dports = mp_value
 
-        rule += '--dports {0} '.format(dports)
-        del kwargs['dports']
-
-    if 'sports' in kwargs:
-        if '-m multiport' not in rule:
-            rule += '-m multiport '
-            if not proto:
-                return 'Error: proto must be specified'
-
-        if isinstance(kwargs['sports'], list):
-            if [item for item in kwargs['sports'] if str(item).startswith('!') or str(item).startswith('not')]:
-                kwargs['sports'] = [re.sub(bang_not_pat, '', str(item)) for item in kwargs['sports']]
-                rule += '! '
-            sports = ','.join([str(i) for i in kwargs['sports']])
-        else:
-            if str(kwargs['sports']).startswith('!') or str(kwargs['sports']).startswith('not'):
-                sports = re.sub(bang_not_pat, '', kwargs['sports'])
-                rule += '! '
-            else:
-                sports = kwargs['sports']
-
-        rule += '--sports {0} '.format(sports)
-        del kwargs['sports']
+            rule.append('--{0} {1}'.format(multiport_arg, dports))
+            del kwargs[multiport_arg]
 
     if 'comment' in kwargs:
-        rule += '--comment "{0}" '.format(kwargs['comment'])
+        rule.append('--comment "{0}"'.format(kwargs['comment']))
         del kwargs['comment']
 
     # --set in ipset is deprecated, works but returns error.
     # rewrite to --match-set if not empty, otherwise treat as recent option
     if 'set' in kwargs and kwargs['set']:
-        if kwargs['set'].startswith('!') or kwargs['set'].startswith('not'):
-            kwargs['set'] = re.sub(bang_not_pat, '', kwargs['set'])
-            rule += '! '
-
-        rule += '--match-set {0} '.format(kwargs['set'])
+        rule.append('{0}--match-set {1}'.format(maybe_add_negation('set'), kwargs['set']))
         del kwargs['set']
 
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
-
-    if 'jump' in kwargs:
-        after_jump.append('--jump {0} '.format(kwargs['jump']))
-        del kwargs['jump']
-
-    if 'j' in kwargs:
-        after_jump.append('-j {0} '.format(kwargs['j']))
-        del kwargs['j']
-
-    if 'to-port' in kwargs:
-        after_jump.append('--to-port {0} '.format(kwargs['to-port']))
-        del kwargs['to-port']
-
-    if 'to-ports' in kwargs:
-        after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
-        del kwargs['to-ports']
-
-    if 'to-destination' in kwargs:
-        after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
-        del kwargs['to-destination']
-
-    if 'to-source' in kwargs:
-        after_jump.append('--to-source {0} '.format(kwargs['to-source']))
-        del kwargs['to-source']
-
-    if 'reject-with' in kwargs:
-        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
-        del kwargs['reject-with']
-
-    if 'set-mark' in kwargs:
-        after_jump.append('--set-mark {0} '.format(kwargs['set-mark']))
-        del kwargs['set-mark']
-
-    if 'set-xmark' in kwargs:
-        after_jump.append('--set-xmark {0} '.format(kwargs['set-xmark']))
-        del kwargs['set-xmark']
+    after_jump_arguments = (
+        'jump',
+        'j',
+        'to-port',
+        'to-ports',
+        'to-destination',
+        'to-source',
+        'reject-with',
+        'set-mark',
+        'set-xmark',
+        'log-level',
+        'log-ip-options',
+        'log-prefix',
+        'log-tcp-options',
+        'log-tcp-sequence',
+    )
+    for after_jump_argument in after_jump_arguments:
+        if after_jump_argument in kwargs:
+            value = kwargs[after_jump_argument]
+            if any(ws_char in str(value) for ws_char in string.whitespace):
+                after_jump.append('--{0} "{1}"'.format(after_jump_argument, value))
+            else:
+                after_jump.append('--{0} {1}'.format(after_jump_argument, value))
+            del kwargs[after_jump_argument]
 
     for item in kwargs:
-        if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):
-            kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])
-            rule += '! '
-
+        rule.append(maybe_add_negation(item))
         if len(item) == 1:
-            rule += '-{0} {1} '.format(item, kwargs[item])
+            rule.append('-{0} {1}'.format(item, kwargs[item]))
         else:
-            rule += '--{0} {1} '.format(item, kwargs[item])
+            rule.append('--{0} {1}'.format(item, kwargs[item]))
 
-    for item in after_jump:
-        rule += item
+    rule += after_jump
 
     if full in ['True', 'true']:
         if not table:
@@ -348,9 +297,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         wait = '--wait' if _has_option('--wait', family) else ''
 
         return '{0} {1} -t {2} {3}{4} {5} {6} {7}'.format(_iptables_cmd(family),
-               wait, table, flag, command, chain, position, rule)
+               wait, table, flag, command, chain, position, ' '.join(rule))
 
-    return rule
+    return ' '.join(rule)
 
 
 def get_saved_rules(conf_file=None, family='ipv4'):
@@ -535,7 +484,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
         return False
     else:
         cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, output_loglevel='quiet')
 
     if not out:
         return True
