@@ -339,6 +339,7 @@ def summary():
 
     return result
 
+
 def plugin_sync():
     '''
     Runs a plugin synch between the puppet master and agent
@@ -356,6 +357,7 @@ def plugin_sync():
     if not ret:
         return ''
     return ret
+
 
 def facts(puppet=False):
     '''
