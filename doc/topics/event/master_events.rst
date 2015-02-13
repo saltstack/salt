@@ -1,3 +1,5 @@
+.. _event-master_events:
+
 ==================
 Salt Master Events
 ==================
