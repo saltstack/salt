@@ -1954,7 +1954,7 @@ def unfreeze(name):
     return _change_state('lxc-unfreeze', name, 'running')
 
 
-def destroy(name, stop=True):
+def destroy(name, stop=False):
     '''
     Destroy the named container.
 
@@ -1962,15 +1962,22 @@ def destroy(name, stop=True):
 
         Destroys all data associated with the container.
 
-    stop : True
-        If ``False``, do not destroy the container if it is running/frozen.
+    stop : False
+        If ``True``, the container will be destroyed even if it is
+        running/frozen.
+
+        .. versionchanged:: 2015.2.0
+            Default value changed to ``False``. This more closely matches the
+            behavior of ``lxc-destroy(1)``, and also makes it less likely that
+            an accidental command will destroy a running container that was
+            being used for important things.
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' lxc.destroy foo
-        salt '*' lxc.destroy foo stop=False
+        salt '*' lxc.destroy foo stop=True
     '''
     _ensure_exists(name)
     if not stop and state(name) != 'stopped':
