@@ -368,11 +368,6 @@ if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] 
     exit 0
 fi
 
-if [ "$_CONFIG_ONLY" -eq $BS_TRUE ] && [ "$_TEMP_CONFIG_DIR" = "null" ]; then
-    echoerror "In order to run the script in configuration only mode you also need to provide the configuration directory."
-    exit 1
-fi
-
 # Check that we're installing a minion if we're being passed a master address
 if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_SALT_MASTER_ADDRESS" != "null" ]; then
     echoerror "Don't pass a master address (-A) if no minion is going to be bootstrapped."
@@ -4505,7 +4500,7 @@ config_salt() {
         CONFIGURED_ANYTHING=$BS_TRUE
     fi
 
-    if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
+    if [ "$_INSTALL_MINION" -eq $BS_TRUE ] || [ "$_CONFIG_ONLY" -eq $BS_TRUE ]; then
         # Create the PKI directory
         [ -d "$_PKI_DIR/minion" ] || (mkdir -p "$_PKI_DIR/minion" && chmod 700 "$_PKI_DIR/minion") || return 1
 
@@ -4529,7 +4524,7 @@ config_salt() {
     fi
 
 
-    if [ "$_INSTALL_MASTER" -eq $BS_TRUE ] || [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
+    if [ "$_INSTALL_MASTER" -eq $BS_TRUE ] || [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ] || [ "$_CONFIG_ONLY" -eq $BS_TRUE ]; then
         # Create the PKI directory
         [ -d "$_PKI_DIR/master" ] || (mkdir -p "$_PKI_DIR/master" && chmod 700 "$_PKI_DIR/master") || return 1
 
