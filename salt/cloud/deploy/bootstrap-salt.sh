@@ -368,11 +368,6 @@ if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] 
     exit 0
 fi
 
-if [ "$_CONFIG_ONLY" -eq $BS_TRUE ] && [ "$_TEMP_CONFIG_DIR" = "null" ]; then
-    echoerror "In order to run the script in configuration only mode you also need to provide the configuration directory."
-    exit 1
-fi
-
 # Check that we're installing a minion if we're being passed a master address
 if [ "$_INSTALL_MINION" -eq $BS_FALSE ] && [ "$_SALT_MASTER_ADDRESS" != "null" ]; then
     echoerror "Don't pass a master address (-A) if no minion is going to be bootstrapped."
