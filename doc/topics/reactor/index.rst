@@ -99,11 +99,11 @@ execution.
 Fire an event
 =============
 
-To fire an event from a minion call ``event.fire_master``
+To fire an event from a minion call ``event.send``
 
 .. code-block:: bash
 
-    salt-call event.fire_master '{"overstate": "refresh"}' 'foo'
+    salt-call event.send 'foo' '{overstate: refresh}'
 
 After this is called, any reactor sls files matching event tag ``foo`` will 
 execute with ``{{ data['data']['overstate'] }}`` equal to ``'refresh'``.
@@ -113,48 +113,47 @@ See :py:mod:`salt.modules.event` for more information.
 Knowing what event is being fired
 =================================
 
-Knowing exactly which event is being fired and what data is has for use in the
-sls files can be challenging. The easiest way to see exactly what's going on is
-to use the :strong:`eventlisten.py` script. This script is not part of packages
-but is part of the source.
+The best way to see exactly what events are fired and what data is available in
+each event is to use the :py:func:`state.event runner
+<salt.runners.state.event>`.
 
-If the master process is using the default socket, no additional options will be
-required. Otherwise, you will need to specify the socket location.
+.. seealso:: :ref:`Common Salt Events <event-master_events>`
 
 Example usage:
 
 .. code-block:: bash
 
-    wget https://raw.githubusercontent.com/saltstack/salt/develop/tests/eventlisten.py
-    python eventlisten.py
-
-    # OR
-    python eventlisten.py --sock-dir /path/to/var/run/salt
+    salt-run state.event pretty=True
 
 Example output:
 
 .. code-block:: text
 
-    Event fired at Fri Dec 20 10:43:00 2013
-    *************************
-    Tag: salt/auth
-    Data:
-    {'_stamp': '2013-12-20_10:47:54.584699',
-     'act': 'accept',
-     'id': 'fuzzer.domain.tld',
-     'pub': '-----BEGIN PUBLIC KEY-----\nMIICIDANBgk+TRIMMED+EMZ8CAQE=\n-----END PUBLIC KEY-----\n',
-     'result': True}
-
-    Event fired at Fri Dec 20 10:43:01 2013
-    *************************
-    Tag: salt/minion/fuzzer.domain.tld/start
-    Data:
-    {'_stamp': '2013-12-20_10:43:01.638387',
-     'cmd': '_minion_event',
-     'data': 'Minion fuzzer.domain.tld started at Fri Dec 20 10:43:01 2013',
-     'id': 'fuzzer.domain.tld',
-     'pretag': None,
-     'tag': 'salt/minion/fuzzer.domain.tld/start'}
+    salt/job/20150213001905721678/new       {
+        "_stamp": "2015-02-13T00:19:05.724583",
+        "arg": [],
+        "fun": "test.ping",
+        "jid": "20150213001905721678",
+        "minions": [
+            "jerry"
+        ],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root"
+    }
+    salt/job/20150213001910749506/ret/jerry {
+        "_stamp": "2015-02-13T00:19:11.136730",
+        "cmd": "_return",
+        "fun": "saltutil.find_job",
+        "fun_args": [
+            "20150213001905721678"
+        ],
+        "id": "jerry",
+        "jid": "20150213001910749506",
+        "retcode": 0,
+        "return": {},
+        "success": true
+    }
 
 Debugging the Reactor
 =====================
