@@ -126,9 +126,14 @@ def returner(ret):
         back = _remove_dots(ret['return'])
     else:
         back = ret['return']
+        
+    if isinstance(ret, dict):
+        full_ret = _remove_dots(ret)
+    else:
+        full_ret = ret
 
     log.debug(back)
-    sdata = {'minion': ret['id'], 'jid': ret['jid'], 'return': back, 'fun': ret['fun'], 'full_ret': ret}
+    sdata = {'minion': ret['id'], 'jid': ret['jid'], 'return': back, 'fun': ret['fun'], 'full_ret': full_ret}
     if 'out' in ret:
         sdata['out'] = ret['out']
     # save returns in the saltReturns collection in the json format:
