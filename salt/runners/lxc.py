@@ -125,18 +125,19 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
 
         salt-run lxc.init name host=minion_id [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
-                [template=lxc template name] [clone=original name] \\
-                [nic=nic_profile] [profile=lxc_profile] \\
-                [nic_opts=nic_opts] [start=(true|false)] \\
-                [seed=(true|false)] [install=(true|false)] \\
-                [config=minion_config] [snapshot=(true|false)]
+                [template=lxc_template_name] [clone=original name] \\
+                [profile=lxc_profile] [network_proflile=network_profile] \\
+                [nic=network_profile] [nic_opts=nic_opts] \\
+                [start=(true|false)] [seed=(true|false)] \\
+                [install=(true|false)] [config=minion_config] \\
+                [snapshot=(true|false)]
 
     names
         Name of the containers, supports a single name or a comma delimited
         list of names.
 
     host
-        Minion to start the container on. Required.
+        Minion on which to initialize the container **(required)**
 
     saltcloud_mode
         init the container with the saltcloud opts format instead
@@ -149,7 +150,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         cgroups cpu shares.
 
     memory
-        cgroups memory limit, in MB.
+        cgroups memory limit, in MB
+
+        .. versionchanged:: 2015.2.0
+            If no value is passed, no limit is set. In earlier Salt versions,
+            not passing this value causes a 1024MB memory limit to be set, and
+            it was necessary to pass ``memory=0`` to set no limit.
 
     template
         Name of LXC template on which to base this container
@@ -157,11 +163,17 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     clone
         Clone this container from an existing container
 
-    nic
-        Network interfaces profile (defined in config or pillar).
-
     profile
         A LXC profile (defined in config or pillar).
+
+    network_profile
+        Network profile to use for the container
+
+        .. versionadded:: Lithium
+
+    nic
+        .. deprecated:: Lithium
+            Use ``network_profile`` instead
 
     nic_opts
         Extra options for network interfaces. E.g.:
@@ -327,7 +339,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
             ret['ping_status'] = False
             ret['result'] = False
 
-    # if no lxc detected as touched (either inited or verified
+    # if no lxc detected as touched (either inited or verified)
     # we result to False
     if not done:
         ret['result'] = False
