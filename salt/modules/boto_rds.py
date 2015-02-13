@@ -355,6 +355,56 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
         return False
 
 
+def describe(name, tags=None, region=None, key=None, keyid=None,
+             profile=None):
+    '''
+    Return RDS instance details.
+
+    CLI example::
+
+        salt myminion boto_rds.describe myrds
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    if not __salt__['boto_rds.exists'](name, region, key, keyid, profile):
+        return False
+    try:
+        rds = conn.describe_db_instances(name)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+    return rds
+
+
+def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Return the enpoint of an RDS instance.
+
+    CLI example::
+
+        salt myminion boto_rds.get_endpoint myrds
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    if not __salt__['boto_rds.exists'](name, region, key, keyid, profile):
+        return False
+    try:
+        rds = conn.describe_db_instances(name)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+    insts = rds['DescribeDBInstancesResponse']['DescribeDBInstancesResult']
+    endpoints = []
+    for instance in insts['DBInstances']:
+        endpoints.append(instance['Endpoint']['Address'])
+    return endpoints[0]
+
+
 def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
            region=None, key=None, keyid=None, profile=None):
     '''
