@@ -4505,7 +4505,7 @@ config_salt() {
         CONFIGURED_ANYTHING=$BS_TRUE
     fi
 
-    if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
+    if [ "$_INSTALL_MINION" -eq $BS_TRUE ] || [ "$_CONFIG_ONLY" -eq $BS_TRUE ]; then
         # Create the PKI directory
         [ -d "$_PKI_DIR/minion" ] || (mkdir -p "$_PKI_DIR/minion" && chmod 700 "$_PKI_DIR/minion") || return 1
 
@@ -4529,7 +4529,7 @@ config_salt() {
     fi
 
 
-    if [ "$_INSTALL_MASTER" -eq $BS_TRUE ] || [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
+    if [ "$_INSTALL_MASTER" -eq $BS_TRUE ] || [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ] || [ "$_CONFIG_ONLY" -eq $BS_TRUE ]; then
         # Create the PKI directory
         [ -d "$_PKI_DIR/master" ] || (mkdir -p "$_PKI_DIR/master" && chmod 700 "$_PKI_DIR/master") || return 1
 
