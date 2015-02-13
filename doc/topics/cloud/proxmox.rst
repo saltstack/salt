@@ -1,12 +1,17 @@
-==============================
+============================
 Getting Started With Proxmox
-==============================
+============================
 
 Proxmox Virtual Environment is a complete server virtualization management solution, 
 based on KVM virtualization and OpenVZ containers.
 Further information can be found at:
 
 http://www.proxmox.org/
+
+Dependencies
+============
+* IPy >= 0.81
+* requests >= 2.2.1
 
 Please note:
 This module allows you to create both OpenVZ and KVM but installing Salt on it will only be
