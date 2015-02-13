@@ -151,7 +151,7 @@ def get_load(jid):
     Return the load associated with a given job id
     '''
     conn, mdb = _get_conn(ret=None)
-    ret = mdb.jobs.find_one({'jid':jid})
+    ret = mdb.jobs.find_one({'jid': jid})
     return ret['load']
 
 
