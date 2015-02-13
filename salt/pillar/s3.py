@@ -20,11 +20,11 @@ options
 The ``bucket`` parameter specifies the target S3 bucket. It is required.
 
 The ``keyid`` parameter specifies the key id to use when access the S3 bucket.
-When it is set to None it will try to grab credentials from IAM role.
+When it is set to None or omitted it will try to grab credentials from IAM role.
 The parameter has default value set to None.
 
 The ``key`` parameter specifies the key to use when access the S3 bucket. It
-When it is set to None it will try to grab credentials from IAM role.
+When it is set to None or omitted it will try to grab credentials from IAM role.
 The parameter has default value set to None.
 
 The ``multiple_env`` defaults to False. It specifies whether the pillar should
