@@ -156,14 +156,25 @@ def _get_serv(ret=None, commit=False):
     Return a mysql cursor
     '''
     _options = _get_options(ret)
-    try:
-        conn = MySQLdb.connect(host=_options.get('host'),
-                               user=_options.get('user'),
-                               passwd=_options.get('pass'),
-                               db=_options.get('db'),
-                               port=_options.get('port'))
-    except MySQLdb.connections.OperationalError as exc:
-        raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
+
+    if __context__ and 'mysql_returner_conn' in __context__:
+        log.debug('Reusing MySQL connection pool')
+        conn = __context__['mysql_returner_conn']
+    else:
+        log.debug('Generating new MySQL connection pool')
+        try:
+            conn = MySQLdb.connect(host=_options.get('host'),
+                                   user=_options.get('user'),
+                                   passwd=_options.get('pass'),
+                                   db=_options.get('db'),
+                                   port=_options.get('port'))
+
+            try:
+                __context__['mysql_returner_conn'] = conn
+            except TypeError:
+                pass
+        except MySQLdb.connections.OperationalError as exc:
+            raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
     cursor = conn.cursor()
     try:
         yield cursor
@@ -177,8 +188,6 @@ def _get_serv(ret=None, commit=False):
             cursor.execute("COMMIT")
         else:
             cursor.execute("ROLLBACK")
-    finally:
-        conn.close()
 
 
 def returner(ret):
