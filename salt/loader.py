@@ -20,6 +20,7 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 import salt.utils.lazy
+import salt.utils.event
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -89,7 +90,7 @@ def _module_dirs(
     return cli_module_dirs + ext_type_types + [ext_types, sys_types]
 
 
-def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False):
+def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False, notify=False):
     '''
     Load execution modules
 
@@ -117,6 +118,9 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
                      pack={'__context__': context},
                      whitelist=whitelist)
     ret.pack['__salt__'] = ret
+    if notify:
+        evt = salt.utils.event.get_event('minion', opts=opts)
+        evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
 
     return ret
 
