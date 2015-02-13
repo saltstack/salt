@@ -46,6 +46,17 @@ def parse():
             help=('Return a count of the number of minions which have '
                  'replied to a job with a given func.'))
 
+    parser.add_option('-i',
+            '--id',
+            default='',
+            help=('If connecting to a live master or minion, pass in the id'))
+
+    parser.add_option('-t',
+            '--transport',
+            default='zeromq',
+            help=('Transport to use. (Default: \'zeromq\''))
+
+
     options, args = parser.parse_args()
 
     opts = {}
@@ -60,8 +71,10 @@ def parse():
         if args:
             opts['id'] = args[0]
             return opts
-
-        opts['id'] = options.node
+        if options.id:
+            opts['id'] = options.id
+        else:
+            opts['id'] = options.node
 
     return opts
 
@@ -85,9 +98,11 @@ def listen(opts):
     '''
     Attach to the pub socket and grab messages
     '''
-    event = salt.utils.event.SaltEvent(
+    event = salt.utils.event.get_event(
             opts['node'],
-            opts['sock_dir']
+            sock_dir=opts['sock_dir'],
+            transport=opts['transport'],
+            opts=opts
             )
     check_access_and_print_warning(opts['sock_dir'])
     print(event.puburi)
