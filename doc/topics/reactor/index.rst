@@ -99,11 +99,11 @@ execution.
 Fire an event
 =============
 
-To fire an event from a minion call ``event.fire_master``
+To fire an event from a minion call ``event.send``
 
 .. code-block:: bash
 
-    salt-call event.fire_master '{"overstate": "refresh"}' 'foo'
+    salt-call event.send 'foo' '{overstate: refresh}'
 
 After this is called, any reactor sls files matching event tag ``foo`` will 
 execute with ``{{ data['data']['overstate'] }}`` equal to ``'refresh'``.
