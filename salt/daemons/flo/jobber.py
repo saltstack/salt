@@ -10,12 +10,10 @@ import os
 import sys
 import types
 import logging
-import threading
 import traceback
 import multiprocessing
 import subprocess
 import json
-from collections import deque
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -61,7 +59,9 @@ def jobber_check(self):
             ret['cmd'] = '_return'
             ret['id'] = self.opts.value['id']
             msg = {'route': route, 'load': ret}
-            self.stack.value.transmit(msg, self.stack.value.fetchUidByName('manor'))
+            self.stack.value.transmit(
+                    msg,
+                    self.stack.value.nameRemotes.get(data['msg']['route']['src'][0]))
 
 
 @ioflo.base.deeding.deedify(
@@ -107,7 +107,8 @@ def shell_jobber(self):
             cmd.append(arg)
         for key in kwargs:
             cmd.append('{0}={1}'.format(key, kwargs[key]))
-        que = {'pub': data}
+        que = {'pub': data,
+               'msg': msg}
         que['proc'] = subprocess.Popen(
                 cmd,
                 shell=False,
