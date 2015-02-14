@@ -143,6 +143,7 @@ framer functionmanager be inactive first setup
     frame shell
         let me if .salt.etc.shell_jobber
         do salt raet shell jobber
+        do salt raet shell jobber check
     frame nix
         do salt raet nix jobber
 

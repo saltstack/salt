@@ -18,6 +18,7 @@ import json
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.utils
 import salt.transport
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
@@ -42,26 +43,32 @@ log = logging.getLogger(__name__)
         ioinits={'opts': '.salt.opts',
                  'grains': '.salt.grains',
                  'fun': '.salt.var.fun',
-                 'matcher': '.salt.master',
+                 'matcher': '.salt.matcher',
                  'shells': '.salt.var.shells',
                  'stack': '.salt.road.manor.stack'})
 def jobber_check(self):
     '''
     Iterate over the shell jobbers and return the ones that have finished
     '''
+    rms = []
     for jid in self.shells.value:
         if isinstance(self.shells.value[jid]['proc'].poll(), int):
-            data = self.shells.value.pop(jid)
+            rms.append(jid)
+            data = self.shells.value[jid]
             stdout, stderr = data['proc'].communicate()
-            ret = json.loads(stdout)
+            ret = json.loads(stdout, object_hook=salt.utils.decode_dict)['local']
             route = {'src': (self.stack.value.local.name, 'manor', 'jid_ret'),
                      'dst': (data['msg']['route']['src'][0], None, 'remote_cmd')}
             ret['cmd'] = '_return'
             ret['id'] = self.opts.value['id']
+            ret['jid'] = jid
             msg = {'route': route, 'load': ret}
-            self.stack.value.transmit(
+            master = self.stack.value.nameRemotes.get(data['msg']['route']['src'][0])
+            self.stack.value.message(
                     msg,
-                    self.stack.value.nameRemotes.get(data['msg']['route']['src'][0]))
+                    master.uid)
+    for rm_ in rms:
+        self.shells.value.pop(rm_)
 
 
 @ioflo.base.deeding.deedify(
@@ -69,7 +76,8 @@ def jobber_check(self):
         ioinits={'opts': '.salt.opts',
                  'grains': '.salt.grains',
                  'fun': '.salt.var.fun',
-                 'matcher': '.salt.master',
+                 'matcher': '.salt.matcher',
+                 'modules': '.salt.loader.modules',
                  'shells': {'ipath': '.salt.var.shells', 'ival': {}}})
 def shell_jobber(self):
     '''
