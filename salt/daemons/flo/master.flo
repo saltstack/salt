@@ -9,6 +9,7 @@ framer masterudpstack be active first setup
             do salt raet cleanup
             do salt raet road stack setup per inode ".salt.road.manor"
             do salt raet manor lane setup per inode ".salt.lane.manor"
+            do salt raet process manager setup
         go zmqstart
         go spawnmaint
 
