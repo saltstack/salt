@@ -30,12 +30,20 @@ framer masterudpstack be active first setup
         enter
             do salt raet worker fork
         go spawnreactor
+        go spawneventreturn
         go start
 
     frame spawnreactor
         let me if .salt.etc.reactor
         enter
             do salt raet reactor fork
+        go spawneventreturn
+        go start
+
+    frame spawneventreturn
+        let me if .salt.etc.event_return
+        enter
+            do salt raet event return fork
         go start
 
     frame start
