@@ -32,7 +32,8 @@ def __virtual__():
 def extracted(name,
               source,
               archive_format,
-              archive_user=None,
+              user=None,
+              group=None,
               tar_options=None,
               source_hash=None,
               if_missing=None,
@@ -85,8 +86,11 @@ def extracted(name,
     archive_format
         tar, zip or rar
 
-    archive_user:
-        user to extract files as
+    user:
+        the user to own each extracted file.
+
+    group:
+        the group to own each extracted file.
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
@@ -174,7 +178,7 @@ def extracted(name,
             source, name)
         return ret
 
-    __salt__['file.makedirs'](name, user=archive_user)
+    __salt__['file.makedirs'](name, user=user, group=group)
 
     if archive_format in ('zip', 'rar'):
         log.debug('Extract {0} in {1}'.format(filename, name))
@@ -218,13 +222,14 @@ def extracted(name,
             if not files:
                 files = 'no tar output so far'
 
-    if archive_user:
-        # Recursively set the permissions after extracting as we might not have
-        # access to the cachedir
+    # Recursively set user and group ownership of files after extraction.
+    # Note: We do this here because we might not have access to the cachedir.
+    if user or group:
         dir_result = __salt__['state.single']('file.directory',
                                                name,
-                                               user=archive_user,
-                                               recurse=['user'])
+                                               user=user,
+                                               group=group,
+                                               recurse=['user','group'])
         log.debug('file.directory: {0}'.format(dir_result))
 
     if len(files) > 0:
