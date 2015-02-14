@@ -126,9 +126,9 @@ def _get_all_legacy_init_scripts():
     '''
     ret = {}
     for fn in os.listdir(LEGACY_INIT_SCRIPT_PATH):
-        if not os.path.isfile(os.path.join(LEGACY_INIT_SCRIPT_PATH,fn)) or fn.startswith('rc'):
+        if not os.path.isfile(os.path.join(LEGACY_INIT_SCRIPT_PATH, fn)) or fn.startswith('rc'):
             continue
-        log.info('Legacy init script: "%s".'%fn)
+        log.info('Legacy init script: "%s".', fn)
         ret[fn] = 'inactive'
     return ret
 
@@ -212,7 +212,8 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(set(list(_get_all_units().keys()) + list(_get_all_unit_files().keys()) + list(_get_all_legacy_init_scripts().keys())))
+    return sorted(set(list(_get_all_units().keys()) + list(_get_all_unit_files().keys())
+                      + list(_get_all_legacy_init_scripts().keys())))
 
 
 def available(name):
