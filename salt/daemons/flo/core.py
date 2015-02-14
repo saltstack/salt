@@ -21,6 +21,7 @@ from collections import deque
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.utils.process
 import salt.transport
 from raet import raeting, nacling
 from raet.road.stacking import RoadStack
@@ -126,6 +127,19 @@ class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
         Update .cluster.clustered share from opts
         '''
         self.clustered.update(value=self.opts.value.get('cluster_mode', False))
+
+
+class SaltRaetProcessManagerSetup(ioflo.base.deeding.Deed):
+    '''
+    Set up the process manager object
+    '''
+    Ioinits = {'proc_mgr': '.salt.var.proc_mgr'}
+
+    def action(self):
+        '''
+        Create the process manager
+        '''
+        self.proc_mgr.value = salt.utils.process.ProcessManager()
 
 
 class SaltRaetRoadUsherMinionSetup(ioflo.base.deeding.Deed):
