@@ -17,24 +17,28 @@ import salt.utils.minions
 import salt.daemons.masterapi
 
 
-class SaltRaetMaintFork(ioflo.base.deeding.Deed):
+@ioflo.base.deeding.deedify(
+        'SaltRaetMaintFork',
+        ioinits={'opts': '.salt.opts', 'proc_mgmr': '.salt.usr.proc_mgmr'})
+def maint_fork(self):
     '''
     For off the maintinence process from the master router process
     FloScript:
 
     do salt raet maint fork at enter
-
     '''
-    Ioinits = {'opts': '.salt.opts'}
+    self.proc_mgr.value.add_process(Maintenance, args=(self.opts.value,))
 
-    def _fork_maint(self):
-        '''
-        Run the multiprocessing in here to fork the maintinace process
-        '''
-        proc = multiprocessing.Process(target=self._maint)
-        proc.start()
 
-    def _maint(self):
+class Maintenance(multiprocessing.Process):
+    '''
+    Start the maintinance process within ioflo
+    '''
+    def __init__(self, opts):
+        super(Maintenance, self).__init__()
+        self.opts.value = opts
+
+    def run(self):
         '''
         Spin up a worker, do this in s multiprocess
         '''
@@ -63,12 +67,6 @@ class SaltRaetMaintFork(ioflo.base.deeding.Deed):
                 verbose=int(self.opts.value['ioflo_verbose']),
                 consolepath=consolepath,
                 )
-
-    def action(self):
-        '''
-        make go!
-        '''
-        self._fork_maint()
 
 
 class SaltRaetMaintSetup(ioflo.base.deeding.Deed):
