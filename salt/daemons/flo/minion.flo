@@ -9,6 +9,7 @@ framer minionudpstack be active first setup
             do salt raet cleanup
             do salt raet road stack setup per inode ".salt.road.manor"
             do salt raet manor lane setup
+            do salt raet process manager setup
         go loadmodules
 
     # Load the minion mods
