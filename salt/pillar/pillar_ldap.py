@@ -51,7 +51,15 @@ possible to reference grains within the configuration.
 .. code-block:: yaml
 
     ldap: &defaults
-    server: 
+    server:    ldap.company.tld
+    port:      389
+    tls:       true
+    dn:        'dc=company,dc=tld
+    binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
+    bindpw:    bi7ieBai5Ano
+    referrals: false
+    anonymous: false
+
 
 
 '''
