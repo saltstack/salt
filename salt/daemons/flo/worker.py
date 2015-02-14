@@ -35,7 +35,7 @@ INHIBIT_RETURN = []  # ['_return']  # cmd for which we should not send return
     'SaltRaetWorkerFork',
     ioinits={
         'opts': '.salt.opts',
-        'proc_mgmr': '.salt.usr.proc_mgr',
+        'proc_mgr': '.salt.usr.proc_mgr',
         'worker_verify': '.salt.var.worker_verify',
         'access_keys': '.salt.access_keys',
         'mkey': '.salt.var.zmq.master_key',

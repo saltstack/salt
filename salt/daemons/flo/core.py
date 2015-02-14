@@ -133,7 +133,7 @@ class SaltRaetProcessManagerSetup(ioflo.base.deeding.Deed):
     '''
     Set up the process manager object
     '''
-    Ioinits = {'proc_mgr': '.salt.var.proc_mgr'}
+    Ioinits = {'proc_mgr': '.salt.usr.proc_mgr'}
 
     def action(self):
         '''

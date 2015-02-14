@@ -19,7 +19,7 @@ import salt.daemons.masterapi
 
 @ioflo.base.deeding.deedify(
         'SaltRaetMaintFork',
-        ioinits={'opts': '.salt.opts', 'proc_mgmr': '.salt.usr.proc_mgmr'})
+        ioinits={'opts': '.salt.opts', 'proc_mgr': '.salt.usr.proc_mgr'})
 def maint_fork(self):
     '''
     For off the maintinence process from the master router process
