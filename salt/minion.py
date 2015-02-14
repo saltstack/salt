@@ -1786,6 +1786,19 @@ class Minion(MinionBase):
                 log.critical('The beacon errored: ', exec_info=True)
             if beacons:
                 self._fire_master(events=beacons)
+                for beacon in beacons:
+                    serialized_data = salt.utils.dicttrim.trim_dict(
+                        self.serial.dumps(beacon['data']),
+                        self.opts.get('max_event_size', 1048576),
+                        is_msgpacked=True,
+                    )
+                    log.debug('Sending event - data = {0}'.format(beacon['data']))
+                    event = '{0}{1}{2}'.format(
+                            beacon['tag'],
+                            salt.utils.event.TAGEND,
+                            serialized_data)
+                    self.handle_event(event)
+                    self.epub_sock.send(event)
 
     def tune_in_no_block(self):
         '''
