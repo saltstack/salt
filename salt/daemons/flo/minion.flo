@@ -136,8 +136,14 @@ framer eventing be inactive first event
         do salt raet eventer
         do salt raet stats eventer minion
 
-framer functionmanager be inactive first checkexec
-    frame checkexec
+framer functionmanager be inactive first setup
+    frame setup
+        go shell
+        go nix
+    frame shell
+        let me if .salt.etc.shell_jobber
+        do salt raet shell jobber
+    frame nix
         do salt raet nix jobber
 
 framer manager be inactive first start at 10.0
