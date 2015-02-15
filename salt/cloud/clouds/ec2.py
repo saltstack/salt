@@ -295,6 +295,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
     provider = get_configured_provider()
     service_url = provider.get('service_url', 'amazonaws.com')
 
+    # Retrieve access credentials from meta-data, or use provided
+    access_key_id, secret_access_key, token = aws.creds(prov_dict)
+
     attempts = 5
     while attempts > 0:
         params_with_headers = params.copy()
@@ -333,11 +336,13 @@ def query(params=None, setname=None, requesturl=None, location=None,
             DEFAULT_EC2_API_VERSION
         )
 
-        params_with_headers['AWSAccessKeyId'] = provider['id']
+        params_with_headers['AWSAccessKeyId'] = access_key_id
         params_with_headers['SignatureVersion'] = '2'
         params_with_headers['SignatureMethod'] = 'HmacSHA256'
         params_with_headers['Timestamp'] = '{0}'.format(timestamp)
         params_with_headers['Version'] = ec2_api_version
+        if token != '':
+            params_with_headers['SecurityToken'] = token
         keys = sorted(params_with_headers)
         values = list(map(params_with_headers.get, keys))
         querystring = _urlencode(list(zip(keys, values)))
@@ -351,7 +356,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
                                           endpoint_path.encode('utf-8'),
                                           querystring.encode('utf-8'))
 
-        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
+        hashed = hmac.new(secret_access_key, uri, hashlib.sha256)
         sig = binascii.b2a_base64(hashed.digest())
         params_with_headers['Signature'] = sig.strip()
 
