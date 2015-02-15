@@ -257,6 +257,56 @@ def get_user():
         return getpass.getuser()
 
 
+def get_uid(user=None):
+    """
+    Get the uid for a given user name. If no user given,
+    the current euid will be returned. If the user
+    does not exist, None will be returned. On
+    systems which do not support pwd or os.geteuid
+    it will return None.
+    """
+    if pwd is None:
+        result =  None
+    elif user is None:
+        try:
+            result = os.geteuid()
+        except:
+            result = None
+    else:
+        try:
+            u_struct = pwd.getpwnam(user)
+        except KeyError:
+            result = None
+        else:
+            result = u_struct.pw_uid
+    return result
+
+
+def get_gid(group=None):
+    """
+    Get the gid for a given group name. If no group given,
+    the current egid will be returned. If the group
+    does not exist, None will be returned. On
+    systems which do not support grp or os.getegid
+    it will return None.
+    """
+    if grp is None:
+        result =  None
+    elif group is None:
+        try:
+            result = os.getegid()
+        except:
+            result = None
+    else:
+        try:
+            g_struct = grp.getgrnam(group)
+        except KeyError:
+            result = None
+        else:
+            result = g_struct.gr_gid
+    return result
+
+
 def get_specific_user():
     '''
     Get a user name for publishing. If you find the user is "root" attempt to be
@@ -943,9 +993,29 @@ def fopen(*args, **kwargs):
     survive into the new program after exec.
 
     NB! We still have small race condition between open and fcntl.
+
+    Supported optional Keyword Arguments:
+
+      lock: lock the file with fcntl
+
+      mode: explicit mode to set. Mode is anything os.chmod
+            would accept as input for mode. Works only on unix/unix
+            like systems.
+
+      uid: the uid to set, if not set, or it is None or -1 no changes are
+           made. Same applies if the path is already owned by this
+           uid. Must be int. Works only on unix/unix like systems.
+
+      gid: the gid to set, if not set, or it is None or -1 no changes are
+           made. Same applies if the path is already owned by this
+           gid. Must be int. Works only on unix/unix like systems.
+
     '''
-    # Remove lock from kwargs if present
+    # Remove lock, uid, gid and mode from kwargs if present
     lock = kwargs.pop('lock', False)
+    uid = kwargs.pop('uid', False)
+    gid = kwargs.pop('gid', False)
+    mode = kwargs.pop('mode', False)
 
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
@@ -959,6 +1029,29 @@ def fopen(*args, **kwargs):
         if lock and is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+
+
+    path = args[0]
+    d_stat = os.stat(path)
+
+    if hasattr(os, 'chown'):
+        if uid is None:
+            # -1 means no change to current uid
+            uid = -1
+        if gid is None:
+            # -1 means no change to current gid
+            gid = -1
+
+        # if uid and gid are both -1 then go ahead with
+        # no changes at all
+        if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
+                [i for i in (uid, gid) if i != -1]:
+            os.chown(path, uid, gid)
+
+    if mode is not None:
+        if d_stat.st_mode | mode != d_stat.st_mode:
+            os.chmod(path, d_stat.st_mode | mode)
+
     return fhandle
 
 
