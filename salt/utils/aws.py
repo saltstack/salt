@@ -97,9 +97,6 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 
     http://docs.aws.amazon.com/general/latest/gr/signature-version-2.html
     '''
-    # Declare globals
-    global __AccessKeyId__, __SecretAccessKey__, __Token__
-
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -143,9 +140,6 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
     http://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
     http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
     '''
-    # Declare globals
-    global __AccessKeyId__, __SecretAccessKey__, __Token__
-
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
