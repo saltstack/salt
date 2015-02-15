@@ -300,7 +300,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
     service_url = provider.get('service_url', 'amazonaws.com')
 
     # Retrieve access credentials from meta-data, or use provided
-    access_key_id, secret_access_key, token = aws.creds(prov_dict)
+    access_key_id, secret_access_key, token = aws.creds(provider)
 
     attempts = 5
     while attempts > 0:
