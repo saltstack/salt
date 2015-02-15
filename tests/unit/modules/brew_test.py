@@ -71,7 +71,7 @@ class BrewTestCase(TestCase):
     @patch('salt.modules.brew._list_taps', MagicMock(return_value=TAPS_LIST))
     def test_tap(self):
         '''
-        Tests adding unofficial Github repos to the list of brew taps
+        Tests adding unofficial GitHub repos to the list of brew taps
         '''
         with patch.dict(brew.__salt__, {'cmd.retcode': MagicMock(return_value=0)}):
             self.assertTrue(brew._tap('homebrew/test'))

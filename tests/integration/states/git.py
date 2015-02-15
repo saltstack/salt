@@ -63,7 +63,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://youSpelledGithubWrong.com/saltstack/salt-test-repo.git',
+                name='https://youSpelledGitHubWrong.com/saltstack/salt-test-repo.git',
                 rev='develop',
                 target=name,
                 submodules=True
