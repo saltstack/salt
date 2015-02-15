@@ -232,7 +232,7 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
 
     # Add in security token if we have one
     if token != '':
-        header['X-Amz-Security-Token'] = token
+        headers['X-Amz-Security-Token'] = token
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
     return headers, requesturl
