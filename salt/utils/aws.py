@@ -55,6 +55,9 @@ def creds(provider):
     literal string 'use-instance-role-credentials' creds will pull the instance
     role credentials from the meta data, cache them, and provide them instead.
     '''
+    # Declare globals
+    global __AccessKeyId__, __SecretAccessKey__, __Token__, __Expiration__
+
     # if id or key is 'use-instance-role-credentials', pull them from meta-data
     ## if needed
     if provider['id'] == IROLE_CODE or provider['key'] == IROLE_CODE:
@@ -94,6 +97,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 
     http://docs.aws.amazon.com/general/latest/gr/signature-version-2.html
     '''
+    # Declare globals
+    global __AccessKeyId__, __SecretAccessKey__, __Token__
+
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -137,6 +143,9 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
     http://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
     http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
     '''
+    # Declare globals
+    global __AccessKeyId__, __SecretAccessKey__, __Token__
+
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
