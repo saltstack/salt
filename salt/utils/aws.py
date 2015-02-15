@@ -42,6 +42,50 @@ AWS_RETRY_CODES = [
     'InsufficientReservedInstanceCapacity',
 ]
 
+IROLE_CODE = 'use-instance-role-credentials'
+__AccessKeyId__ = ''
+__SecretAccessKey__ = ''
+__Token__ = ''
+__Expiration__ == ''
+
+def creds(provider):
+    '''
+    Return the credentials for AWS signing.  This could be just the id and key
+    specified in the provider configuration, or if the id or key is set to the
+    literal string 'use-instance-role-credentials' creds will pull the instance
+    role credentials from the meta data, cache them, and provide them instead.
+    '''
+    # if id or key is 'use-instance-role-credentials', pull them from meta-data
+    ## if needed
+    if provider['id'] == IROLE_CODE or provider['key'] == IROLE_CODE:
+        # Check to see if we have cache credentials that are still good
+        if __Expiration__ != '':
+            timenow = datetime.datetime.utcnow()
+            timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
+            if timestamp < __Expiration__:
+                # Current timestamp less than expiration fo cached credentials
+                return __AccessKeyId__, __SecretAccessKey__, __Token__
+        # We don't have any cached credentials, or they are expired, get them
+        # TODO: Wrap this with a try and handle exceptions gracefully
+        result = requests.get(
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+        )
+        result.raise_for_status()
+        role = result.text
+        # TODO: Wrap this with a try and handle exceptions gracefully
+        result = requests.get(
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role)
+        )
+        result.raise_for_status()
+        data = result.json()
+        __AccessKeyId__ = data['AccessKeyId']
+        __SecretAccessKey__ = data['SecretAccessKey']
+        __Token__ = data['Token']
+        __Expiration__ = data['Expiration']
+        return __AccessKeyId__, __SecretAccessKey__, __Token__
+    else:
+        return provider['id'], provider['key'], ''
+
 
 def sig2(method, endpoint, params, provider, aws_api_version):
     '''
@@ -53,8 +97,11 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
+    # Retrieve access credentials from meta-data, or use provided
+    access_key_id, secret_access_key, token = creds(prov_dict)
+
     params_with_headers = params.copy()
-    params_with_headers['AWSAccessKeyId'] = provider.get('id', '')
+    params_with_headers['AWSAccessKeyId'] = access_key_id
     params_with_headers['SignatureVersion'] = '2'
     params_with_headers['SignatureMethod'] = 'HmacSHA256'
     params_with_headers['Timestamp'] = '{0}'.format(timestamp)
@@ -69,9 +116,14 @@ def sig2(method, endpoint, params, provider, aws_api_version):
         querystring.encode('utf-8'),
     )
 
-    hashed = hmac.new(provider['key'], canonical, hashlib.sha256)
+    hashed = hmac.new(secret_access_key, canonical, hashlib.sha256)
     sig = binascii.b2a_base64(hashed.digest())
     params_with_headers['Signature'] = sig.strip()
+
+    # Add in security token if we have one
+    if token != '':
+        params_with_headers['SecurityToken'] = token
+
     return params_with_headers
 
 
@@ -87,6 +139,9 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
     '''
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    # Retrieve access credentials from meta-data, or use provided
+    access_key_id, secret_access_key, token = creds(prov_dict)
 
     params_with_headers = params.copy()
     params_with_headers['Version'] = aws_api_version
@@ -138,7 +193,7 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
 
     # Create the signing key using the function defined above.
     signing_key = _sig_key(
-        prov_dict.get('key', ''),
+        secret_access_key,
         datestamp,
         location,
         product
@@ -155,7 +210,7 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
             '{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}'
         ).format(
             algorithm,
-            prov_dict.get('id', ''),
+            access_key_id,
             credential_scope,
             signed_headers,
             signature,
@@ -165,6 +220,10 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
         'x-amz-date': amzdate,
         'Authorization': authorization_header
     }
+
+    # Add in security token if we have one
+    if token != '':
+        header['X-Amz-Security-Token'] = token
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
     return headers, requesturl
