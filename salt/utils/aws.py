@@ -46,7 +46,7 @@ IROLE_CODE = 'use-instance-role-credentials'
 __AccessKeyId__ = ''
 __SecretAccessKey__ = ''
 __Token__ = ''
-__Expiration__ == ''
+__Expiration__ = ''
 
 def creds(provider):
     '''
