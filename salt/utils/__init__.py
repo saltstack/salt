@@ -266,11 +266,11 @@ def get_uid(user=None):
     it will return None.
     """
     if pwd is None:
-        result =  None
+        result = None
     elif user is None:
         try:
             result = os.geteuid()
-        except:
+        except AttributeError:
             result = None
     else:
         try:
@@ -291,11 +291,11 @@ def get_gid(group=None):
     it will return None.
     """
     if grp is None:
-        result =  None
+        result = None
     elif group is None:
         try:
             result = os.getegid()
-        except:
+        except AttributeError:
             result = None
     else:
         try:
@@ -1029,7 +1029,6 @@ def fopen(*args, **kwargs):
         if lock and is_fcntl_available(check_sunos=True):
             fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
-
 
     path = args[0]
     d_stat = os.stat(path)
