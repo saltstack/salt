@@ -56,7 +56,6 @@ def parse():
             default='zeromq',
             help=('Transport to use. (Default: \'zeromq\''))
 
-
     options, args = parser.parse_args()
 
     opts = {}
