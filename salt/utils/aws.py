@@ -48,6 +48,7 @@ __SecretAccessKey__ = ''
 __Token__ = ''
 __Expiration__ = ''
 
+
 def creds(provider):
     '''
     Return the credentials for AWS signing.  This could be just the id and key
@@ -101,7 +102,7 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Retrieve access credentials from meta-data, or use provided
-    access_key_id, secret_access_key, token = creds(prov_dict)
+    access_key_id, secret_access_key, token = creds(provider)
 
     params_with_headers = params.copy()
     params_with_headers['AWSAccessKeyId'] = access_key_id
