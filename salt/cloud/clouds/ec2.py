@@ -12,9 +12,13 @@ To use the EC2 cloud module, set up the cloud configuration at
 .. code-block:: yaml
 
     my-ec2-config:
-      # The EC2 API authentication id
+      # The EC2 API authentication id, set this and/or key to
+      # 'use-instance-role-credentials' to use the instance role credentials
+      # from the meta-data if running on an AWS instance
       id: GKTADJGHEIQSXMKKRBJ08H
-      # The EC2 API authentication key
+      # The EC2 API authentication key, set this and/or id to
+      # 'use-instance-role-credentials' to use the instance role credentials
+      # from the meta-data if running on an AWS instance
       key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
       # The ssh keyname to use
       keyname: default
