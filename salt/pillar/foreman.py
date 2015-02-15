@@ -33,7 +33,7 @@ The following options are optional:
 An alternative would be to use the Foreman modules integrating Salt features
 in the Smart Proxy and the webinterface.
 
-Further information can be found on `Github <https://github.com/theforeman/foreman_salt>`_.
+Further information can be found on `GitHub <https://github.com/theforeman/foreman_salt>`_.
 
 Module Documentation
 ====================
