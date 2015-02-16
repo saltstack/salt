@@ -298,7 +298,7 @@ def list_windowsfeatures():
     return result['stdout']
 
 
-def install(name, version=None, source=None, force=False, install_args=None):
+def install(name, version=None, source=None, force=False, install_args=None, override_args=False):
     '''
     Instructs Chocolatey to install a package.
 
@@ -319,6 +319,10 @@ def install(name, version=None, source=None, force=False, install_args=None):
         A list of install arguments you want to pass to the installation process
         i.e product key or feature list
 
+    override_args
+        Set to true if you want to override the original install arguments (for the native installer)
+         in the package and use your own.
+
     CLI Example:
 
     .. code-block:: bash
@@ -337,6 +341,8 @@ def install(name, version=None, source=None, force=False, install_args=None):
         cmd.extend(['-Force'])
     if install_args:
         cmd.extend(['-InstallArguments', install_args])
+    if override_args:
+        cmd.extend(['-OverrideArguments', install_args])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
