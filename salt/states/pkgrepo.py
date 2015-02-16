@@ -295,9 +295,6 @@ def managed(name, **kwargs):
                               .format(name))
             return ret
 
-    if kwargs.get('clean_file', False):
-        open(kwargs['file'], 'w').close()
-
     if __opts__['test']:
         ret['comment'] = ('Package repo {0!r} will be configured. This may '
                           'cause pkg states to behave differently than stated '
@@ -305,6 +302,11 @@ def managed(name, **kwargs):
                           'to the differences in the configured repositories.'
                           .format(name))
         return ret
+
+    # empty file before configure
+    if kwargs.get('clean_file', False):
+        open(kwargs['file'], 'w').close()
+
     try:
         if __grains__['os_family'] == 'Debian':
             __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
