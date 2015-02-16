@@ -143,14 +143,14 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     return ret
 
 
-def create_replication_group(name, primary_cluster_id, replication_group_description, 
+def create_replication_group(name, primary_cluster_id, replication_group_description,
                              region=None, key=None, keyid=None, profile=None):
     '''
     Create replication group.
 
     CLI example::
 
-        salt myminion boto_elasticache.create_replication_group myelasticache 
+        salt myminion boto_elasticache.create_replication_group myelasticache
         myprimarycluster description
     '''
     conn = _get_conn(region, key, keyid, profile)
