@@ -33,12 +33,10 @@ Connection module for Amazon Elasticache
 
 :depends: boto
 '''
-from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import time
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +50,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
+from salt._compat import string_types
 import salt.utils.odict as odict
 
 
@@ -84,7 +82,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def get_config(name, region=None, key=None, keyid=None, profile=None):
+def get_config(name, node_info=None, region=None, key=None, keyid=None,
+               profile=None):
     '''
     Get the configuration for a cache cluster.
 
@@ -96,7 +95,8 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return None
     try:
-        cc = conn.describe_cache_clusters(name)
+        cc = conn.describe_cache_clusters(cache_cluster_id=name, 
+                                          show_cache_node_info=node_info)
     except boto.exception.BotoServerError as e:
         msg = 'Failed to get config for cache cluster {0}.'.format(name)
         log.error(msg)
@@ -111,8 +111,8 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
              'preferred_availability_zone', 'security_groups',
              'cache_subnet_group_name', 'engine_version', 'cache_node_type',
              'notification_configuration', 'preferred_maintenance_window',
-             'configuration_endpoint', 'cache_cluster_status']
-    for key, val in six.iteritems(cc):
+             'configuration_endpoint', 'cache_cluster_status', 'cache_nodes']
+    for key, val in cc.iteritems():
         _key = boto.utils.pythonize_name(key)
         if _key not in attrs:
             continue
@@ -121,6 +121,11 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                 ret[_key] = val['CacheParameterGroupName']
             else:
                 ret[_key] = None
+        elif _key == 'cache_nodes':
+            if val:
+                ret[_key] = [k for k in val]
+            else:
+                ret[_key] = []
         elif _key == 'cache_security_groups':
             if val:
                 ret[_key] = [k['CacheSecurityGroupName'] for k in val]
@@ -169,7 +174,7 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None,
         log.error(msg)
         return False
     ret = {}
-    for key, val in six.iteritems(csg):
+    for key, val in csg.iteritems():
         if key == 'CacheSubnetGroupName':
             ret['cache_subnet_group_name'] = val
         elif key == 'CacheSubnetGroupDescription':
