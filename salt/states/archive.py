@@ -15,6 +15,9 @@ from contextlib import closing
 # Import 3rd-party libs
 import salt.ext.six as six
 
+# remove after archive_user deprecation.
+from salt.utils import warn_until
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'archive'
@@ -135,13 +138,13 @@ def extracted(name,
         return ret
 
     # remove this whole block after formal deprecation.
-    if archive_user != None:
-        salt.utils.warn_until(
-                'Boron',
-                'Passing \'archive_user\' is deprecated.'
-                'Pass \'user\' instead.'
+    if archive_user is not None:
+        warn_until(
+          'Boron',
+          'Passing \'archive_user\' is deprecated.'
+          'Pass \'user\' instead.'
         )
-        if user == None:
+        if user is None:
             user = archive_user
 
     if not name.endswith('/'):
