@@ -32,6 +32,7 @@ def __virtual__():
 def extracted(name,
               source,
               archive_format,
+              archive_user=None,
               user=None,
               group=None,
               tar_options=None,
@@ -51,6 +52,8 @@ def extracted(name,
         instead.  If ``name`` exists, it will assume the archive was previously
         extracted successfully and will not extract it again.
 
+    Example, tar with flag for lmza compression:
+
     .. code-block:: yaml
 
         graylog2-server:
@@ -62,6 +65,8 @@ def extracted(name,
             - archive_format: tar
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
+    Example, tar with flag for verbose output:
+
     .. code-block:: yaml
 
         graylog2-server:
@@ -71,6 +76,8 @@ def extracted(name,
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
             - archive_format: tar
             - tar_options: v
+            - user: root
+            - group: root
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
     name
@@ -86,11 +93,17 @@ def extracted(name,
     archive_format
         tar, zip or rar
 
-    user:
-        the user to own each extracted file.
+    archive_user
+        The user to own each extracted file.
 
-    group:
-        the group to own each extracted file.
+        .. deprecated:: 2014.7.2
+            replaced by standardized `user` parameter.
+
+    user
+        The user to own each extracted file.
+
+    group
+        The group to own each extracted file.
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
@@ -120,6 +133,16 @@ def extracted(name,
         ret['comment'] = '{0} is not supported, valid formats are: {1}'.format(
             archive_format, ','.join(valid_archives))
         return ret
+
+    # remove this whole block after formal deprecation.
+    if archive_user != None:
+        salt.utils.warn_until(
+                'Boron',
+                'Passing \'archive_user\' is deprecated.'
+                'Pass \'user\' instead.'
+        )
+        if user == None:
+            user = archive_user
 
     if not name.endswith('/'):
         name += '/'
