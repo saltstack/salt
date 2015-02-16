@@ -1663,7 +1663,7 @@ def down(iface, iface_type):
 
     .. code-block:: bash
 
-        salt '*' ip.down eth0
+        salt '*' ip.down eth0 eth
     '''
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought down.
@@ -1724,7 +1724,7 @@ def up(iface, iface_type):  # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' ip.up eth0
+        salt '*' ip.up eth0 eth
     '''
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought up.
