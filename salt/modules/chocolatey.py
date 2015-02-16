@@ -321,7 +321,8 @@ def install(name, version=None, source=None, force=False, install_args=None, ove
 
     override_args
         Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own.
+         in the package and use your own. When this is set to False install_args will be appended to the end of the
+         default arguments
 
     CLI Example:
 
@@ -329,6 +330,7 @@ def install(name, version=None, source=None, force=False, install_args=None, ove
 
         salt '*' chocolatey.install <package name>
         salt '*' chocolatey.install <package name> version=<package version>
+        salt '*' chocolatey.install <package name> install_args=<args> override_args=True
     '''
     choc_path = _find_chocolatey()
     # chocolatey helpfully only supports a single package argument
@@ -366,13 +368,15 @@ def install_cygwin(name, install_args=None, override_args=False):
 
     override_args
         Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own.
+         in the package and use your own. When this is set to False install_args will be appended to the end of the
+         default arguments
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' chocolatey.install_cygwin <package name>
+        salt '*' chocolatey.install_cygwin <package name> install_args=<args> override_args=True
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'cygwin', name]
@@ -407,7 +411,8 @@ def install_gem(name, version=None, install_args=None, override_args=False):
 
     override_args
         Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own.
+         in the package and use your own. When this is set to False install_args will be appended to the end of the
+         default arguments
 
 
     CLI Example:
@@ -416,6 +421,7 @@ def install_gem(name, version=None, install_args=None, override_args=False):
 
         salt '*' chocolatey.install_gem <package name>
         salt '*' chocolatey.install_gem <package name> version=<package version>
+        salt '*' chocolatey.install_gem <package name> install_args=<args> override_args=True
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'gem', name]
@@ -501,7 +507,8 @@ def install_python(name, version=None, install_args=None, override_args=False):
 
     override_args
         Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own.
+         in the package and use your own. When this is set to False install_args will be appended to the end of the
+         default arguments
 
     CLI Example:
 
@@ -509,6 +516,7 @@ def install_python(name, version=None, install_args=None, override_args=False):
 
         salt '*' chocolatey.install_python <package name>
         salt '*' chocolatey.install_python <package name> version=<package version>
+        salt '*' chocolatey.install_python <package name> install_args=<args> override_args=True
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'python', name]
@@ -567,13 +575,15 @@ def install_webpi(name, install_args=None, override_args=False):
 
     override_args
         Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own.
+         in the package and use your own. When this is set to False install_args will be appended to the end of the
+         default arguments
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' chocolatey.install_webpi <package name>
+        salt '*' chocolatey.install_webpi <package name> install_args=<args> override_args=True
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'webpi', name]
@@ -607,8 +617,9 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
         i.e product key or feature list
 
     override_args
-        Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own.
+        Set to true if you want to override the original uninstall arguments (for the native uninstaller)
+         in the package and use your own. When this is set to False uninstall_args will be appended to the end of the
+         default arguments
 
     CLI Example:
 
@@ -616,6 +627,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
 
         salt '*' chocolatey.uninstall <package name>
         salt '*' chocolatey.uninstall <package name> version=<package version>
+        salt '*' chocolatey.uninstall <package name> version=<package version> uninstall_args=<args> override_args=True
     '''
     choc_path = _find_chocolatey()
     # chocolatey helpfully only supports a single package argument
