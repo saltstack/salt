@@ -7,6 +7,11 @@ External Authentication System
 Salt's External Authentication System (eAuth) allows for Salt to  pass through
 command authorization to any external authentication system, such as PAM or LDAP.
 
+.. note::
+
+    eAuth using the PAM external auth system requires salt-master to be run as 
+    root as this system needs root access to check authentication.
+
 Access Control System
 ---------------------
 
