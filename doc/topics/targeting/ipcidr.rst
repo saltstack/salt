@@ -12,7 +12,7 @@ notation).
     salt -S 192.168.40.20 test.ping
     salt -S 10.0.0.0/24 test.ping
 
-Ipcidr matching can also be used in compount matches
+Ipcidr matching can also be used in compound matches
 
 .. code-block:: bash
 
