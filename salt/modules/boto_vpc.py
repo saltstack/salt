@@ -281,7 +281,8 @@ def delete(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
 
     try:
         if not vpc_id:
-            vpc_id = get_id(name=name, tags=tags)
+            vpc_id = get_id(name=name, tags=tags, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
         if conn.delete_vpc(vpc_id):
             log.info('VPC {0} was deleted.'.format(vpc_id))
