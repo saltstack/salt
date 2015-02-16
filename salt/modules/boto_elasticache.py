@@ -96,8 +96,7 @@ def get_config(name, node_info=True, region=None, key=None, keyid=None, profile=
     if not conn:
         return None
     try:
-        cc = conn.describe_cache_clusters(cache_cluster_id=name, 
-                                          show_cache_node_info=node_info)
+        cc = conn.describe_cache_clusters(name, show_cache_node_info=node_info)
     except boto.exception.BotoServerError as e:
         msg = 'Failed to get config for cache cluster {0}.'.format(name)
         log.error(msg)
