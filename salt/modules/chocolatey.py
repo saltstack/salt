@@ -298,7 +298,7 @@ def list_windowsfeatures():
     return result['stdout']
 
 
-def install(name, version=None, source=None, force=False):
+def install(name, version=None, source=None, force=False, install_args=None, override_args=False):
     '''
     Instructs Chocolatey to install a package.
 
@@ -315,6 +315,14 @@ def install(name, version=None, source=None, force=False):
     force
         Reinstall the current version of an existing package.
 
+    install_args
+        A list of install arguments you want to pass to the installation process
+        i.e product key or feature list
+
+    override_args
+        Set to true if you want to override the original install arguments (for the native installer)
+         in the package and use your own.
+
     CLI Example:
 
     .. code-block:: bash
@@ -330,7 +338,11 @@ def install(name, version=None, source=None, force=False):
     if source:
         cmd.extend(['-Source', source])
     if salt.utils.is_true(force):
-        cmd.append('-Force')
+        cmd.extend(['-Force'])
+    if install_args:
+        cmd.extend(['-InstallArguments', install_args])
+    if override_args:
+        cmd.extend(['-OverrideArguments'])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -341,12 +353,20 @@ def install(name, version=None, source=None, force=False):
     return result['stdout']
 
 
-def install_cygwin(name):
+def install_cygwin(name, install_args=None, override_args=False):
     '''
     Instructs Chocolatey to install a package via Cygwin.
 
     name
         The name of the package to be installed. Only accepts a single argument.
+
+    install_args
+        A list of install arguments you want to pass to the installation process
+        i.e product key or feature list
+
+    override_args
+        Set to true if you want to override the original install arguments (for the native installer)
+         in the package and use your own.
 
     CLI Example:
 
@@ -356,6 +376,10 @@ def install_cygwin(name):
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'cygwin', name]
+    if install_args:
+        cmd.extend(['-InstallArguments', install_args])
+    if override_args:
+        cmd.extend(['-OverrideArguments'])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -366,7 +390,7 @@ def install_cygwin(name):
     return result['stdout']
 
 
-def install_gem(name, version=None):
+def install_gem(name, version=None, install_args=None, override_args=False):
     '''
     Instructs Chocolatey to install a package via Ruby's Gems.
 
@@ -376,6 +400,15 @@ def install_gem(name, version=None):
     version
         Install a specific version of the package. Defaults to latest version
         available.
+
+    install_args
+        A list of install arguments you want to pass to the installation process
+        i.e product key or feature list
+
+    override_args
+        Set to true if you want to override the original install arguments (for the native installer)
+         in the package and use your own.
+
 
     CLI Example:
 
@@ -388,6 +421,10 @@ def install_gem(name, version=None):
     cmd = [choc_path, 'gem', name]
     if version:
         cmd.extend(['-Version', version])
+    if install_args:
+        cmd.extend(['-InstallArguments', install_args])
+    if override_args:
+        cmd.extend(['-OverrideArguments'])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -447,7 +484,7 @@ def install_missing(name, version=None, source=None):
     return result['stdout']
 
 
-def install_python(name, version=None):
+def install_python(name, version=None, install_args=None, override_args=False):
     '''
     Instructs Chocolatey to install a package via Python's easy_install.
 
@@ -457,6 +494,14 @@ def install_python(name, version=None):
     version
         Install a specific version of the package. Defaults to latest version
         available.
+
+    install_args
+        A list of install arguments you want to pass to the installation process
+        i.e product key or feature list
+
+    override_args
+        Set to true if you want to override the original install arguments (for the native installer)
+         in the package and use your own.
 
     CLI Example:
 
@@ -469,6 +514,10 @@ def install_python(name, version=None):
     cmd = [choc_path, 'python', name]
     if version:
         cmd.extend(['-Version', version])
+    if install_args:
+        cmd.extend(['-InstallArguments', install_args])
+    if override_args:
+        cmd.extend(['-OverrideArguments'])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -505,12 +554,20 @@ def install_windowsfeatures(name):
     return result['stdout']
 
 
-def install_webpi(name):
+def install_webpi(name, install_args=None, override_args=False):
     '''
     Instructs Chocolatey to install a package via the Microsoft Web PI service.
 
     name
         The name of the package to be installed. Only accepts a single argument.
+
+    install_args
+        A list of install arguments you want to pass to the installation process
+        i.e product key or feature list
+
+    override_args
+        Set to true if you want to override the original install arguments (for the native installer)
+         in the package and use your own.
 
     CLI Example:
 
@@ -520,6 +577,10 @@ def install_webpi(name):
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'webpi', name]
+    if install_args:
+        cmd.extend(['-InstallArguments', install_args])
+    if override_args:
+        cmd.extend(['-OverrideArguments'])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -530,7 +591,7 @@ def install_webpi(name):
     return result['stdout']
 
 
-def uninstall(name, version=None):
+def uninstall(name, version=None, uninstall_args=None, override_args=False):
     '''
     Instructs Chocolatey to uninstall a package.
 
@@ -540,6 +601,14 @@ def uninstall(name, version=None):
     version
         Uninstalls a specific version of the package. Defaults to latest version
         installed.
+
+    uninstall_args
+        A list of uninstall arguments you want to pass to the uninstallation process
+        i.e product key or feature list
+
+    override_args
+        Set to true if you want to override the original install arguments (for the native installer)
+         in the package and use your own.
 
     CLI Example:
 
@@ -553,6 +622,10 @@ def uninstall(name, version=None):
     cmd = [choc_path, 'uninstall', name]
     if version:
         cmd.extend(['-Version', version])
+    if uninstall_args:
+        cmd.extend(['-UninstallArguments', uninstall_args])
+    if override_args:
+        cmd.extend(['-OverrideArguments'])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
