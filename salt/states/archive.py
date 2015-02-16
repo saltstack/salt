@@ -252,7 +252,7 @@ def extracted(name,
                                                name,
                                                user=user,
                                                group=group,
-                                               recurse=['user','group'])
+                                               recurse=['user', 'group'])
         log.debug('file.directory: {0}'.format(dir_result))
 
     if len(files) > 0:
