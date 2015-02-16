@@ -298,7 +298,7 @@ def list_windowsfeatures():
     return result['stdout']
 
 
-def install(name, version=None, source=None, force=False):
+def install(name, version=None, source=None, force=False, install_args=None):
     '''
     Instructs Chocolatey to install a package.
 
@@ -315,6 +315,10 @@ def install(name, version=None, source=None, force=False):
     force
         Reinstall the current version of an existing package.
 
+    install_args
+        A list of install arguments you want to pass to the installation process
+        i.e product key or feature list
+
     CLI Example:
 
     .. code-block:: bash
@@ -330,7 +334,9 @@ def install(name, version=None, source=None, force=False):
     if source:
         cmd.extend(['-Source', source])
     if salt.utils.is_true(force):
-        cmd.append('-Force')
+        cmd.extend(['-Force'])
+    if install_args:
+        cmd.extend(['-InstallArguments', install_args])
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
