@@ -84,8 +84,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def get_config(name, node_info=None, region=None, key=None, keyid=None,
-               profile=None):
+def get_config(name, region=None, key=None, keyid=None, profile=None):
     '''
     Get the configuration for a cache cluster.
 
@@ -98,7 +97,7 @@ def get_config(name, node_info=None, region=None, key=None, keyid=None,
         return None
     try:
         cc = conn.describe_cache_clusters(cache_cluster_id=name, 
-                                          show_cache_node_info=node_info)
+                                          show_cache_node_info=True)
     except boto.exception.BotoServerError as e:
         msg = 'Failed to get config for cache cluster {0}.'.format(name)
         log.error(msg)
