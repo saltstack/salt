@@ -33,10 +33,12 @@ Connection module for Amazon Elasticache
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import time
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -112,7 +114,7 @@ def get_config(name, node_info=None, region=None, key=None, keyid=None,
              'cache_subnet_group_name', 'engine_version', 'cache_node_type',
              'notification_configuration', 'preferred_maintenance_window',
              'configuration_endpoint', 'cache_cluster_status', 'cache_nodes']
-    for key, val in cc.iteritems():
+    for key, val in six.iteritems(cc):
         _key = boto.utils.pythonize_name(key)
         if _key not in attrs:
             continue
@@ -174,7 +176,7 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None,
         log.error(msg)
         return False
     ret = {}
-    for key, val in csg.iteritems():
+    for key, val in six.iteritems(csg):
         if key == 'CacheSubnetGroupName':
             ret['cache_subnet_group_name'] = val
         elif key == 'CacheSubnetGroupDescription':
