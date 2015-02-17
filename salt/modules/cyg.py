@@ -35,6 +35,7 @@ def __virtual__():
         return __virtualname__
     return False
 
+
 __func_alias__ = {
     'list_': 'list'
 }
@@ -97,7 +98,6 @@ def check_valid_package(package,
     """Check if the package is valid on the given mirrors."""
     if mirrors is None:
         mirrors = [{DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}]
-
 
     LOG.debug('Checking Valid Mirrors: {0}'.format(mirrors))
 
