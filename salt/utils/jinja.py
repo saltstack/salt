@@ -365,8 +365,8 @@ class SerializerExtension(Extension, object):
             return data
         return explore(data)
 
-    def format_json(self, value, sort_keys=True):
-        return Markup(json.dumps(value, sort_keys=sort_keys).strip())
+    def format_json(self, value, sort_keys=True, indent=None):
+        return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
 
     def format_yaml(self, value, flow_style=True):
         return Markup(yaml.dump(value, default_flow_style=flow_style,
