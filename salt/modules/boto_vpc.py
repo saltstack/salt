@@ -219,7 +219,7 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None, 
         return False
 
 
-def create(cidr_block, instance_tenancy=None, vpc_name=None, 
+def create(cidr_block, instance_tenancy=None, vpc_name=None,
            enable_dns_support=None, enable_dns_hostnames=None, tags=None,
            region=None, key=None, keyid=None, profile=None):
     '''
