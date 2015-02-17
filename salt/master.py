@@ -75,8 +75,6 @@ class SMaster(object):
     '''
     Create a simple salt-master, this will generate the top-level master
     '''
-    aes = None
-
     def __init__(self, opts):
         '''
         Create a salt master server instance
@@ -84,7 +82,7 @@ class SMaster(object):
         :param dict opts: The salt options dictionary
         '''
         self.opts = opts
-        SMaster.aes = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
+        self.aes = multiprocessing.Array(ctypes.c_char, salt.crypt.Crypticle.generate_key_string())
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
         self.crypticle = self.__prep_crypticle()
@@ -93,7 +91,7 @@ class SMaster(object):
         '''
         Return the crypticle used for AES
         '''
-        return salt.crypt.Crypticle(self.opts, SMaster.aes.value)
+        return salt.crypt.Crypticle(self.opts, self.aes.value)
 
     def __prep_key(self):
         '''
@@ -108,7 +106,7 @@ class Maintenance(multiprocessing.Process):
     A generalized maintenance process which performances maintenance
     routines.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, aes):
         '''
         Create a maintenance instance
 
@@ -116,6 +114,7 @@ class Maintenance(multiprocessing.Process):
         '''
         super(Maintenance, self).__init__()
         self.opts = opts
+        self.aes = aes
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts['loop_interval'])
         # Track key rotation intervals
@@ -219,8 +218,8 @@ class Maintenance(multiprocessing.Process):
         if to_rotate:
             log.info('Rotating master AES key')
             # should be unecessary-- since no one else should be modifying
-            with SMaster.aes.get_lock():
-                SMaster.aes.value = salt.crypt.Crypticle.generate_key_string()
+            with self.aes.get_lock():
+                self.aes.value = salt.crypt.Crypticle.generate_key_string()
             self.event.fire_event({'rotate_aes_key': True}, tag='key')
             self.rotate = now
             if self.opts.get('ping_on_rotate'):
@@ -384,7 +383,7 @@ class Master(SMaster):
         log.info('Creating master process manager')
         process_manager = salt.utils.process.ProcessManager()
         log.info('Creating master maintenance process')
-        process_manager.add_process(Maintenance, args=(self.opts,))
+        process_manager.add_process(Maintenance, args=(self.opts, self.aes))
         log.info('Creating master publisher process')
         process_manager.add_process(Publisher, args=(self.opts,))
         log.info('Creating master event publisher process')
@@ -427,7 +426,8 @@ class Master(SMaster):
                 self.opts,
                 self.crypticle,
                 self.key,
-                self.master_key)
+                self.master_key,
+                self.aes)
             reqserv.run()
         log.info('Creating master request server process')
         process_manager.add_process(run_reqserver)
@@ -561,7 +561,7 @@ class ReqServer(object):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, crypticle, key, mkey):
+    def __init__(self, opts, crypticle, key, mkey, aes):
         '''
         Create a request server
 
@@ -577,6 +577,7 @@ class ReqServer(object):
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
+        self.aes = aes
         self.crypticle = crypticle
 
     def zmq_device(self):
@@ -631,6 +632,7 @@ class ReqServer(object):
                                                    self.master_key,
                                                    self.key,
                                                    self.crypticle,
+                                                   self.aes,
                                                    ),
                                              )
         self.process_manager.add_process(self.zmq_device)
@@ -669,7 +671,8 @@ class MWorker(multiprocessing.Process):
                  opts,
                  mkey,
                  key,
-                 crypticle):
+                 crypticle,
+                 aes):
         '''
         Create a salt master worker process
 
@@ -687,6 +690,7 @@ class MWorker(multiprocessing.Process):
         self.crypticle = crypticle
         self.mkey = mkey
         self.key = key
+        self.aes = aes
         self.k_mtime = 0
 
     def __bind(self):
@@ -799,8 +803,8 @@ class MWorker(multiprocessing.Process):
         Check to see if a fresh AES key is available and update the components
         of the worker
         '''
-        if SMaster.aes.value != self.crypticle.key_string:
-            self.crypticle = salt.crypt.Crypticle(self.opts, SMaster.aes.value)
+        if self.aes.value != self.crypticle.key_string:
+            self.crypticle = salt.crypt.Crypticle(self.opts, self.aes.value)
             self.clear_funcs.crypticle = self.crypticle
             self.aes_funcs.crypticle = self.crypticle
 
@@ -813,7 +817,8 @@ class MWorker(multiprocessing.Process):
             self.opts,
             self.key,
             self.mkey,
-            self.crypticle)
+            self.crypticle,
+            self.aes)
         self.aes_funcs = AESFuncs(self.opts, self.crypticle)
         self.__bind()
 
@@ -1472,11 +1477,12 @@ class ClearFuncs(object):
     # the clear:
     # publish (The publish from the LocalClient)
     # _auth
-    def __init__(self, opts, key, master_key, crypticle):
+    def __init__(self, opts, key, master_key, crypticle, aes):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         self.key = key
         self.master_key = master_key
+        self.aes = aes
         self.crypticle = crypticle
         # Create the event manager
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
@@ -1791,13 +1797,13 @@ class ClearFuncs(object):
             if 'token' in load:
                 try:
                     mtoken = self.master_key.key.private_decrypt(load['token'], 4)
-                    aes = '{0}_|-{1}'.format(SMaster.aes.value, mtoken)
+                    aes = '{0}_|-{1}'.format(self.aes.value, mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
             else:
-                aes = SMaster.aes.value
+                aes = self.aes.value
 
             ret['aes'] = pub.public_encrypt(aes, 4)
         else:
@@ -1812,8 +1818,8 @@ class ClearFuncs(object):
                     # support older minions
                     pass
 
-            aes = SMaster.aes.value
-            ret['aes'] = pub.public_encrypt(SMaster.aes.value, 4)
+            aes = self.aes.value
+            ret['aes'] = pub.public_encrypt(self.aes.value, 4)
         # Be aggressive about the signature
         digest = hashlib.sha256(aes).hexdigest()
         ret['sig'] = self.master_key.key.private_encrypt(digest, 5)
@@ -2496,8 +2502,9 @@ class FloMWorker(MWorker):
                  opts,
                  mkey,
                  key,
-                 crypticle):
-        MWorker.__init__(self, opts, mkey, key, crypticle)
+                 crypticle,
+                 aes):
+        MWorker.__init__(self, opts, mkey, key, crypticle, aes)
 
     def setup(self):
         '''
