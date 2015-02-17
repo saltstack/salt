@@ -1812,7 +1812,7 @@ def query_instance(vm_=None, call=None):
             'An error occurred while creating VM: {0}'.format(data['error'])
         )
 
-    def __query_ip_address(params, url):
+    def __query_ip_address(params):
         data = aws.query(params,
                          #requesturl=url,
                          location=location,
