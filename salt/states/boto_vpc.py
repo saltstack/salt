@@ -125,6 +125,8 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
         ret['changes']['old'] = {'vpc': None}
         ret['changes']['new'] = {'vpc': _describe}
         ret['comment'] = 'VPC {0} created.'.format(name)
+        return ret
+    ret['comment'] = 'VPC present.'
     return ret
 
 
