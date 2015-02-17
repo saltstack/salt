@@ -84,6 +84,25 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def group_exists(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check to see if a replication group exists.
+
+    CLI example::
+
+        salt myminion boto_elasticache.group_exists myelasticache
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        conn.describe_replication_group(name)
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
 def describe_replication_group(name, region=None, key=None, keyid=None, profile=None):
     '''
     Get replication group information.
