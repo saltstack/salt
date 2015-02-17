@@ -42,6 +42,13 @@ Configuring the LDAP searches
 The file is processed using `Salt's Renderers <renderers>` which makes it
 possible to reference grains within the configuration.
 
+.. warning::
+
+    When using Jinja in this file, make sure to do it in a way which prevents
+    leaking sensitive information. A rogue minion could send arbitrary grains
+    to trick the master into returning secret data.
+    Use only the 'id' grain which is verified through the minion's key/cert.
+
 .. note::
 
     The following example uses YAML as format for the configuration which
@@ -51,17 +58,57 @@ possible to reference grains within the configuration.
 .. code-block:: yaml
 
     ldap: &defaults
-    server:    ldap.company.tld
-    port:      389
-    tls:       true
-    dn:        'dc=company,dc=tld
-    binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
-    bindpw:    bi7ieBai5Ano
-    referrals: false
-    anonymous: false
+        server:    ldap.company.tld
+        port:      389
+        tls:       true
+        dn:        'dc=company,dc=tld
+        binddn:    'cn=salt-pillars,ou=users,dc=company,dc=tld'
+        bindpw:    bi7ieBai5Ano
+        referrals: false
+        anonymous: false
 
+The ``salt-users`` configuration below returns the Pillar ``salt-users`` by:
 
+- filtering for:
+    - members of the group ``it-admins``
+    - objects with ``objectclass=user``
+- returning a list of users (``mode: list``), where each user is a dictionary
+  containing the configured string or list attributes:
 
+.. code-block:: yaml
+
+    pct-staff:
+        - cn: cn=johndoe,ou=users,dc=company,dc=tld
+          displayName: John Doe
+          givenName:   John
+          sn:          Doe
+          memberOf:
+              - cn=it-admins,ou=groups,dc=company,dc=tld
+              - cn=team01,ou=groups,dc=company
+        - cn: cn=janedoe,ou=users,dc=company,dc=tld
+          displayName: Jane Doe
+          givenName:   Jane
+          sn:          Doe
+          memberOf:
+              - cn=it-admins,ou=groups,dc=company,dc=tld
+              - cn=team02,ou=groups,dc=company
+
+.. code-block:: yaml
+
+    salt-users:
+        <<: *defaults
+        dn: 'ou=users,dc=company,dc=tld'
+        filter: '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
+        attrs:
+            - cn
+            - displayName
+            - givenName
+            - sn
+        lists:
+            - memberOf
+
+.. TODO: document the more obscure default modes (!= 'mode: list') where specially crafted
+         LDAP records are parsed by splitting the records based on equal signs (or so...?)
 '''
 
 # Import python libs
@@ -147,6 +194,7 @@ def _result_to_dict(data, result, conf):
     '''
     attrs = _config('attrs', conf) or []
     lists = _config('lists', conf) or []
+    log.debug('result: {0}'.format(result))
     for key in result:
         if key in attrs:
             for item in result.get(key):
