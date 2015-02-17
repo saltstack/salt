@@ -875,7 +875,12 @@ def user_keys(user=None, pubfile=None, prvfile=None):
         salt '*' ssh.user_keys
         salt '*' ssh.user_keys user=user1
         salt '*' ssh.user_keys user=user1 pubfile=/home/user1/.ssh/id_rsa.pub prvfile=/home/user1/.ssh/id_rsa
+        salt '*' ssh.user_keys user=user1 prvfile=False
         salt '*' ssh.user_keys user="['user1','user2'] pubfile=id_rsa.pub prvfile=id_rsa
+
+    As you can see you can tell Salt not to read from the user's private (or public) key file by setting the
+    file path to ``False``. This can be useful to prevent Salt from publishing private data via Salt Mine or
+    others.
     '''
     if not user:
         user = __salt__['user.list_users']()
@@ -897,13 +902,13 @@ def user_keys(user=None, pubfile=None, prvfile=None):
 
         if pubfile:
             userKeys.append(pubfile)
-        else:
+        elif pubfile is not False:
             # Add the default public keys
             userKeys += ['id_rsa.pub', 'id_dsa.pub', 'id_ecdsa.pub', 'id_ed25519.pub']
 
         if prvfile:
             userKeys.append(prvfile)
-        else:
+        elif prvfile is not False:
             # Add the default private keys
             userKeys += ['id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519']
 
