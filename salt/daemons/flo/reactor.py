@@ -2,6 +2,7 @@
 '''
 Start the reactor!
 '''
+from __future__ import absolute_import
 # Import salt libs
 import salt.utils.reactor
 import salt.utils.event
@@ -11,7 +12,7 @@ import ioflo.base.deeding
 
 @ioflo.base.deeding.deedify(
         'SaltRaetReactorFork',
-        ioinit={
+        ioinits={
             'opts': '.salt.opts',
             'proc_mgr': '.salt.usr.proc_mgr'})
 def reactor_fork(self):
@@ -25,7 +26,7 @@ def reactor_fork(self):
 
 @ioflo.base.deeding.deedify(
         'SaltRaetEventReturnFork',
-        ioinit={
+        ioinits={
             'opts': '.salt.opts',
             'proc_mgr': '.salt.usr.proc_mgr'})
 def event_return_fork(self):
