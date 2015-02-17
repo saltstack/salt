@@ -143,6 +143,30 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     return ret
 
 
+def create_replication_group(name, primary_cluster_id, replication_group_description,
+                             region=None, key=None, keyid=None, profile=None):
+    '''
+    Create replication group.
+
+    CLI example::
+
+        salt myminion boto_elasticache.create_replication_group myelasticache
+        myprimarycluster description
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return None
+    try:
+        cc = conn.create_replication_group(name, primary_cluster_id,
+                                           replication_group_description)
+        return True
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to create replication group {0}.'.format(name)
+        log.error(msg)
+        log.debug(e)
+        return {}
+
+
 def get_cache_subnet_group(name, region=None, key=None, keyid=None,
                            profile=None):
     '''
