@@ -2515,7 +2515,8 @@ class FloMWorker(MWorker):
                 self.opts,
                 self.key,
                 self.mkey,
-                self.crypticle)
+                self.crypticle,
+                self.aes)
         self.aes_funcs = salt.master.AESFuncs(self.opts, self.crypticle)
         self.context = zmq.Context(1)
         self.socket = self.context.socket(zmq.REP)

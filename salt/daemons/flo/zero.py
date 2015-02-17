@@ -244,7 +244,8 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
                     self.opts.value,
                     self.mkey.value,
                     self.key.value,
-                    crypticle)
+                    crypticle,
+                    self.aes.value)
             self.worker.setup()
             self.created = True
             log.info('Started ZMQ worker')
