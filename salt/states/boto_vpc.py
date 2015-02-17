@@ -46,10 +46,6 @@ config:
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-from salt.exceptions import SaltInvocationError
-import logging
-
-log = logging.getLogger(__name__)
 
 
 def __virtual__():
