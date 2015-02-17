@@ -1476,7 +1476,7 @@ def _get_file_list(opts, folder, load):
         elif provider == 'dulwich':
             fl_func = _file_list_dulwich
         try:
-            repo_files, repo_symlinks = fl_func(repo, load['saltenv'])
+            repo_files, repo_symlinks = fl_func(opts, folder, repo, load['saltenv'])
         except TypeError:
             # We should never get here unless the gitfs_provider is not
             # accounted for in tbe above if/elif block.
