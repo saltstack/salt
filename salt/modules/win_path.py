@@ -79,7 +79,7 @@ def exists(path):
 
     return path in sysPath
 
-def valid_series(index=0, series, path):
+def valid_series(index, series, path):
     '''
     Validate index and return the series as it should be
     '''
