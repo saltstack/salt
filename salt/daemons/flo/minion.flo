@@ -9,6 +9,7 @@ framer minionudpstack be active first setup
             do salt raet cleanup
             do salt raet road stack setup per inode ".salt.road.manor"
             do salt raet manor lane setup
+            do salt raet process manager setup
         go loadmodules
 
     # Load the minion mods
@@ -22,6 +23,13 @@ framer minionudpstack be active first setup
 
     frame setupbeacon
         do salt raet setup beacon at enter
+        go spawnreactor
+        go start
+
+    frame spawnreactor
+        let me if .salt.etc.reactor
+        enter
+            do salt raet reactor fork
         go start
 
     # OK, let's start the minion up

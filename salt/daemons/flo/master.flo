@@ -9,6 +9,7 @@ framer masterudpstack be active first setup
             do salt raet cleanup
             do salt raet road stack setup per inode ".salt.road.manor"
             do salt raet manor lane setup per inode ".salt.lane.manor"
+            do salt raet process manager setup
         go zmqstart
         go spawnmaint
 
@@ -29,6 +30,21 @@ framer masterudpstack be active first setup
     frame spawnworkers
         enter
             do salt raet worker fork
+        go spawnreactor
+        go spawneventreturn
+        go start
+
+    frame spawnreactor
+        let me if .salt.etc.reactor
+        enter
+            do salt raet reactor fork
+        go spawneventreturn
+        go start
+
+    frame spawneventreturn
+        let me if .salt.etc.event_return
+        enter
+            do salt raet event return fork
         go start
 
     frame start

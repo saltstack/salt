@@ -26,10 +26,11 @@ import os
 from . import core
 from . import worker
 from . import maint
+from . import reactor
 from . import zero
 from . import dummy
 
-__all__ = ['core', 'worker', 'maint', 'zero', 'dummy']
+__all__ = ['core', 'worker', 'maint', 'zero', 'dummy', 'reactor']
 
 # Import salt libs
 import salt.daemons.masterapi
