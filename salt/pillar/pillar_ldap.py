@@ -165,7 +165,7 @@ def _config(name, conf):
     return value
 
 
-def _result_to_dict(data, result, conf):
+def _result_to_dict(data, result, conf, source):
     '''
     Aggregates LDAP search result based on rules, returns a dictionary.
 
@@ -194,21 +194,37 @@ def _result_to_dict(data, result, conf):
     '''
     attrs = _config('attrs', conf) or []
     lists = _config('lists', conf) or []
-    log.debug('result: {0}'.format(result))
-    for key in result:
-        if key in attrs:
-            for item in result.get(key):
-                if '=' in item:
+    # TODO:
+    # deprecate the default 'mode: split' and make the more
+    # straightforward 'mode: dict' the new default
+    mode = _config('mode', conf) or 'split'
+    if mode == 'map':
+        data[source] = []
+        for record in result:
+            ret = {}
+            record = record[1]
+            log.debug('record: {0}'.format(record))
+            for key in record:
+                if key in attrs:
+                    for item in record.get(key):
+                        ret[key] = item
+                if key in lists:
+                    ret[key] = record.get(key)
+            data[source].append(ret)
+    elif mode == 'split':
+        for key in result[0][1]:
+            if key in attrs:
+                for item in result.get(key):
                     skey, sval = item.split('=', 1)
                     data[skey] = sval
-        elif key in lists:
-            for item in result.get(key):
-                if '=' in item:
-                    skey, sval = item.split('=', 1)
-                    if skey not in data:
-                        data[skey] = [sval]
-                    else:
-                        data[skey].append(sval)
+            elif key in lists:
+                for item in result.get(key):
+                    if '=' in item:
+                        skey, sval = item.split('=', 1)
+                        if skey not in data:
+                            data[skey] = [sval]
+                        else:
+                            data[skey].append(sval)
     print('Returning data {0}'.format(data))
     return data
 
@@ -239,7 +255,7 @@ def _do_search(conf):
     # Perform the search
     try:
         result = __salt__['ldap.search'](_filter, _dn, scope, attrs,
-                                         **connargs)['results'][0][1]
+                                         **connargs)['results']
     except IndexError:  # we got no results for this search
         log.debug(
             'LDAP search returned no results for filter {0}'.format(
@@ -283,5 +299,5 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         result = _do_search(config)
         print('source {0} got result {1}'.format(source, result))
         if result:
-            data = _result_to_dict(data, result, config)
+            data = _result_to_dict(data, result, config, source)
     return data
