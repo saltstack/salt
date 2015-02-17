@@ -103,8 +103,6 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
            'comment': '',
            'changes': {}
            }
-    if not _check_cidr(cidr_block):
-        raise SaltInvocationError('CIDR netmask must be between /16 and /28')
 
     _id = {'salt_id': name}
     if tags:
@@ -122,15 +120,15 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
                                               name, dns_support, dns_hostnames,
                                               _tags, region, key, keyid,
                                               profile)
-        if created:
-            _describe = __salt__['boto_vpc.describe'](created, region, key,
-                                                      keyid, profile)
-            ret['changes']['old'] = {'vpc': None}
-            ret['changes']['new'] = {'vpc': _describe}
-            ret['comment'] = 'VPC {0} created.'.format(name)
-        else:
+        if not created:
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} VPC.'.format(name)
+            return ret
+        _describe = __salt__['boto_vpc.describe'](created, region, key,
+                                                  keyid, profile)
+        ret['changes']['old'] = {'vpc': None}
+        ret['changes']['new'] = {'vpc': _describe}
+        ret['comment'] = 'VPC {0} created.'.format(name)
     return ret
 
 
@@ -141,30 +139,29 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
            'changes': {}
            }
 
-    exists = __salt__['boto_vpc.exists'](name=name, tags=tags, region=region,
-                                         key=key, keyid=keyid, profile=profile)
-    if exists:
-        if __opts__['test']:
-            ret['comment'] = 'VPC {0} is set to be removed.'.format(name)
-            ret['result'] = None
-            return ret
-        deleted = __salt__['boto_vpc.delete'](name=name, tags=tags,
-                                              region=region, key=key,
-                                              keyid=keyid, profile=profile)
-        if deleted:
-            ret['changes']['old'] = {'vpc': name}
-            ret['changes']['new'] = {'vpc': None}
-            ret['comment'] = 'VPC {0} deleted.'.format(name)
-        else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete {0} VPC.'.format(name)
+    _id = {'salt_id': name}
+    if tags:
+        _tags = tags.update(_id)
     else:
+        _tags = _id
+    exists = __salt__['boto_vpc.exists'](tags=_id, region=region, key=key,
+                                         keyid=keyid, profile=profile)
+    if not exists:
         ret['comment'] = '{0} VPC does not exist.'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'VPC {0} is set to be removed.'.format(name)
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_vpc.delete'](name=name, tags=tags,
+                                          region=region, key=key,
+                                          keyid=keyid, profile=profile)
+    if not deleted:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete {0} VPC.'.format(name)
+        return ret
+    ret['changes']['old'] = {'vpc': name}
+    ret['changes']['new'] = {'vpc': None}
+    ret['comment'] = 'VPC {0} deleted.'.format(name)
     return ret
-
-
-def _check_cidr(cidr):
-    if 16 <= int(cidr.split('/')[1]) <= 28:
-        return True
-    else:
-        return False
