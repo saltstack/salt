@@ -825,7 +825,7 @@ def update(opts, folder, ignore_event=False):
             'backend': 'gitfs'}
     provider = get_provider(opts, folder)
     pid = os.getpid()
-    data['changed'] = purge_cache(opts)
+    data['changed'] = purge_cache(opts, folder)
     for repo in init(opts, folder):
         if provider == 'gitpython':
             origin = repo['repo'].remotes[0]
