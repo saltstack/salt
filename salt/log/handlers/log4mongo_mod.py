@@ -34,12 +34,29 @@
         This work was inspired by the Salt logging handlers for LogStash and
         Sentry and by the log4mongo Python implementation.
 '''
-
+# Import python libs
 import socket
 import logging
+
+# Import salt libs
 from log4mongo.handlers import MongoHandler, MongoFormatter
 from salt.log.mixins import NewStyleClassMixIn
 from salt.log.setup import LOG_LEVELS
+
+# Import third party libs
+try:
+    from log4mongo.handlers import MongoHandler, MongoFormatter
+    HAS_MONGO = True
+except ImportError:
+    HAS_MONGO = False
+
+__virtualname__ = 'mongo'
+
+
+def __virtual__():
+    if not HAS_MONGO:
+        return False
+    return __virtualname__
 
 
 class FormatterWithHost(logging.Formatter, NewStyleClassMixIn):
