@@ -6,7 +6,7 @@ in here
 '''
 
 # Import python libs
-#import sys  # Use of sys is commented out below
+# import sys  # Use if sys is commented out below
 import logging
 
 # Import salt libs
@@ -193,10 +193,13 @@ class SREQ(object):
         '''
         if hasattr(self, '_socket'):
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets.keys():
+                sockets = list(self.poller.sockets.keys())
+                for socket in sockets:
+                    log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket)
             else:
                 for socket in self.poller.sockets:
+                    log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket[0])
             del self._socket
 
@@ -235,7 +238,8 @@ class SREQ(object):
 
     def destroy(self):
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets.keys():
+            sockets = list(self.poller.sockets.keys())
+            for socket in sockets:
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()
