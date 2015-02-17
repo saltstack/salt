@@ -36,6 +36,10 @@ __outputter__ = {
     'highstate': 'highstate',
     'template': 'highstate',
     'template_str': 'highstate',
+    'apply': 'highstate',
+    'request': 'highstate',
+    'check_request': 'highstate',
+    'run_request': 'highstate',
 }
 
 __func_alias__ = {
@@ -253,6 +257,8 @@ def template_str(tem, queue=False, **kwargs):
 def apply_(mods=None,
           **kwargs):
     '''
+    .. versionadded:: 2015.2.0
+
     Apply states! This function will call highstate or state.sls based on the
     arguments passed in, state.apply is intended to be the main gateway for
     all state executions.
@@ -273,8 +279,10 @@ def apply_(mods=None,
 def request(mods=None,
             **kwargs):
     '''
+    .. versionadded:: 2015.2.0
+
     Request that the local admin execute a state run via
-    `salt-callstate.apply_request`
+    `salt-call state.run_request`
     All arguments match state.apply
 
     CLI Example:
@@ -285,7 +293,6 @@ def request(mods=None,
         salt '*' state.request test
         salt '*' state.request test,pkgs
     '''
-    kwargs['test'] = True
     ret = apply_(mods, **kwargs)
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
     serial = salt.payload.Serial(__opts__)
@@ -312,6 +319,8 @@ def request(mods=None,
 
 def check_request(name=None):
     '''
+    .. versionadded:: 2015.2.0
+
     Return the state request information, if any
 
     CLI Example:
@@ -333,6 +342,8 @@ def check_request(name=None):
 
 def clear_request(name=None):
     '''
+    .. versionadded:: 2015.2.0
+
     Clear out the state execution request without executing it
 
     CLI Example:
@@ -372,6 +383,8 @@ def clear_request(name=None):
 
 def run_request(name='default', **kwargs):
     '''
+    .. versionadded:: 2015.2.0
+
     Execute the pending state request
 
     CLI Example:
@@ -386,7 +399,7 @@ def run_request(name='default', **kwargs):
     n_req = req[name]
     if 'mods' not in n_req or 'kwargs' not in n_req:
         return {}
-    req['kwargs'].update(kwargs)
+    req[name]['kwargs'].update(kwargs)
     if req:
         ret = apply_(n_req['mods'], **n_req['kwargs'])
         try:
