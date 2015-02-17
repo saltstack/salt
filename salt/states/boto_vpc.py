@@ -59,7 +59,7 @@ def __virtual__():
     return 'boto_vpc' if 'boto_vpc.exists' in __salt__ else False
 
 
-def present(name, cidr_block=None, instance_tenancy=None, dns_support=None,
+def present(name, cidr_block, instance_tenancy=None, dns_support=None,
             dns_hostnames=None, tags=None, region=None, key=None, keyid=None,
             profile=None):
     '''
@@ -106,8 +106,13 @@ def present(name, cidr_block=None, instance_tenancy=None, dns_support=None,
     if not _check_cidr(cidr_block):
         raise SaltInvocationError('CIDR netmask must be between /16 and /28')
 
-    exists = __salt__['boto_vpc.exists'](name=name, tags=tags, region=region,
-                                         key=key, keyid=keyid, profile=profile)
+    _id = {'salt_id': name}
+    if tags:
+        _tags = tags.update(_id)
+    else:
+        _tags = _id
+    exists = __salt__['boto_vpc.exists'](tags=_id, region=region, key=key,
+                                         keyid=keyid, profile=profile)
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'VPC {0} is set to be created.'.format(name)
@@ -115,11 +120,13 @@ def present(name, cidr_block=None, instance_tenancy=None, dns_support=None,
             return ret
         created = __salt__['boto_vpc.create'](cidr_block, instance_tenancy,
                                               name, dns_support, dns_hostnames,
-                                              tags, region, key, keyid,
+                                              _tags, region, key, keyid,
                                               profile)
         if created:
+            _describe = __salt__['boto_vpc.describe'](created, region, key,
+                                                      keyid, profile)
             ret['changes']['old'] = {'vpc': None}
-            ret['changes']['new'] = {'vpc': name}
+            ret['changes']['new'] = {'vpc': _describe}
             ret['comment'] = 'VPC {0} created.'.format(name)
         else:
             ret['result'] = False
