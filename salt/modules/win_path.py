@@ -79,6 +79,29 @@ def exists(path):
 
     return path in sysPath
 
+def valid_series(index=0, series, path):
+    '''
+    Validate index and return the series as it should be
+    '''
+    index = int(index)
+    currIndex = -1
+    if index < 0:
+        index = len(series) + index + 1
+    if index > len(series):
+        index = len(series)
+
+    try:
+        currIndex = series.index(path)
+        if currIndex != index:
+            series.pop(currIndex)
+            return series
+        else:
+            return series
+    except ValueError:
+        pass
+
+    series.insert(index, path)
+    return series
 
 def add(path, index=0):
     '''
@@ -94,43 +117,31 @@ def add(path, index=0):
         # Will add to the end of the path
         salt '*' win_path.add 'c:\\python27' index='-1'
     '''
-    currIndex = -1
-    sysPath = get_path()
     path = _normalize_dir(path)
-    index = int(index)
-
-    # validate index boundaries
-    if index < 0:
-        index = len(sysPath) + index + 1
-    if index > len(sysPath):
-        index = len(sysPath)
-
-    # Check if we are in the system path at the right location
-    try:
-        currIndex = sysPath.index(path)
-        if currIndex != index:
-            sysPath.pop(currIndex)
-        else:
-            return True
-    except ValueError:
-        pass
 
     # Add it to the Path
-    sysPath.insert(index, path)
-    regedit = __salt__['reg.set_key'](
-        'HKEY_LOCAL_MACHINE',
-        'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-        'PATH',
-        ';'.join(sysPath),
-        'REG_EXPAND_SZ'
-        )
+    sysPath = get_path()
+    sysPath_valid = valid_series(index, sysPath, path)
+    if sysPath != sysPath_valid:
+        regedit = __salt__['reg.set_key'](
+            'HKEY_LOCAL_MACHINE',
+            'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
+            'PATH',
+            ';'.join(sysPath_valid),
+            'REG_EXPAND_SZ'
+            )
+
+    # Add it to salt's local PATH
+    localPath = list(map(_normalize_dir, os.environ["PATH"].split(os.pathsep)))
+    localPath_valid = valid_series(index, localPath, path)
+    if localPath != localPath_valid:
+        os.environ["PATH"] = os.pathsep.join(localPath_valid)
 
     # Broadcast WM_SETTINGCHANGE to Windows
     if regedit:
         return rehash()
     else:
         return False
-
 
 def remove(path):
     '''
@@ -154,3 +165,9 @@ def remove(path):
         return rehash()
     else:
         return False
+
+    # Remove path to salt's local PATH
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path in localPath:
+        localPath.remove(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
