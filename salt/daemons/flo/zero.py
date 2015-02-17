@@ -76,6 +76,7 @@ class ZmqRet(multiprocessing.Process):
         self.opts = opts
         self.mkey = mkey
         self.aes = aes
+        super(ZmqRet, self).__init__()
 
     def run(self):
         '''
