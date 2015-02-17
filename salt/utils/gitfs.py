@@ -527,7 +527,7 @@ def _verify_auth(opts, folder, repo):
         return False
 
 
-def init(opts, folder):
+def init(opts, folder, remotes=None):
     '''
     Return the git repo object for this session
     '''
@@ -564,7 +564,10 @@ def init(opts, folder):
     for param in override_params:
         per_remote_defaults[param] = opts['gitfs_{0}'.format(param)]
 
-    for remote in opts['gitfs_remotes']:
+    if not remotes:
+        remotes = opts['gitfs_remotes']
+
+    for remote in remotes:
         repo_conf = copy.deepcopy(per_remote_defaults)
         bad_per_remote_conf = False
         if isinstance(remote, dict):
