@@ -7,6 +7,7 @@ IoFlo behaviors for running a ZeroMQ based master
 # Import python libs
 from __future__ import absolute_import
 import os
+import ctypes
 import logging
 import hashlib
 import multiprocessing
@@ -46,7 +47,9 @@ class SaltZmqSetup(ioflo.base.deeding.Deed):
         Copy opts['aes'] to .salt.var.zmq.aes
         '''
         self.mkey.value = salt.crypt.MasterKeys(self.opts.value)
-        self.aes.value = self.opts.value['aes']
+        self.aes.value = multiprocessing.Array(
+                ctypes.c_char,
+                salt.crypt.Crypticle.generate_key_string())
 
 
 @ioflo.base.deeding.deedify(
@@ -131,7 +134,7 @@ class SaltZmqCrypticleSetup(ioflo.base.deeding.Deed):
         '''
         self.crypticle.value = salt.crypt.Crypticle(
                                                     self.opts.value,
-                                                    self.opts.value.get('aes'))
+                                                    self.aes.value.value)
 
 
 class SaltZmqPublisher(ioflo.base.deeding.Deed):
@@ -236,7 +239,7 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
         connection with the ioflo sequence
         '''
         if not self.created:
-            crypticle = salt.crypt.Crypticle(self.opts.value, self.aes.value)
+            crypticle = salt.crypt.Crypticle(self.opts.value, self.aes.value.value)
             self.worker = salt.master.FloMWorker(
                     self.opts.value,
                     self.mkey.value,
