@@ -82,10 +82,9 @@ def setup_handlers():
         'write_concern': 'w'
     }
 
-    config_opts = {
-        arg_name: __opts__[handler_id].get(config_opt)
-        for config_opt, arg_name in config_fields.iteritems()
-    }
+    config_opts = {}
+    for config_opt, arg_name in config_fields.iteritems():
+        config_opts[arg_name] = __opts__[handler_id].get(config_opt)
 
     config_opts['level'] = LOG_LEVELS[
         __opts__[handler_id].get(
