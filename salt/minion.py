@@ -54,6 +54,12 @@ try:
     HAS_RESOURCE = True
 except ImportError:
     pass
+
+try:
+    import zmq.utils.monitor
+    HAS_ZMQ_MONITOR = True
+except ImportError:
+    HAS_ZMQ_MONITOR = False
 # pylint: enable=import-error
 
 # Import salt libs
@@ -1387,6 +1393,28 @@ class Minion(MinionBase):
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
 
+    def _set_monitor_socket(self):
+        if not HAS_ZMQ_MONITOR or not self.opts['zmq_monitor']:
+            return
+        self.monitor_socket = self.socket.get_monitor_socket()
+        t = threading.Thread(target=self._socket_monitor, args=(self.monitor_socket,))
+        t.start()
+
+    def _socket_monitor(self, monitor):
+        event_map = {}
+        for name in dir(zmq):
+            if name.startswith('EVENT_'):
+                value = getattr(zmq, name)
+                event_map[value] = name
+        while monitor.poll():
+            evt = zmq.utils.monitor.recv_monitor_message(monitor)
+            evt.update({'description': event_map[evt['event']]})
+            log.debug("ZeroMQ event: {0}".format(evt))
+            if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
+                break
+        monitor.close()
+        log.trace("event monitor thread done!")
+
     def _set_reconnect_ivl(self):
         recon_delay = self.opts['recon_default']
 
@@ -1739,6 +1767,7 @@ class Minion(MinionBase):
 
         self._set_reconnect_ivl()
         self._setsockopts()
+        self._set_monitor_socket()
 
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)

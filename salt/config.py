@@ -436,6 +436,7 @@ DEFAULT_MINION_OPTS = {
     'username': None,
     'password': None,
     'zmq_filtering': False,
+    'zmq_monitor': False,
     'cache_sreqs': True,
     'cmd_safe': True,
 }
