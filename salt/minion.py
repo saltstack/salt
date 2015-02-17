@@ -827,7 +827,7 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _load_modules(self, force_refresh=False):
+    def _load_modules(self, force_refresh=False, notify=False):
         '''
         Return the functions and the returners loaded up from the loader
         module
@@ -852,9 +852,9 @@ class Minion(MinionBase):
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
         if self.opts.get('multimaster', False):
             s_opts = copy.copy(self.opts)
-            functions = salt.loader.minion_mods(s_opts)
+            functions = salt.loader.minion_mods(s_opts, notify=notify)
         else:
-            functions = salt.loader.minion_mods(self.opts)
+            functions = salt.loader.minion_mods(self.opts, notify=notify)
         returners = salt.loader.returners(self.opts, functions)
         errors = {}
         if '_errors' in functions:
@@ -1433,12 +1433,12 @@ class Minion(MinionBase):
         else:
             self.publish_port = auth.creds['publish_port']
 
-    def module_refresh(self, force_refresh=False):
+    def module_refresh(self, force_refresh=False, notify=False):
         '''
         Refresh the functions and returners.
         '''
-        log.debug('Refreshing modules')
-        self.functions, self.returners, _ = self._load_modules(force_refresh)
+        log.debug('Refreshing modules. Notify={0}'.format(notify))
+        self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
@@ -1559,7 +1559,8 @@ class Minion(MinionBase):
         '''
         log.debug('Handling event {0!r}'.format(package))
         if package.startswith('module_refresh'):
-            self.module_refresh()
+            tag, data = salt.utils.event.MinionEvent.unpack(package)
+            self.module_refresh(notify=data.get('notify', False))
         elif package.startswith('pillar_refresh'):
             self.pillar_refresh()
         elif package.startswith('manage_schedule'):
@@ -2731,7 +2732,7 @@ class ProxyMinion(Minion):
         '''
         return super(ProxyMinion, self)._prep_mod_opts()
 
-    def _load_modules(self, force_refresh=False):
+    def _load_modules(self, force_refresh=False, notify=False):
         '''
         Return the functions and the returners loaded up from the loader
         module
