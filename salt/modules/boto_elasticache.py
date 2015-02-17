@@ -84,6 +84,67 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def describe_replication_group(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get replication group information.
+
+    CLI example::
+
+        salt myminion boto_elasticache.describe_replication_group mygroup
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return None
+    try:
+        cc = conn.describe_replication_groups(name)
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to get config for cache cluster {0}.'.format(name)
+        log.error(msg)
+        log.debug(e)
+        return {}
+
+    cc = cc['DescribeReplicationGroupsResponse']['DescribeReplicationGroupsResult']
+    cc = cc['ReplicationGroups'][0]
+    ret = odict.OrderedDict()
+    attrs = ['status', 'description', 'primary_endpoint',
+             'member_clusters', 'replication_group_id',
+             'pending_modified_values', 'primary_cluster_id',
+             'node_groups']
+    for key, val in six.iteritems(cc):
+        _key = boto.utils.pythonize_name(key)
+        if _key == 'status':
+            if val:
+                ret[_key] = val
+            else:
+                ret[_key] = None
+        if _key == 'description':
+            if val:
+                ret[_key] = val
+            else:
+                ret[_key] = None
+        if _key == 'replication_group_id':
+            if val:
+                ret[_key] = val
+            else:
+                ret[_key] = None
+        if _key == 'member_clusters':
+            if val:
+                ret[_key] = val
+            else:
+                ret[_key] = None
+        if _key == 'node_groups':
+            if val:
+                ret[_key] = val
+            else:
+                ret[_key] = None
+        if _key == 'pending_modified_values':
+            if val:
+                ret[_key] = val
+            else:
+                ret[_key] = None
+    return ret
+
+
 def get_config(name, region=None, key=None, keyid=None, profile=None):
     '''
     Get the configuration for a cache cluster.
