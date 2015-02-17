@@ -105,6 +105,11 @@ def add(path, index=0):
     if index > len(sysPath):
         index = len(sysPath)
 
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path not in localPath:
+      localPath.insert(index, path)
+      os.environ["PATH"] = os.pathsep.join(localPath)
+
     # Check if we are in the system path at the right location
     try:
         currIndex = sysPath.index(path)
