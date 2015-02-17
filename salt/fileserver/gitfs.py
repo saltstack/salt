@@ -92,6 +92,7 @@ def update():
     '''
     return gitfs.update(__opts__, __folder__)
 
+
 def envs(ignore_cache=False):
     '''
     Return a list of refs that can be used as environments

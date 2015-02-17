@@ -601,7 +601,7 @@ def init(opts, folder, remotes=None):
         per_remote_defaults[param] = \
             six.text_type(opts['gitfs_{0}'.format(param)])
 
-    if remotes == None:
+    if remotes is None:
         remotes = opts['gitfs_remotes']
 
     for remote in remotes:
