@@ -39,7 +39,6 @@ import socket
 import logging
 
 # Import salt libs
-from log4mongo.handlers import MongoHandler, MongoFormatter
 from salt.log.mixins import NewStyleClassMixIn
 from salt.log.setup import LOG_LEVELS
 
