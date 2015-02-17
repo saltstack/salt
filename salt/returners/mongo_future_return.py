@@ -147,9 +147,7 @@ def save_load(jid, load):
     Save the load for a given job id
     '''
     conn, mdb = _get_conn(ret=None)
-    # save load in jobs collection in the json format: {'jid': <job_id>, 'load': <unformatted load data>}
-    sdata = {'jid': jid, 'load': load}
-    mdb.jobs.insert(sdata)
+    mdb.jobs.insert(load)
 
 
 def get_load(jid):
