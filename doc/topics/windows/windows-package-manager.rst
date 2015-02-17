@@ -265,7 +265,7 @@ Git Hosted Repo
 ===============
 
 Windows software package definitions can also be hosted in one or more git
-repositories. The default repo is one hosted on Github.com by SaltStack,Inc., which
+repositories. The default repo is one hosted on GitHub.com by SaltStack,Inc., which
 includes package definitions for open source software. This repo points to the
 HTTP or ftp locations of the installer files. Anyone is welcome to send a pull
 request to this repo to add new package definitions. Browse the repo

@@ -16,6 +16,7 @@ from collections import deque
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.utils.process
 import salt.transport
 from raet import raeting
 from raet.road.stacking import RoadStack
@@ -117,6 +118,19 @@ class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
         Update .cluster.clustered share from opts
         '''
         self.clustered.update(value=self.opts.value.get('cluster_mode', False))
+
+
+class SaltRaetProcessManagerSetup(ioflo.base.deeding.Deed):
+    '''
+    Set up the process manager object
+    '''
+    Ioinits = {'proc_mgr': '.salt.usr.proc_mgr'}
+
+    def action(self):
+        '''
+        Create the process manager
+        '''
+        self.proc_mgr.value = salt.utils.process.ProcessManager()
 
 
 class SaltRaetRoadUsherMinionSetup(ioflo.base.deeding.Deed):
@@ -1658,6 +1672,7 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'modules': '.salt.loader.modules',
                'master_events': '.salt.var.master_events',
+               'event': '.salt.event.events',
                'beacon': '.salt.beacon'}
 
     def action(self):
@@ -1668,7 +1683,9 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
             b_conf = self.modules.value['config.merge']('beacons')
             if b_conf:
                 try:
-                    self.master_events.value.extend(self.beacon.value.process(b_conf))
+                    events = self.beacon.value.process(b_conf)
+                    self.master_events.value.extend(events)
+                    self.event.value.extend(events)
                 except Exception:
                     log.error('Error in the beacon system: ', exc_info=True)
         return []

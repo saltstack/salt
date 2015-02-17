@@ -219,8 +219,9 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None, 
         return False
 
 
-def create(cidr_block, instance_tenancy=None, vpc_name=None, tags=None, region=None, key=None, keyid=None,
-           profile=None):
+def create(cidr_block, instance_tenancy=None, vpc_name=None,
+           enable_dns_support=None, enable_dns_hostnames=None, tags=None,
+           region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid CIDR block, create a VPC.
 
@@ -248,6 +249,7 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None, tags=None, region=N
 
             _maybe_set_name_tag(vpc_name, vpc)
             _maybe_set_tags(tags, vpc)
+            _maybe_set_dns(conn, vpc.id, enable_dns_support, enable_dns_hostnames)
 
             return vpc.id
         else:
@@ -281,7 +283,8 @@ def delete(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
 
     try:
         if not vpc_id:
-            vpc_id = get_id(name=name, tags=tags)
+            vpc_id = get_id(name=name, tags=tags, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
         if conn.delete_vpc(vpc_id):
             log.info('VPC {0} was deleted.'.format(vpc_id))
@@ -1326,3 +1329,12 @@ def _maybe_set_tags(tags, obj):
         obj.add_tags(tags)
 
         log.debug('The following tags: {0} were added to {1}'.format(', '.join(tags), obj))
+
+
+def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
+    if dns_support:
+        conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_support=dns_support)
+        log.debug('DNS spport was set to: {0} on vpc {1}'.format(dns_support, vpcid))
+    if dns_hostnames:
+        conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
+        log.debug('DNS hostnames was set to: {0} on vpc {1}'.format(dns_hostnames, vpcid))

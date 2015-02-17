@@ -84,7 +84,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def get_config(name, region=None, key=None, keyid=None, profile=None):
+def get_config(name, node_info=True, region=None, key=None, keyid=None, profile=None):
     '''
     Get the configuration for a cache cluster.
 
@@ -96,7 +96,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return None
     try:
-        cc = conn.describe_cache_clusters(name)
+        cc = conn.describe_cache_clusters(name, show_cache_node_info=node_info)
     except boto.exception.BotoServerError as e:
         msg = 'Failed to get config for cache cluster {0}.'.format(name)
         log.error(msg)
@@ -111,7 +111,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
              'preferred_availability_zone', 'security_groups',
              'cache_subnet_group_name', 'engine_version', 'cache_node_type',
              'notification_configuration', 'preferred_maintenance_window',
-             'configuration_endpoint', 'cache_cluster_status']
+             'configuration_endpoint', 'cache_cluster_status', 'cache_nodes']
     for key, val in six.iteritems(cc):
         _key = boto.utils.pythonize_name(key)
         if _key not in attrs:
@@ -121,6 +121,11 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                 ret[_key] = val['CacheParameterGroupName']
             else:
                 ret[_key] = None
+        elif _key == 'cache_nodes':
+            if val:
+                ret[_key] = [k for k in val]
+            else:
+                ret[_key] = []
         elif _key == 'cache_security_groups':
             if val:
                 ret[_key] = [k['CacheSecurityGroupName'] for k in val]
@@ -141,6 +146,30 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
         else:
             ret[_key] = val
     return ret
+
+
+def create_replication_group(name, primary_cluster_id, replication_group_description,
+                             region=None, key=None, keyid=None, profile=None):
+    '''
+    Create replication group.
+
+    CLI example::
+
+        salt myminion boto_elasticache.create_replication_group myelasticache
+        myprimarycluster description
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return None
+    try:
+        cc = conn.create_replication_group(name, primary_cluster_id,
+                                           replication_group_description)
+        return True
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to create replication group {0}.'.format(name)
+        log.error(msg)
+        log.debug(e)
+        return {}
 
 
 def get_cache_subnet_group(name, region=None, key=None, keyid=None,
@@ -189,7 +218,7 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None,
     return ret
 
 
-def create(name, num_cache_nodes, engine, cache_node_type,
+def create(name, num_cache_nodes=None, engine=None, cache_node_type=None,
            replication_group_id=None, engine_version=None,
            cache_parameter_group_name=None, cache_subnet_group_name=None,
            cache_security_group_names=None, security_group_ids=None,
