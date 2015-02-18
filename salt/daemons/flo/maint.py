@@ -17,6 +17,7 @@ import salt.fileserver
 import salt.loader
 import salt.utils.minions
 import salt.daemons.masterapi
+import salt.daemons.flo
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class Maintenance(multiprocessing.Process):
         '''
         behaviors = ['salt.daemons.flo']
         preloads = [('.salt.opts', dict(value=self.opts))]
+        preloads.extend(salt.daemons.flo.explode_opts(self.opts))
 
         console_logdir = self.opts.get('ioflo_console_logdir', '')
         if console_logdir:
@@ -153,7 +155,7 @@ class SaltRaetMaintBackendsUpdate(ioflo.base.deeding.Deed):
         salt.daemons.masterapi.fileserver_update(self.fileserver.value)
 
 
-class SaltRaetMaintRotate(ioflo.base.deeding.Deed):
+class SaltZmqMaintRotate(ioflo.base.deeding.Deed):
     '''
     Update the zmq publish session key
     '''
