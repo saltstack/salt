@@ -1929,7 +1929,6 @@ class Minion(MinionBase):
             # Add an extra fallback in case a forked process leaks through
             multiprocessing.active_children()
 
-
     def _do_socket_recv(self, socks):
         if socks.get(self.socket) == zmq.POLLIN:
             # topic filtering is done at the zmq level, so we just strip it
