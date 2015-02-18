@@ -108,7 +108,7 @@ def add(path, index=0):
 
     localPath = os.environ["PATH"].split(os.pathsep)
     if path not in localPath:
-      localPath.insert(index, path)
+      localPath.append(path)
       os.environ["PATH"] = os.pathsep.join(localPath)
 
     # Check if we are in the system path at the right location
@@ -144,6 +144,12 @@ def remove(path):
     '''
     path = _normalize_dir(path)
     sysPath = get_path()
+
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path in localPath:
+      localPath.remove(path)
+      os.environ["PATH"] = os.pathsep.join(localPath)
+
     try:
         sysPath.remove(path)
     except ValueError:
