@@ -255,7 +255,7 @@ def _rds_present(name, allocated_storage, db_instance_class, engine,
 
 
 def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
-           region=None, key=None, keyid=None, profile=None):
+           tags=None, region=None, key=None, keyid=None, profile=None):
     ret = {'name': name,
            'result': True,
            'comment': '',
