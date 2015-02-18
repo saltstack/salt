@@ -42,8 +42,8 @@ def absent(name):
 
     localPath = os.environ["PATH"].split(os.pathsep)
     if path in localPath:
-      localPath.remove(path)
-      os.environ["PATH"] = os.pathsep.join(localPath)
+        localPath.remove(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
 
     if __salt__['win_path.exists'](name):
         ret['changes']['removed'] = name
@@ -90,8 +90,8 @@ def exists(name, index=None):
 
     localPath = os.environ["PATH"].split(os.pathsep)
     if path not in localPath:
-      localPath.append(path)
-      os.environ["PATH"] = os.pathsep.join(localPath)
+        localPath.append(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
 
     try:
         currIndex = sysPath.index(path)
