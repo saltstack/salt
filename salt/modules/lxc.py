@@ -526,19 +526,11 @@ def _network_conf(conf_tuples=None, **kwargs):
                 ret.append({'lxc.network.ipv4': ipv4})
             if ipv6:
                 ret.append({'lxc.network.ipv6': ipv6})
-<<<<<<< HEAD
             for key, val in six.iteritems(args):
                 if key == 'link' and bridge:
                     val = bridge
                 val = opts.get(key, val)
-                if key in ['gateway', 'mac']:
-=======
-            for key, val in args.items():
-                if key == 'link' and bridge:
-                    val = bridge
-                val = opts.get(key, val)
                 if key in ('gateway', 'mac'):
->>>>>>> upstream/2015.2
                     continue
                 ret.append({'lxc.network.{0}'.format(key): val})
             # gateway (in automode) must be appended following network conf !
@@ -580,11 +572,7 @@ def _network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-<<<<<<< HEAD
     for val in six.itervalues(new):
-=======
-    for val in new.values():
->>>>>>> upstream/2015.2
         for row in val:
             ret.append({row: val[row]})
     return ret
@@ -680,11 +668,7 @@ class _LXCConfig(object):
                 self.data.append((key, val))
 
         default_data = _get_lxc_default_data(**kwargs)
-<<<<<<< HEAD
         for key, val in six.iteritems(default_data):
-=======
-        for key, val in default_data.items():
->>>>>>> upstream/2015.2
             _replace(key, val)
         old_net = self._filter_data('lxc.network')
         net_datas = _network_conf(conf_tuples=old_net, **kwargs)
@@ -723,23 +707,13 @@ class _LXCConfig(object):
         Removes parameters which match the pattern from the config data
         '''
         removed = []
-<<<<<<< HEAD
         filtered = []
-        for item in self.data:
-            if not re.match('^' + pat, item[0]):
-                filtered.append(item)
-            else:
-                removed.append(item)
-        self.data = filtered
-=======
-        data = []
         for param in self.data:
             if not param[0].startswith(pattern):
-                data.append(param)
+                filtered.append(param)
             else:
                 removed.append(param)
-        self.data = data
->>>>>>> upstream/2015.2
+        self.data = filtered
         return removed
 
 
@@ -1015,25 +989,6 @@ def init(name,
     if users is None:
         users = []
     dusers = ['root']
-<<<<<<< HEAD
-    if (__grains__['os'] in ['Ubuntu']
-            and 'ubuntu' not in users):
-        dusers.append('ubuntu')
-    for user in dusers:
-        if user not in users:
-            users.append(user)
-    if not isinstance(profile, dict):
-        profile = _lxc_profile(profile)
-    profile = copy.deepcopy(profile)
-
-    def select(key, default=None):
-        kwarg = kwargs.pop(key, _marker)
-        prof = profile.pop(key, default)
-        # let kwargs be really be the preferred choice
-        if kwarg is _marker:
-            kwarg = prof
-        return kwarg
-=======
     for user in dusers:
         if user not in users:
             users.append(user)
@@ -1048,7 +1003,6 @@ def init(name,
         if kw_overrides_match is None:
             return profile_match
         return kw_overrides_match
->>>>>>> upstream/2015.2
 
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
@@ -1113,12 +1067,6 @@ def init(name,
                          autostart=autostart,
                          cpushare=cpushare, memory=memory)
         with cfg.tempfile() as cfile:
-<<<<<<< HEAD
-            ret.update(create(name, config=cfile.name,
-                              profile=profile, **kwargs))
-        if not ret.get('created', False):
-            return ret
-=======
             try:
                 create(name, config=cfile.name, profile=profile, **kwargs)
                 changes.append({'create': 'Container created'})
@@ -1130,7 +1078,6 @@ def init(name,
                     if changes:
                         ret['changes'] = changes_dict
                     return ret
->>>>>>> upstream/2015.2
         path = '/var/lib/lxc/{0}/config'.format(name)
         old_chunks = []
         if os.path.exists(path):
@@ -1364,15 +1311,6 @@ def images(dist=None):
                 passed_header = True
             continue
 
-<<<<<<< HEAD
-    def select(key, default=None):
-        kwarg = kwargs.pop(key, _marker)
-        prof = profile.pop(key, default)
-        # let kwargs be really be the preferred choice
-        if kwarg is _marker:
-            kwarg = prof
-        return kwarg
-=======
         dist_list = ret.setdefault(distro, [])
         dist_list.append({
             'release': release,
@@ -1380,7 +1318,6 @@ def images(dist=None):
             'variant': variant,
             'build_time': build_time,
         })
->>>>>>> upstream/2015.2
 
     if dist is not None:
         return dict([(dist, ret.get(dist, []))])
@@ -1570,11 +1507,7 @@ def create(name,
                     .format(', '.join(missing_deps))
                 )
         cmd += ' --'
-<<<<<<< HEAD
         for key, val in six.iteritems(options):
-=======
-        for key, val in options.items():
->>>>>>> upstream/2015.2
             cmd += ' --{0} {1}'.format(key, val)
 
     ret = __salt__['cmd.run_all'](cmd,
@@ -1644,26 +1577,6 @@ def clone(name,
         salt '*' lxc.clone myclone orig=orig_container snapshot=True
     '''
     if exists(name):
-<<<<<<< HEAD
-        return {'cloned': False, 'error': 'container already exists'}
-
-    orig_state = state(orig)
-    if orig_state is None:
-        return {'cloned': False,
-                'error':
-                'original container \'{0}\' does not exist'.format(orig)}
-    elif orig_state != 'stopped':
-        return {'cloned': False,
-                'error': 'original container \'{0}\' is running'.format(orig)}
-
-    def select(key, default=None):
-        kwarg = kwargs.pop(key, _marker)
-        prof = profile.pop(key, default)
-        # let kwargs be really be the preferred choice
-        if kwarg is _marker:
-            kwarg = prof
-        return kwarg
-=======
         raise CommandExecutionError(
             'Container \'{0}\' already exists'.format(name)
         )
@@ -1684,7 +1597,6 @@ def clone(name,
         if kw_overrides_match is None:
             return profile_match
         return kw_overrides_match
->>>>>>> upstream/2015.2
 
     backing = select('backing')
     snapshot = select('snapshot')
@@ -1836,26 +1748,6 @@ def list_(extra=False, limit=None):
 
 
 def _change_state(cmd, name, expected):
-<<<<<<< HEAD
-    state1 = state(name)
-    if state1 is None:
-        return {'state': None, 'change': False}
-    elif state1 == expected:
-        return {'state': expected, 'change': False}
-
-    cmd = '{0} -n {1}'.format(cmd, name)
-    err = __salt__['cmd.run_stderr'](cmd, python_shell=False)
-    if err:
-        state2 = state(name)
-        return {'state': state2, 'change': state1 != state2, 'error': err}
-    else:
-        if expected is not None:
-            # some commands do not wait, so we will
-            cmd = 'lxc-wait -n {0} -s {1}'.format(name, expected.upper())
-            __salt__['cmd.run'](cmd, timeout=30, python_shell=True)
-        state2 = state(name)
-        return {'state': state2, 'change': state1 != state2}
-=======
     pre = state(name)
     if pre == expected:
         return {'result': True,
@@ -1894,7 +1786,6 @@ def _ensure_exists(name):
         raise CommandExecutionError(
             'Container \'{0}\' does not exist'.format(name)
         )
->>>>>>> upstream/2015.2
 
 
 def _ensure_running(name, no_start=False):
@@ -2107,12 +1998,7 @@ def exists(name):
 
         salt '*' lxc.exists name
     '''
-<<<<<<< HEAD
-    _list = list_()
-    return name in _list['running'] + _list['stopped'] + _list['frozen']
-=======
     return name in ls_()
->>>>>>> upstream/2015.2
 
 
 def state(name):
@@ -2328,110 +2214,19 @@ def info(name):
 
 def set_password(name, users, password, encrypted=True):
     '''
-<<<<<<< HEAD
-    fname = '/var/lib/lxc/{0}/config'.format(name)
-    if not os.path.isfile(fname):
-        return None
-=======
     .. versionchanged:: 2015.2.0
         Function renamed from ``set_pass`` to ``set_password``. Additionally,
         this function now supports (and defaults to using) a password hash
         instead of a plaintext password.
->>>>>>> upstream/2015.2
 
     Set the password of one or more system users inside containers
 
-<<<<<<< HEAD
-    with salt.utils.fopen(fname) as fhr:
-        config = [(v[0].strip(), v[1].strip()) for v in
-                  [l.split('#', 1)[0].strip().split('=', 1) for l in
-                   fhr.readlines()] if len(v) == 2]
-=======
->>>>>>> upstream/2015.2
 
     users
         Comma-separated list (or python list) of users to change password
 
-<<<<<<< HEAD
-    for key, val in config:
-        if key == 'lxc.network.type':
-            current = {'type': val}
-            ifaces.append(current)
-        elif not current:
-            continue
-        elif key.startswith('lxc.network.'):
-            current[key.replace('lxc.network.', '', 1)] = val
-    if ifaces:
-        ret['nics'] = ifaces
-
-    ret['rootfs'] = next((i[1] for i in config if i[0] == 'lxc.rootfs'), None)
-    ret['state'] = state(name)
-    ret['_ips'] = []
-    ret['public_ips'] = []
-    ret['private_ips'] = []
-    ret['public_ipv4_ips'] = []
-    ret['public_ipv6_ips'] = []
-    ret['private_ipv4_ips'] = []
-    ret['private_ipv6_ips'] = []
-    ret['ipv4_ips'] = []
-    ret['ipv6_ips'] = []
-    ret['size'] = None
-    ret['config'] = fname
-
-    if ret['state'] == 'running':
-        try:
-            limit = int(get_parameter(name, 'memory.limit_in_bytes').get(
-                'memory.limit_in_bytes'))
-        except (TypeError, ValueError):
-            limit = 0
-        try:
-            usage = int(get_parameter(name, 'memory.usage_in_bytes').get(
-                'memory.usage_in_bytes'))
-        except (TypeError, ValueError):
-            usage = 0
-        free = limit - usage
-        ret['memory_limit'] = limit
-        ret['memory_free'] = free
-        ret['size'] = __salt__['cmd.run'](
-            ('lxc-attach --clear-env -n {0} -- '
-             'df /|tail -n1|awk \'{{print $2}}\'').format(pipes.quote(name)), python_shell=True)
-        ipaddr = __salt__['cmd.run'](
-            'lxc-attach --clear-env -n {0} -- ip addr show'.format(pipes.quote(name)), python_shell=False)
-        for line in ipaddr.splitlines():
-            if 'inet' in line:
-                line = line.split()
-                ip_address = line[1].split('/')[0]
-                if ip_address not in ret['_ips']:
-                    ret['_ips'].append(ip_address)
-                    if '::' in ip_address:
-                        ret['ipv6_ips'].append(ip_address)
-                        if (
-                            ip_address == '::1'
-                            or ip_address.startswith('fe80')
-                        ):
-                            ret['private_ips'].append(ip_address)
-                            ret['private_ipv6_ips'].append(ip_address)
-                        else:
-                            ret['public_ips'].append(ip_address)
-                            ret['public_ipv6_ips'].append(ip_address)
-                    else:
-                        ret['ipv4_ips'].append(ip_address)
-                        if ip_address == '127.0.0.1':
-                            ret['private_ips'].append(ip_address)
-                            ret['private_ipv4_ips'].append(ip_address)
-                        elif salt.utils.cloud.is_public_ip(ip_address):
-                            ret['public_ips'].append(ip_address)
-                            ret['public_ipv4_ips'].append(ip_address)
-                        else:
-                            ret['private_ips'].append(ip_address)
-                            ret['private_ipv4_ips'].append(ip_address)
-    for k in [l for l in ret if l.endswith('_ips')]:
-        ret[k].sort(key=_ip_sort)
-    return ret
-=======
     password
         Password to set for the specified user(s)
->>>>>>> upstream/2015.2
 
     encrypted : True
         If true, ``password`` must be a password hash. Set to ``False`` to set
@@ -2897,28 +2692,6 @@ def _run(name,
                     try:
                         cstdout, cstderr = proc.recv()
                         if cstdout:
-<<<<<<< HEAD
-                            stdout_buffer += cstdout
-                        else:
-                            cstdout = ''
-                        if cstderr:
-                            stderr_buffer += cstderr
-                        else:
-                            cstderr = ''
-                    except KeyboardInterrupt:
-                        break
-                res = {'retcode': proc.exitstatus,
-                       'pid': 2,
-                       'stdout': stdout_buffer,
-                       'stderr': stderr_buffer}
-            except vt.TerminalException:
-                trace = traceback.format_exc()
-                log.error(trace)
-                res = {'retcode': 127,
-                       'pid': '2',
-                       'stdout': stdout_buffer,
-                       'stderr': stderr_buffer}
-=======
                             stdout += cstdout
                         if cstderr:
                             if output is None:
@@ -2941,7 +2714,6 @@ def _run(name,
                           'pid': '2',
                           'stdout': stdout,
                           'stderr': stderr}
->>>>>>> upstream/2015.2
             finally:
                 proc.terminate()
     else:
