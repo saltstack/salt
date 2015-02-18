@@ -880,6 +880,31 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
+    def _process_beacons(self):
+        '''
+        Process each beacon and send events if appropriate
+        '''
+        # Process Beacons
+        try:
+            beacons = self.process_beacons(self.functions)
+        except Exception:
+            log.critical('The beacon errored: ', exec_info=True)
+        if beacons:
+            self._fire_master(events=beacons)
+            for beacon in beacons:
+                serialized_data = salt.utils.dicttrim.trim_dict(
+                    self.serial.dumps(beacon['data']),
+                    self.opts.get('max_event_size', 1048576),
+                    is_msgpacked=True,
+                )
+                log.debug('Sending event - data = {0}'.format(beacon['data']))
+                event = '{0}{1}{2}'.format(
+                        beacon['tag'],
+                        salt.utils.event.TAGEND,
+                        serialized_data)
+                self.handle_event(event)
+                self.epub_sock.send(event)
+
     def _load_modules(self, force_refresh=False, notify=False):
         '''
         Return the functions and the returners loaded up from the loader
@@ -1817,7 +1842,6 @@ class Minion(MinionBase):
             self._windows_thread_cleanup()
             try:
                 socks = self._do_poll(loop_interval)
-
                 if ping_interval > 0:
                     if socks or not ping_at:
                         ping_at = time.time() + ping_interval
@@ -1827,17 +1851,8 @@ class Minion(MinionBase):
                         ping_at = time.time() + ping_interval
 
                 self._do_socket_recv(socks)
-
-                # Check the event system
-                if socks.get(self.epull_sock) == zmq.POLLIN:
-                    package = self.epull_sock.recv(zmq.NOBLOCK)
-                    try:
-                        self.handle_event(package)
-                        self.epub_sock.send(package)
-                    except Exception:
-                        log.debug('Exception while handling events', exc_info=True)
-                    # Add an extra fallback in case a forked process leeks through
-                    multiprocessing.active_children()
+                self._do_event_poll(socks)
+                self._process_beacons()
 
             except zmq.ZMQError as exc:
                 # The interrupt caused by python handling the
@@ -1856,26 +1871,6 @@ class Minion(MinionBase):
                     'An exception occurred while polling the minion',
                     exc_info=True
                 )
-            # Process Beacons
-            try:
-                beacons = self.process_beacons(self.functions)
-            except Exception:
-                log.critical('The beacon errored: ', exec_info=True)
-            if beacons:
-                self._fire_master(events=beacons)
-                for beacon in beacons:
-                    serialized_data = salt.utils.dicttrim.trim_dict(
-                        self.serial.dumps(beacon['data']),
-                        self.opts.get('max_event_size', 1048576),
-                        is_msgpacked=True,
-                    )
-                    log.debug('Sending event - data = {0}'.format(beacon['data']))
-                    event = '{0}{1}{2}'.format(
-                            beacon['tag'],
-                            salt.utils.event.TAGEND,
-                            serialized_data)
-                    self.handle_event(event)
-                    self.epub_sock.send(event)
 
     def tune_in_no_block(self):
         '''
@@ -1921,6 +1916,18 @@ class Minion(MinionBase):
         return dict(self.poller.poll(
             loop_interval * 1000)
         )
+
+    def _do_event_poll(self, socks):
+        # Check the event system
+        if socks.get(self.epull_sock) == zmq.POLLIN:
+            package = self.epull_sock.recv(zmq.NOBLOCK)
+            try:
+                self.handle_event(package)
+                self.epub_sock.send(package)
+            except Exception:
+                log.debug('Exception while handling events', exc_info=True)
+            # Add an extra fallback in case a forked process leaks through
+            multiprocessing.active_children()
 
     def _do_socket_recv(self, socks):
         if socks.get(self.socket) == zmq.POLLIN:
