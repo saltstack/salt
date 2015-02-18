@@ -76,13 +76,13 @@ class Caller(object):
             # return NewKindOfCaller(opts, **kwargs)
 
 
-class ZeroMQCaller(object):
+class BaseCaller(object):
     '''
-    Object to wrap the calling of local salt modules for the salt-call command
+    Base class for caller transports
     '''
     def __init__(self, opts):
         '''
-        Pass in the command line options
+        Pass in command line opts
         '''
         self.opts = opts
         self.opts['caller'] = True
@@ -94,6 +94,47 @@ class ZeroMQCaller(object):
             self.minion = salt.minion.SMinion(opts)
         except SaltClientError as exc:
             raise SystemExit(str(exc))
+
+    def print_docs(self):
+        '''
+        Pick up the documentation for all of the modules and print it out.
+        '''
+        docs = {}
+        for name, func in six.iteritems(self.minion.functions):
+            if name not in docs:
+                if func.__doc__:
+                    docs[name] = func.__doc__
+        for name in sorted(docs):
+            if name.startswith(self.opts.get('fun', '')):
+                print_cli('{0}:\n{1}\n'.format(name, docs[name]))
+
+    def print_grains(self):
+        '''
+        Print out the grains
+        '''
+        grains = salt.loader.grains(self.opts)
+        salt.output.display_output({'local': grains}, 'grains', self.opts)
+
+    def run(self):
+        '''
+        Execute the salt call logic
+        '''
+        try:
+            ret = self.call()
+            out = ret.get('out', 'nested')
+            if self.opts['metadata']:
+                print_ret = ret
+                out = 'nested'
+            else:
+                print_ret = ret.get('return', {})
+            salt.output.display_output(
+                    {'local': print_ret},
+                    out,
+                    self.opts)
+            if self.opts.get('retcode_passthrough', False):
+                sys.exit(ret['retcode'])
+        except SaltInvocationError as err:
+            raise SystemExit(err)
 
     def call(self):
         '''
@@ -200,6 +241,17 @@ class ZeroMQCaller(object):
         # close raet channel here
         return ret
 
+
+class ZeroMQCaller(BaseCaller):
+    '''
+    Object to wrap the calling of local salt modules for the salt-call command
+    '''
+    def __init__(self, opts):
+        '''
+        Pass in the command line options
+        '''
+        super(ZeroMQCaller, self).__init__(opts)
+
     def return_pub(self, ret):
         '''
         Return the data up to the master
@@ -210,49 +262,8 @@ class ZeroMQCaller(object):
             load[key] = value
         channel.send(load)
 
-    def print_docs(self):
-        '''
-        Pick up the documentation for all of the modules and print it out.
-        '''
-        docs = {}
-        for name, func in six.iteritems(self.minion.functions):
-            if name not in docs:
-                if func.__doc__:
-                    docs[name] = func.__doc__
-        for name in sorted(docs):
-            if name.startswith(self.opts.get('fun', '')):
-                print_cli('{0}:\n{1}\n'.format(name, docs[name]))
 
-    def print_grains(self):
-        '''
-        Print out the grains
-        '''
-        grains = salt.loader.grains(self.opts)
-        salt.output.display_output({'local': grains}, 'grains', self.opts)
-
-    def run(self):
-        '''
-        Execute the salt call logic
-        '''
-        try:
-            ret = self.call()
-            out = ret.get('out', 'nested')
-            if self.opts['metadata']:
-                print_ret = ret
-                out = 'nested'
-            else:
-                print_ret = ret.get('return', {})
-            salt.output.display_output(
-                    {'local': print_ret},
-                    out,
-                    self.opts)
-            if self.opts.get('retcode_passthrough', False):
-                sys.exit(ret['retcode'])
-        except SaltInvocationError as err:
-            raise SystemExit(err)
-
-
-class RAETCaller(ZeroMQCaller):
+class RAETCaller(BaseCaller):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
     when transport is raet
@@ -281,18 +292,19 @@ class RAETCaller(ZeroMQCaller):
         '''
         Pass in the command line options
         '''
-        self.stack = self._setup_caller_stack(opts)
-        salt.transport.jobber_stack = self.stack
-
         self.process = None
-        if (opts.get('__role') ==
-                kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
-            # spin up and fork minion here
-            self.process = multiprocessing.Process(target=self.minion_run,
-                                kwargs={'cleanup_protecteds': [self.stack.ha], })
-            self.process.start()
-            # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists
-            self._wait_caller(opts)
+        if not opts['local']:
+            self.stack = self._setup_caller_stack(opts)
+            salt.transport.jobber_stack = self.stack
+
+            if (opts.get('__role') ==
+                    kinds.APPL_KIND_NAMES[kinds.applKinds.caller]):
+                # spin up and fork minion here
+                self.process = multiprocessing.Process(target=self.minion_run,
+                                    kwargs={'cleanup_protecteds': [self.stack.ha], })
+                self.process.start()
+                # wait here until '/var/run/salt/minion/alpha_caller.manor.uxd' exists
+                self._wait_caller(opts)
 
         super(RAETCaller, self).__init__(opts)
 
@@ -306,8 +318,9 @@ class RAETCaller(ZeroMQCaller):
         '''
         try:
             ret = self.call()
-            self.stack.server.close()
-            salt.transport.jobber_stack = None
+            if not self.opts['local']:
+                self.stack.server.close()
+                salt.transport.jobber_stack = None
 
             if self.opts['metadata']:
                 print_ret = ret
@@ -356,7 +369,7 @@ class RAETCaller(ZeroMQCaller):
                           lanename=lanename,
                           sockdirpath=sockdirpath)
 
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack.value
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
                                    lanename=lanename,

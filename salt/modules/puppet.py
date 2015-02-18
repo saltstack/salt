@@ -340,6 +340,25 @@ def summary():
     return result
 
 
+def plugin_sync():
+    '''
+    Runs a plugin synch between the puppet master and agent
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' puppet.plugin_sync
+    '''
+
+    _check_puppet()
+
+    ret = __salt__['cmd.run']('puppet plugin download')
+
+    if not ret:
+        return ''
+    return ret
+
+
 def facts(puppet=False):
     '''
     Run facter and return the results

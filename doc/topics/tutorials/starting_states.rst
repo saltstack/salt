@@ -519,7 +519,7 @@ The above example could be written as:
     Pkg.installed("django")
 
 
-This Python examples would look like this if they were written in YAML:
+These Python examples would look like this if they were written in YAML:
 
 .. code-block:: yaml
 

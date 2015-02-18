@@ -47,11 +47,44 @@ class IptablesTestCase(TestCase):
 
     # 'build_rule' function tests: 1
 
+    @patch.object(iptables, '_has_option', MagicMock(return_value=True))
     def test_build_rule(self):
         '''
         Test if it build a well-formatted iptables rule based on kwargs.
         '''
         self.assertEqual(iptables.build_rule(), '')
+
+        self.assertEqual(iptables.build_rule(name='ignored', state='ignored'),
+                         '',
+                         'build_rule should ignore name and state')
+
+        # Should properly negate bang-prefixed values
+        self.assertEqual(iptables.build_rule(**{'if': '!eth0'}),
+                         '! -i eth0')
+
+        # Should properly negate "not"-prefixed values
+        self.assertEqual(iptables.build_rule(**{'if': 'not eth0'}),
+                         '! -i eth0')
+
+        self.assertEqual(iptables.build_rule(dports=[80, 443], proto='tcp'),
+                         '-p tcp -m multiport --dports 80,443')
+
+        self.assertEqual(iptables.build_rule(dports='80,443', proto='tcp'),
+                         '-p tcp -m multiport --dports 80,443')
+
+        # Should it really behave this way?
+        self.assertEqual(iptables.build_rule(dports=['!80', 443],
+                                             proto='tcp'),
+                         '-p tcp -m multiport ! --dports 80,443')
+
+        self.assertEqual(iptables.build_rule(dports='!80,443', proto='tcp'),
+                         '-p tcp -m multiport ! --dports 80,443')
+
+        self.assertEqual(iptables.build_rule(sports=[80, 443], proto='tcp'),
+                         '-p tcp -m multiport --sports 80,443')
+
+        self.assertEqual(iptables.build_rule(sports='80,443', proto='tcp'),
+                         '-p tcp -m multiport --sports 80,443')
 
         self.assertEqual(iptables.build_rule('filter', 'INPUT', command='I',
                                              position='3', full=True,
@@ -78,7 +111,22 @@ class IptablesTestCase(TestCase):
                                              match='state', jump='ACCEPT'),
                          'Error: Command needs to be specified')
 
-        ret = '/sbin/iptables -t salt -I INPUT 3 -m state --jump ACCEPT '
+        # Test arguments that should appear after the --jump
+        self.assertEqual(iptables.build_rule(jump='REDIRECT',
+                                             **{'to-port': 8080}),
+                         '--jump REDIRECT --to-port 8080')
+
+        # Should quote arguments with spaces, like log-prefix often has
+        self.assertEqual(iptables.build_rule(jump='LOG',
+                                             **{'log-prefix': 'long prefix'}),
+                         '--jump LOG --log-prefix "long prefix"')
+
+        # Should quote arguments with leading or trailing spaces
+        self.assertEqual(iptables.build_rule(jump='LOG',
+                                             **{'log-prefix': 'spam: '}),
+                         '--jump LOG --log-prefix "spam: "')
+
+        ret = '/sbin/iptables --wait -t salt -I INPUT 3 -m state --jump ACCEPT'
         with patch.object(iptables, '_iptables_cmd',
                           MagicMock(return_value='/sbin/iptables')):
             self.assertEqual(iptables.build_rule('salt', 'INPUT', command='I',
@@ -161,6 +209,7 @@ class IptablesTestCase(TestCase):
 
     # 'set_policy' function tests: 1
 
+    @patch.object(iptables, '_has_option', MagicMock(return_value=True))
     def test_set_policy(self):
         '''
         Test if it set the current policy for the specified table/chain
@@ -197,6 +246,7 @@ class IptablesTestCase(TestCase):
 
     # 'check' function tests: 1
 
+    @patch.object(iptables, '_has_option', MagicMock(return_value=True))
     def test_check(self):
         '''
         Test if it check for the existence of a rule in the table and chain
@@ -286,6 +336,7 @@ class IptablesTestCase(TestCase):
 
     # 'append' function tests: 1
 
+    @patch.object(iptables, '_has_option', MagicMock(return_value=True))
     def test_append(self):
         '''
         Test if it append a rule to the specified table/chain.
@@ -311,6 +362,7 @@ class IptablesTestCase(TestCase):
 
     # 'insert' function tests: 1
 
+    @patch.object(iptables, '_has_option', MagicMock(return_value=True))
     def test_insert(self):
         '''
         Test if it insert a rule into the specified table/chain,
@@ -340,6 +392,7 @@ class IptablesTestCase(TestCase):
 
     # 'delete' function tests: 1
 
+    @patch.object(iptables, '_has_option', MagicMock(return_value=True))
     def test_delete(self):
         '''
         Test if it delete a rule from the specified table/chain
@@ -358,6 +411,7 @@ class IptablesTestCase(TestCase):
 
     # 'flush' function tests: 1
 
+    @patch.object(iptables, '_has_option', MagicMock(return_value=True))
     def test_flush(self):
         '''
         Test if it flush the chain in the specified table,

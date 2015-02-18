@@ -12,9 +12,13 @@ To use the EC2 cloud module, set up the cloud configuration at
 .. code-block:: yaml
 
     my-ec2-config:
-      # The EC2 API authentication id
+      # The EC2 API authentication id, set this and/or key to
+      # 'use-instance-role-credentials' to use the instance role credentials
+      # from the meta-data if running on an AWS instance
       id: GKTADJGHEIQSXMKKRBJ08H
-      # The EC2 API authentication key
+      # The EC2 API authentication key, set this and/or id to
+      # 'use-instance-role-credentials' to use the instance role credentials
+      # from the meta-data if running on an AWS instance
       key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
       # The ssh keyname to use
       keyname: default
@@ -295,6 +299,9 @@ def query(params=None, setname=None, requesturl=None, location=None,
     provider = get_configured_provider()
     service_url = provider.get('service_url', 'amazonaws.com')
 
+    # Retrieve access credentials from meta-data, or use provided
+    access_key_id, secret_access_key, token = aws.creds(provider)
+
     attempts = 5
     while attempts > 0:
         params_with_headers = params.copy()
@@ -333,11 +340,13 @@ def query(params=None, setname=None, requesturl=None, location=None,
             DEFAULT_EC2_API_VERSION
         )
 
-        params_with_headers['AWSAccessKeyId'] = provider['id']
+        params_with_headers['AWSAccessKeyId'] = access_key_id
         params_with_headers['SignatureVersion'] = '2'
         params_with_headers['SignatureMethod'] = 'HmacSHA256'
         params_with_headers['Timestamp'] = '{0}'.format(timestamp)
         params_with_headers['Version'] = ec2_api_version
+        if token != '':
+            params_with_headers['SecurityToken'] = token
         keys = sorted(params_with_headers)
         values = list(map(params_with_headers.get, keys))
         querystring = _urlencode(list(zip(keys, values)))
@@ -351,7 +360,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
                                           endpoint_path.encode('utf-8'),
                                           querystring.encode('utf-8'))
 
-        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
+        hashed = hmac.new(secret_access_key, uri, hashlib.sha256)
         sig = binascii.b2a_base64(hashed.digest())
         params_with_headers['Signature'] = sig.strip()
 
@@ -1803,7 +1812,7 @@ def query_instance(vm_=None, call=None):
             'An error occurred while creating VM: {0}'.format(data['error'])
         )
 
-    def __query_ip_address(params, url):
+    def __query_ip_address(params):
         data = aws.query(params,
                          #requesturl=url,
                          location=location,

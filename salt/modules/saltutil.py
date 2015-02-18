@@ -40,6 +40,7 @@ import salt.runner
 import salt.utils
 import salt.utils.process
 import salt.utils.minion
+import salt.utils.event
 import salt.transport
 import salt.wheel
 from salt.exceptions import (
@@ -420,9 +421,13 @@ def refresh_pillar():
 pillar_refresh = refresh_pillar
 
 
-def refresh_modules():
+def refresh_modules(async=True):
     '''
     Signal the minion to refresh the module and grain data
+
+    The default is to refresh module asyncrhonously. To block
+    until the module refresh is complete, set the 'async' flag
+    to False.
 
     CLI Example:
 
@@ -431,7 +436,16 @@ def refresh_modules():
         salt '*' saltutil.refresh_modules
     '''
     try:
-        ret = __salt__['event.fire']({}, 'module_refresh')
+        if async:
+            #  If we're going to block, first setup a listener
+            ret = __salt__['event.fire']({}, 'module_refresh')
+        else:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
+            # Wait for the finish event to fire
+            log.trace('refresh_modules waiting for module refresh to complete')
+            # Blocks until we hear this event or until the timeout expires
+            eventer.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
     except KeyError:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system

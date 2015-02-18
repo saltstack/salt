@@ -7,34 +7,26 @@ The core behaviors used by minion and master
 # Import python libs
 from __future__ import absolute_import
 import os
-import sys
 import time
-import types
 import random
 import logging
-import threading
 import itertools
-import traceback
-import multiprocessing
 from collections import deque
 
 # Import salt libs
 import salt.daemons.masterapi
 import salt.utils.args
+import salt.utils.process
 import salt.transport
-from raet import raeting, nacling
+from raet import raeting
 from raet.road.stacking import RoadStack
 from raet.road.estating import RemoteEstate
 from raet.lane.stacking import LaneStack
-from raet.lane.yarding import RemoteYard
 
 from salt import daemons
 from salt.daemons import salting
 from salt.utils import kinds
 from salt.utils.event import tagify
-
-from salt.exceptions import (
-        CommandExecutionError, CommandNotFoundError, SaltInvocationError)
 
 # Import ioflo libs
 from ioflo.base.odicting import odict
@@ -126,6 +118,19 @@ class SaltRaetRoadClustered(ioflo.base.deeding.Deed):
         Update .cluster.clustered share from opts
         '''
         self.clustered.update(value=self.opts.value.get('cluster_mode', False))
+
+
+class SaltRaetProcessManagerSetup(ioflo.base.deeding.Deed):
+    '''
+    Set up the process manager object
+    '''
+    Ioinits = {'proc_mgr': '.salt.usr.proc_mgr'}
+
+    def action(self):
+        '''
+        Create the process manager
+        '''
+        self.proc_mgr.value = salt.utils.process.ProcessManager()
 
 
 class SaltRaetRoadUsherMinionSetup(ioflo.base.deeding.Deed):
@@ -239,7 +244,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         '''
         Assign class defaults
         '''
-        RoadStack.Bk = raeting.bodyKinds.msgpack
+        RoadStack.Bk = raeting.BodyKind.msgpack.value
         RoadStack.JoinentTimeout = 0.0
 
     def action(self):
@@ -440,7 +445,7 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                rejected = all([remote.acceptance == raeting.acceptances.rejected
+                rejected = all([remote.acceptance == raeting.Acceptance.rejected.value
                                 for remote in stack.remotes.values()
                                 if remote.kind == kinds.applKinds.master])
             else:  # no remotes so assume rejected
@@ -818,7 +823,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                                     name=name,
                                     lanename=lanename,
                                     sockdirpath=self.opts.value['sock_dir'])
-        self.stack.value.Pk = raeting.packKinds.pack
+        self.stack.value.Pk = raeting.PackKind.pack.value
         self.event_yards.value = set()
         self.local_cmd.value = deque()
         self.remote_cmd.value = deque()
@@ -1594,7 +1599,7 @@ class SaltRaetStatsEventerMinion(SaltRaetStatsEventer):
             return
 
         route = {'dst': (s_estate, s_yard, 'event_fire'),
-                 'src': (self.road_stack.value.name, self.road_stack.value.local.name, None)}
+                 'src': (self.road_stack.value.name, self.lane_stack.value.name, None)}
         repl = {'route': route, 'tag': msg.get('tag'), 'data': stats}
         self.road_stack.value.transmit(repl,
                                        self.road_stack.value.fetchUidByName(s_estate))
@@ -1667,6 +1672,7 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
     Ioinits = {'opts': '.salt.opts',
                'modules': '.salt.loader.modules',
                'master_events': '.salt.var.master_events',
+               'event': '.salt.event.events',
                'beacon': '.salt.beacon'}
 
     def action(self):
@@ -1677,7 +1683,9 @@ class SaltRaetBeacon(ioflo.base.deeding.Deed):
             b_conf = self.modules.value['config.merge']('beacons')
             if b_conf:
                 try:
-                    self.master_events.value.extend(self.beacon.value.process(b_conf))
+                    events = self.beacon.value.process(b_conf)
+                    self.master_events.value.extend(events)
+                    self.event.value.extend(events)
                 except Exception:
                     log.error('Error in the beacon system: ', exc_info=True)
         return []
@@ -1724,313 +1732,3 @@ class SaltRaetSetupMatcher(ioflo.base.deeding.Deed):
         self.matcher.value = salt.minion.Matcher(
                 self.opts.value,
                 self.modules.value)
-
-
-class SaltRaetThreadShellJobber(ioflo.base.deeding.Deed):
-    '''
-    Execute a jobber via shelling out to salt call
-
-    This bahavior is a fallback option for windows platforms
-    and should not be called on any *NIX platform
-    '''
-    Ioinits = {'opts': '.salt.opts',
-               'grains': '.salt.grains',
-               'modules': '.salt.modules',
-               'fun': '.salt.var.fun',
-               'matcher': '.salt.matcher',
-               'threads': '.salt.var.threads',
-               }
-
-    def postinitio(self):
-        self.threads.value = deque()
-
-    def action(self):
-        '''
-        Evaluate the fun options and execute them via salt-call
-        '''
-        while self.fun.value:
-            msg = self.fun.value.popleft()
-            data = msg.get('pub')
-            match = getattr(
-                    self.matcher.value,
-                    '{0}_match'.format(
-                        data.get('tgt_type', 'glob')
-                        )
-                    )(data['tgt'])
-            if not match:
-                continue
-            fun = data['fun']
-            if fun in self.modules.value:
-                func = self.modules.value[fun]
-            else:
-                continue
-            args, kwargs = salt.minion.load_args_and_kwargs(
-                func,
-                salt.utils.args.parse_input(data['arg']),
-                data)
-            cmd = ['salt-call',
-                   '--out', 'json',
-                   '--metadata',
-                   '-c', salt.syspaths.CONFIG_DIR]
-            if 'return' in data:
-                cmd.append('--return')
-                cmd.append(data['return'])
-            cmd.append(fun)
-            for arg in args:
-                cmd.append(arg)
-            for key in kwargs:
-                cmd.append('{0}={1}'.format(key, kwargs[key]))
-            self.threads.value.append(threading.Thread(
-                    target=self.shell_thread,
-                    kwargs={'cmd': cmd}
-                ))
-            self.threads.value[-1].start()
-
-    def _shell_thread(self, cmd):
-        '''
-        Execute the jobber via a call to salt call
-        '''
-        self.modules.value['cmd.run'](cmd, python_shell=False)
-
-
-class SaltRaetNixJobber(ioflo.base.deeding.Deed):
-    '''
-    Execute a function call job on a minion on a *nix based system
-    FloScript:
-
-    do salt raet nix jobber
-
-    '''
-    Ioinits = {'opts_store': '.salt.opts',
-               'grains': '.salt.grains',
-               'modules': '.salt.loader.modules',
-               'returners': '.salt.loader.returners',
-               'fun': '.salt.var.fun',
-               'matcher': '.salt.matcher',
-               'executors': '.salt.track.executors',
-               'road_stack': '.salt.road.manor.stack', }
-
-    def _prepare(self):
-        '''
-        Map opts for convenience
-        '''
-        self.opts = self.opts_store.value
-        self.proc_dir = salt.minion.get_proc_dir(self.opts['cachedir'])
-        self.serial = salt.payload.Serial(self.opts)
-        self.executors.value = {}
-
-    def _setup_jobber_stack(self):
-        '''
-        Setup and return the LaneStack and Yard used by the jobber yard
-        to communicate with the minion manor yard
-
-        '''
-        role = self.opts.get('id', '')
-        if not role:
-            emsg = ("Missing role required to setup Jobber Lane.")
-            log.error(emsg + "\n")
-            raise ValueError(emsg)
-
-        kind = self.opts['__role']
-        if kind not in kinds.APPL_KINDS:
-            emsg = ("Invalid application kind = '{0}' for Jobber lane.".format(kind))
-            log.error(emsg + "\n")
-            raise ValueError(emsg)
-
-        if kind == 'minion':
-            lanename = "{0}_{1}".format(role, kind)
-        else:
-            emsg = ("Unsupported application kind = '{0}' for Jobber Lane.".format(kind))
-            log.error(emsg + '\n')
-            raise ValueError(emsg)
-
-        sockdirpath = self.opts['sock_dir']
-        name = 'jobber' + nacling.uuid(size=18)
-        stack = LaneStack(
-                name=name,
-                lanename=lanename,
-                sockdirpath=sockdirpath)
-
-        stack.Pk = raeting.packKinds.pack
-        # add remote for the manor yard
-        stack.addRemote(RemoteYard(stack=stack,
-                                   name='manor',
-                                   lanename=lanename,
-                                   dirpath=sockdirpath))
-        console.concise("Created Jobber Stack {0}\n".format(stack.name))
-        return stack
-
-    def _return_pub(self, msg, ret, stack):
-        '''
-        Send the return data back via the uxd socket
-        '''
-        route = {'src': (self.road_stack.value.local.name, stack.local.name, 'jid_ret'),
-                 'dst': (msg['route']['src'][0], None, 'remote_cmd')}
-        mid = self.opts['id']
-        ret['cmd'] = '_return'
-        ret['id'] = mid
-        try:
-            oput = self.modules.value[ret['fun']].__outputter__
-        except (KeyError, AttributeError, TypeError):
-            pass
-        else:
-            if isinstance(oput, str):
-                ret['out'] = oput
-        msg = {'route': route, 'load': ret}
-        stack.transmit(msg, stack.fetchUidByName('manor'))
-        stack.serviceAll()
-
-    def action(self):
-        '''
-        Pull the queue for functions to execute
-        '''
-        while self.fun.value:
-            msg = self.fun.value.popleft()
-            data = msg.get('pub')
-            match = getattr(
-                    self.matcher.value,
-                    '{0}_match'.format(
-                        data.get('tgt_type', 'glob')
-                        )
-                    )(data['tgt'])
-            if not match:
-                continue
-            if 'user' in data:
-                log.info(
-                        'User {0[user]} Executing command {0[fun]} with jid '
-                        '{0[jid]}'.format(data))
-            else:
-                log.info(
-                        'Executing command {0[fun]} with jid {0[jid]}'.format(data)
-                        )
-            log.debug('Command details {0}'.format(data))
-
-            process = multiprocessing.Process(
-                    target=self.proc_run,
-                    kwargs={'msg': msg}
-                    )
-            process.start()
-            process.join()
-
-    def proc_run(self, msg):
-        '''
-        Execute the run in a dedicated process
-        '''
-        data = msg['pub']
-        fn_ = os.path.join(self.proc_dir, data['jid'])
-        self.opts['__ex_id'] = data['jid']
-        salt.utils.daemonize_if(self.opts)
-
-        salt.transport.jobber_stack = stack = self._setup_jobber_stack()
-        # set up return destination from source
-        src_estate, src_yard, src_share = msg['route']['src']
-        salt.transport.jobber_estate_name = src_estate
-        salt.transport.jobber_yard_name = src_yard
-
-        sdata = {'pid': os.getpid()}
-        sdata.update(data)
-        with salt.utils.fopen(fn_, 'w+') as fp_:
-            fp_.write(self.serial.dumps(sdata))
-        ret = {'success': False}
-        function_name = data['fun']
-        if function_name in self.modules.value:
-            try:
-                func = self.modules.value[data['fun']]
-                args, kwargs = salt.minion.load_args_and_kwargs(
-                    func,
-                    salt.utils.args.parse_input(data['arg']),
-                    data)
-                sys.modules[func.__module__].__context__['retcode'] = 0
-                if self.opts.get('sudo_user', ''):
-                    sudo_runas = self.opts.get('sudo_user')
-                    if 'sudo.salt_call' in self.modules.value:
-                        return_data = self.modules.value['sudo.salt_call'](
-                                sudo_runas,
-                                data['fun'],
-                                *args,
-                                **kwargs)
-                else:
-                    return_data = func(*args, **kwargs)
-                if isinstance(return_data, types.GeneratorType):
-                    ind = 0
-                    iret = {}
-                    for single in return_data:
-                        if isinstance(single, dict) and isinstance(iret, list):
-                            iret.update(single)
-                        else:
-                            if not iret:
-                                iret = []
-                            iret.append(single)
-                        tag = tagify(
-                                [data['jid'], 'prog', self.opts['id'], str(ind)],
-                                'job')
-                        event_data = {'return': single}
-                        self._fire_master(event_data, tag)  # Need to look into this
-                        ind += 1
-                    ret['return'] = iret
-                else:
-                    ret['return'] = return_data
-                ret['retcode'] = sys.modules[func.__module__].__context__.get(
-                    'retcode',
-                    0
-                )
-                ret['success'] = True
-            except CommandNotFoundError as exc:
-                msg = 'Command required for {0!r} not found'.format(
-                    function_name
-                )
-                log.debug(msg, exc_info=True)
-                ret['return'] = '{0}: {1}'.format(msg, exc)
-            except CommandExecutionError as exc:
-                log.error(
-                    'A command in {0!r} had a problem: {1}'.format(
-                        function_name,
-                        exc
-                    ),
-                    exc_info_on_loglevel=logging.DEBUG
-                )
-                ret['return'] = 'ERROR: {0}'.format(exc)
-            except SaltInvocationError as exc:
-                log.error(
-                    'Problem executing {0!r}: {1}'.format(
-                        function_name,
-                        exc
-                    ),
-                    exc_info_on_loglevel=logging.DEBUG
-                )
-                ret['return'] = 'ERROR executing {0!r}: {1}'.format(
-                    function_name, exc
-                )
-            except TypeError as exc:
-                msg = ('TypeError encountered executing {0}: {1}. See '
-                       'debug log for more info.').format(function_name, exc)
-                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-                ret['return'] = msg
-            except Exception:
-                msg = 'The minion function caused an exception'
-                log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
-                ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
-        else:
-            ret['return'] = '{0!r} is not available.'.format(function_name)
-
-        ret['jid'] = data['jid']
-        ret['fun'] = data['fun']
-        ret['fun_args'] = data['arg']
-        self._return_pub(msg, ret, stack)
-        if data['ret']:
-            ret['id'] = self.opts['id']
-            for returner in set(data['ret'].split(',')):
-                try:
-                    self.returners.value['{0}.returner'.format(
-                        returner
-                    )](ret)
-                except Exception as exc:
-                    log.error(
-                        'The return failed for job {0} {1}'.format(
-                        data['jid'],
-                        exc
-                        )
-                    )
-        console.concise("Closing Jobber Stack {0}\n".format(stack.name))
-        stack.server.close()
-        salt.transport.jobber_stack = None

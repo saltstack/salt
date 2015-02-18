@@ -709,11 +709,8 @@ def _parse_ethtool_pppoe_opts(opts, iface):
         if opt in opts:
             config[opt] = opts[opt]
 
-    if 'provider' in opts:
-        if opts['provider']:
-            pass
-        else:
-            _raise_error_iface(iface, 'provider', _CONFIG_TRUE + _CONFIG_FALSE)
+    if 'provider' in opts and not opts['provider']:
+        _raise_error_iface(iface, 'provider', _CONFIG_TRUE + _CONFIG_FALSE)
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     for option in ('noipdefault', 'usepeerdns', 'defaultroute', 'hide-password', 'noauth', 'persist', 'noaccomp'):
@@ -1666,7 +1663,7 @@ def down(iface, iface_type):
 
     .. code-block:: bash
 
-        salt '*' ip.down eth0
+        salt '*' ip.down eth0 eth
     '''
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought down.
@@ -1727,7 +1724,7 @@ def up(iface, iface_type):  # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' ip.up eth0
+        salt '*' ip.up eth0 eth
     '''
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought up.

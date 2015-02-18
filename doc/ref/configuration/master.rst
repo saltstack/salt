@@ -2158,7 +2158,8 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`.
+:conf_log:`log_level_logfile`. When it is not set explicitly 
+it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml
 

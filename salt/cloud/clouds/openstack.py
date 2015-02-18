@@ -512,9 +512,7 @@ def request_instance(vm_=None, call=None):
                         'available, please create some more'
                     )
             except Exception as e:
-                if str(e).startswith('404'):
-                    pass
-                else:
+                if not str(e).startswith('404'):
                     raise
     vm_['floating'] = floating
 

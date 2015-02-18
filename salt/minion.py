@@ -54,6 +54,12 @@ try:
     HAS_RESOURCE = True
 except ImportError:
     pass
+
+try:
+    import zmq.utils.monitor
+    HAS_ZMQ_MONITOR = True
+except ImportError:
+    HAS_ZMQ_MONITOR = False
 # pylint: enable=import-error
 
 # Import salt libs
@@ -149,15 +155,61 @@ def resolve_dns(opts):
     return ret
 
 
-def get_proc_dir(cachedir):
+def get_proc_dir(cachedir, **kwargs):
     '''
     Given the cache directory, return the directory that process data is
     stored in, creating it if it doesn't exist.
+    The following optional Keyword Arguments are handled:
+
+    mode: which is anything os.makedir would accept as mode.
+
+    uid: the uid to set, if not set, or it is None or -1 no changes are
+         made. Same applies if the directory is already owned by this
+         uid. Must be int. Works only on unix/unix like systems.
+
+    gid: the gid to set, if not set, or it is None or -1 no changes are
+         made. Same applies if the directory is already owned by this
+         gid. Must be int. Works only on unix/unix like systems.
     '''
     fn_ = os.path.join(cachedir, 'proc')
+    mode = kwargs.pop('mode', None)
+
+    if mode is None:
+        mode = {}
+    else:
+        mode = {'mode': mode}
+
     if not os.path.isdir(fn_):
-        # proc_dir is not present, create it
-        os.makedirs(fn_)
+        # proc_dir is not present, create it with mode settings
+        os.makedirs(fn_, **mode)
+        d_stat = os.stat(fn_)
+    else:
+        d_stat = os.stat(fn_)
+
+    # if mode is not an empty dict then we have an explicit
+    # dir mode. So lets check if mode needs to be changed.
+    if mode:
+        if d_stat.st_mode | mode['mode'] != d_stat.st_mode:
+            os.chmod(fn_, d_stat.st_mode | mode['mode'])
+
+    if hasattr(os, 'chown'):
+        # only on unix/unix like systems
+        uid = kwargs.pop('uid', None)
+        gid = kwargs.pop('gid', None)
+
+        if uid is None:
+            # -1 means no change to current uid
+            uid = -1
+        if gid is None:
+            # -1 means no change to current gid
+            gid = -1
+
+        # if uid and gid are both -1 then go ahead with
+        # no changes at all
+        if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
+                [i for i in (uid, gid) if i != -1]:
+            os.chown(fn_, uid, gid)
+
     return fn_
 
 
@@ -639,7 +691,8 @@ class Minion(MinionBase):
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
-        self.proc_dir = get_proc_dir(opts['cachedir'])
+        uid = salt.utils.get_uid(user=opts.get('user', None))
+        self.proc_dir = get_proc_dir(opts['cachedir'], uid=uid)
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
@@ -827,7 +880,7 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _load_modules(self, force_refresh=False):
+    def _load_modules(self, force_refresh=False, notify=False):
         '''
         Return the functions and the returners loaded up from the loader
         module
@@ -852,9 +905,9 @@ class Minion(MinionBase):
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
         if self.opts.get('multimaster', False):
             s_opts = copy.copy(self.opts)
-            functions = salt.loader.minion_mods(s_opts)
+            functions = salt.loader.minion_mods(s_opts, notify=notify)
         else:
-            functions = salt.loader.minion_mods(self.opts)
+            functions = salt.loader.minion_mods(self.opts, notify=notify)
         returners = salt.loader.returners(self.opts, functions)
         errors = {}
         if '_errors' in functions:
@@ -1340,6 +1393,28 @@ class Minion(MinionBase):
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
 
+    def _set_monitor_socket(self):
+        if not HAS_ZMQ_MONITOR or not self.opts['zmq_monitor']:
+            return
+        self.monitor_socket = self.socket.get_monitor_socket()
+        t = threading.Thread(target=self._socket_monitor, args=(self.monitor_socket,))
+        t.start()
+
+    def _socket_monitor(self, monitor):
+        event_map = {}
+        for name in dir(zmq):
+            if name.startswith('EVENT_'):
+                value = getattr(zmq, name)
+                event_map[value] = name
+        while monitor.poll():
+            evt = zmq.utils.monitor.recv_monitor_message(monitor)
+            evt.update({'description': event_map[evt['event']]})
+            log.debug("ZeroMQ event: {0}".format(evt))
+            if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
+                break
+        monitor.close()
+        log.trace("event monitor thread done!")
+
     def _set_reconnect_ivl(self):
         recon_delay = self.opts['recon_default']
 
@@ -1433,12 +1508,12 @@ class Minion(MinionBase):
         else:
             self.publish_port = auth.creds['publish_port']
 
-    def module_refresh(self, force_refresh=False):
+    def module_refresh(self, force_refresh=False, notify=False):
         '''
         Refresh the functions and returners.
         '''
-        log.debug('Refreshing modules')
-        self.functions, self.returners, _ = self._load_modules(force_refresh)
+        log.debug('Refreshing modules. Notify={0}'.format(notify))
+        self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
@@ -1559,7 +1634,8 @@ class Minion(MinionBase):
         '''
         log.debug('Handling event {0!r}'.format(package))
         if package.startswith('module_refresh'):
-            self.module_refresh()
+            tag, data = salt.utils.event.MinionEvent.unpack(package)
+            self.module_refresh(notify=data.get('notify', False))
         elif package.startswith('pillar_refresh'):
             self.pillar_refresh()
         elif package.startswith('manage_schedule'):
@@ -1691,6 +1767,7 @@ class Minion(MinionBase):
 
         self._set_reconnect_ivl()
         self._setsockopts()
+        self._set_monitor_socket()
 
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
@@ -1786,6 +1863,19 @@ class Minion(MinionBase):
                 log.critical('The beacon errored: ', exec_info=True)
             if beacons:
                 self._fire_master(events=beacons)
+                for beacon in beacons:
+                    serialized_data = salt.utils.dicttrim.trim_dict(
+                        self.serial.dumps(beacon['data']),
+                        self.opts.get('max_event_size', 1048576),
+                        is_msgpacked=True,
+                    )
+                    log.debug('Sending event - data = {0}'.format(beacon['data']))
+                    event = '{0}{1}{2}'.format(
+                            beacon['tag'],
+                            salt.utils.event.TAGEND,
+                            serialized_data)
+                    self.handle_event(event)
+                    self.epub_sock.send(event)
 
     def tune_in_no_block(self):
         '''
@@ -2704,7 +2794,8 @@ class ProxyMinion(Minion):
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
-        self.proc_dir = get_proc_dir(opts['cachedir'])
+        uid = salt.utils.get_uid(user=opts.get('user', None))
+        self.proc_dir = get_proc_dir(opts['cachedir'], uid=uid)
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
@@ -2718,7 +2809,7 @@ class ProxyMinion(Minion):
         '''
         return super(ProxyMinion, self)._prep_mod_opts()
 
-    def _load_modules(self, force_refresh=False):
+    def _load_modules(self, force_refresh=False, notify=False):
         '''
         Return the functions and the returners loaded up from the loader
         module

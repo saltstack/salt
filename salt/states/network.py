@@ -38,6 +38,44 @@ all interfaces are ignored unless specified.
           - 8.8.8.8
           - 8.8.4.4
 
+    eth0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - mtu: 9000
+
+    bond0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - mtu: 9000
+
+    eth1.0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - vlan: True
+        - mtu: 9000
+
+    bond0.1-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - vlan: True
+        - mtu: 9000
+
+    .. note::
+        add support of ranged interfaces (vlan, bond and eth) for redhat system,
+        Important:type must be eth.
+
     routes:
       network.routes:
         - name: eth0
@@ -229,6 +267,9 @@ def managed(name, type, enabled=True, **kwargs):
     if 'test' not in kwargs:
         kwargs['test'] = __opts__.get('test', False)
 
+    # set ranged status
+    apply_ranged_setting = False
+
     # Build interface
     try:
         old = __salt__['ip.get_interface'](name)
@@ -251,11 +292,13 @@ def managed(name, type, enabled=True, **kwargs):
                 ret['comment'] = 'Interface {0} ' \
                                  'added.'.format(name)
                 ret['changes']['interface'] = 'Added network interface.'
+                apply_ranged_setting = True
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm='')
                 ret['comment'] = 'Interface {0} ' \
                                  'updated.'.format(name)
                 ret['changes']['interface'] = '\n'.join(diff)
+                apply_ranged_setting = True
     except AttributeError as error:
         ret['result'] = False
         ret['comment'] = str(error)
@@ -287,11 +330,13 @@ def managed(name, type, enabled=True, **kwargs):
                     ret['comment'] = 'Bond interface {0} ' \
                                      'added.'.format(name)
                     ret['changes']['bond'] = 'Added bond {0}.'.format(name)
+                    apply_ranged_setting = True
                 elif old != new:
                     diff = difflib.unified_diff(old, new, lineterm='')
                     ret['comment'] = 'Bond interface {0} ' \
                                      'updated.'.format(name)
                     ret['changes']['bond'] = '\n'.join(diff)
+                    apply_ranged_setting = True
         except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
             ret['result'] = False
@@ -299,6 +344,21 @@ def managed(name, type, enabled=True, **kwargs):
             return ret
 
     if kwargs['test']:
+        return ret
+
+    # For Redhat/Centos ranged network
+    if "range" in name:
+        if apply_ranged_setting:
+            try:
+                ret['result'] = __salt__['service.restart']('network')
+                ret['comment'] = "network restarted for change of ranged interfaces"
+                return ret
+            except Exception as error:
+                ret['result'] = False
+                ret['comment'] = str(error)
+                return ret
+        ret['result'] = True
+        ret['comment'] = "no change, passing it"
         return ret
 
     # Bring up/shutdown interface

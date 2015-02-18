@@ -20,6 +20,7 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 import salt.utils.lazy
+import salt.utils.event
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -89,7 +90,7 @@ def _module_dirs(
     return cli_module_dirs + ext_type_types + [ext_types, sys_types]
 
 
-def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False):
+def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False, notify=False):
     '''
     Load execution modules
 
@@ -117,6 +118,9 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
                      pack={'__context__': context},
                      whitelist=whitelist)
     ret.pack['__salt__'] = ret
+    if notify:
+        evt = salt.utils.event.get_event('minion', opts=opts)
+        evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
 
     return ret
 
@@ -153,15 +157,18 @@ def proxy(opts, functions, whitelist=None):
                       pack={'__proxy__': functions})
 
 
-def returners(opts, functions, whitelist=None):
+def returners(opts, functions, whitelist=None, context=None):
     '''
     Returns the returner modules
     '''
+    if context is None:
+        context = {}
     return LazyLoader(_module_dirs(opts, 'returners', 'returner'),
                       opts,
                       tag='returner',
                       whitelist=whitelist,
-                      pack={'__salt__': functions})
+                      pack={'__salt__': functions,
+                            '__context__': context})
 
 
 def utils(opts, whitelist=None):
@@ -1030,7 +1037,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load a single item if you have it
         '''
         # if the key doesn't have a '.' then it isn't valid for this mod dict
-        if '.' not in key:
+        if key is None or '.' not in key:
             raise KeyError
         mod_name, _ = key.split('.', 1)
         if mod_name in self.missing_modules:
