@@ -41,8 +41,8 @@ def absent(name):
            'comment': ''}
 
     localPath = os.environ["PATH"].split(os.pathsep)
-    if path in localPath:
-        localPath.remove(path)
+    if name in localPath:
+        localPath.remove(name)
         os.environ["PATH"] = os.pathsep.join(localPath)
 
     if __salt__['win_path.exists'](name):
