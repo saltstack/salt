@@ -17,6 +17,7 @@ from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
 
 from salt.utils.serializers import DeserializationError, SerializationError
+from salt.utils.odict import OrderedDict
 
 __all__ = ['deserialize', 'serialize', 'available']
 
@@ -40,7 +41,7 @@ def deserialize(stream_or_string, **options):
     :param options: options given to lower yaml module.
     """
 
-    options.setdefault('Loader', BaseLoader)
+    options.setdefault('Loader', Loader)
     try:
         return yaml.load(stream_or_string, **options)
     except ScannerError as error:
@@ -63,7 +64,7 @@ def serialize(obj, **options):
     :param options: options given to lower yaml module.
     """
 
-    options.setdefault('Dumper', BaseDumper)
+    options.setdefault('Dumper', Dumper)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -112,3 +113,4 @@ Dumper.add_multi_representer(set, Dumper.represent_set)
 Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
 Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
+Dumper.add_multi_representer(OrderedDict, Dumper.represent_dict)
