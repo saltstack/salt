@@ -1302,9 +1302,9 @@ def old_to_new(opts):
         provider_config = {}
         for opt, val in opts.items():
             if provider in opt:
-                    value = val
-                    name = opt.split('.', 1)[1]
-                    provider_config[name] = value
+                value = val
+                name = opt.split('.', 1)[1]
+                provider_config[name] = value
 
         lprovider = provider.lower()
         if provider_config:
