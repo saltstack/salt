@@ -47,6 +47,7 @@ import os
 # Import salt libs
 import salt.utils
 import salt.modules.cmdmod
+from salt.modules.systemd import _sd_booted
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -61,7 +62,9 @@ def __virtual__():
     Only work on Ubuntu
     '''
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
+    if _sd_booted(__context__):
+        return False
+    elif __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
         return __virtualname__
     elif __grains__['os'] in ('Debian', 'Raspbian'):
         debian_initctl = '/sbin/initctl'

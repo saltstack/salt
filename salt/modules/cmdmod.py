@@ -1408,12 +1408,26 @@ def tty(device, echo=None):
         }
 
 
-def run_chroot(root, cmd):
+def run_chroot(root,
+               cmd,
+               stdin=None,
+               output_loglevel='debug'):
     '''
     .. versionadded:: 2014.7.0
 
     This function runs :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` wrapped
     within a chroot, with dev and proc mounted in the chroot
+
+    stdin : None
+        Standard input to be used for the command
+
+        .. versionadded:: 2014.7.1
+
+    output_loglevel : debug
+        Level at which to log the output from the command. Set to ``quiet`` to
+        suppress logging.
+
+        .. versionadded:: 2014.7.1
 
     CLI Example:
 
@@ -1439,7 +1453,8 @@ def run_chroot(root, cmd):
         root,
         sh_,
         cmd)
-    res = run_all(cmd, output_loglevel='quiet')
+    run_func = __context__.pop('cmd.run_chroot.func', run_all)
+    ret = run_func(cmd, stdin=stdin, output_loglevel=output_loglevel)
 
     # Kill processes running in the chroot
     for i in range(6):
@@ -1457,8 +1472,7 @@ def run_chroot(root, cmd):
 
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
-    log.info(res)
-    return res
+    return ret
 
 
 def _is_valid_shell(shell):

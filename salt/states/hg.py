@@ -65,10 +65,12 @@ def latest(name,
     user
         Name of the user performing repository management operations
 
+        .. versionadded:: 0.17.0
+
     identity
         Private SSH key on the minion server for authentication (ssh://)
 
-        .. versionadded: 0.17.0
+        .. versionadded:: 2015.2.0
 
     force
         Force hg to clone into pre-existing directories (deletes contents)
