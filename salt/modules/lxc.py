@@ -2674,7 +2674,7 @@ def _run(name,
                                      output_loglevel=output_loglevel,
                                      ignore_retcode=ignore_retcode)
         else:
-            stdout_buffer, stderr_buffer = '', ''
+            stdout, stderr = '', ''
             try:
                 proc = vt.Terminal(cmd,
                                    shell=python_shell,
