@@ -105,30 +105,47 @@ class CkMinions(object):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
         if self.opts.get('transport', 'zeromq') == 'zeromq':
-            self.acc = 'minions'
+            self.acc = ['minions']
         else:
-            self.acc = 'accepted'
+            self.acc = ['accepted']
+            if self.opts.get('zmq_behavior'):
+                self.acc.append('minions')
+
+    def _minion_keys(self):
+        '''
+        Return a set of the minion keys
+        '''
+        ret = set()
+        for acc in self.acc:
+            pki_dir = os.path.join(self.opts['pki_dir'], acc)
+            if not os.path.isdir(pki_dir):
+                continue
+            ret.update(os.listdir(pki_dir))
+        return ret
 
     def _check_glob_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via globs
         '''
         cwd = os.getcwd()
-        pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
+        pki_dirs = []
+        for acc in self.acc:
+            pki_dirs.append(os.path.join(self.opts['pki_dir'], acc))
+        ret = set()
+        for pki_dir in pki_dirs:
+            # If there is no directory return an empty list
+            if not os.path.isdir(pki_dir):
+                continue
 
-        # If there is no directory return an empty list
-        if os.path.isdir(pki_dir) is False:
-            return []
-
-        os.chdir(pki_dir)
-        ret = set(glob.glob(expr))
-        try:
-            os.chdir(cwd)
-        except OSError as exc:
-            if exc.errno != 13:
-                # If it's not a permission denied, perhaps we're running with
-                # sudo
-                raise
+            os.chdir(pki_dir)
+            ret.update(set(glob.glob(expr)))
+            try:
+                os.chdir(cwd)
+            except OSError as exc:
+                if exc.errno != 13:
+                    # If it's not a permission denied, perhaps we're running with
+                    # sudo
+                    raise
         return list(ret)
 
     def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
@@ -138,7 +155,7 @@ class CkMinions(object):
         if isinstance(expr, string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
+        for fn_ in self.minion_keys():
             if fn_ in expr:
                 if fn_ not in ret:
                     ret.append(fn_)
@@ -148,11 +165,11 @@ class CkMinions(object):
         '''
         Return the minions found by looking via regular expressions
         '''
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
+        ret = set()
         reg = re.compile(expr)
-        ret = [fn_ for fn_ in os.listdir('.') if reg.match(fn_)]
-        os.chdir(cwd)
+        for fn_ in self._minion_keys():
+            if reg.match(fn_):
+                ret.add(fn_)
         return ret
 
     def _check_cache_minions(self,
@@ -168,9 +185,7 @@ class CkMinions(object):
         cache_enabled = self.opts.get('minion_data_cache', False)
 
         if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-            )
+            minions = self._minion_keys()
         elif cache_enabled:
             minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
         else:
@@ -237,9 +252,7 @@ class CkMinions(object):
         cache_enabled = self.opts.get('minion_data_cache', False)
 
         if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-            )
+            minions = self._minion_keys()
         elif cache_enabled:
             minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
         else:
@@ -296,9 +309,7 @@ class CkMinions(object):
             )
         cache_enabled = self.opts.get('minion_data_cache', False)
         if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-            )
+            minions = self._minion_keys()
         elif cache_enabled:
             minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
         else:
@@ -354,9 +365,7 @@ class CkMinions(object):
         '''
         Return the minions found by looking via compound matcher
         '''
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-        )
+        minions = self._minion_keys()
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
@@ -491,7 +500,7 @@ class CkMinions(object):
         '''
         Return a list of all minions that have auth'd
         '''
-        return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+        return self._minion_keys()
 
     def check_minions(self,
                       expr,
