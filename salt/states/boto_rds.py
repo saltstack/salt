@@ -49,11 +49,6 @@ config:
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
-import salt.utils.dictupdate as dictupdate
-from salt.exceptions import SaltInvocationError
-import logging
-
-log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -72,8 +67,8 @@ def present(name, allocated_storage, db_instance_class, engine,
             port=None, multi_az=None, engine_version=None,
             auto_minor_version_upgrade=None, license_model=None, iops=None,
             option_group_name=None, character_set_name=None,
-            publicly_accessible=None, tags=None, region=None, key=None,
-            keyid=None, profile=None):
+            publicly_accessible=None, wait_status=None, tags=None, region=None,
+            key=None, keyid=None, profile=None):
     '''
     Ensure RDS instance exists.
 
@@ -160,6 +155,10 @@ def present(name, allocated_storage, db_instance_class, engine,
         specifies an internal instance with a DNS name that resolves to a
         private IP address.
 
+    wait_status
+        Wait for the RDS instance to reach a disared status before finishing
+        the state. Available states: available, modifying, backing-up
+
     tags
         A list of tags.
 
@@ -189,8 +188,8 @@ def present(name, allocated_storage, db_instance_class, engine,
                         backup_retention_period, preferred_backup_window, port,
                         multi_az, engine_version, auto_minor_version_upgrade,
                         license_model, iops, option_group_name,
-                        character_set_name, publicly_accessible, tags, region,
-                        key, keyid, profile)
+                        character_set_name, publicly_accessible, wait_status,
+                        tags, region, key, keyid, profile)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -209,28 +208,15 @@ def _rds_present(name, allocated_storage, db_instance_class, engine,
                  preferred_backup_window=None, port=None, multi_az=None,
                  engine_version=None, auto_minor_version_upgrade=None,
                  license_model=None, iops=None, option_group_name=None,
-                 character_set_name=None, publicly_accessible=None, tags=None,
-                 region=None, key=None, keyid=None, profile=None):
+                 character_set_name=None, publicly_accessible=None,
+                 wait_status=None, tags=None, region=None, key=None,
+                 keyid=None, profile=None):
     ret = {'result': True,
            'comment': '',
            'changes': {}
            }
-    if not allocated_storage:
-        raise SaltInvocationError('allocated_storage is required')
-    if not db_instance_class:
-        raise SaltInvocationError('db_instance_class is required')
-    if not db_instance_class:
-        raise SaltInvocationError('db_instance_class is required')
-    if not engine:
-        raise SaltInvocationError('engine is required')
-    if not master_username:
-        raise SaltInvocationError('master_username is required')
-    if not master_user_password:
-        raise SaltInvocationError('master_user_password is required')
-    if availability_zone and multi_az:
-        raise SaltInvocationError('availability_zone and multi_az are mutually'
-                                  ' exclusive arguments.')
-    exists = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
+    exists = __salt__['boto_rds.exists'](name, tags, region, key, keyid,
+                                         profile)
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'RDS {0} is set to be created.'.format(name)
@@ -254,15 +240,17 @@ def _rds_present(name, allocated_storage, db_instance_class, engine,
                                               option_group_name,
                                               character_set_name,
                                               publicly_accessible,
-                                              tags, region, key, keyid,
-                                              profile)
-        if created:
-            ret['changes']['old'] = {'rds': None}
-            ret['changes']['new'] = {'rds': name}
-            ret['comment'] = 'RDS {0} created.'.format(name)
-        else:
+                                              wait_status, tags, region, key,
+                                              keyid, profile)
+        if not created:
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} RDS.'.format(name)
+            return ret
+        _describe = __salt__['boto_rds.describe'](name, tags, region, key,
+                                                  keyid, profile)
+        ret['changes']['old'] = {'rds': None}
+        ret['changes']['new'] = {'rds': _describe}
+        ret['comment'] = 'RDS {0} created.'.format(name)
     return ret
 
 
@@ -274,22 +262,25 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
            'changes': {}
            }
 
-    exists = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
-    if exists:
-        if __opts__['test']:
-            ret['comment'] = 'RDS {0} is set to be removed.'.format(name)
-            ret['result'] = None
-            return ret
-        deleted = __salt__['boto_rds.delete'](name, skip_final_snapshot,
-                                              final_db_snapshot_identifier,
-                                              region, key, keyid, profile)
-        if deleted:
-            ret['changes']['old'] = {'rds': name}
-            ret['changes']['new'] = {'rds': None}
-            ret['comment'] = 'RDS {0} deleted.'.format(name)
-        else:
-            ret['result'] = False
-            ret['comment'] = 'Failed to delete {0} RDS.'.format(name)
-    else:
+    exists = __salt__['boto_rds.exists'](name, tags, region, key, keyid,
+                                         profile)
+    if not exists:
+        ret['result'] = True
         ret['comment'] = '{0} RDS does not exist.'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'RDS {0} is set to be removed.'.format(name)
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_rds.delete'](name, skip_final_snapshot,
+                                          final_db_snapshot_identifier,
+                                          region, key, keyid, profile)
+    if not deleted:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete {0} RDS.'.format(name)
+        return ret
+    ret['changes']['old'] = {'rds': name}
+    ret['changes']['new'] = {'rds': None}
+    ret['comment'] = 'RDS {0} deleted.'.format(name)
     return ret
