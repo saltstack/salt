@@ -125,8 +125,8 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
                 )
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
+            cmd.append('--requirement="{0}"'.format(treq or requirement))
 
-            cmd.append('--requirement={0}'.format(treq or requirement))
     return cleanup_requirements, None
 
 
@@ -567,7 +567,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-        return __salt__['cmd.run_all'](' '.join(cmd), python_shell=False, **cmd_kwargs)
+        return __salt__['cmd.run_all'](' '.join(cmd), python_shell=True, **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
             try:
@@ -689,7 +689,7 @@ def uninstall(pkgs=None,
                             pass
         cmd.extend(pkgs)
 
-    cmd_kwargs = dict(python_shell=False, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+    cmd_kwargs = dict(python_shell=True, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -729,7 +729,7 @@ def freeze(bin_env=None,
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
     cmd = [_get_pip_bin(bin_env), 'freeze']
-    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
+    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=True)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -760,7 +760,7 @@ def list_(prefix=None,
     pip_version_cmd = [pip_bin, '--version']
     cmd = [pip_bin, 'freeze']
 
-    cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
+    cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=True)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
