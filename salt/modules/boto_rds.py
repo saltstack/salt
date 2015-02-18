@@ -347,7 +347,8 @@ def create_subnet_group(name, db_subnet_group_description, subnet_ids,
 
 
 def update_parameter_group(name, parameters, apply_method="pending-reboot",
-                           region=None, key=None, keyid=None, profile=None):
+                           tags=None, region=None, key=None, keyid=None,
+                           profile=None):
     '''
     Update an RDS parameter group.
 
