@@ -1851,7 +1851,7 @@ class Minion(MinionBase):
                         ping_at = time.time() + ping_interval
 
                 self._do_socket_recv(socks)
-                self._do_event_poll()
+                self._do_event_poll(socks)
                 self._process_beacons()
 
             except zmq.ZMQError as exc:
@@ -1917,7 +1917,7 @@ class Minion(MinionBase):
             loop_interval * 1000)
         )
 
-    def _do_event_poll(self):
+    def _do_event_poll(self, socks):
         # Check the event system
         if socks.get(self.epull_sock) == zmq.POLLIN:
             package = self.epull_sock.recv(zmq.NOBLOCK)
