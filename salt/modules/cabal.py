@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Manage and query Cabal packages.
+Manage and query Cabal packages
+===============================
+
+.. versionadded:: Beryllium
+
 '''
 from __future__ import absolute_import
 
