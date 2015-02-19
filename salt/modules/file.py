@@ -473,8 +473,15 @@ def chgrp(path, group):
 
 def get_sum(path, form='sha256'):
     '''
-    Return the sum for the given file, default is md5, sha1, sha224, sha256,
-    sha384, sha512 are supported
+    Return the checksum for the given file. The following checksum algorithms
+    are supported:
+
+    * md5
+    * sha1
+    * sha224
+    * sha256 **(default)**
+    * sha384
+    * sha512
 
     path
         path to the file or directory

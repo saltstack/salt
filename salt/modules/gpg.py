@@ -3,6 +3,8 @@
 Manage a GPG keychains, add keys, create keys, retrieve keys
 from keyservers.  Sign, encrypt and sign & encrypt text and files.
 
+.. versionadded:: Lithium
+
 .. note::
 
     The ``python-gnupg`` library and gpg binary are

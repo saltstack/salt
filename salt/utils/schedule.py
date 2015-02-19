@@ -609,7 +609,7 @@ class Schedule(object):
         if 'enabled' in schedule and not schedule['enabled']:
             return
         for job, data in six.iteritems(schedule):
-            if job == 'enabled':
+            if job == 'enabled' or not data:
                 continue
             # Job is disabled, continue
             if 'enabled' in data and not data['enabled']:

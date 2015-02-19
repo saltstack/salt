@@ -2325,7 +2325,7 @@ def update_bootstrap(config, url=None):
 
 
     '''
-    default_url = config.get('bootstrap_script__url',
+    default_url = config.get('bootstrap_script_url',
                              'https://bootstrap.saltstack.com')
     if not url:
         url = default_url
