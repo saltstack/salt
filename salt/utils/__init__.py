@@ -787,7 +787,9 @@ def format_call(fun,
 
     aspec = salt.utils.args.get_function_argspec(fun)
 
-    args, kwargs = six.itervalues(arg_lookup(fun))
+    arg_data = arg_lookup(fun)
+    args = arg_data['args']
+    kwargs = arg_data['kwargs']
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
