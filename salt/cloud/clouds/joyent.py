@@ -337,7 +337,7 @@ def create_node(**kwargs):
     data = json.dumps({
         'name': name,
         'package': size['name'],
-        'dataset': image['name']
+        'image': image['name']
     })
 
     try:
@@ -801,35 +801,26 @@ def avail_images(call=None):
             '-f or --function, or with the --list-images option'
         )
 
+    user = config.get_cloud_config_value(
+        'user', get_configured_provider(), __opts__, search_global=False
+    )
+
     img_url = config.get_cloud_config_value(
         'image_url',
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default='images.joyent.com/images'
+        default='{0}{1}/{2}/images'.format(DEFAULT_LOCATION, JOYENT_API_HOST_SUFFIX, user)
     )
 
     if not img_url.startswith('http://') and not img_url.startswith('https://'):
         img_url = '{0}://{1}'.format(_get_proto(), img_url)
 
-    verify_ssl = config.get_cloud_config_value(
-        'verify_ssl', get_configured_provider(), __opts__,
-        search_global=False, default=True
-    )
-
-    result = salt.utils.http.query(
-        img_url,
-        decode=False,
-        text=True,
-        status=True,
-        headers=True,
-        verify=verify_ssl,
-        opts=__opts__,
-    )
-    content = result['text']
+    rcode, data = query(command='my/images', method='GET')
+    log.debug(data)
 
     ret = {}
-    for image in yaml.safe_load(content):
+    for image in data:
         ret[image['name']] = image
     return ret
 
