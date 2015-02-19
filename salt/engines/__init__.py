@@ -1,5 +1,5 @@
 '''
-Initialize the master services system. This plugin system allows for
+Initialize the engines system. This plugin system allows for
 complex services to be encapsulated within the salt plugin environment
 '''
 # Import python libs
@@ -9,15 +9,15 @@ import multiprocessing
 import salt
 
 
-class MSrvc(multiprocessing.Process):
+class Engine(multiprocessing.Process):
     '''
-    Execute the given master service in a new process
+    Execute the given engine in a new process
     '''
     def __init__(self, opts, service):
         '''
         Set up the process executor
         '''
-        super(MSrvc, self).__init__()
+        super(Engine, self).__init__()
         self.opts = opts
         self.service = service
 

@@ -146,13 +146,13 @@ def raw_mod(opts, _, functions, mod='modules'):
                       pack={'__salt__': functions})
 
 
-def msrvc(opts):
+def engines(opts):
     '''
     Return the master services plugins
     '''
-    return LazyLoader(_module_dirs(opts, 'msrvc', 'msrvc'),
+    return LazyLoader(_module_dirs(opts, 'engines', 'engines'),
                       opts,
-                      tag='msrvc')
+                      tag='engines')
 
 
 def proxy(opts, functions, whitelist=None):
