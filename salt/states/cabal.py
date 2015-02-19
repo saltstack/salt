@@ -3,6 +3,8 @@
 Installation of Cabal Packages
 ==============================
 
+.. versionadded:: Beryllium
+
 These states manage the installed packages for Haskell using
 cabal. Note that cabal-install must be installed for these states to
 be available, so cabal states should include a requisite to a
