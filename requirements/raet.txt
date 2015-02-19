@@ -1,0 +1,5 @@
+-r base.txt
+
+libnacl >= 1.0.0
+ioflo >= 1.1.7
+raet >= 0.6.0
