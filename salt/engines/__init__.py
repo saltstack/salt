@@ -26,4 +26,5 @@ class Engine(multiprocessing.Process):
         Run the master service!
         '''
         self.msrvc = salt.loader.msrvc(self.opts)
-        self.msrvc[self.service]()
+        fun = '{0}.start'.format(self.service)
+        self.msrvc[fun]()
