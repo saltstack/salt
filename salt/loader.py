@@ -146,6 +146,15 @@ def raw_mod(opts, _, functions, mod='modules'):
                       pack={'__salt__': functions})
 
 
+def msrvc(opts):
+    '''
+    Return the master services plugins
+    '''
+    return LazyLoader(_module_dirs(opts, 'msrvc', 'msrvc'),
+                      opts,
+                      tag='msrvc')
+
+
 def proxy(opts, functions, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
