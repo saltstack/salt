@@ -5,7 +5,6 @@ Define the behaviors used in the maintenance process
 from __future__ import absolute_import
 # Import python libs
 import os
-import time
 import logging
 import multiprocessing
 
@@ -153,46 +152,3 @@ class SaltRaetMaintBackendsUpdate(ioflo.base.deeding.Deed):
         for pillargit in self.pillargitfs.value:
             pillargit.update()
         salt.daemons.masterapi.fileserver_update(self.fileserver.value)
-
-
-class SaltZmqMaintRotate(ioflo.base.deeding.Deed):
-    '''
-    Update the zmq publish session key
-    '''
-    Ioinits = {'opts': '.salt.opts',
-               'aes': '.salt.var.zmq.aes',
-               'rotate': '.salt.var.zmq.rotate'}
-
-    def action(self):
-        '''
-        Rotate the AES key rotation
-        '''
-        now = time.time()
-        if not self.rotate.value:
-            self.rotate.value = now
-        to_rotate = False
-        dfn = os.path.join(self.opts.value['cachedir'], '.dfn')
-        try:
-            stats = os.stat(dfn)
-            if stats.st_mode == 0o100400:
-                to_rotate = True
-            os.remove(dfn)
-        except os.error:
-            pass
-
-        if self.opts.value.get('publish_session'):
-            if now - self.rotate.value >= self.opts.value['publish_session']:
-                to_rotate = True
-
-        if to_rotate:
-            log.info('Rotating master AES key')
-            # should be unecessary-- since no one else should be modifying
-            with self.aes.value.get_lock():
-                self.aes.value.value = salt.crypt.Crypticle.generate_key_string()
-            #self.event.fire_event({'rotate_aes_key': True}, tag='key')
-            self.rotate.value = now
-            if self.opts.value.get('ping_on_rotate'):
-                # Ping all minions to get them to pick up the new key
-                log.debug('Pinging all connected minions '
-                          'due to AES key rotation')
-                salt.utils.master.ping_all_connected_minions(self.opts.value)
