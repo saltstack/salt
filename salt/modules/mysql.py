@@ -1853,7 +1853,8 @@ def get_master_status(**connection_args):
     '''
     Retrieves the master status from the minion.
 
-    Returns:
+    Returns::
+
         {'host.domain.com': {'Binlog_Do_DB': '',
                          'Binlog_Ignore_DB': '',
                          'File': 'mysql-bin.000021',
