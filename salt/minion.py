@@ -1650,6 +1650,7 @@ class Minion(MinionBase):
         '''
         channel = salt.transport.Channel.factory(self.opts)
         load = salt.utils.event.SaltEvent.unpack(package)[1]
+        load['tok'] = self.tok
         ret = channel.send(load)
         return ret
 

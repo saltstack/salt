@@ -56,18 +56,11 @@ def _mine_function_available(func):
 
 
 def _mine_send(load, opts):
-    if opts.get('transport', '') == 'zeromq':
-        try:
-            load['tok'] = _auth().gen_token('salt')
-        except AttributeError:
-            log.error('Mine could not authenticate with master. '
-                      'Mine data not sent.')
-            return False
     eventer = salt.utils.event.MinionEvent(opts)
     event_ret = eventer.fire_event(load, '_minion_mine')
     # We need to pause here to allow for the decoupled nature of
     # events time to allow the mine to propagate
-    time.sleep(2.0)
+    time.sleep(0.5)
     return event_ret
 
 
