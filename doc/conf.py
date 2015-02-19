@@ -151,7 +151,7 @@ copyright = '2014 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.7.1'
+release = '2014.7.2'
 
 needs_sphinx = '1.3'
 
