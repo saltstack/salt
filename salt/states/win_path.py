@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import re
 import os
 
+
 def __virtual__():
     '''
     Load this state if the win_path module exists
