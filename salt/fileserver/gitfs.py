@@ -494,24 +494,29 @@ def _get_tree_dulwich(repo, tgt_env):
     return None
 
 
-def _stale_refs_pygit2(repo):
+def _stale_refs(repo):
     '''
     Return a list of stale refs by running git remote prune --dry-run <remote>,
     since pygit2 can't do this.
     '''
-    key = ' * [would prune] '
-    ret = []
-    for line in subprocess.Popen(
-            'git remote prune --dry-run origin',
-            shell=True,
-            close_fds=True,
-            cwd=repo.workdir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT).communicate()[0].splitlines():
-        if line.startswith(key):
-            line = line.replace(key, '')
-            ret.append(line)
-    return ret
+    provider = _get_provider()
+    if provider == 'gitpython':
+        return repo['repo'].remotes[0].stale_refs
+    elif provider == 'pygit2':
+        ret = []
+        key = ' * [would prune] '
+        for line in subprocess.Popen(
+                'git remote prune --dry-run origin',
+                shell=True,
+                close_fds=True,
+                cwd=repo.workdir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT).communicate()[0].splitlines():
+            if line.startswith(key):
+                line = line.replace(key, '')
+                ret.append(line)
+        return ret
+    raise SaltException('_stale_refs() not supported, this is likely a bug')
 
 
 def _verify_auth(repo):
@@ -966,8 +971,12 @@ def update():
                         fetch_results = origin.fetch()
                     except AssertionError:
                         fetch_results = origin.fetch()
-                    for fetch in fetch_results:
-                        if fetch.old_commit is not None:
+                    if fetch_results:
+                        data['changed'] = True
+                    else:
+                        for ref in _stale_refs(repo):
+                            # Delete the local copy of the stale ref
+                            ref.delete(repo['repo'], ref)
                             data['changed'] = True
                 elif provider == 'pygit2':
                     try:
@@ -1142,7 +1151,7 @@ def _envs_pygit2(repo):
     environments.
     '''
     ret = set()
-    stale_refs = _stale_refs_pygit2(repo['repo'])
+    stale_refs = _stale_refs(repo['repo'])
     for ref in repo['repo'].listall_references():
         ref = re.sub('^refs/', '', ref)
         rtype, rspec = ref.split('/', 1)
