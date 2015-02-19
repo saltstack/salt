@@ -215,23 +215,23 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         Test to see if we're supporting --doc
         '''
-        data = self.run_salt(r'-d \* user')
-        self.assertIn('user.add:', data)
+        data = self.run_salt('-d "*" user')
+        self.assertIn("'user.add:'", data)
 
     def test_salt_documentation_arguments_not_assumed(self):
         '''
         Test to see if we're not auto-adding '*' and 'sys.doc' to the call
         '''
         data = self.run_salt('-d -t 20')
-        self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' -d -t 20')
-        self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' -d user -t 20')
-        self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' sys.doc -d user -t 20')
-        self.assertIn('user.add:', data)
-        data = self.run_salt('\'*\' sys.doc user -t 20')
-        self.assertIn('user.add:', data)
+        self.assertIn("'user.add:'", data)
+        data = self.run_salt('"*" -d -t 20')
+        self.assertIn("'user.add:'", data)
+        data = self.run_salt('"*" -d user -t 20')
+        self.assertIn("'user.add:'", data)
+        data = self.run_salt('"*" sys.doc -d user -t 20')
+        self.assertIn("'user.add:'", data)
+        data = self.run_salt('"*" sys.doc user -t 20')
+        self.assertIn("'user.add:'", data)
 
     def test_salt_documentation_too_many_arguments(self):
         '''
