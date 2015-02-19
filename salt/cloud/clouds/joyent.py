@@ -53,7 +53,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import copy
 import salt.ext.six.moves.http_client  # pylint: disable=E0611
 import json
 import logging
@@ -62,7 +61,6 @@ import pprint
 import inspect
 import yaml
 import datetime
-import binascii
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
@@ -175,7 +173,7 @@ def query_instance(vm_=None, call=None):
     '''
     Query an instance upon creation from the Joyent API
     '''
-    if isinstance(vm_, six.string_types) and call=='action':
+    if isinstance(vm_, six.string_types) and call == 'action':
         vm_ = {'name': vm_, 'provider': 'joyent'}
 
     if call == 'function':
