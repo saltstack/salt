@@ -876,9 +876,47 @@ fi
         expected_result = 'Command "echo "Success!"" run'
         self.assertIn(expected_result, test_data)
 
-        # Then, test the restul of the state run when changes are not expected to happen
+        # Then, test the result of the state run when changes are not expected to happen
         test_data = state_run['cmd_|-test_changes_not_expected_|-echo "Should not run"_|-run']['comment']
         expected_result = 'State was not run because onchanges req did not change'
+        self.assertIn(expected_result, test_data)
+
+    # onfail tests
+
+    def test_onfail_requisite(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple')
+
+        # First, test the restul of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onfail_in_requisite(self):
+        '''
+        Tests a simple state using the onfail_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_in_simple')
+
+        # First, test the restul of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
         self.assertIn(expected_result, test_data)
 
 
