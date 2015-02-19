@@ -11,13 +11,15 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-joyent-config:
+      provider: joyent
       # The Joyent login user
       user: fred
       # The Joyent user's password
       password: saltybacon
       # The location of the ssh private key that can log into the new VM
-      private_key: /root/joyent.pem
-      provider: joyent
+      private_key: /root/mykey.pem
+      # The name of the private key
+      private_key: mykey
 
 When creating your profiles for the joyent cloud, add the location attribute to
 the profile, this will automatically get picked up when performing tasks
