@@ -147,6 +147,7 @@ def get_image(vm_):
     vm_image = config.get_cloud_config_value('image', vm_, __opts__)
 
     if vm_image and str(vm_image) in images:
+        images[vm_image]['name'] = images[vm_image]['id']
         return images[vm_image]
 
     raise SaltCloudNotFound(
