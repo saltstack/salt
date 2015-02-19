@@ -718,9 +718,10 @@ class SAuth(object):
                     log.error(
                         'The Salt Master has cached the public key for this '
                         'node. If this is the first time connecting to this master '
-                        'then this key may need to be accepted using \'salt-key\'. '
-                        'This salt minion will wait for {0} seconds '
-                        'before attempting to re-authenticate'.format(
+                        'then this key may need to be accepted using \'salt-key -a {0}\' on '
+                        'the salt master. This salt minion will wait for {1} seconds '
+                        'before attempting to re-authenticate.'.format(
+                            self.opts['id'],
                             self.opts['acceptance_wait_time']
                         )
                     )
