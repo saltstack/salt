@@ -849,10 +849,37 @@ fi
         '''
         Tests a simple state using the onchanges requisite
         '''
-        ret = self.run_function('state.sls', mods='requisites.onchanges_simple')
-        expected_result = 'Command "echo "Success!"" run'
 
-        self.assertIn(expected_result, ret['cmd_|-state_to_run_|-echo "Success!"_|-run']['comment'])
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple')
+
+        # First, test the result of the state run when changes are expected to happen
+        test_data = state_run['cmd_|-test_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when changes are not expected to happen
+        test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onchanges req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onchanges_in_requisite(self):
+        '''
+        Tests a simple state using the onchanges_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_in_simple')
+
+        # First, test the result of the state run of when changes are expected to happen
+        test_data = state_run['cmd_|-test_changes_expected_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the restul of the state run when changes are not expected to happen
+        test_data = state_run['cmd_|-test_changes_not_expected_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onchanges req did not change'
+        self.assertIn(expected_result, test_data)
 
 
 if __name__ == '__main__':
