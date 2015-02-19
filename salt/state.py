@@ -45,6 +45,8 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'check_cmd',
     'fail_hard',
     'fun',
+    'listen',
+    'listen_in',
     'onchanges',
     'onchanges_in',
     'onfail',
