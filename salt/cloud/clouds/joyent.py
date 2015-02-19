@@ -309,7 +309,7 @@ def create(vm_):
     vm_['key_filename'] = key_filename
     vm_['ssh_host'] = data[1]['primaryIp']
 
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    salt.utils.cloud.bootstrap(vm_, __opts__)
 
     salt.utils.cloud.fire_event(
         'event',
@@ -323,7 +323,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    return ret
+    return data[1]
 
 
 def create_node(**kwargs):
