@@ -168,7 +168,7 @@ class SaltZmqMaintRotate(ioflo.base.deeding.Deed):
         Rotate the AES key rotation
         '''
         now = time.time()
-        if not self.last_rotate.value:
+        if not self.rotate.value:
             self.rotate.value = now
         to_rotate = False
         dfn = os.path.join(self.opts.value['cachedir'], '.dfn')
@@ -181,7 +181,7 @@ class SaltZmqMaintRotate(ioflo.base.deeding.Deed):
             pass
 
         if self.opts.value.get('publish_session'):
-            if now - self.rotate.value >= self.opts['publish_session']:
+            if now - self.rotate.value >= self.opts.value['publish_session']:
                 to_rotate = True
 
         if to_rotate:
