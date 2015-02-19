@@ -63,7 +63,8 @@ import yaml
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 
-# Import salt.cloud libs
+# Import salt libs
+import salt.ext.six as six
 import salt.utils.http
 import salt.utils.cloud
 import salt.config as config
@@ -163,6 +164,72 @@ def get_size(vm_):
     )
 
 
+def query_instance(vm_=None, call=None):
+    '''
+    Query an instance upon creation from the Joyent API
+    '''
+    if isinstance(vm_, six.string_types) and call=='action':
+        vm_ = {'name': vm_, 'provider': 'joyent'}
+
+    if call == 'function':
+        # Technically this function may be called other ways too, but it
+        # definitely cannot be called with --function.
+        raise SaltCloudSystemExit(
+            'The query_instance action must be called with -a or --action.'
+        )
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'querying instance',
+        'salt/cloud/{0}/querying'.format(vm_['name']),
+        transport=__opts__['transport']
+    )
+
+    def _query_ip_address():
+        data = show_instance(vm_['name'], call='action')
+        if not data:
+            log.error(
+                'There was an error while querying Joyent. Empty response'
+            )
+            # Trigger a failure in the wait for IP function
+            return False
+
+        if isinstance(data, dict) and 'error' in data:
+            log.warn(
+                'There was an error in the query. {0}'.format(data['error'])
+            )
+            # Trigger a failure in the wait for IP function
+            return False
+
+        log.debug('Returned query data: {0}'.format(data))
+
+        if 'primaryIp' in data[1]:
+            return data[1]['primaryIp']
+        return None
+
+    try:
+        data = salt.utils.cloud.wait_for_ip(
+            _query_ip_address,
+            timeout=config.get_cloud_config_value(
+                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
+            interval=config.get_cloud_config_value(
+                'wait_for_ip_interval', vm_, __opts__, default=10),
+            interval_multiplier=config.get_cloud_config_value(
+                'wait_for_ip_interval_multiplier', vm_, __opts__, default=1),
+        )
+    except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
+        try:
+            # It might be already up, let's destroy it!
+            pass
+            #destroy(vm_['name'])
+        except SaltCloudSystemExit:
+            pass
+        finally:
+            raise SaltCloudSystemExit(str(exc))
+
+    return data
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -228,177 +295,13 @@ def create(vm_):
         )
         return False
 
-    ret = {}
+    query_instance(vm_)
+    data = show_instance(vm_['name'], call='action')
 
-    def __query_node_data(vm_id, vm_location):
-        rcode, data = query(
-            command='my/machines/{0}'.format(vm_id),
-            method='GET',
-            location=vm_location
-        )
-        if rcode not in VALID_RESPONSE_CODES:
-            # Trigger a wait for IP error
-            return False
+    vm_['key_filename'] = key_filename
+    vm_['ssh_host'] = data[1]['primaryIp']
 
-        if data['state'] != 'running':
-            # Still not running, trigger another iteration
-            return
-
-        if isinstance(data['ips'], list) and len(data['ips']) > 0:
-            return data
-
-    if 'ips' in data:
-        if isinstance(data['ips'], list) and len(data['ips']) <= 0:
-            log.info(
-                'New joyent asynchronous machine creation api detected...'
-                '\n\t\t-- please wait for IP addresses to be assigned...'
-            )
-        try:
-            data = salt.utils.cloud.wait_for_ip(
-                __query_node_data,
-                update_args=(
-                    data['id'],
-                    vm_.get('location', DEFAULT_LOCATION)
-                ),
-                timeout=config.get_cloud_config_value(
-                    'wait_for_ip_timeout', vm_, __opts__, default=5 * 60),
-                interval=config.get_cloud_config_value(
-                    'wait_for_ip_interval', vm_, __opts__, default=1),
-            )
-        except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
-            try:
-                # It might be already up, let's destroy it!
-                destroy(vm_['name'])
-            except SaltCloudSystemExit:
-                pass
-            finally:
-                raise SaltCloudSystemExit(str(exc))
-
-    data = reformat_node(data)
-
-    ssh_username = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__, default='root'
-    )
-
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        host = data['public_ips'][0]
-        salt_host = data['public_ips'][0]
-        if ssh_interface(vm_) == 'private_ips':
-            host = data['private_ips'][0]
-        if get_salt_interface(vm_) == 'private_ips':
-            salt_host = data['private_ips'][0]
-
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': host,
-            'salt_host': salt_host,
-            'username': ssh_username,
-            'key_filename': key_filename,
-            'script': deploy_script.script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=True
-            ),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
-
-    ret.update(data)
-
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
-    log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
-        )
-    )
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     salt.utils.cloud.fire_event(
         'event',
@@ -703,6 +606,26 @@ def get_node(name):
     if name in nodes:
         return nodes[name]
     return None
+
+
+def show_instance(name, call=None):
+    '''
+    get details about a machine
+    :param name: name given to the machine
+    :param call: call value in this case is 'action'
+    :return: machine information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a show_instance vm_name
+    '''
+    node = get_node(name)
+    ret = query(command='my/machines/{0}'.format(node['id']),
+                location=node['location'], method='GET')
+
+    return ret
 
 
 def joyent_node_state(id_):
