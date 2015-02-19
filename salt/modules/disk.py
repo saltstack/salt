@@ -74,12 +74,20 @@ def usage(args=None):
         cmd += ' -{0}'.format(flags)
     ret = {}
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    oldline=None
     for line in out:
         if not line:
             continue
         if line.startswith('Filesystem'):
             continue
+        if oldline:
+        	line = oldline + " " + line
         comps = line.split()
+        if len(comps) == 1:
+        	oldline=line
+        	continue
+        else:
+        	oldline=None
         while not comps[1].isdigit():
             comps[0] = '{0} {1}'.format(comps[0], comps[1])
             comps.pop(1)
