@@ -843,6 +843,17 @@ fi
         finally:
             os.unlink(tgt)
 
+    # onchanges tests
+
+    def test_onchanges_requisite(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        '''
+        ret = self.run_function('state.sls', mods='requisites.onchanges_simple')
+        expected_result = 'Command "echo "Success!"" run'
+
+        self.assertIn(expected_result, ret['cmd_|-state_to_run_|-echo "Success!"_|-run']['comment'])
+
 
 if __name__ == '__main__':
     from integration import run_tests
