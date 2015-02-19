@@ -43,6 +43,8 @@ included:
 .. code-block:: yaml
 
       api_host_suffix: .api.myhostname.com
+
+:depends: PyCrypto
 '''
 from __future__ import absolute_import
 # pylint: disable=E0102
@@ -59,6 +61,11 @@ import base64
 import pprint
 import inspect
 import yaml
+import datetime
+import binascii
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
@@ -83,7 +90,7 @@ log = logging.getLogger(__name__)
 get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 JOYENT_API_HOST_SUFFIX = '.api.joyentcloud.com'
-JOYENT_API_VERSION = '~6.5'
+JOYENT_API_VERSION = '~7.2'
 
 JOYENT_LOCATIONS = {
     'us-east-1': 'North Virginia, USA',
@@ -1003,6 +1010,16 @@ def query(action=None,
         search_global=False, default=True
     )
 
+    ssh_keyfile = config.get_cloud_config_value(
+        'private_key', get_configured_provider(), __opts__,
+        search_global=False, default=True
+    )
+
+    ssh_keyname = config.get_cloud_config_value(
+        'keyname', get_configured_provider(), __opts__,
+        search_global=False, default=True
+    )
+
     if not location:
         location = get_location()
 
@@ -1020,13 +1037,26 @@ def query(action=None,
         path += '/{0}'.format(command)
 
     log.debug('User: {0!r} on PATH: {1}'.format(user, path))
-    auth_key = base64.b64encode('{0}:{1}'.format(user, password))
+
+    timenow = datetime.datetime.utcnow()
+    timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()
+    with salt.utils.fopen(ssh_keyfile, 'r') as kh_:
+        rsa_key = RSA.importKey(kh_)
+    rsa_ = PKCS1_v1_5.new(rsa_key)
+    hash_ = SHA256.new()
+    hash_.update(timestamp)
+    signed = base64.b64encode(rsa_.sign(hash_))
+    keyid = '/{0}/keys/{1}'.format(user, ssh_keyname)
 
     headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Api-Version': JOYENT_API_VERSION,
-        'Authorization': 'Basic {0}'.format(auth_key)
+        'Date': timestamp,
+        'Authorization': 'Signature keyId="{0}",algorithm="rsa-sha256" {1}'.format(
+            keyid,
+            signed
+        ),
     }
 
     if not isinstance(args, dict):
