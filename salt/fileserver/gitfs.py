@@ -490,29 +490,48 @@ def _get_tree_dulwich(repo, tgt_env):
     return None
 
 
-def _stale_refs(repo):
+def _clean_stale(repo_obj, local_refs=None):
     '''
-    Return a list of stale refs by running git remote prune --dry-run <remote>,
-    since pygit2 can't do this.
+    Clean stale local refs so they don't appear as fileserver environments
     '''
     provider = _get_provider()
+    cleaned = []
     if provider == 'gitpython':
-        return repo['repo'].remotes[0].stale_refs
+        for ref in repo_obj.remotes[0].stale_refs:
+            if ref.name.startswith('refs/tags/'):
+                # Work around GitPython bug affecting removal of tags
+                # https://github.com/gitpython-developers/GitPython/issues/260
+                repo_obj.git.tag('-d', ref.name[10:])
+            else:
+                ref.delete(repo_obj, ref)
+            cleaned.append(ref)
     elif provider == 'pygit2':
-        ret = []
-        key = ' * [would prune] '
+        if local_refs is None:
+            local_refs = repo_obj.listall_references()
+        remote_refs = []
         for line in subprocess.Popen(
-                'git remote prune --dry-run origin',
+                'git ls-remote origin',
                 shell=True,
                 close_fds=True,
-                cwd=repo.workdir,
+                cwd=repo_obj.workdir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT).communicate()[0].splitlines():
-            if line.startswith(key):
-                line = line.replace(key, '')
-                ret.append(line)
-        return ret
-    raise SaltException('_stale_refs() not supported, this is likely a bug')
+            try:
+                # Rename heads to match the ref names from
+                # pygit2.Repository.listall_references()
+                remote_refs.append(
+                    line.split()[-1].replace('refs/heads/',
+                                             'refs/remotes/origin/')
+                )
+            except IndexError:
+                continue
+        for ref in [x for x in local_refs if x not in remote_refs]:
+            repo_obj.lookup_reference(ref).delete()
+            cleaned.append(ref)
+    if cleaned:
+        log.debug('GitFS cleaned the following stale refs: {0}'
+                  .format(cleaned))
+    return cleaned
 
 
 def _verify_auth(repo):
@@ -803,6 +822,10 @@ def _init_gitpython(rp_, repo_url, ssl_verify):
     if not repo.remotes:
         try:
             repo.create_remote('origin', repo_url)
+            # Ensure tags are also fetched
+            repo.git.config('--add',
+                            'remote.origin.fetch',
+                            '+refs/tags/*:refs/tags/*')
             repo.git.config('http.sslVerify', ssl_verify)
         except os.error:
             # This exception occurs when two processes are trying to write to
@@ -835,6 +858,10 @@ def _init_pygit2(rp_, repo_url, ssl_verify):
     if not repo.remotes:
         try:
             repo.create_remote('origin', repo_url)
+            # Ensure tags are also fetched
+            repo.config.set_multivar('remote.origin.fetch', 'FOO',
+                                     '+refs/tags/*:refs/tags/*')
+
             repo.config.set_multivar('http.sslVerify', '', ssl_verify)
         except os.error:
             # This exception occurs when two processes are trying to write to
@@ -893,7 +920,7 @@ def purge_cache():
         remove_dirs = []
     for repo in init():
         try:
-            with _aquire_update_lock_for_repo(repo):
+            with _acquire_update_lock_for_repo(repo):
                 remove_dirs.remove(repo['hash'])
         except ValueError:
             pass
@@ -907,7 +934,7 @@ def purge_cache():
 
 
 @contextlib.contextmanager
-def _aquire_update_lock_for_repo(repo):
+def _acquire_update_lock_for_repo(repo):
     provider = _get_provider()
 
     if provider == 'gitpython':
@@ -959,22 +986,19 @@ def update():
             origin = repo['url']
             working_dir = repo['repo'].path
 
-        with _aquire_update_lock_for_repo(repo):
+        with _acquire_update_lock_for_repo(repo):
             try:
-                log.debug('Fetching from {0}'.format(repo['url']))
+                log.debug('GitFS is fetching from {0}'.format(repo['url']))
                 if provider == 'gitpython':
                     try:
                         fetch_results = origin.fetch()
                     except AssertionError:
                         fetch_results = origin.fetch()
-                    if fetch_results:
+                    cleaned = _clean_stale(repo['repo'])
+                    if fetch_results or cleaned:
                         data['changed'] = True
-                    else:
-                        for ref in _stale_refs(repo):
-                            # Delete the local copy of the stale ref
-                            ref.delete(repo['repo'], ref)
-                            data['changed'] = True
                 elif provider == 'pygit2':
+                    refs_pre = repo['repo'].listall_references()
                     try:
                         origin.credentials = repo['credentials']
                     except KeyError:
@@ -992,7 +1016,10 @@ def update():
                         'Gitfs received {0} objects for remote {1}'
                         .format(received_objects, repo['url'])
                     )
-                    if received_objects:
+                    # Clean up any stale refs
+                    refs_post = repo['repo'].listall_references()
+                    cleaned = _clean_stale(repo['repo'], refs_post)
+                    if received_objects or refs_pre != refs_post or cleaned:
                         data['changed'] = True
                 elif provider == 'dulwich':
                     client, path = \
@@ -1092,7 +1119,7 @@ def _env_is_exposed(env):
     )
 
 
-def envs(ignore_cache=False):
+def envs(ignore_cache=False, skip_clean=False):
     '''
     Return a list of refs that can be used as environments
     '''
@@ -1127,14 +1154,13 @@ def _envs_gitpython(repo):
     environments.
     '''
     ret = set()
-    remote = repo['repo'].remotes[0]
     for ref in repo['repo'].refs:
         parted = ref.name.partition('/')
         rspec = parted[2] if parted[2] else parted[0]
         if isinstance(ref, git.Head):
             if rspec == repo['base']:
                 rspec = 'base'
-            if ref not in remote.stale_refs and _env_is_exposed(rspec):
+            if _env_is_exposed(rspec):
                 ret.add(rspec)
         elif isinstance(ref, git.Tag) and _env_is_exposed(rspec):
             ret.add(rspec)
@@ -1147,18 +1173,16 @@ def _envs_pygit2(repo):
     environments.
     '''
     ret = set()
-    stale_refs = _stale_refs(repo['repo'])
     for ref in repo['repo'].listall_references():
         ref = re.sub('^refs/', '', ref)
         rtype, rspec = ref.split('/', 1)
         if rtype == 'remotes':
-            if rspec not in stale_refs:
-                parted = rspec.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if rspec == repo['base']:
-                    rspec = 'base'
-                if _env_is_exposed(rspec):
-                    ret.add(rspec)
+            parted = rspec.partition('/')
+            rspec = parted[2] if parted[2] else parted[0]
+            if rspec == repo['base']:
+                rspec = 'base'
+            if _env_is_exposed(rspec):
+                ret.add(rspec)
         elif rtype == 'tags' and _env_is_exposed(rspec):
             ret.add(rspec)
     return ret
@@ -1211,7 +1235,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     hashdir = os.path.dirname(blobshadest)
 
     for repo in init():
-        with _aquire_update_lock_for_repo(repo):
+        with _acquire_update_lock_for_repo(repo):
             if not os.path.isdir(destdir):
                 try:
                     os.makedirs(destdir)
