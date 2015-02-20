@@ -903,6 +903,116 @@ fi
         finally:
             os.unlink(tgt)
 
+    # onchanges tests
+
+    def test_onchanges_requisite(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple')
+
+        # First, test the result of the state run when changes are expected to happen
+        test_data = state_run['cmd_|-test_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when changes are not expected to happen
+        test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onchanges req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onchanges_in_requisite(self):
+        '''
+        Tests a simple state using the onchanges_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_in_simple')
+
+        # First, test the result of the state run of when changes are expected to happen
+        test_data = state_run['cmd_|-test_changes_expected_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when changes are not expected to happen
+        test_data = state_run['cmd_|-test_changes_not_expected_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onchanges req did not change'
+        self.assertIn(expected_result, test_data)
+
+    # onfail tests
+
+    def test_onfail_requisite(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple')
+
+        # First, test the result of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onfail_in_requisite(self):
+        '''
+        Tests a simple state using the onfail_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_in_simple')
+
+        # First, test the result of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    # listen tests
+
+    def test_listen_requisite(self):
+        '''
+        Tests a simple state using the listen requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_simple')
+
+        # First, test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        # Then, test the result of the state run when a listener should not trigger
+        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        self.assertNotIn(absent_state, state_run)
+
+    def test_listen_in_requisite(self):
+        '''
+        Tests a simple state using the listen_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_in_simple')
+
+        # First, test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        # Then, test the result of the state run when a listener should not trigger
+        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        self.assertNotIn(absent_state, state_run)
+
 
 if __name__ == '__main__':
     from integration import run_tests
