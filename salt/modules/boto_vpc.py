@@ -1310,6 +1310,64 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
+                     profile=None):
+    '''
+    Given a VPC ID or subnet CIDR, returns a list of associated subnets and
+    their details.
+    If a subnet CIDR is provided, only it's associated subnet details will be
+    returned.
+
+    CLI Examples::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets vpc_id=vpc-123456
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets cidr=10.0.0.0/21
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    if not vpc_id and not cidr:
+        raise SaltInvocationError('At least on of the following must be '
+                                  'specified: vpc_id or cidr.')
+
+    try:
+        filter_parameters = {'filters': {}}
+
+        if vpc_id:
+            filter_parameters['filters']['vpcId'] = [vpc_id]
+
+        if cidr:
+            filter_parameters['filters']['cidrBlock'] = [cidr]
+
+        subnets = conn.get_all_subnets(**filter_parameters)
+        log.debug('The filters criteria {0} matched the following subnets: '
+                  '{1}'.format(filter_parameters, subnets))
+
+        if not subnets:
+            return False
+
+        subnets_list = []
+        keys = ['id', 'cidr_block', 'availability_zone', 'tags']
+        for item in subnets:
+            subnet = {}
+            for key in keys:
+                if hasattr(item, key):
+                    subnet[key] = getattr(item, key)
+            subnets_list.append(subnet)
+        return subnets_list
+
+    except boto.exception.BotoServerError as exc:
+        log.debug(exc)
+        return False
+
+
 def _create_dhcp_options(conn, domain_name=None, domain_name_servers=None, ntp_servers=None, netbios_name_servers=None,
                          netbios_node_type=None):
     return conn.create_dhcp_options(domain_name=domain_name, domain_name_servers=domain_name_servers,
