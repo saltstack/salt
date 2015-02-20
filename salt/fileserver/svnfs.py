@@ -144,7 +144,7 @@ def init():
 
         if not isinstance(repo_url, string_types):
             log.error(
-                'Invalid gitfs remote {0}. Remotes must be strings, you may '
+                'Invalid svnfs remote {0}. Remotes must be strings, you may '
                 'need to enclose the URI in quotes'.format(repo_url)
             )
             continue
@@ -217,9 +217,9 @@ def init():
     return repos
 
 
-def purge_cache():
+def _clear_old_remotes():
     '''
-    Purge the fileserver cache
+    Remove cache directories for remotes no longer configured
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'svnfs')
     try:
@@ -236,8 +236,22 @@ def purge_cache():
     if remove_dirs:
         for rdir in remove_dirs:
             shutil.rmtree(rdir)
+            log.debug('svnfs removed old cachedir {0}'.format(rdir))
         return True
     return False
+
+
+def clear_cache():
+    '''
+    Completely clear svnfs cache
+    '''
+    fsb_cachedir = os.path.join(__opts__['cachedir'], 'svnfs')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/svnfs')
+    for rdir in (fsb_cachedir, list_cachedir):
+        try:
+            shutil.rmtree(rdir)
+        except OSError:
+            pass
 
 
 def update():
@@ -248,7 +262,7 @@ def update():
     data = {'changed': False,
             'backend': 'svnfs'}
     pid = os.getpid()
-    data['changed'] = purge_cache()
+    data['changed'] = _clear_old_remotes()
     for repo in init():
         lk_fn = os.path.join(repo['repo'], 'update.lk')
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
