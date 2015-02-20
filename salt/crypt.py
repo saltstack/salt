@@ -498,7 +498,8 @@ class SAuth(object):
                 log.info('Received signed and verified master pubkey '
                          'from master {0}'.format(self.opts['master']))
                 m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-                salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                uid = salt.utils.get_uid(self.opts.get('user', None))
+                salt.utils.fopen(m_pub_fn, 'w+', uid=uid).write(payload['pub_key'])
                 return True
             else:
                 log.error('Received signed public-key from master {0} '
@@ -716,8 +717,11 @@ class SAuth(object):
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
-                        'node, this salt minion will wait for {0} seconds '
-                        'before attempting to re-authenticate'.format(
+                        'node. If this is the first time connecting to this master '
+                        'then this key may need to be accepted using \'salt-key -a {0}\' on '
+                        'the salt master. This salt minion will wait for {1} seconds '
+                        'before attempting to re-authenticate.'.format(
+                            self.opts['id'],
                             self.opts['acceptance_wait_time']
                         )
                     )

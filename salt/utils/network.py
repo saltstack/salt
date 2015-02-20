@@ -2,18 +2,20 @@
 '''
 Define some generic socket functions for network modules
 '''
-from __future__ import absolute_import
 
 # Import python libs
-import socket
-import subprocess
-import re
-import logging
+from __future__ import absolute_import
 import os
+import re
+import shlex
+import socket
+import logging
+import subprocess
 from string import ascii_letters, digits
-from salt.ext.six.moves import range
-import salt.ext.six as six
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
     import wmi
@@ -24,9 +26,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
-
 log = logging.getLogger(__name__)
-
 
 # pylint: disable=C0103
 
@@ -126,6 +126,8 @@ def _sort_hostnames(hostname_list):
         'localhost',
         'ip6-localhost',
         'ip6-loopback',
+        'ipv6-localhost',
+        'ipv6-loopback',
         '127.0.2.1',
         '127.0.1.1',
         '127.0.0.1',
@@ -549,7 +551,7 @@ def _interfaces_ifconfig(out):
             # status determines global interface status.
             #
             # merge items with higher priority for older values
-            ret[iface] = dict(data.items() + ret[iface].items())
+            ret[iface] = dict(list(data.items()) + list(ret[iface].items()))
         else:
             ret[iface] = data
         del data
@@ -738,7 +740,10 @@ def interface_ip(iface):
     '''
     Return the interface details
     '''
-    return interfaces().get(iface, {}).get('inet', {})[0].get('address', {})
+    try:
+        return interfaces().get(iface, {}).get('inet', {})[0].get('address', {})
+    except KeyError:
+        return {}  # iface has no IP
 
 
 def subnets():
@@ -1015,7 +1020,8 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        data = subprocess.check_output(['sockstat', '-4', '-c', '-p {0}'.format(port)])
+        cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
+        data = subprocess.check_output(cmd)
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise

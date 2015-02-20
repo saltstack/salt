@@ -25,16 +25,21 @@ configuration file.
 
 '''
 
+# Import Python libs
 from __future__ import absolute_import, generators, with_statement
-
 import time
 import logging
 import salt
 import os
 import os.path
+
+# Import Salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
 __SYSLOG_NG_BINARY_PATH = None
@@ -426,19 +431,19 @@ def _get_type_id_options(name, configuration):
         type_, sep, id_ = name.partition('.')
         options = configuration
     else:
-        type_ = configuration.keys()[0]
+        type_ = next(six.iterkeys(configuration))
         id_ = name
         options = configuration[type_]
 
     return type_, id_, options
 
 
-def _expand_one_key_dictionary(d):
+def _expand_one_key_dictionary(_dict):
     '''
     Returns the only one key and it's value from a dictionary.
     '''
-    key = d.keys()[0]
-    value = d[key]
+    key = next(six.iterkeys(_dict))
+    value = _dict[key]
     return key, value
 
 
@@ -450,12 +455,12 @@ def _parse_typed_parameter_typed_value(values):
 
     _current_parameter_value.type = type_
     if _is_simple_type(value):
-        a = Argument(value)
-        _current_parameter_value.add_argument(a)
+        arg = Argument(value)
+        _current_parameter_value.add_argument(arg)
     elif isinstance(value, list):
-        for i in value:
-            a = Argument(i)
-            _current_parameter_value.add_argument(a)
+        for idx in value:
+            arg = Argument(idx)
+            _current_parameter_value.add_argument(arg)
 
 
 def _parse_typed_parameter(param):
@@ -524,14 +529,14 @@ def _is_reference(arg):
     '''
     Return True, if arg is a reference to a previously defined statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and isinstance(arg.values()[0], str)
+    return isinstance(arg, dict) and len(arg) == 1 and isinstance(next(six.itervalues(arg)), six.string_types)
 
 
 def _is_junction(arg):
     '''
     Return True, if arg is a junction statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and arg.keys()[0] == 'junction'
+    return isinstance(arg, dict) and len(arg) == 1 and next(six.iterkeys(arg)) == 'junction'
 
 
 def _add_reference(reference, statement):
@@ -539,17 +544,17 @@ def _add_reference(reference, statement):
     Adds a reference to statement.
     '''
     type_, value = _expand_one_key_dictionary(reference)
-    o = Option(type_)
-    p = SimpleParameter(value)
-    o.add_parameter(p)
-    statement.add_child(o)
+    opt = Option(type_)
+    param = SimpleParameter(value)
+    opt.add_parameter(param)
+    statement.add_child(opt)
 
 
 def _is_inline_definition(arg):
     '''
     Returns True, if arg is an inline definition of a statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and isinstance(arg.values()[0], list)
+    return isinstance(arg, dict) and len(arg) == 1 and isinstance(next(six.itervalues(arg)), list)
 
 
 def _add_inline_definition(item, statement):
@@ -573,14 +578,14 @@ def _add_junction(item):
     '''
     type_, channels = _expand_one_key_dictionary(item)
     junction = UnnamedStatement(type='junction')
-    for ch in channels:
-        type_, value = _expand_one_key_dictionary(ch)
+    for item in channels:
+        type_, value = _expand_one_key_dictionary(item)
         channel = UnnamedStatement(type='channel')
-        for j in value:
-            if _is_reference(j):
-                _add_reference(j, channel)
-            elif _is_inline_definition(j):
-                _add_inline_definition(j, channel)
+        for val in value:
+            if _is_reference(val):
+                _add_reference(val, channel)
+            elif _is_inline_definition(val):
+                _add_inline_definition(val, channel)
         junction.add_child(channel)
     _current_statement.add_child(junction)
 
@@ -738,11 +743,11 @@ def _determine_config_version(syslog_ng_sbin_dir):
     ret = version(syslog_ng_sbin_dir)
     full_version = ret['stdout']
     dot_count = 0
-    for i, c in enumerate(full_version):
-        if c == '.':
+    for idx, part in enumerate(full_version):
+        if part == '.':
             dot_count = dot_count + 1
         if dot_count == 2:
-            return full_version[0:i]
+            return full_version[0:idx]
     # return first 3 characters
     return full_version[:3]
 
@@ -881,8 +886,8 @@ def version(syslog_ng_sbin_dir=None):
     # syslog-ng 3.6.0alpha0
     version_line_index = 0
     version_column_index = 1
-    v = lines[version_line_index].split()[version_column_index]
-    return _format_return_data(0, stdout=v)
+    line = lines[version_line_index].split()[version_column_index]
+    return _format_return_data(0, stdout=line)
 
 
 def modules(syslog_ng_sbin_dir=None):
@@ -906,7 +911,7 @@ def modules(syslog_ng_sbin_dir=None):
         return _format_return_data(ret["retcode"], ret.get("stdout", None), ret.get("stderr", None))
 
     lines = ret["stdout"].split("\n")
-    for i, line in enumerate(lines):
+    for line in lines:
         if line.startswith("Available-Modules"):
             label, installed_modules = line.split()
             return _format_return_data(ret["retcode"], stdout=installed_modules)
@@ -1135,16 +1140,15 @@ def _write_config(config, newlines=2):
     '''
     text = config
     if isinstance(config, dict) and len(list(list(config.keys()))) == 1:
-        key = config.keys()[0]
+        key = next(six.iterkeys(config))
         text = config[key]
 
     try:
-        with salt.utils.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as f:
-            f.write(text)
+        with salt.utils.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as fha:
+            fha.write(text)
 
-            for i in range(0, newlines):
-                f.write(os.linesep)
-
+            for _ in range(0, newlines):
+                fha.write(os.linesep)
         return True
     except Exception as err:
         log.error(str(err))

@@ -1,4 +1,4 @@
-## -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 '''
 The networking module for Debian based distros
 
@@ -9,18 +9,18 @@ References:
 
 # Import python libs
 from __future__ import absolute_import
-import salt.ext.six as six
 import functools
 import logging
 import os.path
 import os
 import re
-import StringIO
 import time
 
 # Import third party libs
 import jinja2
 import jinja2.exceptions
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -130,20 +130,21 @@ _DEB_CONFIG_PPPOE_OPTS = {
 
 _DEB_ROUTES_FILE = '/etc/network/routes'
 _DEB_NETWORK_FILE = '/etc/network/interfaces'
-_DEB_NETWORK_DIR = '/etc/network/interfaces.d'
-_DEB_NETWORK_UP_DIR = '/etc/network/if-up.d'
-_DEB_NETWORK_DOWN_DIR = '/etc/network/if-down.d'
-_DEB_NETWORK_CONF_FILES = '/etc/modprobe.d'
+_DEB_NETWORK_DIR = '/etc/network/interfaces.d/'
+_DEB_NETWORK_UP_DIR = '/etc/network/if-up.d/'
+_DEB_NETWORK_DOWN_DIR = '/etc/network/if-down.d/'
+_DEB_NETWORK_CONF_FILES = '/etc/modprobe.d/'
 _DEB_NETWORKING_FILE = '/etc/default/networking'
 _DEB_HOSTNAME_FILE = '/etc/hostname'
 _DEB_RESOLV_FILE = '/etc/resolv.conf'
-_DEB_PPP_DIR = '/etc/ppp/peers'
+_DEB_PPP_DIR = '/etc/ppp/peers/'
 
 _CONFIG_TRUE = ['yes', 'on', 'true', '1', True]
 _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
-    'ipsec', 'dialup', 'bridge', 'slave', 'vlan', 'pppoe',
+    'ipsec', 'dialup', 'bridge', 'slave',
+    'vlan', 'pppoe', 'source',
 ]
 
 
@@ -395,9 +396,9 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
 
 
 DEBIAN_ATTR_TO_SALT_ATTR_MAP = dict(
-    (v, k) for (k, v) in SALT_ATTR_TO_DEBIAN_ATTR_MAP.items())
+    (v, k) for (k, v) in six.iteritems(SALT_ATTR_TO_DEBIAN_ATTR_MAP))
 
-#TODO
+# TODO
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['address'] = 'address'
 DEBIAN_ATTR_TO_SALT_ATTR_MAP['hwaddress'] = 'hwaddress'
 
@@ -524,8 +525,8 @@ def _parse_interfaces(interface_files=None):
     if interface_files is None:
         interface_files = []
         # Add this later.
-        # if os.path.exists('/etc/network/interfaces.d/'):
-        #    interface_files += os.listdir('/etc/network/interfaces.d/')
+        if os.path.exists(_DEB_NETWORK_DIR):
+            interface_files += ['{0}/{1}'.format(_DEB_NETWORK_DIR, dir) for dir in os.listdir(_DEB_NETWORK_DIR)]
 
         if os.path.isfile(_DEB_NETWORK_FILE):
             interface_files.insert(0, _DEB_NETWORK_FILE)
@@ -570,6 +571,7 @@ def _parse_interfaces(interface_files=None):
 
                     iface_dict['addrfam'] = addrfam
                     iface_dict['proto'] = method
+                    iface_dict['filename'] = interface_file
 
                 # Parse the detail clauses.
                 elif line[0].isspace():
@@ -626,9 +628,21 @@ def _parse_interfaces(interface_files=None):
                             adapters[word] = salt.utils.odict.OrderedDict()
                         adapters[word]['hotplug'] = True
 
+                elif line.startswith('source'):
+                    if 'source' not in adapters:
+                        adapters['source'] = salt.utils.odict.OrderedDict()
+
+                    # Create item in dict, if not already there
+                    if 'data' not in adapters['source']:
+                        adapters['source']['data'] = salt.utils.odict.OrderedDict()
+                        adapters['source']['data']['sources'] = []
+                    adapters['source']['data']['sources'].append(line.split()[1])
+
     # Return a sorted list of the keys for bond, bridge and ethtool options to
     # ensure a consistent order
     for iface_name in adapters:
+        if iface_name == 'source':
+            continue
         for opt in ['ethtool', 'bonding', 'bridging']:
             if 'inet' in adapters[iface_name]['data']:
                 if opt in adapters[iface_name]['data']['inet']:
@@ -695,11 +709,8 @@ def _parse_ethtool_pppoe_opts(opts, iface):
         if opt in opts:
             config[opt] = opts[opt]
 
-    if 'provider' in opts:
-        if opts['provider']:
-            pass
-        else:
-            _raise_error_iface(iface, 'provider', _CONFIG_TRUE + _CONFIG_FALSE)
+    if 'provider' in opts and not opts['provider']:
+        _raise_error_iface(iface, 'provider', _CONFIG_TRUE + _CONFIG_FALSE)
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     for option in ('noipdefault', 'usepeerdns', 'defaultroute', 'hide-password', 'noauth', 'persist', 'noaccomp'):
@@ -1171,6 +1182,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if enabled:
         adapters[iface]['enabled'] = True
 
+    if opts.get('hotplug', False):
+        adapters[iface]['hotplug'] = True
+
     iface_data['inet']['addrfam'] = 'inet'
 
     if iface_type not in ['bridge']:
@@ -1249,6 +1263,23 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 'down_cmds', 'pre_down_cmds', 'post_down_cmds']:
         if opt in opts:
             iface_data['inet'][opt] = opts[opt]
+
+    return adapters
+
+
+def _parse_settings_source(opts, iface_type, enabled, iface):
+    '''
+    Filters given options and outputs valid settings for a
+    network interface.
+    '''
+    adapters = salt.utils.odict.OrderedDict()
+    adapters[iface] = salt.utils.odict.OrderedDict()
+
+    adapters[iface]['type'] = iface_type
+
+    adapters[iface]['data'] = salt.utils.odict.OrderedDict()
+    iface_data = adapters[iface]['data']
+    iface_data['sources'] = [opts['source']]
 
     return adapters
 
@@ -1365,7 +1396,7 @@ def _read_temp(data):
     '''
     Return what would be written to disk
     '''
-    tout = StringIO.StringIO()
+    tout = StringIO()
     tout.write(data)
     tout.seek(0)
     output = tout.readlines()
@@ -1389,12 +1420,13 @@ def _read_temp_ifaces(iface, data):
     return [item + '\n' for item in ifcfg.split('\n')]
 
 
-def _write_file_ifaces(iface, data):
+def _write_file_ifaces(iface, data, **settings):
     '''
     Writes a file to disk
     '''
     try:
-        template = JINJA.get_template('debian_eth.jinja')
+        eth_template = JINJA.get_template('debian_eth.jinja')
+        source_template = JINJA.get_template('debian_source.jinja')
     except jinja2.exceptions.TemplateNotFound:
         log.error('Could not load template debian_eth.jinja')
         return ''
@@ -1412,19 +1444,37 @@ def _write_file_ifaces(iface, data):
             adapters[adapter]['data']['inet']['addrfam'] = 'inet'
             adapters[adapter]['data']['inet']['proto'] = 'manual'
 
-        tmp = template.render({'name': adapter, 'data': adapters[adapter]})
+        if 'type' in adapters[adapter] and adapters[adapter]['type'] == 'source':
+            tmp = source_template.render({'name': adapter, 'data': adapters[adapter]})
+        else:
+            tmp = eth_template.render({'name': adapter, 'data': adapters[adapter]})
         ifcfg = tmp + ifcfg
         if adapter == iface:
             saved_ifcfg = tmp
 
-    filename = _DEB_NETWORK_FILE
+    _SEPERATE_FILE = False
+    if 'filename' in settings:
+        if not settings['filename'].startswith('/'):
+            filename = '{0}/{1}'.format(_DEB_NETWORK_DIR, settings['filename'])
+        else:
+            filename = settings['filename']
+        _SEPERATE_FILE = True
+    else:
+        if 'filename' in adapter[adapter]['data']:
+            filename = adapter[adapter]['data']
+        else:
+            filename = _DEB_NETWORK_FILE
+
     if not os.path.exists(os.path.dirname(filename)):
         msg = '{0} cannot be written.'
         msg = msg.format(os.path.dirname(filename))
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.flopen(filename, 'w') as fout:
-        fout.write(ifcfg)
+        if _SEPERATE_FILE:
+            fout.write(saved_ifcfg)
+        else:
+            fout.write(ifcfg)
 
     # Return as a array so the difflib works
     return saved_ifcfg.split('\n')
@@ -1555,10 +1605,13 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'pppoe']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
 
+    if iface_type in ['source']:
+        opts = _parse_settings_source(settings, iface_type, enabled, iface)
+
     if 'test' in settings and settings['test']:
         return _read_temp_ifaces(iface, opts[iface])
 
-    ifcfg = _write_file_ifaces(iface, opts[iface])
+    ifcfg = _write_file_ifaces(iface, opts[iface], **settings)
 
     if iface_type == 'pppoe':
         _write_file_ppp_ifaces(iface, opts[iface])
@@ -1610,10 +1663,11 @@ def down(iface, iface_type):
 
     .. code-block:: bash
 
-        salt '*' ip.down eth0
+        salt '*' ip.down eth0 eth
     '''
     # Slave devices are controlled by the master.
-    if iface_type not in ['slave']:
+    # Source 'interfaces' aren't brought down.
+    if iface_type not in ['slave', 'source']:
         return __salt__['cmd.run']('ifdown {0}'.format(iface))
     return None
 
@@ -1646,7 +1700,10 @@ def get_interface(iface):
     adapters = _parse_interfaces()
     if iface in adapters:
         try:
-            template = JINJA.get_template('debian_eth.jinja')
+            if iface == 'source':
+                template = JINJA.get_template('debian_source.jinja')
+            else:
+                template = JINJA.get_template('debian_eth.jinja')
         except jinja2.exceptions.TemplateNotFound:
             log.error('Could not load template debian_eth.jinja')
             return ''
@@ -1667,10 +1724,11 @@ def up(iface, iface_type):  # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' ip.up eth0
+        salt '*' ip.up eth0 eth
     '''
     # Slave devices are controlled by the master.
-    if iface_type not in ['slave']:
+    # Source 'interfaces' aren't brought up.
+    if iface_type not in ['slave', 'source']:
         return __salt__['cmd.run']('ifup {0}'.format(iface))
     return None
 

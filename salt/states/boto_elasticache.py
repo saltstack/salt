@@ -88,9 +88,9 @@ def __virtual__():
 
 def present(
         name,
-        engine,
-        cache_node_type,
-        num_cache_nodes=1,
+        engine=None,
+        cache_node_type=None,
+        num_cache_nodes=None,
         preferred_availability_zone=None,
         port=None,
         cache_parameter_group_name=None,
@@ -102,7 +102,7 @@ def present(
         engine_version=None,
         notification_topic_arn=None,
         preferred_maintenance_window=None,
-        wait=True,
+        wait=None,
         region=None,
         key=None,
         keyid=None,
@@ -177,7 +177,7 @@ def present(
 
     wait
         Boolean. Wait for confirmation from boto that the cluster is in the
-        creating state.
+        available state.
 
     region
         Region to connect to.
@@ -298,5 +298,75 @@ def absent(
             ret['comment'] = 'Failed to delete {0} cache cluster.'.format(name)
     else:
         ret['comment'] = '{0} does not exist in {1}.'.format(name, region)
+
+    return ret
+
+
+def creategroup(name, primary_cluster_id, replication_group_description,
+                wait=None,
+                region=None,
+                key=None,
+                keyid=None,
+                profile=None):
+
+    '''
+    Ensure the a replication group is create.
+
+    name
+        Name of replication group
+
+    wait
+        Waits for the group to be available
+
+    primary_cluster_id
+        Name of the master cache node
+
+    replication_group_description
+        Description for the group
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    is_present = __salt__['boto_elasticache.group_exists'](name, region, key, keyid,
+                                                                 profile)
+    if not is_present:
+        if __opts__['test']:
+            ret['comment'] = 'Replication {0} is set to be created.'.format(
+                name)
+            ret['result'] = None
+        created = __salt__['boto_elasticache.create_replication_group'](name,
+                                                                        primary_cluster_id,
+                                                                        replication_group_description,
+                                                                        wait,
+                                                                        region,
+                                                                        key,
+                                                                        keyid,
+                                                                        profile
+                                                                        )
+
+        if created:
+            config = __salt__['boto_elasticache.describe_replication_group'](name, region, key,
+                                                             keyid, profile)
+            ret['changes']['old'] = None
+            ret['changes']['new'] = config
+            ret['result'] = True
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} replication group.'.format(name)
+    else:
+        ret['comment'] = '{0} replication group exists .'.format(name)
+        ret['result'] = True
 
     return ret

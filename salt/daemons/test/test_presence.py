@@ -76,9 +76,9 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         """
         console.terse("{0}\n".format(self.testContextSetup.__doc__))
 
-        act = self.addEnterDeed("PresenterTestOptsSetup")
+        act = self.addEnterDeed("TestOptsSetupMaster")
         self.assertIn(act, self.frame.enacts)
-        self.assertEqual(act.actor, "PresenterTestOptsSetup")
+        self.assertEqual(act.actor, "TestOptsSetupMaster")
         act = self.addEnterDeed("SaltRaetManorLaneSetup")
         self.assertIn(act, self.frame.enacts)
         self.assertEqual(act.actor, "SaltRaetManorLaneSetup")
@@ -126,7 +126,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceAvailable.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -195,7 +195,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceJoined.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -246,7 +246,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceAllowed.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -296,7 +296,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceAlived.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -346,7 +346,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceReaped.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -396,7 +396,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceNoRequest.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -426,7 +426,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceUnknownSrc.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -466,7 +466,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceAvailableNoMinions.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -511,7 +511,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceAvailableOneMinion.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -559,7 +559,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceAvailableSomeIpUnknown.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -612,7 +612,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceAllowedNoMinions.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")
@@ -658,7 +658,7 @@ class PresenterTestCase(testing.FrameIofloTestCase):
         console.terse("{0}\n".format(self.testPresenceAllowedOneMinion.__doc__))
 
         # Bootstrap
-        self.addEnterDeed("PresenterTestOptsSetup")
+        self.addEnterDeed("TestOptsSetupMaster")
         self.addEnterDeed("SaltRaetManorLaneSetup")
         self.addEnterDeed("PresenterTestSetup")
         act = self.addRecurDeed("SaltRaetPresenter")

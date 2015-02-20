@@ -3,10 +3,12 @@
     :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing Libs
 from salttesting import TestCase
 from salttesting.mock import MagicMock, patch
-#-------- from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import Salt Libs
 from salt.modules import groupadd

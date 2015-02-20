@@ -6,12 +6,17 @@
     Implements MsgPack serializer.
 '''
 
+# Import Python libs
 from __future__ import absolute_import
-from copy import copy
 import logging
+from copy import copy
 
+# Import Salt Libs
 from salt.log import setup_console_logger
 from salt.utils.serializers import DeserializationError, SerializationError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +32,7 @@ try:
 except ImportError:
     # Fall back to msgpack_pure
     try:
-        import msgpack_pure as msgpack
+        import msgpack_pure as msgpack  # pylint: disable=import-error
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
@@ -79,7 +84,7 @@ else:  # msgpack.version < 0.2.0
         tuples.
         '''
         if isinstance(obj, dict):
-            data = [(key, _encoder(value)) for key, value in obj.items()]
+            data = [(key, _encoder(value)) for key, value in six.iteritems(obj)]
             return dict(data)
         elif isinstance(obj, (list, tuple)):
             return [_encoder(value) for value in obj]

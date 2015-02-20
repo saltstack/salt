@@ -40,11 +40,13 @@ Walkthrough <tutorial-gitfs>`.
 .. _libgit2: https://libgit2.github.com/
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
+import contextlib
 import distutils.version  # pylint: disable=E0611
+import fcntl
 import glob
 import hashlib
 import logging
@@ -54,8 +56,6 @@ import shutil
 import stat
 import subprocess
 from datetime import datetime
-from salt.ext.six import text_type as _text_type
-from salt._compat import StringIO
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root')
@@ -93,11 +93,12 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt.ext.six import string_types
 from salt.exceptions import SaltException
 from salt.utils.event import tagify
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import git
     import gitdb
@@ -120,6 +121,7 @@ try:
     HAS_DULWICH = True
 except ImportError:
     HAS_DULWICH = False
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -142,9 +144,11 @@ def _verify_gitpython(quiet=False):
         if HAS_DULWICH and not quiet:
             log.error(_RECOMMEND_DULWICH)
         return False
+    # pylint: disable=no-member
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
     minver = distutils.version.LooseVersion(minver_str)
+    # pylint: enable=no-member
     errors = []
     if gitver < minver:
         errors.append(
@@ -187,6 +191,7 @@ def _verify_pygit2(quiet=False):
             log.error(_RECOMMEND_DULWICH)
         return False
 
+    # pylint: disable=no-member
     pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
     pygit2_minver_str = '0.20.3'
     pygit2_minver = distutils.version.LooseVersion(pygit2_minver_str)
@@ -194,6 +199,7 @@ def _verify_pygit2(quiet=False):
     libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
     libgit2_minver_str = '0.20.0'
     libgit2_minver = distutils.version.LooseVersion(libgit2_minver_str)
+    # pylint: enable=no-member
 
     errors = []
     if pygit2ver < pygit2_minver:
@@ -242,17 +248,16 @@ def _verify_dulwich(quiet=False):
             log.error(_RECOMMEND_PYGIT2)
         return False
 
-    dulwich_ver = distutils.version.LooseVersion(dulwich.__version__)
-    dulwich_minver_str = '0.9.4'
-    dulwich_minver = distutils.version.LooseVersion(dulwich_minver_str)
+    dulwich_version = dulwich.__version__
+    dulwich_min_version = (0, 9, 4)
 
     errors = []
 
-    if dulwich_ver < dulwich_minver:
+    if dulwich_version < dulwich_min_version:
         errors.append(
             'Git fileserver backend is enabled in the master config file, but '
             'the installed version of Dulwich is earlier than {0}. Version {1} '
-            'detected.'.format(dulwich_minver_str, dulwich.__version__)
+            'detected.'.format(dulwich_min_version, dulwich_version)
         )
 
         if HAS_PYGIT2 and not quiet:
@@ -646,7 +651,7 @@ def init():
     per_remote_defaults = {}
     for param in override_params:
         per_remote_defaults[param] = \
-            _text_type(__opts__['gitfs_{0}'.format(param)])
+            six.text_type(__opts__['gitfs_{0}'.format(param)])
 
     for remote in __opts__['gitfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
@@ -654,8 +659,8 @@ def init():
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
             per_remote_conf = dict(
-                [(key, _text_type(val)) for key, val in
-                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+                [(key, six.text_type(val)) for key, val in
+                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
@@ -698,7 +703,7 @@ def init():
         else:
             repo_url = remote
 
-        if not isinstance(repo_url, string_types):
+        if not isinstance(repo_url, six.string_types):
             log.error(
                 'Invalid gitfs remote {0}. Remotes must be strings, you may '
                 'need to enclose the URL in quotes'.format(repo_url)
@@ -891,7 +896,8 @@ def purge_cache():
         remove_dirs = []
     for repo in init():
         try:
-            remove_dirs.remove(repo['hash'])
+            with _aquire_update_lock_for_repo(repo):
+                remove_dirs.remove(repo['hash'])
         except ValueError:
             pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
@@ -901,6 +907,37 @@ def purge_cache():
             shutil.rmtree(rdir)
         return True
     return False
+
+
+@contextlib.contextmanager
+def _aquire_update_lock_for_repo(repo):
+    provider = _get_provider()
+
+    if provider == 'gitpython':
+        working_dir = repo['repo'].working_dir
+    elif provider == 'pygit2':
+        working_dir = repo['repo'].workdir
+    elif provider == 'dulwich':
+        working_dir = repo['repo'].path
+
+    with wait_for_write_lock(os.path.join(working_dir, 'update.lk')):
+        yield
+
+
+@contextlib.contextmanager
+def wait_for_write_lock(filename):
+    fhandle = open(filename, 'w')
+
+    if salt.utils.is_fcntl_available(check_sunos=True):
+        fcntl.flock(fhandle.fileno(), fcntl.LOCK_EX)
+    try:
+        yield
+    finally:
+        if salt.utils.is_fcntl_available(check_sunos=True):
+            fcntl.flock(fhandle.fileno(), fcntl.LOCK_UN)
+
+        fhandle.close()
+        os.remove(filename)
 
 
 def update():
@@ -924,98 +961,93 @@ def update():
             # origin is just a url here, there is no origin object
             origin = repo['url']
             working_dir = repo['repo'].path
-        lk_fn = os.path.join(working_dir, 'update.lk')
-        with salt.utils.fopen(lk_fn, 'w+') as fp_:
-            fp_.write(str(pid))
-        try:
-            log.debug('Fetching from {0}'.format(repo['url']))
-            if provider == 'gitpython':
-                try:
-                    fetch_results = origin.fetch()
-                except AssertionError:
-                    fetch_results = origin.fetch()
-                for fetch in fetch_results:
-                    if fetch.old_commit is not None:
-                        data['changed'] = True
-            elif provider == 'pygit2':
-                try:
-                    origin.credentials = repo['credentials']
-                except KeyError:
-                    # No credentials configured for this repo
-                    pass
-                fetch = origin.fetch()
-                try:
-                    # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
-                    received_objects = fetch['received_objects']
-                except (AttributeError, TypeError):
-                    # pygit2.Remote.fetch() returns a class instance in
-                    # pygit2 >= 0.21.0
-                    received_objects = fetch.received_objects
-                log.debug(
-                    'Gitfs received {0} objects for remote {1}'
-                    .format(received_objects, repo['url'])
-                )
-                if received_objects:
-                    data['changed'] = True
-            elif provider == 'dulwich':
-                client, path = \
-                    dulwich.client.get_transport_and_path_from_url(
-                        origin, thin_packs=True
-                    )
-                refs_pre = repo['repo'].get_refs()
-                try:
-                    refs_post = client.fetch(path, repo['repo'])
-                except dulwich.errors.NotGitRepository:
-                    log.critical(
-                        'Dulwich does not recognize remote {0} as a valid '
-                        'remote URL. Perhaps it is missing \'.git\' at the '
-                        'end.'.format(repo['url'])
-                    )
-                    continue
-                except KeyError:
-                    log.critical(
-                        'Local repository cachedir {0!r} (corresponding '
-                        'remote: {1}) has been corrupted. Salt will now '
-                        'attempt to remove the local checkout to allow it to '
-                        'be re-initialized in the next fileserver cache '
-                        'update.'
-                        .format(repo['cachedir'], repo['url'])
-                    )
+
+        with _aquire_update_lock_for_repo(repo):
+            try:
+                log.debug('Fetching from {0}'.format(repo['url']))
+                if provider == 'gitpython':
                     try:
-                        salt.utils.rm_rf(repo['cachedir'])
-                    except OSError as exc:
-                        log.critical(
-                            'Unable to remove {0!r}: {1}'
-                            .format(repo['cachedir'], exc)
-                        )
-                    continue
-                if refs_post is None:
-                    # Empty repository
-                    log.warning(
-                        'Gitfs remote {0!r} is an empty repository and will '
-                        'be skipped.'.format(origin)
+                        fetch_results = origin.fetch()
+                    except AssertionError:
+                        fetch_results = origin.fetch()
+                    for fetch in fetch_results:
+                        if fetch.old_commit is not None:
+                            data['changed'] = True
+                elif provider == 'pygit2':
+                    try:
+                        origin.credentials = repo['credentials']
+                    except KeyError:
+                        # No credentials configured for this repo
+                        pass
+                    fetch = origin.fetch()
+                    try:
+                        # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
+                        received_objects = fetch['received_objects']
+                    except (AttributeError, TypeError):
+                        # pygit2.Remote.fetch() returns a class instance in
+                        # pygit2 >= 0.21.0
+                        received_objects = fetch.received_objects
+                    log.debug(
+                        'Gitfs received {0} objects for remote {1}'
+                        .format(received_objects, repo['url'])
                     )
-                    continue
-                if refs_pre != refs_post:
-                    data['changed'] = True
-                    # Update local refs
-                    for ref in _dulwich_env_refs(refs_post):
-                        repo['repo'][ref] = refs_post[ref]
-                    # Prune stale refs
-                    for ref in repo['repo'].get_refs():
-                        if ref not in refs_post:
-                            del repo['repo'][ref]
-        except Exception as exc:
-            # Do not use {0!r} in the error message, as exc is not a string
-            log.error(
-                'Exception \'{0}\' caught while fetching gitfs remote {1}'
-                .format(exc, repo['url']),
-                exc_info_on_loglevel=logging.DEBUG
-            )
-        try:
-            os.remove(lk_fn)
-        except (IOError, OSError):
-            pass
+                    if received_objects:
+                        data['changed'] = True
+                elif provider == 'dulwich':
+                    client, path = \
+                        dulwich.client.get_transport_and_path_from_url(
+                            origin, thin_packs=True
+                        )
+                    refs_pre = repo['repo'].get_refs()
+                    try:
+                        refs_post = client.fetch(path, repo['repo'])
+                    except dulwich.errors.NotGitRepository:
+                        log.critical(
+                            'Dulwich does not recognize remote {0} as a valid '
+                            'remote URL. Perhaps it is missing \'.git\' at the '
+                            'end.'.format(repo['url'])
+                        )
+                        continue
+                    except KeyError:
+                        log.critical(
+                            'Local repository cachedir {0!r} (corresponding '
+                            'remote: {1}) has been corrupted. Salt will now '
+                            'attempt to remove the local checkout to allow it to '
+                            'be re-initialized in the next fileserver cache '
+                            'update.'
+                            .format(repo['cachedir'], repo['url'])
+                        )
+                        try:
+                            salt.utils.rm_rf(repo['cachedir'])
+                        except OSError as exc:
+                            log.critical(
+                                'Unable to remove {0!r}: {1}'
+                                .format(repo['cachedir'], exc)
+                            )
+                        continue
+                    if refs_post is None:
+                        # Empty repository
+                        log.warning(
+                            'Gitfs remote {0!r} is an empty repository and will '
+                            'be skipped.'.format(origin)
+                        )
+                        continue
+                    if refs_pre != refs_post:
+                        data['changed'] = True
+                        # Update local refs
+                        for ref in _dulwich_env_refs(refs_post):
+                            repo['repo'][ref] = refs_post[ref]
+                        # Prune stale refs
+                        for ref in repo['repo'].get_refs():
+                            if ref not in refs_post:
+                                del repo['repo'][ref]
+            except Exception as exc:
+                # Do not use {0!r} in the error message, as exc is not a string
+                log.error(
+                    'Exception \'{0}\' caught while fetching gitfs remote {1}'
+                    .format(exc, repo['url']),
+                    exc_info_on_loglevel=logging.DEBUG
+                )
 
     env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
@@ -1176,155 +1208,157 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                          '{0}.lk'.format(path))
     destdir = os.path.dirname(dest)
     hashdir = os.path.dirname(blobshadest)
-    if not os.path.isdir(destdir):
-        try:
-            os.makedirs(destdir)
-        except OSError:
-            # Path exists and is a file, remove it and retry
-            os.remove(destdir)
-            os.makedirs(destdir)
-    if not os.path.isdir(hashdir):
-        try:
-            os.makedirs(hashdir)
-        except OSError:
-            # Path exists and is a file, remove it and retry
-            os.remove(hashdir)
-            os.makedirs(hashdir)
 
     for repo in init():
-        if repo['mountpoint'] \
-                and not path.startswith(repo['mountpoint'] + os.path.sep):
-            continue
-        repo_path = path[len(repo['mountpoint']):].lstrip(os.path.sep)
-        if repo['root']:
-            repo_path = os.path.join(repo['root'], repo_path)
-
-        blob = None
-        depth = 0
-        if provider == 'gitpython':
-            tree = _get_tree_gitpython(repo, tgt_env)
-            if not tree:
-                # Branch/tag/SHA not found in repo, try the next
-                continue
-            while True:
-                depth += 1
-                if depth > SYMLINK_RECURSE_DEPTH:
-                    break
+        with _aquire_update_lock_for_repo(repo):
+            if not os.path.isdir(destdir):
                 try:
-                    file_blob = tree / repo_path
-                    if stat.S_ISLNK(file_blob.mode):
-                        # Path is a symlink. The blob data corresponding to
-                        # this path's object ID will be the target of the
-                        # symlink. Follow the symlink and set repo_path to the
-                        # location indicated in the blob data.
-                        stream = StringIO()
-                        file_blob.stream_data(stream)
-                        stream.seek(0)
-                        link_tgt = stream.read()
-                        stream.close()
-                        repo_path = os.path.normpath(
-                            os.path.join(os.path.dirname(repo_path), link_tgt)
-                        )
-                    else:
-                        blob = file_blob
-                        break
-                except KeyError:
-                    # File not found or repo_path points to a directory
-                    break
-            if blob is None:
-                continue
-            blob_hexsha = blob.hexsha
-
-        elif provider == 'pygit2':
-            tree = _get_tree_pygit2(repo, tgt_env)
-            if not tree:
-                # Branch/tag/SHA not found in repo, try the next
-                continue
-            while True:
-                depth += 1
-                if depth > SYMLINK_RECURSE_DEPTH:
-                    break
+                    os.makedirs(destdir)
+                except OSError:
+                    # Path exists and is a file, remove it and retry
+                    os.remove(destdir)
+                    os.makedirs(destdir)
+            if not os.path.isdir(hashdir):
                 try:
-                    if stat.S_ISLNK(tree[repo_path].filemode):
-                        # Path is a symlink. The blob data corresponding to this
-                        # path's object ID will be the target of the symlink. Follow
-                        # the symlink and set repo_path to the location indicated
-                        # in the blob data.
-                        link_tgt = repo['repo'][tree[repo_path].oid].data
-                        repo_path = os.path.normpath(
-                            os.path.join(os.path.dirname(repo_path), link_tgt)
-                        )
-                    else:
-                        oid = tree[repo_path].oid
-                        blob = repo['repo'][oid]
-                except KeyError:
-                    break
-            if blob is None:
-                continue
-            blob_hexsha = blob.hex
+                    os.makedirs(hashdir)
+                except OSError:
+                    # Path exists and is a file, remove it and retry
+                    os.remove(hashdir)
+                    os.makedirs(hashdir)
 
-        elif provider == 'dulwich':
-            while True:
-                depth += 1
-                if depth > SYMLINK_RECURSE_DEPTH:
-                    break
-                prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
-                tree = _get_tree_dulwich(repo, tgt_env)
-                tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
-                if not isinstance(tree, dulwich.objects.Tree):
-                    # Branch/tag/SHA not found in repo
-                    break
-                try:
-                    mode, oid = tree[filename]
-                    if stat.S_ISLNK(mode):
-                        # Path is a symlink. The blob data corresponding to
-                        # this path's object ID will be the target of the
-                        # symlink. Follow the symlink and set repo_path to the
-                        # location indicated in the blob data.
-                        link_tgt = repo['repo'].get_object(oid).as_raw_string()
-                        repo_path = os.path.normpath(
-                            os.path.join(os.path.dirname(repo_path), link_tgt)
-                        )
-                    else:
-                        blob = repo['repo'].get_object(oid)
-                        break
-                except KeyError:
-                    break
-            if blob is None:
+            if repo['mountpoint'] \
+                    and not path.startswith(repo['mountpoint'] + os.path.sep):
                 continue
-            blob_hexsha = blob.sha().hexdigest()
+            repo_path = path[len(repo['mountpoint']):].lstrip(os.path.sep)
+            if repo['root']:
+                repo_path = os.path.join(repo['root'], repo_path)
 
-        salt.fileserver.wait_lock(lk_fn, dest)
-        if os.path.isfile(blobshadest) and os.path.isfile(dest):
-            with salt.utils.fopen(blobshadest, 'r') as fp_:
-                sha = fp_.read()
-                if sha == blob_hexsha:
-                    fnd['rel'] = path
-                    fnd['path'] = dest
-                    return fnd
-        with salt.utils.fopen(lk_fn, 'w+') as fp_:
-            fp_.write('')
-        for filename in glob.glob(hashes_glob):
-            try:
-                os.remove(filename)
-            except Exception:
-                pass
-        with salt.utils.fopen(dest, 'w+') as fp_:
+            blob = None
+            depth = 0
             if provider == 'gitpython':
-                blob.stream_data(fp_)
+                tree = _get_tree_gitpython(repo, tgt_env)
+                if not tree:
+                    # Branch/tag/SHA not found in repo, try the next
+                    continue
+                while True:
+                    depth += 1
+                    if depth > SYMLINK_RECURSE_DEPTH:
+                        break
+                    try:
+                        file_blob = tree / repo_path
+                        if stat.S_ISLNK(file_blob.mode):
+                            # Path is a symlink. The blob data corresponding to
+                            # this path's object ID will be the target of the
+                            # symlink. Follow the symlink and set repo_path to the
+                            # location indicated in the blob data.
+                            stream = six.StringIO()
+                            file_blob.stream_data(stream)
+                            stream.seek(0)
+                            link_tgt = stream.read()
+                            stream.close()
+                            repo_path = os.path.normpath(
+                                os.path.join(os.path.dirname(repo_path), link_tgt)
+                            )
+                        else:
+                            blob = file_blob
+                            break
+                    except KeyError:
+                        # File not found or repo_path points to a directory
+                        break
+                if blob is None:
+                    continue
+                blob_hexsha = blob.hexsha
+
             elif provider == 'pygit2':
-                fp_.write(blob.data)
+                tree = _get_tree_pygit2(repo, tgt_env)
+                if not tree:
+                    # Branch/tag/SHA not found in repo, try the next
+                    continue
+                while True:
+                    depth += 1
+                    if depth > SYMLINK_RECURSE_DEPTH:
+                        break
+                    try:
+                        if stat.S_ISLNK(tree[repo_path].filemode):
+                            # Path is a symlink. The blob data corresponding to this
+                            # path's object ID will be the target of the symlink. Follow
+                            # the symlink and set repo_path to the location indicated
+                            # in the blob data.
+                            link_tgt = repo['repo'][tree[repo_path].oid].data
+                            repo_path = os.path.normpath(
+                                os.path.join(os.path.dirname(repo_path), link_tgt)
+                            )
+                        else:
+                            oid = tree[repo_path].oid
+                            blob = repo['repo'][oid]
+                    except KeyError:
+                        break
+                if blob is None:
+                    continue
+                blob_hexsha = blob.hex
+
             elif provider == 'dulwich':
-                fp_.write(blob.as_raw_string())
-        with salt.utils.fopen(blobshadest, 'w+') as fp_:
-            fp_.write(blob_hexsha)
-        try:
-            os.remove(lk_fn)
-        except (OSError, IOError):
-            pass
-        fnd['rel'] = path
-        fnd['path'] = dest
-        return fnd
+                while True:
+                    depth += 1
+                    if depth > SYMLINK_RECURSE_DEPTH:
+                        break
+                    prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
+                    tree = _get_tree_dulwich(repo, tgt_env)
+                    tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
+                    if not isinstance(tree, dulwich.objects.Tree):
+                        # Branch/tag/SHA not found in repo
+                        break
+                    try:
+                        mode, oid = tree[filename]
+                        if stat.S_ISLNK(mode):
+                            # Path is a symlink. The blob data corresponding to
+                            # this path's object ID will be the target of the
+                            # symlink. Follow the symlink and set repo_path to the
+                            # location indicated in the blob data.
+                            link_tgt = repo['repo'].get_object(oid).as_raw_string()
+                            repo_path = os.path.normpath(
+                                os.path.join(os.path.dirname(repo_path), link_tgt)
+                            )
+                        else:
+                            blob = repo['repo'].get_object(oid)
+                            break
+                    except KeyError:
+                        break
+                if blob is None:
+                    continue
+                blob_hexsha = blob.sha().hexdigest()
+
+            salt.fileserver.wait_lock(lk_fn, dest)
+            if os.path.isfile(blobshadest) and os.path.isfile(dest):
+                with salt.utils.fopen(blobshadest, 'r') as fp_:
+                    sha = fp_.read()
+                    if sha == blob_hexsha:
+                        fnd['rel'] = path
+                        fnd['path'] = dest
+                        return fnd
+            with salt.utils.fopen(lk_fn, 'w+') as fp_:
+                fp_.write('')
+            for filename in glob.glob(hashes_glob):
+                try:
+                    os.remove(filename)
+                except Exception:
+                    pass
+            with salt.utils.fopen(dest, 'w+') as fp_:
+                if provider == 'gitpython':
+                    blob.stream_data(fp_)
+                elif provider == 'pygit2':
+                    fp_.write(blob.data)
+                elif provider == 'dulwich':
+                    fp_.write(blob.as_raw_string())
+            with salt.utils.fopen(blobshadest, 'w+') as fp_:
+                fp_.write(blob_hexsha)
+            try:
+                os.remove(lk_fn)
+            except (OSError, IOError):
+                pass
+            fnd['rel'] = path
+            fnd['path'] = dest
+            return fnd
     return fnd
 
 
@@ -1519,7 +1553,7 @@ def _file_list_gitpython(repo, tgt_env):
         file_path = add_mountpoint(relpath(file_blob.path))
         files.add(file_path)
         if stat.S_ISLNK(file_blob.mode):
-            stream = StringIO()
+            stream = six.StringIO()
             file_blob.stream_data(stream)
             stream.seek(0)
             link_tgt = stream.read()
@@ -1574,7 +1608,7 @@ def _file_list_pygit2(repo, tgt_env):
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
         files.add(add_mountpoint(relpath(repo_path)))
-    for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
+    for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
         symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
     return files, symlinks
 
@@ -1588,7 +1622,7 @@ def _file_list_dulwich(repo, tgt_env):
         Traverse through a dulwich Tree object recursively, accumulating all the
         file paths and symlink info in the "blobs" dict
         '''
-        for item in tree.items():
+        for item in six.iteritems(tree):
             obj = repo_obj.get_object(item.sha)
             if isinstance(obj, dulwich.objects.Blob):
                 repo_path = os.path.join(prefix, item.path)
@@ -1617,7 +1651,7 @@ def _file_list_dulwich(repo, tgt_env):
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
         files.add(add_mountpoint(relpath(repo_path)))
-    for repo_path, link_tgt in blobs.get('symlinks', {}).iteritems():
+    for repo_path, link_tgt in six.iteritems(blobs.get('symlinks', {})):
         symlinks[add_mountpoint(relpath(repo_path))] = link_tgt
     return files, symlinks
 
@@ -1747,7 +1781,7 @@ def _dir_list_dulwich(repo, tgt_env):
         Traverse through a dulwich Tree object recursively, accumulating all
         the empty directories within it in the "blobs" list
         '''
-        for item in tree.items():
+        for item in six.iteritems(tree):
             obj = repo_obj.get_object(item.sha)
             if not isinstance(obj, dulwich.objects.Tree):
                 continue
@@ -1794,5 +1828,5 @@ def symlink_list(load):
         prefix = ''
     symlinks = _file_lists(load, 'symlinks')
     return dict([(key, val)
-                 for key, val in symlinks.iteritems()
+                 for key, val in six.iteritems(symlinks)
                  if key.startswith(prefix)])

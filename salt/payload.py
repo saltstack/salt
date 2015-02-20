@@ -12,11 +12,11 @@ import gc
 
 # Import salt libs
 import salt.log
-import salt.ext.six as six
-
+import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -35,7 +35,7 @@ try:
 except ImportError:
     # Fall back to msgpack_pure
     try:
-        import msgpack_pure as msgpack
+        import msgpack_pure as msgpack  # pylint: disable=import-error
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
@@ -109,7 +109,8 @@ class Serial(object):
         '''
         data = fn_.read()
         fn_.close()
-        return self.loads(data)
+        if data:
+            return self.loads(data)
 
     def dumps(self, msg):
         '''
@@ -197,10 +198,13 @@ class SREQ(object):
         '''
         if hasattr(self, '_socket'):
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets.keys():
+                sockets = list(self.poller.sockets.keys())
+                for socket in sockets:
+                    log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket)
             else:
                 for socket in self.poller.sockets:
+                    log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket[0])
             del self._socket
 
@@ -239,7 +243,8 @@ class SREQ(object):
 
     def destroy(self):
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets.keys():
+            sockets = list(self.poller.sockets.keys())
+            for socket in sockets:
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()

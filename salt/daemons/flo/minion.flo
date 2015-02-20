@@ -9,11 +9,27 @@ framer minionudpstack be active first setup
             do salt raet cleanup
             do salt raet road stack setup per inode ".salt.road.manor"
             do salt raet manor lane setup
+            do salt raet process manager setup
         go loadmodules
 
     # Load the minion mods
     frame loadmodules
         do salt load modules at enter
+        go setupmatcher
+
+    frame setupmatcher
+        do salt raet setup matcher at enter
+        go setupbeacon
+
+    frame setupbeacon
+        do salt raet setup beacon at enter
+        go spawnreactor
+        go start
+
+    frame spawnreactor
+        let me if .salt.etc.reactor
+        enter
+            do salt raet reactor fork
         go start
 
     # OK, let's start the minion up
@@ -28,6 +44,7 @@ framer minionudpstack be active first setup
         bid start functionmanager
         # Start the outbound framer
         bid start outbound
+        # Start the scheduler
         bid start scheduler
 
         # Cleanup on exit
@@ -102,6 +119,14 @@ framer bootstrap be inactive first setup
         print Loading
         enter
             do salt load modules
+        go latestart
+
+    frame latestart
+        # Start late frames that need the pillar/modules to be available
+        # Start the master events loop
+        bid start masterevents
+        # Start Beacon
+        bid start beacon
         go router
 
     frame router
@@ -117,14 +142,30 @@ framer bootstrap be inactive first setup
 framer eventing be inactive first event
     frame event
         do salt raet eventer
+        do salt raet stats eventer minion
 
-framer functionmanager be inactive first checkexec
-    frame checkexec
+framer functionmanager be inactive first setup
+    frame setup
+        go shell
+        go nix
+    frame shell
+        let me if .salt.etc.shell_jobber
+        do salt raet shell jobber
+        do salt raet shell jobber check
+    frame nix
         do salt raet nix jobber
 
 framer manager be inactive first start at 10.0
     frame start
-         do salt raet road stack manager per inode ".salt.road.manor"
+        do salt raet road stack manager per inode ".salt.road.manor"
+
+framer beacon be inactive first start
+    frame start
+        do salt raet beacon
+
+framer masterevents be inactive first start
+    frame start
+        do salt raet master events
 
 # Framer for handling outbound traffic
 framer outbound be inactive first start

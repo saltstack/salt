@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import pipes
@@ -20,6 +21,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -35,7 +39,9 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if not line:
                 continue
             data = yaml.load(line)
-            minions.extend(data.keys())
+            minions.extend(data.keys())  # pylint: disable=incompatible-py3-code
+                                         #   since we're extending a list, the Py3 dict_keys view will behave
+                                         #   as expected.
 
         self.assertNotEqual(minions, [])
 
@@ -77,7 +83,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             ))
 
             data = yaml.load('\n'.join(ret))
-            for part in data.values():
+            for part in six.itervalues(data):
                 self.assertTrue(part[minion_testfile])
 
             ret = self.run_salt(

@@ -41,24 +41,28 @@ To generate a cipher from a secret:
 
 .. code-block:: bash
 
-   $ echo -n "supersecret" | gpg --homedir --armor --encrypt -r <KEY-name>
+   $ echo -n "supersecret" | gpg --homedir ~/.gnupg --armor --encrypt -r <KEY-name>
 
-Set up the renderer on your master by adding something like this line to your
-config:
+There are two ways to configure salt for the usage of this renderer:
 
-.. code-block:: yaml
+1. Set up the renderer on your master by adding something like this line to your
+    config:
 
-    renderer: jinja | yaml | gpg
+        .. code-block:: yaml
 
-Setting a gpg renderer in the master currently requires minions to be
-configured for gpg.  The workaround for this is to add a line to the top of
-any pillar with gpg data in it.
+            renderer: jinja | yaml | gpg
 
-.. code-block:: yaml
+    This will apply the renderers to all pillars and states while requiring
+    ``python-gnupg`` to be installed on all minions since the decryption
+    will happen on the minions.
 
-    #!yaml|gpg
+2. To apply the renderer on a file-by-file basis add the following line to the top of any pillar with gpg data in it:
 
-Now you can include your ciphers in your pillar data like so:
+    .. code-block:: yaml
+
+        #!yaml|gpg
+
+Now with your renderers configured, you can include your ciphers in your pillar data like so:
 
 .. code-block:: yaml
 
@@ -77,12 +81,21 @@ Now you can include your ciphers in your pillar data like so:
       =Eqsm
       -----END PGP MESSAGE-----
 '''
-from __future__ import absolute_import
 
+# Import python libs
+from __future__ import absolute_import
 import os
 import re
+import logging
+
+# Import salt libs
 import salt.utils
 import salt.syspaths
+from salt.exceptions import SaltRenderError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import gnupg
     HAS_GPG = True
@@ -90,49 +103,48 @@ try:
         HAS_GPG = False
 except ImportError:
     HAS_GPG = False
-import logging
-
-from salt.exceptions import SaltRenderError
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
+
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
 DEFAULT_GPG_KEYDIR = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
 
 
-def decrypt_ciphertext(c, gpg):
+def decrypt_ciphertext(cypher, gpg):
     '''
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    decrypted_data = gpg.decrypt(c)
+    decrypted_data = gpg.decrypt(cypher)
     if not decrypted_data.ok:
         log.info("Could not decrypt cipher {0}, received {1}".format(
-            c, decrypted_data.stderr))
-        return c
+            cypher, decrypted_data.stderr))
+        return cypher
     else:
         return str(decrypted_data)
 
 
-def decrypt_object(o, gpg):
+def decrypt_object(obj, gpg):
     '''
     Recursively try to decrypt any object. If the object is a string, and
     it contains a valid GPG header, decrypt it, otherwise keep going until
     a string is found.
     '''
-    if isinstance(o, str):
-        if GPG_HEADER.search(o):
-            return decrypt_ciphertext(o, gpg)
+    if isinstance(obj, str):
+        if GPG_HEADER.search(obj):
+            return decrypt_ciphertext(obj, gpg)
         else:
-            return o
-    elif isinstance(o, dict):
-        for k, v in o.items():
-            o[k] = decrypt_object(v, gpg)
-        return o
-    elif isinstance(o, list):
-        return [decrypt_object(e, gpg) for e in o]
+            return obj
+    elif isinstance(obj, dict):
+        for key, val in six.iteritems(obj):
+            obj[key] = decrypt_object(val, gpg)
+        return obj
+    elif isinstance(obj, list):
+        return [decrypt_object(e, gpg) for e in obj]
     else:
-        return o
+        return obj
 
 
 def render(data, saltenv='base', sls='', argline='', **kwargs):

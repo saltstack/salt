@@ -62,19 +62,19 @@ def _do_names(names, fun):
         return False
 
     client = salt.client.get_local_client(__opts__['conf_file'])
-    cmds = []
-    for host, sub_names in hosts.items():
+    for host, sub_names in six.iteritems(hosts):
+        cmds = []
         for name in sub_names:
             cmds.append(client.cmd_iter(
                     host,
                     'lxc.{0}'.format(fun),
                     [name],
                     timeout=60))
-    for cmd in cmds:
-        data = next(cmd)
-        data = data.get(host, {}).get('ret', None)
-        if data:
-            ret.update({host: data})
+        for cmd in cmds:
+            data = next(cmd)
+            data = data.get(host, {}).get('ret', None)
+            if data:
+                ret.update({host: data})
     return ret
 
 
@@ -89,7 +89,7 @@ def find_guest(name, quiet=False):
     if quiet:
         log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
     for data in _list_iter():
-        host, l = data.items()[0]
+        host, l = next(six.iteritems(data))
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
@@ -105,7 +105,7 @@ def find_guests(names):
     ret = {}
     names = names.split(',')
     for data in _list_iter():
-        host, stat = data.items()[0]
+        host, stat = next(six.iteritems(data))
         for state in stat:
             for name in stat[state]:
                 if name in names:
@@ -125,18 +125,19 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
 
         salt-run lxc.init name host=minion_id [cpuset=cgroups_cpuset] \\
                 [cpushare=cgroups_cpushare] [memory=cgroups_memory] \\
-                [template=lxc template name] [clone=original name] \\
-                [nic=nic_profile] [profile=lxc_profile] \\
-                [nic_opts=nic_opts] [start=(true|false)] \\
-                [seed=(true|false)] [install=(true|false)] \\
-                [config=minion_config] [snapshot=(true|false)]
+                [template=lxc_template_name] [clone=original name] \\
+                [profile=lxc_profile] [network_proflile=network_profile] \\
+                [nic=network_profile] [nic_opts=nic_opts] \\
+                [start=(true|false)] [seed=(true|false)] \\
+                [install=(true|false)] [config=minion_config] \\
+                [snapshot=(true|false)]
 
     names
         Name of the containers, supports a single name or a comma delimited
         list of names.
 
     host
-        Minion to start the container on. Required.
+        Minion on which to initialize the container **(required)**
 
     saltcloud_mode
         init the container with the saltcloud opts format instead
@@ -149,7 +150,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         cgroups cpu shares.
 
     memory
-        cgroups memory limit, in MB.
+        cgroups memory limit, in MB
+
+        .. versionchanged:: 2015.2.0
+            If no value is passed, no limit is set. In earlier Salt versions,
+            not passing this value causes a 1024MB memory limit to be set, and
+            it was necessary to pass ``memory=0`` to set no limit.
 
     template
         Name of LXC template on which to base this container
@@ -157,11 +163,17 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     clone
         Clone this container from an existing container
 
-    nic
-        Network interfaces profile (defined in config or pillar).
-
     profile
         A LXC profile (defined in config or pillar).
+
+    network_profile
+        Network profile to use for the container
+
+        .. versionadded:: Lithium
+
+    nic
+        .. deprecated:: Lithium
+            Use ``network_profile`` instead
 
     nic_opts
         Extra options for network interfaces. E.g.:
@@ -198,9 +210,9 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         return ret
     log.info('Searching for LXC Hosts')
     data = __salt__['lxc.list'](host, quiet=True)
-    for host, containers in data.items():
+    for host, containers in six.iteritems(data):
         for name in names:
-            if name in sum(containers.values(), []):
+            if name in sum(six.itervalues(containers), []):
                 log.info('Container \'{0}\' already exists'
                          ' on host \'{1}\','
                          ' init can be a NO-OP'.format(
@@ -212,7 +224,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
 
     client = salt.client.get_local_client(__opts__['conf_file'])
 
-    kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
+    kw = dict((k, v) for k, v in six.iteritems(kwargs) if not k.startswith('__'))
     pub_key = kw.get('pub_key', None)
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key
@@ -327,7 +339,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
             ret['ping_status'] = False
             ret['result'] = False
 
-    # if no lxc detected as touched (either inited or verified
+    # if no lxc detected as touched (either inited or verified)
     # we result to False
     if not done:
         ret['result'] = False

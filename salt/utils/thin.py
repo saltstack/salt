@@ -15,7 +15,6 @@ import tempfile
 # Import third party libs
 import jinja2
 import yaml
-import requests
 import salt.ext.six as six
 
 # pylint: disable=import-error,no-name-in-module
@@ -24,26 +23,7 @@ try:
     HAS_CERTIFI = True
 except ImportError:
     HAS_CERTIFI = False
-try:
-    import urllib3
-    HAS_URLLIB3 = True
-except ImportError:
-    # Import the bundled package
-    try:
-        from requests.packages import urllib3
-        HAS_URLLIB3 = True
-    except ImportError:
-        HAS_URLLIB3 = False
-try:
-    import chardet
-    HAS_CHARDET = True
-except ImportError:
-    # Import the bundled package
-    try:
-        from requests.packages.urllib3.packages import chardet
-        HAS_CHARDET = True
-    except ImportError:
-        HAS_CHARDET = False
+
 try:
     import markupsafe
     HAS_MARKUPSAFE = True
@@ -51,6 +31,7 @@ except ImportError:
     # Older jinja does not need markupsafe
     HAS_MARKUPSAFE = False
 # pylint: enable=import-error,no-name-in-module
+
 try:
     # Older python where the backport from pypi is installed
     from backports import ssl_match_hostname
@@ -58,7 +39,7 @@ try:
 except ImportError:
     # Other older python we use our bundled copy
     try:
-        from requests.packages.urllib3.packages import ssl_match_hostname
+        from salt.ext import ssl_match_hostname
         HAS_SSL_MATCH_HOSTNAME = True
     except ImportError:
         HAS_SSL_MATCH_HOSTNAME = False
@@ -117,15 +98,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
-            os.path.dirname(requests.__file__)
             ]
-    if HAS_URLLIB3:
-        tops.append(os.path.dirname(urllib3.__file__))
 
     tops.append(six.__file__.replace('.pyc', '.py'))
-
-    if HAS_CHARDET:
-        tops.append(os.path.dirname(chardet.__file__))
 
     if HAS_CERTIFI:
         tops.append(os.path.dirname(certifi.__file__))

@@ -3,14 +3,18 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
-# Import Salt Testing libs
+# Import python libs
+from __future__ import absolute_import
 from StringIO import StringIO
+
+# Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
 ensure_in_syspath('../../')
 
+# Import Salt libs
 from salt.modules import cron
 
 STUB_USER = 'root'

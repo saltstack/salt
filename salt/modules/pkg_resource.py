@@ -2,20 +2,19 @@
 '''
 Resources needed by pkg providers
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import fnmatch
 import logging
 import pprint
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
-from salt.ext.six import string_types
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
@@ -50,7 +49,7 @@ def pack_sources(sources):
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
     _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-    if isinstance(sources, string_types):
+    if isinstance(sources, six.string_types):
         try:
             sources = yaml.safe_load(sources)
         except yaml.parser.ParserError as err:
@@ -175,7 +174,7 @@ def version(*names, **kwargs):
     # return dict
     if len(ret) == 1 and not pkg_glob:
         try:
-            return next(ret.itervalues())
+            return next(six.itervalues(ret))
         except StopIteration:
             return ''
     return ret
@@ -193,8 +192,8 @@ def add_pkg(pkgs, name, version):
     '''
     try:
         pkgs.setdefault(name, []).append(version)
-    except AttributeError as e:
-        log.exception(e)
+    except AttributeError as exc:
+        log.exception(exc)
 
 
 def sort_pkglist(pkgs):
@@ -216,8 +215,8 @@ def sort_pkglist(pkgs):
             # Passing the pkglist to set() also removes duplicate version
             # numbers (if present).
             pkgs[key] = sorted(set(pkgs[key]))
-    except AttributeError as e:
-        log.exception(e)
+    except AttributeError as exc:
+        log.exception(exc)
 
 
 def stringify(pkgs):
@@ -234,8 +233,8 @@ def stringify(pkgs):
     try:
         for key in pkgs:
             pkgs[key] = ','.join(pkgs[key])
-    except AttributeError as e:
-        log.exception(e)
+    except AttributeError as exc:
+        log.exception(exc)
 
 
 def version_clean(version):

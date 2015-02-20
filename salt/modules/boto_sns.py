@@ -93,9 +93,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     topics = get_all_topics(region=region, key=key, keyid=keyid,
                             profile=profile)
     if name.startswith('arn:aws:sns:'):
-        return name in topics.values()
+        return name in list(topics.values())
     else:
-        return name in topics.keys()
+        return name in list(topics.keys())
 
 
 def create(name, region=None, key=None, keyid=None, profile=None):

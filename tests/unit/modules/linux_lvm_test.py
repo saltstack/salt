@@ -2,7 +2,9 @@
 '''
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
-#  Import python libs
+
+# Import Python libs
+from __future__ import absolute_import
 import os.path
 
 # Import Salt Testing Libs

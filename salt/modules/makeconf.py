@@ -4,8 +4,9 @@ Support for modifying make.conf under Gentoo
 
 '''
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
+# Import Salt libs
 import salt.utils
 
 
@@ -185,7 +186,12 @@ def get_var(var):
         conf_file = fn_.readlines()
     for line in conf_file:
         if line.startswith(var):
-            ret = line.split('=', 1)[1].replace('"', '')
+            ret = line.split('=', 1)[1]
+            if '"' in ret:
+                ret = ret.split('"')[1]
+            elif '#' in ret:
+                ret = ret.split('#')[0]
+            ret = ret.strip()
             return ret
     return None
 

@@ -17,11 +17,14 @@ from ioflo.base.odicting import odict
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
-from raet import nacling
-from raet.stacking import Stack
+from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
+from raet.road.estating import RemoteEstate
+from raet.road.stacking import RoadStack
+from raet.stacking import Stack
 
+from salt.daemons import salting
 from salt.utils.event import tagify
 
 
@@ -38,7 +41,7 @@ def createStack(ip):
     return stack
 
 
-class PresenterTestOptsSetup(ioflo.base.deeding.Deed):
+class TestOptsSetup(ioflo.base.deeding.Deed):
     '''
     Setup opts share
     '''
@@ -49,7 +52,7 @@ class PresenterTestOptsSetup(ioflo.base.deeding.Deed):
         Register presence requests
         Iterate over the registered presence yards and fire!
         '''
-        pkiDirpath = os.path.join('/tmp', 'raet', 'test', 'master', 'pki')
+        pkiDirpath = os.path.join('/tmp', 'raet', 'test', self.role, 'pki')
         if not os.path.exists(pkiDirpath):
             os.makedirs(pkiDirpath)
 
@@ -73,22 +76,22 @@ class PresenterTestOptsSetup(ioflo.base.deeding.Deed):
             mode = os.stat(localFilepath).st_mode
             print(mode)
 
-        cacheDirpath = os.path.join('/tmp/raet', 'cache', 'master')
+        cacheDirpath = os.path.join('/tmp/raet', 'cache', self.role)
         if not os.path.exists(cacheDirpath):
             os.makedirs(cacheDirpath)
 
-        sockDirpath = os.path.join('/tmp/raet', 'sock', 'master')
+        sockDirpath = os.path.join('/tmp/raet', 'sock', self.role)
         if not os.path.exists(sockDirpath):
             os.makedirs(sockDirpath)
 
         self.opts.value = dict(
-            id='master',
-            __role='master',
+            id=self.role,
+            __role=self.role,
             ioflo_period=0.1,
             ioflo_realtime=True,
             ioflo_verbose=2,
             interface="",
-            raet_port=7530,
+            raet_port=self.raet_port,
             transport='raet',
             client_acl=dict(),
             pki_dir=pkiDirpath,
@@ -98,8 +101,51 @@ class PresenterTestOptsSetup(ioflo.base.deeding.Deed):
             auto_accept=True,
             )
 
+        name = "{0}_{1}".format(self.role, self.role)
+        basedirpath = os.path.abspath(os.path.join(cacheDirpath, 'raet'))
+        keep = salting.SaltKeep(opts=self.opts.value,
+                                basedirpath=basedirpath,
+                                stackname=name)
+        keep.clearLocalData()
+        keep.clearLocalRoleData()
+        keep.clearAllRemoteData()
+        keep.clearAllRemoteRoleData()
 
-def serviceStacks(stacks, duration=1.0):
+
+class TestOptsSetupMaster(TestOptsSetup):
+
+    def action(self):
+        self.role = 'master'
+        self.raet_port = raeting.RAET_PORT
+        super(TestOptsSetupMaster, self).action()
+
+
+class TestOptsSetupMinion(TestOptsSetup):
+
+    def action(self):
+        self.role = 'minion'
+        self.raet_port = raeting.RAET_TEST_PORT
+        super(TestOptsSetupMinion, self).action()
+
+
+def serviceRoads(stacks, duration=1.0):
+    '''
+    Utility method to service queues for list of stacks. Call from test method.
+    '''
+    start = time.time()
+    while start + duration > time.time():
+        for stack in stacks:
+            stack.serviceAll()
+        if all([not stack.transactions for stack in stacks]):
+            console.terse("Service stacks done normally\n")
+            break
+        time.sleep(0.05)
+    for stack in stacks:
+        console.terse("Stack {0} remotes: {1}\n".format(stack.name, stack.nameRemotes))
+    console.terse("Service stacks exit\n")
+
+
+def serviceLanes(stacks, duration=1.0):
     '''
     Utility method to service queues for list of stacks. Call from test method.
     '''
@@ -161,7 +207,7 @@ class PresenterTestSetup(ioflo.base.deeding.Deed):
                  'src': (None, stack.local.name, None)}
         msg = {'route': route}
         stack.transmit(msg, stack.nameRemotes[ryn].uid)
-        serviceStacks([stack, self.lane_stack.value])
+        serviceLanes([stack, self.lane_stack.value])
 
 
 class PresenterTestCleanup(ioflo.base.deeding.Deed):
@@ -699,3 +745,83 @@ class TestPresenceAllowedOneMinionCheck(ioflo.base.deeding.Deed, DeedTestWrapper
                                           'dst': [None, None, 'event_fire']},
                                 'tag': tag,
                                 'data': {'allowed': {'alpha':'1.1.1.1'}}})
+
+
+class StatsMasterTestSetup(ioflo.base.deeding.Deed):
+    '''
+    Setup shares for stats tests
+    '''
+    Ioinits = {'stats_req': '.salt.stats.event_req',
+               'lane_stack': '.salt.lane.manor.stack',
+               'road_stack': '.salt.road.manor.stack',
+               'event_stack': '.salt.test.lane.stack'}
+
+    def action(self):
+
+        self.stats_req.value = deque()
+
+        # Create event stack
+        name = 'event' + nacling.uuid(size=18)
+        lanename = self.lane_stack.value.local.lanename
+        sock_dir = self.lane_stack.value.local.dirpath
+        ryn = 'manor'
+        console.terse("Create stack: name = {0}, lanename = {1}, sock_dir = {2}\n".
+                      format(name, lanename, sock_dir))
+        stack = LaneStack(
+            name=name,
+            lanename=lanename,
+            sockdirpath=sock_dir)
+        stack.addRemote(RemoteYard(stack=stack,
+                                   lanename=lanename,
+                                   name=ryn,
+                                   dirpath=sock_dir))
+        self.event_stack.value = stack
+
+        route = {'dst': (None, ryn, 'stats_req'),
+                 'src': (None, stack.local.name, None)}
+        msg = {'route': route}
+        stack.transmit(msg, stack.nameRemotes[ryn].uid)
+        serviceLanes([stack, self.lane_stack.value])
+
+
+class StatsMinionTestSetup(ioflo.base.deeding.Deed):
+    '''
+    Setup shares for stats tests
+    '''
+    Ioinits = {'stats_req': '.salt.stats.event_req',
+               'lane_stack': '.salt.lane.manor.stack',
+               'road_stack': '.salt.road.manor.stack',
+               'event_stack': '.salt.test.road.stack'}
+
+    def action(self):
+
+        self.stats_req.value = deque()
+
+        minionStack = self.road_stack.value
+
+        # Create Master Stack
+        self.store.stamp = 0.0
+        masterStack = RoadStack(store=self.store,
+                                name='master',
+                                ha=('', raeting.RAET_PORT),
+                                role='master',
+                                main=True,
+                                cleanremote=True,
+                                period=3.0,
+                                offset=0.5)
+        self.event_stack.value = masterStack
+
+        minionRemoteMaster = RemoteEstate(stack=minionStack,
+                                          fuid=0,
+                                          sid=0,
+                                          ha=masterStack.local.ha)
+        minionStack.addRemote(minionRemoteMaster)
+
+        # Make life easier
+        masterStack.keep.auto = raeting.AutoMode.always.value
+        minionStack.keep.auto = raeting.AutoMode.always.value
+
+        minionStack.join(minionRemoteMaster.uid)
+        serviceRoads([minionStack, masterStack])
+        minionStack.allow(minionRemoteMaster.uid)
+        serviceRoads([minionStack, masterStack])

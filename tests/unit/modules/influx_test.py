@@ -3,6 +3,9 @@
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
@@ -20,7 +23,7 @@ USER_LIST = [{'name': 'A'}, {'name': 'B'}]
 
 
 class MockInfluxDBClient(object):
-    def get_database_list(self):
+    def get_list_database(self):
         return DB_LIST
 
     def create_database(self, name):
@@ -29,7 +32,7 @@ class MockInfluxDBClient(object):
     def delete_database(self, name):
         return name
 
-    def switch_db(self, name):
+    def switch_database(self, name):
         return name
 
     def get_database_users(self):

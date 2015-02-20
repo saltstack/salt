@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
@@ -9,6 +10,9 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class SysModuleTest(integration.ModuleCase):
@@ -56,6 +60,7 @@ class SysModuleTest(integration.ModuleCase):
         noexample = set()
         allow_failure = (
                 'cp.recv',
+                'lxc.run_cmd',
                 'pkg.expand_repo_def',
                 'runtests_decorators.depends',
                 'runtests_decorators.depends_will_fallback',
@@ -70,7 +75,7 @@ class SysModuleTest(integration.ModuleCase):
                 continue
             if fun in allow_failure:
                 continue
-            if not isinstance(docs[fun], basestring):
+            if not isinstance(docs[fun], six.string_types):
                 nodoc.add(fun)
             elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::?', docs[fun]):
                 noexample.add(fun)

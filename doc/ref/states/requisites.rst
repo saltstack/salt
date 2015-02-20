@@ -46,8 +46,8 @@ something", requisite_ins say "Someone depends on me":
 
 So here, with a requisite_in, the same thing is accomplished as in the first
 example, but the other way around. The vim package is saying "/etc/vimrc depends
-on me".  This will result in a ``require`` being inserted into the
-``/etc/vimrc`` state which  targets the ``vim`` state.
+on me". This will result in a ``require`` being inserted into the
+``/etc/vimrc`` state which targets the ``vim`` state.
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
@@ -69,10 +69,24 @@ finite and predictable order.
 Direct Requisite and Requisite_in types
 ---------------------------------------
 
-There are six direct requisite statements that can be used in Salt:
-``require``, ``watch``, ``prereq``, ``use``, ``onchanges``, and ``onfail``.
-Each direct requisite also has a corresponding requisite_in: ``require_in``,
-``watch_in``, ``prereq_in``, ``use_in``, ``onchanges_in``, and ``onfail_in``.
+There are several direct requisite statements that can be used in Salt:
+
+* ``require``
+* ``watch``
+* ``prereq``
+* ``use``
+* ``onchanges``
+* ``onfail``
+
+Each direct requisite also has a corresponding requisite_in:
+
+* ``require_in``
+* ``watch_in``
+* ``prereq_in``
+* ``use_in``
+* ``onchanges_in``
+* ``onfail_in``
+
 All of the requisites define specific relationships and always work with the
 dependency logic defined above.
 
@@ -117,7 +131,7 @@ in other states.
 
     If a state should only execute when another state has changes, and
     otherwise do nothing, the new ``onchanges`` requisite should be used
-    instead of ``watch``.  ``watch`` is designed to add *additional* behavior
+    instead of ``watch``. ``watch`` is designed to add *additional* behavior
     when there are changes, but otherwise execute normally.
 
 The state containing the ``watch`` requisite is defined as the watching
@@ -151,17 +165,17 @@ shown in json for clarity:
     }
 
 If the "result" of the watched state is ``True``, the watching state *will
-execute normally*.  This part of ``watch`` mirrors the functionality of the
-``require`` requisite.  If the "result" of the watched state is ``False``, the
+execute normally*. This part of ``watch`` mirrors the functionality of the
+``require`` requisite. If the "result" of the watched state is ``False``, the
 watching state will never run, nor will the watching state's ``mod_watch``
 function execute.
 
 However, if the "result" of the watched state is ``True``, and the "changes"
 key contains a populated dictionary (changes occurred in the watched state),
-then the ``watch`` requisite can add additional behavior.  This additional
+then the ``watch`` requisite can add additional behavior. This additional
 behavior is defined by the ``mod_watch`` function within the watching state
-module.  If the ``mod_watch`` function exists in the watching state module, it
-will be called *in addition to* the normal watching state.  The return data
+module. If the ``mod_watch`` function exists in the watching state module, it
+will be called *in addition to* the normal watching state. The return data
 from the ``mod_watch`` function is what will be returned to the master in this
 case; the return data from the main watching function is discarded.
 
@@ -319,12 +333,12 @@ The _in versions of requisites
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All of the requisites also have corresponding requisite_in versions, which do
-the reverse of their normal counterparts.  The examples below all use
+the reverse of their normal counterparts. The examples below all use
 ``require_in`` as the example, but note that all of the ``_in`` requisites work
-the same way:  They result in a normal requisite in the targeted state, which
-targets the state which has defines the requisite_in.  Thus, a ``require_in``
-causes the target state to ``require`` the targeting state.  Similarly, a
-``watch_in`` causes the target state to ``watch`` the targeting state.  This
+the same way: They result in a normal requisite in the targeted state, which
+targets the state which has defines the requisite_in. Thus, a ``require_in``
+causes the target state to ``require`` the targeting state. Similarly, a
+``watch_in`` causes the target state to ``watch`` the targeting state. This
 pattern continues for the rest of the requisites.
 
 If a state declaration needs to be required by another state declaration then
@@ -398,10 +412,10 @@ Altering States
 ===============
 
 The state altering system is used to make sure that states are evaluated exactly
-as the user expects.  It can be used to double check that a state preformed
+as the user expects. It can be used to double check that a state preformed
 exactly how it was expected to, or to make 100% sure that a state only runs
-under certain conditions.  The use of unless or onlyif options help make states
-even more stateful.  The check_cmds option helps ensure that the result of a
+under certain conditions. The use of unless or onlyif options help make states
+even more stateful. The check_cmds option helps ensure that the result of a
 state is evaluated correctly.
 
 Unless
@@ -538,10 +552,10 @@ expected.
           - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
 
 This will attempt to do a replace on all enabled=0 in the .repo file, and
-replace them with enabled=1.  The check_cmd is just a bash command.  It will do
+replace them with enabled=1. The check_cmd is just a bash command. It will do
 a grep for enabled=0 in the file, and if it finds any, it will return a 0, which
 will prompt the && portion of the command to return a 1, causing check_cmd to
-set the state as failed.  If it returns a 1, meaning it didn't find any
+set the state as failed. If it returns a 1, meaning it didn't find any
 'enabled=0' it will hit the || portion of the command, returning a 0, and
 declaring the function succeeded.
 
@@ -550,9 +564,9 @@ Overriding Checks
 
 There are two commands used for the above checks.
 
-``mod_run_check`` is used to check for ``onlyif`` and ``unless``.  If the goal is to
+``mod_run_check`` is used to check for ``onlyif`` and ``unless``. If the goal is to
 override the global check for these to variables, include a ``mod_run_check`` in the
 salt/states/ file.
 
-``mod_run_check_cmd`` is used to check for the check_cmd options.  To override
+``mod_run_check_cmd`` is used to check for the check_cmd options. To override
 this one, include a ``mod_run_check_cmd`` in the states file for the state.

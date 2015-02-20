@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -311,7 +312,7 @@ class PipTestCase(TestCase):
             )
 
     @patch('os.path')
-    def test_install_fix_activate_env(self, mock_path):
+    def test_install_venv(self, mock_path):
         mock_path.is_file.return_value = True
         mock_path.isdir.return_value = True
 
@@ -320,9 +321,9 @@ class PipTestCase(TestCase):
         mock_path.join = join
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install('mock', bin_env='/test_env', activate=True)
+            pip.install('mock', bin_env='/test_env')
             mock.assert_called_once_with(
-                '. /test_env/bin/activate && /test_env/bin/pip install '
+                '/test_env/bin/pip install '
                 '\'mock\'',
                 env={'VIRTUAL_ENV': '/test_env'},
                 saltenv='base',

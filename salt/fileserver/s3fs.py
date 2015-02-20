@@ -62,9 +62,9 @@ structure::
 .. note:: This fileserver back-end requires the use of the MD5 hashing algorithm.
     MD5 may not be compliant with all security policies.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
 import os
 import time
@@ -412,7 +412,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     if _is_env_per_bucket():
         # Single environment per bucket
-        for saltenv, buckets in _get_buckets().items():
+        for saltenv, buckets in six.iteritems(_get_buckets()):
             bucket_files = {}
             for bucket_name in buckets:
                 s3_meta = __get_s3_meta(bucket_name)

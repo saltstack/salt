@@ -18,9 +18,9 @@ requisite to a pkg.installed state for the package which provides pip
         - require:
           - pkg: python-pip
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
@@ -29,6 +29,8 @@ from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import pip
     HAS_PIP = True
@@ -45,6 +47,7 @@ if HAS_PIP is True:
         del pip
         if 'pip' in sys.modules:
             del sys.modules['pip']
+# pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
 
@@ -346,6 +349,10 @@ def installed(name,
         Activates the virtual environment, if given via bin_env,
         before running install.
 
+        .. deprecated:: 2014.7.2
+            If `bin_env` is given, pip will already be sourced from that
+            virualenv, making `activate` effectively a noop.
+
     pre_releases
         Include pre-releases in the available versions
 
@@ -467,7 +474,7 @@ def installed(name,
     #     ' '.join((pkg.items()[0][0], pkg.items()[0][1].replace(',', ';')))
     # pkgs = ','.join([prepro(pkg) for pkg in pkgs])
     prepro = lambda pkg: pkg if type(pkg) == str else \
-        ' '.join((pkg.items()[0][0], pkg.items()[0][1]))
+        ' '.join((six.iteritems(pkg)[0][0], six.iteritems(pkg)[0][1]))
     pkgs = [prepro(pkg) for pkg in pkgs]
 
     ret = {'name': ';'.join(pkgs), 'result': None,
@@ -678,12 +685,11 @@ def installed(name,
                     # If we didnt find the package in the system after
                     # installing it report it
                     if not pipsearch:
-                        msg = (
+                        pkg_404_comms.append(
                             'There was no error installing package \'{0}\' '
                             'although it does not show when calling '
                             '\'pip.freeze\'.'.format(pkg)
                         )
-                        pkg_404_comms.append(msg)
                     else:
                         pkg_name = _find_key(prefix, pipsearch)
                         ver = pipsearch[pkg_name]

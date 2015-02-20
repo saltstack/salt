@@ -4,7 +4,7 @@ house presence
 
 framer presenter be active first setup
     frame setup
-        do presenter test opts setup
+        do test opts setup master
         do salt raet manor lane setup per inode ".salt.lane.manor"
         do presenter test setup
         go next

@@ -13,7 +13,7 @@ class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this
     '''
-    def __init__(self, message):
+    def __init__(self, message=''):
         super(SaltException, self).__init__(message)
         self.strerror = message
 

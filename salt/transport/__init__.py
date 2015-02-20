@@ -2,21 +2,24 @@
 '''
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
+
+# Import Python libs
 from __future__ import absolute_import, print_function
 import time
 import os
 import threading
+import logging
+from collections import defaultdict
 
 # Import Salt Libs
 import salt.payload
 import salt.auth
 import salt.crypt
 import salt.utils
-import logging
-from collections import defaultdict
-
 from salt.utils import kinds
 
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from raet import raeting, nacling
     from raet.lane.stacking import LaneStack
@@ -157,7 +160,7 @@ class RAETChannel(Channel):
                           lanename=lanename,
                           sockdirpath=self.opts['sock_dir'])
 
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack.value
         stack.addRemote(RemoteYard(stack=stack,
                                    name=ryn,
                                    lanename=lanename,
@@ -244,7 +247,7 @@ class ZeroMQChannel(Channel):
                 if master_type == 'failover':
                     # remove all cached sreqs to the old master to prevent
                     # zeromq from reconnecting to old masters automagically
-                    for check_key in self.sreq_cache.keys():
+                    for check_key in six.iterkeys(self.sreq_cache):
                         if self.opts['master_uri'] != check_key[0]:
                             del self.sreq_cache[check_key]
                             log.debug('Removed obsolete sreq-object from '

@@ -176,18 +176,21 @@ To use it one must convert it to a list. Example:
 '''
 
 # Import python libs
+from __future__ import absolute_import
+
 # Windows platform has no 'grp' module
+import os
+import copy
+import json
+import shlex
+import logging
+
 HAS_GRP = False
 try:
     import grp
     HAS_GRP = True
 except ImportError:
     pass
-import os
-import copy
-import json
-import shlex
-import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError

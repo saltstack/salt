@@ -232,9 +232,9 @@ A more complex ``recurse`` example:
         - source: salt://project/templates_dir
         - include_empty: True
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import difflib
 import json
 import logging
@@ -245,21 +245,54 @@ import traceback
 import yaml
 
 # Import salt libs
+import salt.payload
 import salt.utils
 import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
-from salt.ext.six.moves import map
+
+# Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six import string_types, integer_types
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
 
-_ACCUMULATORS = {}
-_ACCUMULATORS_DEPS = {}
+
+def _get_accumulator_filepath():
+    '''
+    Return accumulator data path.
+    '''
+    return os.path.join(salt.utils.get_accumulator_dir(__opts__['cachedir']),
+                        __instance_id__)
+
+
+def _load_accumulators():
+    def _deserialize(path):
+        serial = salt.payload.Serial(__opts__)
+        ret = {'accumulators': {}, 'accumulators_deps': {}}
+        try:
+            with open(path, 'rb') as f:
+                loaded = serial.load(f)
+                return loaded if loaded else ret
+        except IOError:
+            return ret
+
+    loaded = _deserialize(_get_accumulator_filepath())
+
+    return loaded['accumulators'], loaded['accumulators_deps']
+
+
+def _persist_accummulators(accumulators, accumulators_deps):
+
+    accumm_data = {'accumulators': accumulators,
+                   'accumulators_deps': accumulators_deps}
+
+    serial = salt.payload.Serial(__opts__)
+    with open(_get_accumulator_filepath(), 'w+b') as f:
+        serial.dump(accumm_data, f)
 
 
 def _check_user(user, group):
@@ -476,7 +509,7 @@ def _check_directory(name,
     if changes:
         comments = ['The following files will be changed:\n']
         for fn_ in changes:
-            for key, val in changes[fn_].items():
+            for key, val in six.iteritems(changes[fn_]):
                 comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
         return None, ''.join(comments)
     return True, 'The directory {0} is in the correct state'.format(name)
@@ -961,7 +994,7 @@ def exists(name):
     if not name:
         return _error(ret, 'Must provide name to file.exists')
     if not os.path.exists(name):
-        return _error(ret, ('Specified path {0} does not exist').format(name))
+        return _error(ret, 'Specified path {0} does not exist'.format(name))
 
     ret['comment'] = 'Path {0} exists'.format(name)
     return ret
@@ -984,7 +1017,7 @@ def missing(name):
     if not name:
         return _error(ret, 'Must provide name to file.missing')
     if os.path.exists(name):
-        return _error(ret, ('Specified path {0} exists').format(name))
+        return _error(ret, 'Specified path {0} exists'.format(name))
 
     ret['comment'] = 'Path {0} is missing'.format(name)
     return ret
@@ -1297,7 +1330,7 @@ def managed(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, string_types):
+    if isinstance(env, six.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -1348,10 +1381,11 @@ def managed(name,
                               'No changes made.'.format(name))
         return ret
 
-    if name in _ACCUMULATORS:
+    accum_data, _ = _load_accumulators()
+    if name in accum_data:
         if not context:
             context = {}
-        context['accumulator'] = _ACCUMULATORS[name]
+        context['accumulator'] = accum_data[name]
 
     try:
         if __opts__['test']:
@@ -1769,7 +1803,7 @@ def directory(name,
                     # file.user_to_uid returns '' if user does not exist. Above
                     # check for user is not fatal, so we need to be sure user
                     # exists.
-                    if isinstance(uid, string_types):
+                    if isinstance(uid, six.string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce ownership for ' \
                                          'user {0} (user does not ' \
@@ -1785,7 +1819,7 @@ def directory(name,
                 if group:
                     gid = __salt__['file.group_to_gid'](group)
                     # As above with user, we need to make sure group exists.
-                    if isinstance(gid, string_types):
+                    if isinstance(gid, six.string_types):
                         ret['result'] = False
                         ret['comment'] = 'Failed to enforce group ownership ' \
                                          'for group {0}'.format(group)
@@ -2020,7 +2054,7 @@ def recurse(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, string_types):
+    if isinstance(env, six.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -2032,14 +2066,14 @@ def recurse(name,
         # No need to set __env__ = env since that's done in the state machinery
 
     # Handle corner case where someone uses a numeric source
-    if isinstance(source, (integer_types, float)):
+    if isinstance(source, (six.integer_types, float)):
         ret['result'] = False
         ret['comment'] = ('Invalid source {0} (cannot be numeric)'
                           .format(source))
         return ret
 
     # Make sure that only salt fileserver paths are being used (no http(s)/ftp)
-    if isinstance(source, string_types):
+    if isinstance(source, six.string_types):
         source_precheck = [source]
     else:
         source_precheck = source
@@ -2097,7 +2131,7 @@ def recurse(name,
 
     def add_comment(path, comment):
         comments = ret['comment'].setdefault(path, [])
-        if isinstance(comment, string_types):
+        if isinstance(comment, six.string_types):
             comments.append(comment)
         else:
             comments.extend(comment)
@@ -2180,7 +2214,7 @@ def recurse(name,
 
     # Process symlinks and return the updated filenames list
     def process_symlinks(filenames, symlinks):
-        for lname, ltarget in symlinks.items():
+        for lname, ltarget in six.iteritems(symlinks):
             if not salt.utils.check_include_exclude(
                     os.path.relpath(lname, srcpath), include_pat, exclude_pat):
                 continue
@@ -2224,7 +2258,7 @@ def recurse(name,
     vdir = set()
     srcpath = source[7:]
     if not srcpath.endswith('/'):
-        #we're searching for things that start with this *directory*.
+        # we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
         srcpath = srcpath + '/'
     fns_ = __salt__['cp.list_master'](__env__, srcpath)
@@ -2256,7 +2290,7 @@ def recurse(name,
             if len(relpieces) > maxdepth + 1:
                 continue
 
-        #- Check if it is to be excluded. Match only part of the path
+        # Check if it is to be excluded. Match only part of the path
         # relative to the target directory
         if not salt.utils.check_include_exclude(
                 relname, include_pat, exclude_pat):
@@ -2311,7 +2345,7 @@ def recurse(name,
     # Flatten comments until salt command line client learns
     # to display structured comments in a readable fashion
     ret['comment'] = '\n'.join('\n#### {0} ####\n{1}'.format(
-        k, v if isinstance(v, string_types) else '\n'.join(v)
+        k, v if isinstance(v, six.string_types) else '\n'.join(v)
     ) for (k, v) in six.iteritems(ret['comment'])).strip()
 
     if not ret['comment']:
@@ -2381,13 +2415,15 @@ def replace(name,
 
     if changes:
         ret['changes'] = {'diff': changes}
-        ret['comment'] = ('Changes were made'
-                if not __opts__['test'] else 'Changes would have been made')
         if __opts__['test']:
             ret['result'] = None
+            ret['comment'] = 'Changes would have been made'
+        else:
+            ret['result'] = True
+            ret['comment'] = 'Changes were made'
     else:
-        ret['comment'] = ('No changes were made'
-            if not __opts__['test'] else 'No changes would have been made')
+        ret['result'] = True
+        ret['comment'] = 'No changes needed to be made'
 
     return ret
 
@@ -2507,11 +2543,12 @@ def blockreplace(
     if not check_res:
         return _error(ret, check_msg)
 
-    if name in _ACCUMULATORS:
-        accumulator = _ACCUMULATORS[name]
+    accum_data, accum_deps = _load_accumulators()
+    if name in accum_data:
+        accumulator = accum_data[name]
         # if we have multiple accumulators for a file, only apply the one
         # required at a time
-        deps = _ACCUMULATORS_DEPS.get(name, [])
+        deps = accum_deps.get(name, [])
         filtered = [a for a in deps if
                     __low__['__id__'] in deps[a] and a in accumulator]
         if not filtered:
@@ -2923,7 +2960,7 @@ def append(name,
         if not retry_res:
             return _error(ret, check_msg)
 
-    #Follow the original logic and re-assign 'text' if using source(s)...
+    # Follow the original logic and re-assign 'text' if using source(s)...
     if sl_:
         tmpret = _get_template_texts(source_list=sl_,
                                      template=template,
@@ -2934,10 +2971,10 @@ def append(name,
         text = tmpret['data']
 
     for index, item in enumerate(text):
-        if isinstance(item, integer_types):
+        if isinstance(item, six.integer_types):
             text[index] = str(item)
 
-    if isinstance(text, string_types):
+    if isinstance(text, six.string_types):
         text = (text,)
 
     with salt.utils.fopen(name, 'rb') as fp_:
@@ -3103,7 +3140,7 @@ def prepend(name,
     if not check_res:
         return _error(ret, check_msg)
 
-    #Follow the original logic and re-assign 'text' if using source(s)...
+    # Follow the original logic and re-assign 'text' if using source(s)...
     if sl_:
         tmpret = _get_template_texts(source_list=sl_,
                                      template=template,
@@ -3113,7 +3150,7 @@ def prepend(name,
             return tmpret
         text = tmpret['data']
 
-    if isinstance(text, string_types):
+    if isinstance(text, six.string_types):
         text = (text,)
 
     with salt.utils.fopen(name, 'rb') as fp_:
@@ -3254,7 +3291,7 @@ def patch(name,
         ret.update(result=True, comment='Patch is already applied')
         return ret
 
-    if isinstance(env, string_types):
+    if isinstance(env, six.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '
@@ -3726,23 +3763,25 @@ def accumulated(name, filename, text, **kwargs):
             __low__['__id__']
         )
         return ret
-    if isinstance(text, string_types):
+    if isinstance(text, six.string_types):
         text = (text,)
-    if filename not in _ACCUMULATORS:
-        _ACCUMULATORS[filename] = {}
-    if filename not in _ACCUMULATORS_DEPS:
-        _ACCUMULATORS_DEPS[filename] = {}
-    if name not in _ACCUMULATORS_DEPS[filename]:
-        _ACCUMULATORS_DEPS[filename][name] = []
+    accum_data, accum_deps = _load_accumulators()
+    if filename not in accum_data:
+        accum_data[filename] = {}
+    if filename not in accum_deps:
+        accum_deps[filename] = {}
+    if name not in accum_deps[filename]:
+        accum_deps[filename][name] = []
     for accumulator in deps:
-        _ACCUMULATORS_DEPS[filename][name].extend(six.itervalues(accumulator))
-    if name not in _ACCUMULATORS[filename]:
-        _ACCUMULATORS[filename][name] = []
+        accum_deps[filename][name].extend(six.itervalues(accumulator))
+    if name not in accum_data[filename]:
+        accum_data[filename][name] = []
     for chunk in text:
-        if chunk not in _ACCUMULATORS[filename][name]:
-            _ACCUMULATORS[filename][name].append(chunk)
+        if chunk not in accum_data[filename][name]:
+            accum_data[filename][name].append(chunk)
             ret['comment'] = ('Accumulator {0} for file {1} '
                               'was charged by text'.format(name, filename))
+    _persist_accummulators(accum_data, accum_deps)
     return ret
 
 
@@ -3897,7 +3936,7 @@ def serialize(name,
     if not name:
         return _error(ret, 'Must provide name to file.serialize')
 
-    if isinstance(env, string_types):
+    if isinstance(env, six.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
             '\'env\'. This warning will go away in Salt Boron and this '

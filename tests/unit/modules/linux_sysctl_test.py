@@ -3,6 +3,9 @@
     :codeauthor: :email:`jmoney <justin@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.modules import linux_sysctl
 from salt.modules import systemd
@@ -23,6 +26,7 @@ ensure_in_syspath('../../')
 
 # Globals
 linux_sysctl.__salt__ = {}
+linux_sysctl.__context__ = {}
 systemd.__context__ = {}
 
 

@@ -4,14 +4,16 @@ Control virtual machines via Salt
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import logging
 
 # Import Salt libs
 import salt.client
 import salt.utils.virt
 import salt.key
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ def _determine_hyper(data, omit=''):
     # to be much more complicated.
     hyper = ''
     bestmem = 0
-    for hv_, comps in data.items():
+    for hv_, comps in six.iteritems(data):
         if hv_ == omit:
             continue
         if not isinstance(comps, dict):
@@ -69,7 +71,7 @@ def query(hyper=None, quiet=False):
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = next(info.iterkeys())
+        id_ = next(six.iterkeys(info))
         if hyper:
             if hyper != id_:
                 continue
@@ -105,7 +107,7 @@ def list(hyper=None, quiet=False):  # pylint: disable=redefined-builtin
         if not isinstance(info, dict):
             continue
         chunk = {}
-        id_ = next(info.iterkeys())
+        id_ = next(six.iterkeys(info))
         if hyper:
             if hyper != id_:
                 continue
@@ -116,7 +118,7 @@ def list(hyper=None, quiet=False):  # pylint: disable=redefined-builtin
         if not isinstance(info[id_]['ret'], dict):
             continue
         data = {}
-        for key, val in info[id_]['ret'].items():
+        for key, val in six.iteritems(info[id_]['ret']):
             if val['state'] in data:
                 data[val['state']].append(key)
             else:
@@ -262,7 +264,7 @@ def reset(name):
     if not data:
         __jid_event__.fire_event({'message': 'Failed to find vm {0} to reset'.format(name)}, 'progress')
         return 'fail'
-    hyper = next(data.iterkeys())
+    hyper = next(six.iterkeys(data))
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.reset',
@@ -284,7 +286,7 @@ def start(name):
     if not data:
         __jid_event__.fire_event({'message': 'Failed to find vm {0} to start'.format(name)}, 'progress')
         return 'fail'
-    hyper = next(data.iterkeys())
+    hyper = next(six.iterkeys(data))
     if data[hyper][name]['state'] == 'running':
         print('VM {0} is already running'.format(name))
         return 'bad state'
@@ -309,7 +311,7 @@ def force_off(name):
     if not data:
         print('Failed to find vm {0} to destroy'.format(name))
         return 'fail'
-    hyper = next(data.iterkeys())
+    hyper = next(six.iterkeys(data))
     if data[hyper][name]['state'] == 'shutdown':
         print('VM {0} is already shutdown'.format(name))
         return'bad state'
@@ -334,7 +336,7 @@ def purge(name, delete_key=True):
     if not data:
         __jid_event__.fire_event({'error': 'Failed to find vm {0} to purge'.format(name)}, 'progress')
         return 'fail'
-    hyper = next(data.iterkeys())
+    hyper = next(six.iterkeys(data))
     cmd_ret = client.cmd_iter(
             hyper,
             'virt.purge',
@@ -361,7 +363,7 @@ def pause(name):
     if not data:
         __jid_event__.fire_event({'error': 'Failed to find VM {0} to pause'.format(name)}, 'progress')
         return 'fail'
-    hyper = next(data.iterkeys())
+    hyper = next(six.iterkeys(data))
     if data[hyper][name]['state'] == 'paused':
         __jid_event__.fire_event({'error': 'VM {0} is already paused'.format(name)}, 'progress')
         return 'bad state'
@@ -386,7 +388,7 @@ def resume(name):
     if not data:
         __jid_event__.fire_event({'error': 'Failed to find VM {0} to pause'.format(name)}, 'progress')
         return 'not found'
-    hyper = next(data.iterkeys())
+    hyper = next(six.iterkeys(data))
     if data[hyper][name]['state'] != 'paused':
         __jid_event__.fire_event({'error': 'VM {0} is not paused'.format(name)}, 'progress')
         return 'bad state'

@@ -7,6 +7,18 @@ accepting its key on the master. For instance, you may want the minion to
 bootstrap itself as soon as it comes online. You may also want to to let your
 developers provision new development machines on the fly.
 
+.. seealso:: Many ways to preseed minion keys
+
+    Salt has other ways to generate and pre-accept minion keys in addition to
+    the manual steps outlined below.
+
+    salt-cloud performs these same steps automatically when new cloud VMs are
+    created (unless instructed not to).
+
+    salt-api exposes an HTTP call to Salt's REST API to :py:class:`generate and
+    download the new minion keys as a tarball
+    <salt.netapi.rest_cherrypy.app.Keys>`.
+
 There is a general four step process to do this:
 
 1. Generate the keys on the master:

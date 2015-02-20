@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
+
+# Import Salt libs
+from salt.exceptions import SaltSystemExit
+
+# Import 3rd-party libs
 try:
     import zmq
     HAS_ZMQ = True
 except ImportError:
     HAS_ZMQ = False
-
-from salt.exceptions import SaltSystemExit
 
 
 def check_ipc_path_max_len(uri):

@@ -1,13 +1,22 @@
 # -*- coding: utf-8 -*-
 
 # import Python Libs
+from __future__ import absolute_import
 import random
 import string
 from copy import deepcopy
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
-# import Python Third Party Libs
+# Import Salt Testing Libs
+from salttesting.unit import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../')
+
+# Import Third Party Libs
 # pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
     import boto
     HAS_BOTO = True
@@ -36,12 +45,6 @@ except ImportError:
 from salt.utils.odict import OrderedDict
 from salt.modules import boto_secgroup
 
-# Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 required_boto_version = '2.4.0'
 vpc_id = 'vpc-mjm05d27'

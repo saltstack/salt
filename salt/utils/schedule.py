@@ -4,7 +4,7 @@ Scheduling routines are located here. To activate the scheduler make the
 schedule option available to the master or minion configurations (master config
 file or for the minion via config or pillar)
 
-code-block:: yaml
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -18,6 +18,8 @@ code-block:: yaml
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour)
 
+.. code-block:: yaml
+
     schedule:
       job1:
         function: state.sls
@@ -30,6 +32,8 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 0 and 15 seconds
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -46,10 +50,12 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) splaying the time between 10 and 15 seconds
 
-    .. versionadded:: 2014.7.0
+.. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library.
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -62,6 +68,8 @@ the python dateutil library.
 
 This will schedule the command: state.sls httpd test=True at 5:00pm minion
 localtime.
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -80,6 +88,8 @@ localtime.
 This will schedule the command: state.sls httpd test=True at 5pm on Monday,
 Wednesday and Friday, and 3pm on Tuesday and Thursday.
 
+.. code-block:: yaml
+
     schedule:
       job1:
         function: state.sls
@@ -96,7 +106,9 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 (every hour) between the hours of 8am and 5pm.  The range parameter must be a
 dictionary with the date strings using the dateutil format.
 
-    ... versionadded:: 2014.7.0
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -121,7 +133,9 @@ the scheduled job when the minion starts up.  Sometimes this is not the desired
 situation.  Using the 'run_on_start' parameter set to False will cause the
 scheduler to skip this first run and wait until the next scheduled run.
 
-    ... versionadded:: Lithium
+.. versionadded:: Lithium
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -133,7 +147,9 @@ scheduler to skip this first run and wait until the next scheduled run.
         kwargs:
           test: True
 
-    ... versionadded:: 2014.7.0
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
 
     schedule:
       job1:
@@ -171,7 +187,7 @@ and could step on each other or pile up in case of infrastructure outage.
 
 The default for maxrunning is 1.
 
-code-block:: yaml
+.. code-block:: yaml
 
     schedule:
       long_running_job:
@@ -181,15 +197,16 @@ code-block:: yaml
 
 By default, data about jobs runs from the Salt scheduler is not returned to the
 master.  Because of this information for these jobs will not be listed in the
-jobs.list_jobs runner.  The return_job parameter will return the data back to
-the Salt master, making the job available in this list.
+:py:func:`jobs.list_jobs <salt.runners.jobs.list_jobs>` runner.  The
+``return_job`` parameter will return the data back to the Salt master, making
+the job available in this list.
 
-    ... versionadded:: Lithium
+.. versionadded:: Lithium
 
     schedule:
       job1:
           function: scheduled_job_function
-          job_return: True
+          return_job: True
 
 It can be useful to include specific data to differentiate a job from other
 jobs.  Using the metadata parameter special values can be associated with
@@ -198,7 +215,7 @@ but can be used to search for specific jobs later if combined with the
 return_job parameter.  The metadata parameter must be specified as a
 dictionary, othewise it will be ignored.
 
-    ... versionadded:: Lithium
+.. versionadded:: Lithium
 
     schedule:
       job1:
@@ -207,9 +224,9 @@ dictionary, othewise it will be ignored.
             foo: bar
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import time
 import datetime
@@ -220,6 +237,21 @@ import logging
 import errno
 import random
 
+# Import Salt libs
+import salt.utils
+import salt.utils.jid
+import salt.utils.process
+import salt.utils.args
+import salt.payload
+import salt.syspaths
+from salt.utils.odict import OrderedDict
+from salt.utils.process import os_is_running
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
+
+# pylint: disable=import-error
 try:
     import dateutil.parser as dateutil_parser
     _WHEN_SUPPORTED = True
@@ -233,14 +265,7 @@ try:
     _CRON_SUPPORTED = True
 except ImportError:
     _CRON_SUPPORTED = False
-
-# Import Salt libs
-import salt.utils
-import salt.utils.jid
-import salt.utils.process
-from salt.utils.odict import OrderedDict
-from salt.utils.process import os_is_running
-import salt.payload
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -260,6 +285,7 @@ class Schedule(object):
             self.returners = returners
         else:
             self.returners = returners.loader.gen_functions()
+        self.time_offset = self.functions.get('timezone.get_offset', lambda: '0000')()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxint
@@ -273,11 +299,24 @@ class Schedule(object):
             return self.functions['config.merge'](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
+    def persist(self):
+        '''
+        Persist the modified schedule into <<configdir>>/minion.d/_schedule.conf
+        '''
+        schedule_conf = os.path.join(
+                salt.syspaths.CONFIG_DIR,
+                'minion.d',
+                '_schedule.conf')
+        try:
+            with salt.utils.fopen(schedule_conf, 'w+') as fp_:
+                fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
+        except (IOError, OSError):
+            log.error('Failed to persist the updated schedule')
+
     def delete_job(self, name, where=None):
         '''
         Deletes a job from the scheduler.
         '''
-
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
             if name in self.opts['schedule']:
@@ -306,7 +345,7 @@ class Schedule(object):
         if not len(data) == 1:
             raise ValueError('You can only schedule one new job at a time.')
 
-        new_job = next(data.iterkeys())
+        new_job = next(six.iterkeys(data))
 
         if new_job in self.opts['schedule']:
             log.info('Updating job settings for scheduled '
@@ -314,6 +353,7 @@ class Schedule(object):
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
         self.opts['schedule'].update(data)
+        self.persist()
 
     def enable_job(self, name, where=None):
         '''
@@ -429,6 +469,9 @@ class Schedule(object):
         if 'metadata' in data:
             if isinstance(data['metadata'], dict):
                 ret['metadata'] = data['metadata']
+                ret['metadata']['_TOS'] = self.time_offset
+                ret['metadata']['_TS'] = time.ctime()
+                ret['metadata']['_TT'] = time.strftime('%Y %B %d %a %H %m', time.gmtime())
             else:
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
@@ -486,26 +529,23 @@ class Schedule(object):
             with salt.utils.fopen(proc_fn, 'w+') as fp_:
                 fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
-        args = None
+        args = tuple()
         if 'args' in data:
             args = data['args']
 
-        kwargs = None
+        kwargs = {}
         if 'kwargs' in data:
             kwargs = data['kwargs']
+        # if the func support **kwargs, lets pack in the pub data we have
+        # TODO: pack the *same* pub data as a minion?
+        argspec = salt.utils.args.get_function_argspec(self.functions[func])
+        if argspec.keywords:
+            # this function accepts **kwargs, pack in the publish data
+            for key, val in six.iteritems(ret):
+                kwargs['__pub_{0}'.format(key)] = val
 
         try:
-            if args and kwargs:
-                ret['return'] = self.functions[func](*args, **kwargs)
-
-            if args and not kwargs:
-                ret['return'] = self.functions[func](*args)
-
-            if kwargs and not args:
-                ret['return'] = self.functions[func](**kwargs)
-
-            if not kwargs and not args:
-                ret['return'] = self.functions[func]()
+            ret['return'] = self.functions[func](*args, **kwargs)
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
@@ -536,7 +576,7 @@ class Schedule(object):
                 mret['jid'] = 'req'
                 channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
                 load = {'cmd': '_return', 'id': self.opts['id']}
-                for key, value in mret.items():
+                for key, value in six.iteritems(mret):
                     load[key] = value
                 channel.send(load)
 
@@ -568,8 +608,8 @@ class Schedule(object):
             raise ValueError('Schedule must be of type dict.')
         if 'enabled' in schedule and not schedule['enabled']:
             return
-        for job, data in schedule.items():
-            if job == 'enabled':
+        for job, data in six.iteritems(schedule):
+            if job == 'enabled' or not data:
                 continue
             # Job is disabled, continue
             if 'enabled' in data and not data['enabled']:

@@ -10,7 +10,6 @@ import logging
 import hashlib
 import os
 import shutil
-import requests
 
 # Import salt libs
 from salt.exceptions import (
@@ -25,6 +24,7 @@ import salt.fileserver
 import salt.utils
 import salt.utils.templates
 import salt.utils.gzip_util
+import salt.utils.http
 from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
@@ -590,19 +590,29 @@ class Client(object):
         else:
             fixed_url = url
         try:
-            if requests.__version__[0] == '0':
-                # 'stream' was called 'prefetch' before 1.0, with flipped meaning
-                get_kwargs['prefetch'] = False
-            else:
-                get_kwargs['stream'] = True
-            response = requests.get(fixed_url, **get_kwargs)
+            query = salt.utils.http.query(
+                fixed_url,
+                stream=True
+            )
+            response = query['handle']
+            chunk_size = 32 * 1024
             if not no_cache:
                 with salt.utils.fopen(dest, 'wb') as destfp:
-                    for chunk in response.iter_content(chunk_size=32 * 1024):
-                        destfp.write(chunk)
+                    if hasattr(response, 'iter_content'):
+                        for chunk in response.iter_content(chunk_size=chunk_size):
+                            destfp.write(chunk)
+                    else:
+                        while True:
+                            chunk = response.read(chunk_size)
+                            destfp.write(chunk)
+                            if len(chunk) < chunk_size:
+                                break
                 return dest
             else:
-                return response.text
+                if hasattr(response, 'text'):
+                    return response.text
+                else:
+                    return response['text']
         except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
                 exc.code,

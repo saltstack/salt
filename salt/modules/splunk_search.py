@@ -19,14 +19,15 @@ Module for interop with the Splunk API
             host: example.splunkcloud.com
             port: 8080
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import yaml
 import urllib
 
 # Import third party libs
+import salt.ext.six as six
 HAS_LIBS = False
 try:
     import splunklib.client
@@ -36,7 +37,6 @@ except ImportError:
     pass
 
 # Import salt libs
-from salt.ext.six import string_types
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -124,9 +124,9 @@ def update(name, profile="splunk", **kwargs):
     for key in sorted(kwargs):
         old_value = props.get(key, None)
         new_value = updates.get(key, None)
-        if isinstance(old_value, string_types):
+        if isinstance(old_value, six.string_types):
             old_value = old_value.strip()
-        if isinstance(new_value, string_types):
+        if isinstance(new_value, six.string_types):
             new_value = new_value.strip()
         if old_value != new_value:
             update_set[key] = new_value
@@ -240,7 +240,7 @@ def list_all(prefix=None, app=None, owner=None, description_contains=None,
 
     # yaml magic to output OrderedDict
     def ordered_dict_presenter(dumper, data):
-        return dumper.represent_dict(data.items())
+        return dumper.represent_dict(six.iteritems(data))
     yaml.add_representer(
         OrderedDict, ordered_dict_presenter, Dumper=yaml.dumper.SafeDumper)
 

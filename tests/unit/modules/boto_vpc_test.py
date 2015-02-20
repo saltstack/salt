@@ -1,8 +1,24 @@
 # -*- coding: utf-8 -*-
 
-# import Third Party Libs
-from salttesting.mock import patch
-# pylint: disable=import-error,no-name-in-module
+# Import Python libs
+from __future__ import absolute_import
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+
+# Import Salt Testing libs
+from salttesting.unit import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../')
+
+# Import Salt libs
+from salt.modules import boto_vpc
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
+
+# Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import boto
     from boto.exception import BotoServerError
@@ -30,22 +46,7 @@ except ImportError:
             pass
 
         return stub_function
-
-# Import Python libs
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
-
-# Import Salt Libs
-from salt.modules import boto_vpc
-from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-
-# Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # the boto_vpc module relies on the connect_to_region() method
 # which was added in boto 2.8.0
@@ -439,7 +440,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
         describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
 
-        vpc_properties = dict(cidr_block=unicode(cidr_block),
+        vpc_properties = dict(cidr_block=six.text_type(cidr_block),
                               is_default=None,
                               state=u'available',
                               tags={'Name': 'test', 'test': 'testvalue'},

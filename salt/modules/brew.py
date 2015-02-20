@@ -38,7 +38,7 @@ def _list_taps():
 
 def _tap(tap, runas=None):
     '''
-    Add unofficial Github repos to the list of formulas that brew tracks,
+    Add unofficial GitHub repos to the list of formulas that brew tracks,
     updates, and installs from.
     '''
     if tap in _list_taps():
@@ -244,7 +244,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             salt '*' pkg.install <package name>
 
     taps
-        Unofficial Github repos to use when updating and installing formulas.
+        Unofficial GitHub repos to use when updating and installing formulas.
 
         CLI Example:
 
