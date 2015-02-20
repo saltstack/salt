@@ -131,6 +131,25 @@ def installed(name,
                 pkgs_satisfied.append(installed_name_ver)
                 continue
 
+    if __opts__['test']:
+        ret['result'] = None
+
+        comment_msg = []
+        if pkgs_to_install:
+            comment_msg.append(
+                'Bower package(s) {0!r} are set to be installed'.format(
+                    ', '.join(pkgs_to_install)))
+
+            ret['changes'] = {'old': [], 'new': pkgs_to_install}
+
+        if pkgs_satisfied:
+            comment_msg.append(
+                'Package(s) {0!r} satisfied by {1}'.format(
+                    ', '.join(pkg_list), ', '.join(pkgs_satisfied)))
+
+        ret['comment'] = '. '.join(comment_msg)
+        return ret
+
     if not pkgs_to_install:
         ret['result'] = True
         ret['comment'] = ('Package(s) {0!r} satisfied by {1}'.format(
@@ -186,20 +205,34 @@ def removed(name, dir, user=None):
 
     try:
         installed_pkgs = __salt__['bower.list'](dir=dir, runas=user)
-        if name not in installed_pkgs:
-            ret['result'] = True
-            ret['comment'] = 'Package {0!r} is not installed'.format(name)
-            return ret
-        if __salt__['bower.uninstall'](pkg=name, dir=dir, runas=user):
-            ret['result'] = True
-            ret['changes'][name] = 'Removed'
-            ret['comment'] = 'Package {0!r} was successfully removed'.format(
-                name)
-            return ret
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error removing {0!r}: {1}'.format(name, err)
         return ret
+
+    if name not in installed_pkgs:
+        ret['result'] = True
+        ret['comment'] = 'Package {0!r} is not installed'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Package {0!r} is set to be removed!'.format(name)
+        return ret
+
+    try:
+        if __salt__['bower.uninstall'](pkg=name, dir=dir, runas=user):
+            ret['result'] = True
+            ret['changes'] = {name: 'Removed'}
+            ret['comment'] = 'Package {0!r} was successfully removed'.format(
+                name)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Error removing {0!r}'.format(name)
+    except (CommandExecutionError, CommandNotFoundError) as err:
+        ret['result'] = False
+        ret['comment'] = 'Error removing {0!r}: {1}'.format(name, err)
+
     return ret
 
 
@@ -214,6 +247,12 @@ def bootstrap(name, user=None):
 
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Directory {0!r} is set to be bootstrapped'.format(
+            name)
+        return ret
 
     try:
         call = __salt__['bower.install'](pkg=None, dir=name, runas=user)

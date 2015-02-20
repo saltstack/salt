@@ -25,6 +25,7 @@ from salt.exceptions import CommandExecutionError
 
 # Globals
 bower.__salt__ = {}
+bower.__opts__ = {'test': False}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
