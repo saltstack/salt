@@ -128,10 +128,10 @@ def get_printout(out, opts=None, **kwargs):
     if 'output' in opts:
         # new --out option
         out = opts['output']
-        if out == 'text':
-            out = 'txt'
 
-    if out is None or out == '':
+    if out == 'text':
+        out = 'txt'
+    elif out is None or out == '':
         out = 'nested'
     if opts.get('progress', False):
         out = 'progress'
