@@ -73,7 +73,7 @@ class LocalClient(salt.client.LocalClient):
                 name=name,
                 lanename=lanename,
                 sockdirpath=sockdirpath)
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack.value
         manor_yard = RemoteYard(
                 stack=stack,
                 lanename=lanename,

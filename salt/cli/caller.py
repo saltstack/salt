@@ -354,7 +354,7 @@ class RAETCaller(ZeroMQCaller):
                           lanename=lanename,
                           sockdirpath=sockdirpath)
 
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack.value
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
                                    lanename=lanename,

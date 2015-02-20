@@ -131,7 +131,7 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         '''
         Assign class defaults
         '''
-        RoadStack.Bk = raeting.bodyKinds.msgpack
+        RoadStack.Bk = raeting.BodyKind.msgpack.value
         RoadStack.JoinentTimeout = 0.0
 
     def action(self):
@@ -320,9 +320,9 @@ class SaltRaetRoadStackRejected(ioflo.base.deeding.Deed):
         rejected = False
         if stack and isinstance(stack, RoadStack):
             if stack.remotes:
-                for remote in stack.remotes.values():
-                    rejected = all([remote.acceptance == raeting.acceptances.rejected
-                                    for remote in stack.remotes.values()])
+                rejected = all([remote.acceptance == raeting.Acceptance.rejected.value
+                                for remote in stack.remotes.values()
+                                if remote.kind == kinds.applKinds.master])
             else:  # no remotes so assume rejected
                 rejected = True
         self.status.update(rejected=rejected)
@@ -696,7 +696,7 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                                     name=name,
                                     lanename=lanename,
                                     sockdirpath=self.opts.value['sock_dir'])
-        self.stack.value.Pk = raeting.packKinds.pack
+        self.stack.value.Pk = raeting.PackKind.pack.value
         self.event_yards.value = set()
         self.local_cmd.value = deque()
         self.remote_cmd.value = deque()
@@ -1409,7 +1409,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 lanename=lanename,
                 sockdirpath=sockdirpath)
 
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack.value
         # add remote for the manor yard
         stack.addRemote(RemoteYard(stack=stack,
                                    name='manor',
