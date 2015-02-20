@@ -21,7 +21,7 @@ import time
 import traceback
 import types
 from random import randint, shuffle
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
 try:
