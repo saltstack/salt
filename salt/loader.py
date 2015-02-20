@@ -895,6 +895,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         fpath, suffix = self.file_mapping[name]
         self.loaded_files.append(name)
         try:
+            sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
             else:
@@ -948,6 +949,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 exc_info=True
             )
             return mod
+        finally:
+            sys.path.pop()
 
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
