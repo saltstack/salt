@@ -529,7 +529,7 @@ def _clean_stale(repo_obj, local_refs=None):
             repo_obj.lookup_reference(ref).delete()
             cleaned.append(ref)
     if cleaned:
-        log.debug('GitFS cleaned the following stale refs: {0}'
+        log.debug('gitfs cleaned the following stale refs: {0}'
                   .format(cleaned))
     return cleaned
 
@@ -651,7 +651,7 @@ def init():
         override_params += AUTH_PARAMS
     elif global_auth_params:
         log.critical(
-            'GitFS authentication was configured, but the {0!r} '
+            'gitfs authentication was configured, but the {0!r} '
             'gitfs_provider does not support authentication. The providers '
             'for which authentication is supported in gitfs are: {1}. See the '
             'GitFS Walkthrough in the Salt documentation for further '
@@ -690,7 +690,7 @@ def init():
                 bad_per_remote_conf = True
                 if param in AUTH_PARAMS and provider not in AUTH_PROVIDERS:
                     log.critical(
-                        'GitFS authentication parameter {0!r} (from remote '
+                        'gitfs authentication parameter {0!r} (from remote '
                         '{1}) is only supported by the following provider(s): '
                         '{2}. Current gitfs_provider is {3!r}. See the '
                         'GitFS Walkthrough in the Salt documentation for '
@@ -909,9 +909,9 @@ def _init_dulwich(rp_, repo_url, ssl_verify):
     return repo, new
 
 
-def purge_cache():
+def _clear_old_remotes():
     '''
-    Purge the fileserver cache
+    Remove cache directories for remotes no longer configured
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     try:
@@ -929,8 +929,22 @@ def purge_cache():
     if remove_dirs:
         for rdir in remove_dirs:
             shutil.rmtree(rdir)
+            log.debug('gitfs removed old cachedir {0}'.format(rdir))
         return True
     return False
+
+
+def clear_cache():
+    '''
+    Completely clear gitfs cache
+    '''
+    fsb_cachedir = os.path.join(__opts__['cachedir'], 'gitfs')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/gitfs')
+    for rdir in (fsb_cachedir, list_cachedir):
+        try:
+            shutil.rmtree(rdir)
+        except OSError:
+            pass
 
 
 @contextlib.contextmanager
@@ -973,7 +987,7 @@ def update():
             'backend': 'gitfs'}
     provider = _get_provider()
     pid = os.getpid()
-    data['changed'] = purge_cache()
+    data['changed'] = _clear_old_remotes()
     for repo in init():
         if provider == 'gitpython':
             origin = repo['repo'].remotes[0]
@@ -988,7 +1002,7 @@ def update():
 
         with _acquire_update_lock_for_repo(repo):
             try:
-                log.debug('GitFS is fetching from {0}'.format(repo['url']))
+                log.debug('gitfs is fetching from {0}'.format(repo['url']))
                 if provider == 'gitpython':
                     try:
                         fetch_results = origin.fetch()
@@ -1013,7 +1027,7 @@ def update():
                         # pygit2 >= 0.21.0
                         received_objects = fetch.received_objects
                     log.debug(
-                        'Gitfs received {0} objects for remote {1}'
+                        'gitfs received {0} objects for remote {1}'
                         .format(received_objects, repo['url'])
                     )
                     # Clean up any stale refs
@@ -1056,7 +1070,7 @@ def update():
                     if refs_post is None:
                         # Empty repository
                         log.warning(
-                            'Gitfs remote {0!r} is an empty repository and will '
+                            'gitfs remote {0!r} is an empty repository and will '
                             'be skipped.'.format(origin)
                         )
                         continue
