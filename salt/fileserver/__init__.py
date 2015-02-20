@@ -15,7 +15,7 @@ import time
 # Import salt libs
 import salt.loader
 import salt.utils
-import salt.ext.six as six
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -283,8 +283,8 @@ class Fileserver(object):
         ret = []
         if not back:
             back = self.opts['fileserver_backend']
-        if isinstance(back, str):
-            back = [back]
+        if isinstance(back, string_types):
+            back = back.split(',')
         for sub in back:
             if '{0}.envs'.format(sub) in self.servers:
                 ret.append(sub)
@@ -296,21 +296,43 @@ class Fileserver(object):
         '''
         return self.opts
 
+    def clear_cache(self, back=None):
+        '''
+        Clear the cache of all of the fileserver backends that support the
+        clear_cache function or the named backend(s) only.
+        '''
+        back = self._gen_back(back)
+        ret = []
+        for fsb in back:
+            fstr = '{0}.clear_cache'.format(fsb)
+            if fstr in self.servers:
+                log.debug('Clearing {0} fileserver cache'.format(fsb))
+                try:
+                    self.servers[fstr]()
+                except Exception as exc:
+                    log.error('Error occurred clearing {0} fileserver cache: '
+                              '{1}'.format(fsb, exc))
+                else:
+                    ret.append(
+                        'The {0} fileserver cache was cleared'.format(fsb)
+                    )
+        return ret
+
     def update(self, back=None):
         '''
-        Update all of the file-servers that support the update function or the
-        named fileserver only.
+        Update all of the fileserver backends that support the update function
+        or the named backend(s) only.
         '''
         back = self._gen_back(back)
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
-                log.debug('Updating fileserver cache')
+                log.debug('Updating {0} fileserver cache'.format(fsb))
                 self.servers[fstr]()
 
     def envs(self, back=None, sources=False):
         '''
-        Return the environments for the named backend or all back-ends
+        Return the environments for the named backend or all backends
         '''
         back = self._gen_back(back)
         ret = set()
