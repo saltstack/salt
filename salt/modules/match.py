@@ -36,15 +36,6 @@ def compound(tgt, minion_id=None):
     .. code-block:: bash
 
         salt '*' match.compound 'L@cheese,foo and *'
-
-    delimiter
-    Pillar Example:
-
-    .. code-block:: yaml
-       '172.16.0.0/12':
-         - match: ipcidr
-         - nodeclass: internal
-
     '''
     opts = {'grains': __grains__}
     if minion_id is not None:
@@ -70,6 +61,15 @@ def ipcidr(tgt):
     .. code-block:: bash
 
         salt '*' match.ipcidr '192.168.44.0/24'
+
+    delimiter
+    Pillar Example:
+
+    .. code-block:: yaml
+       '172.16.0.0/12':
+         - match: ipcidr
+         - nodeclass: internal
+
     '''
     matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
     try:
