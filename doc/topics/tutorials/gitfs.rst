@@ -134,6 +134,15 @@ For APT-based distros such as Ubuntu and Debian:
 
         salt-run fileserver.clear_cache backend=git
 
+    If the Master is running an earlier version, then the cache can be cleared
+    by removing the ``gitfs`` and ``file_lists/gitfs`` directories (both paths
+    relative to the master cache directory, usually
+    ``/var/cache/salt/master``).
+
+    .. code-block:: bash
+
+        rm -rf /var/cache/salt/master{,/file_lists}/gitfs
+
 Simple Configuration
 ====================
 
