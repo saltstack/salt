@@ -31,6 +31,7 @@ Full list of builtin state modules
     boto_secgroup
     boto_sns
     boto_sqs
+    bower
     chef
     cloud
     cmd
