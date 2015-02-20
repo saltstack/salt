@@ -118,6 +118,21 @@ For APT-based distros such as Ubuntu and Debian:
 
     # apt-get install python-dulwich
 
+.. important::
+
+    If switching to Dulwich from GitPython/pygit2, or switching from
+    GitPython/pygit2 to Dulwich, it is necessary to clear the gitfs cache to
+    avoid unpredictable behavior. This is probably a good idea whenever
+    switching to a new :conf_master:`gitfs_provider`, but it is less important
+    when switching between GitPython and pygit2.
+
+    Beginning in version 2015.2.0, the gitfs cache can be easily cleared using
+    the :mod:`fileserver.clear_cache <salt.runners.fileserver.clear_cache>`
+    runner.
+
+    .. code-block:: bash
+
+        salt-run fileserver.clear_cache backend=git
 
 Simple Configuration
 ====================
