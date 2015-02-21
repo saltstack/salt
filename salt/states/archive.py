@@ -186,7 +186,7 @@ def extracted(name,
         else:
             log.debug('Untar {0} in {1}'.format(filename, name))
 
-            tar_cmd = ['tar', 'x{0}'.format(tar_options), '-f', repr(filename)]
+            tar_cmd = ['tar', 'x{0}'.format(tar_options), '-f', filename]
             results = __salt__['cmd.run_all'](tar_cmd, cwd=name, python_shell=False)
             if results['retcode'] != 0:
                 ret['result'] = False
