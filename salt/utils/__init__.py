@@ -1035,12 +1035,7 @@ def fopen(*args, **kwargs):
         # no changes at all
         if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
                 [i for i in (uid, gid) if i != -1]:
-            try:
-                os.chown(path, uid, gid)
-            except OSError:
-                # uid and gid != -1, but file attrs are still immutable, such
-                # as on a network filesystem
-                pass
+            os.chown(path, uid, gid)
 
     if mode is not None:
         if d_stat.st_mode | mode != d_stat.st_mode:
