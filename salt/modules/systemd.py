@@ -125,6 +125,8 @@ def _get_all_legacy_init_scripts():
     otherwise.
     '''
     ret = {}
+    if not os.path.isdir(LEGACY_INIT_SCRIPT_PATH):
+        return ret
     for fn in os.listdir(LEGACY_INIT_SCRIPT_PATH):
         if not os.path.isfile(os.path.join(LEGACY_INIT_SCRIPT_PATH, fn)) or fn.startswith('rc'):
             continue
