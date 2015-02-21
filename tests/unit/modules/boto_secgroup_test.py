@@ -39,7 +39,7 @@ except ImportError:
         def stub_function(self):
             pass
         return stub_function
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import Salt Libs
 from salt.utils.odict import OrderedDict

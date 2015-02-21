@@ -46,7 +46,7 @@ import salt.ext.six as six
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
-# pylint: disable=import-error,no-name-in-module
+# pylint: enable=import-error,no-name-in-module
 try:
     import requests
     HAS_REQUESTS = True

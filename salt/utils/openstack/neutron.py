@@ -19,7 +19,7 @@ try:
     HAS_NEUTRON = True
 except ImportError:
     pass
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import salt libs
 from salt import exceptions
