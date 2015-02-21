@@ -19,7 +19,7 @@ from salt.utils import print_cli
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 
 class Batch(object):
