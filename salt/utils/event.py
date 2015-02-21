@@ -53,14 +53,12 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import sys
 import time
 import errno
 import hashlib
 import logging
 import datetime
 import multiprocessing
-import traceback
 from collections import MutableMapping
 
 # Import third party libs
@@ -516,10 +514,7 @@ class SaltEvent(object):
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() below will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
-            try:
-                self.sub.setsockopt(zmq.LINGER, linger)
-            except TypeError:
-                pass
+            self.sub.setsockopt(zmq.LINGER, linger)
             self.sub.close()
         if self.cpush is True and self.push.closed is False:
             self.push.setsockopt(zmq.LINGER, linger)
@@ -590,10 +585,11 @@ class SaltEvent(object):
         try:
             self.destroy()
         except Exception as ex:
-            log.debug(ex)
-            # as this method can be called when logging is already teared down
-            # just try to stdout it
-            traceback.print_exc(file=sys.stderr)
+            # attempt to log, but the logger may have been uloaded already
+            try:
+                log.debug(ex, exc_info=True)
+            except:
+                pass
 
 
 class MasterEvent(SaltEvent):
