@@ -23,7 +23,7 @@ class DarwingPkgutilTestCase(TestCase):
         # When
         mock_cmd = MagicMock(return_value=r_output)
         with patch.dict(darwin_pkgutil.__salt__, {'cmd.run_stdout': mock_cmd}):
-            output = darwin_pkgutil.list()
+            output = darwin_pkgutil.list_()
 
         # Then
         mock_cmd.assert_called_with("/usr/sbin/pkgutil --pkgs")
@@ -35,7 +35,7 @@ class DarwingPkgutilTestCase(TestCase):
         # When
         mock_cmd = MagicMock(return_value=r_output)
         with patch.dict(darwin_pkgutil.__salt__, {'cmd.run_stdout': mock_cmd}):
-            output = darwin_pkgutil.list()
+            output = darwin_pkgutil.list_()
 
         # Then
         self.assertEqual(output, r_output)
