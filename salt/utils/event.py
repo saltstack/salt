@@ -52,6 +52,8 @@ Namespaced tag
 from __future__ import absolute_import
 
 # Import python libs
+import traceback
+import sys
 import os
 import time
 import errno
@@ -509,12 +511,20 @@ class SaltEvent(object):
         }
         return self.fire_event(msg, "fire_master", timeout)
 
-    def destroy(self, linger=5000):
+    def destroy(self, linger=5000, swallow=False):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() below will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
-            self.sub.setsockopt(zmq.LINGER, linger)
+            try:
+                self.sub.setsockopt(zmq.LINGER, linger)
+            except TypeError as ex:
+                typ, eargs, _trace = sys.exc_info()
+                if swallow:
+                    pass
+                else:
+                    # conserve original stack trace !
+                    raise typ, eargs, _trace
             self.sub.close()
         if self.cpush is True and self.push.closed is False:
             self.push.setsockopt(zmq.LINGER, linger)
@@ -583,9 +593,13 @@ class SaltEvent(object):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
         # shutdown-- where globals start going missing
         try:
-            self.destroy()
+            self.destroy(swallow=True)
         except Exception as ex:
-            log.debug(ex)
+            # attempt to log, but the logger may have been uloaded already
+            try:
+                traceback.print_exc(file=sys.stderr)
+            except:
+                pass
 
 
 class MasterEvent(SaltEvent):
