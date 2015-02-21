@@ -783,7 +783,8 @@ class Minion(MinionBase):
             super(Minion, self).__init__(opts)
             self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
             # TODO: remove? What is this used for...
-            self.tok = self.pub_channel.auth.gen_token('salt')
+            # TODO: re-enable
+            #self.tok = self.pub_channel.auth.gen_token('salt')
             self.connected = True
             return opts['master']
 
@@ -876,7 +877,8 @@ class Minion(MinionBase):
         load = {'id': self.opts['id'],
                 'cmd': '_minion_event',
                 'pretag': pretag,
-                'tok': self.tok}
+                }
+                #'tok': self.tok}
         if events:
             load['events'] = events
         elif data and tag:

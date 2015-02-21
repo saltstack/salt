@@ -21,6 +21,9 @@ class ReqChannel(object):
         elif 'transport' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport']
 
+        # TODO: remove
+        ttype = 'tcp'
+
         # switch on available ttypes
         if ttype == 'zeromq':
             import salt.transport.zeromq
@@ -28,6 +31,9 @@ class ReqChannel(object):
         elif ttype == 'raet':
             import salt.transport.raet
             return salt.transport.raet.RAETReqChannel(opts, **kwargs)
+        elif ttype == 'tcp':
+            import salt.transport.tcp
+            return salt.transport.tcp.TCPReqChannel(opts, **kwargs)
         elif ttype == 'local':
             import salt.transport.local
             return salt.transport.local.LocalChannel(opts, **kwargs)
@@ -64,6 +70,9 @@ class PubChannel(object):
         elif 'transport' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport']
 
+        # TODO: remove
+        ttype = 'tcp'
+
         # switch on available ttypes
         if ttype == 'zeromq':
             import salt.transport.zeromq
@@ -71,6 +80,9 @@ class PubChannel(object):
         elif ttype == 'raet':  # TODO:
             import salt.transport.raet
             return salt.transport.raet.RAETPubChannel(opts, **kwargs)
+        elif ttype == 'tcp':
+            import salt.transport.tcp
+            return salt.transport.tcp.TCPPubChannel(opts, **kwargs)
         elif ttype == 'local':  # TODO:
             import salt.transport.local
             return salt.transport.local.LocalPubChannel(opts, **kwargs)

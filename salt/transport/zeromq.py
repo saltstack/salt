@@ -433,8 +433,6 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
         '''
         self._socket.send(self.serial.dumps(payload))
 
-    # TODO? maybe have recv() return this function, so this class isn't tied to
-    # a send/recv order
     def send_clear(self, payload):
         '''
         Send a response to a recv()'d payload
@@ -447,7 +445,6 @@ class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
         Send a response to a recv()'d payload
         '''
         self._send(self.crypticle.dumps(payload))
-
 
     def send_private(self, payload, dictkey, target):
         '''

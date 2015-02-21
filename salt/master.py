@@ -658,7 +658,10 @@ class MWorker(multiprocessing.Process):
                     payload = self.req_channel.recv()
                     # TODO: maybe change into a wrapper class?
                     # req_opts defines our response function
-                    ret, req_opts = self._handle_payload(payload)
+                    try:
+                        ret, req_opts = self._handle_payload(payload)
+                    except KeyError:
+                        ret, req_opts = 'error', {}
 
                     # req_fun: default to send
                     req_fun = req_opts.get('fun', 'send')
@@ -714,11 +717,8 @@ class MWorker(multiprocessing.Process):
 
         :param dict payload: The payload route to the appropriate handler
         '''
-        try:
-            key = payload['enc']
-            load = payload['load']
-        except KeyError:
-            return ''
+        key = payload['enc']
+        load = payload['load']
         return {'aes': self._handle_aes,
                 'clear': self._handle_clear}[key](load)
 
