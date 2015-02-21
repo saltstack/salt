@@ -511,7 +511,7 @@ class SaltEvent(object):
         }
         return self.fire_event(msg, "fire_master", timeout)
 
-    def destroy(self, linger=5000, shallow=False):
+    def destroy(self, linger=5000, swallow=False):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() below will hang indefinitely.
@@ -520,7 +520,7 @@ class SaltEvent(object):
                 self.sub.setsockopt(zmq.LINGER, linger)
             except TypeError as ex:
                 typ, eargs, _trace = sys.exc_info()
-                if shallow:
+                if swallow:
                     pass
                 else:
                     # conserve original stack trace !
@@ -593,7 +593,7 @@ class SaltEvent(object):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
         # shutdown-- where globals start going missing
         try:
-            self.destroy(shallow=True)
+            self.destroy(swallow=True)
         except Exception as ex:
             # attempt to log, but the logger may have been uloaded already
             try:
