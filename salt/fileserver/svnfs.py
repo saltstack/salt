@@ -44,7 +44,7 @@ try:
     CLIENT = pysvn.Client()
 except ImportError:
     pass
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils

@@ -48,7 +48,7 @@ try:
     HAS_HG = True
 except ImportError:
     HAS_HG = False
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
