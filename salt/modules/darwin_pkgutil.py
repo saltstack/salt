@@ -12,6 +12,10 @@ import os.path
 # Import 3rd-party libs
 from salt.ext.six.moves import urllib  # pylint: disable=import-error
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'list_': 'list'
+}
 
 PKGUTIL = "/usr/sbin/pkgutil"
 
@@ -22,7 +26,7 @@ def __virtual__():
     return False
 
 
-def list():
+def list_():
     '''
     List the installed packages.
 
