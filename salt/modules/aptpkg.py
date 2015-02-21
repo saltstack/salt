@@ -54,7 +54,7 @@ try:
     HAS_SOFTWAREPROPERTIES = True
 except ImportError:
     HAS_SOFTWAREPROPERTIES = False
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'

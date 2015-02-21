@@ -40,7 +40,7 @@ from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
-# pylint: disable=import-error,redefined-builtin
+# pylint: enable=import-error,redefined-builtin
 
 # Try to load pwd, fallback to getpass if unsuccessful
 try:

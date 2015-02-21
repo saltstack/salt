@@ -247,7 +247,7 @@ import cherrypy
 from cherrypy.lib import cpstats
 import yaml
 import salt.ext.six as six
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 
 # Import Salt libs

@@ -57,7 +57,7 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 
 def __virtual__():

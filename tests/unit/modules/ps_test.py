@@ -65,7 +65,7 @@ try:
     HAS_UTMP = True
 except ImportError:
     HAS_UTMP = False
-# pylint: disable=import-error,unused-import
+# pylint: enable=import-error,unused-import
 
 
 def _get_proc_name(proc):
