@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 # Import Python libs
 from __future__ import absolute_import, print_function
 import os
@@ -8,6 +8,7 @@ import time
 # Import salt libs
 import salt.config
 import salt.payload
+import salt.utils.dictupdate
 
 # Import third party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -158,6 +159,62 @@ class CacheRegex(object):
         self.cache[pattern] = [1, regex, pattern, time.time()]
         return regex
 
+
+class ContextCache(object):
+    def __init__(self, opts, name):
+        '''
+        Create a context cache
+        '''
+        self.opts = opts
+        self.cache_path = os.path.join(opts['cachedir'], 'context', '{0}.p'.format(name))
+        self.serial = salt.payload.Serial(self.opts)
+
+    def cache_context(self, context):
+        '''
+        Cache the given context to disk
+        '''
+        with salt.utils.fopen(self.cache_path, 'w+b') as cache:
+            self.serial.dump(context, cache)
+
+    def get_cache_context(self):
+        '''
+        Retrieve a context cache from disk
+        '''
+        with salt.utils.fopen(self.cache_path, 'rb') as cache:
+            return self.serial.load(cache)
+
+
+def context_cache(func, fill_if_empty=None):
+    '''
+    A decorator to be used module functions which need to cache their
+    context.
+
+    To evaluate a __context__ and re-hydrate it if a given key
+    is empty or contains no items, pass a list of keys to evaulate.
+    '''
+    def context_cache_wrap(*args, **kwargs):
+        func_context = func.func_globals['__context__']
+        func_opts = func.func_globals['__opts__']
+
+        context_cache = ContextCache(func_opts)
+        context_cache.cache_context(func_context)
+
+        if fill_if_empty:
+            salt.utils.dictupdate.update(func_context,
+                                         _cache_fill(fill_if_empty, func_context, context_cache))
+        return func(*args, **kwargs)
+    return context_cache_wrap
+
+    def _cache_fill(cache_keys, context, context_cache):
+        '''
+        Helper method to evaluate a provided context and merge in
+        the cached context
+        '''
+        for key in cache_keys: 
+            cache_key = context_cache.get_cache_context().get(key)
+            if key in context and cache_key:
+                context[key] = cache_key
+        return context
 
 # test code for the CacheCli
 if __name__ == '__main__':
