@@ -274,9 +274,6 @@ class SyncClientMixin(object):
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
                         '__tag__': tag,
-                        # be sure to have the correct __salt__ reference
-                        # in modules globals
-                        '__salt__': self.functions,
                         # weak ref to avoid the Exception in interpreter teardown
                         # of event
                         '__jid_event__': weakref.proxy(namespaced_event),
@@ -288,9 +285,13 @@ class SyncClientMixin(object):
             self._verify_fun(fun)
 
             # Inject some useful globals to *all* the funciton's global namespace
-            # and not only once per module as we got bugs in lazyloader with some
-            # functions that had somehow differents globals (eg for __salt__)
+            # only once per module-- not per func
+            completed_funcs = []
             for mod_name in six.iterkeys(self.functions):
+                mod, _ = mod_name.split('.', 1)
+                if mod in completed_funcs:
+                    continue
+                completed_funcs.append(mod)
                 for global_key, value in six.iteritems(func_globals):
                     self.functions[mod_name].__globals__[global_key] = value
 
