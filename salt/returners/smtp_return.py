@@ -97,7 +97,7 @@ def returner(ret):
         subject = cfg.get('smtp.subject', None)
         gpgowner = cfg.get('smtp.gpgowner', None)
         fields = cfg.get('smtp.fields', '').split(',')
-        smtp_tls = cfg('smtp.tls', False)
+        smtp_tls = cfg.get('smtp.tls', False)
 
     if not port:
         port = 25
