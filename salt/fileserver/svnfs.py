@@ -3,16 +3,20 @@
 Subversion Fileserver Backend
 
 After enabling this backend, branches, and tags in a remote subversion
-repository are exposed to salt as different environments. This feature is
-managed by the :conf_master:`fileserver_backend` option in the salt master
-config.
+repository are exposed to salt as different environments. To enable this
+backend, add ``svn`` to the :conf_master:`fileserver_backend` option in the
+Master config file.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - svn
 
 This backend assumes a standard svn layout with directories for ``branches``,
 ``tags``, and ``trunk``, at the repository root.
 
 :depends:   - subversion
             - pysvn
-
 
 .. versionchanged:: 2014.7.0
     The paths to the trunk, branches, and tags have been made configurable, via
