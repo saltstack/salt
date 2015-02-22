@@ -288,6 +288,8 @@ class Fileserver(object):
         for sub in back:
             if '{0}.envs'.format(sub) in self.servers:
                 ret.append(sub)
+            elif '{0}.envs'.format(sub[:-2]) in self.servers:
+                ret.append(sub[:-2])
         return ret
 
     def master_opts(self, load):
