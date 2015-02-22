@@ -928,9 +928,15 @@ def _clear_old_remotes():
                    if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
     if remove_dirs:
         for rdir in remove_dirs:
-            shutil.rmtree(rdir)
-            log.debug('gitfs removed old cachedir {0}'.format(rdir))
-    # If remove_dirs is not empty, than
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                log.error(
+                    'Unable to remove old gitfs remote cachedir {0}: {1}'
+                    .format(rdir, exc)
+                )
+            else:
+                log.debug('gitfs removed old cachedir {0}'.format(rdir))
     return bool(remove_dirs), repos
 
 
