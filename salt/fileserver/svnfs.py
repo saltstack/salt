@@ -353,10 +353,7 @@ def update():
                 'Error updating svnfs remote {0} (cachedir: {1}): {2}'
                 .format(repo['url'], repo['cachedir'], exc)
             )
-        try:
-            os.remove(lk_fn)
-        except (OSError, IOError):
-            pass
+        clear_lock(repo)
 
         new_rev = _rev(repo)
         if any((x is None for x in (old_rev, new_rev))):
