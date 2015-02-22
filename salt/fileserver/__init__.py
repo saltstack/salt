@@ -317,6 +317,33 @@ class Fileserver(object):
                     )
         return cleared, errors
 
+    def clear_lock(self, back=None, remote=None):
+        '''
+        Clear the update lock for the enabled fileserver backends
+
+        back
+            Only clear the update lock for the specified backend(s). The
+            default is to clear the lock for all enabled backends
+
+        remote
+            If not None, then any remotes which contain the passed string will
+            have their lock cleared.
+        '''
+        back = self._gen_back(back)
+        cleared = []
+        errors = []
+        for fsb in back:
+            fstr = '{0}.clear_lock'.format(fsb)
+            if fstr in self.servers:
+                msg = 'Clearing update.lk for {0} remotes'.format(fsb)
+                if remote:
+                    msg += ' matching {0}'.format(remote)
+                log.debug(msg)
+                good, bad = self.servers[fstr](remote=remote)
+                cleared.extend(good)
+                errors.extend(bad)
+        return cleared, errors
+
     def update(self, back=None):
         '''
         Update all of the enabled fileserver backends which support the update
