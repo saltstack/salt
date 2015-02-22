@@ -109,7 +109,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(func_globals['__pillar__'], self.opts.get('pillar', {}))
         # the opts passed into modules is at least a subset of the whole opts
         for key, val in six.iteritems(func_globals['__opts__']):
-            if val in self.opts:
+            if key in self.opts:
                 self.assertEqual(self.opts[key], val)
 
     def test_pack(self):
