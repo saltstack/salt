@@ -19,7 +19,6 @@ from collections import MutableMapping
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
-import salt.utils.dictupdate
 import salt.utils.lazy
 import salt.utils.event
 
