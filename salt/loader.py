@@ -712,8 +712,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.mod_type_check = mod_type_check or _mod_type
 
         self.pack = {} if pack is None else pack
-        if '__context__' not in self.pack:
-            self.pack['__context__'] = {}
+        self.pack.setdefault('__context__', {})
+        self.pack.setdefault('__opts__', self.opts)
 
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
