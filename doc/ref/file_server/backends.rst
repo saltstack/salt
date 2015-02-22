@@ -1,21 +1,43 @@
+.. _file-server-backends:
+
 ====================
 File Server Backends
 ====================
 
-Salt version 0.12.0 introduced the ability for the Salt Master to integrate
-different file server backends. File server backends allows the Salt file
-server to act as a transparent bridge to external resources. The primary
-example of this is the git backend which allows for all of the Salt formulas
-and files to be maintained in a remote git repository.
+In Salt 0.12.0, the modular fileserver was introduced. This feature added the
+ability for the Salt Master to integrate different file server backends. File
+server backends allow the Salt file server to act as a transparent bridge to
+external resources. A good example of this is the :mod:`git
+<salt.fileserver.git>` backend, which allows Salt to serve files sourced from
+one or more git repositories, but there are several others as well. Click
+:ref:`here <all-salt.fileserver>` for a full list of Salt's fileserver
+backends.
 
-The fileserver backend system can accept multiple backends as well. This makes
-it possible to have the environments listed in the :conf_master:`file_roots`
-configuration available in addition to other backends, or the ability to mix
-multiple backends.
+Enabling a Fileserver Backend
+-----------------------------
 
-This feature is managed by the :conf_master:`fileserver_backend` option in the
-master config. The desired backend systems are listed in order of search
-priority:
+Fileserver backends can be enabled with the :conf_master:`fileserver_backend`
+option.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - git
+
+See the :ref:`documentation <all-salt.fileserver>` for each backend to find the
+correct value to add to :conf_master:`fileserver_backend` in order to enable
+them.
+
+Using Multiple Backends
+-----------------------
+
+If :conf_master:`fileserver_backend` is not defined in the Master config file,
+Salt will use the :mod:`roots <salt.fileserver.roots>` backend, but the
+:conf_master:`fileserver_backend` option supports multiple backends. When more
+than one backend is in use, the files from the enabled backends are merged into a
+single virtual filesystem. When a file is requested, the backends will be
+searched in order for that file, and the first backend to match will be the one
+which returns the file.
 
 .. code-block:: yaml
 
@@ -24,9 +46,9 @@ priority:
       - git
 
 With this configuration, the environments and files defined in the
-:conf_master:`file_roots` parameter will be searched first, if the referenced
-environment and file is not found then the :mod:`git <salt.fileserver.gitfs>`
-backend will be searched.
+:conf_master:`file_roots` parameter will be searched first, and if the file is
+not found then the git repositories defined in :conf_master:`gitfs_remotes`
+will be searched.
 
 Environments
 ------------
