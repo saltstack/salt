@@ -3579,6 +3579,13 @@ def edit_conf(conf_file, out_format='simple', read_only=False, lxc_config=None, 
 def reboot(name):
     '''
     Reboot a container.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.reboot myvm
+
     '''
     ret = {'result': True,
            'changes': {},
