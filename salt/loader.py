@@ -19,6 +19,7 @@ from collections import MutableMapping
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
+import salt.utils.dictupdate
 import salt.utils.lazy
 import salt.utils.event
 
@@ -964,6 +965,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
+            update_dict = False
+            m_value = getattr(mod, p_name, None)
+            if all([
+                isinstance(p_value, dict),
+                isinstance(m_value, dict),
+                p_value is not m_value
+            ]):
+                update_dict = True
+            if update_dict:
+                # do not use update here to have a direct reference to the opt dict
+                for k, val in six.iteritems(m_value):
+                    p_value.setdefault(k, val)
             setattr(mod, p_name, p_value)
 
         # Call a module's initialization method if it exists
