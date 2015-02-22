@@ -226,7 +226,9 @@ def _clear_old_remotes():
         cachedir_ls = os.listdir(bp_)
     except OSError:
         cachedir_ls = []
-    for repo in init():
+    repos = init()
+    # Remove actively-used remotes from list
+    for repo in repos:
         try:
             cachedir_ls.remove(repo['hash'])
         except ValueError:
@@ -245,7 +247,7 @@ def _clear_old_remotes():
                 shutil.rmtree(rdir)
             except OSError as exc:
                 log.error(
-k                   'Unable to remove old svnfs remote cachedir {0}: {1}'
+                    'Unable to remove old svnfs remote cachedir {0}: {1}'
                     .format(rdir, exc)
                 )
                 failed.append(rdir)
@@ -253,7 +255,7 @@ k                   'Unable to remove old svnfs remote cachedir {0}: {1}'
                 log.debug('svnfs removed old cachedir {0}'.format(rdir))
     for fdir in failed:
         to_remove.remove(fdir)
-    return bool(to_remove)
+    return bool(to_remove), repos
 
 
 def clear_cache():
@@ -326,8 +328,10 @@ def update():
     data = {'changed': False,
             'backend': 'svnfs'}
     pid = os.getpid()
-    data['changed'] = _clear_old_remotes()
-    for repo in init():
+    # _clear_old_remotes runs init(), so use the value from there to avoid a
+    # second init()
+    data['changed'], repos = _clear_old_remotes()
+    for repo in repos:
         lk_fn = _update_lockfile(repo)
         if os.path.exists(lk_fn):
             log.warning(
