@@ -289,7 +289,8 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 if not container.get('result', False):
                     error = container
             else:
-                error = 'Invalid return for {0}'.format(container_name)
+                error = 'Invalid return for {0}: {1} {2}'.format(
+                    container_name, container, sub_ret)
         else:
             error = sub_ret
             if not error:
