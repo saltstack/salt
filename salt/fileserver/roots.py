@@ -2,8 +2,18 @@
 '''
 The default file server backend
 
-Based on the environments in the :conf_master:`file_roots` configuration
-option.
+This fileserver backend serves files from the Master's local filesystem. If
+:conf_master:`fileserver_backend` is not defined in the Master config file,
+then this backend is enabled by default. If it *is* defined then ``roots`` must
+be in the :conf_master:`fileserver_backend` list to enable this backend.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+
+Fileserver environments are defined using the :conf_master:`file_roots`
+configuration option.
 '''
 
 # Import python libs
