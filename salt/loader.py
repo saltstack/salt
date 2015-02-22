@@ -966,14 +966,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for p_name, p_value in six.iteritems(self.pack):
             update_dict = False
             m_value = getattr(mod, p_name, None)
-            if all([
-                isinstance(p_value, dict),
-                isinstance(m_value, dict),
-                p_value is not m_value
-            ]):
+            if (
+                isinstance(p_value, dict)
+                and isinstance(m_value, dict)
+                and p_value is not m_value
+            ):
                 update_dict = True
             if update_dict:
-                # do not use update here to have a direct reference to the opt dict
+                # do not use update here to have a direct ref to the opt dict
                 for k, val in six.iteritems(m_value):
                     p_value.setdefault(k, val)
             setattr(mod, p_name, p_value)
