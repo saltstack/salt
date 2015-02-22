@@ -438,10 +438,7 @@ def update():
             if curtip[1] != newtip[1]:
                 data['changed'] = True
         repo['repo'].close()
-        try:
-            os.remove(lk_fn)
-        except (IOError, OSError):
-            pass
+        clear_lock(repo)
 
     env_cache = os.path.join(__opts__['cachedir'], 'hgfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
