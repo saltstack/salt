@@ -329,6 +329,34 @@ class Fileserver(object):
                     )
         return cleared, errors
 
+    def lock(self, back=None, remote=None):
+        '''
+        ``remote`` can either be a dictionary containing repo configuration
+        information, or a pattern. If the latter, then remotes for which the URL
+        matches the pattern will be locked.
+        '''
+        back = self._gen_back(back)
+        locked = []
+        errors = []
+        for fsb in back:
+            fstr = '{0}.lock'.format(fsb)
+            if fstr in self.servers:
+                msg = 'Setting update lock for {0} remotes'.format(fsb)
+                if remote:
+                    if not isinstance(remote, string_types):
+                        errors.append(
+                            'Badly formatted remote pattern \'{0}\''
+                            .format(remote)
+                        )
+                        continue
+                    else:
+                        msg += ' matching {0}'.format(remote)
+                log.debug(msg)
+                good, bad = self.servers[fstr](remote=remote)
+                locked.extend(good)
+                errors.extend(bad)
+        return locked, errors
+
     def clear_lock(self, back=None, remote=None):
         '''
         Clear the update lock for the enabled fileserver backends
@@ -347,7 +375,7 @@ class Fileserver(object):
         for fsb in back:
             fstr = '{0}.clear_lock'.format(fsb)
             if fstr in self.servers:
-                msg = 'Clearing update.lk for {0} remotes'.format(fsb)
+                msg = 'Clearing update lock for {0} remotes'.format(fsb)
                 if remote:
                     msg += ' matching {0}'.format(remote)
                 log.debug(msg)
