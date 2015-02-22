@@ -311,8 +311,15 @@ def _clear_old_remotes():
                    and not rdir.endswith('.update.lk')]
     if remove_dirs:
         for rdir in remove_dirs:
-            shutil.rmtree(rdir)
-            log.debug('hgfs removed old cachedir {0}'.format(rdir))
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                log.error(
+                    'Unable to remove old gitfs remote cachedir {0}: {1}'
+                    .format(rdir, exc)
+                )
+            else:
+                log.debug('hgfs removed old cachedir {0}'.format(rdir))
         return True
     return False
 
