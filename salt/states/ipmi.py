@@ -33,6 +33,15 @@ Every call can override the config defaults:
 '''
 
 
+def __virtual__():
+    IMPORT_ERR = None
+    try:
+        from pyghmi.ipmi import command
+    except Exception as ex:
+        IMPORT_ERR = str(ex)
+    return (IMPORT_ERR is None, IMPORT_ERR)
+
+
 def boot_device(name='default', **kwargs):
     '''
     Request power state change
