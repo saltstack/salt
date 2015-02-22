@@ -48,8 +48,6 @@ __func_alias__ = {
 }
 
 DEFAULT_NIC = 'eth0'
-DEFAULT_NIC_PROFILE = {}
-DEFAULT_NIC_PROFILES = {DEFAULT_NIC: copy.deepcopy(DEFAULT_NIC_PROFILE)}
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -472,9 +470,7 @@ def get_network_profile(name=None):
                     'lxc.nic has been deprecated, please configure LXC '
                     'network profiles under lxc.network_profile instead'
                 )
-    return net_profile if net_profile is not None else copy.deepcopy(
-        DEFAULT_NIC_PROFILE
-    )
+    return net_profile if net_profile is not None else {}
 
 
 def _rand_cpu_str(cpu):
@@ -1026,7 +1022,6 @@ def init(name,
         network_profile = nic
     if network_profile is _marker:
         network_profile = DEFAULT_NIC
-
 
     try:
         kwargs['clone_from'] = kwargs.pop('clone')
