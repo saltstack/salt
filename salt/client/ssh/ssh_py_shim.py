@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This is a shim that handles checking and updating salt thin and
 then invoking thin.
