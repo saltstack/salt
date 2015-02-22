@@ -298,30 +298,38 @@ def _clear_old_remotes():
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'hgfs')
     try:
-        remove_dirs = os.listdir(bp_)
+        cachedir_ls = os.listdir(bp_)
     except OSError:
-        remove_dirs = []
+        cachedir_ls = []
+    # Remove actively-used remotes from list
     for repo in init():
         try:
-            remove_dirs.remove(repo['hash'])
+            cachedir_ls.remove(repo['hash'])
         except ValueError:
             pass
-    remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
-                   if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')
-                   and not rdir.endswith('.update.lk')]
-    if remove_dirs:
-        for rdir in remove_dirs:
+    to_remove = []
+    for item in cachedir_ls:
+        if item in ('hash', 'refs'):
+            continue
+        path = os.path.join(bp_, item)
+        if os.path.isdir(path):
+            to_remove.append(path)
+    failed = []
+    if to_remove:
+        for rdir in to_remove:
             try:
                 shutil.rmtree(rdir)
             except OSError as exc:
                 log.error(
-                    'Unable to remove old gitfs remote cachedir {0}: {1}'
+                    'Unable to remove old hgfs remote cachedir {0}: {1}'
                     .format(rdir, exc)
                 )
+                failed.append(rdir)
             else:
                 log.debug('hgfs removed old cachedir {0}'.format(rdir))
-        return True
-    return False
+    for fdir in failed:
+        to_remove.remove(fdir)
+    return bool(to_remove)
 
 
 def clear_cache():
