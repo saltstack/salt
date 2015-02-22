@@ -712,8 +712,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.mod_type_check = mod_type_check or _mod_type
 
         self.pack = {} if pack is None else pack
-        if '__context__' not in self.pack:
-            self.pack['__context__'] = {}
+        self.pack.setdefault('__context__', {})
+        self.pack.setdefault('__opts__', self.opts)
 
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
@@ -962,6 +962,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
+            update_dict = False
+            m_value = getattr(mod, p_name, None)
+            if (
+                isinstance(p_value, dict)
+                and isinstance(m_value, dict)
+                and p_value is not m_value
+            ):
+                update_dict = True
+            if update_dict:
+                # do not use update here to have a direct ref to the opt dict
+                for k, val in six.iteritems(m_value):
+                    p_value.setdefault(k, val)
             setattr(mod, p_name, p_value)
 
         # Call a module's initialization method if it exists
