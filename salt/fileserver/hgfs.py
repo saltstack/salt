@@ -388,9 +388,8 @@ def update():
                 'Update lockfile is present for hgfs remote {0}, skipping. '
                 'If this warning persists, it is possible that the update '
                 'process was interrupted. Removing {1} or running '
-                '\'salt-run fileserver.clear_lock backend=hg\' will allow '
-                'updates to continue for this remote.'
-                .format(repo['url'], lk_fn)
+                '\'salt-run fileserver.clear_lock hgfs\' will allow updates '
+                'to continue for this remote.'.format(repo['url'], lk_fn)
             )
             continue
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
