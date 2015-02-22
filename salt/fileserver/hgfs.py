@@ -301,8 +301,9 @@ def _clear_old_remotes():
         cachedir_ls = os.listdir(bp_)
     except OSError:
         cachedir_ls = []
+    repos = init()
     # Remove actively-used remotes from list
-    for repo in init():
+    for repo in repos:
         try:
             cachedir_ls.remove(repo['hash'])
         except ValueError:
@@ -329,7 +330,7 @@ def _clear_old_remotes():
                 log.debug('hgfs removed old cachedir {0}'.format(rdir))
     for fdir in failed:
         to_remove.remove(fdir)
-    return bool(to_remove)
+    return bool(to_remove), repos
 
 
 def clear_cache():
@@ -405,8 +406,10 @@ def update():
     data = {'changed': False,
             'backend': 'hgfs'}
     pid = os.getpid()
-    data['changed'] = _clear_old_remotes()
-    for repo in init():
+    # _clear_old_remotes runs init(), so use the value from there to avoid a
+    # second init()
+    data['changed'], repos = _clear_old_remotes()
+    for repo in repos:
         repo['repo'].open()
         lk_fn = _update_lockfile(repo)
         if os.path.exists(lk_fn):
