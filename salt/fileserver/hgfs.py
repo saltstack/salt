@@ -307,7 +307,8 @@ def _clear_old_remotes():
         except ValueError:
             pass
     remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
-                   if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
+                   if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')
+                   and not rdir.endswith('.update.lk')]
     if remove_dirs:
         for rdir in remove_dirs:
             shutil.rmtree(rdir)
@@ -375,7 +376,10 @@ def _update_lockfile(repo):
     '''
     Return the filename of the update lock
     '''
-    return os.path.join(repo['repo'].root(), 'update.lk')
+    #return os.path.join(repo['repo'].root(), 'update.lk')
+    return os.path.join(__opts__['cachedir'],
+                        'hgfs',
+                        '{0}.update.lk'.format(repo['hash']))
 
 
 def update():
