@@ -301,26 +301,26 @@ class Fileserver(object):
         clear_cache function or the named backend(s) only.
         '''
         back = self._gen_back(back)
-        ret = []
+        cleared = []
+        errors = []
         for fsb in back:
             fstr = '{0}.clear_cache'.format(fsb)
             if fstr in self.servers:
                 log.debug('Clearing {0} fileserver cache'.format(fsb))
-                try:
-                    self.servers[fstr]()
-                except Exception as exc:
-                    log.error('Error occurred clearing {0} fileserver cache: '
-                              '{1}'.format(fsb, exc))
+                failed = self.servers[fstr]()
+                if failed:
+                    errors.extend(failed)
                 else:
-                    ret.append(
-                        'The {0} fileserver cache was cleared'.format(fsb)
+                    cleared.append(
+                        'The {0} fileserver cache was successfully cleared'
+                        .format(fsb)
                     )
-        return ret
+        return cleared, errors
 
     def update(self, back=None):
         '''
-        Update all of the fileserver backends that support the update function
-        or the named backend(s) only.
+        Update all of the enabled fileserver backends which support the update
+        function, or
         '''
         back = self._gen_back(back)
         for fsb in back:
