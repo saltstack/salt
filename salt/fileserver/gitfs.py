@@ -6,7 +6,12 @@ With this backend, branches and tags in a remote git repository are exposed to
 salt as different environments.
 
 To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
-master config file.
+Master config file.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - git
 
 As of Salt 2014.7.0, the Git fileserver backend supports GitPython_, pygit2_,
 and dulwich_ to provide the Python interface to git. If more than one of these
