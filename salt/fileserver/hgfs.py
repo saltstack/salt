@@ -252,7 +252,14 @@ def init():
             )
             continue
 
-        refs = repo.config(names='paths')
+        try:
+            refs = repo.config(names='paths')
+        except hglib.error.CommandError:
+            refs = None
+
+        # Do NOT put this if statement inside the except block above. Earlier
+        # versions of hglib did not raise an exception, so we need to do it
+        # this way to support both older and newer hglib.
         if not refs:
             # Write an hgrc defining the remote URI
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
