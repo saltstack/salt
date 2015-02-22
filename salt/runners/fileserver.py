@@ -326,3 +326,45 @@ def clear_lock(backend=None, remote=None):
         ret = 'No locks were removed'
     salt.output.display_output(ret, 'nested', opts=__opts__)
 
+
+def lock(backend=None, remote=None):
+    '''
+    .. versionadded:: 2015.2.0
+
+    Set a fileserver update lock for VCS fileserver backends (:mod:`git
+    <salt.fileserver.gitfs>`, :mod:`hg <salt.fileserver.hgfs>`, :mod:`svn
+    <salt.fileserver.svnfs>`).
+
+    .. note::
+
+        This will only operate on enabled backends (those configured in
+        :master_conf:`fileserver_backend`).
+
+    backend
+        Only set the update lock for the specified backend(s).
+
+    remote
+        If not None, then any remotes which contain the passed string will have
+        their lock cleared. For example, a ``remote`` value of ``*github.com*``
+        will remove the lock from all github.com remotes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run fileserver.lock
+        salt-run fileserver.lock backend=git,hg
+        salt-run fileserver.lock backend=git remote='*github.com*'
+        salt-run fileserver.lock remote=bitbucket
+    '''
+    fileserver = salt.fileserver.Fileserver(__opts__)
+    locked, errors = fileserver.lock(back=backend, remote=remote)
+    ret = {}
+    if locked:
+        ret['locked'] = locked
+    if errors:
+        ret['errors'] = errors
+    if not ret:
+        ret = 'No locks were set'
+    salt.output.display_output(ret, 'nested', opts=__opts__)
+
