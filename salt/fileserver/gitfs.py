@@ -954,6 +954,45 @@ def clear_cache():
     return errors
 
 
+def clear_lock(remote=None):
+    '''
+    Clear update.lk
+    '''
+    def _add_error(errlist, url, lk_fn, exc):
+        errlist.append('Unable to remove update lock for {0} ({1}): {2} '
+                       .format(url, lk_fn, exc))
+
+    cleared = []
+    errors = []
+    for repo in init():
+        if remote:
+            try:
+                if remote not in repo['url']:
+                    continue
+            except TypeError:
+                # remote was non-string, try again
+                if _text_type(remote) not in repo['url']:
+                    continue
+        lk_fn = _update_lockfile(repo)
+        if os.path.exists(lk_fn):
+            try:
+                os.remove(lk_fn)
+            except OSError as exc:
+                if exc.errno == errno.EISDIR:
+                    # Somehow this path is a directory. Should never happen
+                    # unless some wiseguy manually creates a directory at this
+                    # path, but just in case, handle it.
+                    try:
+                        shutil.rmtree(lk_fn)
+                    except OSError as exc:
+                        _add_error(errors, repo['url'], lk_fn, exc)
+                else:
+                    _add_error(errors, repo['url'], lk_fn, exc)
+            else:
+                cleared.append('Removed lock for {0}'.format(repo['url']))
+    return cleared, errors
+
+
 def _update_lockfile(repo):
     '''
     Return the filename of the update lock
