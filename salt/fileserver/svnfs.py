@@ -247,11 +247,14 @@ def clear_cache():
     '''
     fsb_cachedir = os.path.join(__opts__['cachedir'], 'svnfs')
     list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/svnfs')
+    errors = []
     for rdir in (fsb_cachedir, list_cachedir):
-        try:
-            shutil.rmtree(rdir)
-        except OSError:
-            pass
+        if os.path.exists(rdir):
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                errors.append('Unable to delete {0}: {1}'.format(rdir, exc))
+    return errors
 
 
 def update():
