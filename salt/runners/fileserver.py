@@ -110,19 +110,30 @@ def clear_cache(backend=None):
     '''
     .. versionadded:: 2015.2.0
 
-    Clear the fileserver cache. If no backend is provided, then the cache for
-    all configured backends will be cleared, provided the backend has a
-    ``clear_cache()`` function. This currently only includes the VCS backends
-    (:mod:`git <salt.fileserver.gitfs>`, :mod:`hg <salt.fileserver.hgfs>`,
-    :mod:`svn <salt.fileserver.svnfs>`).
+    Clear the fileserver cache from VCS fileserver backends (:mod:`git
+    <salt.fileserver.gitfs>`, :mod:`hg <salt.fileserver.hgfs>`, :mod:`svn
+    <salt.fileserver.svnfs>`). Executing this runner with no arguments will
+    clear the cache for all enabled VCS fileserver backends, but this
+    can be narrowed using the ``backend`` argument.
+
+    backend
+        Only clear the update lock for the specified backend(s).
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-run fileserver.update
-        salt-run fileserver.update backend=git
+        salt-run fileserver.update backend=git,hg
+        salt-run fileserver.update backend=hg
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
-    ret = fileserver.clear_cache(back=backend)
+    cleared, errors = fileserver.clear_cache(back=backend)
+    ret = {}
+    if cleared:
+        ret['cleared'] = cleared
+    if errors:
+        ret['errors'] = errors
+    if not ret:
+        ret = 'No cache was cleared'
     salt.output.display_output(ret, 'nested', opts=__opts__)
