@@ -284,11 +284,20 @@ class Fileserver(object):
             back = self.opts['fileserver_backend']
         if isinstance(back, string_types):
             back = back.split(',')
-        for sub in back:
-            if '{0}.envs'.format(sub) in self.servers:
-                ret.append(sub)
-            elif '{0}.envs'.format(sub[:-2]) in self.servers:
-                ret.append(sub[:-2])
+        if all((x.startswith('-') for x in back)):
+            # Only subtracting backends from enabled ones
+            ret = self.opts['fileserver_backend']
+            for sub in back:
+                if '{0}.envs'.format(sub[1:]) in self.servers:
+                    ret.remove(sub[1:])
+                elif '{0}.envs'.format(sub[1:-2]) in self.servers:
+                    ret.remove(sub[1:-2])
+        else:
+            for sub in back:
+                if '{0}.envs'.format(sub) in self.servers:
+                    ret.append(sub)
+                elif '{0}.envs'.format(sub[:-2]) in self.servers:
+                    ret.append(sub[:-2])
         return ret
 
     def master_opts(self, load):
@@ -496,7 +505,7 @@ class Fileserver(object):
         ret = set()
         if 'saltenv' not in load:
             return []
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -552,7 +561,7 @@ class Fileserver(object):
         ret = set()
         if 'saltenv' not in load:
             return []
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -580,7 +589,7 @@ class Fileserver(object):
         ret = {}
         if 'saltenv' not in load:
             return {}
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
