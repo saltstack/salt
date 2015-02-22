@@ -142,3 +142,44 @@ def clear_cache(backend=None):
     if not ret:
         ret = 'No cache was cleared'
     salt.output.display_output(ret, 'nested', opts=__opts__)
+
+
+def clear_lock(backend=None, remote=None):
+    '''
+    .. versionadded:: 2015.2.0
+
+    Clear the fileserver update lock from VCS fileserver backends (:mod:`git
+    <salt.fileserver.gitfs>`, :mod:`hg <salt.fileserver.hgfs>`, :mod:`svn
+    <salt.fileserver.svnfs>`). This should only need to be done if a fileserver
+    update was interrupted and a remote is not updating (generating a warning
+    in the Master's log file). Executing this runner with no arguments will
+    remove all update locks from all enabled VCS fileserver backends, but this
+    can be narrowed by using the following arguments:
+
+    backend
+        Only clear the update lock for the specified backend(s).
+
+    remote
+        If not None, then any remotes which contain the passed string will have
+        their lock cleared. For example, a ``remote`` value of **github** will
+        remove the lock from all github.com remotes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run fileserver.clear_lock
+        salt-run fileserver.clear_lock backend=git,hg
+        salt-run fileserver.clear_lock backend=git remote=github
+        salt-run fileserver.clear_lock remote=bitbucket
+    '''
+    fileserver = salt.fileserver.Fileserver(__opts__)
+    cleared, errors = fileserver.clear_lock(back=backend, remote=remote)
+    ret = {}
+    if cleared:
+        ret['cleared'] = cleared
+    if errors:
+        ret['errors'] = errors
+    if not ret:
+        ret = 'No locks were removed'
+    salt.output.display_output(ret, 'nested', opts=__opts__)
