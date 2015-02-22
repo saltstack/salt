@@ -323,6 +323,7 @@ def update():
                 'to continue for this remote.'.format(repo['url'], lk_fn)
             )
             continue
+        log.debug('svnfs is fetching from {0}'.format(repo['url']))
         with salt.utils.fopen(lk_fn, 'w+') as fp_:
             fp_.write(str(pid))
         old_rev = _rev(repo)
