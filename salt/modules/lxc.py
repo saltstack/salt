@@ -3374,7 +3374,7 @@ def read_conf(conf_file, out_format='simple'):
     .. code-block:: bash
 
         salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf
-        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf out_format=comented
+        salt 'minion' lxc.read_conf /etc/lxc/mycontainer.conf out_format=commented
     '''
     ret_commented = []
     ret_simple = {}
