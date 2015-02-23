@@ -1140,7 +1140,12 @@ def init(name,
             try:
                 distrib_id = info(name)['lsb']['distrib_id']
                 if distrib_id.lower() == 'ubuntu' and 'ubuntu' not in users:
-                    users.append('ubuntu')
+                    if cmd_retcode(name,
+                                   'id ubuntu',
+                                   python_shell=False,
+                                   ignore_retcode=False) != 0:
+
+                        users.append('ubuntu')
                 cret = set_password(name,
                                     users=users,
                                     password=password,
