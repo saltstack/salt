@@ -138,17 +138,19 @@ def _verify_gitpython(quiet=False):
     '''
     Check if GitPython is available and at a compatible version (>= 0.3.0)
     '''
+            log.error(_RECOMMEND_PYGIT2)
+        if HAS_DULWICH:
+            log.error(_RECOMMEND_DULWICH)
+
     if not HAS_GITPYTHON:
         if not quiet:
             log.error(
                 'Git fileserver backend is enabled in master config file, but '
                 'could not be loaded, is GitPython installed?'
             )
-        if HAS_PYGIT2 and not quiet:
-            log.error(_RECOMMEND_PYGIT2)
-        if HAS_DULWICH and not quiet:
-            log.error(_RECOMMEND_DULWICH)
+            _recommend()
         return False
+
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
     minver = distutils.version.LooseVersion(minver_str)
@@ -164,15 +166,15 @@ def _verify_gitpython(quiet=False):
             'The git command line utility is required by the Git fileserver '
             'backend when using the \'gitpython\' provider.'
         )
+
     if errors:
-        if HAS_PYGIT2 and not quiet:
-            errors.append(_RECOMMEND_PYGIT2)
-        if HAS_DULWICH and not quiet:
-            errors.append(_RECOMMEND_DULWICH)
         for error in errors:
             log.error(error)
+        if not quiet:
+            _recommend()
         return False
-    log.info('gitpython gitfs_provider enabled')
+
+    log.debug('gitpython gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'gitpython'
     return True
 
@@ -182,16 +184,17 @@ def _verify_pygit2(quiet=False):
     Check if pygit2/libgit2 are available and at a compatible version. Pygit2
     must be at least 0.20.3 and libgit2 must be at least 0.20.0.
     '''
+            log.error(_RECOMMEND_GITPYTHON)
+        if HAS_DULWICH:
+            log.error(_RECOMMEND_DULWICH)
+
     if not HAS_PYGIT2:
         if not quiet:
             log.error(
                 'Git fileserver backend is enabled in master config file, but '
                 'could not be loaded, are pygit2 and libgit2 installed?'
             )
-        if HAS_GITPYTHON and not quiet:
-            log.error(_RECOMMEND_GITPYTHON)
-        if HAS_DULWICH and not quiet:
-            log.error(_RECOMMEND_DULWICH)
+            _recommend()
         return False
 
     pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
@@ -220,15 +223,15 @@ def _verify_pygit2(quiet=False):
             'The git command line utility is required by the Git fileserver '
             'backend when using the \'pygit2\' provider.'
         )
+
     if errors:
-        if HAS_GITPYTHON and not quiet:
-            errors.append(_RECOMMEND_GITPYTHON)
-        if HAS_DULWICH and not quiet:
-            errors.append(_RECOMMEND_DULWICH)
         for error in errors:
             log.error(error)
+        if not quiet:
+            _recommend()
         return False
-    log.info('pygit2 gitfs_provider enabled')
+
+    log.debug('pygit2 gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'pygit2'
     return True
 
@@ -237,16 +240,17 @@ def _verify_dulwich(quiet=False):
     '''
     Check if dulwich is available.
     '''
+            log.error(_RECOMMEND_GITPYTHON)
+        if HAS_PYGIT2:
+            log.error(_RECOMMEND_PYGIT2)
+
     if not HAS_DULWICH:
         if not quiet:
             log.error(
-                'Git fileserver backend is enabled in the master config file, '
-                'but could not be loaded. Is Dulwich installed?'
+                'Git fileserver backend is enabled in the master config file, but '
+                'could not be loaded. Is Dulwich installed?'
             )
-        if HAS_GITPYTHON and not quiet:
-            log.error(_RECOMMEND_GITPYTHON)
-        if HAS_PYGIT2 and not quiet:
-            log.error(_RECOMMEND_PYGIT2)
+            _recommend()
         return False
 
     dulwich_version = dulwich.__version__
@@ -261,16 +265,14 @@ def _verify_dulwich(quiet=False):
             'detected.'.format(dulwich_min_version, dulwich_version)
         )
 
-        if HAS_PYGIT2 and not quiet:
-            errors.append(_RECOMMEND_PYGIT2)
-        if HAS_GITPYTHON and not quiet:
-            errors.append(_RECOMMEND_GITPYTHON)
-
+    if errors:
         for error in errors:
             log.error(error)
+        if not quiet:
+            _recommend()
         return False
 
-    log.info('dulwich gitfs_provider enabled')
+    log.debug('dulwich gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'dulwich'
     return True
 
