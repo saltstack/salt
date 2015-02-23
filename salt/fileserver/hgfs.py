@@ -368,8 +368,10 @@ def clear_lock(remote=None):
     '''
     def _do_clear_lock(repo):
         def _add_error(errlist, repo, exc):
-            errlist.append('Unable to remove update lock for {0} ({1}): {2} '
-                           .format(repo['url'], repo['lockfile'], exc))
+            msg = ('Unable to remove update lock for {0} ({1}): {2} '
+                   .format(repo['url'], repo['lockfile'], exc))
+            log.debug(msg)
+            errlist.append(msg)
         success = []
         failed = []
         if os.path.exists(repo['lockfile']):
@@ -387,7 +389,9 @@ def clear_lock(remote=None):
                 else:
                     _add_error(failed, repo, exc)
             else:
-                success.append('Removed lock for {0}'.format(repo['url']))
+                msg = 'Removed lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
         return success, failed
 
     if isinstance(remote, dict):
@@ -426,10 +430,14 @@ def lock(remote=None):
                 with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
                     fp_.write('')
             except (IOError, OSError) as exc:
-                failed.append('Unable to set update lock for {0} ({1}): {2} '
-                              .format(repo['url'], repo['lockfile'], exc))
+                msg = ('Unable to set update lock for {0} ({1}): {2} '
+                       .format(repo['url'], repo['lockfile'], exc))
+                log.debug(msg)
+                failed.append(msg)
             else:
-                success.append('Set lock for {0}'.format(repo['url']))
+                msg = 'Set lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
         return success, failed
 
     if isinstance(remote, dict):
@@ -474,12 +482,8 @@ def update():
                 .format(repo['url'], repo['lockfile'])
             )
             continue
-        locked, errors = lock(repo)
-        for msg in locked:
-            log.debug(msg)
+        _, errors = lock(repo)
         if errors:
-            for msg in errors:
-                log.error(errors)
             log.error('Unable to set update lock for hgfs remote {0}, '
                       'skipping.'.format(repo['url']))
             continue
@@ -499,11 +503,7 @@ def update():
             if curtip[1] != newtip[1]:
                 data['changed'] = True
         repo['repo'].close()
-        success, errors = clear_lock(repo)
-        for msg in success:
-            log.debug(msg)
-        for msg in errors:
-            log.error(msg)
+        clear_lock(repo)
 
     env_cache = os.path.join(__opts__['cachedir'], 'hgfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
