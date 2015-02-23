@@ -1138,6 +1138,9 @@ def init(name,
                                ignore_retcode=True) == 0
                    for x in gids):
             try:
+                distrib_id = info(name)['lsb']['distrib_id']
+                if distrib_id.lower() == 'ubuntu' and 'ubuntu' not in users:
+                    users.append('ubuntu')
                 cret = set_password(name,
                                     users=users,
                                     password=password,
