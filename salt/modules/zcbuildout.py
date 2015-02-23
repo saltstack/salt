@@ -1044,7 +1044,7 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
             elif isinstance(unless, string_types):
                 if retcode(
                     unless, python_shell=True, cwd=directory,
-                    runas=runas, env=env, python_shell=False
+                    runas=runas, env=env
                 ) == 0:
                     _valid(status, 'unless execution succeeded')
     if status['status']:
