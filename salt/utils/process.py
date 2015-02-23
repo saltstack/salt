@@ -222,7 +222,7 @@ class ProcessManager(object):
         if kwargs is None:
             kwargs = {}
 
-        if type(multiprocessing.Process) == type(tgt) and issubclass(tgt, multiprocessing.Process):
+        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
             process = tgt(*args, **kwargs)
         else:
             process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
