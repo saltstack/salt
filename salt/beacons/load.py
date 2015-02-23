@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Becaon to emit system load averages
+Beacon to emit system load averages
 '''
 
 # Import Python libs
