@@ -1159,7 +1159,13 @@ def replace(path,
         salt '*' file.replace /etc/httpd/httpd.conf pattern='LogLevel warn' repl='LogLevel info'
         salt '*' file.replace /some/file pattern='before' repl='after' flags='[MULTILINE, IGNORECASE]'
     '''
-    path = os.path.expanduser(path)
+    symlink = False
+    if is_link(path):
+      symlink = True
+      target_path = os.readlink(path)
+      given_path = os.path.expanduser(path)
+
+    path = os.path.realpath(os.path.expanduser(path))
 
     if not os.path.exists(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
@@ -1232,6 +1238,14 @@ def replace(path,
                         backup=False if (dry_run or search_only or found) else backup,
                         bufsize=bufsize,
                         mode='r' if (dry_run or search_only or found) else 'rb')
+
+        if symlink and (backup and not (dry_run or search_only or found)):
+            symlink_backup = given_path + backup
+            # Always clobber any existing symlink backup
+            # to match the behavior of the 'backup' option
+            if os.path.exists(symlink_backup):
+                os.remove(symlink_backup)
+            os.symlink(target_path + backup, given_path + backup)
 
         if not found:
             for line in fi_file:
