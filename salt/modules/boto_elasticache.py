@@ -263,6 +263,56 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
     return ret
 
 
+def get_node_host(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get hostname from cache node
+
+    CLI example::
+
+        salt myminion boto_elasticache.get_node_host myelasticache
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return None
+    try:
+        cc = conn.describe_cache_clusters(name,
+                                          show_cache_node_info=True)
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to get config for cache cluster {0}.'.format(name)
+        log.error(msg)
+        log.debug(e)
+        return {}
+
+    cc = cc['DescribeCacheClustersResponse']['DescribeCacheClustersResult']
+    host = cc['CacheClusters'][0]['CacheNodes'][0]['Endpoint']['Address']
+    return host
+
+
+def get_group_host(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get hostname from replication cache group
+
+    CLI example::
+
+        salt myminion boto_elasticache.get_group_host myelasticachegroup
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return None
+    try:
+        cc = conn.describe_replication_groups(name)
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to get config for cache cluster {0}.'.format(name)
+        log.error(msg)
+        log.debug(e)
+        return {}
+
+    cc = cc['DescribeReplicationGroupsResponse']['DescribeReplicationGroupsResult']
+    cc = cc['ReplicationGroups'][0]['NodeGroups'][0]['PrimaryEndpoint']
+    host = cc['Address']
+    return host
+
+
 def get_cache_subnet_group(name, region=None, key=None, keyid=None,
                            profile=None):
     '''
