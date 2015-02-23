@@ -644,7 +644,7 @@ class State(object):
                 low_data_onlyif = low_data['onlyif']
             for entry in low_data_onlyif:
                 cmd = self.functions['cmd.retcode'](
-                    entry, ignore_retcode=True, python_shell=True, lint**cmd_opts)
+                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0 and ret['result'] is False:
                     ret.update({'comment': 'onlyif execution failed',
