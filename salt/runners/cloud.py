@@ -159,3 +159,17 @@ def create(provider, instances, **kwargs):
     client = _get_client()
     info = client.create(provider, instances, **create_kwargs)
     return info
+
+def delete(instances, **kwargs):
+    '''
+    Delete an instance using Salt Cloud
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cloud.delete my-ec2-config myinstance
+    '''
+    client = _get_client()
+    info = client.destroy(instances)
+    return info
