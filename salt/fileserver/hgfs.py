@@ -34,6 +34,7 @@ will set the desired branch method. Possible values are: ``branches``,
 
 # Import python libs
 import copy
+import errno
 import fnmatch
 import glob
 import hashlib
