@@ -1021,8 +1021,8 @@ def fopen(*args, **kwargs):
     '''
     # Remove lock, uid, gid and mode from kwargs if present
     lock = kwargs.pop('lock', False)
-    uid = kwargs.pop('uid', -1)
-    gid = kwargs.pop('gid', -1)
+    uid = kwargs.pop('uid', -1)  # -1 means no change to current uid
+    gid = kwargs.pop('gid', -1)  # -1 means no change to current gid
     mode = kwargs.pop('mode', None)
 
     fhandle = open(*args, **kwargs)
@@ -1042,13 +1042,6 @@ def fopen(*args, **kwargs):
     d_stat = os.stat(path)
 
     if hasattr(os, 'chown'):
-        if uid is None:
-            # -1 means no change to current uid
-            uid = -1
-        if gid is None:
-            # -1 means no change to current gid
-            gid = -1
-
         # if uid and gid are both -1 then go ahead with
         # no changes at all
         if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
