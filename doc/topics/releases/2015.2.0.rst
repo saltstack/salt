@@ -30,6 +30,8 @@ Misc Fixes/Additions
 - Add ``only_upgrade`` argument to apt-based ``pkg.install`` to only install a
   package version if the package is already installed. (Great for security
   updates!)
+- Joyent now requires a ``keyname`` to be specified in the provider
+  configuration. This change was necessitated upstream by the 7.0+ API.
 
 Deprecations
 ============
