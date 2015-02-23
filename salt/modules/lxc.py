@@ -2205,6 +2205,25 @@ def info(name):
                     ret['public_ips'].append(address)
                     ret['public_ipv6_ips'].append(address)
 
+        # LSB info
+        ret['lsb'] = {
+            'distrib_id': 'Unknown',
+            'distrib_release': 'Unknown',
+            'distrib_codename': 'Unknown',
+            'distrib_description': 'Unknown',
+        }
+        lsb_data = cmd_run_all(name,
+                               'cat /etc/lsb-release',
+                               python_shell=False,
+                               ignore_retcode=True)
+        if lsb_data['retcode'] == 0:
+            for line in lsb_data['stdout'].splitlines():
+                try:
+                    key, val = line.split('=')
+                except ValueError:
+                    continue
+                ret['lsb'][key.lower()] = val.strip('"').strip("'")
+
         for key in [x for x in ret if x == 'ips' or x.endswith('ips')]:
             ret[key].sort(key=_ip_sort)
         __context__['lxc.info.{0}'.format(name)] = ret
