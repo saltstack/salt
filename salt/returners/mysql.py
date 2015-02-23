@@ -222,7 +222,7 @@ def event_return(events):
             data = event.get('data', '')
             sql = '''INSERT INTO `salt_events` (`tag`, `data` )
                      VALUES (%s, %s)'''
-            cur.execute(sql, (tag, data))
+            cur.execute(sql, (tag, json.dumps(data)))
 
 
 def save_load(jid, load):
