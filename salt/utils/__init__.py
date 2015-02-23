@@ -1021,8 +1021,8 @@ def fopen(*args, **kwargs):
     '''
     # Remove lock, uid, gid and mode from kwargs if present
     lock = kwargs.pop('lock', False)
-    uid = kwargs.pop('uid', False)
-    gid = kwargs.pop('gid', False)
+    uid = kwargs.pop('uid', -1)
+    gid = kwargs.pop('gid', -1)
     mode = kwargs.pop('mode', False)
 
     fhandle = open(*args, **kwargs)
