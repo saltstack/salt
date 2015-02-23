@@ -1160,9 +1160,9 @@ def replace(path,
     '''
     symlink = False
     if is_link(path):
-      symlink = True
-      target_path = os.readlink(path)
-      given_path = os.path.expanduser(path)
+        symlink = True
+        target_path = os.readlink(path)
+        given_path = os.path.expanduser(path)
 
     path = os.path.realpath(os.path.expanduser(path))
 
