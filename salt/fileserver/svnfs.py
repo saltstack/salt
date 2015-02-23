@@ -288,8 +288,10 @@ def clear_lock(remote=None):
     '''
     def _do_clear_lock(repo):
         def _add_error(errlist, repo, exc):
-            errlist.append('Unable to remove update lock for {0} ({1}): {2} '
-                           .format(repo['url'], repo['lockfile'], exc))
+            msg = ('Unable to remove update lock for {0} ({1}): {2} '
+                   .format(repo['url'], repo['lockfile'], exc))
+            log.debug(msg)
+            errlist.append(msg)
         success = []
         failed = []
         if os.path.exists(repo['lockfile']):
@@ -307,12 +309,13 @@ def clear_lock(remote=None):
                 else:
                     _add_error(failed, repo, exc)
             else:
-                success.append('Removed lock for {0}'.format(repo['url']))
+                msg = 'Removed lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
         return success, failed
 
     if isinstance(remote, dict):
         return _do_clear_lock(remote)
-
 
     cleared = []
     errors = []
@@ -347,10 +350,14 @@ def lock(remote=None):
                 with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
                     fp_.write('')
             except (IOError, OSError) as exc:
-                failed.append('Unable to set update lock for {0} ({1}): {2} '
-                              .format(repo['url'], repo['lockfile'], exc))
+                msg = ('Unable to set update lock for {0} ({1}): {2} '
+                       .format(repo['url'], repo['lockfile'], exc))
+                log.debug(msg)
+                failed.append(msg)
             else:
-                success.append('Set lock for {0}'.format(repo['url']))
+                msg = 'Set lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
         return success, failed
 
     if isinstance(remote, dict):
@@ -387,7 +394,7 @@ def update():
     for repo in repos:
         if os.path.exists(repo['lockfile']):
             log.warning(
-                'Update lockfile is present for svn remote {0}, skipping. '
+                'Update lockfile is present for svnfs remote {0}, skipping. '
                 'If this warning persists, it is possible that the update '
                 'process was interrupted. Removing {1} or running '
                 '\'salt-run fileserver.clear_lock svnfs\' will allow updates '
@@ -395,12 +402,8 @@ def update():
                 .format(repo['url'], repo['lockfile'])
             )
             continue
-        locked, errors = lock(repo)
-        for msg in locked:
-            log.debug(msg)
+        _, errors = lock(repo)
         if errors:
-            for msg in errors:
-                log.error(errors)
             log.error('Unable to set update lock for svnfs remote {0}, '
                       'skipping.'.format(repo['url']))
             continue
@@ -421,11 +424,7 @@ def update():
         if new_rev != old_rev:
             data['changed'] = True
 
-        success, errors = clear_lock(repo)
-        for msg in success:
-            log.debug(msg)
-        for msg in errors:
-            log.error(msg)
+        clear_lock(repo)
 
     env_cache = os.path.join(__opts__['cachedir'], 'svnfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
@@ -541,7 +540,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     '''
     Find the first file to match the path and ref. This operates similarly to
     the roots file sever but with assumptions of the directory structure
-    based of svn standard practices.
+    based on svn standard practices.
     '''
     fnd = {'path': '',
            'rel': ''}
