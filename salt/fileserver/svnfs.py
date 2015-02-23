@@ -29,6 +29,7 @@ This backend assumes a standard svn layout with directories for ``branches``,
 
 # Import python libs
 import copy
+import errno
 import fnmatch
 import hashlib
 import logging
