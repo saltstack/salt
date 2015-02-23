@@ -142,8 +142,6 @@ def symlink_list(saltenv='base', backend=None, outputter='nested'):
 
 def dir_list(saltenv='base', backend=None, outputter='nested'):
     '''
-    .. versionadded:: 2015.2.0
-
     Return a list of directories in the given environment
 
     saltenv : base
@@ -156,6 +154,8 @@ def dir_list(saltenv='base', backend=None, outputter='nested'):
         of backends with and without a minus sign (ex:
         ``backend=-roots,git``) then the ones starting with a minus sign will
         be disregarded.
+
+        .. versionadded:: 2015.2.0
 
     CLI Example:
 
@@ -367,4 +367,3 @@ def lock(backend=None, remote=None):
     if not ret:
         ret = 'No locks were set'
     salt.output.display_output(ret, 'nested', opts=__opts__)
-

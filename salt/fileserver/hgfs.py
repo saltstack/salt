@@ -35,6 +35,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import errno
 import fnmatch
 import glob
 import hashlib
