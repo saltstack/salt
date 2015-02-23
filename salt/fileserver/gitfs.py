@@ -48,9 +48,9 @@ Walkthrough <tutorial-gitfs>`.
 
 # Import python libs
 import copy
-import contextlib
 import distutils.version  # pylint: disable=E0611
 import errno
+import fnmatch
 import glob
 import hashlib
 import logging
