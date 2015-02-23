@@ -197,7 +197,8 @@ def init():
             'repo': rp_,
             'url': repo_url,
             'hash': repo_hash,
-            'cachedir': rp_
+            'cachedir': rp_,
+            'lockfile': os.path.join(rp_, 'update.lk')
         })
         repos.append(repo_conf)
 
@@ -281,10 +282,38 @@ def clear_cache():
 def clear_lock(remote=None):
     '''
     Clear update.lk
+
+    ``remote`` can either be a dictionary containing repo configuration
+    information, or a pattern. If the latter, then remotes for which the URL
+    matches the pattern will be locked.
     '''
-    def _add_error(errlist, url, lk_fn, exc):
-        errlist.append('Unable to remove update lock for {0} ({1}): {2} '
-                       .format(url, lk_fn, exc))
+    def _do_clear_lock(repo):
+        def _add_error(errlist, repo, exc):
+            errlist.append('Unable to remove update lock for {0} ({1}): {2} '
+                           .format(repo['url'], repo['lockfile'], exc))
+        success = []
+        failed = []
+        if os.path.exists(repo['lockfile']):
+            try:
+                os.remove(repo['lockfile'])
+            except OSError as exc:
+                if exc.errno == errno.EISDIR:
+                    # Somehow this path is a directory. Should never happen
+                    # unless some wiseguy manually creates a directory at this
+                    # path, but just in case, handle it.
+                    try:
+                        shutil.rmtree(repo['lockfile'])
+                    except OSError as exc:
+                        _add_error(failed, repo, exc)
+                else:
+                    _add_error(failed, repo, exc)
+            else:
+                success.append('Removed lock for {0}'.format(repo['url']))
+        return success, failed
+
+    if isinstance(remote, dict):
+        return _do_clear_lock(remote)
+
 
     cleared = []
     errors = []
@@ -297,31 +326,53 @@ def clear_lock(remote=None):
                 # remote was non-string, try again
                 if _text_type(remote) not in repo['url']:
                     continue
-        lk_fn = _update_lockfile(repo)
-        if os.path.exists(lk_fn):
-            try:
-                os.remove(lk_fn)
-            except OSError as exc:
-                if exc.errno == errno.EISDIR:
-                    # Somehow this path is a directory. Should never happen
-                    # unless some wiseguy manually creates a directory at this
-                    # path, but just in case, handle it.
-                    try:
-                        shutil.rmtree(lk_fn)
-                    except OSError as exc:
-                        _add_error(errors, repo['url'], lk_fn, exc)
-                else:
-                    _add_error(errors, repo['url'], lk_fn, exc)
-            else:
-                cleared.append('Removed lock for {0}'.format(repo['url']))
+        success, failed = _do_clear_lock(repo)
+        cleared.extend(success)
+        errors.extend(failed)
     return cleared, errors
 
 
-def _update_lockfile(repo):
+def lock(remote=None):
     '''
-    Return the filename of the update lock
+    Place an update.lk
+
+    ``remote`` can either be a dictionary containing repo configuration
+    information, or a pattern. If the latter, then remotes for which the URL
+    matches the pattern will be locked.
     '''
-    return os.path.join(repo['repo'], 'update.lk')
+    def _do_lock(repo):
+        success = []
+        failed = []
+        if not os.path.exists(repo['lockfile']):
+            try:
+                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
+                    fp_.write('')
+            except (IOError, OSError) as exc:
+                failed.append('Unable to set update lock for {0} ({1}): {2} '
+                              .format(repo['url'], repo['lockfile'], exc))
+            else:
+                success.append('Set lock for {0}'.format(repo['url']))
+        return success, failed
+
+    if isinstance(remote, dict):
+        return _do_lock(remote)
+
+    locked = []
+    errors = []
+    for repo in init():
+        if remote:
+            try:
+                if not fnmatch.fnmatch(repo['url'], remote):
+                    continue
+            except TypeError:
+                # remote was non-string, try again
+                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                    continue
+        success, failed = _do_lock(repo)
+        locked.extend(success)
+        errors.extend(failed)
+
+    return locked, errors
 
 
 def update():
@@ -331,24 +382,30 @@ def update():
     # data for the fileserver event
     data = {'changed': False,
             'backend': 'svnfs'}
-    pid = os.getpid()
     # _clear_old_remotes runs init(), so use the value from there to avoid a
     # second init()
     data['changed'], repos = _clear_old_remotes()
     for repo in repos:
-        lk_fn = _update_lockfile(repo)
-        if os.path.exists(lk_fn):
+        if os.path.exists(repo['lockfile']):
             log.warning(
                 'Update lockfile is present for svn remote {0}, skipping. '
                 'If this warning persists, it is possible that the update '
                 'process was interrupted. Removing {1} or running '
                 '\'salt-run fileserver.clear_lock svnfs\' will allow updates '
-                'to continue for this remote.'.format(repo['url'], lk_fn)
+                'to continue for this remote.'
+                .format(repo['url'], repo['lockfile'])
             )
             continue
+        locked, errors = lock(repo)
+        for msg in locked:
+            log.debug(msg)
+        if errors:
+            for msg in errors:
+                log.error(errors)
+            log.error('Unable to set update lock for svnfs remote {0}, '
+                      'skipping.'.format(repo['url']))
+            continue
         log.debug('svnfs is fetching from {0}'.format(repo['url']))
-        with salt.utils.fopen(lk_fn, 'w+') as fp_:
-            fp_.write(str(pid))
         old_rev = _rev(repo)
         try:
             CLIENT.update(repo['repo'])
@@ -357,7 +414,6 @@ def update():
                 'Error updating svnfs remote {0} (cachedir: {1}): {2}'
                 .format(repo['url'], repo['cachedir'], exc)
             )
-        clear_lock(repo)
 
         new_rev = _rev(repo)
         if any((x is None for x in (old_rev, new_rev))):
@@ -365,6 +421,12 @@ def update():
             continue
         if new_rev != old_rev:
             data['changed'] = True
+
+        success, errors = clear_lock(repo)
+        for msg in success:
+            log.debug(msg)
+        for msg in errors:
+            log.error(msg)
 
     env_cache = os.path.join(__opts__['cachedir'], 'svnfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
