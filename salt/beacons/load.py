@@ -47,18 +47,17 @@ def beacon(config):
 
     '''
     log.trace('load beacon starting')
-    print(config)
     ret = []
     if not os.path.isfile('/proc/loadavg'):
         return ret
     with salt.utils.fopen('/proc/loadavg', 'rb') as fp_:
         avgs = fp_.read().split()[:3]
         # Check each entry for threshold
-        if avgs[0] < float(config[0]['1m'][0]) or \
-        avgs[0] > float(config[0]['1m'][1]) or \
-        avgs[1] < float(config[0]['5m'][0]) or \
-        avgs[1] > float(config[0]['5m'][1]) or \
-        avgs[2] < float(config[0]['15m'][0]) or \
-        avgs[2] > float(config[0]['15m'][1]):
+        if float(avgs[0]) < float(config[0]['1m'][0]) or \
+        float(avgs[0]) > float(config[0]['1m'][1]) or \
+        float(avgs[1]) < float(config[1]['5m'][0]) or \
+        float(avgs[1]) > float(config[1]['5m'][1]) or \
+        float(avgs[2]) < float(config[2]['15m'][0]) or \
+        float(avgs[2]) > float(config[2]['15m'][1]):
             ret.append({'avg': avgs})
     return ret
