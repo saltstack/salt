@@ -43,7 +43,21 @@ class CMDModuleTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function('cmd.run',
                               ['echo $SHELL',
-                               'shell={0}'.format(shell)], python_shell=True).rstrip(), shell)
+                               'shell={0}'.format(shell)],
+                              python_shell=True).rstrip(), shell)
+        self.assertEqual(self.run_function('cmd.run',
+                          ['ls / | grep etc'],
+                          python_shell=True), 'etc')
+        self.assertEqual(self.run_function('cmd.run',
+                         ['echo {{grains.id}} | awk "{print $1}"'],
+                         template='jinja',
+                         python_shell=True), 'minion')
+        self.assertEqual(self.run_function('cmd.run',
+                         ['grep f'],
+                         stdin='one\ntwo\nthree\nfour\nfive\n'), 'four\nfive')
+        self.assertEqual(self.run_function('cmd.run',
+                         ['echo "a=b" | sed -e s/=/:/g'],
+                         python_shell=True), 'a:b')
 
     @patch('pwd.getpwnam')
     @patch('subprocess.Popen')
