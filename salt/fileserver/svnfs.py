@@ -30,6 +30,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import fnmatch
 import hashlib
 import logging
 import os
