@@ -1005,7 +1005,7 @@ def fopen(*args, **kwargs):
     lock = kwargs.pop('lock', False)
     uid = kwargs.pop('uid', -1)  # -1 means no change to current uid
     gid = kwargs.pop('gid', -1)  # -1 means no change to current gid
-    mode = kwargs.pop('mode', False)
+    mode = kwargs.pop('mode', None)
 
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
