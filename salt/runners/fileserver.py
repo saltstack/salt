@@ -269,10 +269,10 @@ def clear_cache(backend=None):
 
     .. code-block:: bash
 
-        salt-run fileserver.update
-        salt-run fileserver.update backend=git,hg
-        salt-run fileserver.update hg
-        salt-run fileserver.update -roots
+        salt-run fileserver.clear_cache
+        salt-run fileserver.clear_cache backend=git,hg
+        salt-run fileserver.clear_cache hg
+        salt-run fileserver.clear_cache -roots
     '''
     fileserver = salt.fileserver.Fileserver(__opts__)
     cleared, errors = fileserver.clear_cache(back=backend)
