@@ -221,7 +221,7 @@ def serve_file(load, fnd):
             load['saltenv'],
             fnd['path'])
 
-    ret['dest'] = fnd['path']
+    ret['dest'] = _trim_env_off_path([fnd['path']], load['saltend'])[0]
 
     with salt.utils.fopen(cached_file_path, 'rb') as fp_:
         fp_.seek(load['loc'])
