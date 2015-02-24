@@ -1074,6 +1074,7 @@ def replace(path,
             dry_run=False,
             search_only=False,
             show_changes=True,
+            ignore_if_missing=False,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1140,6 +1141,13 @@ def replace(path,
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the
             diff.
+    ignore_if_missing
+        .. versionadded:: 
+
+        When this parameter is ``True``, ``file.replace`` will return ``False`` if the 
+        file doesn't exist. When this parameter is ``False``, ``file.replace`` will 
+        throw an error if the file doesn't exist.
+        Default is ``False`` (to maintain compatibility with prior behavior).
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1161,7 +1169,10 @@ def replace(path,
     path = os.path.expanduser(path)
 
     if not os.path.exists(path):
-        raise SaltInvocationError('File not found: {0}'.format(path))
+        if ignore_if_missing:
+            return False
+        else:
+            raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -1493,6 +1504,7 @@ def search(path,
         pattern,
         flags=0,
         bufsize=1,
+        ignore_if_missing=False,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1517,7 +1529,8 @@ def search(path,
             bufsize=bufsize,
             dry_run=True,
             search_only=True,
-            show_changes=False)
+            show_changes=False,
+            ignore_if_missing=ignore_if_missing)
 
 
 def patch(originalfile, patchfile, options='', dry_run=False):
