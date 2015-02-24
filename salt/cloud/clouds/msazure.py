@@ -172,19 +172,19 @@ def avail_images(conn=None, call=None):
     for image in images:
         ret[image.name] = {
             'category': image.category,
-            'description': image.description.encode('utf-8'),
+            'description': image.description.encode('ascii', 'replace'),
             'eula': image.eula,
             'label': image.label,
             'logical_size_in_gb': image.logical_size_in_gb,
             'name': image.name,
             'os': image.os,
         }
-        if image.affinity_group:
-            ret[image.name] = image.affinity_group
-        if image.location:
-            ret[image.name] = image.location
-        if image.media_link:
-            ret[image.name] = image.media_link
+        if hasattr(image, 'affinity_group'):
+            ret[image.name]['affinity_group'] = image.affinity_group
+        if hasattr(image, 'location'):
+            ret[image.name]['location'] = image.location
+        if hasattr(image, 'media_link'):
+            ret[image.name]['media_link'] = image.media_link
     return ret
 
 
