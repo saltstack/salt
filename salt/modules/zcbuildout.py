@@ -1032,14 +1032,20 @@ def _check_onlyif_unless(onlyif, unless, directory, runas=None, env=()):
                 if not onlyif:
                     _valid(status, 'onlyif execution failed')
             elif isinstance(onlyif, string_types):
-                if retcode(onlyif, cwd=directory, runas=runas, env=env) != 0:
+                if retcode(
+                    onlyif, python_shell=True, cwd=directory,
+                    runas=runas, env=env
+                ) != 0:
                     _valid(status, 'onlyif execution failed')
         if unless is not None:
             if not isinstance(unless, string_types):
                 if unless:
                     _valid(status, 'unless execution succeeded')
             elif isinstance(unless, string_types):
-                if retcode(unless, cwd=directory, runas=runas, env=env, python_shell=False) == 0:
+                if retcode(
+                    unless, python_shell=True, cwd=directory,
+                    runas=runas, env=env
+                ) == 0:
                     _valid(status, 'unless execution succeeded')
     if status['status']:
         ret = status
