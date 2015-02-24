@@ -17,6 +17,7 @@ ensure_in_syspath('../../../')
 import integration
 from salt.config import cloud_providers_config
 
+
 def __random_name(size=6):
     '''
     Generates a random cloud instance name
