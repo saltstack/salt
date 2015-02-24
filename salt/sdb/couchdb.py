@@ -93,7 +93,7 @@ def set_(key, value, profile=None):
     Set a key/value pair in couchdb
     '''
     db = _get_db(profile)
-    db.save({'_id': uuid4().hex, key: value})
+    return db.save({'_id': uuid4().hex, key: value})
 
 
 def get(key, profile=None):
