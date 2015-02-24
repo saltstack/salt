@@ -390,7 +390,8 @@ send the provisioning commands up to the freshly created virtual machine.
     my-joyent-config:
         user: fred
         password: saltybacon
-        private_key: /root/joyent.pem
+        private_key: /root/mykey.pem
+        keyname: mykey
         provider: joyent
 
 

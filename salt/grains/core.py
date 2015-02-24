@@ -853,7 +853,8 @@ _OS_NAME_MAP = {
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
     'pidora': 'Fedora',
-    'scientific': 'ScientificLinux'
+    'scientific': 'ScientificLinux',
+    'synology': 'Synology'
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1069,6 +1070,29 @@ def os_data():
                             grains['lsb_distrib_release'] = release.group()
                         if codename is not None:
                             grains['lsb_distrib_codename'] = codename.group()
+            elif os.path.isfile('/etc.defaults/VERSION') \
+                    and os.path.isfile('/etc.defaults/synoinfo.conf'):
+                grains['osfullname'] = 'Synology'
+                with salt.utils.fopen('/etc.defaults/VERSION', 'r') as fp_:
+                    synoinfo = {}
+                    for line in fp_:
+                        try:
+                            key, val = line.rstrip('\n').split('=')
+                        except ValueError:
+                            continue
+                        if key in ('majorversion', 'minorversion',
+                                   'buildnumber'):
+                            synoinfo[key] = val.strip('"')
+                    if len(synoinfo) != 3:
+                        log.warning(
+                            'Unable to determine Synology version info. '
+                            'Please report this, as it is likely a bug.'
+                        )
+                    else:
+                        grains['osrelease'] = (
+                            '{majorversion}.{minorversion}-{buildnumber}'
+                            .format(**synoinfo)
+                        )
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
@@ -1080,9 +1104,12 @@ def os_data():
         # It's worth noting that Ubuntu has patched their Python distribution
         # so that platform.linux_distribution() does the /etc/lsb-release
         # parsing, but we do it anyway here for the sake for full portability.
-        grains['osfullname'] = grains.get('lsb_distrib_id', osname).strip()
-        grains['osrelease'] = grains.get('lsb_distrib_release',
-                                         osrelease).strip()
+        if 'osfullname' not in grains:
+            grains['osfullname'] = \
+                grains.get('lsb_distrib_id', osname).strip()
+        if 'osrelease' not in grains:
+            grains['osrelease'] = \
+                grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename',
                                           oscodename).strip()
         distroname = _REPLACE_LINUX_RE.sub('', grains['osfullname']).strip()

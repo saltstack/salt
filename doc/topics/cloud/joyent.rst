@@ -27,7 +27,8 @@ send the provisioning commands up to the freshly created virtual machine.
         provider: joyent
         user: fred
         password: saltybacon
-        private_key: /root/joyent.pem
+        private_key: /root/mykey.pem
+        keyname: mykey
 
 
 Profiles
