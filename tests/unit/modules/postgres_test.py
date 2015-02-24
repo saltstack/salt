@@ -340,6 +340,7 @@ class PostgresTestCase(TestCase):
                           'expiry time': None,
                           'can login': True,
                           'can update system catalogs': True,
+                          'groups': [],
                           'inherits privileges': True}})
 
     @patch('salt.modules.postgres._run_psql',
