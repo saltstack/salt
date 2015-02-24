@@ -260,7 +260,7 @@ def remove(mod, persist=False, comment=True):
         salt '*' kmod.remove kvm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('modprobe -r {0}'.format(mod), python_shell=False)
+    __salt__['cmd.run_all']('rmmod {0}'.format(mod), python_shell=False)
     post_mods = lsmod()
     mods = _rm_mods(pre_mods, post_mods)
     persist_mods = set()
