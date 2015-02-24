@@ -133,10 +133,14 @@ class Runner(RunnerClient):
         else:
             try:
                 low = {'fun': self.opts['fun']}
-                args, kwargs = salt.minion.load_args_and_kwargs(
-                    self.functions[low['fun']],
-                    salt.utils.args.parse_input(self.opts['arg']),
-                )
+                if low['fun'] in self.functions:
+                    args, kwargs = salt.minion.load_args_and_kwargs(
+                        self.functions[low['fun']],
+                        salt.utils.args.parse_input(self.opts['arg']),
+                    )
+                else:
+                    print('\'{0}\' is not available.'.format(low['fun']))
+                    return
                 low['args'] = args
                 low['kwargs'] = kwargs
 
