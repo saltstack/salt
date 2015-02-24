@@ -1129,6 +1129,7 @@ def replace(path,
             search_only=False,
             show_changes=True,
             ignore_if_missing=False,
+            preserve_inode=True,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1202,6 +1203,16 @@ def replace(path,
         file doesn't exist. When this parameter is ``False``, ``file.replace`` will
         throw an error if the file doesn't exist.
         Default is ``False`` (to maintain compatibility with prior behaviour).
+    preserve_inode
+        .. versionadded:: Beryllium
+
+        Preserve the inode of the file, so that any hard links continue to share the
+        inode with the original filename. This works by *copying* the file, reading
+        from the copy, and writing to the file at the original inode. If ``False``, the
+        file will be *moved* rather than copied, and a new file will be written to a
+        new inode, but using the original filename. Hard links will then share an inode
+        with the backup, instead (if using ``backup`` to create a backup copy).
+        Default is ``True``.
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1321,7 +1332,8 @@ def replace(path,
         # Write the replacement text in this block.
         try:
             # Create a copy to read from and to use as a backup later
-            temp_file = _mkstemp_copy(path=path, preserve_inode=False)
+            temp_file = _mkstemp_copy(path=path,
+                                      preserve_inode=preserve_inode)
         except (OSError, IOError) as exc:
             raise CommandExecutionError("Exception: {0}".format(exc))
 
@@ -1368,7 +1380,8 @@ def replace(path,
         if not dry_run:
             try:
                 # Create a copy to read from and for later use as a backup
-                temp_file = _mkstemp_copy(path=path, preserve_inode=False)
+                temp_file = _mkstemp_copy(path=path,
+                                          preserve_inode=preserve_inode)
             except (OSError, IOError) as exc:
                 raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
