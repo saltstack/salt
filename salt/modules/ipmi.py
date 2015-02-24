@@ -26,6 +26,9 @@ most calls can override the api connection config defaults:
                             uid=1
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+
 
 IMPORT_ERR = None
 try:
