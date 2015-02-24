@@ -125,10 +125,9 @@ class DigitalOceanTest(integration.ShellCase):
         except AssertionError:
             raise
 
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
+        # Final clean-up of created instance, in case something went wrong.
+        # This was originally in a tearDown function, but that didn't make sense
+        # To run this for each test when not all tests create instances.
         query = self.run_cloud('--query')
         ret_str = '        {0}:'.format(INSTANCE_NAME)
 
