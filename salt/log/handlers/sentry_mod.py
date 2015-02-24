@@ -111,7 +111,7 @@ def setup_handlers():
                 'project': dsn_config['SENTRY_PROJECT'],
                 'servers': dsn_config['SENTRY_SERVERS'],
                 'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
-                'private_key': dsn_config['SENTRY_SECRET_KEY']
+                'secret_key': dsn_config['SENTRY_SECRET_KEY']
             })
         except ValueError as exc:
             log.info(
@@ -120,7 +120,7 @@ def setup_handlers():
             )
 
     # Allow options to be overridden if previously parsed, or define them
-    for key in ('project', 'servers', 'public_key', 'private_key'):
+    for key in ('project', 'servers', 'public_key', 'secret_key'):
         config_value = get_config_value(key)
         if config_value is None and key not in options:
             log.debug(
