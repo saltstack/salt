@@ -17,7 +17,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
-def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None):
+def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None, classifier=None):
     '''
        Gets latest snapshot of the given artifact
 
@@ -35,19 +35,21 @@ def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, pack
            Target directory to download artifact to (default: /tmp)
        target_file
            Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+       classifier
+           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
        '''
-    log.debug("======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s)",
-                    artifactory_url, repository, group_id, artifact_id, packaging, target_dir)
+    log.debug("======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+                    artifactory_url, repository, group_id, artifact_id, packaging, target_dir, classifier)
     artifact_metadata = _get_artifact_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
     version = artifact_metadata['latest_version']
 
-    snapshot_url, file_name = _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging)
+    snapshot_url, file_name = _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, classifier)
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
     return __save_artifact(snapshot_url, target_file)
 
 
-def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, version, snapshot_version=None, target_dir='/tmp', target_file=None):
+def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, version, snapshot_version=None, target_dir='/tmp', target_file=None, classifier=None):
     '''
        Gets snapshot of the desired version of the artifact
 
@@ -67,17 +69,19 @@ def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, 
            Target directory to download artifact to (default: /tmp)
        target_file
            Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+       classifier
+           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
        '''
-    log.debug('======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s)',
-              artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir)
+    log.debug('======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)',
+              artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir, classifier)
 
-    snapshot_url, file_name = _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version)
+    snapshot_url, file_name = _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version, classifier)
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
     return __save_artifact(snapshot_url, target_file)
 
 
-def get_release(artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir='/tmp', target_file=None):
+def get_release(artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir='/tmp', target_file=None, classifier=None):
     '''
        Gets the specified release of the artifact
 
@@ -97,11 +101,13 @@ def get_release(artifactory_url, repository, group_id, artifact_id, packaging, v
            Target directory to download artifact to (default: /tmp)
        target_file
            Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+       classifier
+           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
        '''
-    log.debug('======================== MODULE FUNCTION: artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s)',
-              artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir)
+    log.debug('======================== MODULE FUNCTION: artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)',
+              artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir, classifier)
 
-    release_url, file_name = _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url)
+    release_url, file_name = _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url, classifier)
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
     return __save_artifact(release_url, target_file)
@@ -113,7 +119,9 @@ def __resolve_target_file(file_name, target_dir, target_file=None):
     return target_file
 
 
-def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version=None):
+def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version=None, classifier=None):
+    has_classifier = classifier is not None and classifier != ""
+
     if snapshot_version is None:
         snapshot_version_metadata = _get_snapshot_version_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
         if packaging not in snapshot_version_metadata['snapshot_versions']:
@@ -123,22 +131,45 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
                       group_id: {group_id}
                       artifact_id: {artifact_id}
                       packaging: {packaging}
+                      classifier: {classifier}
                       version: {version}'''.format(
                         artifactory_url=artifactory_url,
                         repository=repository,
                         group_id=group_id,
                         artifact_id=artifact_id,
                         packaging=packaging,
+                        classifier=classifier,
                         version=version)
             raise ArtifactoryError(error_message)
+
+        if has_classifier and classifier not in snapshot_version_metadata['snapshot_versions']:
+            error_message = '''Cannot find requested classifier '{classifier}' in the snapshot version metadata.
+                      artifactory_url: {artifactory_url}
+                      repository: {repository}
+                      group_id: {group_id}
+                      artifact_id: {artifact_id}
+                      packaging: {packaging}
+                      classifier: {classifier}
+                      version: {version}'''.format(
+                        artifactory_url=artifactory_url,
+                        repository=repository,
+                        group_id=group_id,
+                        artifact_id=artifact_id,
+                        packaging=packaging,
+                        classifier=classifier,
+                        version=version)
+            raise ArtifactoryError(error_message)
+
         snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
 
     group_url = __get_group_id_subpath(group_id)
 
-    file_name = '{artifact_id}-{snapshot_version}.{packaging}'.format(
+    file_name = '{artifact_id}-{snapshot_version}{classifier}.{packaging}'.format(
         artifact_id=artifact_id,
         snapshot_version=snapshot_version,
-        packaging=packaging)
+        packaging=packaging,
+        classifier=__get_classifier_url(classifier))
+
     snapshot_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/{version}/{file_name}'.format(
                         artifactory_url=artifactory_url,
                         repository=repository,
@@ -151,13 +182,15 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
     return snapshot_url, file_name
 
 
-def _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url):
+def _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url, classifier=None):
     group_url = __get_group_id_subpath(group_id)
+
     # for released versions the suffix for the file is same as version
-    file_name = '{artifact_id}-{version}.{packaging}'.format(
+    file_name = '{artifact_id}-{version}{classifier}.{packaging}'.format(
         artifact_id=artifact_id,
         version=version,
-        packaging=packaging)
+        packaging=packaging,
+        classifier=__get_classifier_url(classifier))
 
     release_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/{version}/{file_name}'.format(
                         artifactory_url=artifactory_url,
@@ -301,6 +334,11 @@ def __save_artifact(artifact_url, target_file):
 def __get_group_id_subpath(group_id):
     group_url = group_id.replace('.', '/')
     return group_url
+
+
+def __get_classifier_url(classifier):
+    has_classifier = classifier is not None and classifier != ""
+    return "-" + classifier if has_classifier else ""
 
 
 def __download(request_url):
