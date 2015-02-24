@@ -433,7 +433,7 @@ class AsyncClientMixin(object):
         # more general, since this will get *really* messy as
         # people use more events that don't quite fit into this mold
         if suffix == 'ret':  # for "ret" just print out return
-            salt.output.display_output(event['return'], self.opts.get('out', None), self.opts)
+            salt.output.display_output(event['return'], self.opts.get('out'), self.opts)
         elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
             print(self.outputters[event['outputter']](event['data']))
         # otherwise fall back on basic printing
