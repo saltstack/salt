@@ -829,7 +829,7 @@ def format_call(fun,
     # We'll be showing errors to the users until Salt Lithium comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Lithium',
+        'Beryllium',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
