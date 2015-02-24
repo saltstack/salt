@@ -51,3 +51,10 @@ Deprecations
 - Removed ``parameter`` argument from ``eselect.set_`` state. Please migrate to
   ``module_parameter`` or ``action_parameter``.
 
+- The ``salt_events`` table schema has changed to include an additional field
+  called ``master_id`` to distinguish between events flowing into a database
+  from multiple masters. If ``event_return`` is enabled in the master config,
+  the database schema must first be updated to add the ``master_id`` field.
+  This alteration can be accomplished as follows:
+
+    ``ALTER TABLE salt_events ADD master_id VARCHAR(255) NOT NULL;``
