@@ -1257,7 +1257,7 @@ def init(name,
                 except (SaltInvocationError, CommandExecutionError) as exc:
                     msg = '{0}: Failed to set password'.format(
                         user) + exc.strerror
-                    # only hardfail in uncoverrable situation:
+                    # only hardfail in unrecoverable situation:
                     # root cannot be setted up
                     if user == 'root':
                         ret['comment'] = msg
