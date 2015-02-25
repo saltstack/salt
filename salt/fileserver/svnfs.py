@@ -37,6 +37,7 @@ import os
 import shutil
 from datetime import datetime
 from salt._compat import text_type as _text_type
+from salt.exceptions import FileserverConfigError
 
 PER_REMOTE_PARAMS = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
@@ -104,6 +105,15 @@ def _rev(repo):
     return None
 
 
+def _failhard():
+    '''
+    Fatal fileserver configuration issue, raise an exception
+    '''
+    raise FileserverConfigError(
+        'Failed to load svn fileserver backend'
+    )
+
+
 def init():
     '''
     Return the list of svn remotes and their configuration information
@@ -129,10 +139,12 @@ def init():
                 log.error(
                     'Invalid per-remote configuration for remote {0}. If no '
                     'per-remote parameters are being specified, there may be '
-                    'a trailing colon after the URI, which should be removed. '
+                    'a trailing colon after the URL, which should be removed. '
                     'Check the master configuration file.'.format(repo_url)
                 )
+                _failhard()
 
+            per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_PARAMS):
                 log.error(
@@ -142,7 +154,10 @@ def init():
                         param, repo_url, ', '.join(PER_REMOTE_PARAMS)
                     )
                 )
-                per_remote_conf.pop(param)
+                per_remote_errors = True
+            if per_remote_errors:
+                _failhard()
+
             repo_conf.update(per_remote_conf)
         else:
             repo_url = remote
@@ -150,9 +165,9 @@ def init():
         if not isinstance(repo_url, string_types):
             log.error(
                 'Invalid svnfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URI in quotes'.format(repo_url)
+                'need to enclose the URL in quotes'.format(repo_url)
             )
-            continue
+            _failhard()
 
         try:
             repo_conf['mountpoint'] = salt.utils.strip_proto(
@@ -179,7 +194,7 @@ def init():
                     'Failed to initialize svnfs remote {0!r}: {1}'
                     .format(repo_url, exc)
                 )
-                continue
+                _failhard()
         else:
             # Confirm that there is an svn checkout at the necessary path by
             # running pysvn.Client().status()
@@ -192,7 +207,7 @@ def init():
                     'manually delete this directory on the master to continue '
                     'to use this svnfs remote.'.format(rp_, repo_url)
                 )
-                continue
+                _failhard()
 
         repo_conf.update({
             'repo': rp_,
