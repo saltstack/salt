@@ -230,8 +230,10 @@ def fileserver_update(fileserver):
     '''
     try:
         if not fileserver.servers:
-            log.error('No fileservers loaded, the master will not be'
-                      'able to serve files to minions')
+            log.error(
+                'No fileservers loaded, the master will not be able to '
+                'serve files to minions'
+            )
             raise SaltMasterError('No fileserver backends available')
         fileserver.update()
     except Exception as exc:
