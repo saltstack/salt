@@ -22,6 +22,21 @@ def __virtual__():
     return __virtualname__ if __opts__.get('transport', '') == 'raet' else False
 
 
+def _parse_args(arg):
+    '''
+    yamlify `arg` and ensure it's outermost datatype is a list
+    '''
+    yaml_args = salt.utils.args.yamlify_arg(arg)
+
+    if not isinstance(yaml_args, list):
+        yaml_args = [yaml_args]
+
+    if len(yaml_args) == 1 and yaml_args[0] is None:
+        return []
+    else:
+        return yaml_args
+
+
 def _publish(
         tgt,
         fun,
@@ -53,9 +68,7 @@ def _publish(
         log.info('Function name is \'publish.publish\'. Returning {}')
         return {}
 
-    arg = [salt.utils.args.yamlify_arg(arg)]
-    if len(arg) == 1 and arg[0] is None:
-        arg = []
+    arg = _parse_args(arg)
 
     load = {'cmd': 'minion_pub',
             'fun': fun,
@@ -191,9 +204,7 @@ def runner(fun, arg=None, timeout=5):
 
         salt publish.runner manage.down
     '''
-    arg = [salt.utils.args.yamlify_arg(arg)]
-    if len(arg) == 1 and arg[0] is None:
-        arg = []
+    arg = _parse_args(arg)
 
     load = {'cmd': 'minion_runner',
             'fun': fun,
