@@ -27,3 +27,8 @@ EX_UNAVAILABLE = 69
 EX_CANTCREAT = 73
 EX_SOFTWARE = 70
 EX_USAGE = 64
+
+# The Salt specific exit codes are defined below:
+
+# SALT_BUILD_FAIL is used when salt fails to build something, like a container
+SALT_BUILD_FAIL = 101
