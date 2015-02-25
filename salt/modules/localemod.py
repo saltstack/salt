@@ -124,12 +124,15 @@ def set_locale(locale):
     if 'Arch' in __grains__['os_family']:
         return _localectl_set(locale)
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
-        )
+        if not __salt__['file.file_exists']('/etc/sysconfig/i18n'):
+            __salt__['file.touch']('/etc/sysconfig/i18n')
         if __salt__['cmd.retcode']('grep "^LANG=" /etc/sysconfig/i18n') != 0:
             __salt__['file.append']('/etc/sysconfig/i18n',
                                     '"\nLANG={0}"'.format(locale))
+        else:
+          __salt__['file.sed'](
+              '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
+          )
     elif 'Debian' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale)
