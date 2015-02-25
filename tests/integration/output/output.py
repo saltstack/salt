@@ -5,15 +5,17 @@
 
 # Import Salt Libs
 import traceback
-import integration
 import os
 import copy
-from salt.output import display_output
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+
+# Import Salt libs
+import integration
+from salt.output import display_output
 
 
 class OutputReturnTest(integration.ShellCase):
