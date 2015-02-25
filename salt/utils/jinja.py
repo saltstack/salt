@@ -372,7 +372,7 @@ class SerializerExtension(Extension, object):
                              Dumper=OrderedDictDumper).strip()
         if yaml_txt.endswith('\n...\n'):
             log.info('Yaml filter ended with "\n...\n". This trailing string '
-                     'will be removed in the future.')
+                     'will be removed in Boron.')
         return Markup(yaml_txt)
 
     def format_python(self, value):
