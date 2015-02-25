@@ -38,6 +38,7 @@ Full list of builtin execution modules
     boto_sns
     boto_sqs
     boto_vpc
+    bower
     brew
     bridge
     bsd_shadow

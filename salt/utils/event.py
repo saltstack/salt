@@ -584,8 +584,8 @@ class SaltEvent(object):
         # shutdown-- where globals start going missing
         try:
             self.destroy()
-        except Exception as ex:
-            log.debug(ex)
+        except:  # pylint: disable=W0702
+            pass
 
 
 class MasterEvent(SaltEvent):

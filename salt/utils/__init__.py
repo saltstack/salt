@@ -867,7 +867,7 @@ def format_call(fun,
                     '{0}.{1}'.format(fun.__module__, fun.__name__)
                 )
             )
-        raise SaltInvocationError(
+        log.critical(
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs.{1}'.format(
@@ -1021,9 +1021,9 @@ def fopen(*args, **kwargs):
     '''
     # Remove lock, uid, gid and mode from kwargs if present
     lock = kwargs.pop('lock', False)
-    uid = kwargs.pop('uid', False)
-    gid = kwargs.pop('gid', False)
-    mode = kwargs.pop('mode', False)
+    uid = kwargs.pop('uid', -1)  # -1 means no change to current uid
+    gid = kwargs.pop('gid', -1)  # -1 means no change to current gid
+    mode = kwargs.pop('mode', None)
 
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
@@ -1042,13 +1042,6 @@ def fopen(*args, **kwargs):
     d_stat = os.stat(path)
 
     if hasattr(os, 'chown'):
-        if uid is None:
-            # -1 means no change to current uid
-            uid = -1
-        if gid is None:
-            # -1 means no change to current gid
-            gid = -1
-
         # if uid and gid are both -1 then go ahead with
         # no changes at all
         if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
@@ -1105,7 +1098,7 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if whitelist:
         try:
             for expr in whitelist:
-                if expr_match(expr, value):
+                if expr_match(value, expr):
                     in_whitelist = True
                     break
         except TypeError:
@@ -1117,7 +1110,7 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if blacklist:
         try:
             for expr in blacklist:
-                if expr_match(expr, value):
+                if expr_match(value, expr):
                     in_blacklist = True
                     break
         except TypeError:

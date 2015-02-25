@@ -257,7 +257,7 @@ def query(url,
         result_text = result.text
         result_cookies = result.cookies
     else:
-        request = urllib2.Request(url)
+        request = urllib2.Request(url, data)
         handlers = (
             urllib2.HTTPHandler,
             urllib2.HTTPCookieProcessor(sess_cookies)

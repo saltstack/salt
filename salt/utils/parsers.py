@@ -2203,7 +2203,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
                                              TimeoutMixIn,
                                              LogLevelMixIn,
                                              HardCrashMixin,
-                                             SaltfileMixIn)):
+                                             SaltfileMixIn,
+                                             OutputOptionsMixIn)):
 
     default_timeout = 1
 
@@ -2238,18 +2239,6 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
         )
         self.add_option_group(group)
 
-        group.add_option(
-            '--no-color', '--no-colour',
-            default=False,
-            action='store_true',
-            help='Disable all colored output'
-        )
-        group.add_option(
-            '--force-color', '--force-colour',
-            default=False,
-            action='store_true',
-            help='Force colored output'
-        )
         group.add_option(
             '--quiet',
             default=False,
