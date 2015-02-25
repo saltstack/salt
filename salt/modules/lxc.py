@@ -507,6 +507,17 @@ def _rand_cpu_str(cpu):
 
 
 def _network_conf(conf_tuples=None, **kwargs):
+    '''
+    Network configuration defaults
+
+        network_profile
+            as for containers, we can either call this function
+            either with a network_profile dict or network profile name
+            in the kwargs
+        nic_opts
+            overrides or extra nics in the form {nic_name: {set: tings}
+
+    '''
     nic = kwargs.pop('network_profile', None)
     ret = []
     nic_opts = kwargs.pop('nic_opts', {})
@@ -519,6 +530,10 @@ def _network_conf(conf_tuples=None, **kwargs):
     gateway = kwargs.pop('gateway', None)
     bridge = kwargs.get('bridge', None)
 
+    # if we have a profile name, get the profile and load the interface settings
+    # this will obviously by default  look for a profile called "eth0"
+    # or by what is defined in nic_opts
+    # and complete each nic settings by sane defaults
     if isinstance(nic, six.string_types):
         nicp = get_network_profile(nic)
         if nic_opts:
