@@ -41,28 +41,50 @@ def __virtual__():
     return 'chocolatey'
 
 
+def _clear_context():
+    '''
+    Clear variables stored in __context__. Run this function when a new version
+    of chocolatey is installed.
+    '''
+    for var in (x for x in __context__ if x.startswith('chocolatey.')):
+        __context__.pop(var)
+
+
+def _yes():
+    '''
+    Returns ['--yes'] if on v0.9.9.0 or later, otherwise returns an empty list
+    '''
+    if 'chocolatey._yes' in __context__:
+        return __context__['chocolatey._yes']
+    if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.9.9'):
+        answer = ['--yes']
+    else:
+        answer = []
+    __context__['chocolatey._yes'] = answer
+    return answer
+
+
 def _find_chocolatey():
     '''
     Returns the full path to chocolatey.bat on the host.
     '''
-    try:
+    if 'chocolatey._path' in __context__:
         return __context__['chocolatey._path']
-    except KeyError:
-        choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
-                         'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.exe', ]
+    choc_defaults = ['C:\\Chocolatey\\bin\\chocolatey.bat',
+                        'C:\\ProgramData\\Chocolatey\\bin\\chocolatey.exe', ]
 
-        choc_path = __salt__['cmd.which']('chocolatey.exe')
-        if not choc_path:
-            for choc_dir in choc_defaults:
-                if __salt__['cmd.has_exec'](choc_dir):
-                    choc_path = choc_dir
-        if not choc_path:
-            err = ('Chocolatey not installed. Use chocolatey.bootstrap to '
-                   'install the Chocolatey package manager.')
-            log.error(err)
-            raise CommandExecutionError(err)
-        __context__['chocolatey._path'] = choc_path
-        return choc_path
+    choc_path = __salt__['cmd.which']('chocolatey.exe')
+    if not choc_path:
+        for choc_dir in choc_defaults:
+            if __salt__['cmd.has_exec'](choc_dir):
+                choc_path = choc_dir
+    if not choc_path:
+        err = ('Chocolatey not installed. Use chocolatey.bootstrap to '
+                'install the Chocolatey package manager.')
+        log.error(err)
+        raise CommandExecutionError(err)
+    __context__['chocolatey._path'] = choc_path
+    return choc_path
 
 
 def chocolatey_version():
@@ -77,20 +99,23 @@ def chocolatey_version():
 
         salt '*' chocolatey.chocolatey_version
     '''
-    try:
+    if 'chocolatey._version' in __context__:
         return __context__['chocolatey._version']
-    except KeyError:
-        cmd = [_find_chocolatey(), 'help']
-        out = __salt__['cmd.run'](cmd, python_shell=False)
-        for line in out.splitlines():
-            if line.lower().startswith('version: '):
-                try:
-                    __context__['chocolatey._version'] = \
-                        line.split(None, 1)[-1].strip("'")
-                    return __context__['chocolatey._version']
-                except Exception:
-                    pass
-        raise CommandExecutionError('Unable to determine Chocolatey version')
+    cmd = [_find_chocolatey(), 'help']
+    out = __salt__['cmd.run'](cmd, python_shell=False)
+    for line in out.splitlines():
+        line = line.lower()
+        if line.startswith('chocolatey v'):
+            __context__['chocolatey._version'] = line[12:]
+            return __context__['chocolatey._version']
+        elif line.startswith('version: '):
+            try:
+                __context__['chocolatey._version'] = \
+                    line.split(None, 1)[-1].strip("'")
+                return __context__['chocolatey._version']
+            except Exception:
+                pass
+    raise CommandExecutionError('Unable to determine Chocolatey version')
 
 
 def bootstrap(force=False):
@@ -192,12 +217,12 @@ def bootstrap(force=False):
     return result['stdout']
 
 
-def list_(filter, all_versions=False, pre_versions=False, source=None):
+def list_(narrow, all_versions=False, pre_versions=False, source=None):
     '''
     Instructs Chocolatey to pull a vague package list from the repository.
 
-    filter
-        Term used to filter down results. Searches against name/description/tag.
+    narrow
+        Term used to narrow down results. Searches against name/description/tag.
 
     all_versions
         Display all available package versions in results. Defaults to False.
@@ -213,11 +238,11 @@ def list_(filter, all_versions=False, pre_versions=False, source=None):
 
     .. code-block:: bash
 
-        salt '*' chocolatey.list <filter>
-        salt '*' chocolatey.list <filter> all_versions=True
+        salt '*' chocolatey.list <narrow>
+        salt '*' chocolatey.list <narrow> all_versions=True
     '''
     choc_path = _find_chocolatey()
-    cmd = [choc_path, 'list', filter]
+    cmd = [choc_path, 'list', narrow]
     if salt.utils.is_true(all_versions):
         cmd.append('-AllVersions')
     if salt.utils.is_true(pre_versions):
@@ -247,7 +272,8 @@ def list_(filter, all_versions=False, pre_versions=False, source=None):
 
 def list_webpi():
     '''
-    Instructs Chocolatey to pull a full package list from the Microsoft Web PI repository.
+    Instructs Chocolatey to pull a full package list from the Microsoft Web PI
+    repository.
 
     CLI Example:
 
@@ -323,12 +349,15 @@ def install(name, version=None, source=None, force=False):
         cmd.extend(['-Source', source])
     if salt.utils.is_true(force):
         cmd.append('-Force')
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
         err = 'Running chocolatey failed: {0}'.format(result['stderr'])
         log.error(err)
         raise CommandExecutionError(err)
+    elif name == 'chocolatey':
+        _clear_context()
 
     return result['stdout']
 
@@ -348,6 +377,7 @@ def install_cygwin(name):
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'cygwin', name]
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -380,6 +410,7 @@ def install_gem(name, version=None):
     cmd = [choc_path, 'gem', name]
     if version:
         cmd.extend(['-Version', version])
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -429,6 +460,8 @@ def install_missing(name, version=None, source=None):
         cmd.extend(['-Version', version])
     if source:
         cmd.extend(['-Source', source])
+    # Shouldn't need this as this code should never run on v0.9.9 and newer
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -461,6 +494,7 @@ def install_python(name, version=None):
     cmd = [choc_path, 'python', name]
     if version:
         cmd.extend(['-Version', version])
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -487,6 +521,7 @@ def install_windowsfeatures(name):
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'windowsfeatures', name]
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -512,6 +547,7 @@ def install_webpi(name):
     '''
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'webpi', name]
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -545,6 +581,7 @@ def uninstall(name, version=None):
     cmd = [choc_path, 'uninstall', name]
     if version:
         cmd.extend(['-Version', version])
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
@@ -584,6 +621,7 @@ def update(name, source=None, pre_versions=False):
         cmd.extend(['-Source', source])
     if salt.utils.is_true(pre_versions):
         cmd.append('-PreRelease')
+    cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
