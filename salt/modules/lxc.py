@@ -8,8 +8,10 @@ lxc >= 1.0 (even beta alpha) is required
 
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import print_function
 import traceback
 import datetime
 import pipes
@@ -22,6 +24,8 @@ import time
 import shutil
 import re
 import random
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 # Import salt libs
 import salt
@@ -34,10 +38,6 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.cloud
 import salt.config
 
-# Import 3rd-party libs
-import salt.ext.six as six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
-
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -48,11 +48,8 @@ __func_alias__ = {
 }
 
 DEFAULT_NIC = 'eth0'
-<<<<<<< HEAD
-=======
 DEFAULT_NIC_PROFILE = {}
 DEFAULT_NIC_PROFILES = {DEFAULT_NIC: copy.deepcopy(DEFAULT_NIC_PROFILE)}
->>>>>>> lxc_bis
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -475,7 +472,9 @@ def get_network_profile(name=None):
                     'lxc.nic has been deprecated, please configure LXC '
                     'network profiles under lxc.network_profile instead'
                 )
-    return net_profile if net_profile is not None else {}
+    return net_profile if net_profile is not None else copy.deepcopy(
+        DEFAULT_NIC_PROFILE
+    )
 
 
 def _rand_cpu_str(cpu):
@@ -510,7 +509,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     if isinstance(nic, (six.string_types, six.text_type)):
         nicp = get_network_profile(nic)
         if nic_opts:
-            for dev, args in six.iteritems(nic_opts):
+            for dev, args in nic_opts.items():
                 ethx = nicp.setdefault(dev, {})
                 try:
                     ethx = salt.utils.dictupdate.update(ethx, args)
@@ -627,7 +626,7 @@ def _network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for val in six.itervalues(new):
+    for val in new.values():
         for row in val:
             ret.append(salt.utils.odict.OrderedDict([(row, val[row])]))
     return ret
@@ -709,13 +708,13 @@ class _LXCConfig(object):
         if self.name:
             self.path = '/var/lib/lxc/{0}/config'.format(self.name)
             if os.path.isfile(self.path):
-                with salt.utils.fopen(self.path) as fhr:
-                    for line in fhr.readlines():
-                        match = self.pattern.findall((line.strip()))
+                with salt.utils.fopen(self.path) as f:
+                    for l in f.readlines():
+                        match = self.pattern.findall((l.strip()))
                         if match:
                             self.data.append((match[0][0], match[0][-1]))
                         match = self.non_interpretable_pattern.findall(
-                            (line.strip()))
+                            (l.strip()))
                         if match:
                             self.data.append(('', match[0][0]))
         else:
@@ -727,7 +726,7 @@ class _LXCConfig(object):
                 self.data.append((key, val))
 
         default_data = _get_lxc_default_data(**kwargs)
-        for key, val in six.iteritems(default_data):
+        for key, val in default_data.items():
             _replace(key, val)
         old_net = self._filter_data('lxc.network')
         net_datas = _network_conf(conf_tuples=old_net, **kwargs)
@@ -736,9 +735,9 @@ class _LXCConfig(object):
                 self.data.extend(list(row.items()))
 
         # be sure to reset harmful settings
-        for idx in ['lxc.cgroup.memory.limit_in_bytes']:
-            if not default_data.get(idx):
-                self._filter_data(idx)
+        for i in ['lxc.cgroup.memory.limit_in_bytes']:
+            if not default_data.get(i):
+                self._filter_data(i)
 
     def as_string(self):
         chunks = ('{0[0]}{1}{0[1]}'.format(item, (' = ' if item[0] else '')) for item in self.data)
@@ -756,23 +755,23 @@ class _LXCConfig(object):
     def tempfile(self):
         # this might look like the function name is shadowing the
         # module, but it's not since the method belongs to the class
-        ntf = tempfile.NamedTemporaryFile()
-        ntf.write(self.as_string())
-        ntf.flush()
-        return ntf
+        f = tempfile.NamedTemporaryFile()
+        f.write(self.as_string())
+        f.flush()
+        return f
 
     def _filter_data(self, pattern):
         '''
         Removes parameters which match the pattern from the config data
         '''
         removed = []
-        filtered = []
+        data = []
         for param in self.data:
             if not param[0].startswith(pattern):
-                filtered.append(param)
+                data.append(param)
             else:
                 removed.append(param)
-        self.data = filtered
+        self.data = data
         return removed
 
 
@@ -1588,7 +1587,7 @@ def create(name,
                     .format(', '.join(missing_deps))
                 )
         cmd += ' --'
-        for key, val in six.iteritems(options):
+        for key, val in options.items():
             cmd += ' --{0} {1}'.format(key, val)
 
     ret = __salt__['cmd.run_all'](cmd,
