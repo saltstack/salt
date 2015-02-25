@@ -26,6 +26,7 @@ def __virtual__():
     else:
         return False
 
+
 def beacon(config):
     '''
     Emit a dict name "texts" whose value is a list
