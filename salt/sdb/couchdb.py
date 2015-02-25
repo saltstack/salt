@@ -73,7 +73,7 @@ def _construct_uri(profile):
 
         http://localhost:5984/
     '''
-    return 'http://{host}:{port}'.format(host=profile['host'], port=profile['port'])
+    return 'http://{host}:{port}'.format(**profile)
 
 
 def _get_conn(profile):
