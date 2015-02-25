@@ -50,6 +50,7 @@ DEFAULT_NIC_PROFILE = {'eth0': {'link': 'br0', 'type': 'veth', 'flags': 'up'}}
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
+_nomatch = object()
 
 
 def __virtual__():
@@ -726,10 +727,10 @@ def _get_base(**kwargs):
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, None)
+        kw_overrides_match = kw_overrides.pop(key, _nomatch)
         profile_match = profile.pop(key, default)
         # let kwarg overrides be the preferred choice
-        if kw_overrides_match is None:
+        if kw_overrides_match is _nomatch:
             return profile_match
         return kw_overrides_match
 
@@ -996,10 +997,10 @@ def init(name,
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, None)
+        kw_overrides_match = kw_overrides.pop(key, _nomatch)
         profile_match = profile.pop(key, default)
         # let kwarg overrides be the preferred choice
-        if kw_overrides_match is None:
+        if kw_overrides_match is _nomatch:
             return profile_match
         return kw_overrides_match
 
@@ -1432,11 +1433,11 @@ def create(name,
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, None)
+        kw_overrides_match = kw_overrides.pop(key, _nomatch)
         profile_match = profile.pop(key, default)
         # Return the profile match if the the kwarg match was None, as the
         # lxc.present state will pass these kwargs set to None by default.
-        if kw_overrides_match is None:
+        if kw_overrides_match is _nomatch:
             return profile_match
         return kw_overrides_match
 
@@ -1590,10 +1591,10 @@ def clone(name,
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, None)
+        kw_overrides_match = kw_overrides.pop(key, _nomatch)
         profile_match = profile.pop(key, default)
         # let kwarg overrides be the preferred choice
-        if kw_overrides_match is None:
+        if kw_overrides_match is _nomatch:
             return profile_match
         return kw_overrides_match
 
