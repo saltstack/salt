@@ -58,9 +58,13 @@ def cert_base_path(cacert_path=None):
         salt '*' tls.cert_base_path
     '''
     if not cacert_path:
-        cacert_path = __salt__['config.option']('ca.contextual_cert_base_path')
+        cacert_path = __context__.get(
+            'ca.contextual_cert_base_path',
+            __salt__['config.option']('ca.contextual_cert_base_path'))
     if not cacert_path:
-        cacert_path = __salt__['config.option']('ca.cert_base_path')
+        cacert_path = __context__.get(
+            'ca.cert_base_path',
+            __salt__['config.option']('ca.cert_base_path'))
     return cacert_path
 
 
@@ -83,7 +87,7 @@ def set_ca_path(cacert_path):
         salt '*' tls.set_ca_path /etc/certs
     '''
     if cacert_path:
-        __opts__['ca.contextual_cert_base_path'] = cacert_path
+        __context__['ca.contextual_cert_base_path'] = cacert_path
     return cert_base_path()
 
 
