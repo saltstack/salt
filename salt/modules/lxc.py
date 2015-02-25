@@ -1249,7 +1249,7 @@ def init(name,
                                     python_shell=False,
                                     ignore_retcode=True) == 0
                 ):
-                    users.extend(default_user)
+                    users.append(default_user)
             for user in users:
                 try:
                     cret = set_password(name,
