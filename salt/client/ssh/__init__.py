@@ -435,7 +435,7 @@ class SSH(object):
         # Save the invocation information
         argv = self.opts['argv']
 
-        if self.opts['raw_shell']:
+        if self.opts.get('raw_shell', False):
             fun = 'ssh._raw'
             args = argv
         else:
@@ -627,7 +627,7 @@ class Single(object):
         '''
         stdout = stderr = retcode = None
 
-        if self.opts.get('raw_shell'):
+        if self.opts.get('raw_shell', False):
             cmd_str = ' '.join([self._escape_arg(arg) for arg in self.argv])
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
