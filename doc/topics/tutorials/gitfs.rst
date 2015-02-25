@@ -181,6 +181,14 @@ master:
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
 
+   .. note::
+
+       Dulwich does not recognize ``ssh://`` URLs, ``git+ssh://`` must be used
+       instead. Salt version 2015.2.0 and later will automatically add the
+       ``git+`` to the beginning of these URLs before fetching, but earlier
+       Salt versions will fail to fetch unless the URL is specified using
+       ``git+ssh://``.
+
 3. Restart the master to load the new configuration.
 
 
