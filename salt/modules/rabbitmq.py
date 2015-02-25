@@ -588,7 +588,7 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode": "all"}'
+        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode":"all"}'
     '''
     if runas is None:
         runas = salt.utils.get_user()
