@@ -204,8 +204,13 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     vm_ = salt.utils.dictupdate.update(vm_, kwargs)
     if 'profile' in vm_:
         profile_data = copy.deepcopy(vm_['profile'])
-        profile = get_container_profile(
-            profile_data.pop('name', name), **profile_data)
+        if isinstance(profile_data, dict):
+            profile_name = profile_data.pop('name', name)
+        else:
+            # assuming profile is a string (profile name)
+            profile_name = profile_data
+            profile_data = {}
+        profile = get_container_profile(profile_name, **profile_data)
     else:
         profile = {}
     if name is None:
