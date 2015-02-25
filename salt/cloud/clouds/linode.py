@@ -16,10 +16,10 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 .. code-block:: yaml
 
-    my-linode-config:
-      # Linode account api key
-      apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
-      provider: linode
+my-linode-config:
+  # Linode account api key
+  apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
+  provider: linode
 
 When used with linode-python, this provider supports cloning existing Linodes.
 To clone, add a profile with a ``clonefrom`` key, and a ``script_args: -C``.
@@ -64,8 +64,6 @@ try:
     HAS_LINODEPY = True
 except ImportError:
     HAS_LINODEPY = False
-
-if not HAS_LINODEPY:
     try:
         from libcloud.compute.base import NodeAuthPassword
         HAS_LIBCLOUD = True
@@ -84,22 +82,22 @@ LINODE_STATUS = {
 }
 
 if HAS_LINODEPY:
-    # Redirect linode functions to this module namespace
-    # get_size = namespaced_function(get_size, globals())
-    # get_image = namespaced_function(get_image, globals())
-    # avail_locations = namespaced_function(avail_locations, globals())
-    # avail_images = namespaced_function(avail_distributions, globals())
-    # avail_sizes = namespaced_function(avail_sizes, globals())
+# Redirect linode functions to this module namespace
+# get_size = namespaced_function(get_size, globals())
+# get_image = namespaced_function(get_image, globals())
+# avail_locations = namespaced_function(avail_locations, globals())
+# avail_images = namespaced_function(avail_distributions, globals())
+# avail_sizes = namespaced_function(avail_sizes, globals())
     script = namespaced_function(script, globals())
-    # destroy = namespaced_function(destroy, globals())
-    # list_nodes = namespaced_function(list_nodes, globals())
-    # list_nodes_full = namespaced_function(list_nodes_full, globals())
+# destroy = namespaced_function(destroy, globals())
+# list_nodes = namespaced_function(list_nodes, globals())
+# list_nodes_full = namespaced_function(list_nodes_full, globals())
     list_nodes_select = namespaced_function(list_nodes_select, globals())
     show_instance = namespaced_function(show_instance, globals())
-    # get_node = namespaced_function(get_node, globals())
+# get_node = namespaced_function(get_node, globals())
 
 elif HAS_LIBCLOUD:
-    # Redirect linode functions to this module namespace
+# Redirect linode functions to this module namespace
     get_size = namespaced_function(get_size, globals())
     get_image = namespaced_function(get_image, globals())
     avail_locations = namespaced_function(avail_locations, globals())
@@ -198,6 +196,27 @@ def get_conn():
             config.get_cloud_config_value(
                 'apikey', get_configured_provider(), __opts__, search_global=False
             )
+        )
+
+if HAS_LIBCLOUD:
+
+    def get_location(conn, vm_):
+        '''
+        Return the node location to use
+        '''
+        locations = conn.list_locations()
+# Default to Dallas if not otherwise set
+        loc = config.get_cloud_config_value('location', vm_, __opts__, default=2)
+        for location in locations:
+            if str(loc) in (str(location.id), str(location.name)):
+                return location 
+
+    def get_disk_size(vm_, size, swap):
+        '''
+        Return the size of of the root disk in MB 
+        '''
+        return config.get_cloud_config_value(
+            'disk_size', vm_, __opts__, default=size.disk - swap
         )
 
 # These are the relevant functions out of linode-python.  For Apache Libcloud
@@ -478,7 +497,9 @@ if HAS_LINODEPY:
 
         locations = avail_locations(conn)
         # Default to Dallas if not otherwise set
-        loc = config.get_cloud_config_value('location', vm_, __opts__, default=2)
+        loc = config.get_cloud_config_value(
+            'location', vm_, __opts__, default=2
+        )
 
         # Was this an id that matches something in locations?
         if str(loc) not in [locations[k]['id'] for k in locations]:
@@ -497,22 +518,22 @@ if HAS_LINODEPY:
         # use a default or throw an exception
         return None
 
+
+
+    def get_disk_size(vm_, size, swap):
+        '''
+        Return the size of of the root disk in MB
+        '''
+        conn = get_conn()
+        vmsize = get_size(conn, vm_)
+        disksize = int(vmsize['disk']) * 1024
+        return config.get_cloud_config_value(
+            'disk_size', vm_, __opts__, default=disksize - swap
+        )
+
 # End of linode-python specific functions.  The following are
 # usable by both Apache Libcloud and Linode-python, or just Linode-python.
 # Linode-python functions almost all take a LinodeID.
-
-
-def get_disk_size(vm_, size, swap):
-    '''
-    Return the size of of the root disk in MB
-    '''
-    conn = get_conn()
-    vmsize = get_size(conn, vm_)
-    disksize = int(vmsize['disk']) * 1024
-    return config.get_cloud_config_value(
-        'disk_size', vm_, __opts__, default=disksize - swap
-    )
-
 
 def get_password(vm_):
     '''
@@ -538,14 +559,17 @@ def get_auth(vm_):
     Return either NodeAuthSSHKey or NodeAuthPassword, preferring
     NodeAuthSSHKey if both are provided.
     '''
-    if get_pubkey(vm_) is not None:
-        return NodeAuthSSHKey(get_pubkey(vm_))
-    elif get_password(vm_) is not None:
+    if HAS_LINODEPY:
+        if get_pubkey(vm_) is not None:
+            return NodeAuthSSHKey(get_pubkey(vm_))
+        elif get_password(vm_) is not None:
+            return NodeAuthPassword(get_password(vm_))
+        else:
+            raise SaltCloudConfigError(
+                'The Linode driver requires either a password or ssh_pubkey with '
+                'corresponding ssh_private_key.')
+    if HAS_LIBCLOUD:
         return NodeAuthPassword(get_password(vm_))
-    else:
-        raise SaltCloudConfigError(
-            'The Linode driver requires either a password or ssh_pubkey with '
-            'corresponding ssh_private_key.')
 
 
 def get_ssh_key_filename(vm_):
@@ -731,7 +755,7 @@ def create_config(vm_, LinodeID=None, root_disk_id=None, swap_disk_id=None):
     '''
     conn = get_conn()
 
-    # 138 appears to always be the latest 64-bit kernel for Linux
+# 138 appears to always be the latest 64-bit kernel for Linux
     kernelid = 138
 
     result = conn.linode_config_create(LinodeID=LinodeID,
@@ -771,7 +795,6 @@ def create(vm_):
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
-    import pdb; pdb.set_trace()
     if 'clonefrom' in vm_:
         if HAS_LIBCLOUD:
             if 'clonefrom' in vm_:
@@ -802,34 +825,59 @@ def create(vm_):
             transport=__opts__['transport']
         )
     else:
-        kwargs = {
-            'name': vm_['name'],
-            'image': get_image(conn, vm_),
-            'size': get_size(conn, vm_)['id'],
-            'location': get_location(conn, vm_),
-            'auth': get_auth(vm_),
-            'ex_private': get_private_ip(vm_),
-            'ex_rsize': get_disk_size(vm_, get_size(conn, vm_)['disk'], get_swap(vm_)),
-            'ex_swap': get_swap(vm_)
-        }
+        if HAS_LIBCLOUD:
+            kwargs = {
+                'name': vm_['name'],
+                'image': get_image(conn, vm_),
+                'size': get_size(conn, vm_),
+                'location': get_location(conn, vm_),
+                'auth': get_auth(vm_),
+                'ex_private': get_private_ip(vm_),
+                'ex_rsize': get_disk_size(vm_, get_size(conn, vm_), get_swap(vm_)),
+                'ex_swap': get_swap(vm_)
+            }
+
+            salt.utils.cloud.fire_event(
+                'event',
+                'requesting instance',
+                'salt/cloud/{0}/requesting'.format(vm_['name']),
+                {'kwargs': {'name': kwargs['name'],
+                                'image': kwargs['image'].name,
+                                'size': kwargs['size'].name,
+                                'location': kwargs['location'].name,
+                                'ex_private': kwargs['ex_private'],
+                                'ex_rsize': kwargs['ex_rsize'],
+                                'ex_swap': kwargs['ex_swap']}},
+                    transport=__opts__['transport']
+                )
+
+        if HAS_LINODEPY:
+            kwargs = {
+                'name': vm_['name'],
+                'image': get_image(conn, vm_),
+                'size': get_size(conn, vm_),
+                'location': get_location(conn, vm_),
+                'auth': get_auth(vm_),
+                'ex_private': get_private_ip(vm_),
+                'ex_rsize': get_disk_size(vm_, get_size(conn, vm_), get_swap(vm_)),
+                'ex_swap': get_swap(vm_)
+            }
+            salt.utils.cloud.fire_event(
+                'event',
+                'requesting instance',
+                'salt/cloud/{0}/requesting'.format(vm_['name']),
+                {'kwargs': {'name': kwargs['name'],
+                                'image': kwargs['image'],
+                                'size': kwargs['size'],
+                                'location': kwargs['location'],
+                                'ex_private': kwargs['ex_private'],
+                                'ex_rsize': kwargs['ex_rsize'],
+                                'ex_swap': kwargs['ex_swap']}},
+                    transport=__opts__['transport']
+                )
 
         if 'libcloud_args' in vm_:
             kwargs.update(vm_['libcloud_args'])
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'requesting instance',
-            'salt/cloud/{0}/requesting'.format(vm_['name']),
-            {'kwargs': {'name': kwargs['name'],
-                        'image': kwargs['image'],
-                        'size': kwargs['size'],
-                        'location': kwargs['location'],
-                        'ex_private': kwargs['ex_private'],
-                        'ex_rsize': kwargs['ex_rsize'],
-                        'ex_swap': kwargs['ex_swap']}},
-            transport=__opts__['transport']
-        )
-
 
         if HAS_LIBCLOUD:
             try:
@@ -848,10 +896,9 @@ def create(vm_):
 
         if HAS_LINODEPY:
             # linode-python version
-
             try:
                 node_data = conn.linode_create(DatacenterID=get_location(conn, vm_),
-                                               PlanID=kwargs['size'], PaymentTerm=1)
+                                               PlanID=kwargs['size']['extra']['PLANID'], PaymentTerm=1)
             except Exception as exc:
                 log.error(
                     'Error creating {0} on Linode via linode-python\n\n'
@@ -902,25 +949,40 @@ def create(vm_):
 
             node_data.update(get_node(node_data['LinodeID']))
 
-    if get_private_ip(vm_) and config.get_cloud_config_value(
-                                         'ssh_interface',
-                                         get_configured_provider(),
-                                         __opts__, search_global=False,
-                                         default='public') == 'private':
-        vm_['ssh_host'] = node_data['private_ips'][0]
-    else:
-        vm_['ssh_host'] = node_data['public_ips'][0]
+    if HAS_LINODEPY:
+        if get_private_ip(vm_) and config.get_cloud_config_value(
+                                             'ssh_interface',
+                                             get_configured_provider(),
+                                             __opts__, search_global=False,
+                                             default='public') == 'private':
+            vm_['ssh_host'] = node_data['private_ips'][0]
+        else:
+            vm_['ssh_host'] = node_data['public_ips'][0]
+
+    if HAS_LIBCLOUD:
+        if get_private_ip(vm_) and config.get_cloud_config_value(
+                                             'ssh_interface',
+                                             get_configured_provider(),
+                                             __opts__, search_global=False,
+                                             default='public') == 'private':
+            vm_['ssh_host'] = node_data.private_ips[0]
+        else:
+            vm_['ssh_host'] = node_data.public_ips[0]
 
     # Bootstrap, either apache-libcloud or linode-python
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
-    ret.update(node_data)
+    if HAS_LINODEPY:
+        ret.update(node_data)
+
+    if HAS_LIBCLOUD:
+        ret.update(node_data.__dict__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(
         '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(node_data)
-        )
+        vm_, pprint.pformat(node_data)
+            )
     )
 
     salt.utils.cloud.fire_event(
