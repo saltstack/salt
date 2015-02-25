@@ -1050,7 +1050,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # if the key doesn't have a '.' then it isn't valid for this mod dict
         if not isinstance(key, six.string_types) or '.' not in key:
             raise KeyError
-        mod_name, fun = key.split('.', 1)
+        mod_name, func = key.split('.', 1)
         if mod_name in self.missing_modules:
             return True
         # if the modulename isn't in the whitelist, don't bother
@@ -1066,9 +1066,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                 # load deep dependency if a function is coming from another import
                 # and mod need to be reloaded to set correctly opts
-                fun_ref = getattr(mod, fun)
-                if getattr(fun_ref, '__module__') != name:
-                    self._load_module(getattr(fun_ref, '__module__'))
+                func_ref = getattr(mod, fun)
+                func_ref_module = getattr(func_ref, '__module__')
+                if func_ref_module != name and func_ref_module != mod.__name__:
+                    self._load_module(func_ref_module)
                     self._load_module(name)
 
                 # if we got what we wanted, we are done
