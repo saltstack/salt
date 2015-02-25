@@ -826,10 +826,10 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Beryllium comes out, after
+    # We'll be showing errors to the users until Salt Carbon comes out, after
     # which, errors will be raised instead.
     warn_until(
-        'Beryllium',
+        'Carbon',
         'It\'s time to start raising `SaltInvocationError` instead of '
         'returning warnings',
         # Let's not show the deprecation warning on the console, there's no
@@ -866,7 +866,7 @@ def format_call(fun,
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
             '\'key: value\' pairs. Your approach will work until Salt '
-            'Beryllium is out.{1}'.format(
+            'Carbon is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
