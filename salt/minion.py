@@ -1590,7 +1590,9 @@ class Minion(MinionBase):
 
                 self._process_beacons()
                 # TODO: rename?? Maybe do_pub_recv and take a list of them?
-                if socks.get(self.pub_channel.socket) == zmq.POLLIN:
+                # for some reason, native FDs sometimes return event 5, whatever that is...
+                if socks.get(self.pub_channel.socket.fileno()):
+                    print ('got stuff from pub_channel')
                     self._do_socket_recv()
 
                 # Check the event system

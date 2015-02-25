@@ -70,9 +70,6 @@ class PubChannel(object):
         elif 'transport' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport']
 
-        # TODO: remove
-        ttype = 'tcp'
-
         # switch on available ttypes
         if ttype == 'zeromq':
             import salt.transport.zeromq

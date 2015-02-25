@@ -112,7 +112,8 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
     '''
     Return an event object suitable for the named transport
     '''
-    if transport == 'zeromq':
+    # TODO: AIO core is separate from transport
+    if transport in ('zeromq', 'tcp'):
         if node == 'master':
             return MasterEvent(sock_dir or opts.get('sock_dir', None))
         return SaltEvent(node, sock_dir, opts)
@@ -128,7 +129,8 @@ def get_master_event(opts, sock_dir, listen=True):
     '''
     Return an event object suitable for the named transport
     '''
-    if opts['transport'] == 'zeromq':
+    # TODO: AIO core is separate from transport
+    if opts['transport'] in ('zeromq', 'tcp'):
         return MasterEvent(sock_dir)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent

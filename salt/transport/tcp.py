@@ -88,6 +88,7 @@ class TCPPubChannel(salt.transport.client.PubChannel):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # connect
         self._socket.connect(self.master_pub)
+        self._socket.send('connect')
 
     @property
     def socket(self):
@@ -126,6 +127,7 @@ class TCPPubChannel(salt.transport.client.PubChannel):
         Get a pub job in a non-blocking manner.
         Return pub or None
         '''
+        print ('noblock get??')
         socks = select.select([self.socket], [], [], 0)  #nonblocking select
         if self.socket in socks[0]:
             data = self.socket.recv(self.recv_size)
@@ -278,16 +280,18 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
                 try:
                     socks = dict(poller.poll())
                     # is it a new client?
-                    if pub_sock in socks and socks[pub_sock] == zmq.POLLIN:
+                    if pub_sock.fileno() in socks and socks[pub_sock.fileno()] == zmq.POLLIN:
                         client, address = pub_sock.accept()
-                        print (address, client)
+                        print ('Added minion', address, client, os.getpid())
                         clients.append(client)
                     # is it a publish job?
                     elif pull_sock in socks and socks[pull_sock] == zmq.POLLIN:
                         package = pull_sock.recv()
                         payload = salt.payload.unpackage(package)['payload']
+                        print ('clients', clients)
                         for s in clients:
                             s.send(payload)
+                        print ('sends done')
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
                         continue
@@ -317,8 +321,11 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         payload = {'enc': 'aes'}
 
-        crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
-        payload['load'] = crypticle.dumps(load)
+
+        # TODO: re-enable
+        #crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
+        #payload['load'] = crypticle.dumps(load)
+        payload['load'] = load
         if self.opts['sign_pub_messages']:
             master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
             log.debug("Signing data packet")
@@ -337,7 +344,6 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             int_payload['topic_lst'] = load['tgt']
 
         pub_sock.send(self.serial.dumps(int_payload))
-
 
 
 

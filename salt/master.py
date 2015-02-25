@@ -662,6 +662,7 @@ class MWorker(multiprocessing.Process):
                         ret, req_opts = self._handle_payload(payload)
                     except KeyError:
                         ret, req_opts = 'error', {}
+                        log.debug('Exception when handling payload', exc_info=True)
 
                     # req_fun: default to send
                     req_fun = req_opts.get('fun', 'send')
@@ -719,6 +720,8 @@ class MWorker(multiprocessing.Process):
         '''
         key = payload['enc']
         load = payload['load']
+        if load['cmd'] in dir(ClearFuncs):
+            key = 'clear'
         return {'aes': self._handle_aes,
                 'clear': self._handle_clear}[key](load)
 
@@ -2002,7 +2005,6 @@ class ClearFuncs(object):
 
         # TODO Error reporting over the master event bus
         self.event.fire_event({'minions': minions}, clear_load['jid'])
-
         new_job_load = {
             'jid': clear_load['jid'],
             'tgt_type': clear_load['tgt_type'],
