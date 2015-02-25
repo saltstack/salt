@@ -20,7 +20,7 @@ try:
        distutils.version.StrictVersion(min_tornado_version):
         has_tornado = True
     else:
-        log.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
+        logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
 except ImportError as err:
     logger.info('ImportError! {0}'.format(str(err)))
 
