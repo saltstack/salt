@@ -1057,7 +1057,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if self.whitelist and mod_name not in self.whitelist:
             raise KeyError
 
-        def _inner_load(mod_name, fun):
+        def _inner_load(mod_name, func):
             for name in self._iter_files(mod_name):
                 if name in self.loaded_files:
                     continue
@@ -1066,7 +1066,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                 # load deep dependency if a function is coming from another import
                 # and mod need to be reloaded to set correctly opts
-                func_ref = getattr(mod, fun)
+                func_ref = getattr(mod, func)
                 func_ref_module = getattr(func_ref, '__module__')
                 if func_ref_module != name and func_ref_module != mod.__name__:
                     self._load_module(func_ref_module)
@@ -1084,7 +1084,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # filesystem
         while True:
             try:
-                ret = _inner_load(mod_name, fun)
+                ret = _inner_load(mod_name, func)
                 if not reloaded and ret is not True:
                     self.refresh_file_mapping()
                     reloaded = True
