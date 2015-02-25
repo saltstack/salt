@@ -664,12 +664,20 @@ def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
     autostart = kwargs.get('autostart')
+    # autostart can have made in kwargs, but with the None
+    # value which is invalid, we need an explicit boolean
+    # autostart = on is the default.
     if autostart is None:
         autostart = True
-    if autostart and (autostart != 'keep'):
-        ret['lxc.start.auto'] = '1'
-    else:
-        ret['lxc.start.auto'] = '0'
+    # we will set the regular lxc marker to restart container at
+    # machine (re)boot only if if did not explicitly ask
+    # not to touch to the autostart settings via
+    # autostart == 'keep'
+    if autostart != 'keep':
+        if autostart:
+            ret['lxc.start.auto'] = '1'
+        else:
+            ret['lxc.start.auto'] = '0'
     memory = kwargs.get('memory')
     if memory is not None:
         ret['lxc.cgroup.memory.limit_in_bytes'] = memory * 1024
