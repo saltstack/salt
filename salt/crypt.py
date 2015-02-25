@@ -677,6 +677,7 @@ class SAuth(object):
 
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
+            opts=self.opts
         )
 
         try:
