@@ -5,7 +5,7 @@ Contains systemd related help files
 import os
 
 
-def sd_booted(context):
+def booted(context):
     '''
     Return True if the system was booted with systemd, False otherwise.
     Pass in the loader context "__context__", this function will set the
