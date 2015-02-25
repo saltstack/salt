@@ -100,7 +100,7 @@ _INVALID_REPO = (
 import salt.utils
 import salt.fileserver
 from salt._compat import string_types
-from salt.exceptions import SaltException
+from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -305,10 +305,11 @@ def _get_provider():
             )
     else:
         if provider not in VALID_PROVIDERS:
-            raise SaltException(
+            log.critical(
                 'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
                 .format(provider, ', '.join(VALID_PROVIDERS))
             )
+            return None
         elif provider == 'pygit2' and _verify_pygit2():
             return 'pygit2'
         elif provider == 'gitpython' and _verify_gitpython():
@@ -325,11 +326,7 @@ def __virtual__():
     '''
     if __virtualname__ not in __opts__['fileserver_backend']:
         return False
-    try:
-        return __virtualname__ if _get_provider() else False
-    except SaltException as exc:
-        log.error(exc)
-        return False
+    return __virtualname__ if _get_provider() else False
 
 
 def _dulwich_conf(repo):
@@ -579,6 +576,7 @@ def _verify_auth(repo):
             'Incomplete authentication information for remote {0}. Missing '
             'parameters: {1}'.format(remote_url, ', '.join(missing))
         )
+        _failhard()
 
     transport, _, address = repo['url'].partition('://')
     if not address:
@@ -601,7 +599,7 @@ def _verify_auth(repo):
                 'Password / keypair specified for remote {0}, but remote '
                 'URL is missing a username'.format(repo['url'])
             )
-            return False
+            _failhard()
 
         repo['user'] = user
         if all(bool(repo[x]) for x in required_params):
@@ -612,7 +610,6 @@ def _verify_auth(repo):
         else:
             missing_auth = [x for x in required_params if not bool(repo[x])]
             _incomplete_auth(repo['url'], missing_auth)
-            return False
 
     elif transport in ('https', 'http'):
         required_params = ('user', 'password')
@@ -624,27 +621,35 @@ def _verify_auth(repo):
         if password_ok:
             if transport == 'http' and not repo['insecure_auth']:
                 log.error(
-                    'Invalid configuration for remote {0}. Authentication is '
-                    'disabled by default on http remotes. Either set '
-                    'gitfs_insecure_auth to True in the master '
+                    'Invalid configuration for gitfs remote {0}. '
+                    'Authentication is disabled by default on http remotes. '
+                    'Either set gitfs_insecure_auth to True in the master '
                     'configuration file, set a per-remote config option named '
                     '\'insecure_auth\' to True, or use https or ssh-based '
                     'authentication.'.format(repo['url'])
                 )
-                return False
+                _failhard()
             repo['credentials'] = pygit2.UserPass(repo['user'],
                                                   repo['password'])
             return True
         else:
             missing_auth = [x for x in required_params if not bool(repo[x])]
             _incomplete_auth(repo['url'], missing_auth)
-            return False
     else:
         log.error(
             'Invalid configuration for remote {0}. Unsupported transport '
             '{1!r}.'.format(repo['url'], transport)
         )
-        return False
+        _failhard()
+
+
+def _failhard():
+    '''
+    Fatal fileserver configuration issue, raise an exception
+    '''
+    raise FileserverConfigError(
+        'Failed to load git fileserver backend'
+    )
 
 
 def init():
@@ -673,7 +678,7 @@ def init():
             'GitFS Walkthrough in the Salt documentation for further '
             'information.'.format(provider, ', '.join(AUTH_PROVIDERS))
         )
-        return []
+        _failhard()
 
     # ignore git ssl verification if requested
     ssl_verify = 'true' if __opts__.get('gitfs_ssl_verify', True) else 'false'
@@ -696,14 +701,17 @@ def init():
             )
             if not per_remote_conf:
                 log.error(
-                    'Invalid per-remote configuration for remote {0}. If no '
-                    'per-remote parameters are being specified, there may be '
-                    'a trailing colon after the URL, which should be removed. '
-                    'Check the master configuration file.'.format(repo_url)
+                    'Invalid per-remote configuration for gitfs remote {0}. '
+                    'If no per-remote parameters are being specified, there '
+                    'may be a trailing colon after the URL, which should be '
+                    'removed. Check the master configuration file.'
+                    .format(repo_url)
                 )
+                _failhard()
+
+            per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in override_params):
-                bad_per_remote_conf = True
                 if param in AUTH_PARAMS and provider not in AUTH_PROVIDERS:
                     log.critical(
                         'gitfs authentication parameter {0!r} (from remote '
@@ -728,9 +736,10 @@ def init():
                             ', '.join(PER_REMOTE_PARAMS)
                         )
                     )
-            if bad_per_remote_conf:
-                # Don't let Salt try to use a badly-configured remote
-                continue
+                per_remote_errors = True
+            if per_remote_errors:
+                _failhard()
+
             repo_conf.update(per_remote_conf)
         else:
             repo_url = remote
@@ -803,7 +812,7 @@ def init():
             if provider == 'gitpython':
                 msg += ' Perhaps git is not available.'
             log.error(msg, exc_info_on_loglevel=logging.DEBUG)
-            continue
+            _failhard()
 
     if new_remote:
         remote_map = os.path.join(__opts__['cachedir'], 'gitfs/remote_map.txt')
