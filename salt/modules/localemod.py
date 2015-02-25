@@ -132,11 +132,11 @@ def set_locale(locale):
             __salt__['file.append']('/etc/sysconfig/i18n',
                                     '"\nLANG={0}"'.format(locale))
         else:
-          __salt__['file.sed'](
+          __salt__['file.replace'](
               '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
           )
     elif 'Debian' in __grains__['os_family']:
-        __salt__['file.sed'](
+        __salt__['file.replace'](
             '/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale)
         )
         if __salt__['cmd.retcode']('grep "^LANG=" /etc/default/locale') != 0:
