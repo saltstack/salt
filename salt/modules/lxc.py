@@ -1266,7 +1266,7 @@ def init(name,
                         ret['result'] = False
                     else:
                         log.debug(msg)
-            if ret['result']:
+            if ret.get('result', True):
                 changes.append({'password': 'Password(s) updated'})
                 if cmd_retcode(name,
                                ('sh -c \'touch "{0}"; test -e "{0}"\''
