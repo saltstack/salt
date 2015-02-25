@@ -30,11 +30,10 @@ def _parse_args(arg):
     '''
     yaml_args = salt.utils.args.yamlify_arg(arg)
 
-    if not isinstance(yaml_args, list):
-        yaml_args = [yaml_args]
-
-    if len(yaml_args) == 1 and yaml_args[0] is None:
+    if yaml_args is None:
         return []
+    elif not isinstance(yaml_args, list):
+        return [yaml_args]
     else:
         return yaml_args
 
