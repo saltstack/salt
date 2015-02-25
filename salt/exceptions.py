@@ -69,6 +69,12 @@ class MinionError(SaltException):
     '''
 
 
+class FileserverConfigError(SaltException):
+    '''
+    Used when invalid fileserver settings are detected
+    '''
+
+
 class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
