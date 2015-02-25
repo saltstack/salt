@@ -48,6 +48,11 @@ __func_alias__ = {
 }
 
 DEFAULT_NIC = 'eth0'
+<<<<<<< HEAD
+=======
+DEFAULT_NIC_PROFILE = {}
+DEFAULT_NIC_PROFILES = {DEFAULT_NIC: copy.deepcopy(DEFAULT_NIC_PROFILE)}
+>>>>>>> lxc_bis
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -1022,6 +1027,7 @@ def init(name,
         network_profile = nic
     if network_profile is _marker:
         network_profile = DEFAULT_NIC
+
 
     try:
         kwargs['clone_from'] = kwargs.pop('clone')

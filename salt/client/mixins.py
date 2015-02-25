@@ -449,7 +449,7 @@ class AsyncClientMixin(object):
             if isinstance(event['return'], dict):
                 outputter = event['return'].pop('outputter', None)
             else:
-                outputter = None
+                outputter = self.opts.get('out')
             salt.output.display_output(event['return'], outputter, self.opts)
         elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
             print(self.outputters[event['outputter']](event['data']))

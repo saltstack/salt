@@ -1098,7 +1098,7 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if whitelist:
         try:
             for expr in whitelist:
-                if expr_match(expr, value):
+                if expr_match(value, expr):
                     in_whitelist = True
                     break
         except TypeError:
@@ -1110,7 +1110,7 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if blacklist:
         try:
             for expr in blacklist:
-                if expr_match(expr, value):
+                if expr_match(value, expr):
                     in_blacklist = True
                     break
         except TypeError:
