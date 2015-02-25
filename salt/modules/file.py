@@ -1142,10 +1142,10 @@ def replace(path,
             (the original version and the edited version) in order to generate the
             diff.
     ignore_if_missing
-        .. versionadded:: 
+        .. versionadded::
 
-        When this parameter is ``True``, ``file.replace`` will return ``False`` if the 
-        file doesn't exist. When this parameter is ``False``, ``file.replace`` will 
+        When this parameter is ``True``, ``file.replace`` will return ``False`` if the
+        file doesn't exist. When this parameter is ``False``, ``file.replace`` will
         throw an error if the file doesn't exist.
         Default is ``False`` (to maintain compatibility with prior behavior).
 
