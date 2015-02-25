@@ -506,7 +506,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     gateway = kwargs.pop('gateway', None)
     bridge = kwargs.get('bridge', None)
 
-    if isinstance(nic, (six.string_types, six.text_type)):
+    if isinstance(nic, six.string_types):
         nicp = get_network_profile(nic)
         if nic_opts:
             for dev, args in nic_opts.items():
