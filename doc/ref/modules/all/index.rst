@@ -30,9 +30,11 @@ Full list of builtin execution modules
     boto_asg
     boto_cfn
     boto_cloudwatch
+    boto_dynamodb
     boto_elasticache
     boto_elb
     boto_iam
+    boto_rds
     boto_route53
     boto_secgroup
     boto_sns
