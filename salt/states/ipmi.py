@@ -32,6 +32,9 @@ Every call can override the config defaults:
             - api_pass: apassword
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+
 
 def __virtual__():
     IMPORT_ERR = None

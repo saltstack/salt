@@ -2196,10 +2196,15 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                    []).append(os.path.abspath(module_dir))
 
 
-class SaltRunOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
-                          TimeoutMixIn, LogLevelMixIn, HardCrashMixin,
-                          SaltfileMixIn, OutputOptionsMixIn):
-    __metaclass__ = OptionParserMeta
+class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
+                                             OptionParser,
+                                             ConfigDirMixIn,
+                                             MergeConfigMixIn,
+                                             TimeoutMixIn,
+                                             LogLevelMixIn,
+                                             HardCrashMixin,
+                                             SaltfileMixIn,
+                                             OutputOptionsMixIn)):
 
     default_timeout = 1
 
