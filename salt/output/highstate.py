@@ -57,10 +57,12 @@ Example output:
     ------------
     Total:     0
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
+from __future__ import absolute_import
 import pprint
+import textwrap
 
 # Import salt libs
 import salt.utils
@@ -249,9 +251,24 @@ def _format_host(host, data):
             hstrs.append((u'{0}{1}{2[ENDC]}'
                           .format(tcolor, changes, colors)))
 
+            if 'warnings' in ret:
+                rcounts.setdefault('warnings', 0)
+                rcounts['warnings'] += 1
+                wrapper = textwrap.TextWrapper(
+                    width=80,
+                    initial_indent=u' ' * 14,
+                    subsequent_indent=u' ' * 14
+                )
+                hstrs.append(
+                    u'   {colors[YELLOW]} Warnings: {0}{colors[ENDC]}'.format(
+                        wrapper.fill('\n'.join(ret['warnings'])).lstrip(),
+                        colors=colors
+                    )
+                )
+
         # Append result counts to end of output
         colorfmt = u'{0}{1}{2[ENDC]}'
-        rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run'}
+        rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run', 'warnings': u'Warnings'}
         count_max_len = max([len(str(x)) for x in six.itervalues(rcounts)] or [0])
         label_max_len = max([len(x) for x in six.itervalues(rlabel)] or [0])
         line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
@@ -314,8 +331,18 @@ def _format_host(host, data):
             )
         )
 
+        num_warnings = rcounts.get('warnings', 0)
+        if num_warnings:
+            hstrs.append(
+                colorfmt.format(
+                    colors['YELLOW'],
+                    _counts(rlabel['warnings'], num_warnings),
+                    colors
+                )
+            )
+
         totals = u'{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
-                                               sum(six.itervalues(rcounts)),
+                                               sum(six.itervalues(rcounts)) - rcounts.get('warnings', 0),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 
