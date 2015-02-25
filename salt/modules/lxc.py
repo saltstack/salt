@@ -1138,6 +1138,14 @@ def init(name,
                                ignore_retcode=True) == 0
                    for x in gids):
             try:
+                distrib_id = info(name)['lsb']['distrib_id']
+                if distrib_id.lower() == 'ubuntu' and 'ubuntu' not in users:
+                    if cmd_retcode(name,
+                                   'id ubuntu',
+                                   python_shell=False,
+                                   ignore_retcode=False) != 0:
+
+                        users.append('ubuntu')
                 cret = set_password(name,
                                     users=users,
                                     password=password,
@@ -2204,6 +2212,25 @@ def info(name):
                 else:
                     ret['public_ips'].append(address)
                     ret['public_ipv6_ips'].append(address)
+
+        # LSB info
+        ret['lsb'] = {
+            'distrib_id': 'Unknown',
+            'distrib_release': 'Unknown',
+            'distrib_codename': 'Unknown',
+            'distrib_description': 'Unknown',
+        }
+        lsb_data = cmd_run_all(name,
+                               'cat /etc/lsb-release',
+                               python_shell=False,
+                               ignore_retcode=True)
+        if lsb_data['retcode'] == 0:
+            for line in lsb_data['stdout'].splitlines():
+                try:
+                    key, val = line.split('=')
+                except ValueError:
+                    continue
+                ret['lsb'][key.lower()] = val.strip('"').strip("'")
 
         for key in [x for x in ret if x == 'ips' or x.endswith('ips')]:
             ret[key].sort(key=_ip_sort)
