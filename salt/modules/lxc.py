@@ -670,7 +670,7 @@ def _get_lxc_default_data(**kwargs):
     if autostart is None:
         autostart = True
     # we will set the regular lxc marker to restart container at
-    # machine (re)boot only if if did not explicitly ask
+    # machine (re)boot only if we did not explicitly ask
     # not to touch to the autostart settings via
     # autostart == 'keep'
     if autostart != 'keep':
