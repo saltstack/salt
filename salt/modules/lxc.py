@@ -48,8 +48,6 @@ __func_alias__ = {
 }
 
 DEFAULT_NIC = 'eth0'
-DEFAULT_NIC_PROFILE = {}
-DEFAULT_NIC_PROFILES = {DEFAULT_NIC: copy.deepcopy(DEFAULT_NIC_PROFILE)}
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -317,10 +315,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['gateway'] = gateway
     lxc_init_interface['nic_opts'] = nic_opts
     for clone_from in ['clone_from', 'clone', 'from_container']:
-        if clone_from in vm_:
-            lxc_init_interface['clone_from'] clone_from
+        # clone_from should default to None if not available
+        lxc_init_interface['clone_from'] = vm_.get(clone_from, None)
+        if lxc_init_interface['clone_from'] is not None:
             break
-    lxc_init_interface['clone_from'] = from_container
     lxc_init_interface['profile'] = profile
     lxc_init_interface['snapshot'] = snapshot
     lxc_init_interface['dnsservers'] = dnsservers
@@ -485,9 +483,7 @@ def get_network_profile(name=None):
                     'lxc.nic has been deprecated, please configure LXC '
                     'network profiles under lxc.network_profile instead'
                 )
-    return net_profile if net_profile is not None else copy.deepcopy(
-        DEFAULT_NIC_PROFILE
-    )
+    return net_profile if net_profile is not None else {}
 
 
 def _rand_cpu_str(cpu):
