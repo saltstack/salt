@@ -215,7 +215,6 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         profile = {}
     if name is None:
         name = vm_['name']
-    from_container = vm_.get('from_container', None)
     # if we are on ubuntu, default to ubuntu
     default_template = ''
     if __grains__.get('os', '') in ['Ubuntu']:
@@ -317,6 +316,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['bridge'] = bridge
     lxc_init_interface['gateway'] = gateway
     lxc_init_interface['nic_opts'] = nic_opts
+    for clone_from in ['clone_from', 'clone', 'from_container']:
+        if clone_from in vm_:
+            lxc_init_interface['clone_from'] clone_from
+            break
     lxc_init_interface['clone_from'] = from_container
     lxc_init_interface['profile'] = profile
     lxc_init_interface['snapshot'] = snapshot
