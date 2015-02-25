@@ -854,7 +854,7 @@ def set_known_host(user=None,
         check_required = True
 
     if not update_required and not check_required:
-        return {'status': 'exists', 'key': stored_host}
+        return {'status': 'exists', 'key': stored_host['key']}
 
     if not key:
         remote_host = recv_known_host(hostname,
@@ -871,8 +871,8 @@ def set_known_host(user=None,
                               'does not match one you have provided')}
 
         if check_required:
-            if remote_host == stored_host:
-                return {'status': 'uptodate', 'key': stored_host}
+            if remote_host['key'] == stored_host['key']:
+                return {'status': 'exists', 'key': stored_host['key']}
 
     # remove everything we had in the config so far
     rm_known_host(user, hostname, config=config)
