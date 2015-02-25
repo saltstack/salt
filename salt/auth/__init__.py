@@ -321,7 +321,8 @@ class Resolver(object):
             sreq = salt.payload.SREQ(
                     'tcp://{0}:{1}'.format(
                         salt.utils.ip_bracket(self.opts['interface']),
-                        self.opts['ret_port'])
+                        self.opts['ret_port']),
+                        opts=self.opts
                 )
             tdata = sreq.send('clear', load)
             return tdata
