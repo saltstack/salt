@@ -43,7 +43,8 @@ import logging
 import os
 import shutil
 from datetime import datetime
-from salt.ext.six import text_type as _text_type
+from salt._compat import text_type as _text_type
+from salt.exceptions import FileserverConfigError
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
 PER_REMOTE_PARAMS = ('base', 'branch_method', 'mountpoint', 'root')
@@ -169,6 +170,15 @@ def _get_ref(repo, name):
     return False
 
 
+def _failhard():
+    '''
+    Fatal fileserver configuration issue, raise an exception
+    '''
+    raise FileserverConfigError(
+        'Failed to load hg fileserver backend'
+    )
+
+
 def init():
     '''
     Return a list of hglib objects for the various hgfs remotes
@@ -192,11 +202,13 @@ def init():
             )
             if not per_remote_conf:
                 log.error(
-                    'Invalid per-remote configuration for remote {0}. If no '
-                    'per-remote parameters are being specified, there may be '
-                    'a trailing colon after the URI, which should be removed. '
-                    'Check the master configuration file.'.format(repo_url)
+                    'Invalid per-remote configuration for hgfs remote {0}. If '
+                    'no per-remote parameters are being specified, there may '
+                    'be a trailing colon after the URL, which should be '
+                    'removed. Check the master configuration file.'
+                    .format(repo_url)
                 )
+                _failhard()
 
             branch_method = \
                 per_remote_conf.get('branch_method',
@@ -208,8 +220,9 @@ def init():
                     .format(branch_method, repo_url,
                             ', '.join(VALID_BRANCH_METHODS))
                 )
-                continue
+                _failhard()
 
+            per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_PARAMS):
                 log.error(
@@ -219,7 +232,10 @@ def init():
                         param, repo_url, ', '.join(PER_REMOTE_PARAMS)
                     )
                 )
-                per_remote_conf.pop(param)
+                per_remote_errors = True
+            if per_remote_errors:
+                _failhard()
+
             repo_conf.update(per_remote_conf)
         else:
             repo_url = remote
@@ -227,9 +243,9 @@ def init():
         if not isinstance(repo_url, string_types):
             log.error(
                 'Invalid hgfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URI in quotes'.format(repo_url)
+                'need to enclose the URL in quotes'.format(repo_url)
             )
-            continue
+            _failhard()
 
         try:
             repo_conf['mountpoint'] = salt.utils.strip_proto(
@@ -258,7 +274,13 @@ def init():
                 'delete this directory on the master to continue to use this '
                 'hgfs remote.'.format(rp_, repo_url)
             )
-            continue
+            _failhard()
+        except Exception as exc:
+            log.error(
+                'Exception \'{0}\' encountered while initializing hgfs remote '
+                '{1}'.format(exc, repo_url)
+            )
+            _failhard()
 
         try:
             refs = repo.config(names='paths')
@@ -269,7 +291,7 @@ def init():
         # versions of hglib did not raise an exception, so we need to do it
         # this way to support both older and newer hglib.
         if not refs:
-            # Write an hgrc defining the remote URI
+            # Write an hgrc defining the remote URL
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
             with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
                 hgconfig.write('[paths]\n')
