@@ -1074,6 +1074,7 @@ def replace(path,
             dry_run=False,
             search_only=False,
             show_changes=True,
+            preserve_inode=True,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1140,6 +1141,16 @@ def replace(path,
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the
             diff.
+    preserve_inode
+        .. versionadded:: 
+
+        Preserve the inode of the file, so that any hard links continue to share the 
+        inode with the original filename. This works by *copying* the file, reading 
+        from the copy, and writing to the file at the original inode. If ``False``, the 
+        file will be *moved* rather than copied, and a new file will be written to a 
+        new inode, but using the original filename. Hard links will then share an inode 
+        with the backup, instead (if using ``backup`` to create a backup copy).
+        Default is ``True``.
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1225,15 +1236,32 @@ def replace(path,
     finally:
         fi_file.close()
 
+    found_prior = found
     try:
-        fi_file = fileinput.input(path,
-                        inplace=not (dry_run or search_only),
-                        backup=False if (dry_run or search_only or found) else backup,
-                        bufsize=bufsize,
-                        mode='r' if (dry_run or search_only or found) else 'rb')
+        if not (dry_run or search_only or found_prior):
+            # use `copy` to preserve the original file's 
+            # inode, and thus preserve hardlinks to the 
+            # file. otherwise, use `move` to preserve 
+            # prior behavior, which results in writing 
+            # the file to a new inode.
+            backup_file = '{0}{1}'.format(path,backup) if backup else salt.utils.mkstemp()
+            if preserve_inode:
+                shutil.copy2(path, backup_file)
+            else:
+                shutil.move(path, backup_file)
 
-        if not found:
-            for line in fi_file:
+            w_file = salt.utils.fopen(path,
+                        mode='wb',
+                        buffering=bufsize)
+
+        # read from backup_file unless no change 
+        # is to be made; then, read from path.
+        r_file = salt.utils.fopen(backup_file if not (dry_run or search_only or found_prior) else path,
+                    mode='rb',
+                    buffering=bufsize)
+
+        if not found_prior:
+            for line in r_file:
                 result, nrepl = re.subn(cpattern, repl, line, count)
 
                 # found anything? (even if no change)
@@ -1248,10 +1276,18 @@ def replace(path,
                     orig_file.append(line)
                     new_file.append(result)
 
-                if not dry_run:
-                    print(result, end='', file=sys.stdout)
+                if not (dry_run or search_only):
+                    w_file.write(result)
     finally:
-        fi_file.close()
+        r_file.close()
+
+        # close the writeable file if we opened it
+        if not (dry_run or search_only or found_prior):
+            w_file.close()
+            # keep the backup only if it was requested
+            # and only if there were any changes
+            if not (backup and has_changes):
+                os.remove(backup_file)
 
     if not found and (append_if_not_found or prepend_if_not_found):
         if None == not_found_content:
