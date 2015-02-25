@@ -10,6 +10,7 @@ import re
 
 # Import 3rd-party libs
 import salt.ext.six as six
+import salt.utils.systemd
 
 log = logging.getLogger(__name__)
 
@@ -30,26 +31,9 @@ def __virtual__():
     '''
     Only work on systems that have been booted with systemd
     '''
-    if __grains__['kernel'] == 'Linux' and _sd_booted(__context__):
+    if __grains__['kernel'] == 'Linux' and salt.utils.systemd.booted(__context__):
         return __virtualname__
     return False
-
-
-def _sd_booted(context):
-    '''
-    Return True if the system was booted with systemd, False otherwise.
-    '''
-    # We can cache this for as long as the minion runs.
-    if "systemd.sd_booted" not in context:
-        try:
-            # This check does the same as sd_booted() from libsystemd-daemon:
-            # http://www.freedesktop.org/software/systemd/man/sd_booted.html
-            if os.stat('/run/systemd/system'):
-                context['systemd.sd_booted'] = True
-        except OSError:
-            context['systemd.sd_booted'] = False
-
-    return context['systemd.sd_booted']
 
 
 def _canonical_unit_name(name):
