@@ -899,6 +899,9 @@ def _init_dulwich(rp_, repo_url, ssl_verify):
     successful, otherwise return None. Also return a boolean that will tell
     init() whether a new repo was initialized.
     '''
+    if repo_url.startswith('ssh://'):
+        # Dulwich will throw an error if 'ssh' is used.
+        repo_url = 'git+' + repo_url
     new = False
     if not os.listdir(rp_):
         # Repo cachedir is empty, initialize a new repo there
