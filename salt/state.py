@@ -1520,6 +1520,11 @@ class State(object):
         }
 
         if low.get('__prereq__'):
+            mtests = {}
+            for func, funcm in six.iteritems(self.states):
+                mtests[func] = self.states[func].__globals__['__opts__'].get(
+                    'test', None)
+                self.states[func].__globals__['__opts__']['test'] = True
             test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
             sys.modules[self.states[cdata['full']].__module__].__opts__['test'] = True
         try:
@@ -1582,6 +1587,13 @@ class State(object):
             }
         finally:
             if low.get('__prereq__'):
+                for func, testval in six.iteritems(mtests):
+                    if testval is not None:
+                        self.states[func].__globals__[
+                            '__opts__']['test'] = testval
+                    else:
+                        self.states[func].__globals__['__opts__'].pop(
+                            'test', None)
                 sys.modules[self.states[cdata['full']].__module__].__opts__[
                     'test'] = test
 
