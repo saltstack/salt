@@ -62,7 +62,7 @@ def pv_present(name, **kwargs):
 
         if __salt__['lvm.pvdisplay'](name):
             ret['comment'] = 'Created Physical Volume {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['created'] = changes
         else:
             ret['comment'] = 'Failed to create Physical Volume {0}'.format(name)
             ret['result'] = False
@@ -95,7 +95,7 @@ def pv_absent(name):
             ret['result'] = False
         else:
             ret['comment'] = 'Removed Physical Volume {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['removed'] = changes
     return ret
 
 
@@ -129,7 +129,7 @@ def vg_present(name, devices=None, **kwargs):
 
         if __salt__['lvm.vgdisplay'](name):
             ret['comment'] = 'Created Volume Group {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['created'] = changes
         else:
             ret['comment'] = 'Failed to create Volume Group {0}'.format(name)
             ret['result'] = False
@@ -159,7 +159,7 @@ def vg_absent(name):
 
         if not __salt__['lvm.vgdisplay'](name):
             ret['comment'] = 'Removed Volume Group {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['removed'] = changes
         else:
             ret['comment'] = 'Failed to remove Volume Group {0}'.format(name)
             ret['result'] = False
@@ -228,7 +228,7 @@ def lv_present(name,
 
         if __salt__['lvm.lvdisplay'](lvpath):
             ret['comment'] = 'Created Logical Volume {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['created'] = changes
         else:
             ret['comment'] = 'Failed to create Logical Volume {0}'.format(name)
             ret['result'] = False
@@ -262,7 +262,7 @@ def lv_absent(name, vgname=None):
 
         if not __salt__['lvm.lvdisplay'](lvpath):
             ret['comment'] = 'Removed Logical Volume {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['removed'] = changes
         else:
             ret['comment'] = 'Failed to remove Logical Volume {0}'.format(name)
             ret['result'] = False
