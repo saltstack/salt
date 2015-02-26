@@ -781,6 +781,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if IS_WINDOWS_PLATFORM:
             freezer_includes.extend([
+                'imp',
                 'win32api',
                 'win32file',
                 'win32con',
