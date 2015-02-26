@@ -83,6 +83,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     '__pub_fun',
     '__pub_tgt',
     '__pub_ret',
+    '__pub_pid',
     '__pub_tgt_type',
     ])
 STATE_INTERNAL_KEYWORDS = STATE_REQUISITE_KEYWORDS.union(STATE_REQUISITE_IN_KEYWORDS).union(STATE_RUNTIME_KEYWORDS)
