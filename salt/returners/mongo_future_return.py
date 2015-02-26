@@ -17,6 +17,11 @@ to the minion config files:
     mongo.password: <MongoDB user password>
     mongo.port: 27017
 
+You can also ask for indexes creation on the most common used fields, which
+should greatly improve performance. Indexes are not created by default.
+
+    mongo.indexes: true
+
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location:
@@ -96,7 +101,8 @@ def _get_options(ret=None):
              'port': 'port',
              'db': 'db',
              'username': 'username',
-             'password': 'password'}
+             'password': 'password',
+             'indexes': 'indexes'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -117,12 +123,20 @@ def _get_conn(ret):
     db_ = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
+    indexes = _options.get('indexes', False)
 
     conn = pymongo.Connection(host, port)
     mdb = conn[db_]
 
     if user and password:
         mdb.authenticate(user, password)
+
+    if indexes:
+        mdb.saltReturns.ensure_index('minion')
+        mdb.saltReturns.ensure_index('jid')
+
+        mdb.jobs.ensure_index('jid')
+
     return conn, mdb
 
 
