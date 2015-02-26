@@ -4,6 +4,7 @@ Manage nspawn containers
 '''
 # Import python libs
 from __future__ import absolute_import
+import logging
 import os
 import shutil
 
@@ -11,6 +12,8 @@ import shutil
 # Import Salt libs
 import salt.defaults.exitcodes
 import salt.utils.systemd
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'nspawn'
 WANT = '/etc/systemd/system/multi-user.target.wants/systemd-nspawn@{0}.service'
@@ -98,7 +101,11 @@ def bootstrap(name, dist=None, version=None):
     '''
     if not dist:
         dist = __grains__['os'].lower()
-    return locals['_{0}_bootstrap'.format(dist)](name, version=version)
+        log.debug(
+            'nspawn.bootstrap: no dist provided, defaulting to \'{0}\''
+            .format(dist)
+        )
+    return globals()['_{0}_bootstrap'.format(dist)](name, version=version)
 
 
 def enable(name):
