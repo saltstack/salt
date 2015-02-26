@@ -171,6 +171,7 @@ def _run(cmd,
          timeout=None,
          with_communicate=True,
          reset_system_locale=True,
+         ignore_retcode=False,
          saltenv='base',
          use_vt=False):
     '''
@@ -465,7 +466,10 @@ def _run(cmd,
         finally:
             proc.close(terminate=True, kill=True)
     try:
-        __context__['retcode'] = ret['retcode']
+        if ignore_retcode:
+            __context__['retcode'] = 0
+        else:
+            __context__['retcode'] = ret['retcode']
     except NameError:
         # Ignore the context error during grain generation
         pass
@@ -612,6 +616,7 @@ def run(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt)
 
@@ -711,6 +716,7 @@ def run_stdout(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt)
 
@@ -794,6 +800,7 @@ def run_stderr(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
                use_vt=use_vt,
                saltenv=saltenv)
 
@@ -877,6 +884,7 @@ def run_all(cmd,
                quiet=quiet,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt)
 
@@ -963,6 +971,7 @@ def retcode(cmd,
               quiet=quiet,
               timeout=timeout,
               reset_system_locale=reset_system_locale,
+              ignore_retcode=ignore_retcode,
               saltenv=saltenv,
               use_vt=use_vt)
 
