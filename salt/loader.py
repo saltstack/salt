@@ -1066,11 +1066,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                 # load deep dependency if a function is coming from another import
                 # and mod need to be reloaded to set correctly opts
-                func_ref = getattr(mod, func)
-                func_ref_module = getattr(func_ref, '__module__')
-                if func_ref_module != name and func_ref_module != mod.__name__:
-                    self._load_module(func_ref_module)
-                    self._load_module(name)
+                try:
+                    func_ref = getattr(mod, func)
+                    func_ref_module = getattr(func_ref, '__module__')
+                    if func_ref_module != name and func_ref_module != mod.__name__:
+                        self._load_module(func_ref_module)
+                        self._load_module(name)
+                except AttributeError:
+                    pass
 
                 # if we got what we wanted, we are done
                 if mod and key in self._dict:
