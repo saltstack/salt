@@ -1007,6 +1007,16 @@ def fopen(*args, **kwargs):
     gid = kwargs.pop('gid', -1)  # -1 means no change to current gid
     mode = kwargs.pop('mode', None)
 
+    if lock is True:
+        warn_until(
+            'Beryllium',
+            'The \'lock\' keyword argument is deprecated and will be '
+            'removed in Salt Beryllium. Please use '
+            '\'salt.utils.flopen()\' for file locking while calling '
+            '\'salt.utils.fopen()\'.'
+        )
+        return flopen(*args, **kwargs)
+
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
@@ -1016,8 +1026,6 @@ def fopen(*args, **kwargs):
         except AttributeError:
             FD_CLOEXEC = 1                  # pylint: disable=C0103
         old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        if lock and is_fcntl_available(check_sunos=True):
-            fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
         fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
 
     path = args[0]
@@ -1042,12 +1050,14 @@ def flopen(*args, **kwargs):
     '''
     Shortcut for fopen with lock and context manager
     '''
-    with fopen(*args, lock=True, **kwargs) as fp_:
+    with fopen(*args, **kwargs) as fhandle:
         try:
-            yield fp_
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
+            yield fhandle
         finally:
             if is_fcntl_available(check_sunos=True):
-                fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
+                fcntl.flock(fhandle.fileno(), fcntl.LOCK_UN)
 
 
 def expr_match(line, expr):
