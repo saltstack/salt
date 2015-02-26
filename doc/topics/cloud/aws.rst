@@ -144,7 +144,7 @@ Note: if either ``id`` or ``key`` is set to 'use-instance-role-credentials' it i
 assumed that Salt is running on an AWS instance, and the instance role
 credentials will be retrieved and used.  Since both the ``id`` and ``key`` are
 required parameters for the AWS ec2 provider, it is recommended to set both
-to use-instance-role-credentials' for this functionality.
+to 'use-instance-role-credentials' for this functionality.
 
 A "static" and "permanent" Access Key ID and Secret Key can be specified,
 but this is not recommended.  Instance role keys are rotated on a regular
