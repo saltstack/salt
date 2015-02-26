@@ -12,6 +12,8 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
+import salt.utils.cloud
+import salt._compat
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
 
