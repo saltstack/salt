@@ -205,7 +205,7 @@ def mounted(name,
                         opt = "size={0}k".format(converted_size)
                     # make cifs option user synonym for option username which is reported by /proc/mounts
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
-                       opt = "username={0}".format(opt.split('=')[1])
+                        opt = "username={0}".format(opt.split('=')[1])
 
                     if opt not in active[real_name]['opts'] and opt not in active[real_name]['superopts'] and opt not in mount_invisible_options:
                         if __opts__['test']:
