@@ -138,3 +138,19 @@ def start(name):
         __context__['retcode'] = salt.defaults.exitcode.EX_UNAVAILABLE
         return False
     return True
+
+
+def stop(name):
+    '''
+    Start the named container
+
+    CLI Example::
+
+        salt '*' nspawn.stop <name>
+    '''
+    cmd = 'systemctl stop systemd-nspawn@{0}'.format(name)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if ret['retcode'] != 0:
+        __context__['retcode'] = salt.defaults.exitcode.EX_UNAVAILABLE
+        return False
+    return True
