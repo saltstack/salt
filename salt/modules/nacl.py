@@ -53,11 +53,10 @@ Or do somthing interesting with grains like:
         {%- endif %}
     {%- endif %}
     base:
-        'minionname':
-            - _sdl.ntp
-            {%- if role %}
+        {%- if role %}
+        '{{ opts['id'] }}':
             - {{ role }}
-            {%- endif %}
+        {%- endif %}
 '''
 import base64
 import os
