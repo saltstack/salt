@@ -118,6 +118,30 @@ For APT-based distros such as Ubuntu and Debian:
 
     # apt-get install python-dulwich
 
+.. important::
+
+    If switching to Dulwich from GitPython/pygit2, or switching from
+    GitPython/pygit2 to Dulwich, it is necessary to clear the gitfs cache to
+    avoid unpredictable behavior. This is probably a good idea whenever
+    switching to a new :conf_master:`gitfs_provider`, but it is less important
+    when switching between GitPython and pygit2.
+
+    Beginning in version 2015.2.0, the gitfs cache can be easily cleared using
+    the :mod:`fileserver.clear_cache <salt.runners.fileserver.clear_cache>`
+    runner.
+
+    .. code-block:: bash
+
+        salt-run fileserver.clear_cache backend=git
+
+    If the Master is running an earlier version, then the cache can be cleared
+    by removing the ``gitfs`` and ``file_lists/gitfs`` directories (both paths
+    relative to the master cache directory, usually
+    ``/var/cache/salt/master``).
+
+    .. code-block:: bash
+
+        rm -rf /var/cache/salt/master{,/file_lists}/gitfs
 
 Simple Configuration
 ====================
@@ -152,6 +176,14 @@ master:
 
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
+
+   .. note::
+
+       Dulwich does not recognize ``ssh://`` URLs, ``git+ssh://`` must be used
+       instead. Salt version 2015.2.0 and later will automatically add the
+       ``git+`` to the beginning of these URLs before fetching, but earlier
+       Salt versions will fail to fetch unless the URL is specified using
+       ``git+ssh://``.
 
 3. Restart the master to load the new configuration.
    
