@@ -738,13 +738,24 @@ def create_disk_from_distro(vm_=None, LinodeID=None, swapsize=None):
     '''
     conn = get_conn()
 
+    pubkey = get_pubkey(vm_)
+    rootpass = get_password(vm_)
+
+    kwargs = {}
+    if pubkey:
+        kwargs.update({'rootSSHKey': pubkey})
+    if rootpass:
+        kwargs.update({'rootPass': rootpass})
+    else:
+        raise SaltCloudConfigError(
+            'The Linode driver requires a password.')
+
     result = conn.linode_disk_createfromdistribution(
         LinodeID=LinodeID,
         DistributionID=get_image(conn, vm_),
         Label='root',
         Size=get_disk_size(vm_, get_size(conn, vm_)['disk'], get_swap(vm_)),
-        rootPass=get_password(vm_),
-        rootSSHKey=get_pubkey(vm_)
+        **kwargs
     )
     return result
 
