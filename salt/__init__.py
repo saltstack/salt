@@ -46,8 +46,13 @@ def __define_global_system_encoding_variable__():
             # unable to find a better encoding
             encoding = sys.getdefaultencoding()
 
-    # Import 3rd-party libs
-    import salt.ext.six.moves.builtins as builtins  # pylint: disable=import-error,no-name-in-module
+    # We can't use six.moves.builtins because these builtins get deleted sooner
+    # than expected. See:
+    #    https://github.com/saltstack/salt/issues/21036
+    if sys.version_info.major < 3:
+        import __builtin__ as builtins
+    else:
+        import builtins  # pylint: disable=import-error
 
     # Define the detected encoding as a built-in variable for ease of use
     setattr(builtins, '__salt_system_encoding__', encoding)
