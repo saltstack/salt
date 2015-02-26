@@ -847,7 +847,7 @@ def _get_base(**kwargs):
                    vgname=vgname, **kwargs)
             if vgname:
                 rootfs = os.path.join('/dev', vgname, name)
-                edit_conf(info(name)['config'], out_format='commented',  **{'lxc.rootfs': rootfs})
+                edit_conf(info(name)['config'], out_format='commented', **{'lxc.rootfs': rootfs})
         return name
     elif template:
         name = '__base_{0}'.format(template)
