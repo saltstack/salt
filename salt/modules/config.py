@@ -285,6 +285,9 @@ def gather_bootstrap_script(bootstrap=None):
     '''
     Download the salt-bootstrap script, and return its location
 
+    bootstrap
+        URL of alternate bootstrap script
+
     CLI Example:
 
     .. code-block:: bash
