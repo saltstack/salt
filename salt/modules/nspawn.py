@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage nspawn containers
 '''
@@ -72,7 +73,7 @@ def _fedora_bootstrap(name, **kwargs):
     if os.path.exists(dst):
         __context__['retcode'] = salt.defaults.exitcodes.SALT_BUILD_FAIL
         return {'err': 'Container {0} already exists'.format(name)}
-    cmd = 'yum -y --releasever={0} --nogpg --installroot={0} --disablerepo="*" --enablerepo=fedora install systemd passwd yum fedora-release vim-minimal'.format(dst, version)
+    cmd = 'yum -y --releasever={0} --nogpg --installroot={1} --disablerepo="*" --enablerepo=fedora install systemd passwd yum fedora-release vim-minimal'.format(version, dst)
     os.makedirs(dst)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
@@ -94,7 +95,7 @@ def bootstrap(name, dist=None, version=None):
     '''
     if not dist:
         dist = __grains__['os'].lower()
-    return locals['_{0}_bootstrap'.format()]
+    return locals['_{0}_bootstrap'.format(dist)](name, version=version)
 
 
 def enable(name):
