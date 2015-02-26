@@ -201,6 +201,8 @@ def mounted(name,
                     'reconnect',
                     'retry',
                     'soft',
+                    'auto',
+                    'users',
                 ]
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
