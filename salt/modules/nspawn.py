@@ -102,7 +102,7 @@ def enable(name):
     '''
     Enable a specific container
 
-    CLI Exmaple::
+    CLI Example::
 
         salt '*' nspawn.enable <name>
     '''
