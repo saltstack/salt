@@ -1183,7 +1183,7 @@ def replace(path,
         raise SaltInvocationError('Choose between append or prepend_if_not_found')
 
     flags_num = _get_flags(flags)
-    cpattern = re.compile(pattern, flags_num)
+    cpattern = re.compile(str(pattern), flags_num)
     if bufsize == 'file':
         bufsize = os.path.getsize(path)
 
