@@ -13,7 +13,7 @@ import re
 import salt.utils
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
-from salt.modules.systemd import _sd_booted
+import salt.utils.systemd
 import string
 
 log = logging.getLogger(__name__)
@@ -31,8 +31,6 @@ def __virtual__():
     '''
     if __grains__['kernel'] != 'Linux':
         return False
-    global _sd_booted
-    _sd_booted = salt.utils.namespaced_function(_sd_booted, globals())
     return __virtualname__
 
 
@@ -59,7 +57,7 @@ def default_config():
 
         salt -G 'kernel:Linux' sysctl.default_config
     '''
-    if _sd_booted(__context__):
+    if salt.utils.systemd.booted(__context__):
         for line in __salt__['cmd.run_stdout'](
             'systemctl --version'
         ).splitlines():
