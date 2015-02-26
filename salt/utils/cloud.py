@@ -894,10 +894,10 @@ def deploy_windows(host,
             smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
             smb_conn.deleteDirectory('C$', 'salttemp')
         # Shell out to winexe to ensure salt-minion service started
-        win_cmd('winexe {0} "sc stop salt-minion"'.format(
+        win_cmd('winexe {0} "net stop salt-minion"'.format(
             creds,
         ))
-        win_cmd('winexe {0} "sc start salt-minion"'.format(
+        win_cmd('winexe {0} "net start salt-minion"'.format(
             creds,
         ))
 
