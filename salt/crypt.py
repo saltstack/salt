@@ -4,10 +4,8 @@ The crypt module manages all of the cryptography functions for minions and
 masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 '''
-from __future__ import absolute_import
-from __future__ import print_function
-
 # Import python libs
+from __future__ import absolute_import, print_function
 import os
 import sys
 import time
@@ -16,7 +14,7 @@ import hashlib
 import logging
 import traceback
 import binascii
-from salt.ext.six.moves import zip
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
 try:
