@@ -256,10 +256,10 @@ def query(url,
         result_cookies = result.cookies
     else:
         request = urllib2.Request(url, data)
-        handlers = (
+        handlers = [
             urllib2.HTTPHandler,
             urllib2.HTTPCookieProcessor(sess_cookies)
-        )
+        ]
 
         if url.startswith('https') or port == 443:
             if not HAS_MATCHHOSTNAME:
