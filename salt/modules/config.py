@@ -279,3 +279,18 @@ def dot_vals(value):
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
     return ret
+
+
+def gather_bootstrap_script(bootstrap=None):
+    '''
+    Download the salt-bootstrap script, and return its location
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' config.gather_bootstrap_script
+    '''
+    ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
+    if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
+        return ret['Success']['Files updated'][0]
