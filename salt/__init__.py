@@ -49,7 +49,7 @@ def __define_global_system_encoding_variable__():
     # We can't use six.moves.builtins because these builtins get deleted sooner
     # than expected. See:
     #    https://github.com/saltstack/salt/issues/21036
-    if sys.version_info.major < 3:
+    if sys.version_info[0] < 3:
         import __builtin__ as builtins
     else:
         import builtins  # pylint: disable=import-error
