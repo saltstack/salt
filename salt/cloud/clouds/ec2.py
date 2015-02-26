@@ -2064,6 +2064,8 @@ def create(vm_=None, call=None):
             )
         )
     vm_['key_filename'] = key_filename
+    # wait_for_instance requires private_key
+    vm_['private_key'] = key_filename
 
     # Get SSH Gateway config early to verify the private_key,
     # if used, exists or not. We don't want to deploy an instance
