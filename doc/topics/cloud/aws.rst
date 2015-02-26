@@ -48,8 +48,8 @@ parameters are discussed in more detail below.
 
       # Set the EC2 access credentials (see below)
       #
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      id: 'use-instance-role-credentials'
+      key: 'use-instance-role-credentials'
 
       # Make sure this key is owned by root with permissions 0400.
       #
@@ -97,8 +97,8 @@ parameters are discussed in more detail below.
 
       # Set the EC2 access credentials (see below)
       #
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      id: 'use-instance-role-credentials'
+      key: 'use-instance-role-credentials'
 
       # Make sure this key is owned by root with permissions 0400.
       #
@@ -140,6 +140,15 @@ Both are located in the Access Credentials area of the page, under the Access
 Keys tab. The ``id`` setting is labeled Access Key ID, and the ``key`` setting
 is labeled Secret Access Key.
 
+Note: if either ``id`` or ``key`` is set to 'use-instance-role-credentials' it is
+assumed that Salt is running on an AWS instance, and the instance role
+credentials will be retrieved and used.  Since both the ``id`` and ``key`` are
+required parameters for the AWS ec2 provider, it is recommended to set both
+to use-instance-role-credentials' for this functionality.
+
+A "static" and "permanent" Access Key ID and Secret Key can be specified,
+but this is not recommended.  Instance role keys are rotated on a regular
+basis, and are the recommended method of specifying AWS credentials.
 
 Key Pairs
 =========
