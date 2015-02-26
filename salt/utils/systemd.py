@@ -3,6 +3,7 @@
 Contains systemd related help files
 '''
 # import python libs
+from __future__ import absolute_import
 import os
 
 
