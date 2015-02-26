@@ -118,7 +118,7 @@ try:
     import Crypto
     # PKCS1_v1_5 was added in PyCrypto 2.5
     from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    from Crypto.Cipher import SHA  # pylint: disable=E0611
+    from Crypto.Hash import SHA  # pylint: disable=E0611
     HAS_PYCRYPTO = True
 except ImportError:
     HAS_PYCRYPTO = False
