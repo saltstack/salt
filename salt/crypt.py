@@ -497,7 +497,8 @@ class SAuth(object):
                          'from master {0}'.format(self.opts['master']))
                 m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
                 uid = salt.utils.get_uid(self.opts.get('user', None))
-                salt.utils.fopen(m_pub_fn, 'w+', uid=uid).write(payload['pub_key'])
+                with salt.utils.fpopen(m_pub_fn, 'w+', uid=uid) as wfh:
+                    wfh.write(payload['pub_key'])
                 return True
             else:
                 log.error('Received signed public-key from master {0} '
