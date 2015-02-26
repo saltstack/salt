@@ -81,23 +81,35 @@ LINODE_STATUS = {
      '4': 'Saved to Disk (not in use)',
 }
 
+# Linode-python is now returning some complex types that
+# are not serializable by msgpack.  Kill those.
+def remove_complex_types(dictionary):
+
+    for k, v in dictionary.iteritems():
+        if isinstance(v, dict):
+            dictionary[k] = remove_complex_types(v)
+        elif hasattr(v, 'to_eng_string'):
+            dictionary[k] = v.to_eng_string()
+
+    return dictionary
+
 if HAS_LINODEPY:
-# Redirect linode functions to this module namespace
-# get_size = namespaced_function(get_size, globals())
-# get_image = namespaced_function(get_image, globals())
-# avail_locations = namespaced_function(avail_locations, globals())
-# avail_images = namespaced_function(avail_distributions, globals())
-# avail_sizes = namespaced_function(avail_sizes, globals())
+    # Redirect linode functions to this module namespace
+    # get_size = namespaced_function(get_size, globals())
+    # get_image = namespaced_function(get_image, globals())
+    # avail_locations = namespaced_function(avail_locations, globals())
+    # avail_images = namespaced_function(avail_distributions, globals())
+    # avail_sizes = namespaced_function(avail_sizes, globals())
     script = namespaced_function(script, globals())
-# destroy = namespaced_function(destroy, globals())
-# list_nodes = namespaced_function(list_nodes, globals())
-# list_nodes_full = namespaced_function(list_nodes_full, globals())
+    # destroy = namespaced_function(destroy, globals())
+    # list_nodes = namespaced_function(list_nodes, globals())
+    # list_nodes_full = namespaced_function(list_nodes_full, globals())
     list_nodes_select = namespaced_function(list_nodes_select, globals())
     show_instance = namespaced_function(show_instance, globals())
-# get_node = namespaced_function(get_node, globals())
+    # get_node = namespaced_function(get_node, globals())
 
 elif HAS_LIBCLOUD:
-# Redirect linode functions to this module namespace
+    # Redirect linode functions to this module namespace
     get_size = namespaced_function(get_size, globals())
     get_image = namespaced_function(get_image, globals())
     avail_locations = namespaced_function(avail_locations, globals())
@@ -113,7 +125,7 @@ elif HAS_LIBCLOUD:
 
 
 if not HAS_LIBCLOUD:
-# Borrowed from Apache Libcloud
+    # Borrowed from Apache Libcloud
     class NodeAuthSSHKey(object):
         '''
         An SSH key to be installed for authentication to a node.
@@ -257,7 +269,8 @@ if HAS_LINODEPY:
             sizes[key]['disk'] = plan['DISK']
             sizes[key]['price'] = plan['HOURLY']*24*30
             sizes[key]['ram'] = plan['RAM']
-        return sizes
+
+        return remove_complex_types(sizes)
 
 
     def avail_locations(conn=None):
@@ -873,6 +886,7 @@ def create(vm_):
                 'ex_rsize': get_disk_size(vm_, get_size(conn, vm_), get_swap(vm_)),
                 'ex_swap': get_swap(vm_)
             }
+
             salt.utils.cloud.fire_event(
                 'event',
                 'requesting instance',
