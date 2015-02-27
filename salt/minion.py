@@ -920,7 +920,7 @@ class Minion(MinionBase):
 
         return functions, returners, errors
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -940,7 +940,7 @@ class Minion(MinionBase):
             return
         channel = salt.transport.Channel.factory(self.opts)
         try:
-            result = channel.send(load)
+            result = channel.send(load, timeout=timeout)
             return True
         except Exception:
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
@@ -1271,7 +1271,7 @@ class Minion(MinionBase):
                         )
                     )
 
-    def _return_pub(self, ret, ret_cmd='_return'):
+    def _return_pub(self, ret, ret_cmd='_return', timeout=60):
         '''
         Return the data from the executed command to the master server
         '''
@@ -1330,7 +1330,7 @@ class Minion(MinionBase):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         try:
-            ret_val = channel.send(load)
+            ret_val = channel.send(load, timeout=timeout)
         except SaltReqTimeoutError:
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
@@ -2263,11 +2263,12 @@ class MultiSyndic(MinionBase):
 
     In addition, since these classes all seem to use a mix of blocking and non-blocking
     calls (with varying timeouts along the way) this daemon does not handle failure well,
-    it will (under most circumstances) stall the daemon for ~180s trying to forward events
+    it will (under most circumstances) stall the daemon for ~15s trying to forward events
     to the down master
     '''
     # time to connect to upstream master
     SYNDIC_CONNECT_TIMEOUT = 5
+    SYNDIC_EVENT_TIMEOUT = 5
 
     def __init__(self, opts):
         opts['loop_interval'] = 1
@@ -2279,21 +2280,34 @@ class MultiSyndic(MinionBase):
         # create all of the syndics you need
         self.master_syndics = {}
         for master in set(self.opts['master']):
-            s_opts = copy.copy(self.opts)
-            s_opts['master'] = master
-            t = threading.Thread(target=self._connect_to_master_thread, args=(master,))
-            t.daemon = True
-            self.master_syndics[master] = {'opts': s_opts,
-                                           'auth_wait': s_opts['acceptance_wait_time'],
-                                           'dead_until': 0,
-                                           'sign_in_thread': t,
-                                           }
-            t.start()
+            self._init_master_conn(master)
 
         log.info('Syndic waiting on any master to connect...')
         # threading events are un-interruptible in python 2 :/
         while not self._has_master.is_set():
             self._has_master.wait(1)
+
+    def _init_master_conn(self, master):
+        '''
+        Start a thread to connect to the master `master`
+        '''
+        # if we are re-creating one, lets make sure its not still in use
+        if master in self.master_syndics:
+            if 'sign_in_thread' in self.master_syndics[master]:
+                self.master_syndics[master]['sign_in_thread'].join(0)
+                if self.master_syndics[master]['sign_in_thread'].is_alive():
+                    return
+        # otherwise we make one!
+        s_opts = copy.copy(self.opts)
+        s_opts['master'] = master
+        t = threading.Thread(target=self._connect_to_master_thread, args=(master,))
+        t.daemon = True
+        self.master_syndics[master] = {'opts': s_opts,
+                                       'auth_wait': s_opts['acceptance_wait_time'],
+                                       'dead_until': 0,
+                                       'sign_in_thread': t,
+                                       }
+        t.start()
 
     def _connect_to_master_thread(self, master):
         '''
@@ -2350,7 +2364,8 @@ class MultiSyndic(MinionBase):
 
     # TODO: Move to an async framework of some type-- channel (the event thing underneath)
     # doesn't handle failures well, and will retry 3 times at 60s timeouts-- which all block
-    # the main thread's execution
+    # the main thread's execution. For now we just cause failures to kick off threads to look
+    # for the master to come back up
     def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
@@ -2361,20 +2376,18 @@ class MultiSyndic(MinionBase):
             if 'syndic' not in syndic_dict:
                 continue
             if syndic_dict['dead_until'] > time.time():
-                log.error('Unable to call {0} on {1}, that syndic is dead for now'.format(func, master_id))
+                log.error('Unable to call {0} on {1}, that syndic is dead for now'.format(func, master))
                 continue
             try:
                 ret = getattr(syndic_dict['syndic'], func)(*args, **kwargs)
-                if ret:
-                    log.info('Event sent to {0}'.format(master))
+                if ret is not False:
+                    log.debug('{0} called on {1}'.format(func, master))
                     return
             except (SaltClientError, SaltReqTimeoutError):
                 pass
-            log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
-            # re-use auth-wait as backoff for syndic
-            syndic_dict['dead_until'] = time.time() + syndic_dict['auth_wait']
-            if syndic_dict['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                syndic_dict['auth_wait'] += self.opts['acceptance_wait_time']
+            log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
+            # If the connection is dead, lets have another thread wait for it to come back
+            self._init_master_conn(master)
             continue
         log.critical('Unable to call {0} on any masters!'.format(func))
 
@@ -2511,10 +2524,16 @@ class MultiSyndic(MinionBase):
         if self.raw_events:
             self._call_syndic('_fire_master',
                               kwargs={'events': self.raw_events,
-                                      'pretag': tagify(self.opts['id'], base='syndic')},
+                                      'pretag': tagify(self.opts['id'], base='syndic'),
+                                      'timeout': self.SYNDIC_EVENT_TIMEOUT,
+                                      },
                               )
         for jid, jid_ret in self.jids.items():
-            self._call_syndic('_return_pub', args=(jid_ret, '_syndic_return'), master_id=jid_ret.get('__master_id__'))
+            self._call_syndic('_return_pub',
+                              args=(jid_ret, '_syndic_return'),
+                              kwargs={'timeout': self.SYNDIC_EVENT_TIMEOUT},
+                              master_id=jid_ret.get('__master_id__'),
+                              )
 
         self._reset_event_aggregation()
 
