@@ -74,6 +74,7 @@ Use the following mysql database schema::
     `tag` varchar(255) NOT NULL,
     `data` varchar(1024) NOT NULL,
     `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `master_id` varchar(255) NOT NULL,
     PRIMARY KEY (`id`),
     KEY `tag` (`tag`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -220,9 +221,9 @@ def event_return(events):
         for event in events:
             tag = event.get('tag', '')
             data = event.get('data', '')
-            sql = '''INSERT INTO `salt_events` (`tag`, `data` )
-                     VALUES (%s, %s)'''
-            cur.execute(sql, (tag, json.dumps(data)))
+            sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
+                     VALUES (%s, %s, %s)'''
+            cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
 
 
 def save_load(jid, load):
