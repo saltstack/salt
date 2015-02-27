@@ -32,6 +32,8 @@ Misc Fixes/Additions
   updates!)
 - Joyent now requires a ``keyname`` to be specified in the provider
   configuration. This change was necessitated upstream by the 7.0+ API.
+- Add ``args`` argument to ``cmd.script_retcode`` to match ``cmd.script`` in
+  the :py:mod:`cmd module <salt.cmd.cmdmod>`. (:issue:`21122`)
 
 Deprecations
 ============
