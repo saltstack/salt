@@ -138,6 +138,8 @@ def _verify_gitpython(quiet=False):
     '''
     Check if GitPython is available and at a compatible version (>= 0.3.0)
     '''
+    def _recommend():
+        if HAS_PYGIT2:
             log.error(_RECOMMEND_PYGIT2)
         if HAS_DULWICH:
             log.error(_RECOMMEND_DULWICH)
@@ -184,6 +186,8 @@ def _verify_pygit2(quiet=False):
     Check if pygit2/libgit2 are available and at a compatible version. Pygit2
     must be at least 0.20.3 and libgit2 must be at least 0.20.0.
     '''
+    def _recommend():
+        if HAS_GITPYTHON:
             log.error(_RECOMMEND_GITPYTHON)
         if HAS_DULWICH:
             log.error(_RECOMMEND_DULWICH)
@@ -240,6 +244,8 @@ def _verify_dulwich(quiet=False):
     '''
     Check if dulwich is available.
     '''
+    def _recommend():
+        if HAS_GITPYTHON:
             log.error(_RECOMMEND_GITPYTHON)
         if HAS_PYGIT2:
             log.error(_RECOMMEND_PYGIT2)

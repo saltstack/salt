@@ -53,9 +53,49 @@ will be searched.
 Environments
 ------------
 
-The concept of environments is followed in all backend systems. The
-environments in the classic :mod:`roots <salt.fileserver.roots>` backend are
-defined in the :conf_master:`file_roots` option. Environments map differently
-based on the backend, for instance the git backend translated branches and tags
-in git to environments. This makes it easy to define environments in git by
-just setting a tag or forking a branch.
+Just as the order of the values in :conf_master:`fileserver_backend` matters,
+so too does the order in which different sources are defined within a
+fileserver environment. For example, given the below :conf_master:`file_roots`
+configuration, if both ``/srv/salt/dev/foo.txt`` and ``/srv/salt/prod/foo.txt``
+exist on the Master, then ``salt://foo.txt`` would point to
+``/srv/salt/dev/foo.txt`` in the ``dev`` environment, but it would point to
+``/srv/salt/prod/foo.txt`` in the ``base`` environment.
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt/prod
+      qa:
+        - /srv/salt/qa
+        - /srv/salt/prod
+      dev:
+        - /srv/salt/dev
+        - /srv/salt/qa
+        - /srv/salt/prod
+
+Similarly, when using the :mod:`git <salt.fileserver.gitfs>` backend, if both
+repositories defined below have a ``hotfix23`` branch/tag, and both of them
+also contain the file ``bar.txt`` in the root of the repository at that
+branch/tag, then ``salt://bar.txt`` in the ``hotfix23`` environment would be
+served from the ``first`` repository.
+
+.. code-block:: yaml
+
+    gitfs_remotes:
+      - https://mydomain.tld/repos/first.git
+      - https://mydomain.tld/repos/second.git
+
+.. note::
+
+    Environments map differently based on the fileserver backend. For instance,
+    the mappings are explicitly defined in :mod:`roots <salt.fileserver.roots>`
+    backend, while in the VCS backends (:mod:`git <salt.fileserver.gitfs>`,
+    :mod:`hg <salt.fileserver.hgfs>`, :mod:`svn <salt.fileserver.svnfs>`) the
+    environments are created from branches/tags/bookmarks/etc. For the
+    :mod:`minion <salt.fileserver.minionfs>` backend, the files are all in a
+    single environment, which is specified by the :conf_master:`minionfs_env`
+    option.
+
+    See the documentation for each backend for a more detailed explanation of
+    how environments are mapped.
