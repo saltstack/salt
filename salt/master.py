@@ -1186,9 +1186,8 @@ class AESFuncs(object):
             load['grains'],
             load['id'],
             load.get('saltenv', load.get('env')),
-            load.get('ext'),
-            self.mminion.functions,
-            load.get('pillar_override', {}))
+            ext=load.get('ext'),
+            pillar=load.get('pillar_override', {}))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
@@ -1204,8 +1203,6 @@ class AESFuncs(object):
                          'pillar': data})
                     )
             os.rename(tmpfname, datap)
-        for mod in mods:
-            sys.modules[mod].__grains__ = self.opts['grains']
         return data
 
     def _minion_event(self, load):

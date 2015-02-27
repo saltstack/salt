@@ -31,12 +31,12 @@ import types
 import warnings
 import string
 import locale
-from calendar import month_abbr as months
 
 # Import 3rd-party libs
 import salt.ext.six as six
-# pylint: disable=import-error,redefined-builtin
+# pylint: disable=import-error
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
+# pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
@@ -844,6 +844,17 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
+    # We'll be showing errors to the users until Salt Carbon comes out, after
+    # which, errors will be raised instead.
+    warn_until(
+        'Carbon',
+        'It\'s time to start raising `SaltInvocationError` instead of '
+        'returning warnings',
+        # Let's not show the deprecation warning on the console, there's no
+        # need.
+        _dont_call_warnings=True
+    )
+
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
@@ -857,7 +868,7 @@ def format_call(fun,
                 )
             )
         else:
-            msg = '{0} and {1!r} are invalid keyword arguments for {2}'.format(
+            msg = '{0} and {1!r} are invalid keyword arguments for {2!r}'.format(
                 ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
                 list(extra.keys())[-1],
                 ret.get(
@@ -867,14 +878,20 @@ def format_call(fun,
                     '{0}.{1}'.format(fun.__module__, fun.__name__)
                 )
             )
-        log.critical(
+
+        # Return a warning to the user explaining what's going on
+        ret.setdefault('warnings', []).append(
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs.{1}'.format(
+            '\'key: value\' pairs. Your approach will work until Salt '
+            'Carbon is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
         )
+
+        # Lets pack the current extra kwargs as template context
+        ret.setdefault('context', {}).update(extra)
     return ret
 
 
@@ -1002,9 +1019,55 @@ def fopen(*args, **kwargs):
 
     NB! We still have small race condition between open and fcntl.
 
-    Supported optional Keyword Arguments:
+    '''
+    # Remove lock, uid, gid and mode from kwargs if present
+    lock = kwargs.pop('lock', False)
 
-      lock: lock the file with fcntl
+    if lock is True:
+        warn_until(
+            'Beryllium',
+            'The \'lock\' keyword argument is deprecated and will be '
+            'removed in Salt Beryllium. Please use '
+            '\'salt.utils.flopen()\' for file locking while calling '
+            '\'salt.utils.fopen()\'.'
+        )
+        return flopen(*args, **kwargs)
+
+    fhandle = open(*args, **kwargs)
+    if is_fcntl_available():
+        # modify the file descriptor on systems with fcntl
+        # unix and unix-like systems only
+        try:
+            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
+        except AttributeError:
+            FD_CLOEXEC = 1                  # pylint: disable=C0103
+        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+
+    return fhandle
+
+
+@contextlib.contextmanager
+def flopen(*args, **kwargs):
+    '''
+    Shortcut for fopen with lock and context manager
+    '''
+    with fopen(*args, **kwargs) as fhandle:
+        try:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
+            yield fhandle
+        finally:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fhandle.fileno(), fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def fpopen(*args, **kwargs):
+    '''
+    Shortcut for fopen with extra uid, gid and mode options.
+
+    Supported optional Keyword Arguments:
 
       mode: explicit mode to set. Mode is anything os.chmod
             would accept as input for mode. Works only on unix/unix
@@ -1019,53 +1082,26 @@ def fopen(*args, **kwargs):
            gid. Must be int. Works only on unix/unix like systems.
 
     '''
-    # Remove lock, uid, gid and mode from kwargs if present
-    lock = kwargs.pop('lock', False)
+    # Remove uid, gid and mode from kwargs if present
     uid = kwargs.pop('uid', -1)  # -1 means no change to current uid
     gid = kwargs.pop('gid', -1)  # -1 means no change to current gid
     mode = kwargs.pop('mode', None)
+    with fopen(*args, **kwargs) as fhandle:
+        path = args[0]
+        d_stat = os.stat(path)
 
-    fhandle = open(*args, **kwargs)
-    if is_fcntl_available():
-        # modify the file descriptor on systems with fcntl
-        # unix and unix-like systems only
-        try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
-        except AttributeError:
-            FD_CLOEXEC = 1                  # pylint: disable=C0103
-        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        if lock and is_fcntl_available(check_sunos=True):
-            fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
-        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+        if hasattr(os, 'chown'):
+            # if uid and gid are both -1 then go ahead with
+            # no changes at all
+            if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
+                    [i for i in (uid, gid) if i != -1]:
+                os.chown(path, uid, gid)
 
-    path = args[0]
-    d_stat = os.stat(path)
+        if mode is not None:
+            if d_stat.st_mode | mode != d_stat.st_mode:
+                os.chmod(path, d_stat.st_mode | mode)
 
-    if hasattr(os, 'chown'):
-        # if uid and gid are both -1 then go ahead with
-        # no changes at all
-        if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
-                [i for i in (uid, gid) if i != -1]:
-            os.chown(path, uid, gid)
-
-    if mode is not None:
-        if d_stat.st_mode | mode != d_stat.st_mode:
-            os.chmod(path, d_stat.st_mode | mode)
-
-    return fhandle
-
-
-@contextlib.contextmanager
-def flopen(*args, **kwargs):
-    '''
-    Shortcut for fopen with lock and context manager
-    '''
-    with fopen(*args, lock=True, **kwargs) as fp_:
-        try:
-            yield fp_
-        finally:
-            if is_fcntl_available(check_sunos=True):
-                fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
+        yield fhandle
 
 
 def expr_match(line, expr):

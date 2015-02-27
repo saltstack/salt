@@ -442,7 +442,7 @@ class SSH(object):
         # Save the invocation information
         argv = self.opts['argv']
 
-        if self.opts['raw_shell']:
+        if self.opts.get('raw_shell', False):
             fun = 'ssh._raw'
             args = argv
         else:
