@@ -114,6 +114,31 @@ a simple protocol described below:
    Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
    then be watched by some other states as well.
 
+4. :strong:`The stateful argument can optionally include a test_name parameter.`
+
+   This is used to specify a command to run in test mode.  This command should
+   return stateful data for changes that would be made by the command in the
+   name parameter.
+    
+   .. versionadded:: 2015.3.0
+
+   .. code-block:: yaml
+
+       Run myscript:
+         cmd.run:
+           - name: /path/to/myscript
+           - cwd: /
+           - stateful:
+             - test_name: /path/to/myscript test
+
+       Run masterscript:
+         cmd.script:
+           - name: masterscript
+           - source: salt://path/to/masterscript
+           - cwd: /
+           - stateful:
+             - test_name: masterscript test
+
 ``cmd.wait`` is not restricted to watching only cmd states. For example
 it can also watch a git state for changes
 
