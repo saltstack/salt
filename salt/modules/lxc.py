@@ -517,6 +517,9 @@ def _network_conf(conf_tuples=None, **kwargs):
     nic = kwargs.pop('network_profile', None)
     ret = []
     nic_opts = kwargs.pop('nic_opts', {})
+    if nic_opts is None:
+        # coming from elsewhere
+        nic_opts = {}
     if not conf_tuples:
         conf_tuples = []
     old = _get_veths(conf_tuples)
@@ -1504,6 +1507,7 @@ def create(name,
            config=None,
            profile=None,
            network_profile=None,
+           nic_opts=None,
            **kwargs):
     '''
     Create a new container.
@@ -1574,6 +1578,8 @@ def create(name,
     lvname
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing=lvm``.
+    nic_opts
+        give extra opts overriding network profile values
     '''
     if exists(name):
         raise CommandExecutionError(
@@ -1672,7 +1678,10 @@ def create(name,
     _clear_context()
     if ret['retcode'] == 0 and exists(name):
         if network_profile:
-            network_changes = apply_network_profile(name, network_profile)
+            network_changes = apply_network_profile(name,
+                                                    network_profile,
+                                                    nic_opts=nic_opts)
+
             if network_changes:
                 log.info(
                     'Network changes from applying network profile \'{0}\' '
@@ -3791,7 +3800,7 @@ def reconfigure(name,
     return ret
 
 
-def apply_network_profile(name, network_profile):
+def apply_network_profile(name, network_profile, nic_opts=None):
     '''
     .. versionadded:: 2015.2.0
 
@@ -3800,14 +3809,20 @@ def apply_network_profile(name, network_profile):
     network_profile
         profile name or default values (dict)
 
+    nic_opts
+        values to override in defaults (ict)
+        indexed by nic card names
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt 'minion' lxc.apply_network_profile web1 centos
-        salt 'minion' lxc.apply_network_profile web1 centos
+        salt 'minion' lxc.apply_network_profile web1 centos \\
+                nic_opts="{'eth0': {'mac': 'xx:xx:xx:xx:xx:xx'}}"
         salt 'minion' lxc.apply_network_profile web1 \\
                 "{'eth0': {'mac': 'xx:xx:xx:xx:xx:yy'}}"
+                nic_opts="{'eth0': {'mac': 'xx:xx:xx:xx:xx:xx'}}"
     '''
     path = '/var/lib/lxc/{0}/config'.format(name)
 
@@ -3817,7 +3832,9 @@ def apply_network_profile(name, network_profile):
             before.append(line)
 
     network_params = {}
-    for param in _network_conf(network_profile=network_profile):
+    for param in _network_conf(
+        network_profile=network_profile, nic_opts=nic_opts
+    ):
         network_params.update(param)
     if network_params:
         edit_conf(path, out_format='commented', **network_params)
