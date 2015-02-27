@@ -208,7 +208,23 @@ will directly correspond to a parameter in an LXC configuration file (see ``man
 - **flags** - Corresponds to **lxc.network.flags**
 
 Interface-specific options (MAC address, IPv4/IPv6, etc.) must be passed on a
-container-by-container basis.
+container-by-container basis, for instance using the ``nic_opts`` argument to
+:mod:`lxc.create <salt.modules.lxc.create>`:
+
+.. code-block:: bash
+
+    salt myminion lxc.create container1 profile=centos network_profile=centos nic_opts='{eth0: {ipv4: 10.0.0.20/24, gateway: 10.0.0.1}}'
+
+.. warning::
+
+    The ``ipv4``, ``ipv6``, ``gateway``, and ``link`` (bridge) settings in
+    network profiles / nic_opts will only work if the container doesnt redefine
+    the network configuration (for example in
+    ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on RHEL/CentOS,
+    or ``/etc/sysconfig/network`` on Debian/Ubuntu/etc.). Use these with
+    caution. The container images installed using the ``download`` template,
+    for instance, typically are configured for eth0 to use DHCP, which will
+    conflict with static IP addresses set at the container level.
 
 
 Creating a Container on the CLI
