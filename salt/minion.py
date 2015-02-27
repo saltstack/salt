@@ -2287,8 +2287,11 @@ class MultiSyndic(MinionBase):
                                            'sign_in_thread': t,
                                            }
             t.start()
+
         log.info('Syndic waiting on any master to connect...')
-        self._has_master.wait()
+        # threading events are un-interruptible in python 2 :/
+        while not self._has_master.is_set():
+            self._has_master.wait(1)
 
     # TODO: move auth_wait etc up to here
     def _connect_to_master_thread(self, master):
