@@ -26,6 +26,18 @@ minion pillar, grains, or local config file:
         /etc/httpd/conf.d: {}
         /opt: {}
 
+Optionally, a beacon can be run on an interval other than the default 
+``loop_interval``, which is typically set to 1 second.
+
+To run a beacon every 5 seconds, for example, provide an ``interval`` argument
+to a beacon.
+
+.. code-block:: yaml
+
+    beacons:
+      load:
+        - interval: 5
+
 Writing Beacon Plugins
 ======================
 
