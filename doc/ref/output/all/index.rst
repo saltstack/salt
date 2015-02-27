@@ -12,7 +12,6 @@ Follow one of the below links for further information and examples
     :toctree:
     :template: autosummary.rst.tmpl
 
-    grains
     highstate
     json_out
     key
