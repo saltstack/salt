@@ -18,9 +18,11 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import json
 
 # Import salt libs
 from salt.ext.six import string_types
+
 
 # Import third party libs
 try:

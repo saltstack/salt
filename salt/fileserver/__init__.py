@@ -16,6 +16,8 @@ import time
 import salt.loader
 import salt.utils
 from salt.ext.six import string_types
+import salt.ext.six as six
+
 
 log = logging.getLogger(__name__)
 
