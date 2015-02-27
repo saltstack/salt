@@ -221,7 +221,7 @@ container-by-container basis, for instance using the ``nic_opts`` argument to
     network profiles / nic_opts will only work if the container doesnt redefine
     the network configuration (for example in
     ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on RHEL/CentOS,
-    or ``/etc/sysconfig/network`` on Debian/Ubuntu/etc.). Use these with
+    or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.). Use these with
     caution. The container images installed using the ``download`` template,
     for instance, typically are configured for eth0 to use DHCP, which will
     conflict with static IP addresses set at the container level.
