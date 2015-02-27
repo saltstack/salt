@@ -2,25 +2,44 @@
 
 local state line curcontext="$curcontext"
 
-salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
+local salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
 _modules(){
-    typeset -a _funcs
-    for file in $salt_dir/modules/*${words[CURRENT]%.*}*.py; do
-        module=${${file##*/}%.py}
-        if ! grep '__virtual__' $file &> /dev/null; then
-            continue
-        fi
-        mod=$(python2 -c "import salt.modules.$module as tmp; print(getattr(tmp, '__virtualname__', '$module'));")
-        for func in $(awk -F'[ (]' '/^def [^_]/ {print $2}' $file); do
-            _funcs+=($mod.$func)
-        done
-    done
-    _describe modules _funcs
+    local _funcs cachefn
+
+    zstyle -s ":completion:$curcontext:" cache-policy cachefn
+    if [[ -z $cachefn ]]; then
+      zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/modules || ! _retrieve_cache salt/modules; then
+      _funcs=( ${(M)${(f)"$(salt-call --local -d 2>/dev/null)"}##[[:alpha:][:digit:]._]##} )
+      _store_cache salt/modules _funcs
+    fi
+
+    _multi_parts "$@" . _funcs
 }
 
 _minions(){
-    _peons=($(salt-key 2>/dev/null | tail -n +2))
-    _describe Minions _peons
+    local _peons cachefn
+
+    zstyle -s ":completion:$curcontext:" cache-policy cachefn
+    if [[ -z $cachefn ]]; then
+      zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/modules || ! _retrieve_cache salt/modules; then
+      _peons=( ${${(f)"$(salt-key -l acc)"}[2,-1]} )
+      _store_cache salt/minions _peons
+    fi
+
+    compadd "$@" -a _peons
+}
+
+(( $+functions[_salt_caching_policy] )) ||
+_salt_caching_policy() {
+  local -a oldp
+  oldp=( "$1"(Nm+7) )
+  (( $#oldp ))
 }
 
 _target_options=(
