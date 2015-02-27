@@ -3,16 +3,20 @@
 Subversion Fileserver Backend
 
 After enabling this backend, branches, and tags in a remote subversion
-repository are exposed to salt as different environments. This feature is
-managed by the :conf_master:`fileserver_backend` option in the salt master
-config.
+repository are exposed to salt as different environments. To enable this
+backend, add ``svn`` to the :conf_master:`fileserver_backend` option in the
+Master config file.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - svn
 
 This backend assumes a standard svn layout with directories for ``branches``,
 ``tags``, and ``trunk``, at the repository root.
 
 :depends:   - subversion
             - pysvn
-
 
 .. versionchanged:: 2014.7.0
     The paths to the trunk, branches, and tags have been made configurable, via
@@ -26,12 +30,15 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import errno
+import fnmatch
 import hashlib
 import logging
 import os
 import shutil
 from datetime import datetime
-from salt.ext.six import text_type as _text_type
+from salt._compat import text_type as _text_type
+from salt.exceptions import FileserverConfigError
 
 PER_REMOTE_PARAMS = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
@@ -99,6 +106,15 @@ def _rev(repo):
     return None
 
 
+def _failhard():
+    '''
+    Fatal fileserver configuration issue, raise an exception
+    '''
+    raise FileserverConfigError(
+        'Failed to load svn fileserver backend'
+    )
+
+
 def init():
     '''
     Return the list of svn remotes and their configuration information
@@ -124,10 +140,12 @@ def init():
                 log.error(
                     'Invalid per-remote configuration for remote {0}. If no '
                     'per-remote parameters are being specified, there may be '
-                    'a trailing colon after the URI, which should be removed. '
+                    'a trailing colon after the URL, which should be removed. '
                     'Check the master configuration file.'.format(repo_url)
                 )
+                _failhard()
 
+            per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_PARAMS):
                 log.error(
@@ -137,17 +155,20 @@ def init():
                         param, repo_url, ', '.join(PER_REMOTE_PARAMS)
                     )
                 )
-                per_remote_conf.pop(param)
+                per_remote_errors = True
+            if per_remote_errors:
+                _failhard()
+
             repo_conf.update(per_remote_conf)
         else:
             repo_url = remote
 
         if not isinstance(repo_url, string_types):
             log.error(
-                'Invalid gitfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URI in quotes'.format(repo_url)
+                'Invalid svnfs remote {0}. Remotes must be strings, you may '
+                'need to enclose the URL in quotes'.format(repo_url)
             )
-            continue
+            _failhard()
 
         try:
             repo_conf['mountpoint'] = salt.utils.strip_proto(
@@ -174,7 +195,7 @@ def init():
                     'Failed to initialize svnfs remote {0!r}: {1}'
                     .format(repo_url, exc)
                 )
-                continue
+                _failhard()
         else:
             # Confirm that there is an svn checkout at the necessary path by
             # running pysvn.Client().status()
@@ -187,13 +208,14 @@ def init():
                     'manually delete this directory on the master to continue '
                     'to use this svnfs remote.'.format(rp_, repo_url)
                 )
-                continue
+                _failhard()
 
         repo_conf.update({
             'repo': rp_,
             'url': repo_url,
             'hash': repo_hash,
-            'cachedir': rp_
+            'cachedir': rp_,
+            'lockfile': os.path.join(rp_, 'update.lk')
         })
         repos.append(repo_conf)
 
@@ -217,27 +239,164 @@ def init():
     return repos
 
 
-def purge_cache():
+def _clear_old_remotes():
     '''
-    Purge the fileserver cache
+    Remove cache directories for remotes no longer configured
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'svnfs')
     try:
-        remove_dirs = os.listdir(bp_)
+        cachedir_ls = os.listdir(bp_)
     except OSError:
-        remove_dirs = []
-    for repo in init():
+        cachedir_ls = []
+    repos = init()
+    # Remove actively-used remotes from list
+    for repo in repos:
         try:
-            remove_dirs.remove(repo['hash'])
+            cachedir_ls.remove(repo['hash'])
         except ValueError:
             pass
-    remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
-                   if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
-    if remove_dirs:
-        for rdir in remove_dirs:
-            shutil.rmtree(rdir)
-        return True
-    return False
+    to_remove = []
+    for item in cachedir_ls:
+        if item in ('hash', 'refs'):
+            continue
+        path = os.path.join(bp_, item)
+        if os.path.isdir(path):
+            to_remove.append(path)
+    failed = []
+    if to_remove:
+        for rdir in to_remove:
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                log.error(
+                    'Unable to remove old svnfs remote cachedir {0}: {1}'
+                    .format(rdir, exc)
+                )
+                failed.append(rdir)
+            else:
+                log.debug('svnfs removed old cachedir {0}'.format(rdir))
+    for fdir in failed:
+        to_remove.remove(fdir)
+    return bool(to_remove), repos
+
+
+def clear_cache():
+    '''
+    Completely clear svnfs cache
+    '''
+    fsb_cachedir = os.path.join(__opts__['cachedir'], 'svnfs')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/svnfs')
+    errors = []
+    for rdir in (fsb_cachedir, list_cachedir):
+        if os.path.exists(rdir):
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                errors.append('Unable to delete {0}: {1}'.format(rdir, exc))
+    return errors
+
+
+def clear_lock(remote=None):
+    '''
+    Clear update.lk
+
+    ``remote`` can either be a dictionary containing repo configuration
+    information, or a pattern. If the latter, then remotes for which the URL
+    matches the pattern will be locked.
+    '''
+    def _do_clear_lock(repo):
+        def _add_error(errlist, repo, exc):
+            msg = ('Unable to remove update lock for {0} ({1}): {2} '
+                   .format(repo['url'], repo['lockfile'], exc))
+            log.debug(msg)
+            errlist.append(msg)
+        success = []
+        failed = []
+        if os.path.exists(repo['lockfile']):
+            try:
+                os.remove(repo['lockfile'])
+            except OSError as exc:
+                if exc.errno == errno.EISDIR:
+                    # Somehow this path is a directory. Should never happen
+                    # unless some wiseguy manually creates a directory at this
+                    # path, but just in case, handle it.
+                    try:
+                        shutil.rmtree(repo['lockfile'])
+                    except OSError as exc:
+                        _add_error(failed, repo, exc)
+                else:
+                    _add_error(failed, repo, exc)
+            else:
+                msg = 'Removed lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
+        return success, failed
+
+    if isinstance(remote, dict):
+        return _do_clear_lock(remote)
+
+    cleared = []
+    errors = []
+    for repo in init():
+        if remote:
+            try:
+                if remote not in repo['url']:
+                    continue
+            except TypeError:
+                # remote was non-string, try again
+                if _text_type(remote) not in repo['url']:
+                    continue
+        success, failed = _do_clear_lock(repo)
+        cleared.extend(success)
+        errors.extend(failed)
+    return cleared, errors
+
+
+def lock(remote=None):
+    '''
+    Place an update.lk
+
+    ``remote`` can either be a dictionary containing repo configuration
+    information, or a pattern. If the latter, then remotes for which the URL
+    matches the pattern will be locked.
+    '''
+    def _do_lock(repo):
+        success = []
+        failed = []
+        if not os.path.exists(repo['lockfile']):
+            try:
+                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
+                    fp_.write('')
+            except (IOError, OSError) as exc:
+                msg = ('Unable to set update lock for {0} ({1}): {2} '
+                       .format(repo['url'], repo['lockfile'], exc))
+                log.debug(msg)
+                failed.append(msg)
+            else:
+                msg = 'Set lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
+        return success, failed
+
+    if isinstance(remote, dict):
+        return _do_lock(remote)
+
+    locked = []
+    errors = []
+    for repo in init():
+        if remote:
+            try:
+                if not fnmatch.fnmatch(repo['url'], remote):
+                    continue
+            except TypeError:
+                # remote was non-string, try again
+                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                    continue
+        success, failed = _do_lock(repo)
+        locked.extend(success)
+        errors.extend(failed)
+
+    return locked, errors
 
 
 def update():
@@ -247,12 +406,26 @@ def update():
     # data for the fileserver event
     data = {'changed': False,
             'backend': 'svnfs'}
-    pid = os.getpid()
-    data['changed'] = purge_cache()
-    for repo in init():
-        lk_fn = os.path.join(repo['repo'], 'update.lk')
-        with salt.utils.fopen(lk_fn, 'w+') as fp_:
-            fp_.write(str(pid))
+    # _clear_old_remotes runs init(), so use the value from there to avoid a
+    # second init()
+    data['changed'], repos = _clear_old_remotes()
+    for repo in repos:
+        if os.path.exists(repo['lockfile']):
+            log.warning(
+                'Update lockfile is present for svnfs remote {0}, skipping. '
+                'If this warning persists, it is possible that the update '
+                'process was interrupted. Removing {1} or running '
+                '\'salt-run fileserver.clear_lock svnfs\' will allow updates '
+                'to continue for this remote.'
+                .format(repo['url'], repo['lockfile'])
+            )
+            continue
+        _, errors = lock(repo)
+        if errors:
+            log.error('Unable to set update lock for svnfs remote {0}, '
+                      'skipping.'.format(repo['url']))
+            continue
+        log.debug('svnfs is fetching from {0}'.format(repo['url']))
         old_rev = _rev(repo)
         try:
             CLIENT.update(repo['repo'])
@@ -261,10 +434,6 @@ def update():
                 'Error updating svnfs remote {0} (cachedir: {1}): {2}'
                 .format(repo['url'], repo['cachedir'], exc)
             )
-        try:
-            os.remove(lk_fn)
-        except (OSError, IOError):
-            pass
 
         new_rev = _rev(repo)
         if any((x is None for x in (old_rev, new_rev))):
@@ -272,6 +441,8 @@ def update():
             continue
         if new_rev != old_rev:
             data['changed'] = True
+
+        clear_lock(repo)
 
     env_cache = os.path.join(__opts__['cachedir'], 'svnfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
@@ -387,7 +558,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
     '''
     Find the first file to match the path and ref. This operates similarly to
     the roots file sever but with assumptions of the directory structure
-    based of svn standard practices.
+    based on svn standard practices.
     '''
     fnd = {'path': '',
            'rel': ''}
