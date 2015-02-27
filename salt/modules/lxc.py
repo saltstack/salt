@@ -526,7 +526,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     gateway = kwargs.pop('gateway', None)
     bridge = kwargs.get('bridge', None)
 
-    # if we have a profile name, get the profile and load the interface settings
+    # if we have a profile name, get the profile and load the network settings
     # this will obviously by default  look for a profile called "eth0"
     # or by what is defined in nic_opts
     # and complete each nic settings by sane defaults
@@ -692,7 +692,29 @@ def _get_lxc_default_data(**kwargs):
 def _config_list(conf_tuples=None, only_net=False, **kwargs):
     '''
     Return a list of dicts from the salt level configurations
+
+    conf_tuples
+        _LXCConfig compatible list of entries which can contain
+
+            - string line
+            - tuple (lxc config param,value)
+            - dict of one entry: {lxc config param: value)
+
+    only_net
+        by default we add to the tuples a reflection of both
+        the real config if avalaible and a certain amount of
+        default values like the cpu parameters, the memory
+        and etc.
+        On the other hand, we also no matter the case reflect
+        the network configuration computed from the actual config if
+        available and given values.
+        if no_default_loads is set, we will only
+        reflect the network configuration back to the conf tuples
+        list
+
     '''
+    # explicit cast
+    only_net = bool(only_net)
     if not conf_tuples:
         conf_tuples = []
     kwargs = copy.deepcopy(kwargs)
@@ -718,6 +740,14 @@ def _get_veths(net_data):
     for item in net_data:
         if item and isinstance(item, dict):
             item = list(item.items())[0]
+        # skip LXC configuration comment lines, and play only with tuples conf
+        elif isinstance(item, six.string_types):
+            # deal with reflection of commented lxc configs
+            sitem = item.strip()
+            if sitem.startswith('#') or not sitem:
+                continue
+            elif '=' in item:
+                item = tuple([a.strip() for a in item.split('=', 1)])
         if item[0] == 'lxc.network.type':
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
@@ -3629,11 +3659,17 @@ def apply_network_profile(name, network_profile):
 
     Apply a network profile to a container
 
+    network_profile
+        profile name or default values (dict)
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt 'minion' lxc.apply_network_profile web1 centos
+        salt 'minion' lxc.apply_network_profile web1 centos
+        salt 'minion' lxc.apply_network_profile web1 \\
+                "{'eth0': {'mac': 'xx:xx:xx:xx:xx:yy'}}"
     '''
     path = '/var/lib/lxc/{0}/config'.format(name)
 
