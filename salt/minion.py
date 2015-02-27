@@ -2301,8 +2301,12 @@ class MultiSyndic(MinionBase):
             # if we marked it as dead, wait a while
             if master_dict['dead_until'] > time.time():
                 time.sleep(master_dict['dead_until'] - time.time())
+            if master_dict['dead_until'] > time.time():
+                time.sleep(master_dict['dead_until'] - time.time())
             connected = self._connect_to_master(master)
-            time.sleep(1)
+            if not connected:
+                time.sleep(1)
+
         self._has_master.set()
 
     # TODO: do we need all of this?
@@ -2319,30 +2323,29 @@ class MultiSyndic(MinionBase):
 
         minion = self.master_syndics[master]
 
-        # TODO: remove this auth_wait? Syndic class should do all that
-        if time.time() - minion['auth_wait'] > minion.get('last', 0):
-            try:
-                t_minion = Syndic(minion['opts'],
-                                  timeout=self.SYNDIC_CONNECT_TIMEOUT,
-                                  safe=False,
-                                  )
+        try:
+            t_minion = Syndic(minion['opts'],
+                              timeout=self.SYNDIC_CONNECT_TIMEOUT,
+                              safe=False,
+                              )
 
-                self.master_syndics[master]['syndic'] = t_minion
-                self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
-                self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
-                self.master_syndics[master]['dead_until'] = 0
+            self.master_syndics[master]['syndic'] = t_minion
+            self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
+            self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
+            self.master_syndics[master]['dead_until'] = 0
 
-                log.info('Syndic successfully connected to {0}'.format(master))
-                return True
-            except SaltClientError:
-                log.error('Error while bring up minion for multi-syndic. Is master {0} responding?'.format(master))
-                # re-use auth-wait as backoff for syndic
-                minion['dead_until'] = time.time() + minion['auth_wait']
-                if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                    minion['auth_wait'] += self.opts['acceptance_wait_time']
+            log.info('Syndic successfully connected to {0}'.format(master))
+            return True
+        except SaltClientError:
+            log.error('Error while bring up minion for multi-syndic. Is master {0} responding?'.format(master))
+            # re-use auth-wait as backoff for syndic
+            minion['dead_until'] = time.time() + minion['auth_wait']
+            if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
+                minion['auth_wait'] += self.opts['acceptance_wait_time']
         return False
 
-    # TODO: count failed event send as a sign-out of master
+    # TODO: count failed event send as a sign-out of master (and make the
+    # background thread do the waiting)
     def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
