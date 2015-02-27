@@ -1250,6 +1250,7 @@ def locale_info():
         # might do, per #2205
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
+    grains['locale_info']['detectedencoding'] = __salt_system_encoding__
     return grains
 
 
