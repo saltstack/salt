@@ -746,7 +746,8 @@ def _get_veths(net_data):
         # skip LXC configuration comment lines, and play only with tuples conf
         elif isinstance(item, six.string_types):
             # deal with reflection of commented lxc configs
-            if item.strip().startswith('#'):
+            sitem = item.strip()
+            if sitem.startswith('#') or not sitem:
                 continue
             elif '=' in item:
                 item = tuple([a.strip() for a in item.split('=', 1)])
