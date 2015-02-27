@@ -941,8 +941,10 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         try:
             result = channel.send(load)
+            return True
         except Exception:
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
+            return False
 
     def _handle_payload(self, payload):
         '''
@@ -2261,8 +2263,8 @@ class MultiSyndic(MinionBase):
 
     In addition, since these classes all seem to use a mix of blocking and non-blocking
     calls (with varying timeouts along the way) this daemon does not handle failure well,
-    it will (under most circumstances) stall the daemon for ~60s attempting to re-auth
-    with the down master
+    it will (under most circumstances) stall the daemon for ~180s trying to forward events
+    to the down master
     '''
     # time to connect to upstream master
     SYNDIC_CONNECT_TIMEOUT = 5
@@ -2293,8 +2295,10 @@ class MultiSyndic(MinionBase):
         while not self._has_master.is_set():
             self._has_master.wait(1)
 
-    # TODO: move auth_wait etc up to here
     def _connect_to_master_thread(self, master):
+        '''
+        Thread target to connect to a master
+        '''
         connected = False
         master_dict = self.master_syndics[master]
         while connected is False:
@@ -2344,8 +2348,9 @@ class MultiSyndic(MinionBase):
                 minion['auth_wait'] += self.opts['acceptance_wait_time']
         return False
 
-    # TODO: count failed event send as a sign-out of master (and make the
-    # background thread do the waiting)
+    # TODO: Move to an async framework of some type-- channel (the event thing underneath)
+    # doesn't handle failures well, and will retry 3 times at 60s timeouts-- which all block
+    # the main thread's execution
     def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
@@ -2359,15 +2364,18 @@ class MultiSyndic(MinionBase):
                 log.error('Unable to call {0} on {1}, that syndic is dead for now'.format(func, master_id))
                 continue
             try:
-                getattr(syndic_dict['syndic'], func)(*args, **kwargs)
-                return
-            except SaltClientError:
-                log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
-                # re-use auth-wait as backoff for syndic
-                syndic_dict['dead_until'] = time.time() + syndic_dict['auth_wait']
-                if syndic_dict['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                    syndic_dict['auth_wait'] += self.opts['acceptance_wait_time']
-                continue
+                ret = getattr(syndic_dict['syndic'], func)(*args, **kwargs)
+                if ret:
+                    log.info('Event sent to {0}'.format(master))
+                    return
+            except (SaltClientError, SaltReqTimeoutError):
+                pass
+            log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
+            # re-use auth-wait as backoff for syndic
+            syndic_dict['dead_until'] = time.time() + syndic_dict['auth_wait']
+            if syndic_dict['auth_wait'] < self.opts['acceptance_wait_time_max']:
+                syndic_dict['auth_wait'] += self.opts['acceptance_wait_time']
+            continue
         log.critical('Unable to call {0} on any masters!'.format(func))
 
     def iter_master_options(self, master_id=None):
