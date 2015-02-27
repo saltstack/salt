@@ -1005,7 +1005,7 @@ def deploy_script(host,
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 ssh_kwargs['key_filename'] = key_filename
-            elif password and 'has_ssh_agent' in kwargs and kwargs['has_ssh_agent'] is False:
+            elif password and kwargs.get('has_ssh_agent', False) is False:
                 log.debug('Using {0} as the password'.format(password))
                 ssh_kwargs['password'] = password
 
