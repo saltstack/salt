@@ -354,7 +354,6 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     ret['name'] = name
     lb = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
-    log.debug(lb)
     if lb:
         health = __salt__['boto_elb.get_instance_health'](name,
                                                           region,
@@ -383,8 +382,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
                 ret['comment'] = 'Load Balancer {0} has been changed' \
                                  ''.format(name)
                 ret['changes']['old'] = '\n'.join(nodes)
-                log.debug(nodes)
-                new = set().union(nodes,instances)
+                new = set().union(nodes, instances)
                 ret['changes']['new'] = '\n'.join(list(new))
                 ret['result'] = True
             else:
