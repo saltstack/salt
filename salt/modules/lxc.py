@@ -746,10 +746,10 @@ def _get_veths(net_data):
         # skip LXC configuration comment lines, and play only with tuples conf
         elif isinstance(item, six.string_types):
             # deal with reflection of commented lxc configs
-            if '=' in item and not item.strip().startswith('#'):
-                item = item.split('=', 1)
-            else:
+            if item.strip().startswith('#'):
                 continue
+            elif '=' in item:
+                item = tuple([a.strip() for a in item.split('=', 1)])
         if item[0] == 'lxc.network.type':
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
