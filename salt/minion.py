@@ -2272,15 +2272,35 @@ class MultiSyndic(MinionBase):
         super(MultiSyndic, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
 
+        self._has_master = threading.Event()
+
         # create all of the syndics you need
         self.master_syndics = {}
         for master in set(self.opts['master']):
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
+            t = threading.Thread(target=self._connect_to_master_thread, args=(master,))
+            t.daemon = True
             self.master_syndics[master] = {'opts': s_opts,
                                            'auth_wait': s_opts['acceptance_wait_time'],
-                                           'dead_until': 0}
-            self._connect_to_master(master)
+                                           'dead_until': 0,
+                                           'sign_in_thread': t,
+                                           }
+            t.start()
+        log.info('Syndic waiting on any master to connect...')
+        self._has_master.wait()
+
+    # TODO: move auth_wait etc up to here
+    def _connect_to_master_thread(self, master):
+        connected = False
+        master_dict = self.master_syndics[master]
+        while connected is False:
+            # if we marked it as dead, wait a while
+            if master_dict['dead_until'] > time.time():
+                time.sleep(master_dict['dead_until'] - time.time())
+            connected = self._connect_to_master(master)
+            time.sleep(1)
+        self._has_master.set()
 
     # TODO: do we need all of this?
     def _connect_to_master(self, master):
@@ -2289,15 +2309,14 @@ class MultiSyndic(MinionBase):
 
         return boolean of whether you connected or not
         '''
+        log.debug('Syndic attempting to connect to {0}'.format(master))
         if master not in self.master_syndics:
             log.error('Unable to connect to {0}, not in the list of masters'.format(master))
             return False
 
         minion = self.master_syndics[master]
-        # if we need to be dead for a while, stay that way
-        if minion['dead_until'] > time.time():
-            return False
 
+        # TODO: remove this auth_wait? Syndic class should do all that
         if time.time() - minion['auth_wait'] > minion.get('last', 0):
             try:
                 t_minion = Syndic(minion['opts'],
@@ -2310,6 +2329,7 @@ class MultiSyndic(MinionBase):
                 self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
                 self.master_syndics[master]['dead_until'] = 0
 
+                log.info('Syndic successfully connected to {0}'.format(master))
                 return True
             except SaltClientError:
                 log.error('Error while bring up minion for multi-syndic. Is master {0} responding?'.format(master))
@@ -2319,6 +2339,7 @@ class MultiSyndic(MinionBase):
                     minion['auth_wait'] += self.opts['acceptance_wait_time']
         return False
 
+    # TODO: count failed event send as a sign-out of master
     def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
@@ -2403,9 +2424,9 @@ class MultiSyndic(MinionBase):
                 for master_id, syndic_dict in self.master_syndics.items():
                     # if not connected, lets try
                     if 'generator' not in syndic_dict:
+                        log.info('Syndic still not connected to {0}'.format(master_id))
                         # if we couldn't connect, lets try later
-                        if not self._connect_to_master(master_id):
-                            continue
+                        continue
                     next(syndic_dict['generator'])
 
                 # events
@@ -2440,6 +2461,7 @@ class MultiSyndic(MinionBase):
                 raise
 
             log.trace('Got event {0}'.format(event['tag']))
+
             if self.event_forward_timeout is None:
                 self.event_forward_timeout = (
                         time.time() + self.opts['syndic_event_forward_timeout']
@@ -2451,6 +2473,7 @@ class MultiSyndic(MinionBase):
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
+
                 jdict = self.jids.setdefault(event['tag'], {})
                 if not jdict:
                     jdict['__fun__'] = event['data'].get('fun')
