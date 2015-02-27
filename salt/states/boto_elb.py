@@ -344,12 +344,16 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     Add instance/s to load balancer
 
+    .. versionsadded:: Beryllium
+
+    .. code-block:: yaml
+
     add-instances:
       boto_elb.register_instances:
         - name: myloadbalancer
         - instances:
-          - instance1
-          - instance2
+          - instance-id1
+          - instance-id2
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     ret['name'] = name
