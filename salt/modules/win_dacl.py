@@ -363,7 +363,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
     .. code-block:: bash
 
         allow domain\fakeuser full control on HKLM\\SOFTWARE\\somekey, propagate to this key and subkeys
-            salt 'myminion' acl.add_ace 'HKEY_LOCAL_MACHINE\\SOFTWARE\\somekey' 'Registry' 'domain\fakeuser' 'FULLCONTROL' 'ALLOW' 'KEY&SUBKEYS'
+            salt 'myminion' win_dacl.add_ace 'HKEY_LOCAL_MACHINE\\SOFTWARE\\somekey' 'Registry' 'domain\fakeuser' 'FULLCONTROL' 'ALLOW' 'KEY&SUBKEYS'
     '''
     ret = {'result': None,
            'changes': {},
@@ -440,7 +440,7 @@ def rm_ace(path, objectType, user, permission, acetype, propagation):
     .. code-block:: bash
 
         remove allow domain\fakeuser full control on HKLM\\SOFTWARE\\somekey propagated to this key and subkeys
-            salt 'myminion' acl.rm_ace 'Registry' 'HKEY_LOCAL_MACHINE\\SOFTWARE\\somekey' 'domain\fakeuser' 'FULLCONTROL' 'ALLOW' 'KEY&SUBKEYS'
+            salt 'myminion' win_dacl.rm_ace 'Registry' 'HKEY_LOCAL_MACHINE\\SOFTWARE\\somekey' 'domain\fakeuser' 'FULLCONTROL' 'ALLOW' 'KEY&SUBKEYS'
     '''
     ret = {'result': None,
            'changes': {},

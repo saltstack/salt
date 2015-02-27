@@ -14,7 +14,7 @@ Ensure an ACL is present
     .. code-block:: yaml
 
         addAcl:
-          acl.present:
+          win_dacl.present:
             - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
             - objectType: Registry
             - user: FakeUser
@@ -34,7 +34,7 @@ Ensure an ACL does not exist
     .. code-block:: yaml
 
     removeAcl:
-          acl.absent:
+          win_dacl.absent:
             - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
             - objectType: Registry
             - user: FakeUser
@@ -51,7 +51,7 @@ Ensure an object is inheriting permissions
     .. code-block:: yaml
 
     eInherit:
-      acl.enableinheritance:
+      win_dacl.enableinheritance:
         - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
         - objectType: Registry
         - clear_existing_acl: True
@@ -65,7 +65,7 @@ Ensure an object is not inheriting permissions
         .. code-block:: yaml
 
     dInherit:
-      acl.disableinheritance:
+      win_dacl.disableinheritance:
         - name: HKEY_LOCAL_MACHINE\\SOFTWARE\\mykey
         - objectType: Registry
         - copy_inherited_acl: False
