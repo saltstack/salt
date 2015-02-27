@@ -8,27 +8,6 @@ from __future__ import absolute_import
 import salt.fileserver
 
 
-def dir_list(saltenv='base', outputter='nested'):
-    '''
-    List all directories in the given environment
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run fileserver.dir_list
-        salt-run fileserver.dir_list saltenv=prod
-    '''
-    fileserver = salt.fileserver.Fileserver(__opts__)
-    load = {'saltenv': saltenv}
-    output = fileserver.dir_list(load=load)
-
-    if outputter:
-        return {'outputter': outputter, 'data': output}
-    else:
-        return output
-
-
 def envs(backend=None, sources=False, outputter='nested'):
     '''
     Return the available fileserver environments. If no backend is provided,
@@ -98,9 +77,8 @@ def file_list(saltenv='base', backend=None, outputter='nested'):
     output = fileserver.file_list(load=load)
 
     if outputter:
-        return {'outputter': outputter, 'data': output}
-    else:
-        return output
+        salt.output.display_output(output, outputter, opts=__opts__)
+    return output
 
 
 def symlink_list(saltenv='base', backend=None, outputter='nested'):
@@ -133,6 +111,111 @@ def symlink_list(saltenv='base', backend=None, outputter='nested'):
     fileserver = salt.fileserver.Fileserver(__opts__)
     load = {'saltenv': saltenv, 'fsbackend': backend}
     output = fileserver.symlink_list(load=load)
+
+    if outputter:
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
+
+
+def dir_list(saltenv='base', backend=None, outputter='nested'):
+    '''
+    Return a list of directories in the given environment
+
+    saltenv : base
+        The salt fileserver environment to be listed
+
+    backend
+        Narrow fileserver backends to a subset of the enabled ones. If all
+        passed backends start with a minus sign (``-``), then these backends
+        will be excluded from the enabled backends. However, if there is a mix
+        of backends with and without a minus sign (ex:
+        ``backend=-roots,git``) then the ones starting with a minus sign will
+        be disregarded.
+
+        .. versionadded:: 2015.2.0
+
+    saltenv : base
+        The salt fileserver environment to be listed
+
+    backend
+        Narrow fileserver backends to a subset of the enabled ones. If all
+        passed backends start with a minus sign (``-``), then these backends
+        will be excluded from the enabled backends. However, if there is a mix
+        of backends with and without a minus sign (ex:
+        ``backend=-roots,git``) then the ones starting with a minus sign will
+        be disregarded.
+
+        .. versionadded:: 2015.2.0
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-run fileserver.dir_list
+        salt-run fileserver.dir_list saltenv=prod
+        salt-run fileserver.dir_list saltenv=dev backend=git
+        salt-run fileserver.dir_list base hg,roots
+        salt-run fileserver.dir_list -git
+    '''
+    fileserver = salt.fileserver.Fileserver(__opts__)
+    load = {'saltenv': saltenv, 'fsbackend': backend}
+    output = fileserver.dir_list(load=load)
+
+    if outputter:
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
+
+
+def empty_dir_list(saltenv='base', backend=None, outputter='nested'):
+    '''
+    .. versionadded:: 2015.2.0
+
+    Return a list of empty directories in the given environment
+
+    saltenv : base
+        The salt fileserver environment to be listed
+
+    backend
+        Narrow fileserver backends to a subset of the enabled ones. If all
+        passed backends start with a minus sign (``-``), then these backends
+        will be excluded from the enabled backends. However, if there is a mix
+        of backends with and without a minus sign (ex:
+        ``backend=-roots,git``) then the ones starting with a minus sign will
+        be disregarded.
+
+        .. note::
+
+            Some backends (such as :mod:`git <salt.fileserver.gitfs>` and
+            :mod:`hg <salt.fileserver.hgfs>`) do not support empty directories.
+            So, passing ``backend=git`` or ``backend=hg`` will result in an
+            empty list being returned.
+
+    saltenv : base
+        The salt fileserver environment to be listed
+
+    backend
+        Narrow fileserver backends to a subset of the enabled ones. If all
+        passed backends start with a minus sign (``-``), then these backends
+        will be excluded from the enabled backends. However, if there is a mix
+        of backends with and without a minus sign (ex:
+        ``backend=-roots,git``) then the ones starting with a minus sign will
+        be disregarded.
+
+        .. versionadded:: 2015.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run fileserver.empty_dir_list
+        salt-run fileserver.empty_dir_list saltenv=prod
+        salt-run fileserver.empty_dir_list backend=roots
+    '''
+    fileserver = salt.fileserver.Fileserver(__opts__)
+    load = {'saltenv': saltenv, 'fsbackend': backend}
+    output = fileserver.file_list_emptydirs(load=load)
 
     if outputter:
         return {'outputter': outputter, 'data': output}
