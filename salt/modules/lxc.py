@@ -517,6 +517,9 @@ def _network_conf(conf_tuples=None, **kwargs):
     nic = kwargs.pop('network_profile', None)
     ret = []
     nic_opts = kwargs.pop('nic_opts', {})
+    if nic_opts is None:
+        # coming from elsewhere
+        nic_opts = {}
     if not conf_tuples:
         conf_tuples = []
     old = _get_veths(conf_tuples)
@@ -1504,6 +1507,7 @@ def create(name,
            config=None,
            profile=None,
            network_profile=None,
+           nic_opts=None,
            **kwargs):
     '''
     Create a new container.
@@ -1574,6 +1578,8 @@ def create(name,
     lvname
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing=lvm``.
+    nic_opts
+        give extra opts overriding network profile values
     '''
     if exists(name):
         raise CommandExecutionError(
@@ -1672,7 +1678,10 @@ def create(name,
     _clear_context()
     if ret['retcode'] == 0 and exists(name):
         if network_profile:
-            network_changes = apply_network_profile(name, network_profile)
+            network_changes = apply_network_profile(name,
+                                                    network_profile,
+                                                    nic_opts=nic_opts)
+
             if network_changes:
                 log.info(
                     'Network changes from applying network profile \'{0}\' '
@@ -3652,7 +3661,146 @@ def edit_conf(conf_file, out_format='simple', read_only=False, lxc_config=None, 
     return read_conf(conf_file, out_format)
 
 
-def apply_network_profile(name, network_profile):
+def reboot(name):
+    '''
+    Reboot a container.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.reboot myvm
+
+    '''
+    ret = {'result': True,
+           'changes': {},
+           'comment': '{0} rebooted'.format(name)}
+    does_exist = exists(name)
+    if does_exist and (state(name) == 'running'):
+        try:
+            stop(name)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            ret['comment'] = 'Unable to stop container: {0}'.format(exc)
+            ret['result'] = False
+            return ret
+    if does_exist and (state(name) != 'running'):
+        try:
+            start(name)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            ret['comment'] = 'Unable to stop container: {0}'.format(exc)
+            ret['result'] = False
+            return ret
+    ret['changes'][name] = 'rebooted'
+    return ret
+
+
+def reconfigure(name,
+                cpu=None,
+                cpuset=None,
+                cpushare=None,
+                memory=None,
+                profile=None,
+                network_profile=None,
+                nic_opts=None,
+                bridge=None,
+                gateway=None,
+                autostart=None,
+                **kwargs):
+    '''
+    Reconfigure a container.
+
+    This only applies to a few property
+
+    name
+        Name of the container.
+    cpu
+        Select a random number of cpu cores and assign it to the cpuset, if the
+        cpuset option is set then this option will be ignored
+    cpuset
+        Explicitly define the cpus this container will be bound to
+    cpushare
+        cgroups cpu shares.
+    autostart
+        autostart container on reboot
+    memory
+        cgroups memory limit, in MB.
+        (0 for nolimit, None for old default 1024MB)
+    gateway
+        the ipv4 gateway to use
+        the default does nothing more than lxcutils does
+    bridge
+        the bridge to use
+        the default does nothing more than lxcutils does
+    nic
+        Network interfaces profile (defined in config or pillar).
+
+    nic_opts
+        Extra options for network interfaces, will override
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
+
+        or
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call -lall mc_lxc_fork.reconfigure foobar nic_opts="{'eth1': {'mac': '00:16:3e:dd:ee:44'}}" memory=4
+
+    '''
+    changes = {}
+    ret = {'name': name,
+           'comment': 'config for {0} up to date'.format(name),
+           'result': True,
+           'changes': changes}
+    profile = get_container_profile(copy.deepcopy(profile))
+    kw_overrides = copy.deepcopy(kwargs)
+
+    def select(key, default=None):
+        kw_overrides_match = kw_overrides.pop(key, _marker)
+        profile_match = profile.pop(key, default)
+        # let kwarg overrides be the preferred choice
+        if kw_overrides_match is _marker:
+            return profile_match
+        return kw_overrides_match
+    if nic_opts is not None and not network_profile:
+        network_profile = 'eth0'
+
+    if autostart is not None:
+        autostart = select('autostart', autostart)
+    else:
+        autostart = 'keep'
+    path = os.path.join('/var/lib/lxc/{0}/config'.format(name))
+    if os.path.exists(path):
+        old_chunks = read_conf(path, out_format='commented')
+        make_kw = salt.utils.odict.OrderedDict([
+            ('autostart', autostart),
+            ('cpu', cpu),
+            ('cpuset', cpuset),
+            ('cpushare', cpushare),
+            ('network_profile', network_profile),
+            ('nic_opts', nic_opts),
+            ('bridge', bridge),
+            ('memory', memory)])
+        kw = salt.utils.odict.OrderedDict()
+        for key, val in six.iteritems(make_kw):
+            if val is not None:
+                kw[key] = val
+        new_cfg = _config_list(conf_tuples=old_chunks, **kw)
+        if new_cfg:
+            edit_conf(path, out_format='commented', lxc_config=new_cfg)
+        chunks = read_conf(path, out_format='commented')
+        if old_chunks != chunks:
+            ret['comment'] = '{0} lxc config updated'.format(name)
+            if state(name) == 'running':
+                cret = reboot(name)
+                ret['result'] = cret['result']
+    return ret
+
+
+def apply_network_profile(name, network_profile, nic_opts=None):
     '''
     .. versionadded:: 2015.2.0
 
@@ -3661,14 +3809,20 @@ def apply_network_profile(name, network_profile):
     network_profile
         profile name or default values (dict)
 
+    nic_opts
+        values to override in defaults (ict)
+        indexed by nic card names
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt 'minion' lxc.apply_network_profile web1 centos
-        salt 'minion' lxc.apply_network_profile web1 centos
+        salt 'minion' lxc.apply_network_profile web1 centos \\
+                nic_opts="{'eth0': {'mac': 'xx:xx:xx:xx:xx:xx'}}"
         salt 'minion' lxc.apply_network_profile web1 \\
                 "{'eth0': {'mac': 'xx:xx:xx:xx:xx:yy'}}"
+                nic_opts="{'eth0': {'mac': 'xx:xx:xx:xx:xx:xx'}}"
     '''
     path = '/var/lib/lxc/{0}/config'.format(name)
 
@@ -3678,7 +3832,9 @@ def apply_network_profile(name, network_profile):
             before.append(line)
 
     network_params = {}
-    for param in _network_conf(network_profile=network_profile):
+    for param in _network_conf(
+        network_profile=network_profile, nic_opts=nic_opts
+    ):
         network_params.update(param)
     if network_params:
         edit_conf(path, out_format='commented', **network_params)
