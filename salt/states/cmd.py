@@ -119,8 +119,8 @@ a simple protocol described below:
    This is used to specify a command to run in test mode.  This command should
    return stateful data for changes that would be made by the command in the
    name parameter.
-    
-   .. versionadded:: 2015.3.0
+
+   .. versionadded:: 2015.2.0
 
    .. code-block:: yaml
 
