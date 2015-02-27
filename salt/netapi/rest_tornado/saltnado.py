@@ -368,7 +368,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         '''
         if client not in self.saltclients:
             self.set_status(400)
-            self.write("We don't serve your kind here")
+            self.write("400 Invalid Client: Client not found in salt clients")
             self.finish()
 
     @property
