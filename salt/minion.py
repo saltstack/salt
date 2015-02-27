@@ -2028,7 +2028,6 @@ class Syndic(Minion):
                        data['ret'],
                        data['jid'],
                        data['to'],
-                       user=data.get('user', ''),
                        **kwargs)
 
     def _setsockopts(self):
