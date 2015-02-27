@@ -975,6 +975,23 @@ def os_data():
             grains['systemd']['version'] = systemd_info[0].split()[1]
             grains['systemd']['features'] = systemd_info[1]
 
+        # Add init grain
+        if os.path.isdir('/run/systemd/system'):
+            grains['init'] = 'systemd'
+        else:
+            with salt.utils.fopen('/proc/1/cmdline') as fhr:
+                init_cmdline = fhr.read().replace('\x00', ' ').split()
+                init_bin = salt.utils.which(init_cmdline[0])
+                strings_out = __salt__['cmd.run']('strings {0}'.format(init_bin))
+                if 'upstart' in strings_out.lower():
+                    grains['init'] = 'upstart'
+                elif 'sysvinit' in strings_out.lower():
+                    grains['init'] = 'sysvinit'
+                elif 'systemd' in strings_out.lower():
+                    grains['init'] = 'systemd'
+                else:
+                    grains['init'] = 'unknown'
+
         # Add lsb grains on any distro with lsb-release
         try:
             import lsb_release  # pylint: disable=import-error
