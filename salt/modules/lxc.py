@@ -3811,7 +3811,7 @@ def apply_network_profile(name, network_profile, nic_opts=None):
         profile name or default values (dict)
 
     nic_opts
-        values to override in defaults (ict)
+        values to override in defaults (dict)
         indexed by nic card names
 
     CLI Examples:
