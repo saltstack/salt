@@ -21,6 +21,12 @@ from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'true_': 'true',
+    'false_': 'false'
+}
+
 
 @depends('non_existantmodulename')
 def missing_func():
@@ -468,3 +474,29 @@ def assertion(assertion):
         salt '*' test.assert False
     '''
     assert assertion
+
+
+def true_():
+    '''
+    Always return True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.true
+    '''
+    return True
+
+
+def false_():
+    '''
+    Always return False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.false
+    '''
+    return False
