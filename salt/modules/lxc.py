@@ -464,7 +464,7 @@ def get_network_profile(name=None):
         network profiles will only work if the container doesnt redefine the
         network configuration (for example in
         ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on
-        RHEL/CentOS, or ``/etc/sysconfig/network`` on Debian/Ubuntu/etc.)
+        RHEL/CentOS, or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.)
 
     CLI Example::
 
