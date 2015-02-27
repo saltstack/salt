@@ -672,6 +672,14 @@ def run(name,
     ###       of unsupported arguments in a cmd.run state will result in a
     ###       traceback.
 
+    test_name = None
+    if not isinstance(stateful, list):
+        stateful = stateful is True
+    elif isinstance(stateful, list) and 'test_name' in stateful[0]:
+        test_name = stateful[0]['test_name']
+    if __opts__['test'] and test_name:
+        name = test_name
+
     ret = {'name': name,
            'changes': {},
            'result': False,
@@ -709,23 +717,28 @@ def run(name,
             ret.update(cret)
             return ret
 
-        # Wow, we passed the test, run this sucker!
-        if not __opts__['test']:
-            try:
-                cmd_all = __salt__['cmd.run_all'](
-                    name, timeout=timeout, python_shell=True, **cmd_kwargs
-                )
-            except CommandExecutionError as err:
-                ret['comment'] = str(err)
-                return ret
-
-            ret['changes'] = cmd_all
-            ret['result'] = not bool(cmd_all['retcode'])
-            ret['comment'] = 'Command "{0}" run'.format(name)
+        if __opts__['test'] and not test_name:
+            ret['result'] = None
+            ret['comment'] = 'Command "{0}" would have been executed'.format(name)
             return _reinterpreted_state(ret) if stateful else ret
-        ret['result'] = None
-        ret['comment'] = 'Command "{0}" would have been executed'.format(name)
-        return _reinterpreted_state(ret) if stateful else ret
+
+        # Wow, we passed the test, run this sucker!
+        try:
+            cmd_all = __salt__['cmd.run_all'](
+                name, timeout=timeout, python_shell=True, **cmd_kwargs
+            )
+        except CommandExecutionError as err:
+            ret['comment'] = str(err)
+            return ret
+
+        ret['changes'] = cmd_all
+        ret['result'] = not bool(cmd_all['retcode'])
+        ret['comment'] = 'Command "{0}" run'.format(name)
+        if stateful:
+            ret = _reinterpreted_state(ret)
+        if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+            ret['result'] = None
+        return ret
 
     finally:
         if HAS_GRP:
