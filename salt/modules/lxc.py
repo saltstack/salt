@@ -458,6 +458,14 @@ def get_network_profile(name=None):
     <tutorial-lxc-profiles>` for more information on how to use network
     profiles.
 
+    .. warning::
+
+        The ``ipv4``, ``ipv6``, ``gateway``, and ``link`` (bridge) settings in
+        network profiles will only work if the container doesnt redefine the
+        network configuration (for example in
+        ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on
+        RHEL/CentOS, or ``/etc/sysconfig/network`` on Debian/Ubuntu/etc.)
+
     CLI Example::
 
     .. code-block:: bash
