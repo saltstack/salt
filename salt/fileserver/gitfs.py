@@ -560,7 +560,7 @@ def _verify_auth(repo):
         # These transports do not use auth
         return True
 
-    elif transport == 'ssh':
+    elif 'ssh' in transport:
         required_params = ('pubkey', 'privkey')
         user = address.split('@')[0]
         if user == address:
@@ -582,7 +582,7 @@ def _verify_auth(repo):
             _incomplete_auth(repo['url'], missing_auth)
             return False
 
-    elif transport in ('https', 'http'):
+    elif 'http' in transport:
         required_params = ('user', 'password')
         password_ok = all(bool(repo[x]) for x in required_params)
         no_password_auth = not any(bool(repo[x]) for x in required_params)
