@@ -56,14 +56,9 @@ class ReqServerChannel(object):
 
     def recv(self, timeout=0):
         '''
-        Get a req job, with an optional timeout (0==forever)
-        '''
-        raise NotImplementedError()
-
-    def recv_noblock(self):
-        '''
-        Get a req job in a non-blocking manner.
-        Return load or None
+        Get a req job, with an optional timeout
+            0: nonblocking
+            None: forever
         '''
         raise NotImplementedError()
 

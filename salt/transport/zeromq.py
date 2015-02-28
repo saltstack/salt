@@ -339,22 +339,6 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         else:
             return None
 
-    def recv_noblock(self):
-        '''
-        Get a req job in a non-blocking manner.
-        Return load or None
-        '''
-        try:
-            package = self._socket.recv()
-            payload = self.serial.loads(package)
-            payload = self._decode_payload(payload)
-            return payload
-        except zmq.ZMQError as e:
-            # Swallow errors for bad wakeups or signals needing processing
-            if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
-                raise
-            return None
-
     def _send(self, payload):
         '''
         Helper function to serialize and send payload

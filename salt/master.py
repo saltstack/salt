@@ -655,7 +655,7 @@ class MWorker(multiprocessing.Process):
         try:
             while True:
                 try:
-                    payload = self.req_channel.recv()
+                    payload = self.req_channel.recv(None)  # blocking get
                     # TODO: maybe change into a wrapper class?
                     # req_opts defines our response function
                     try:

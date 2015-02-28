@@ -34,6 +34,9 @@ import salt.utils
 import salt.utils.verify
 import salt.utils.event
 import salt.payload
+import salt.exceptions
+
+
 import logging
 from collections import defaultdict
 
@@ -60,14 +63,17 @@ def unframe_msg(frame):
 
     return (int(msg_len) - len(msg), msg)
 
-def socket_frame_recv(socket, recv_size=4096):
+def socket_frame_recv(s, recv_size=4096):
     '''
     Retrieve a frame from socket
     '''
-    ret_frame = socket.recv(recv_size)
+    ret_frame = s.recv(recv_size)
+    # TODO: exception? This is an ugly API
+    if ret_frame == '':
+        raise socket.error('Empty response!')
     remain, ret_msg = unframe_msg(ret_frame)
     while remain > 0:
-        data = socket.recv(recv_size)
+        data = s.recv(recv_size)
         ret_msg += data
         remain -= len(data)
     return ret_msg
@@ -207,7 +213,10 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
         '''
         socks = select.select([self.socket], [], [], timeout)
         if self.socket in socks[0]:
-            data = socket_frame_recv(self.socket)
+            try:
+                data = socket_frame_recv(self.socket)
+            except socket.error as e:
+                raise salt.exceptions.SaltClientError(e)
             return self._decode_payload(self.serial.loads(data))
         else:
             return None
@@ -243,50 +252,71 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         self.serial = salt.payload.Serial(self.opts)
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self)
 
-    def recv(self, timeout=0):
-        '''
-        Get a req job, with an optional timeout (0==forever)
-        '''
-        if timeout == 0:
-            timeout = None
-        socks = select.select([self.socket], [], [], timeout)
-        if self.socket in socks[0]:
-            self.client, address = self.socket.accept()
-            print (address)
+        self.epoll = select.epoll()
+        self.epoll.register(self.socket.fileno(), select.EPOLLIN)
+        # map of fd -> (socket, address)
+        self.sock_map = {}
 
-            payload = socket_frame_recv(self.client)
-            payload = self.serial.loads(payload)
-            payload = self._decode_payload(payload)
-            # if timeout was 0 and we got a None, we intercepted the job,
-            # so just queue up another recv()
-            if payload is None and timeout == None:
-                return self.recv(timeout=timeout)
-            return payload
-        else:
-            return None
+    def recv(self, timeout=0.001):
+        '''
+        Get a req job, with an optional timeout
+            0: nonblocking
+            None: forever
 
-    def recv_noblock(self):
+        This is the main event loop of the TCP server. Since we aren't using an
+        event driven mechanism-- we'll allow the caller to determine when we should
+        listen next-- by controlling the timeout with which we are called
         '''
-        Get a req job in a non-blocking manner.
-        Return load or None
-        '''
-        socks = select.select([self.socket], [], [], 0)
-        if self.socket in socks[0]:
-            self.client, address = self.socket.accept()
-            package = socket_frame_recv(self.client)
-            payload = self.serial.loads(package)
-            payload = self._decode_payload(payload)
-            return payload
+        if timeout:
+            timeout = timeout * 1000  # epoll takes milliseconds
+            socks = self.epoll.poll(timeout)
         else:
-            return None
+            socks = self.epoll.poll()
+        for fd, event in socks:
+            # do we have a new client?
+            if fd == self.socket.fileno():
+                client, address = self.socket.accept()
+                self.epoll.register(client.fileno(), select.EPOLLIN)
+                self.sock_map[client.fileno()] = (client, address)
+                log.trace('New client at {0} connected to reqserver'.format(address))
+            if fd in self.sock_map:
+                client, address = self.sock_map[fd]
+                try:
+                    payload = socket_frame_recv(client)
+                # if the client bombed out on us, we just soldier on
+                except socket.error as e:
+                    log.trace('Socket error {0} communicating with {1}, closing connection'.format(e, address))
+                    client.close()
+                    self.epoll.unregister(fd)
+                    del self.sock_map[fd]
+                    continue
+                self.client = client
+                payload = self.serial.loads(payload)
+                payload = self._decode_payload(payload)
+                # if timeout was 0 and we got a None, we intercepted the job,
+                # so just queue up another recv()
+                if payload is None and timeout == None:
+                    return self.recv(timeout=timeout)
+                return payload
+        if timeout is None:
+            return self.recv(timeout=timeout)
+        return None
 
     def _send(self, payload):
         '''
         Helper function to serialize and send payload
         '''
-        self.client.send(frame_msg(self.serial.dumps(payload)))
-        self.client.close()
-        self.client = None
+        try:
+            self.client.send(frame_msg(self.serial.dumps(payload)))
+        # if there was an error, close the socket out
+        except socket.error as e:
+            self.client.close()
+            epoll.unregister(self.client.fileno())
+            del self.sock_map[self.client.fileno()]
+            raise salt.exceptions.SaltClientError(e)
+        # always reset self.client
+        finally:
+            self.client = None
 
 
 class TCPPubServerChannel(salt.transport.server.PubServerChannel):
@@ -340,15 +370,19 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
                     # is it a new client?
                     if pub_sock.fileno() in socks and socks[pub_sock.fileno()] == zmq.POLLIN:
                         client, address = pub_sock.accept()
-                        print ('Added minion', address, client, os.getpid())
-                        clients.append(client)
+                        clients.append((client, address))
+                    # TODO: non-blocking sends
                     # is it a publish job?
                     elif pull_sock in socks and socks[pull_sock] == zmq.POLLIN:
                         package = pull_sock.recv()
                         payload = frame_msg(salt.payload.unpackage(package)['payload'])
-                        print ('clients', clients)
-                        for s in clients:
-                            s.send(payload)
+                        for item in list(clients):
+                            client, address = item
+                            try:
+                                client.send(payload)
+                            except socket.error as e:
+                                clients.remove(item)
+                                log.debug('Client at {0} has disconnected from publisher'.format(address))
                         print ('sends done')
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
