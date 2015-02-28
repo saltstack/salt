@@ -8,11 +8,8 @@ lxc >= 1.0 (even beta alpha) is required
 
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
-import traceback
+from __future__ import absolute_import, print_function
 import datetime
 import pipes
 import copy
@@ -24,8 +21,6 @@ import time
 import shutil
 import re
 import random
-import salt.ext.six as six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 # Import salt libs
 import salt
@@ -33,10 +28,16 @@ import salt.utils.odict
 import salt.utils
 import salt.utils.dictupdate
 import salt.utils.network
-from salt.utils import vt
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.cloud
 import salt.config
+
+# Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+# pylint: enable=import-error,no-name-in-module
 
 # Set up logging
 log = logging.getLogger(__name__)
