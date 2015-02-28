@@ -673,7 +673,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             host, port
         )
     )
-    creds = '-U {0}%{1} //{2}'.format(
+    creds = "-U '{0}%{1}' //{2}".format(
             username, password, host)
     trycount = 0
     while True:
@@ -706,7 +706,7 @@ def validate_windows_cred(host, username='Administrator', password=None, retries
     Check if the windows credentials are valid
     '''
     for i in xrange(retries):
-        retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
+        retcode = win_cmd("winexe -U '{0}%{1}' //{2} \"hostname\"".format(
             username, password, host
         ))
         if retcode == 0:
@@ -827,7 +827,7 @@ def deploy_windows(host,
 
         smb_conn = salt.utils.smb.get_conn(host, username, password)
 
-        creds = '-U {0}%{1} //{2}'.format(
+        creds = "-U '{0}%{1}' //{2}".format(
             username, password, host)
 
         salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
