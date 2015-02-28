@@ -9,12 +9,9 @@ import hashlib
 import ctypes
 import multiprocessing
 
-from M2Crypto import RSA
-
 from random import randint
 
 # Import Salt Libs
-import salt.payload
 import salt.auth
 import salt.crypt
 import salt.utils

@@ -3,10 +3,7 @@ TCP transport classes
 
 
 
-Wire protocol:
-
-    #### msg
-    # == len of msg
+Wire protocol: "len(msg) msg"
 
 '''
 
@@ -14,21 +11,14 @@ import socket
 import select
 
 
-
 import os
-import threading
 import errno
-import hashlib
 import ctypes
 import multiprocessing
 import urlparse  # TODO: remove
 
-from M2Crypto import RSA
-
-from random import randint
 
 # Import Salt Libs
-import salt.payload
 import salt.auth
 import salt.crypt
 import salt.utils
@@ -37,10 +27,7 @@ import salt.utils.event
 import salt.payload
 import salt.exceptions
 
-
 import logging
-from collections import defaultdict
-
 
 import salt.transport.client
 import salt.transport.server
@@ -56,6 +43,7 @@ log = logging.getLogger(__name__)
 def frame_msg(msg):
     return '{0} {1}'.format(len(msg), msg)
 
+
 def unframe_msg(frame):
     '''
     Return a tuple of (remaining_bits, msg)
@@ -63,6 +51,7 @@ def unframe_msg(frame):
     msg_len, msg = frame.split(' ', 1)
 
     return (int(msg_len) - len(msg), msg)
+
 
 def socket_frame_recv(s, recv_size=4096):
     '''
@@ -78,6 +67,7 @@ def socket_frame_recv(s, recv_size=4096):
         ret_msg += data
         remain -= len(data)
     return ret_msg
+
 
 class TCPReqChannel(salt.transport.client.ReqChannel):
     '''
@@ -427,13 +417,3 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             int_payload['topic_lst'] = load['tgt']
 
         pub_sock.send(self.serial.dumps(int_payload))
-
-
-
-
-
-
-
-
-
-# EOF

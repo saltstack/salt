@@ -15,6 +15,7 @@ import salt.utils.event
 
 log = logging.getLogger(__name__)
 
+# TODO: rename
 class AESPubClientMixin(object):
     def _verify_master_signature(self, payload):
         if payload.get('sig') and self.opts.get('sign_pub_messages'):
