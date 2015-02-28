@@ -1051,7 +1051,7 @@ def clear_lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
                     continue
         success, failed = _do_clear_lock(repo)
         cleared.extend(success)
@@ -1097,7 +1097,7 @@ def lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
                     continue
         success, failed = _do_lock(repo)
         locked.extend(success)
