@@ -898,6 +898,7 @@ def deploy_windows(host,
         win_cmd('winexe {0} "sc stop salt-minion"'.format(
             creds,
         ))
+        time.sleep(5)
         win_cmd('winexe {0} "sc start salt-minion"'.format(
             creds,
         ))
