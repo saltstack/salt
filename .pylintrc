@@ -152,7 +152,8 @@ additional-builtins=__opts__,
   __active_provider_name__,
   __master_opts__,
   __jid_event__,
-  __instance_id__
+  __instance_id__,
+  __salt_system_encoding__
 
 # List of strings which can identify a callback function by name. A callback
 # name must start or end with one of those strings.
@@ -326,24 +327,6 @@ no-docstring-rgx=__.*__
 # Minimum line length for functions/classes that require docstrings, shorter
 # ones are exempt.
 docstring-min-length=-1
-# List of additional names supposed to be defined in builtins. Remember that
-# you should avoid to define new builtins when possible.
-additional-builtins=__opts__,
-  __salt__,
-  __pillar__,
-  __grains__,
-  __context__,
-  __ret__,
-  __env__,
-  __low__,
-  __states__,
-  __lowstate__,
-  __running__,
-  __active_provider_name__,
-  __master_opts__,
-  __jid_event__,
-  __instance_id__,
-  __salt_system_encoding__
 
 
 [SPELLING]

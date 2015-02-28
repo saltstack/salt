@@ -482,6 +482,8 @@ def mod_watch(name,
                 verb = 'restart'
                 past_participle = verb + 'ed'
         else:
+            if 'service.stop' in __salt__:
+                __salt__['service.stop'](name)
             func = __salt__['service.start']
             verb = 'start'
             past_participle = verb + 'ed'

@@ -359,7 +359,9 @@ class SerializerExtension(Extension, object):
         '''
         def explore(data):
             if isinstance(data, (dict, OrderedDict)):
-                return PrintableDict([(key, explore(value)) for key, value in six.iteritems(data)])
+                return PrintableDict(
+                    [(key, explore(value)) for key, value in six.iteritems(data)]
+                )
             elif isinstance(data, (list, tuple, set)):
                 return data.__class__([explore(value) for value in data])
             return data

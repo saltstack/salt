@@ -35,8 +35,9 @@ from calendar import month_abbr as months
 
 # Import 3rd-party libs
 import salt.ext.six as six
-# pylint: disable=import-error,redefined-builtin
+# pylint: disable=import-error
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
+# pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
