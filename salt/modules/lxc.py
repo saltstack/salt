@@ -3346,6 +3346,13 @@ def _wrapper_cmd(func, *args, **kw):
         'lxc.cmd_{0} has been renamed to lxc.{0},'
         ' please update your code !'.format(func)
     )
+    if func not in ['run',
+                    'run_stderr',
+                    'run_stdout',
+                    'run_all',
+                    'retcode']:
+        # injection !?
+        raise ValueError('Wrapper is not supported')
     kw = copy.deepcopy(kw)
     for i in [a for a in six.iterkeys(kw)]:
         if i.startswith('__'):
