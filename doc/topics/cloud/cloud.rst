@@ -59,6 +59,12 @@ is the module provided for Linode:
 
 https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/linode.py
 
+Note that as of 2014.7.2 the Linode module was refactored to work with both
+Libcloud and linode-python.  In the code the different types are delineated
+b comments and conditials (e.g. if HAS_LIBCLOUD versus HAS_LINODEPY).  Thus,
+looking at this module might be a good way to see how salt-cloud support can be
+implemented with Libcloud and with a morej "native" style interface.
+
 The basic flow of a ``create()`` function is as follows:
 
 * Send a request to the cloud provider to create a virtual machine.
