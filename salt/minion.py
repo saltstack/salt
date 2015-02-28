@@ -1293,6 +1293,8 @@ class Minion(MinionBase):
                     'jid': jid,
                     'fun': fun,
                     'load': ret.get('__load__')}
+            if '__master_id__' in ret:
+                load['master_id'] = ret['__master_id__']
             load['return'] = {}
             for key, value in ret.items():
                 if key.startswith('__'):
@@ -2004,7 +2006,9 @@ class Syndic(Minion):
         Override this method if you wish to handle the decoded data
         differently.
         '''
-        self.syndic_cmd(data)
+        # Only forward the command if it didn't originate from ourselves
+        if data.get('master_id', 0) != self.opts.get('master_id', 1):
+            self.syndic_cmd(data)
 
     def syndic_cmd(self, data):
         '''
@@ -2500,6 +2504,9 @@ class MultiSyndic(MinionBase):
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
+                if event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
+                    log.debug('Return recieved with matching master_id, not forwarding')
+                    continue
 
                 jdict = self.jids.setdefault(event['tag'], {})
                 if not jdict:
@@ -2515,9 +2522,13 @@ class MultiSyndic(MinionBase):
                     jdict['__master_id__'] = event['data']['master_id']
                 jdict[event['data']['id']] = event['data']['return']
             else:
-                # Add generic event aggregation here
-                if 'retcode' not in event['data']:
-                    self.raw_events.append(event)
+                # TODO: config to forward these? If so we'll have to keep track of who
+                # has seen them
+                # if we are the top level masters-- don't forward all the minion events
+                if 'master_id' not in self.opts:
+                    # Add generic event aggregation here
+                    if 'retcode' not in event['data']:
+                        self.raw_events.append(event)
 
     def _forward_events(self):
         log.trace('Forwarding events')
