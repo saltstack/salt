@@ -6,7 +6,12 @@ With this backend, branches and tags in a remote git repository are exposed to
 salt as different environments.
 
 To enable, add ``git`` to the :conf_master:`fileserver_backend` option in the
-master config file.
+Master config file.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - git
 
 As of Salt 2014.7.0, the Git fileserver backend supports GitPython_, pygit2_,
 and dulwich_ to provide the Python interface to git. If more than one of these
@@ -44,9 +49,9 @@ Walkthrough <tutorial-gitfs>`.
 # Import python libs
 from __future__ import absolute_import
 import copy
-import contextlib
 import distutils.version  # pylint: disable=E0611
-import fcntl
+import errno
+import fnmatch
 import glob
 import hashlib
 import logging
@@ -93,7 +98,7 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt.exceptions import SaltException
+from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -133,18 +138,22 @@ def _verify_gitpython(quiet=False):
     '''
     Check if GitPython is available and at a compatible version (>= 0.3.0)
     '''
+    def _recommend():
+        if HAS_PYGIT2:
+            log.error(_RECOMMEND_PYGIT2)
+        if HAS_DULWICH:
+            log.error(_RECOMMEND_DULWICH)
+
     if not HAS_GITPYTHON:
         if not quiet:
             log.error(
                 'Git fileserver backend is enabled in master config file, but '
                 'could not be loaded, is GitPython installed?'
             )
-        if HAS_PYGIT2 and not quiet:
-            log.error(_RECOMMEND_PYGIT2)
-        if HAS_DULWICH and not quiet:
-            log.error(_RECOMMEND_DULWICH)
+            _recommend()
         return False
     # pylint: disable=no-member
+
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
     minver = distutils.version.LooseVersion(minver_str)
@@ -161,15 +170,15 @@ def _verify_gitpython(quiet=False):
             'The git command line utility is required by the Git fileserver '
             'backend when using the \'gitpython\' provider.'
         )
+
     if errors:
-        if HAS_PYGIT2 and not quiet:
-            errors.append(_RECOMMEND_PYGIT2)
-        if HAS_DULWICH and not quiet:
-            errors.append(_RECOMMEND_DULWICH)
         for error in errors:
             log.error(error)
+        if not quiet:
+            _recommend()
         return False
-    log.info('gitpython gitfs_provider enabled')
+
+    log.debug('gitpython gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'gitpython'
     return True
 
@@ -179,16 +188,19 @@ def _verify_pygit2(quiet=False):
     Check if pygit2/libgit2 are available and at a compatible version. Pygit2
     must be at least 0.20.3 and libgit2 must be at least 0.20.0.
     '''
+    def _recommend():
+        if HAS_GITPYTHON:
+            log.error(_RECOMMEND_GITPYTHON)
+        if HAS_DULWICH:
+            log.error(_RECOMMEND_DULWICH)
+
     if not HAS_PYGIT2:
         if not quiet:
             log.error(
                 'Git fileserver backend is enabled in master config file, but '
                 'could not be loaded, are pygit2 and libgit2 installed?'
             )
-        if HAS_GITPYTHON and not quiet:
-            log.error(_RECOMMEND_GITPYTHON)
-        if HAS_DULWICH and not quiet:
-            log.error(_RECOMMEND_DULWICH)
+            _recommend()
         return False
 
     # pylint: disable=no-member
@@ -219,15 +231,15 @@ def _verify_pygit2(quiet=False):
             'The git command line utility is required by the Git fileserver '
             'backend when using the \'pygit2\' provider.'
         )
+
     if errors:
-        if HAS_GITPYTHON and not quiet:
-            errors.append(_RECOMMEND_GITPYTHON)
-        if HAS_DULWICH and not quiet:
-            errors.append(_RECOMMEND_DULWICH)
         for error in errors:
             log.error(error)
+        if not quiet:
+            _recommend()
         return False
-    log.info('pygit2 gitfs_provider enabled')
+
+    log.debug('pygit2 gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'pygit2'
     return True
 
@@ -236,16 +248,19 @@ def _verify_dulwich(quiet=False):
     '''
     Check if dulwich is available.
     '''
+    def _recommend():
+        if HAS_GITPYTHON:
+            log.error(_RECOMMEND_GITPYTHON)
+        if HAS_PYGIT2:
+            log.error(_RECOMMEND_PYGIT2)
+
     if not HAS_DULWICH:
         if not quiet:
             log.error(
-                'Git fileserver backend is enabled in the master config file, '
-                'but could not be loaded. Is Dulwich installed?'
+                'Git fileserver backend is enabled in the master config file, but '
+                'could not be loaded. Is Dulwich installed?'
             )
-        if HAS_GITPYTHON and not quiet:
-            log.error(_RECOMMEND_GITPYTHON)
-        if HAS_PYGIT2 and not quiet:
-            log.error(_RECOMMEND_PYGIT2)
+            _recommend()
         return False
 
     dulwich_version = dulwich.__version__
@@ -260,16 +275,14 @@ def _verify_dulwich(quiet=False):
             'detected.'.format(dulwich_min_version, dulwich_version)
         )
 
-        if HAS_PYGIT2 and not quiet:
-            errors.append(_RECOMMEND_PYGIT2)
-        if HAS_GITPYTHON and not quiet:
-            errors.append(_RECOMMEND_GITPYTHON)
-
+    if errors:
         for error in errors:
             log.error(error)
+        if not quiet:
+            _recommend()
         return False
 
-    log.info('dulwich gitfs_provider enabled')
+    log.debug('dulwich gitfs_provider enabled')
     __opts__['verified_gitfs_provider'] = 'dulwich'
     return True
 
@@ -297,10 +310,11 @@ def _get_provider():
             )
     else:
         if provider not in VALID_PROVIDERS:
-            raise SaltException(
+            log.critical(
                 'Invalid gitfs_provider {0!r}. Valid choices are: {1}'
                 .format(provider, ', '.join(VALID_PROVIDERS))
             )
+            return None
         elif provider == 'pygit2' and _verify_pygit2():
             return 'pygit2'
         elif provider == 'gitpython' and _verify_gitpython():
@@ -317,11 +331,7 @@ def __virtual__():
     '''
     if __virtualname__ not in __opts__['fileserver_backend']:
         return False
-    try:
-        return __virtualname__ if _get_provider() else False
-    except SaltException as exc:
-        log.error(exc)
-        return False
+    return __virtualname__ if _get_provider() else False
 
 
 def _dulwich_conf(repo):
@@ -498,24 +508,48 @@ def _get_tree_dulwich(repo, tgt_env):
     return None
 
 
-def _stale_refs_pygit2(repo):
+def _clean_stale(repo_obj, local_refs=None):
     '''
-    Return a list of stale refs by running git remote prune --dry-run <remote>,
-    since pygit2 can't do this.
+    Clean stale local refs so they don't appear as fileserver environments
     '''
-    key = ' * [would prune] '
-    ret = []
-    for line in subprocess.Popen(
-            'git remote prune --dry-run origin',
-            shell=True,
-            close_fds=True,
-            cwd=repo.workdir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT).communicate()[0].splitlines():
-        if line.startswith(key):
-            line = line.replace(key, '')
-            ret.append(line)
-    return ret
+    provider = _get_provider()
+    cleaned = []
+    if provider == 'gitpython':
+        for ref in repo_obj.remotes[0].stale_refs:
+            if ref.name.startswith('refs/tags/'):
+                # Work around GitPython bug affecting removal of tags
+                # https://github.com/gitpython-developers/GitPython/issues/260
+                repo_obj.git.tag('-d', ref.name[10:])
+            else:
+                ref.delete(repo_obj, ref)
+            cleaned.append(ref)
+    elif provider == 'pygit2':
+        if local_refs is None:
+            local_refs = repo_obj.listall_references()
+        remote_refs = []
+        for line in subprocess.Popen(
+                'git ls-remote origin',
+                shell=True,
+                close_fds=True,
+                cwd=repo_obj.workdir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT).communicate()[0].splitlines():
+            try:
+                # Rename heads to match the ref names from
+                # pygit2.Repository.listall_references()
+                remote_refs.append(
+                    line.split()[-1].replace('refs/heads/',
+                                             'refs/remotes/origin/')
+                )
+            except IndexError:
+                continue
+        for ref in [x for x in local_refs if x not in remote_refs]:
+            repo_obj.lookup_reference(ref).delete()
+            cleaned.append(ref)
+    if cleaned:
+        log.debug('gitfs cleaned the following stale refs: {0}'
+                  .format(cleaned))
+    return cleaned
 
 
 def _verify_auth(repo):
@@ -547,6 +581,7 @@ def _verify_auth(repo):
             'Incomplete authentication information for remote {0}. Missing '
             'parameters: {1}'.format(remote_url, ', '.join(missing))
         )
+        _failhard()
 
     transport, _, address = repo['url'].partition('://')
     if not address:
@@ -569,7 +604,7 @@ def _verify_auth(repo):
                 'Password / keypair specified for remote {0}, but remote '
                 'URL is missing a username'.format(repo['url'])
             )
-            return False
+            _failhard()
 
         repo['user'] = user
         if all(bool(repo[x]) for x in required_params):
@@ -580,7 +615,6 @@ def _verify_auth(repo):
         else:
             missing_auth = [x for x in required_params if not bool(repo[x])]
             _incomplete_auth(repo['url'], missing_auth)
-            return False
 
     elif transport in ('https', 'http'):
         required_params = ('user', 'password')
@@ -592,27 +626,35 @@ def _verify_auth(repo):
         if password_ok:
             if transport == 'http' and not repo['insecure_auth']:
                 log.error(
-                    'Invalid configuration for remote {0}. Authentication is '
-                    'disabled by default on http remotes. Either set '
-                    'gitfs_insecure_auth to True in the master '
+                    'Invalid configuration for gitfs remote {0}. '
+                    'Authentication is disabled by default on http remotes. '
+                    'Either set gitfs_insecure_auth to True in the master '
                     'configuration file, set a per-remote config option named '
                     '\'insecure_auth\' to True, or use https or ssh-based '
                     'authentication.'.format(repo['url'])
                 )
-                return False
+                _failhard()
             repo['credentials'] = pygit2.UserPass(repo['user'],
                                                   repo['password'])
             return True
         else:
             missing_auth = [x for x in required_params if not bool(repo[x])]
             _incomplete_auth(repo['url'], missing_auth)
-            return False
     else:
         log.error(
             'Invalid configuration for remote {0}. Unsupported transport '
             '{1!r}.'.format(repo['url'], transport)
         )
-        return False
+        _failhard()
+
+
+def _failhard():
+    '''
+    Fatal fileserver configuration issue, raise an exception
+    '''
+    raise FileserverConfigError(
+        'Failed to load git fileserver backend'
+    )
 
 
 def init():
@@ -635,13 +677,13 @@ def init():
         override_params += AUTH_PARAMS
     elif global_auth_params:
         log.critical(
-            'GitFS authentication was configured, but the {0!r} '
+            'gitfs authentication was configured, but the {0!r} '
             'gitfs_provider does not support authentication. The providers '
             'for which authentication is supported in gitfs are: {1}. See the '
             'GitFS Walkthrough in the Salt documentation for further '
             'information.'.format(provider, ', '.join(AUTH_PROVIDERS))
         )
-        return []
+        _failhard()
 
     # ignore git ssl verification if requested
     ssl_verify = 'true' if __opts__.get('gitfs_ssl_verify', True) else 'false'
@@ -664,17 +706,20 @@ def init():
             )
             if not per_remote_conf:
                 log.error(
-                    'Invalid per-remote configuration for remote {0}. If no '
-                    'per-remote parameters are being specified, there may be '
-                    'a trailing colon after the URL, which should be removed. '
-                    'Check the master configuration file.'.format(repo_url)
+                    'Invalid per-remote configuration for gitfs remote {0}. '
+                    'If no per-remote parameters are being specified, there '
+                    'may be a trailing colon after the URL, which should be '
+                    'removed. Check the master configuration file.'
+                    .format(repo_url)
                 )
+                _failhard()
+
+            per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in override_params):
-                bad_per_remote_conf = True
                 if param in AUTH_PARAMS and provider not in AUTH_PROVIDERS:
                     log.critical(
-                        'GitFS authentication parameter {0!r} (from remote '
+                        'gitfs authentication parameter {0!r} (from remote '
                         '{1}) is only supported by the following provider(s): '
                         '{2}. Current gitfs_provider is {3!r}. See the '
                         'GitFS Walkthrough in the Salt documentation for '
@@ -696,9 +741,10 @@ def init():
                             ', '.join(PER_REMOTE_PARAMS)
                         )
                     )
-            if bad_per_remote_conf:
-                # Don't let Salt try to use a badly-configured remote
-                continue
+                per_remote_errors = True
+            if per_remote_errors:
+                _failhard()
+
             repo_conf.update(per_remote_conf)
         else:
             repo_url = remote
@@ -729,14 +775,17 @@ def init():
                 repo, new = _init_gitpython(rp_, repo_url, ssl_verify)
                 if new:
                     new_remote = True
+                lockfile = os.path.join(repo.working_dir, 'update.lk')
             elif provider == 'pygit2':
                 repo, new = _init_pygit2(rp_, repo_url, ssl_verify)
                 if new:
                     new_remote = True
+                lockfile = os.path.join(repo.workdir, 'update.lk')
             elif provider == 'dulwich':
                 repo, new = _init_dulwich(rp_, repo_url, ssl_verify)
                 if new:
                     new_remote = True
+                lockfile = os.path.join(repo.path, 'update.lk')
             else:
                 # Should never get here because the provider has been verified
                 # in __virtual__(). Log an error and return an empty list.
@@ -751,7 +800,8 @@ def init():
                     'repo': repo,
                     'url': repo_url,
                     'hash': repo_hash,
-                    'cachedir': rp_
+                    'cachedir': rp_,
+                    'lockfile': lockfile
                 })
                 # Strip trailing slashes from the gitfs root as these cause
                 # path searches to fail.
@@ -767,7 +817,7 @@ def init():
             if provider == 'gitpython':
                 msg += ' Perhaps git is not available.'
             log.error(msg, exc_info_on_loglevel=logging.DEBUG)
-            continue
+            _failhard()
 
     if new_remote:
         remote_map = os.path.join(__opts__['cachedir'], 'gitfs/remote_map.txt')
@@ -806,6 +856,10 @@ def _init_gitpython(rp_, repo_url, ssl_verify):
     if not repo.remotes:
         try:
             repo.create_remote('origin', repo_url)
+            # Ensure tags are also fetched
+            repo.git.config('--add',
+                            'remote.origin.fetch',
+                            '+refs/tags/*:refs/tags/*')
             repo.git.config('http.sslVerify', ssl_verify)
         except os.error:
             # This exception occurs when two processes are trying to write to
@@ -838,6 +892,10 @@ def _init_pygit2(rp_, repo_url, ssl_verify):
     if not repo.remotes:
         try:
             repo.create_remote('origin', repo_url)
+            # Ensure tags are also fetched
+            repo.config.set_multivar('remote.origin.fetch', 'FOO',
+                                     '+refs/tags/*:refs/tags/*')
+
             repo.config.set_multivar('http.sslVerify', '', ssl_verify)
         except os.error:
             # This exception occurs when two processes are trying to write to
@@ -855,6 +913,9 @@ def _init_dulwich(rp_, repo_url, ssl_verify):
     successful, otherwise return None. Also return a boolean that will tell
     init() whether a new repo was initialized.
     '''
+    if repo_url.startswith('ssh://'):
+        # Dulwich will throw an error if 'ssh' is used.
+        repo_url = 'git+' + repo_url
     new = False
     if not os.listdir(rp_):
         # Repo cachedir is empty, initialize a new repo there
@@ -885,59 +946,164 @@ def _init_dulwich(rp_, repo_url, ssl_verify):
     return repo, new
 
 
-def purge_cache():
+def _clear_old_remotes():
     '''
-    Purge the fileserver cache
+    Remove cache directories for remotes no longer configured
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'gitfs')
     try:
-        remove_dirs = os.listdir(bp_)
+        cachedir_ls = os.listdir(bp_)
     except OSError:
-        remove_dirs = []
-    for repo in init():
+        cachedir_ls = []
+    repos = init()
+    # Remove actively-used remotes from list
+    for repo in repos:
         try:
-            with _aquire_update_lock_for_repo(repo):
-                remove_dirs.remove(repo['hash'])
+            cachedir_ls.remove(repo['hash'])
         except ValueError:
             pass
-    remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
-                   if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
-    if remove_dirs:
-        for rdir in remove_dirs:
-            shutil.rmtree(rdir)
-        return True
-    return False
+    to_remove = []
+    for item in cachedir_ls:
+        if item in ('hash', 'refs'):
+            continue
+        path = os.path.join(bp_, item)
+        if os.path.isdir(path):
+            to_remove.append(path)
+    failed = []
+    if to_remove:
+        for rdir in to_remove:
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                log.error(
+                    'Unable to remove old gitfs remote cachedir {0}: {1}'
+                    .format(rdir, exc)
+                )
+                failed.append(rdir)
+            else:
+                log.debug('gitfs removed old cachedir {0}'.format(rdir))
+    for fdir in failed:
+        to_remove.remove(fdir)
+    return bool(to_remove), repos
 
 
-@contextlib.contextmanager
-def _aquire_update_lock_for_repo(repo):
-    provider = _get_provider()
+def clear_cache():
+    '''
+    Completely clear gitfs cache
+    '''
+    fsb_cachedir = os.path.join(__opts__['cachedir'], 'gitfs')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/gitfs')
+    errors = []
+    for rdir in (fsb_cachedir, list_cachedir):
+        if os.path.exists(rdir):
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                errors.append('Unable to delete {0}: {1}'.format(rdir, exc))
+    return errors
 
-    if provider == 'gitpython':
-        working_dir = repo['repo'].working_dir
-    elif provider == 'pygit2':
-        working_dir = repo['repo'].workdir
-    elif provider == 'dulwich':
-        working_dir = repo['repo'].path
 
-    with wait_for_write_lock(os.path.join(working_dir, 'update.lk')):
-        yield
+def clear_lock(remote=None):
+    '''
+    Clear update.lk
+
+    ``remote`` can either be a dictionary containing repo configuration
+    information, or a pattern. If the latter, then remotes for which the URL
+    matches the pattern will be locked.
+    '''
+    def _do_clear_lock(repo):
+        def _add_error(errlist, repo, exc):
+            msg = ('Unable to remove update lock for {0} ({1}): {2} '
+                   .format(repo['url'], repo['lockfile'], exc))
+            log.debug(msg)
+            errlist.append(msg)
+        success = []
+        failed = []
+        if os.path.exists(repo['lockfile']):
+            try:
+                os.remove(repo['lockfile'])
+            except OSError as exc:
+                if exc.errno == errno.EISDIR:
+                    # Somehow this path is a directory. Should never happen
+                    # unless some wiseguy manually creates a directory at this
+                    # path, but just in case, handle it.
+                    try:
+                        shutil.rmtree(repo['lockfile'])
+                    except OSError as exc:
+                        _add_error(failed, repo, exc)
+                else:
+                    _add_error(failed, repo, exc)
+            else:
+                msg = 'Removed lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
+        return success, failed
+
+    if isinstance(remote, dict):
+        return _do_clear_lock(remote)
+
+    cleared = []
+    errors = []
+    for repo in init():
+        if remote:
+            try:
+                if not fnmatch.fnmatch(repo['url'], remote):
+                    continue
+            except TypeError:
+                # remote was non-string, try again
+                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                    continue
+        success, failed = _do_clear_lock(repo)
+        cleared.extend(success)
+        errors.extend(failed)
+    return cleared, errors
 
 
-@contextlib.contextmanager
-def wait_for_write_lock(filename):
-    fhandle = open(filename, 'w')
+def lock(remote=None):
+    '''
+    Place an update.lk
 
-    if salt.utils.is_fcntl_available(check_sunos=True):
-        fcntl.flock(fhandle.fileno(), fcntl.LOCK_EX)
-    try:
-        yield
-    finally:
-        if salt.utils.is_fcntl_available(check_sunos=True):
-            fcntl.flock(fhandle.fileno(), fcntl.LOCK_UN)
+    ``remote`` can either be a dictionary containing repo configuration
+    information, or a pattern. If the latter, then remotes for which the URL
+    matches the pattern will be locked.
+    '''
+    def _do_lock(repo):
+        success = []
+        failed = []
+        if not os.path.exists(repo['lockfile']):
+            try:
+                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
+                    fp_.write('')
+            except (IOError, OSError) as exc:
+                msg = ('Unable to set update lock for {0} ({1}): {2} '
+                       .format(repo['url'], repo['lockfile'], exc))
+                log.debug(msg)
+                failed.append(msg)
+            else:
+                msg = 'Set lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
+        return success, failed
 
-        fhandle.close()
-        os.remove(filename)
+    if isinstance(remote, dict):
+        return _do_lock(remote)
+
+    locked = []
+    errors = []
+    for repo in init():
+        if remote:
+            try:
+                if not fnmatch.fnmatch(repo['url'], remote):
+                    continue
+            except TypeError:
+                # remote was non-string, try again
+                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                    continue
+        success, failed = _do_lock(repo)
+        locked.extend(success)
+        errors.extend(failed)
+
+    return locked, errors
 
 
 def update():
@@ -948,106 +1114,120 @@ def update():
     data = {'changed': False,
             'backend': 'gitfs'}
     provider = _get_provider()
-    pid = os.getpid()
-    data['changed'] = purge_cache()
-    for repo in init():
-        if provider == 'gitpython':
-            origin = repo['repo'].remotes[0]
-            working_dir = repo['repo'].working_dir
-        elif provider == 'pygit2':
-            origin = repo['repo'].remotes[0]
-            working_dir = repo['repo'].workdir
-        elif provider == 'dulwich':
-            # origin is just a url here, there is no origin object
-            origin = repo['url']
-            working_dir = repo['repo'].path
-
-        with _aquire_update_lock_for_repo(repo):
-            try:
-                log.debug('Fetching from {0}'.format(repo['url']))
-                if provider == 'gitpython':
-                    try:
-                        fetch_results = origin.fetch()
-                    except AssertionError:
-                        fetch_results = origin.fetch()
-                    for fetch in fetch_results:
-                        if fetch.old_commit is not None:
-                            data['changed'] = True
-                elif provider == 'pygit2':
-                    try:
-                        origin.credentials = repo['credentials']
-                    except KeyError:
-                        # No credentials configured for this repo
-                        pass
-                    fetch = origin.fetch()
-                    try:
-                        # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
-                        received_objects = fetch['received_objects']
-                    except (AttributeError, TypeError):
-                        # pygit2.Remote.fetch() returns a class instance in
-                        # pygit2 >= 0.21.0
-                        received_objects = fetch.received_objects
-                    log.debug(
-                        'Gitfs received {0} objects for remote {1}'
-                        .format(received_objects, repo['url'])
-                    )
-                    if received_objects:
-                        data['changed'] = True
-                elif provider == 'dulwich':
-                    client, path = \
-                        dulwich.client.get_transport_and_path_from_url(
-                            origin, thin_packs=True
-                        )
-                    refs_pre = repo['repo'].get_refs()
-                    try:
-                        refs_post = client.fetch(path, repo['repo'])
-                    except dulwich.errors.NotGitRepository:
-                        log.critical(
-                            'Dulwich does not recognize remote {0} as a valid '
-                            'remote URL. Perhaps it is missing \'.git\' at the '
-                            'end.'.format(repo['url'])
-                        )
-                        continue
-                    except KeyError:
-                        log.critical(
-                            'Local repository cachedir {0!r} (corresponding '
-                            'remote: {1}) has been corrupted. Salt will now '
-                            'attempt to remove the local checkout to allow it to '
-                            'be re-initialized in the next fileserver cache '
-                            'update.'
-                            .format(repo['cachedir'], repo['url'])
-                        )
-                        try:
-                            salt.utils.rm_rf(repo['cachedir'])
-                        except OSError as exc:
-                            log.critical(
-                                'Unable to remove {0!r}: {1}'
-                                .format(repo['cachedir'], exc)
-                            )
-                        continue
-                    if refs_post is None:
-                        # Empty repository
-                        log.warning(
-                            'Gitfs remote {0!r} is an empty repository and will '
-                            'be skipped.'.format(origin)
-                        )
-                        continue
-                    if refs_pre != refs_post:
-                        data['changed'] = True
-                        # Update local refs
-                        for ref in _dulwich_env_refs(refs_post):
-                            repo['repo'][ref] = refs_post[ref]
-                        # Prune stale refs
-                        for ref in repo['repo'].get_refs():
-                            if ref not in refs_post:
-                                del repo['repo'][ref]
-            except Exception as exc:
-                # Do not use {0!r} in the error message, as exc is not a string
-                log.error(
-                    'Exception \'{0}\' caught while fetching gitfs remote {1}'
-                    .format(exc, repo['url']),
-                    exc_info_on_loglevel=logging.DEBUG
+    # _clear_old_remotes runs init(), so use the value from there to avoid a
+    # second init()
+    data['changed'], repos = _clear_old_remotes()
+    for repo in repos:
+        if os.path.exists(repo['lockfile']):
+            log.warning(
+                'Update lockfile is present for gitfs remote {0}, skipping. '
+                'If this warning persists, it is possible that the update '
+                'process was interrupted. Removing {1} or running '
+                '\'salt-run fileserver.clear_lock gitfs\' will allow updates '
+                'to continue for this remote.'
+                .format(repo['url'], repo['lockfile'])
+            )
+            continue
+        _, errors = lock(repo)
+        if errors:
+            log.error('Unable to set update lock for gitfs remote {0}, '
+                      'skipping.'.format(repo['url']))
+            continue
+        log.debug('gitfs is fetching from {0}'.format(repo['url']))
+        try:
+            if provider == 'gitpython':
+                origin = repo['repo'].remotes[0]
+                try:
+                    fetch_results = origin.fetch()
+                except AssertionError:
+                    fetch_results = origin.fetch()
+                cleaned = _clean_stale(repo['repo'])
+                if fetch_results or cleaned:
+                    data['changed'] = True
+            elif provider == 'pygit2':
+                origin = repo['repo'].remotes[0]
+                refs_pre = repo['repo'].listall_references()
+                try:
+                    origin.credentials = repo['credentials']
+                except KeyError:
+                    # No credentials configured for this repo
+                    pass
+                fetch = origin.fetch()
+                try:
+                    # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
+                    received_objects = fetch['received_objects']
+                except (AttributeError, TypeError):
+                    # pygit2.Remote.fetch() returns a class instance in
+                    # pygit2 >= 0.21.0
+                    received_objects = fetch.received_objects
+                log.debug(
+                    'gitfs received {0} objects for remote {1}'
+                    .format(received_objects, repo['url'])
                 )
+                # Clean up any stale refs
+                refs_post = repo['repo'].listall_references()
+                cleaned = _clean_stale(repo['repo'], refs_post)
+                if received_objects or refs_pre != refs_post or cleaned:
+                    data['changed'] = True
+            elif provider == 'dulwich':
+                # origin is just a url here, there is no origin object
+                origin = repo['url']
+                client, path = \
+                    dulwich.client.get_transport_and_path_from_url(
+                        origin, thin_packs=True
+                    )
+                refs_pre = repo['repo'].get_refs()
+                try:
+                    refs_post = client.fetch(path, repo['repo'])
+                except dulwich.errors.NotGitRepository:
+                    log.critical(
+                        'Dulwich does not recognize remote {0} as a valid '
+                        'remote URL. Perhaps it is missing \'.git\' at the '
+                        'end.'.format(repo['url'])
+                    )
+                    continue
+                except KeyError:
+                    log.critical(
+                        'Local repository cachedir {0!r} (corresponding '
+                        'remote: {1}) has been corrupted. Salt will now '
+                        'attempt to remove the local checkout to allow it to '
+                        'be re-initialized in the next fileserver cache '
+                        'update.'
+                        .format(repo['cachedir'], repo['url'])
+                    )
+                    try:
+                        salt.utils.rm_rf(repo['cachedir'])
+                    except OSError as exc:
+                        log.critical(
+                            'Unable to remove {0!r}: {1}'
+                            .format(repo['cachedir'], exc)
+                        )
+                    continue
+                if refs_post is None:
+                    # Empty repository
+                    log.warning(
+                        'gitfs remote {0!r} is an empty repository and will '
+                        'be skipped.'.format(origin)
+                    )
+                    continue
+                if refs_pre != refs_post:
+                    data['changed'] = True
+                    # Update local refs
+                    for ref in _dulwich_env_refs(refs_post):
+                        repo['repo'][ref] = refs_post[ref]
+                    # Prune stale refs
+                    for ref in repo['repo'].get_refs():
+                        if ref not in refs_post:
+                            del repo['repo'][ref]
+        except Exception as exc:
+            # Do not use {0!r} in the error message, as exc is not a string
+            log.error(
+                'Exception \'{0}\' caught while fetching gitfs remote {1}'
+                .format(exc, repo['url']),
+                exc_info_on_loglevel=logging.DEBUG
+            )
+        finally:
+            clear_lock(repo)
 
     env_cache = os.path.join(__opts__['cachedir'], 'gitfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
@@ -1091,7 +1271,7 @@ def _env_is_exposed(env):
     )
 
 
-def envs(ignore_cache=False):
+def envs(ignore_cache=False, skip_clean=False):
     '''
     Return a list of refs that can be used as environments
     '''
@@ -1126,14 +1306,13 @@ def _envs_gitpython(repo):
     environments.
     '''
     ret = set()
-    remote = repo['repo'].remotes[0]
     for ref in repo['repo'].refs:
         parted = ref.name.partition('/')
         rspec = parted[2] if parted[2] else parted[0]
         if isinstance(ref, git.Head):
             if rspec == repo['base']:
                 rspec = 'base'
-            if ref not in remote.stale_refs and _env_is_exposed(rspec):
+            if _env_is_exposed(rspec):
                 ret.add(rspec)
         elif isinstance(ref, git.Tag) and _env_is_exposed(rspec):
             ret.add(rspec)
@@ -1146,18 +1325,16 @@ def _envs_pygit2(repo):
     environments.
     '''
     ret = set()
-    stale_refs = _stale_refs_pygit2(repo['repo'])
     for ref in repo['repo'].listall_references():
         ref = re.sub('^refs/', '', ref)
         rtype, rspec = ref.split('/', 1)
         if rtype == 'remotes':
-            if rspec not in stale_refs:
-                parted = rspec.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if rspec == repo['base']:
-                    rspec = 'base'
-                if _env_is_exposed(rspec):
-                    ret.add(rspec)
+            parted = rspec.partition('/')
+            rspec = parted[2] if parted[2] else parted[0]
+            if rspec == repo['base']:
+                rspec = 'base'
+            if _env_is_exposed(rspec):
+                ret.add(rspec)
         elif rtype == 'tags' and _env_is_exposed(rspec):
             ret.add(rspec)
     return ret
@@ -1208,157 +1385,155 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                          '{0}.lk'.format(path))
     destdir = os.path.dirname(dest)
     hashdir = os.path.dirname(blobshadest)
+    if not os.path.isdir(destdir):
+        try:
+            os.makedirs(destdir)
+        except OSError:
+            # Path exists and is a file, remove it and retry
+            os.remove(destdir)
+            os.makedirs(destdir)
+    if not os.path.isdir(hashdir):
+        try:
+            os.makedirs(hashdir)
+        except OSError:
+            # Path exists and is a file, remove it and retry
+            os.remove(hashdir)
+            os.makedirs(hashdir)
 
     for repo in init():
-        with _aquire_update_lock_for_repo(repo):
-            if not os.path.isdir(destdir):
-                try:
-                    os.makedirs(destdir)
-                except OSError:
-                    # Path exists and is a file, remove it and retry
-                    os.remove(destdir)
-                    os.makedirs(destdir)
-            if not os.path.isdir(hashdir):
-                try:
-                    os.makedirs(hashdir)
-                except OSError:
-                    # Path exists and is a file, remove it and retry
-                    os.remove(hashdir)
-                    os.makedirs(hashdir)
+        if repo['mountpoint'] \
+                and not path.startswith(repo['mountpoint'] + os.path.sep):
+            continue
+        repo_path = path[len(repo['mountpoint']):].lstrip(os.path.sep)
+        if repo['root']:
+            repo_path = os.path.join(repo['root'], repo_path)
 
-            if repo['mountpoint'] \
-                    and not path.startswith(repo['mountpoint'] + os.path.sep):
+        blob = None
+        depth = 0
+        if provider == 'gitpython':
+            tree = _get_tree_gitpython(repo, tgt_env)
+            if not tree:
+                # Branch/tag/SHA not found in repo, try the next
                 continue
-            repo_path = path[len(repo['mountpoint']):].lstrip(os.path.sep)
-            if repo['root']:
-                repo_path = os.path.join(repo['root'], repo_path)
-
-            blob = None
-            depth = 0
-            if provider == 'gitpython':
-                tree = _get_tree_gitpython(repo, tgt_env)
-                if not tree:
-                    # Branch/tag/SHA not found in repo, try the next
-                    continue
-                while True:
-                    depth += 1
-                    if depth > SYMLINK_RECURSE_DEPTH:
-                        break
-                    try:
-                        file_blob = tree / repo_path
-                        if stat.S_ISLNK(file_blob.mode):
-                            # Path is a symlink. The blob data corresponding to
-                            # this path's object ID will be the target of the
-                            # symlink. Follow the symlink and set repo_path to the
-                            # location indicated in the blob data.
-                            stream = six.StringIO()
-                            file_blob.stream_data(stream)
-                            stream.seek(0)
-                            link_tgt = stream.read()
-                            stream.close()
-                            repo_path = os.path.normpath(
-                                os.path.join(os.path.dirname(repo_path), link_tgt)
-                            )
-                        else:
-                            blob = file_blob
-                            break
-                    except KeyError:
-                        # File not found or repo_path points to a directory
-                        break
-                if blob is None:
-                    continue
-                blob_hexsha = blob.hexsha
-
-            elif provider == 'pygit2':
-                tree = _get_tree_pygit2(repo, tgt_env)
-                if not tree:
-                    # Branch/tag/SHA not found in repo, try the next
-                    continue
-                while True:
-                    depth += 1
-                    if depth > SYMLINK_RECURSE_DEPTH:
-                        break
-                    try:
-                        if stat.S_ISLNK(tree[repo_path].filemode):
-                            # Path is a symlink. The blob data corresponding to this
-                            # path's object ID will be the target of the symlink. Follow
-                            # the symlink and set repo_path to the location indicated
-                            # in the blob data.
-                            link_tgt = repo['repo'][tree[repo_path].oid].data
-                            repo_path = os.path.normpath(
-                                os.path.join(os.path.dirname(repo_path), link_tgt)
-                            )
-                        else:
-                            oid = tree[repo_path].oid
-                            blob = repo['repo'][oid]
-                    except KeyError:
-                        break
-                if blob is None:
-                    continue
-                blob_hexsha = blob.hex
-
-            elif provider == 'dulwich':
-                while True:
-                    depth += 1
-                    if depth > SYMLINK_RECURSE_DEPTH:
-                        break
-                    prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
-                    tree = _get_tree_dulwich(repo, tgt_env)
-                    tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
-                    if not isinstance(tree, dulwich.objects.Tree):
-                        # Branch/tag/SHA not found in repo
-                        break
-                    try:
-                        mode, oid = tree[filename]
-                        if stat.S_ISLNK(mode):
-                            # Path is a symlink. The blob data corresponding to
-                            # this path's object ID will be the target of the
-                            # symlink. Follow the symlink and set repo_path to the
-                            # location indicated in the blob data.
-                            link_tgt = repo['repo'].get_object(oid).as_raw_string()
-                            repo_path = os.path.normpath(
-                                os.path.join(os.path.dirname(repo_path), link_tgt)
-                            )
-                        else:
-                            blob = repo['repo'].get_object(oid)
-                            break
-                    except KeyError:
-                        break
-                if blob is None:
-                    continue
-                blob_hexsha = blob.sha().hexdigest()
-
-            salt.fileserver.wait_lock(lk_fn, dest)
-            if os.path.isfile(blobshadest) and os.path.isfile(dest):
-                with salt.utils.fopen(blobshadest, 'r') as fp_:
-                    sha = fp_.read()
-                    if sha == blob_hexsha:
-                        fnd['rel'] = path
-                        fnd['path'] = dest
-                        return fnd
-            with salt.utils.fopen(lk_fn, 'w+') as fp_:
-                fp_.write('')
-            for filename in glob.glob(hashes_glob):
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
                 try:
-                    os.remove(filename)
-                except Exception:
-                    pass
-            with salt.utils.fopen(dest, 'w+') as fp_:
-                if provider == 'gitpython':
-                    blob.stream_data(fp_)
-                elif provider == 'pygit2':
-                    fp_.write(blob.data)
-                elif provider == 'dulwich':
-                    fp_.write(blob.as_raw_string())
-            with salt.utils.fopen(blobshadest, 'w+') as fp_:
-                fp_.write(blob_hexsha)
+                    file_blob = tree / repo_path
+                    if stat.S_ISLNK(file_blob.mode):
+                        # Path is a symlink. The blob data corresponding to
+                        # this path's object ID will be the target of the
+                        # symlink. Follow the symlink and set repo_path to the
+                        # location indicated in the blob data.
+                        stream = six.StringIO()
+                        file_blob.stream_data(stream)
+                        stream.seek(0)
+                        link_tgt = stream.read()
+                        stream.close()
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        blob = file_blob
+                        break
+                except KeyError:
+                    # File not found or repo_path points to a directory
+                    break
+            if blob is None:
+                continue
+            blob_hexsha = blob.hexsha
+
+        elif provider == 'pygit2':
+            tree = _get_tree_pygit2(repo, tgt_env)
+            if not tree:
+                # Branch/tag/SHA not found in repo, try the next
+                continue
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
+                try:
+                    if stat.S_ISLNK(tree[repo_path].filemode):
+                        # Path is a symlink. The blob data corresponding to this
+                        # path's object ID will be the target of the symlink. Follow
+                        # the symlink and set repo_path to the location indicated
+                        # in the blob data.
+                        link_tgt = repo['repo'][tree[repo_path].oid].data
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        oid = tree[repo_path].oid
+                        blob = repo['repo'][oid]
+                except KeyError:
+                    break
+            if blob is None:
+                continue
+            blob_hexsha = blob.hex
+
+        elif provider == 'dulwich':
+            while True:
+                depth += 1
+                if depth > SYMLINK_RECURSE_DEPTH:
+                    break
+                prefix_dirs, _, filename = repo_path.rpartition(os.path.sep)
+                tree = _get_tree_dulwich(repo, tgt_env)
+                tree = _dulwich_walk_tree(repo['repo'], tree, prefix_dirs)
+                if not isinstance(tree, dulwich.objects.Tree):
+                    # Branch/tag/SHA not found in repo
+                    break
+                try:
+                    mode, oid = tree[filename]
+                    if stat.S_ISLNK(mode):
+                        # Path is a symlink. The blob data corresponding to
+                        # this path's object ID will be the target of the
+                        # symlink. Follow the symlink and set repo_path to the
+                        # location indicated in the blob data.
+                        link_tgt = repo['repo'].get_object(oid).as_raw_string()
+                        repo_path = os.path.normpath(
+                            os.path.join(os.path.dirname(repo_path), link_tgt)
+                        )
+                    else:
+                        blob = repo['repo'].get_object(oid)
+                        break
+                except KeyError:
+                    break
+            if blob is None:
+                continue
+            blob_hexsha = blob.sha().hexdigest()
+
+        salt.fileserver.wait_lock(lk_fn, dest)
+        if os.path.isfile(blobshadest) and os.path.isfile(dest):
+            with salt.utils.fopen(blobshadest, 'r') as fp_:
+                sha = fp_.read()
+                if sha == blob_hexsha:
+                    fnd['rel'] = path
+                    fnd['path'] = dest
+                    return fnd
+        with salt.utils.fopen(lk_fn, 'w+') as fp_:
+            fp_.write('')
+        for filename in glob.glob(hashes_glob):
             try:
-                os.remove(lk_fn)
-            except (OSError, IOError):
+                os.remove(filename)
+            except Exception:
                 pass
-            fnd['rel'] = path
-            fnd['path'] = dest
-            return fnd
+        with salt.utils.fopen(dest, 'w+') as fp_:
+            if provider == 'gitpython':
+                blob.stream_data(fp_)
+            elif provider == 'pygit2':
+                fp_.write(blob.data)
+            elif provider == 'dulwich':
+                fp_.write(blob.as_raw_string())
+        with salt.utils.fopen(blobshadest, 'w+') as fp_:
+            fp_.write(blob_hexsha)
+        try:
+            os.remove(lk_fn)
+        except OSError:
+            pass
+        fnd['rel'] = path
+        fnd['path'] = dest
+        return fnd
     return fnd
 
 
