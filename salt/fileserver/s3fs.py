@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-The backend for a fileserver based on Amazon S3
+Amazon S3 Fileserver Backend
 
-.. seealso:: :doc:`/ref/file_server/index`
+This backend exposes directories in S3 buckets as Salt environments. To enable
+this backend, add ``s3`` to the :conf_master:`fileserver_backend` option in the
+Master config file.
 
-This backend exposes directories in S3 buckets as Salt environments.  This
-feature is managed by the :conf_master:`fileserver_backend` option in the Salt
-Master config.
+.. code-block:: yaml
 
+    fileserver_backend:
+      - s3
 
-S3 credentials can be set in the master config file like so:
+S3 credentials must also be set in the master config file:
 
 .. code-block:: yaml
 
@@ -18,14 +20,6 @@ S3 credentials can be set in the master config file like so:
 
 Alternatively, if on EC2 these credentials can be automatically loaded from
 instance metadata.
-
-Additionally, ``s3fs`` must be included in the
-:conf_master:`fileserver_backend` config parameter in the master config file:
-
-.. code-block:: yaml
-
-    fileserver_backend:
-      - s3fs
 
 This fileserver supports two modes of operation for the buckets:
 
@@ -228,7 +222,7 @@ def serve_file(load, fnd):
             load['saltenv'],
             fnd['path'])
 
-    ret['dest'] = fnd['path']
+    ret['dest'] = _trim_env_off_path([fnd['path']], load['saltenv'])[0]
 
     with salt.utils.fopen(cached_file_path, 'rb') as fp_:
         fp_.seek(load['loc'])

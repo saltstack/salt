@@ -51,6 +51,7 @@ import salt.utils.process
 import salt.utils.zeromq
 import salt.utils.jid
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.exceptions import FileserverConfigError
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.utils.event import tagify
 import binascii
@@ -358,6 +359,13 @@ class Master(SMaster):
                 'Failed to load fileserver backends, the configured backends '
                 'are: {0}'.format(', '.join(self.opts['fileserver_backend']))
             )
+        else:
+            # Run init() for all backends which support the function, to
+            # double-check configuration
+            try:
+                fileserver.init()
+            except FileserverConfigError as exc:
+                errors.append('{0}'.format(exc))
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
         if errors:

@@ -21,6 +21,7 @@ import yaml
 
 # Import salt libs
 import salt
+import salt.utils
 import salt.fileclient
 from salt.utils.odict import OrderedDict
 from salt.ext.six import string_types
@@ -370,8 +371,17 @@ class SerializerExtension(Extension, object):
         return Markup(json.dumps(value, sort_keys=sort_keys).strip())
 
     def format_yaml(self, value, flow_style=True):
-        return Markup(yaml.dump(value, default_flow_style=flow_style,
-                                Dumper=OrderedDictDumper).strip())
+        yaml_txt = yaml.dump(value, default_flow_style=flow_style,
+                             Dumper=OrderedDictDumper).strip()
+        if yaml_txt.endswith('\n...\n'):
+            log.info('Yaml filter ended with "\n...\n". This trailing string '
+                     'will be removed in Boron.')
+            salt.utils.warn_until(
+                'Boron',
+                'Please remove the log message above.',
+                _dont_call_warnings=True
+            )
+        return Markup(yaml_txt)
 
     def format_python(self, value):
         return Markup(pprint.pformat(value).strip())

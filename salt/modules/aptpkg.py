@@ -1156,7 +1156,7 @@ def _consolidate_repo_sources(sources):
     for repo in repos:
         repo.uri = repo.uri.rstrip('/')
         key = str((getattr(repo, 'architectures', []),
-                   repo.disabled, repo.type, repo.uri))
+                   repo.disabled, repo.type, repo.uri, repo.dist))
         if key in consolidated:
             combined = consolidated[key]
             combined_comps = set(repo.comps).union(set(combined.comps))
@@ -1562,7 +1562,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'comps' in kwargs:
         kwargs['comps'] = kwargs['comps'].split(',')
-        full_comp_list.union(set(kwargs['comps']))
+        full_comp_list |= set(kwargs['comps'])
     else:
         kwargs['comps'] = list(full_comp_list)
 
