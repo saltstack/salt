@@ -3361,32 +3361,72 @@ def _wrapper_cmd(func, *args, **kw):
 
 
 def cmd_run_stdout(name, *args, **kw):
-    # cmd_alike historical wrapper (compat)
-    # no doctstring to avoid autodoc
+    '''
+    Historical function, do not use it anymore -> use run_stdout
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.cmd_run_stdout foo 'cat /etc/hostname'
+
+    '''
     return _wrapper_cmd('run_stdout', name, *args, **kw)
 
 
 def cmd_run_stderr(name, *args, **kw):
-    # cmd_alike historical wrapper (compat)
-    # no doctstring to avoid autodoc
+    '''
+    Historical function, do not use it anymore -> use run_stderr
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.cmd_run_stderr foo 'cat /etc/hostname'
+
+    '''
     return _wrapper_cmd('run_stderr', name, *args, **kw)
 
 
 def cmd_run_all(name, *args, **kw):
-    # cmd_alike historical wrapper (compat)
-    # no doctstring to avoid autodoc
+    '''
+    Historical function, do not use it anymore -> use run_all
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.cmd_run_all foo 'cat /etc/hostname'
+
+    '''
     return _wrapper_cmd('run_all', name, *args, **kw)
 
 
 def cmd_run(name, *args, **kw):
-    # cmd_alike historical wrapper (compat)
-    # no doctstring to avoid autodoc
+    '''
+    Historical function, do not use it anymore -> use run
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.cmd_run foo 'cat /etc/hostname'
+
+    '''
     return _wrapper_cmd('run', name, *args, **kw)
 
 
 def cmd_retcode(name, *args, **kw):
-    # cmd_alike historical wrapper (compat)
-    # no doctstring to avoid autodoc
+    '''
+    Historical function, do not use it anymore -> use retcode
+
+     CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.cmd_retcode foo 'cat /etc/hostname'
+
+    '''
     return _wrapper_cmd('retcode', name, *args, **kw)
 
 
