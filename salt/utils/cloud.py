@@ -711,7 +711,7 @@ def validate_windows_cred(host, username='Administrator', password=None, retries
         ))
         if retcode == 0:
             break
-        time.sleep(delay)
+        time.sleep(retry_delay)
     return retcode == 0
 
 
