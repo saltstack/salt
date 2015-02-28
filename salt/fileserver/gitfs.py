@@ -152,7 +152,7 @@ def _verify_gitpython(quiet=False):
             )
             _recommend()
         return False
-
+    # pylint: disable=no-member
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
     minver = distutils.version.LooseVersion(minver_str)

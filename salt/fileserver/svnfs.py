@@ -37,7 +37,6 @@ import logging
 import os
 import shutil
 from datetime import datetime
-from salt._compat import text_type as _text_type
 from salt.exceptions import FileserverConfigError
 
 PER_REMOTE_PARAMS = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
@@ -346,7 +345,7 @@ def clear_lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if _text_type(remote) not in repo['url']:
+                if six.text_type(remote) not in repo['url']:
                     continue
         success, failed = _do_clear_lock(repo)
         cleared.extend(success)
@@ -392,7 +391,7 @@ def lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
                     continue
         success, failed = _do_lock(repo)
         locked.extend(success)

@@ -287,7 +287,7 @@ class Fileserver(object):
         ret = []
         if not back:
             back = self.opts['fileserver_backend']
-        if isinstance(back, string_types):
+        if isinstance(back, six.string_types):
             back = back.split(',')
         if all((x.startswith('-') for x in back)):
             # Only subtracting backends from enabled ones
@@ -347,7 +347,7 @@ class Fileserver(object):
             if fstr in self.servers:
                 msg = 'Setting update lock for {0} remotes'.format(fsb)
                 if remote:
-                    if not isinstance(remote, string_types):
+                    if not isinstance(remote, six.string_types):
                         errors.append(
                             'Badly formatted remote pattern \'{0}\''
                             .format(remote)
