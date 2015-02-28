@@ -90,13 +90,6 @@ class PubChannel(object):
         '''
         raise NotImplementedError()
 
-    def recv_noblock(self):
-        '''
-        Get a pub job in a non-blocking manner.
-        Return pub or None
-        '''
-        raise NotImplementedError()
-
     @property
     def socket(self):
         '''

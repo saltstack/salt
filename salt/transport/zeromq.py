@@ -240,26 +240,14 @@ class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transp
 
     def recv(self, timeout=0):
         '''
-        Get a pub job, with an optional timeout (0==forever)
+        Get a pub job, with an optional timeout
+            0: nonblocking
+            None: forever
         '''
-        if timeout == 0 or self._socket.poll(timeout):
+        if self._socket.poll(timeout):
             messages = self._socket.recv_multipart()
             return self._decode_messages(messages)
         else:
-            return None
-
-    def recv_noblock(self):
-        '''
-        Get a pub job in a non-blocking manner.
-        Return pub or None
-        '''
-        try:
-            messages = self._socket.recv_multipart(zmq.NOBLOCK)
-            return self._decode_messages(messages)
-        except zmq.ZMQError as e:
-            # Swallow errors for bad wakeups or signals needing processing
-            if e.errno != errno.EAGAIN and e.errno != errno.EINTR:
-                raise
             return None
 
     @property
@@ -269,6 +257,10 @@ class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transp
     @property
     def poll_key(self):
         return self.socket
+
+    def register_poller(self, poller):
+        self.poller = poller
+        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
 
 class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel):

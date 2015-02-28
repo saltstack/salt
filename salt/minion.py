@@ -1534,7 +1534,7 @@ class Minion(MinionBase):
         self.event_publisher = salt.utils.event.PollingEventPublisher(self.opts)
 
         self.poller.register(self.event_publisher.socket, zmq.POLLIN)
-        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
+        self.pub_channel.register_poller(self.poller)
 
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
@@ -1644,7 +1644,7 @@ class Minion(MinionBase):
         )
 
     def _do_socket_recv(self):
-        payload = self.pub_channel.recv_noblock()
+        payload = self.pub_channel.recv()
 
         if payload is not None and self._target_load(payload['load']):
             self._handle_decoded_payload(payload['load'])

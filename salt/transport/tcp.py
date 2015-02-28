@@ -187,6 +187,10 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
     def poll_key(self):
         return self._socket.fileno()
 
+    def register_poller(self, poller):
+        self.poller = poller
+        self.poller.register(self.socket, zmq.POLLIN)
+
     @property
     def master_pub(self):
         '''
@@ -197,24 +201,11 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
 
     def recv(self, timeout=0):
         '''
-        Get a pub job, with an optional timeout (0==forever)
+        Get a pub job, with an optional timeout
+            0: nonblocking
+            None: forever
         '''
-        if timeout == 0:
-            timeout = None
         socks = select.select([self.socket], [], [], timeout)
-        if self.socket in socks[0]:
-            data = socket_frame_recv(self.socket)
-            return self._decode_payload(self.serial.loads(data))
-        else:
-            return None
-
-    def recv_noblock(self):
-        '''
-        Get a pub job in a non-blocking manner.
-        Return pub or None
-        '''
-        print ('noblock get??')
-        socks = select.select([self.socket], [], [], 0)  #nonblocking select
         if self.socket in socks[0]:
             data = socket_frame_recv(self.socket)
             return self._decode_payload(self.serial.loads(data))
