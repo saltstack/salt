@@ -74,7 +74,7 @@ class PublishModuleTest(integration.ModuleCase,
         )
         for name in check_true:
             if name not in ret['kwargs']:
-                print name
+                print(name)
             self.assertTrue(name in ret['kwargs'])
 
         self.assertEqual(ret['args'], test_args_list)
@@ -114,7 +114,7 @@ class PublishModuleTest(integration.ModuleCase,
         )
         for name in check_true:
             if name not in ret:
-                print name
+                print(name)
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
