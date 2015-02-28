@@ -38,7 +38,7 @@ class PublishModuleTest(integration.ModuleCase,
         )
         for name in check_true:
             if name not in ret:
-                print name
+                print(name)
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
