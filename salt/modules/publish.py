@@ -24,6 +24,20 @@ def __virtual__():
     return __virtualname__ if __opts__.get('transport', '') == 'zeromq' else False
 
 
+def _parse_args(arg):
+    '''
+    yamlify `arg` and ensure it's outermost datatype is a list
+    '''
+    yaml_args = salt.utils.args.yamlify_arg(arg)
+
+    if yaml_args is None:
+        return []
+    elif not isinstance(yaml_args, list):
+        return [yaml_args]
+    else:
+        return yaml_args
+
+
 def _publish(
         tgt,
         fun,
@@ -56,12 +70,7 @@ def _publish(
         log.info('Cannot publish publish calls. Returning {}')
         return {}
 
-    if not isinstance(arg, list):
-        arg = [salt.utils.args.yamlify_arg(arg)]
-    else:
-        arg = [salt.utils.args.yamlify_arg(x) for x in arg]
-    if len(arg) == 1 and arg[0] is None:
-        arg = []
+    arg = _parse_args(arg)
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
@@ -246,12 +255,7 @@ def runner(fun, arg=None, timeout=5):
 
         salt publish.runner manage.down
     '''
-    if not isinstance(arg, list):
-        arg = [salt.utils.args.yamlify_arg(arg)]
-    else:
-        arg = [salt.utils.args.yamlify_arg(x) for x in arg]
-    if len(arg) == 1 and arg[0] is None:
-        arg = []
+    arg = _parse_args(arg)
 
     if 'master_uri' not in __opts__:
         return 'No access to master. If using salt-call with --local, please remove.'
