@@ -95,6 +95,10 @@ class TCPPubChannel(salt.transport.client.PubChannel):
         return self._socket
 
     @property
+    def poll_key(self):
+        return self._socket.fileno()
+
+    @property
     def master_pub(self):
         '''
         Return the master publish port

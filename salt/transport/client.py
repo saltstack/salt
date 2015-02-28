@@ -104,4 +104,11 @@ class PubChannel(object):
         '''
         raise NotImplementedError()
 
+    @property
+    def poll_key(self):
+        '''
+        Return the representation that the poller will return
+        '''
+        raise NotImplementedError()
+
 # EOF

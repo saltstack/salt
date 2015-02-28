@@ -282,6 +282,10 @@ class ZeroMQPubChannel(salt.transport.client.PubChannel):
     def socket(self):
         return self._socket
 
+    @property
+    def poll_key(self):
+        return self.socket
+
 
 class ZeroMQReqServerChannel(salt.transport.server.ReqServerChannel):
     def zmq_device(self):
