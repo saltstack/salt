@@ -3376,7 +3376,7 @@ def cmd_run_all(name, *args, **kw):
 
 
 def cmd_run(name, *args, **kw):
-    Historical function, do not use it anymore -> use run
+    # Historical function, do not use it anymore -> use run
     return _wrapper_cmd('run', name, *args, **kw)
 
 
