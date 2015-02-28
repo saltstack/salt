@@ -1592,7 +1592,7 @@ class Minion(MinionBase):
                 # TODO: rename?? Maybe do_pub_recv and take a list of them?
                 # for some reason, native FDs sometimes return event 5, whatever that is...
                 if socks.get(self.pub_channel.poll_key):
-                    print ('got stuff from pub_channel')
+                    print ('got stuff from pub_channel', socks)
                     self._do_socket_recv()
 
                 # Check the event system

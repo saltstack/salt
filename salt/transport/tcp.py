@@ -1,5 +1,13 @@
 '''
-Zeromq transport classes
+TCP transport classes
+
+
+
+Wire protocol:
+
+    #### msg
+    # == len of msg
+
 '''
 
 import socket
@@ -32,18 +40,43 @@ from collections import defaultdict
 
 import salt.transport.client
 import salt.transport.server
+import salt.transport.mixins.auth
 
+# for IPC (for now)
 import zmq
 
 log = logging.getLogger(__name__)
 
+
+# TODO: put in some lib?
+def frame_msg(msg):
+    return '{0} {1}'.format(len(msg), msg)
+
+def unframe_msg(frame):
+    '''
+    Return a tuple of (remaining_bits, msg)
+    '''
+    msg_len, msg = frame.split(' ', 1)
+
+    return (int(msg_len) - len(msg), msg)
+
+def socket_frame_recv(socket, recv_size=4096):
+    '''
+    Retrieve a frame from socket
+    '''
+    ret_frame = socket.recv(recv_size)
+    remain, ret_msg = unframe_msg(ret_frame)
+    while remain > 0:
+        data = socket.recv(recv_size)
+        ret_msg += data
+        remain -= len(data)
+    return ret_msg
 
 class TCPReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to tcp.
 
     TODO:
-        - add crypto-- clear for starters
         - add timeouts
         - keepalive?
     '''
@@ -53,29 +86,84 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
 
         self.serial = salt.payload.Serial(self.opts)
 
+        # crypt defaults to 'aes'
+        self.crypt = kwargs.get('crypt', 'aes')
+
+        if self.crypt != 'clear':
+            # we don't need to worry about auth as a kwarg, since its a singleton
+            self.auth = salt.crypt.SAuth(self.opts)
+
     @property
     def master_addr(self):
         # TODO: opts...
         return ('127.0.0.1',
                 4506)
 
+    def _package_load(self, load):
+        return self.serial.dumps({
+            'enc': self.crypt,
+            'load': load,
+        })
+
+    @property
+    def socket(self):
+        if not hasattr(self, '_socket'):
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._socket.connect(self.master_addr)
+        return self._socket
+
+    def _send_recv(self, msg):
+        '''
+        Do a blocking send/recv combo
+        '''
+        self.socket.send(frame_msg(msg))
+        return socket_frame_recv(self.socket)
+
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
-        return self.send(load, tries=tries, timeout=timeout)
+        # send msg
+        ret = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)))
+        # wait for response
+        ret = self.serial.loads(ret)
+        key = self.auth.get_keys()
+        aes = key.private_decrypt(ret['key'], 4)
+        pcrypt = salt.crypt.Crypticle(self.opts, aes)
+        return pcrypt.loads(ret[dictkey])
+
+    def _crypted_transfer(self, load, tries=3, timeout=60):
+        '''
+        In case of authentication errors, try to renegotiate authentication
+        and retry the method.
+        Indeed, we can fail too early in case of a master restart during a
+        minion state execution call
+        '''
+        def _do_transfer():
+            data = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)))
+            data = self.serial.loads(data)
+            # we may not have always data
+            # as for example for saltcall ret submission, this is a blind
+            # communication, we do not subscribe to return events, we just
+            # upload the results to the master
+            if data:
+                data = self.auth.crypticle.loads(data)
+            return data
+        try:
+            return _do_transfer()
+        except salt.crypt.AuthenticationError:
+            self.auth.authenticate()
+            return _do_transfer()
+
+    def _uncrypted_transfer(self, load, tries=3, timeout=60):
+        ret = self._send_recv(self._package_load(load))
+        return self.serial.loads(ret)
 
     def send(self, load, tries=3, timeout=60):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # connect
-        s.connect(self.master_addr)
-        # send msg
-        s.send(self.serial.dumps(load))
-        # wait for response
-        data = s.recv(self.recv_size)
-        s.close()
-        print self.master_addr, len(self.serial.dumps(load))
-        return self.serial.loads(data)
+        if self.crypt == 'clear':  # for sign-in requests
+            return self._uncrypted_transfer(load, tries, timeout)
+        else:  # for just about everything else
+            return self._crypted_transfer(load, tries, timeout)
 
 
-class TCPPubChannel(salt.transport.client.PubChannel):
+class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
     recv_size = 16384
 
     def __init__(self,
@@ -83,6 +171,7 @@ class TCPPubChannel(salt.transport.client.PubChannel):
                  **kwargs):
         self.opts = opts
 
+        self.auth = salt.crypt.SAuth(self.opts)
         self.serial = salt.payload.Serial(self.opts)
 
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -106,13 +195,6 @@ class TCPPubChannel(salt.transport.client.PubChannel):
         return (self.opts['master_ip'],
                 4505)
 
-    def _verify_master_signature(self, payload):
-        if payload.get('sig') and self.opts.get('sign_pub_messages'):
-            # Verify that the signature is valid
-            master_pubkey_path = os.path.join(self.opts['pki_dir'], 'minion_master.pub')
-            if not salt.crypt.verify_signature(master_pubkey_path, load, payload.get('sig')):
-                raise salt.crypt.AuthenticationError('Message signature failed to validate.')
-
     def recv(self, timeout=0):
         '''
         Get a pub job, with an optional timeout (0==forever)
@@ -121,8 +203,8 @@ class TCPPubChannel(salt.transport.client.PubChannel):
             timeout = None
         socks = select.select([self.socket], [], [], timeout)
         if self.socket in socks[0]:
-            data = self.socket.recv(self.recv_size)
-            return self.serial.loads(data)
+            data = socket_frame_recv(self.socket)
+            return self._decode_payload(self.serial.loads(data))
         else:
             return None
 
@@ -134,13 +216,13 @@ class TCPPubChannel(salt.transport.client.PubChannel):
         print ('noblock get??')
         socks = select.select([self.socket], [], [], 0)  #nonblocking select
         if self.socket in socks[0]:
-            data = self.socket.recv(self.recv_size)
-            return self.serial.loads(data)
+            data = socket_frame_recv(self.socket)
+            return self._decode_payload(self.serial.loads(data))
         else:
             return None
 
 
-class TCPReqServerChannel(salt.transport.server.ReqServerChannel):
+class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel):
     # TODO: opts!
     backlog = 5
     size = 16384
@@ -153,6 +235,7 @@ class TCPReqServerChannel(salt.transport.server.ReqServerChannel):
         '''
         Pre-fork we need to create the zmq router device
         '''
+        salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
@@ -167,16 +250,7 @@ class TCPReqServerChannel(salt.transport.server.ReqServerChannel):
 
 
         self.serial = salt.payload.Serial(self.opts)
-        # other things needed for _auth
-        # Create the event manager
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
-        self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
-
-        self.master_key = salt.crypt.MasterKeys(self.opts)
-
-    def payload_wrap(self, load):
-        return {'enc': 'aes',
-                'load': load}
+        salt.transport.mixins.auth.AESReqServerMixin.post_fork(self)
 
     def recv(self, timeout=0):
         '''
@@ -184,13 +258,19 @@ class TCPReqServerChannel(salt.transport.server.ReqServerChannel):
         '''
         if timeout == 0:
             timeout = None
-        log.error('recv')
         socks = select.select([self.socket], [], [], timeout)
         if self.socket in socks[0]:
             self.client, address = self.socket.accept()
             print (address)
-            data = self.client.recv(self.size)
-            return self.payload_wrap(self.serial.loads(data))
+
+            payload = socket_frame_recv(self.client)
+            payload = self.serial.loads(payload)
+            payload = self._decode_payload(payload)
+            # if timeout was 0 and we got a None, we intercepted the job,
+            # so just queue up another recv()
+            if payload is None and timeout == None:
+                return self.recv(timeout=timeout)
+            return payload
         else:
             return None
 
@@ -199,12 +279,13 @@ class TCPReqServerChannel(salt.transport.server.ReqServerChannel):
         Get a req job in a non-blocking manner.
         Return load or None
         '''
-        log.error('recv_noblock')
         socks = select.select([self.socket], [], [], 0)
         if self.socket in socks[0]:
             self.client, address = self.socket.accept()
-            data = self.client.recv(self.size)
-            return self.payload_wrap(self.serial.loads(data))
+            package = socket_frame_recv(self.client)
+            payload = self.serial.loads(package)
+            payload = self._decode_payload(payload)
+            return payload
         else:
             return None
 
@@ -212,27 +293,9 @@ class TCPReqServerChannel(salt.transport.server.ReqServerChannel):
         '''
         Helper function to serialize and send payload
         '''
-        self.client.send(self.serial.dumps(payload))
+        self.client.send(frame_msg(self.serial.dumps(payload)))
         self.client.close()
         self.client = None
-
-    def send_clear(self, payload):
-        '''
-        Send a response to a recv()'d payload
-        '''
-        self._send(payload)
-
-    def send(self, payload):
-        '''
-        Send a response to a recv()'d payload
-        '''
-        self._send(payload)
-
-    def send_private(self, payload, dictkey, target):
-        '''
-        Send a response to a recv()'d payload encrypted privately for target
-        '''
-        self._send(payload)
 
 
 class TCPPubServerChannel(salt.transport.server.PubServerChannel):
@@ -291,7 +354,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
                     # is it a publish job?
                     elif pull_sock in socks and socks[pull_sock] == zmq.POLLIN:
                         package = pull_sock.recv()
-                        payload = salt.payload.unpackage(package)['payload']
+                        payload = frame_msg(salt.payload.unpackage(package)['payload'])
                         print ('clients', clients)
                         for s in clients:
                             s.send(payload)
@@ -325,11 +388,8 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         payload = {'enc': 'aes'}
 
-
-        # TODO: re-enable
-        #crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
-        #payload['load'] = crypticle.dumps(load)
-        payload['load'] = load
+        crypticle = salt.crypt.Crypticle(self.opts, salt.master.SMaster.secrets['aes']['secret'].value)
+        payload['load'] = crypticle.dumps(load)
         if self.opts['sign_pub_messages']:
             master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
             log.debug("Signing data packet")

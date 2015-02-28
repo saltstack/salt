@@ -720,8 +720,6 @@ class MWorker(multiprocessing.Process):
         '''
         key = payload['enc']
         load = payload['load']
-        if load['cmd'] in dir(ClearFuncs):
-            key = 'clear'
         return {'aes': self._handle_aes,
                 'clear': self._handle_clear}[key](load)
 
