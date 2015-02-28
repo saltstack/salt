@@ -98,7 +98,6 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt.exceptions import SaltException
 from salt.ext.six import string_types
 from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
@@ -154,7 +153,7 @@ def _verify_gitpython(quiet=False):
             )
             _recommend()
         return False
-    # pylint: disable=no-member
+
     gitver = distutils.version.LooseVersion(git.__version__)
     minver_str = '0.3.0'
     minver = distutils.version.LooseVersion(minver_str)

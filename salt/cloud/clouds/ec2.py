@@ -91,15 +91,6 @@ import salt.ext.six as six
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
 # pylint: enable=no-name-in-module
-# Try to import PyCrypto, which may not be installed on a RAET-based system
-try:
-    import Crypto
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    HAS_PYCRYPTO = True
-except ImportError:
-    HAS_PYCRYPTO = False
-# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils

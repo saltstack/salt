@@ -27,6 +27,7 @@ import random
 import salt.ext.six as six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
+
 # Import salt libs
 import salt
 import salt.utils.odict
@@ -2817,105 +2818,57 @@ def _run(name,
     '''
     Common logic for lxc.run functions
     '''
-    _ensure_exists(name)
-    valid_output = ('stdout', 'stderr', 'retcode', 'all')
-    if output is None:
-        cmd_func = 'cmd.run'
-    elif output not in valid_output:
-        raise SaltInvocationError(
-            '\'output\' param must be one of the following: {0}'
-            .format(', '.join(valid_output))
-        )
-    else:
-        cmd_func = 'cmd.run_all'
-
     orig_state = state(name)
-    if _ensure_running(name, no_start=no_start) is False:
-        raise CommandExecutionError(
-            'Container \'{0}\' is not running'.format(name)
-        )
-    if attachable(name):
-        if isinstance(keep_env, salt._compat.string_types):
-            keep_env = keep_env.split(',')
-        env = ' '.join('--set-var {0}={1}'.format(
-                       x, pipes.quote(os.environ[x]))
-                       for x in keep_env if x in os.environ)
-        if 'PATH' not in keep_env:
-            # --clear-env results in a very restrictive PATH (/bin:/usr/bin),
-            # use the below path instead to prevent
-            env += ' --set-var {0}'.format(PATH)
+    try:
+        if attachable(name):
+            if isinstance(keep_env, salt._compat.string_types):
+                keep_env = keep_env.split(',')
+            env = ' '.join(
+                ['--set-var {0}={1}'.format(x, pipes.quote(os.environ[x]))
+                 for x in keep_env
+                 if x in os.environ]
+            )
+            if 'PATH' not in keep_env:
+                # --clear-env results in a very restrictive PATH (/bin:/usr/bin),
+                # use the below path instead to prevent
+                env += ' --set-var {0}'.format(PATH)
 
-        cmd = (
-            'lxc-attach --clear-env {0} -n {1} -- {2}'
-            .format(env, pipes.quote(name), cmd)
-        )
+            full_cmd = (
+                'lxc-attach --clear-env {0} -n {1} -- {2}'
+                .format(env, pipes.quote(name), cmd)
+            )
 
-        if not use_vt:
-            ret = __salt__[cmd_func](cmd,
-                                     stdin=stdin,
-                                     python_shell=python_shell,
-                                     output_loglevel=output_loglevel,
-                                     ignore_retcode=ignore_retcode)
+            ret = __salt__['container_resource.run'](
+                name,
+                full_cmd,
+                output=output,
+                no_start=no_start,
+                stdin=stdin,
+                python_shell=python_shell,
+                output_loglevel=output_loglevel,
+                ignore_retcode=ignore_retcode,
+                use_vt=use_vt)
         else:
-            stdout, stderr = '', ''
-            try:
-                proc = vt.Terminal(cmd,
-                                   shell=python_shell,
-                                   log_stdin_level=output_loglevel if
-                                                   output_loglevel == 'quiet'
-                                                   else 'info',
-                                   log_stdout_level=output_loglevel,
-                                   log_stderr_level=output_loglevel,
-                                   log_stdout=True,
-                                   log_stderr=True,
-                                   stream_stdout=False,
-                                   stream_stderr=False)
-                # Consume output
-                while proc.has_unread_data:
-                    try:
-                        cstdout, cstderr = proc.recv()
-                        if cstdout:
-                            stdout += cstdout
-                        if cstderr:
-                            if output is None:
-                                stdout += cstderr
-                            else:
-                                stderr += cstderr
-                        time.sleep(0.5)
-                    except KeyboardInterrupt:
-                        break
-                ret = stdout if output is None \
-                    else {'retcode': proc.exitstatus,
-                          'pid': 2,
-                          'stdout': stdout,
-                          'stderr': stderr}
-            except vt.TerminalException:
-                trace = traceback.format_exc()
-                log.error(trace)
-                ret = stdout if output is None \
-                    else {'retcode': 127,
-                          'pid': '2',
-                          'stdout': stdout,
-                          'stderr': stderr}
-            finally:
-                proc.close(terminate=True, kill=True)
-    else:
-        rootfs = info(name).get('rootfs')
-        # Set context var to make cmd.run_chroot run cmd.run instead of
-        # cmd.run_all.
-        __context__['cmd.run_chroot.func'] = __salt__['cmd.run']
-        ret = __salt__['cmd.run_chroot'](rootfs,
-                                         cmd,
-                                         stdin=stdin,
-                                         python_shell=python_shell,
-                                         output_loglevel=output_loglevel,
-                                         ignore_retcode=ignore_retcode)
-
-    if preserve_state:
-        if orig_state == 'stopped':
-            stop(name)
-        elif orig_state == 'frozen':
-            freeze(name)
+            rootfs = info(name).get('rootfs')
+            # Set context var to make cmd.run_chroot run cmd.run instead of
+            # cmd.run_all.
+            __context__['cmd.run_chroot.func'] = __salt__['cmd.run']
+            ret = __salt__['cmd.run_chroot'](rootfs,
+                                             cmd,
+                                             stdin=stdin,
+                                             python_shell=python_shell,
+                                             output_loglevel=output_loglevel,
+                                             ignore_retcode=ignore_retcode)
+    except Exception:
+        raise
+    finally:
+        # Make sure we honor preserve_state, even if there was an exception
+        new_state = state(name)
+        if preserve_state:
+            if orig_state == 'stopped' and new_state != 'stopped':
+                stop(name)
+            elif orig_state == 'frozen' and new_state != 'frozen':
+                freeze(name, start=True)
 
     if output in (None, 'all'):
         return ret
