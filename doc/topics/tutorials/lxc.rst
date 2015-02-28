@@ -420,15 +420,15 @@ New functions have been added to mimic the behavior of the functions in the
 equivalents:
 
 
-======================================= ====================================================== ===========================================================
+======================================= ====================================================== ===================================================
 Description                             :mod:`cmd <salt.modules.cmdmod>` module                :mod:`lxc <salt.modules.lxc>` module
-======================================= ====================================================== ===========================================================
-Run a command and get all output        :mod:`cmd.run <salt.modules.cmdmod.run>`               :mod:`lxc.cmd_run <salt.modules.lxc.cmd_run>`
-Run a command and get just stdout       :mod:`cmd.run_stdout <salt.modules.cmdmod.run_stdout>` :mod:`lxc.cmd_run_stdout <salt.modules.lxc.cmd_run_stdout>`
-Run a command and get just stderr       :mod:`cmd.run_stderr <salt.modules.cmdmod.run_stderr>` :mod:`lxc.cmd_run_stderr <salt.modules.lxc.cmd_run_stderr>`
-Run a command and get just the retcode  :mod:`cmd.retcode <salt.modules.cmdmod.retcode>`       :mod:`lxc.cmd_retcode <salt.modules.lxc.cmd_retcode>`
-Run a command and get all information   :mod:`cmd.run_all <salt.modules.cmdmod.run_all>`       :mod:`lxc.cmd_run_all <salt.modules.lxc.cmd_run_all>`
-======================================= ====================================================== ===========================================================
+======================================= ====================================================== ===================================================
+Run a command and get all output        :mod:`cmd.run <salt.modules.cmdmod.run>`               :mod:`lxc.run <salt.modules.lxc.run>`
+Run a command and get just stdout       :mod:`cmd.run_stdout <salt.modules.cmdmod.run_stdout>` :mod:`lxc.run_stdout <salt.modules.lxc.run_stdout>`
+Run a command and get just stderr       :mod:`cmd.run_stderr <salt.modules.cmdmod.run_stderr>` :mod:`lxc.run_stderr <salt.modules.lxc.run_stderr>`
+Run a command and get just the retcode  :mod:`cmd.retcode <salt.modules.cmdmod.retcode>`       :mod:`lxc.retcode <salt.modules.lxc.retcode>`
+Run a command and get all information   :mod:`cmd.run_all <salt.modules.cmdmod.run_all>`       :mod:`lxc.run_all <salt.modules.lxc.run_all>`
+======================================= ====================================================== ===================================================
 
 
 2014.7.x and Earlier
