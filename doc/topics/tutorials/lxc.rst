@@ -208,7 +208,23 @@ will directly correspond to a parameter in an LXC configuration file (see ``man
 - **flags** - Corresponds to **lxc.network.flags**
 
 Interface-specific options (MAC address, IPv4/IPv6, etc.) must be passed on a
-container-by-container basis.
+container-by-container basis, for instance using the ``nic_opts`` argument to
+:mod:`lxc.create <salt.modules.lxc.create>`:
+
+.. code-block:: bash
+
+    salt myminion lxc.create container1 profile=centos network_profile=centos nic_opts='{eth0: {ipv4: 10.0.0.20/24, gateway: 10.0.0.1}}'
+
+.. warning::
+
+    The ``ipv4``, ``ipv6``, ``gateway``, and ``link`` (bridge) settings in
+    network profiles / nic_opts will only work if the container doesnt redefine
+    the network configuration (for example in
+    ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on RHEL/CentOS,
+    or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.). Use these with
+    caution. The container images installed using the ``download`` template,
+    for instance, typically are configured for eth0 to use DHCP, which will
+    conflict with static IP addresses set at the container level.
 
 
 Creating a Container on the CLI
@@ -404,15 +420,15 @@ New functions have been added to mimic the behavior of the functions in the
 equivalents:
 
 
-======================================= ====================================================== ===========================================================
+======================================= ====================================================== ===================================================
 Description                             :mod:`cmd <salt.modules.cmdmod>` module                :mod:`lxc <salt.modules.lxc>` module
-======================================= ====================================================== ===========================================================
-Run a command and get all output        :mod:`cmd.run <salt.modules.cmdmod.run>`               :mod:`lxc.cmd_run <salt.modules.lxc.cmd_run>`
-Run a command and get just stdout       :mod:`cmd.run_stdout <salt.modules.cmdmod.run_stdout>` :mod:`lxc.cmd_run_stdout <salt.modules.lxc.cmd_run_stdout>`
-Run a command and get just stderr       :mod:`cmd.run_stderr <salt.modules.cmdmod.run_stderr>` :mod:`lxc.cmd_run_stderr <salt.modules.lxc.cmd_run_stderr>`
-Run a command and get just the retcode  :mod:`cmd.retcode <salt.modules.cmdmod.retcode>`       :mod:`lxc.cmd_retcode <salt.modules.lxc.cmd_retcode>`
-Run a command and get all information   :mod:`cmd.run_all <salt.modules.cmdmod.run_all>`       :mod:`lxc.cmd_run_all <salt.modules.lxc.cmd_run_all>`
-======================================= ====================================================== ===========================================================
+======================================= ====================================================== ===================================================
+Run a command and get all output        :mod:`cmd.run <salt.modules.cmdmod.run>`               :mod:`lxc.run <salt.modules.lxc.run>`
+Run a command and get just stdout       :mod:`cmd.run_stdout <salt.modules.cmdmod.run_stdout>` :mod:`lxc.run_stdout <salt.modules.lxc.run_stdout>`
+Run a command and get just stderr       :mod:`cmd.run_stderr <salt.modules.cmdmod.run_stderr>` :mod:`lxc.run_stderr <salt.modules.lxc.run_stderr>`
+Run a command and get just the retcode  :mod:`cmd.retcode <salt.modules.cmdmod.retcode>`       :mod:`lxc.retcode <salt.modules.lxc.retcode>`
+Run a command and get all information   :mod:`cmd.run_all <salt.modules.cmdmod.run_all>`       :mod:`lxc.run_all <salt.modules.lxc.run_all>`
+======================================= ====================================================== ===================================================
 
 
 2014.7.x and Earlier
