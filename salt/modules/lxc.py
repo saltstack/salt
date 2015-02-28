@@ -10,7 +10,6 @@ lxc >= 1.0 (even beta alpha) is required
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import traceback
 import datetime
 import pipes
 import copy
@@ -29,7 +28,6 @@ import salt.utils.odict
 import salt.utils
 import salt.utils.dictupdate
 import salt.utils.network
-from salt.utils import vt
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.cloud
 import salt.config

@@ -98,7 +98,6 @@ _INVALID_REPO = (
 # Import salt libs
 import salt.utils
 import salt.fileserver
-from salt.ext.six import string_types
 from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
 
@@ -1051,7 +1050,7 @@ def clear_lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
                     continue
         success, failed = _do_clear_lock(repo)
         cleared.extend(success)
@@ -1097,7 +1096,7 @@ def lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
                     continue
         success, failed = _do_lock(repo)
         locked.extend(success)
@@ -1426,7 +1425,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                         # this path's object ID will be the target of the
                         # symlink. Follow the symlink and set repo_path to the
                         # location indicated in the blob data.
-                        stream = StringIO()
+                        stream = six.StringIO()
                         file_blob.stream_data(stream)
                         stream.seek(0)
                         link_tgt = stream.read()
