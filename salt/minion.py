@@ -1534,7 +1534,7 @@ class Minion(MinionBase):
         self.event_publisher = salt.utils.event.PollingEventPublisher(self.opts)
 
         self.poller.register(self.event_publisher.socket, zmq.POLLIN)
-        self.pub_channel.register_poller(self.poller)
+        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')

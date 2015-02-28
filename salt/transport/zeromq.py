@@ -258,10 +258,6 @@ class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transp
     def poll_key(self):
         return self.socket
 
-    def register_poller(self, poller):
-        self.poller = poller
-        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
-
 
 class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel):
     def zmq_device(self):

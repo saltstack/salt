@@ -21,6 +21,7 @@ import errno
 import hashlib
 import ctypes
 import multiprocessing
+import urlparse  # TODO: remove
 
 from M2Crypto import RSA
 
@@ -84,7 +85,6 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
 
     TODO:
         - add timeouts
-        - keepalive?
     '''
     recv_size = 16384
     def __init__(self, opts, **kwargs):
@@ -99,11 +99,9 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.SAuth(self.opts)
 
-    @property
-    def master_addr(self):
-        # TODO: opts...
-        return ('127.0.0.1',
-                4506)
+        parse = urlparse.urlparse(self.opts['master_uri'])
+        host, port = parse.netloc.rsplit(':', 1)
+        self.master_addr = (host, int(port))
 
     def _package_load(self, load):
         return self.serial.dumps({
@@ -193,17 +191,13 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
     def poll_key(self):
         return self._socket.fileno()
 
-    def register_poller(self, poller):
-        self.poller = poller
-        self.poller.register(self.socket, zmq.POLLIN)
-
     @property
     def master_pub(self):
         '''
         Return the master publish port
         '''
         return (self.opts['master_ip'],
-                4505)
+                int(self.auth.creds['publish_port']))
 
     def recv(self, timeout=0):
         '''
