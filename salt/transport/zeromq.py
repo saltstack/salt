@@ -30,6 +30,7 @@ import zmq
 
 log = logging.getLogger(__name__)
 
+
 class ZeroMQReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to ZeroMQ.
@@ -346,7 +347,6 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         self._socket
 
 
-
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
@@ -464,14 +464,3 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             int_payload['topic_lst'] = load['tgt']
 
         pub_sock.send(self.serial.dumps(int_payload))
-
-
-
-
-
-
-
-
-
-
-# EOF
