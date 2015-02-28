@@ -17,7 +17,9 @@ import salt.loader
 import salt.utils
 
 # Import 3rd-party libs
+from salt.ext.six import string_types
 import salt.ext.six as six
+
 
 log = logging.getLogger(__name__)
 
@@ -285,11 +287,22 @@ class Fileserver(object):
         ret = []
         if not back:
             back = self.opts['fileserver_backend']
-        if isinstance(back, str):
-            back = [back]
-        for sub in back:
-            if '{0}.envs'.format(sub) in self.servers:
-                ret.append(sub)
+        if isinstance(back, string_types):
+            back = back.split(',')
+        if all((x.startswith('-') for x in back)):
+            # Only subtracting backends from enabled ones
+            ret = self.opts['fileserver_backend']
+            for sub in back:
+                if '{0}.envs'.format(sub[1:]) in self.servers:
+                    ret.remove(sub[1:])
+                elif '{0}.envs'.format(sub[1:-2]) in self.servers:
+                    ret.remove(sub[1:-2])
+        else:
+            for sub in back:
+                if '{0}.envs'.format(sub) in self.servers:
+                    ret.append(sub)
+                elif '{0}.envs'.format(sub[:-2]) in self.servers:
+                    ret.append(sub[:-2])
         return ret
 
     def master_opts(self, load):
@@ -298,21 +311,98 @@ class Fileserver(object):
         '''
         return self.opts
 
+    def clear_cache(self, back=None):
+        '''
+        Clear the cache of all of the fileserver backends that support the
+        clear_cache function or the named backend(s) only.
+        '''
+        back = self._gen_back(back)
+        cleared = []
+        errors = []
+        for fsb in back:
+            fstr = '{0}.clear_cache'.format(fsb)
+            if fstr in self.servers:
+                log.debug('Clearing {0} fileserver cache'.format(fsb))
+                failed = self.servers[fstr]()
+                if failed:
+                    errors.extend(failed)
+                else:
+                    cleared.append(
+                        'The {0} fileserver cache was successfully cleared'
+                        .format(fsb)
+                    )
+        return cleared, errors
+
+    def lock(self, back=None, remote=None):
+        '''
+        ``remote`` can either be a dictionary containing repo configuration
+        information, or a pattern. If the latter, then remotes for which the URL
+        matches the pattern will be locked.
+        '''
+        back = self._gen_back(back)
+        locked = []
+        errors = []
+        for fsb in back:
+            fstr = '{0}.lock'.format(fsb)
+            if fstr in self.servers:
+                msg = 'Setting update lock for {0} remotes'.format(fsb)
+                if remote:
+                    if not isinstance(remote, string_types):
+                        errors.append(
+                            'Badly formatted remote pattern \'{0}\''
+                            .format(remote)
+                        )
+                        continue
+                    else:
+                        msg += ' matching {0}'.format(remote)
+                log.debug(msg)
+                good, bad = self.servers[fstr](remote=remote)
+                locked.extend(good)
+                errors.extend(bad)
+        return locked, errors
+
+    def clear_lock(self, back=None, remote=None):
+        '''
+        Clear the update lock for the enabled fileserver backends
+
+        back
+            Only clear the update lock for the specified backend(s). The
+            default is to clear the lock for all enabled backends
+
+        remote
+            If not None, then any remotes which contain the passed string will
+            have their lock cleared.
+        '''
+        back = self._gen_back(back)
+        cleared = []
+        errors = []
+        for fsb in back:
+            fstr = '{0}.clear_lock'.format(fsb)
+            if fstr in self.servers:
+                msg = 'Clearing update lock for {0} remotes'.format(fsb)
+                if remote:
+                    msg += ' matching {0}'.format(remote)
+                log.debug(msg)
+                good, bad = self.servers[fstr](remote=remote)
+                cleared.extend(good)
+                errors.extend(bad)
+        return cleared, errors
+
     def update(self, back=None):
         '''
-        Update all of the file-servers that support the update function or the
-        named fileserver only.
+        Update all of the enabled fileserver backends which support the update
+        function, or
         '''
         back = self._gen_back(back)
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
-                log.debug('Updating fileserver cache')
+                log.debug('Updating {0} fileserver cache'.format(fsb))
                 self.servers[fstr]()
 
     def envs(self, back=None, sources=False):
         '''
-        Return the environments for the named backend or all back-ends
+        Return the environments for the named backend or all backends
         '''
         back = self._gen_back(back)
         ret = set()
@@ -448,7 +538,7 @@ class Fileserver(object):
         ret = set()
         if 'saltenv' not in load:
             return []
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -504,7 +594,7 @@ class Fileserver(object):
         ret = set()
         if 'saltenv' not in load:
             return []
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
@@ -532,7 +622,7 @@ class Fileserver(object):
         ret = {}
         if 'saltenv' not in load:
             return {}
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)

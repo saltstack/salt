@@ -91,15 +91,6 @@ import salt.ext.six as six
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
 # pylint: enable=no-name-in-module
-# Try to import PyCrypto, which may not be installed on a RAET-based system
-try:
-    import Crypto
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    HAS_PYCRYPTO = True
-except ImportError:
-    HAS_PYCRYPTO = False
-# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
@@ -118,6 +109,16 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+
+# Try to import PyCrypto, which may not be installed on a RAET-based system
+try:
+    import Crypto
+    # PKCS1_v1_5 was added in PyCrypto 2.5
+    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
+    HAS_PYCRYPTO = True
+except ImportError:
+    HAS_PYCRYPTO = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -2070,6 +2071,8 @@ def create(vm_=None, call=None):
             )
         )
     vm_['key_filename'] = key_filename
+    # wait_for_instance requires private_key
+    vm_['private_key'] = key_filename
 
     # Get SSH Gateway config early to verify the private_key,
     # if used, exists or not. We don't want to deploy an instance
