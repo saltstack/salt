@@ -21,7 +21,7 @@ class ManageTest(integration.ShellCase):
         fileserver.dir_list
         '''
         ret = self.run_run_plus(fun='fileserver.dir_list')
-        self.assertIsInstance(ret['fun'], dict)
+        self.assertIsInstance(ret['fun'], list)
 
     def test_envs(self):
         '''
@@ -38,7 +38,7 @@ class ManageTest(integration.ShellCase):
         fileserver.file_list
         '''
         ret = self.run_run_plus(fun='fileserver.file_list')
-        self.assertIsInstance(ret['fun'], dict)
+        self.assertIsInstance(ret['fun'], list)
 
     def test_symlink_list(self):
         '''
