@@ -3338,6 +3338,9 @@ def run_all(name,
 
 
 def _wrapper_cmd(func, *args, **kw):
+    '''
+    cmd_alike historical wrapper (compat)
+    '''
     # no plan to remove, just warn
     log.warn(
         'lxc.cmd_{0} has been renamed to lxc.{0},'
@@ -3351,22 +3354,32 @@ def _wrapper_cmd(func, *args, **kw):
 
 
 def cmd_run_stdout(name, *args, **kw):
+    # cmd_alike historical wrapper (compat)
+    # no doctstring to avoid autodoc
     return _wrapper_cmd('run_stdout', name, *args, **kw)
 
 
 def cmd_run_stderr(name, *args, **kw):
+    # cmd_alike historical wrapper (compat)
+    # no doctstring to avoid autodoc
     return _wrapper_cmd('run_stderr', name, *args, **kw)
 
 
 def cmd_run_all(name, *args, **kw):
+    # cmd_alike historical wrapper (compat)
+    # no doctstring to avoid autodoc
     return _wrapper_cmd('run_all', name, *args, **kw)
 
 
 def cmd_run(name, *args, **kw):
+    # cmd_alike historical wrapper (compat)
+    # no doctstring to avoid autodoc
     return _wrapper_cmd('run', name, *args, **kw)
 
 
 def cmd_retcode(name, *args, **kw):
+    # cmd_alike historical wrapper (compat)
+    # no doctstring to avoid autodoc
     return _wrapper_cmd('retcode', name, *args, **kw)
 
 
