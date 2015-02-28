@@ -96,6 +96,7 @@ try:
     import Crypto
     # PKCS1_v1_5 was added in PyCrypto 2.5
     from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
     HAS_PYCRYPTO = True
 except ImportError:
     HAS_PYCRYPTO = False
@@ -2070,6 +2071,8 @@ def create(vm_=None, call=None):
             )
         )
     vm_['key_filename'] = key_filename
+    # wait_for_instance requires private_key
+    vm_['private_key'] = key_filename
 
     # Get SSH Gateway config early to verify the private_key,
     # if used, exists or not. We don't want to deploy an instance

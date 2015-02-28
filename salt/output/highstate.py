@@ -265,7 +265,7 @@ def _format_host(host, data):
                     subsequent_indent=u' ' * 14
                 )
                 hstrs.append(
-                    u'   {colors[YELLOW]} Warnings: {0}{colors[ENDC]}'.format(
+                    u'   {colors[LIGHT_RED]} Warnings: {0}{colors[ENDC]}'.format(
                         wrapper.fill('\n'.join(ret['warnings'])).lstrip(),
                         colors=colors
                     )
@@ -340,7 +340,7 @@ def _format_host(host, data):
         if num_warnings:
             hstrs.append(
                 colorfmt.format(
-                    colors['YELLOW'],
+                    colors['LIGHT_RED'],
                     _counts(rlabel['warnings'], num_warnings),
                     colors
                 )

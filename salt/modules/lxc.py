@@ -47,10 +47,11 @@ __func_alias__ = {
     'ls_': 'ls'
 }
 
-DEFAULT_NIC_PROFILE = {'eth0': {'link': 'br0', 'type': 'veth', 'flags': 'up'}}
+DEFAULT_NIC = 'eth0'
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
+_marker = object()
 
 
 def __virtual__():
@@ -199,10 +200,19 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         vm_ = {}
     vm_ = copy.deepcopy(vm_)
     vm_ = salt.utils.dictupdate.update(vm_, kwargs)
-    profile = get_container_profile(vm_.get('profile'))
+    if 'profile' in vm_:
+        profile_data = copy.deepcopy(vm_['profile'])
+        if isinstance(profile_data, dict):
+            profile_name = profile_data.pop('name', name)
+        else:
+            # assuming profile is a string (profile name)
+            profile_name = profile_data
+            profile_data = {}
+        profile = get_container_profile(profile_name, **profile_data)
+    else:
+        profile = {}
     if name is None:
         name = vm_['name']
-    from_container = vm_.get('from_container', None)
     # if we are on ubuntu, default to ubuntu
     default_template = ''
     if __grains__.get('os', '') in ['Ubuntu']:
@@ -217,6 +227,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     if not dnsservers:
         dnsservers = ['8.8.8.8', '4.4.4.4']
     password = vm_.get('password', 's3cr3t')
+    password_encrypted = vm_.get('password_encrypted', False)
     fstype = vm_.get('fstype', None)
     lvname = vm_.get('lvname', None)
     pub_key = vm_.get('pub_key', None)
@@ -289,20 +300,25 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         for i in ('mac', 'hwaddr'):
             if i in iopts:
                 ethx['mac'] = iopts[i]
-        if 'hwaddr' not in ethx:
+                break
+        if 'mac' not in ethx:
             raise ValueError('No mac for {0}'.format(ifh))
     gateway = vm_.get('gateway', 'auto')
     #
     lxc_init_interface = {}
     lxc_init_interface['name'] = name
     lxc_init_interface['config'] = config
-    lxc_init_interface['memory'] = 0  # nolimit
+    lxc_init_interface['memory'] = vm_.get('memory', 0)  # nolimit
     lxc_init_interface['pub_key'] = pub_key
     lxc_init_interface['priv_key'] = priv_key
     lxc_init_interface['bridge'] = bridge
     lxc_init_interface['gateway'] = gateway
     lxc_init_interface['nic_opts'] = nic_opts
-    lxc_init_interface['clone'] = from_container
+    for clone_from in ['clone_from', 'clone', 'from_container']:
+        # clone_from should default to None if not available
+        lxc_init_interface['clone_from'] = vm_.get(clone_from, None)
+        if lxc_init_interface['clone_from'] is not None:
+            break
     lxc_init_interface['profile'] = profile
     lxc_init_interface['snapshot'] = snapshot
     lxc_init_interface['dnsservers'] = dnsservers
@@ -316,10 +332,15 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     )
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
-    lxc_init_interface['bootstrap_shell'] = 'sh'
+    lxc_init_interface['bootstrap_shell'] = vm_.get('bootstrap_shell', 'sh')
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
+    lxc_init_interface['password_encrypted'] = password_encrypted
+    lxc_init_interface['network_profile'] = DEFAULT_NIC
+    for i in ['cpu', 'cpuset', 'cpushare']:
+        if vm_.get(i, None):
+            lxc_init_interface[i] = vm_[i]
     return lxc_init_interface
 
 
@@ -437,6 +458,14 @@ def get_network_profile(name=None):
     <tutorial-lxc-profiles>` for more information on how to use network
     profiles.
 
+    .. warning::
+
+        The ``ipv4``, ``ipv6``, ``gateway``, and ``link`` (bridge) settings in
+        network profiles will only work if the container doesnt redefine the
+        network configuration (for example in
+        ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on
+        RHEL/CentOS, or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.)
+
     CLI Example::
 
     .. code-block:: bash
@@ -462,8 +491,7 @@ def get_network_profile(name=None):
                     'lxc.nic has been deprecated, please configure LXC '
                     'network profiles under lxc.network_profile instead'
                 )
-
-    return net_profile if net_profile is not None else DEFAULT_NIC_PROFILE
+    return net_profile if net_profile is not None else {}
 
 
 def _rand_cpu_str(cpu):
@@ -483,19 +511,38 @@ def _rand_cpu_str(cpu):
 
 
 def _network_conf(conf_tuples=None, **kwargs):
+    '''
+    Network configuration defaults
+
+        network_profile
+            as for containers, we can either call this function
+            either with a network_profile dict or network profile name
+            in the kwargs
+        nic_opts
+            overrides or extra nics in the form {nic_name: {set: tings}
+
+    '''
     nic = kwargs.pop('network_profile', None)
     ret = []
-    if not nic:
+    nic_opts = kwargs.pop('nic_opts', {})
+    if nic_opts is None:
+        # coming from elsewhere
+        nic_opts = {}
+    if not conf_tuples:
+        conf_tuples = []
+    old = _get_veths(conf_tuples)
+    if not nic and not nic_opts and not old:
         return ret
     kwargs = copy.deepcopy(kwargs)
     gateway = kwargs.pop('gateway', None)
     bridge = kwargs.get('bridge', None)
-    if not conf_tuples:
-        conf_tuples = []
 
-    if nic:
+    # if we have a profile name, get the profile and load the network settings
+    # this will obviously by default  look for a profile called "eth0"
+    # or by what is defined in nic_opts
+    # and complete each nic settings by sane defaults
+    if isinstance(nic, six.string_types):
         nicp = get_network_profile(nic)
-        nic_opts = kwargs.pop('nic_opts', {})
         if nic_opts:
             for dev, args in six.iteritems(nic_opts):
                 ethx = nicp.setdefault(dev, {})
@@ -504,33 +551,76 @@ def _network_conf(conf_tuples=None, **kwargs):
                 except AttributeError:
                     raise SaltInvocationError('Invalid nic_opts configuration')
         ifs = [a for a in nicp]
+        ifs += [a for a in old if a not in nicp]
         ifs.sort()
         gateway_set = False
         for dev in ifs:
-            args = nicp[dev]
-            ret.append({'lxc.network.type': args.pop('type', '')})
-            ret.append({'lxc.network.name': dev})
-            ret.append({'lxc.network.flags': args.pop('flags', 'up')})
-            opts = nic_opts.get(dev) if nic_opts else {}
+            args = nicp.get(dev, {})
+            opts = nic_opts.get(dev, {}) if nic_opts else {}
+            old_if = old.get(dev, {})
+            flags = opts.get('flags', '')
             mac = opts.get('mac', '')
-            if opts:
-                ipv4 = opts.get('ipv4')
-                ipv6 = opts.get('ipv6')
-            else:
-                ipv4, ipv6 = None, None
-                if not mac:
-                    mac = salt.utils.gen_mac()
-            if mac:
-                ret.append({'lxc.network.hwaddr': mac})
-            if ipv4:
-                ret.append({'lxc.network.ipv4': ipv4})
-            if ipv6:
-                ret.append({'lxc.network.ipv6': ipv6})
+            type_ = opts.get('type', args.get('type', ''))
+            link = opts.get('link', args.get('link', ''))
+            ipv4 = opts.get('ipv4')
+            ipv6 = opts.get('ipv6')
+            infos = salt.utils.odict.OrderedDict([
+                ('lxc.network.type', {
+                    'test': not type_,
+                    'value': type_,
+                    'old': old_if.get('lxc.network.type'),
+                    'default': 'veth'}),
+                ('lxc.network.name', {
+                    'test': False,
+                    'value': dev,
+                    'old': dev,
+                    'default': dev}),
+                ('lxc.network.flags', {
+                    'test': not flags,
+                    'value': flags,
+                    'old': old_if.get('lxc.network.flags'),
+                    'default': 'up'}),
+                ('lxc.network.link', {
+                    'test': not link,
+                    'value': link,
+                    'old': old_if.get('lxc.network.link'),
+                    'default': 'br0'}),
+                ('lxc.network.hwaddr', {
+                    'test': not mac,
+                    'value': mac,
+                    'old': old_if.get('lxc.network.hwaddr'),
+                    'default': salt.utils.gen_mac()}),
+                ('lxc.network.ipv4', {
+                    'test': not ipv4,
+                    'value': ipv4,
+                    'old': old_if.get('lxc.network.ipv4', ''),
+                    'default': None}),
+                ('lxc.network.ipv6', {
+                    'test': not ipv6,
+                    'value': ipv6,
+                    'old': old_if.get('lxc.network.ipv6', ''),
+                    'default': None})])
+            # for each parameter, if not explicitly set, the
+            # config value present in the LXC configuration should
+            # take precedence over the profile configuration
+            for info in list(infos.keys()):
+                bundle = infos[info]
+                if bundle['test']:
+                    if bundle['old']:
+                        bundle['value'] = bundle['old']
+                    elif bundle['default']:
+                        bundle['value'] = bundle['default']
+            for info, data in infos.items():
+                if data['value']:
+                    ret.append({info: data['value']})
             for key, val in six.iteritems(args):
                 if key == 'link' and bridge:
                     val = bridge
                 val = opts.get(key, val)
-                if key in ('gateway', 'mac'):
+                if key in [
+                    'type', 'flags', 'name',
+                    'gateway', 'mac', 'link', 'ipv4', 'ipv6'
+                ]:
                     continue
                 ret.append({'lxc.network.{0}'.format(key): val})
             # gateway (in automode) must be appended following network conf !
@@ -548,7 +638,6 @@ def _network_conf(conf_tuples=None, **kwargs):
             # only one network gateway ;)
             gateway_set = True
 
-    old = _get_veths(conf_tuples)
     new = _get_veths(ret)
     # verify that we did not loose the mac settings
     for iface in [a for a in new]:
@@ -574,17 +663,28 @@ def _network_conf(conf_tuples=None, **kwargs):
     ret = []
     for val in six.itervalues(new):
         for row in val:
-            ret.append({row: val[row]})
+            ret.append(salt.utils.odict.OrderedDict([(row, val[row])]))
     return ret
 
 
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
-    if kwargs.get('autostart', True):
-        ret['lxc.start.auto'] = '1'
-    else:
-        ret['lxc.start.auto'] = '0'
+    autostart = kwargs.get('autostart')
+    # autostart can have made in kwargs, but with the None
+    # value which is invalid, we need an explicit boolean
+    # autostart = on is the default.
+    if autostart is None:
+        autostart = True
+    # we will set the regular lxc marker to restart container at
+    # machine (re)boot only if we did not explicitly ask
+    # not to touch to the autostart settings via
+    # autostart == 'keep'
+    if autostart != 'keep':
+        if autostart:
+            ret['lxc.start.auto'] = '1'
+        else:
+            ret['lxc.start.auto'] = '0'
     memory = kwargs.get('memory')
     if memory is not None:
         ret['lxc.cgroup.memory.limit_in_bytes'] = memory * 1024
@@ -600,17 +700,40 @@ def _get_lxc_default_data(**kwargs):
     return ret
 
 
-def _config_list(conf_tuples=None, **kwargs):
+def _config_list(conf_tuples=None, only_net=False, **kwargs):
     '''
     Return a list of dicts from the salt level configurations
+
+    conf_tuples
+        _LXCConfig compatible list of entries which can contain
+
+            - string line
+            - tuple (lxc config param,value)
+            - dict of one entry: {lxc config param: value)
+
+    only_net
+        by default we add to the tuples a reflection of both
+        the real config if avalaible and a certain amount of
+        default values like the cpu parameters, the memory
+        and etc.
+        On the other hand, we also no matter the case reflect
+        the network configuration computed from the actual config if
+        available and given values.
+        if no_default_loads is set, we will only
+        reflect the network configuration back to the conf tuples
+        list
+
     '''
+    # explicit cast
+    only_net = bool(only_net)
     if not conf_tuples:
         conf_tuples = []
     kwargs = copy.deepcopy(kwargs)
     ret = []
-    default_data = _get_lxc_default_data(**kwargs)
-    for k, val in six.iteritems(default_data):
-        ret.append({k: val})
+    if not only_net:
+        default_data = _get_lxc_default_data(**kwargs)
+        for k, val in six.iteritems(default_data):
+            ret.append({k: val})
     net_datas = _network_conf(conf_tuples=conf_tuples, **kwargs)
     ret.extend(net_datas)
     return ret
@@ -628,6 +751,14 @@ def _get_veths(net_data):
     for item in net_data:
         if item and isinstance(item, dict):
             item = list(item.items())[0]
+        # skip LXC configuration comment lines, and play only with tuples conf
+        elif isinstance(item, six.string_types):
+            # deal with reflection of commented lxc configs
+            sitem = item.strip()
+            if sitem.startswith('#') or not sitem:
+                continue
+            elif '=' in item:
+                item = tuple([a.strip() for a in item.split('=', 1)])
         if item[0] == 'lxc.network.type':
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
@@ -727,10 +858,10 @@ def _get_base(**kwargs):
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, None)
+        kw_overrides_match = kw_overrides.pop(key, _marker)
         profile_match = profile.pop(key, default)
         # let kwarg overrides be the preferred choice
-        if kw_overrides_match is None:
+        if kw_overrides_match is _marker:
             return profile_match
         return kw_overrides_match
 
@@ -757,7 +888,7 @@ def _get_base(**kwargs):
                    vgname=vgname, **kwargs)
             if vgname:
                 rootfs = os.path.join('/dev', vgname, name)
-                edit_conf(info(name)['config'], **{'lxc.rootfs': rootfs})
+                edit_conf(info(name)['config'], out_format='commented', **{'lxc.rootfs': rootfs})
         return name
     elif template:
         name = '__base_{0}'.format(template)
@@ -766,7 +897,7 @@ def _get_base(**kwargs):
                    vgname=vgname, **kwargs)
             if vgname:
                 rootfs = os.path.join('/dev', vgname, name)
-                edit_conf(info(name)['config'], **{'lxc.rootfs': rootfs})
+                edit_conf(info(name)['config'], out_format='commented', **{'lxc.rootfs': rootfs})
         return name
     return ''
 
@@ -777,8 +908,8 @@ def init(name,
          cpushare=None,
          memory=None,
          profile=None,
-         network_profile=None,
-         nic=None,
+         network_profile=_marker,
+         nic=_marker,
          nic_opts=None,
          cpu=None,
          autostart=True,
@@ -959,13 +1090,15 @@ def init(name,
     ret = {'name': name,
            'changes': {}}
 
-    if nic:
+    if bool(nic) and nic is not _marker:
         salt.utils.warn_until(
             'Boron',
             'The \'nic\' argument to \'lxc.init\' has been deprecated, '
             'please use \'network_profile\' instead.'
         )
         network_profile = nic
+    if network_profile is _marker:
+        network_profile = DEFAULT_NIC
 
     try:
         kwargs['clone_from'] = kwargs.pop('clone')
@@ -997,10 +1130,10 @@ def init(name,
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
-        kw_overrides_match = kw_overrides.pop(key, None)
+        kw_overrides_match = kw_overrides.pop(key, _marker)
         profile_match = profile.pop(key, default)
         # let kwarg overrides be the preferred choice
-        if kw_overrides_match is None:
+        if kw_overrides_match is _marker:
             return profile_match
         return kw_overrides_match
 
@@ -1037,7 +1170,9 @@ def init(name,
     does_exist = exists(name)
     to_reboot = False
     remove_seed_marker = False
-    if clone_from:
+    if does_exist:
+        pass
+    elif clone_from:
         remove_seed_marker = True
         try:
             clone(name, clone_from, profile=profile, **kwargs)
@@ -1046,6 +1181,7 @@ def init(name,
             if 'already exists' in exc.strerror:
                 changes.append({'create': 'Container already exists'})
             else:
+                ret['result'] = False
                 ret['comment'] = exc.strerror
                 if changes:
                     ret['changes'] = changes_dict
@@ -1054,9 +1190,9 @@ def init(name,
                          nic_opts=nic_opts, bridge=bridge,
                          gateway=gateway, autostart=autostart,
                          cpuset=cpuset, cpushare=cpushare, memory=memory)
-        old_chunks = read_conf(cfg.path)
+        old_chunks = read_conf(cfg.path, out_format='commented')
         cfg.write()
-        chunks = read_conf(cfg.path)
+        chunks = read_conf(cfg.path, out_format='commented')
         if old_chunks != chunks:
             to_reboot = True
     else:
@@ -1081,21 +1217,22 @@ def init(name,
         path = '/var/lib/lxc/{0}/config'.format(name)
         old_chunks = []
         if os.path.exists(path):
-            old_chunks = read_conf(path)
-        for comp in _config_list(conf_tuples=old_chunks,
+            old_chunks = read_conf(path, out_format='commented')
+        new_cfg = _config_list(conf_tuples=old_chunks,
                                  cpu=cpu,
                                  network_profile=network_profile,
                                  nic_opts=nic_opts, bridge=bridge,
                                  cpuset=cpuset, cpushare=cpushare,
-                                 memory=memory):
-            edit_conf(path, **comp)
-        chunks = read_conf(path)
+                                 memory=memory)
+        if new_cfg:
+            edit_conf(path, out_format='commented', lxc_config=new_cfg)
+        chunks = read_conf(path, out_format='commented')
         if old_chunks != chunks:
             to_reboot = True
     if remove_seed_marker:
-        cmd_run(name,
-                'rm -f \'{0}\''.format(SEED_MARKER),
-                python_shell=False)
+        run(name,
+            'rm -f \'{0}\''.format(SEED_MARKER),
+            python_shell=False)
 
     # last time to be sure any of our property is correctly applied
     cfg = _LXCConfig(name=name, network_profile=network_profile,
@@ -1104,9 +1241,9 @@ def init(name,
                      cpuset=cpuset, cpushare=cpushare, memory=memory)
     old_chunks = []
     if os.path.exists(cfg.path):
-        old_chunks = read_conf(cfg.path)
+        old_chunks = read_conf(cfg.path, out_format='commented')
     cfg.write()
-    chunks = read_conf(cfg.path)
+    chunks = read_conf(cfg.path, out_format='commented')
     if old_chunks != chunks:
         changes.append({'config': 'Container configuration updated'})
         to_reboot = True
@@ -1129,43 +1266,63 @@ def init(name,
             return ret
 
     # set the default user/password, only the first time
-    if password:
+    if ret.get('result', True) and password:
         gid = '/.lxc.initial_pass'
         gids = [gid,
                 '/lxc.initial_pass',
                 '/.lxc.{0}.initial_pass'.format(name)]
-        if not any(cmd_retcode(name,
-                               'test -e "{0}"'.format(x),
-                               ignore_retcode=True) == 0
+        if not any(retcode(name,
+                           'test -e "{0}"'.format(x),
+                           ignore_retcode=True) == 0
                    for x in gids):
-            try:
-                cret = set_password(name,
-                                    users=users,
-                                    password=password,
-                                    encrypted=password_encrypted)
-            except (SaltInvocationError, CommandExecutionError) as exc:
-                ret['comment'] = 'Failed to set password' + exc.strerror
-                ret['result'] = False
-            else:
+            # think to touch the default user generated by default templates
+            # which has a really unsecure passwords...
+            # root is defined as a member earlier in the code
+            for default_user in ['ubuntu']:
+                if (
+                    default_user not in users
+                    and retcode(name,
+                                'id {0}'.format(default_user),
+                                python_shell=False,
+                                ignore_retcode=True) == 0
+                ):
+                    users.append(default_user)
+            for user in users:
+                try:
+                    cret = set_password(name,
+                                        users=[user],
+                                        password=password,
+                                        encrypted=password_encrypted)
+                except (SaltInvocationError, CommandExecutionError) as exc:
+                    msg = '{0}: Failed to set password'.format(
+                        user) + exc.strerror
+                    # only hardfail in unrecoverable situation:
+                    # root cannot be setted up
+                    if user == 'root':
+                        ret['comment'] = msg
+                        ret['result'] = False
+                    else:
+                        log.debug(msg)
+            if ret.get('result', True):
                 changes.append({'password': 'Password(s) updated'})
-                if cmd_retcode(name,
-                               ('sh -c \'touch "{0}"; test -e "{0}"\''
-                                .format(gid)),
-                               ignore_retcode=True) != 0:
+                if retcode(name,
+                           ('sh -c \'touch "{0}"; test -e "{0}"\''
+                            .format(gid)),
+                           ignore_retcode=True) != 0:
                     ret['comment'] = 'Failed to set password marker'
                     changes[-1]['password'] += '. ' + ret['comment'] + '.'
                     ret['result'] = False
 
     # set dns servers if any, only the first time
-    if dnsservers:
+    if ret.get('result', True) and dnsservers:
         # retro compatibility, test also old markers
         gid = '/.lxc.initial_dns'
         gids = [gid,
                 '/lxc.initial_dns',
                 '/lxc.{0}.initial_dns'.format(name)]
-        if not any(cmd_retcode(name,
-                               'test -e "{0}"'.format(x),
-                               ignore_retcode=True) == 0
+        if not any(retcode(name,
+                           'test -e "{0}"'.format(x),
+                           ignore_retcode=True) == 0
                    for x in gids):
             try:
                 set_dns(name,
@@ -1176,15 +1333,26 @@ def init(name,
                 ret['result'] = False
             else:
                 changes.append({'dns': 'DNS updated'})
-                if cmd_retcode(name,
-                               ('sh -c \'touch "{0}"; test -e "{0}"\''
-                                .format(gid)),
-                               ignore_retcode=True) != 0:
+                if retcode(name,
+                           ('sh -c \'touch "{0}"; test -e "{0}"\''
+                            .format(gid)),
+                           ignore_retcode=True) != 0:
                     ret['comment'] = 'Failed to set DNS marker'
                     changes[-1]['dns'] += '. ' + ret['comment'] + '.'
                     ret['result'] = False
 
-    if seed or seed_cmd:
+    # retro compatibility, test also old markers
+    gid = '/.lxc.initial_seed'
+    gids = [gid, '/lxc.initial_seed']
+    if (
+        any(retcode(name,
+                    'test -e {0}'.format(x),
+                    ignore_retcode=True) == 0
+            for x in gids)
+        or not ret.get('result', True)
+    ):
+        pass
+    elif seed or seed_cmd:
         if seed:
             try:
                 result = bootstrap(
@@ -1232,7 +1400,7 @@ def init(name,
                                       .format(seed_cmd)}
                     )
 
-    if not start_:
+    if ret.get('result', True) and not start_:
         try:
             stop(name)
         except (SaltInvocationError, CommandExecutionError) as exc:
@@ -1348,6 +1516,7 @@ def create(name,
            config=None,
            profile=None,
            network_profile=None,
+           nic_opts=None,
            **kwargs):
     '''
     Create a new container.
@@ -1418,6 +1587,8 @@ def create(name,
     lvname
         Name of the LVM logical volume in which to create the volume for this
         container. Only applicable if ``backing=lvm``.
+    nic_opts
+        give extra opts overriding network profile values
     '''
     if exists(name):
         raise CommandExecutionError(
@@ -1516,7 +1687,10 @@ def create(name,
     _clear_context()
     if ret['retcode'] == 0 and exists(name):
         if network_profile:
-            network_changes = apply_network_profile(name, network_profile)
+            network_changes = apply_network_profile(name,
+                                                    network_profile,
+                                                    nic_opts=nic_opts)
+
             if network_changes:
                 log.info(
                     'Network changes from applying network profile \'{0}\' '
@@ -2153,20 +2327,20 @@ def info(name):
             free = limit - usage
             ret['memory_limit'] = limit
             ret['memory_free'] = free
-            size = cmd_run_stdout(name, 'df /', python_shell=False)
+            size = run_stdout(name, 'df /', python_shell=False)
             # The size is the 2nd column of the last line
             ret['size'] = size.splitlines()[-1].split()[1]
 
             # First try iproute2
-            ip_cmd = cmd_run_all(name, 'ip link show', python_shell=False)
+            ip_cmd = run_all(name, 'ip link show', python_shell=False)
             if ip_cmd['retcode'] == 0:
                 ip_data = ip_cmd['stdout']
-                ip_cmd = cmd_run_all(name, 'ip addr show', python_shell=False)
+                ip_cmd = run_all(name, 'ip addr show', python_shell=False)
                 ip_data += '\n' + ip_cmd['stdout']
                 ip_data = salt.utils.network._interfaces_ip(ip_data)
             else:
                 # That didn't work, try ifconfig
-                ip_cmd = cmd_run_all(name, 'ifconfig', python_shell=False)
+                ip_cmd = run_all(name, 'ifconfig', python_shell=False)
                 if ip_cmd['retcode'] == 0:
                     ip_data = \
                         salt.utils.network._interfaces_ifconfig(
@@ -2255,11 +2429,11 @@ def set_password(name, users, password, encrypted=True):
 
     failed_users = []
     for user in users:
-        result = cmd_retcode(name,
-                             'chpasswd{0}'.format(' -e' if encrypted else ''),
-                             stdin=':'.join((user, password)),
-                             python_shell=False,
-                             output_loglevel='quiet')
+        result = retcode(name,
+                         'chpasswd{0}'.format(' -e' if encrypted else ''),
+                         stdin=':'.join((user, password)),
+                         python_shell=False,
+                         output_loglevel='quiet')
         if result != 0:
             failed_users.append(user)
     if failed_users:
@@ -2294,83 +2468,73 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
     changes = {'edited': [], 'added': [], 'removed': []}
     ret = {'changes': changes, 'result': True, 'comment': ''}
-    lxc_conf_p = '/var/lib/lxc/{0}/config'.format(name)
-    if not exists(name):
-        ret['result'] = False
-        ret['comment'] = 'Container does not exist: {0}'.format(name)
-    elif not os.path.exists(lxc_conf_p):
-        ret['result'] = False
-        ret['comment'] = (
-            'Configuration does not exist: {0}'.format(lxc_conf_p))
-    else:
-        with salt.utils.fopen(lxc_conf_p, 'r') as fic:
-            filtered_lxc_conf = []
-            for row in lxc_conf:
-                if not row:
-                    continue
-                for conf in row:
-                    try:
-                        filtered_lxc_conf.append((conf.strip(),
-                                                  row[conf].strip()))
-                    except AttributeError:
-                        filtered_lxc_conf.append((conf.strip(),
-                                                  str(row[conf]).strip()))
-            ret['comment'] = 'lxc.conf is up to date'
-            lines = []
-            orig_config = fic.read()
-            for line in orig_config.splitlines():
-                if line.startswith('#') or not line.strip():
-                    lines.append([line, ''])
-                else:
-                    line = line.split('=')
-                    index = line.pop(0)
-                    val = (index.strip(), '='.join(line).strip())
-                    if val not in lines:
-                        lines.append(val)
-            for k, item in filtered_lxc_conf:
-                matched = False
-                for idx, line in enumerate(lines[:]):
-                    if line[0] == k:
-                        matched = True
-                        lines[idx] = (k, item)
-                        if '='.join(line[1:]).strip() != item.strip():
-                            changes['edited'].append(
-                                ({line[0]: line[1:]}, {k: item}))
-                            break
-                if not matched:
-                    if not (k, item) in lines:
-                        lines.append((k, item))
-                    changes['added'].append({k: item})
-            dest_lxc_conf = []
-            # filter unset
-            if lxc_conf_unset:
-                for line in lines:
-                    for opt in lxc_conf_unset:
-                        if (
-                            not line[0].startswith(opt)
-                            and line not in dest_lxc_conf
-                        ):
-                            dest_lxc_conf.append(line)
-                        else:
-                            changes['removed'].append(opt)
+
+    # do not use salt.utils.fopen !
+    with open(lxc_conf_p, 'r') as fic:
+        filtered_lxc_conf = []
+        for row in lxc_conf:
+            if not row:
+                continue
+            for conf in row:
+                filtered_lxc_conf.append((conf.strip(),
+                                          row[conf].strip()))
+        ret['comment'] = 'lxc.conf is up to date'
+        lines = []
+        orig_config = fic.read()
+        for line in orig_config.splitlines():
+            if line.startswith('#') or not line.strip():
+                lines.append([line, ''])
             else:
-                dest_lxc_conf = lines
-            conf = ''
-            for key, val in dest_lxc_conf:
-                if not val:
-                    conf += '{0}\n'.format(key)
-                else:
-                    conf += '{0} = {1}\n'.format(key.strip(), val.strip())
-            conf_changed = conf != orig_config
-            chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-            if conf_changed:
-                path = '.'.join((lxc_conf_p, chrono))
-                with salt.utils.fopen(path, 'w') as wfic:
-                    wfic.write(conf)
-                with salt.utils.fopen(lxc_conf_p, 'w') as wfic:
-                    wfic.write(conf)
-                ret['comment'] = 'Updated'
-                ret['result'] = True
+                line = line.split('=')
+                index = line.pop(0)
+                val = (index.strip(), '='.join(line).strip())
+                if val not in lines:
+                    lines.append(val)
+        for key, item in filtered_lxc_conf:
+            matched = False
+            for idx, line in enumerate(lines[:]):
+                if line[0] == key:
+                    matched = True
+                    lines[idx] = (key, item)
+                    if '='.join(line[1:]).strip() != item.strip():
+                        changes['edited'].append(
+                            ({line[0]: line[1:]}, {key: item}))
+                        break
+            if not matched:
+                if not (key, item) in lines:
+                    lines.append((key, item))
+                changes['added'].append({key: item})
+        dest_lxc_conf = []
+        # filter unset
+        if lxc_conf_unset:
+            for line in lines:
+                for opt in lxc_conf_unset:
+                    if (
+                        not line[0].startswith(opt)
+                        and line not in dest_lxc_conf
+                    ):
+                        dest_lxc_conf.append(line)
+                    else:
+                        changes['removed'].append(opt)
+        else:
+            dest_lxc_conf = lines
+        conf = ''
+        for key, val in dest_lxc_conf:
+            if not val:
+                conf += '{0}\n'.format(key)
+            else:
+                conf += '{0} = {1}\n'.format(key.strip(), val.strip())
+        conf_changed = conf != orig_config
+        chrono = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        if conf_changed:
+            # DO NOT USE salt.utils.fopen here, i got (kiorky)
+            # problems with lxc configs which were wiped !
+            with open('{0}.{1}'.format(lxc_conf_p, chrono), 'w') as wfic:
+                wfic.write(conf)
+            with open(lxc_conf_p, 'w') as wfic:
+                wfic.write(conf)
+            ret['comment'] = 'Updated'
+            ret['result'] = True
 
     if not any(changes[x] for x in changes):
         # Ensure an empty changes dict if nothing was modified
@@ -2415,10 +2579,10 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns = ['nameserver {0}'.format(x) for x in dnsservers]
     dns.extend(['search {0}'.format(x) for x in searchdomains])
     dns = '\n'.join(dns) + '\n'
-    result = cmd_run_all(name,
-                         'tee /etc/resolv.conf',
-                         stdin=dns,
-                         python_shell=False)
+    result = run_all(name,
+                     'tee /etc/resolv.conf',
+                     stdin=dns,
+                     python_shell=False)
     if result['retcode'] != 0:
         error = ('Unable to write to /etc/resolv.conf in container \'{0}\''
                  .format(name))
@@ -2426,6 +2590,24 @@ def set_dns(name, dnsservers=None, searchdomains=None):
             error += ': {0}'.format(result['stderr'])
         raise CommandExecutionError(error)
     return True
+
+
+def _need_install(name):
+    ret = 0
+    has_minion = retcode(name, "command -v salt-minion")
+    # we assume that installing is when no minion is running
+    # but testing the executable presence is not enougth for custom
+    # installs where the bootstrap can do much more than installing
+    # the bare salt binaries.
+    if has_minion:
+        processes = run_stdout(name, "ps aux")
+        if 'salt-minion' not in processes:
+            ret = 1
+        else:
+            retcode(name, "salt-call --local service.stop salt-minion")
+    else:
+        ret = 1
+    return ret
 
 
 def bootstrap(name,
@@ -2508,7 +2690,11 @@ def bootstrap(name,
     # default set here as we cannot set them
     # in def as it can come from a chain of procedures.
     if bootstrap_args:
-        bootstrap_args = '{0} -c {{0}}'.format(bootstrap_args)
+        # custom bootstrap args can be totally customized, and user could
+        # have inserted the placeholder for the config directory.
+        # For example, some salt bootstrap script do not use at all -c
+        if '{0}' not in bootstrap_args:
+            bootstrap_args += ' -c {0}'
     else:
         bootstrap_args = '-c {0}'
     if not bootstrap_shell:
@@ -2517,15 +2703,11 @@ def bootstrap(name,
     orig_state = _ensure_running(name)
     if not orig_state:
         return orig_state
-
-    cmd = ('sh -c "if command -v salt-minion; then '
-            'salt-call --local service.stop salt-minion; exit 0; '
-            'else exit 1; fi"')
     if not force_install:
-        needs_install = cmd_retcode(name, cmd) == 1
+        needs_install = _need_install(name)
     else:
         needs_install = True
-    seeded = cmd_retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
+    seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         ret = True
@@ -2538,9 +2720,9 @@ def bootstrap(name,
             if install:
                 rstr = __salt__['test.rand_str']()
                 configdir = '/tmp/.c_{0}'.format(rstr)
-                cmd_run(name,
-                        'install -m 0700 -d {0}'.format(configdir),
-                        python_shell=False)
+                run(name,
+                    'install -m 0700 -d {0}'.format(configdir),
+                    python_shell=False)
                 bs_ = __salt__['config.gather_bootstrap_script'](
                     bootstrap=bootstrap_url)
                 dest_dir = os.path.join('/tmp', rstr)
@@ -2548,7 +2730,7 @@ def bootstrap(name,
                     'mkdir -p {0}'.format(dest_dir),
                     'chmod 700 {0}'.format(dest_dir),
                 ]:
-                    if cmd_run_stdout(name, cmd):
+                    if run_stdout(name, cmd):
                         log.error(
                             ('tmpdir {0} creation'
                              ' failed ({1}').format(dest_dir, cmd))
@@ -2571,7 +2753,8 @@ def bootstrap(name,
                 # out of the output in case of unexpected problem
                 log.info('Running {0} in LXC container \'{1}\''
                          .format(cmd, name))
-                ret = cmd_retcode(name, cmd, use_vt=True) == 0
+                ret = retcode(name, cmd, output_loglevel='info',
+                                  use_vt=True) == 0
             else:
                 ret = False
         else:
@@ -2580,9 +2763,9 @@ def bootstrap(name,
             cp(name, cfg_files['config'], '/etc/salt/minion')
             cp(name, cfg_files['privkey'], os.path.join(pki_dir, 'minion.pem'))
             cp(name, cfg_files['pubkey'], os.path.join(pki_dir, 'minion.pub'))
-            cmd_run(name,
-                    'salt-call --local service.enable salt-minion',
-                    python_shell=False)
+            run(name,
+                'salt-call --local service.enable salt-minion',
+                python_shell=False)
             ret = True
         shutil.rmtree(tmp)
         if orig_state == 'stopped':
@@ -2591,7 +2774,7 @@ def bootstrap(name,
             freeze(name)
         # mark seeded upon successful install
         if ret:
-            cmd_run(name,
+            run(name,
                     'touch \'{0}\''.format(SEED_MARKER),
                     python_shell=False)
     return ret
@@ -2612,7 +2795,7 @@ def attachable(name):
         return __context__['lxc.attachable']
     except KeyError:
         _ensure_exists(name)
-        # Can't use cmd_run() here because it uses attachable() and would
+        # Can't use run() here because it uses attachable() and would
         # endlessly recurse, resulting in a traceback
         cmd = 'lxc-attach --clear-env -n {0} -- /usr/bin/env'.format(name)
         result = __salt__['cmd.retcode'](cmd, python_shell=False) == 0
@@ -2632,107 +2815,59 @@ def _run(name,
          ignore_retcode=False,
          keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    Common logic for lxc.cmd_run functions
+    Common logic for lxc.run functions
     '''
-    _ensure_exists(name)
-    valid_output = ('stdout', 'stderr', 'retcode', 'all')
-    if output is None:
-        cmd_func = 'cmd.run'
-    elif output not in valid_output:
-        raise SaltInvocationError(
-            '\'output\' param must be one of the following: {0}'
-            .format(', '.join(valid_output))
-        )
-    else:
-        cmd_func = 'cmd.run_all'
-
     orig_state = state(name)
-    if _ensure_running(name, no_start=no_start) is False:
-        raise CommandExecutionError(
-            'Container \'{0}\' is not running'.format(name)
-        )
-    if attachable(name):
-        if isinstance(keep_env, salt._compat.string_types):
-            keep_env = keep_env.split(',')
-        env = ' '.join('--set-var {0}={1}'.format(
-                       x, pipes.quote(os.environ[x]))
-                       for x in keep_env if x in os.environ)
-        if 'PATH' not in keep_env:
-            # --clear-env results in a very restrictive PATH (/bin:/usr/bin),
-            # use the below path instead to prevent
-            env += ' --set-var {0}'.format(PATH)
+    try:
+        if attachable(name):
+            if isinstance(keep_env, salt._compat.string_types):
+                keep_env = keep_env.split(',')
+            env = ' '.join(
+                ['--set-var {0}={1}'.format(x, pipes.quote(os.environ[x]))
+                 for x in keep_env
+                 if x in os.environ]
+            )
+            if 'PATH' not in keep_env:
+                # --clear-env results in a very restrictive PATH (/bin:/usr/bin),
+                # use the below path instead to prevent
+                env += ' --set-var {0}'.format(PATH)
 
-        cmd = (
-            'lxc-attach --clear-env {0} -n {1} -- {2}'
-            .format(env, pipes.quote(name), cmd)
-        )
+            full_cmd = (
+                'lxc-attach --clear-env {0} -n {1} -- {2}'
+                .format(env, pipes.quote(name), cmd)
+            )
 
-        if not use_vt:
-            ret = __salt__[cmd_func](cmd,
-                                     stdin=stdin,
-                                     python_shell=python_shell,
-                                     output_loglevel=output_loglevel,
-                                     ignore_retcode=ignore_retcode)
+            ret = __salt__['container_resource.run'](
+                name,
+                full_cmd,
+                output=output,
+                no_start=no_start,
+                stdin=stdin,
+                python_shell=python_shell,
+                output_loglevel=output_loglevel,
+                ignore_retcode=ignore_retcode,
+                use_vt=use_vt)
         else:
-            stdout, stderr = '', ''
-            try:
-                proc = vt.Terminal(cmd,
-                                   shell=python_shell,
-                                   log_stdin_level=output_loglevel if
-                                                   output_loglevel == 'quiet'
-                                                   else 'info',
-                                   log_stdout_level=output_loglevel,
-                                   log_stderr_level=output_loglevel,
-                                   log_stdout=True,
-                                   log_stderr=True,
-                                   stream_stdout=False,
-                                   stream_stderr=False)
-                # Consume output
-                while proc.has_unread_data:
-                    try:
-                        cstdout, cstderr = proc.recv()
-                        if cstdout:
-                            stdout += cstdout
-                        if cstderr:
-                            if output is None:
-                                stdout += cstderr
-                            else:
-                                stderr += cstderr
-                        time.sleep(0.5)
-                    except KeyboardInterrupt:
-                        break
-                ret = stdout if output is None \
-                    else {'retcode': proc.exitstatus,
-                          'pid': 2,
-                          'stdout': stdout,
-                          'stderr': stderr}
-            except vt.TerminalException:
-                trace = traceback.format_exc()
-                log.error(trace)
-                ret = stdout if output is None \
-                    else {'retcode': 127,
-                          'pid': '2',
-                          'stdout': stdout,
-                          'stderr': stderr}
-            finally:
-                proc.terminate()
-    else:
-        rootfs = info(name).get('rootfs')
-        # Set context var to make cmd.run_chroot run cmd.run instead of
-        # cmd.run_all.
-        __context__['cmd.run_chroot.func'] = __salt__['cmd.run']
-        ret = __salt__['cmd.run_chroot'](rootfs,
-                                         cmd,
-                                         stdin=stdin,
-                                         python_shell=python_shell,
-                                         output_loglevel=output_loglevel,
-                                         ignore_retcode=ignore_retcode)
-
-    if preserve_state:
-        if orig_state == 'stopped':
-            stop(name)
-        elif orig_state == 'frozen':
-            freeze(name)
+            rootfs = info(name).get('rootfs')
+            # Set context var to make cmd.run_chroot run cmd.run instead of
+            # cmd.run_all.
+            __context__['cmd.run_chroot.func'] = __salt__['cmd.run']
+            ret = __salt__['cmd.run_chroot'](rootfs,
+                                             cmd,
+                                             stdin=stdin,
+                                             python_shell=python_shell,
+                                             output_loglevel=output_loglevel,
+                                             ignore_retcode=ignore_retcode)
+    except Exception:
+        raise
+    finally:
+        # Make sure we honor preserve_state, even if there was an exception
+        new_state = state(name)
+        if preserve_state:
+            if orig_state == 'stopped' and new_state != 'stopped':
+                stop(name)
+            elif orig_state == 'frozen' and new_state != 'frozen':
+                freeze(name, start=True)
 
     if output in (None, 'all'):
         return ret
@@ -2754,12 +2889,13 @@ def run_cmd(name,
             keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. deprecated:: 2015.2.0
-        Use :mod:`lxc.cmd_run <salt.modules.lxc.cmd_run>` instead
+        Use :mod:`lxc.run <salt.modules.lxc.run>` instead
     '''
     salt.utils.warn_until(
         'Boron',
-        'lxc.run_cmd has been deprecated, please use one of the lxc.cmd_run* '
-        'functions. See the documentation for more information.'
+        'lxc.run_cmd has been deprecated, please use one of the lxc.run '
+        'functions (or lxc.retcode). See the documentation for more '
+        'information.'
     )
     if stdout and stderr:
         output = 'all'
@@ -2782,16 +2918,16 @@ def run_cmd(name,
                 keep_env=keep_env)
 
 
-def cmd_run(name,
-            cmd,
-            no_start=False,
-            preserve_state=True,
-            stdin=None,
-            python_shell=True,
-            output_loglevel='debug',
-            use_vt=False,
-            ignore_retcode=False,
-            keep_env='http_proxy,https_proxy,no_proxy'):
+def run(name,
+        cmd,
+        no_start=False,
+        preserve_state=True,
+        stdin=None,
+        python_shell=True,
+        output_loglevel='debug',
+        use_vt=False,
+        ignore_retcode=False,
+        keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.2.0
 
@@ -2808,8 +2944,8 @@ def cmd_run(name,
 
         The same error will be displayed in stderr if the command being run
         does not exist. If no output is returned using this function, try using
-        :mod:`lxc.cmd_run_stderr <salt.modules.lxc.cmd_run_stderr>` or
-        :mod:`lxc.cmd_run_all <salt.modules.lxc.cmd_run_all>`.
+        :mod:`lxc.run_stderr <salt.modules.lxc.run_stderr>` or
+        :mod:`lxc.run_all <salt.modules.lxc.run_all>`.
 
     name
         Name of the container in which to run the command
@@ -2842,7 +2978,7 @@ def cmd_run(name,
 
     .. code-block:: bash
 
-        salt myminion lxc.cmd_run mycontainer 'ifconfig -a'
+        salt myminion lxc.run mycontainer 'ifconfig -a'
     '''
     return _run(name,
                 cmd,
@@ -2857,16 +2993,16 @@ def cmd_run(name,
                 keep_env=keep_env)
 
 
-def cmd_run_stdout(name,
-                   cmd,
-                   no_start=False,
-                   preserve_state=True,
-                   stdin=None,
-                   python_shell=True,
-                   output_loglevel='debug',
-                   use_vt=False,
-                   ignore_retcode=False,
-                   keep_env='http_proxy,https_proxy,no_proxy'):
+def run_stdout(name,
+               cmd,
+               no_start=False,
+               preserve_state=True,
+               stdin=None,
+               python_shell=True,
+               output_loglevel='debug',
+               use_vt=False,
+               ignore_retcode=False,
+               keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.2.0
 
@@ -2883,8 +3019,8 @@ def cmd_run_stdout(name,
 
         The same error will be displayed in stderr if the command being run
         does not exist. If no output is returned using this function, try using
-        :mod:`lxc.cmd_run_stderr <salt.modules.lxc.cmd_run_stderr>` or
-        :mod:`lxc.cmd_run_all <salt.modules.lxc.cmd_run_all>`.
+        :mod:`lxc.run_stderr <salt.modules.lxc.run_stderr>` or
+        :mod:`lxc.run_all <salt.modules.lxc.run_all>`.
 
     name
         Name of the container in which to run the command
@@ -2917,7 +3053,7 @@ def cmd_run_stdout(name,
 
     .. code-block:: bash
 
-        salt myminion lxc.cmd_run_stdout mycontainer 'ifconfig -a'
+        salt myminion lxc.run_stdout mycontainer 'ifconfig -a'
     '''
     return _run(name,
                 cmd,
@@ -2932,16 +3068,16 @@ def cmd_run_stdout(name,
                 keep_env=keep_env)
 
 
-def cmd_run_stderr(name,
-                   cmd,
-                   no_start=False,
-                   preserve_state=True,
-                   stdin=None,
-                   python_shell=True,
-                   output_loglevel='debug',
-                   use_vt=False,
-                   ignore_retcode=False,
-                   keep_env='http_proxy,https_proxy,no_proxy'):
+def run_stderr(name,
+               cmd,
+               no_start=False,
+               preserve_state=True,
+               stdin=None,
+               python_shell=True,
+               output_loglevel='debug',
+               use_vt=False,
+               ignore_retcode=False,
+               keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.2.0
 
@@ -2990,7 +3126,7 @@ def cmd_run_stderr(name,
 
     .. code-block:: bash
 
-        salt myminion lxc.cmd_run_stderr mycontainer 'ip addr show'
+        salt myminion lxc.run_stderr mycontainer 'ip addr show'
     '''
     return _run(name,
                 cmd,
@@ -3005,7 +3141,7 @@ def cmd_run_stderr(name,
                 keep_env=keep_env)
 
 
-def cmd_retcode(name,
+def retcode(name,
                 cmd,
                 no_start=False,
                 preserve_state=True,
@@ -3031,8 +3167,8 @@ def cmd_retcode(name,
 
         The same error will be displayed in stderr if the command being run
         does not exist. If the retcode is nonzero and not what was expected,
-        try using :mod:`lxc.cmd_run_stderr <salt.modules.lxc.cmd_run_stderr>`
-        or :mod:`lxc.cmd_run_all <salt.modules.lxc.cmd_run_all>`.
+        try using :mod:`lxc.run_stderr <salt.modules.lxc.run_stderr>`
+        or :mod:`lxc.run_all <salt.modules.lxc.run_all>`.
 
     name
         Name of the container in which to run the command
@@ -3065,7 +3201,7 @@ def cmd_retcode(name,
 
     .. code-block:: bash
 
-        salt myminion lxc.cmd_retcode mycontainer 'ip addr show'
+        salt myminion lxc.retcode mycontainer 'ip addr show'
     '''
     return _run(name,
                 cmd,
@@ -3080,16 +3216,16 @@ def cmd_retcode(name,
                 keep_env=keep_env)
 
 
-def cmd_run_all(name,
-                cmd,
-                no_start=False,
-                preserve_state=True,
-                stdin=None,
-                python_shell=True,
-                output_loglevel='debug',
-                use_vt=False,
-                ignore_retcode=False,
-                keep_env='http_proxy,https_proxy,no_proxy'):
+def run_all(name,
+            cmd,
+            no_start=False,
+            preserve_state=True,
+            stdin=None,
+            python_shell=True,
+            output_loglevel='debug',
+            use_vt=False,
+            ignore_retcode=False,
+            keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.2.0
 
@@ -3138,7 +3274,7 @@ def cmd_run_all(name,
 
     .. code-block:: bash
 
-        salt myminion lxc.cmd_run_all mycontainer 'ip addr show'
+        salt myminion lxc.run_all mycontainer 'ip addr show'
     '''
     return _run(name,
                 cmd,
@@ -3157,9 +3293,7 @@ def _get_md5(name, path):
     '''
     Get the MD5 checksum of a file from a container
     '''
-    output = cmd_run_stdout(name,
-                            'md5sum "{0}"'.format(path),
-                            ignore_retcode=True)
+    output = run_stdout(name, 'md5sum "{0}"'.format(path), ignore_retcode=True)
     try:
         return output.split()[0]
     except IndexError:
@@ -3225,7 +3359,7 @@ def cp(name, source, dest, makedirs=False):
     # Destination file sanity checks
     if not os.path.isabs(dest):
         raise SaltInvocationError('Destination path must be absolute')
-    if cmd_retcode(name,
+    if retcode(name,
                    'test -d \'{0}\''.format(dest),
                    ignore_retcode=True) == 0:
         # Destination is a directory, full path to dest file will include the
@@ -3236,12 +3370,11 @@ def cp(name, source, dest, makedirs=False):
         # dir is a directory, and then (if makedirs=True) attempt to create the
         # parent directory.
         dest_dir, dest_name = os.path.split(dest)
-        if cmd_retcode(name,
+        if retcode(name,
                        'test -d \'{0}\''.format(dest_dir),
                        ignore_retcode=True) != 0:
             if makedirs:
-                result = cmd_run_all(name,
-                                     'mkdir -p \'{0}\''.format(dest_dir))
+                result = run_all(name, 'mkdir -p \'{0}\''.format(dest_dir))
                 if result['retcode'] != 0:
                     error = ('Unable to create destination directory {0} in '
                              'container \'{1}\''.format(dest_dir, name))
@@ -3258,7 +3391,7 @@ def cp(name, source, dest, makedirs=False):
     source_md5 = __salt__['file.get_sum'](source, 'md5')
     if source_md5 != _get_md5(name, dest):
         # Using cat here instead of opening the file, reading it into memory,
-        # and passing it as stdin to cmd_run(). This will keep down memory
+        # and passing it as stdin to run(). This will keep down memory
         # usage for the minion and make the operation run quicker.
         __salt__['cmd.run_stdout'](
             'cat "{0}" | lxc-attach --clear-env --set-var {1} -n {2} -- '
@@ -3275,6 +3408,10 @@ def read_conf(conf_file, out_format='simple'):
     Read in an LXC configuration file. By default returns a simple, unsorted
     dict, but can also return a more detailed structure including blank lines
     and comments.
+
+        out_format:
+            set to 'simple' if you need the old and unsupported behavior.
+            This wont support the multiple lxc values (eg: multiple network nics)
 
     CLI Examples:
 
@@ -3348,31 +3485,51 @@ def write_conf(conf_file, conf):
     if not isinstance(conf, list):
         raise SaltInvocationError('Configuration must be passed as a list')
 
-    with salt.utils.fopen(conf_file, 'w') as fp_:
-        for line in conf:
-            if isinstance(line, str):
-                fp_.write(line)
-            elif isinstance(line, dict):
-                key = next(iter(list(line.keys())))
+    # construct the content prior to write to the file
+    # to avoid half written configs
+    content = ''
+    for line in conf:
+        if isinstance(line, (six.text_type, six.string_types)):
+            content += line
+        elif isinstance(line, dict):
+            for key in list(line.keys()):
                 out_line = None
-                if isinstance(line[key], str):
-                    out_line = ' = '.join((key, line[key]))
+                if isinstance(
+                    line[key],
+                    (six.text_type, six.string_types, six.integer_types, float)
+                ):
+                    out_line = ' = '.join((key, "{0}".format(line[key])))
                 elif isinstance(line[key], dict):
                     out_line = ' = '.join((key, line[key]['value']))
                     if 'comment' in line[key]:
                         out_line = ' # '.join((out_line, line[key]['comment']))
                 if out_line:
-                    fp_.write(out_line)
-                    fp_.write('\n')
+                    content += out_line
+                    content += '\n'
+    with salt.utils.fopen(conf_file, 'w') as fp_:
+        fp_.write(content)
     return {}
 
 
-def edit_conf(conf_file, out_format='simple', **kwargs):
+def edit_conf(conf_file, out_format='simple', read_only=False, lxc_config=None, **kwargs):
     '''
     Edit an LXC configuration file. If a setting is already present inside the
     file, its value will be replaced. If it does not exist, it will be appended
     to the end of the file. Comments and blank lines will be kept in-tact if
     they already exist in the file.
+
+    out_format:
+        Set to simple if you need backward compatbility (multiple items for a
+        simple key is not supported)
+    read_only:
+        return only the edited configuration without applying it
+        to the underlying lxc configuration file
+    lxc_config:
+        List of dict containning lxc configuration items
+        For network configuration, you also need to add the device it belongs
+        to, otherwise it will default to eth0.
+        Also, any change to a network parameter will result in the whole
+        network reconfiguration to avoid mismatchs, be aware of that !
 
     After the file is edited, its contents will be returned. By default, it
     will be returned in ``simple`` format, meaning an unordered dict (which
@@ -3386,46 +3543,106 @@ def edit_conf(conf_file, out_format='simple', **kwargs):
 
         salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \\
             out_format=commented lxc.network.type=veth
+        salt 'minion' lxc.edit_conf /etc/lxc/mycontainer.conf \\
+            out_format=commented \\
+            lxc_config="[{'lxc.network.name': 'eth0', \\
+                          'lxc.network.ipv4': '1.2.3.4'},
+                         {'lxc.network.name': 'eth2', \\
+                          'lxc.network.ipv4': '1.2.3.5',\\
+                          'lxc.network.gateway': '1.2.3.1'}]"
     '''
     data = []
 
     try:
-        conf = read_conf(conf_file, out_format='commented')
+        conf = read_conf(conf_file, out_format=out_format)
     except Exception:
         conf = []
+
+    if not lxc_config:
+        lxc_config = []
+    lxc_config = copy.deepcopy(lxc_config)
+
+    # search if we want to access net config
+    # in that case, we will replace all the net configuration
+    net_config = []
+    for lxc_kws in lxc_config + [kwargs]:
+        net_params = {}
+        for kwarg in [a for a in lxc_kws]:
+            if kwarg.startswith('__'):
+                continue
+            if kwarg.startswith('lxc.network.'):
+                net_params[kwarg] = lxc_kws[kwarg]
+                lxc_kws.pop(kwarg, None)
+        if net_params:
+            net_config.append(net_params)
+    nic_opts = salt.utils.odict.OrderedDict()
+    for params in net_config:
+        dev = params.get('lxc.network.name', 'eth0')
+        dev_opts = nic_opts.setdefault(dev, salt.utils.odict.OrderedDict())
+        for param in params:
+            opt = param.replace('lxc.network.', '')
+            opt = {'hwaddr': 'mac'}.get(opt, opt)
+            dev_opts[opt] = params[param]
+
+    net_changes = []
+    if nic_opts:
+        net_changes = _config_list(conf, only_net=True,
+                                   **{'network_profile': DEFAULT_NIC,
+                                      'nic_opts': nic_opts})
+        if net_changes:
+            lxc_config.extend(net_changes)
 
     for line in conf:
         if not isinstance(line, dict):
             data.append(line)
             continue
         else:
-            key = next(iter(list(line.keys())))
-            if key not in kwargs:
-                data.append(line)
-                continue
-            data.append({key: kwargs[key]})
-            del kwargs[key]
+            for key in list(line.keys()):
+                val = line[key]
+                if net_changes and key.startswith('lxc.network.'):
+                    continue
+                found = False
+                for ix in range(len(lxc_config)):
+                    kw = lxc_config[ix]
+                    if key in kw:
+                        found = True
+                        data.append({key: kw[key]})
+                        del kw[key]
+                if not found:
+                    data.append({key: val})
 
-    for kwarg in kwargs:
-        if kwarg.startswith('__'):
-            continue
-        data.append({kwarg: kwargs[kwarg]})
-
+    for lxc_kws in lxc_config:
+        for kwarg in lxc_kws:
+            data.append({kwarg: lxc_kws[kwarg]})
+    if read_only:
+        return data
     write_conf(conf_file, data)
     return read_conf(conf_file, out_format)
 
 
-def apply_network_profile(name, network_profile):
+def apply_network_profile(name, network_profile, nic_opts=None):
     '''
     .. versionadded:: 2015.2.0
 
     Apply a network profile to a container
+
+    network_profile
+        profile name or default values (dict)
+
+    nic_opts
+        values to override in defaults (dict)
+        indexed by nic card names
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt 'minion' lxc.apply_network_profile web1 centos
+        salt 'minion' lxc.apply_network_profile web1 centos \\
+                nic_opts="{'eth0': {'mac': 'xx:xx:xx:xx:xx:xx'}}"
+        salt 'minion' lxc.apply_network_profile web1 \\
+                "{'eth0': {'mac': 'xx:xx:xx:xx:xx:yy'}}"
+                nic_opts="{'eth0': {'mac': 'xx:xx:xx:xx:xx:xx'}}"
     '''
     path = '/var/lib/lxc/{0}/config'.format(name)
 
@@ -3435,10 +3652,12 @@ def apply_network_profile(name, network_profile):
             before.append(line)
 
     network_params = {}
-    for param in _network_conf(network_profile=network_profile):
+    for param in _network_conf(
+        network_profile=network_profile, nic_opts=nic_opts
+    ):
         network_params.update(param)
     if network_params:
-        edit_conf(path, **network_params)
+        edit_conf(path, out_format='commented', **network_params)
 
     after = []
     with salt.utils.fopen(path, 'r') as fp_:
