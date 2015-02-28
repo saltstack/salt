@@ -1918,6 +1918,12 @@ def wait_for_instance(
         win_passwd = config.get_cloud_config_value(
             'win_password', vm_, __opts__, default=''
         )
+        win_deploy_auth_retries = config.get_cloud_config_value(
+            'win_deploy_auth_retries', vm_, __opts__, default='10'
+        )
+        win_deploy_auth_retry_delay = config.get_cloud_config_value(
+            'win_deploy_auth_retry_delay', vm_, __opts__, default='1'
+        )
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
             while True:
@@ -1946,7 +1952,9 @@ def wait_for_instance(
             )
         if not salt.utils.cloud.validate_windows_cred(ip_address,
                                                       username,
-                                                      win_passwd):
+                                                      win_passwd,
+                                                      retries=win_deploy_auth_retries,
+                                                      retry_delay=win_deploy_auth_retry_delay):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote windows host'
             )

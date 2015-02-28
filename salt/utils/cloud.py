@@ -700,7 +700,8 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             )
 
 
-def validate_windows_cred(host, username='Administrator', password=None, retries=10):
+def validate_windows_cred(host, username='Administrator', password=None, retries=10,
+                          retry_delay=1):
     '''
     Check if the windows credentials are valid
     '''
@@ -710,7 +711,7 @@ def validate_windows_cred(host, username='Administrator', password=None, retries
         ))
         if retcode == 0:
             break
-        time.sleep(1)
+        time.sleep(delay)
     return retcode == 0
 
 
