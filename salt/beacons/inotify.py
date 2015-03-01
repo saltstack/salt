@@ -25,7 +25,6 @@ except ImportError:
 __virtualname__ = 'inotify'
 
 
-
 def __virtual__():
     if HAS_PYINOTIFY:
         return __virtualname__
