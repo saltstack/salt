@@ -66,6 +66,17 @@ def wrap_tmpl_func(render_str):
                 context['tplpath'] = tmplpath
                 if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
                     slspath = os.path.dirname(slspath)
+                template = tmplpath.replace('\\', '/')
+                i = template.rfind(slspath.replace('.', '/'))
+                if i != -1:
+                    template = template[i:]
+                tpldir = os.path.dirname(template).replace('\\', '/')
+                tpldata = {
+                    'tplfile': template,
+                    'tpldir': tpldir,
+                    'tpldot': tpldir.replace('/', '.'),
+                }
+                context.update(tpldata)
             context['slsdotpath'] = slspath.replace('/', '.')
             context['slscolonpath'] = slspath.replace('/', ':')
             context['sls_path'] = slspath.replace('/', '_')
