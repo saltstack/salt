@@ -71,8 +71,6 @@ Ensure an object is not inheriting permissions
         - copy_inherited_acl: False
 '''
 
-# Import salt libs
-import salt.utils
 
 __virtualname__ = 'win_dacl'
 
