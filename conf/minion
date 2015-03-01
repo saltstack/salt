@@ -464,7 +464,7 @@
 #state_output_profile: True
 
 # Fingerprint of the master public key to double verify the master is valid,
-# the master fingerprint can be found by running "salt-key -F master" on the
+# the master fingerprint can be found by running "salt-key -f master.pub" on the
 # salt master.
 #master_finger: ''
 
