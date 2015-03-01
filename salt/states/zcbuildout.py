@@ -216,12 +216,6 @@ def installed(name,
             'Passing \'output_loglevel\' is deprecated,'
             ' please use loglevel instead'
         )
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4.',
-        _dont_call_warnings=True
-    )
     if runas:
         # Warn users about the deprecation
         ret.setdefault('warnings', []).append(
