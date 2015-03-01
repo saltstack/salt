@@ -139,7 +139,7 @@ def installed(name,
               onlyif=None,
               use_vt=False,
               loglevel='debug',
-              output_loglevel = None):
+              output_loglevel=None):
     '''
     Install buildout in a specific directory
 
@@ -212,8 +212,10 @@ def installed(name,
     '''
     ret = {}
     if output_loglevel and not loglevel:
-        log.warn('Passing \'output_loglevel\' is deprecated,'
-                 ' please use loglevel instead')
+        ret.setdefault('warnings', []).append(
+            'Passing \'output_loglevel\' is deprecated,'
+            ' please use loglevel instead'
+        )
     salt.utils.warn_until(
         'Lithium',
         'Please remove \'runas\' support at this stage. \'user\' support was '
