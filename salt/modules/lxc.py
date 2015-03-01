@@ -37,6 +37,13 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 import salt.utils.cloud
 import salt.config
 
+# Import 3rd-party libs
+import salt.ext.six as six
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+# pylint: enable=import-error,no-name-in-module
+
 # Set up logging
 log = logging.getLogger(__name__)
 

@@ -27,7 +27,7 @@ _minions(){
       zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
     fi
 
-    if _cache_invalid salt/modules || ! _retrieve_cache salt/modules; then
+    if _cache_invalid salt/minions || ! _retrieve_cache salt/minions; then
       _peons=( ${${(f)"$(salt-key -l acc)"}[2,-1]} )
       _store_cache salt/minions _peons
     fi
