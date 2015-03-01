@@ -67,8 +67,8 @@ def wrap_tmpl_func(render_str):
                 if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
                     slspath = os.path.dirname(slspath)
                 template = tmplpath.replace('\\', '/')
-                i = template.rfind(slspath.replace('.','/'))
-                if i != -1: 
+                i = template.rfind(slspath.replace('.', '/'))
+                if i != -1:
                     template = template[i:]
                 tpldir = os.path.dirname(template).replace('\\', '/')
                 tpldata = {
