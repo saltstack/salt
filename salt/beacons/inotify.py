@@ -72,7 +72,7 @@ def beacon(config):
                 - open
                 - create
                 - close_write
-              rec: True
+              recurse: True
               auto_add: True
 
     The mask can be a single option from:
@@ -93,7 +93,7 @@ def beacon(config):
       onlydir
       open
       unmount
-    rec:
+    recurse:
       Tell the beacon to recursively watch files in the directory
     auto_add:
       Automatically start adding files that are created in the watched directory
@@ -135,7 +135,7 @@ def beacon(config):
             elif isinstance(mask, salt.ext.six.binary_type):
                 r_mask = _get_mask(mask)
             mask = r_mask
-            rec = config[path].get('rec', False)
+            rec = config[path].get('recurse', False)
             auto_add = config[path].get('auto_add', False)
         else:
             mask = DEFAULT_MASK
