@@ -938,7 +938,7 @@ def deploy_script(host,
     if not isinstance(opts, dict):
         opts = {}
 
-    tmp_dir = '{0}-{1}'.format(tmp_dir, uuid.uuid4())
+    tmp_dir = '{0}-{1}'.format(tmp_dir.rstrip('/'), uuid.uuid4())
     deploy_command = os.path.join(tmp_dir, 'deploy.sh')
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
@@ -990,10 +990,10 @@ def deploy_script(host,
                 log.debug('Using {0} as the password'.format(password))
                 kwargs['password'] = password
 
-            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo,
+            if root_cmd('test -e {0}'.format(tmp_dir), tty, sudo,
                         allow_failure=True, **kwargs):
-                ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
-                                ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
+                ret = root_cmd(('sh -c "( mkdir -p {0} &&'
+                                ' chmod 700 {0} )"').format(tmp_dir),
                                tty, sudo, **kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
@@ -1139,7 +1139,7 @@ def deploy_script(host,
 
                 if kwargs['username'] != 'root':
                     root_cmd(
-                        'chown -R root \\"{0}\\"'.format(
+                        'chown -R root {0}'.format(
                             preseed_minion_keys_tempdir
                         ),
                         tty, sudo, **kwargs
@@ -1155,7 +1155,7 @@ def deploy_script(host,
                 # subshell fixes that
                 sftp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
                 ret = root_cmd(
-                    ('sh -c "( chmod +x \\"{0}/deploy.sh\\" )";'
+                    ('sh -c "( chmod +x {0}/deploy.sh )";'
                      'exit $?').format(tmp_dir),
                     tty, sudo, **kwargs)
                 if ret:
