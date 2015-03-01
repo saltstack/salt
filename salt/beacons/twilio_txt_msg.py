@@ -32,7 +32,7 @@ def beacon(config):
     Emit a dict name "texts" whose value is a list
     of texts.
 
-    code_block:: yaml
+    .. code-block:: yaml
 
         beacons:
           twilio_txt_msg:
