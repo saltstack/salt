@@ -189,13 +189,16 @@ class daclConstants(object):
         '''
         returns the bit value of the string object type
         '''
-        t = t.upper()
-        try:
-            return self.objectType[t]
-        except KeyError:
-            raise CommandExecutionError((
-                'Invalid object type "{0}".  It should be one of the following:  {1}'
-                ).format(t, ', '.join(self.objectType)))
+        if isinstance(t, string_types):
+            t = t.upper()
+            try:
+                return self.objectType[t]
+            except KeyError:
+                raise CommandExecutionError((
+                    'Invalid object type "{0}".  It should be one of the following:  {1}'
+                    ).format(t, ', '.join(self.objectType)))
+        else:
+            return t
 
     def getSecurityHkey(self, s):
         '''
@@ -516,6 +519,7 @@ def _ace_to_text(ace, objectType):
     helper function to convert an ace to a textual representation
     '''
     dc = daclConstants()
+    objectType = dc.getObjectTypeBit(objectType)
     try:
         userSid = win32security.LookupAccountSid('', ace[2])
         if userSid[1]:
