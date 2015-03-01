@@ -46,6 +46,12 @@ parameters are discussed in more detail below.
       #
       ssh_interface: public_ips
 
+      # Optionally configure the Windows credential validation number of
+      # retries and delay between retries.  This defaults to 10 retries
+      # with a one second delay betwee retries
+      win_deploy_auth_retries: 10
+      win_deploy_auth_retry_delay: 1
+      
       # Set the EC2 access credentials (see below)
       #
       id: HJGRYCILJLKJYG
@@ -95,6 +101,12 @@ parameters are discussed in more detail below.
       #
       ssh_interface: private_ips
 
+      # Optionally configure the Windows credential validation number of
+      # retries and delay between retries.  This defaults to 10 retries
+      # with a one second delay betwee retries
+      win_deploy_auth_retries: 10
+      win_deploy_auth_retry_delay: 1
+      
       # Set the EC2 access credentials (see below)
       #
       id: HJGRYCILJLKJYG
@@ -139,6 +151,16 @@ https://portal.aws.amazon.com/gp/aws/securityCredentials
 Both are located in the Access Credentials area of the page, under the Access
 Keys tab. The ``id`` setting is labeled Access Key ID, and the ``key`` setting
 is labeled Secret Access Key.
+
+
+Windows Deploy Timeouts
+=======================
+For Windows instances, it may take longer than normal for the instance to be
+ready.  In these circumstances, the provider configuration can be configured
+with a ``win_deploy_auth_retries`` and/or a ``win_deploy_auth_retry_delay``
+setting, which default to 10 retries and a one second delay between retries.
+These retries and timeouts relate to validating the Administrator password
+once AWS provides the credentials via the AWS API.
 
 
 Key Pairs
