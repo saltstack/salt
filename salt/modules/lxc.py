@@ -8,6 +8,8 @@ lxc >= 1.0 (even beta alpha) is required
 
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import absolute_import, print_function
 import datetime
@@ -21,6 +23,8 @@ import time
 import shutil
 import re
 import random
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
 
 
 # Import salt libs
