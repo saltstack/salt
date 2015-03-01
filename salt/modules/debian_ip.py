@@ -1448,7 +1448,7 @@ def _write_file_ifaces(iface, data, **settings):
             tmp = source_template.render({'name': adapter, 'data': adapters[adapter]})
         else:
             tmp = eth_template.render({'name': adapter, 'data': adapters[adapter]})
-        ifcfg = tmp + ifcfg
+        ifcfg = ifcfg + tmp
         if adapter == iface:
             saved_ifcfg = tmp
 
