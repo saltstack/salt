@@ -8,8 +8,6 @@ lxc >= 1.0 (even beta alpha) is required
 
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
 from __future__ import absolute_import, print_function
 import datetime
@@ -23,9 +21,6 @@ import time
 import shutil
 import re
 import random
-import salt.ext.six as six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=E0611
-
 
 # Import salt libs
 import salt
@@ -550,7 +545,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     if isinstance(nic, six.string_types):
         nicp = get_network_profile(nic)
         if nic_opts:
-            for dev, args in nic_opts.items():
+            for dev, args in six.iteritems(nic_opts):
                 ethx = nicp.setdefault(dev, {})
                 try:
                     ethx = salt.utils.dictupdate.update(ethx, args)
@@ -667,7 +662,7 @@ def _network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for val in new.values():
+    for val in six.itervalues(new):
         for row in val:
             ret.append(salt.utils.odict.OrderedDict([(row, val[row])]))
     return ret
@@ -787,13 +782,13 @@ class _LXCConfig(object):
         if self.name:
             self.path = '/var/lib/lxc/{0}/config'.format(self.name)
             if os.path.isfile(self.path):
-                with salt.utils.fopen(self.path) as f:
-                    for l in f.readlines():
-                        match = self.pattern.findall((l.strip()))
+                with salt.utils.fopen(self.path) as fhr:
+                    for line in fhr.readlines():
+                        match = self.pattern.findall((line.strip()))
                         if match:
                             self.data.append((match[0][0], match[0][-1]))
                         match = self.non_interpretable_pattern.findall(
-                            (l.strip()))
+                            (line.strip()))
                         if match:
                             self.data.append(('', match[0][0]))
         else:
@@ -805,7 +800,7 @@ class _LXCConfig(object):
                 self.data.append((key, val))
 
         default_data = _get_lxc_default_data(**kwargs)
-        for key, val in default_data.items():
+        for key, val in six.iteritems(default_data):
             _replace(key, val)
         old_net = self._filter_data('lxc.network')
         net_datas = _network_conf(conf_tuples=old_net, **kwargs)
@@ -814,9 +809,9 @@ class _LXCConfig(object):
                 self.data.extend(list(row.items()))
 
         # be sure to reset harmful settings
-        for i in ['lxc.cgroup.memory.limit_in_bytes']:
-            if not default_data.get(i):
-                self._filter_data(i)
+        for idx in ['lxc.cgroup.memory.limit_in_bytes']:
+            if not default_data.get(idx):
+                self._filter_data(idx)
 
     def as_string(self):
         chunks = ('{0[0]}{1}{0[1]}'.format(item, (' = ' if item[0] else '')) for item in self.data)
@@ -834,23 +829,23 @@ class _LXCConfig(object):
     def tempfile(self):
         # this might look like the function name is shadowing the
         # module, but it's not since the method belongs to the class
-        f = tempfile.NamedTemporaryFile()
-        f.write(self.as_string())
-        f.flush()
-        return f
+        ntf = tempfile.NamedTemporaryFile()
+        ntf.write(self.as_string())
+        ntf.flush()
+        return ntf
 
     def _filter_data(self, pattern):
         '''
         Removes parameters which match the pattern from the config data
         '''
         removed = []
-        data = []
+        filtered = []
         for param in self.data:
             if not param[0].startswith(pattern):
-                data.append(param)
+                filtered.append(param)
             else:
                 removed.append(param)
-        self.data = data
+        self.data = filtered
         return removed
 
 
@@ -1684,7 +1679,7 @@ def create(name,
                     .format(', '.join(missing_deps))
                 )
         cmd += ' --'
-        for key, val in options.items():
+        for key, val in six.iteritems(options):
             cmd += ' --{0} {1}'.format(key, val)
 
     ret = __salt__['cmd.run_all'](cmd,
