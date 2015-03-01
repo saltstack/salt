@@ -40,7 +40,6 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import sys
-import salt.utils
 
 # Import salt libs
 from salt.ext.six import string_types
