@@ -254,6 +254,56 @@ def _rds_present(name, allocated_storage, db_instance_class, engine,
     return ret
 
 
+def create_replica(name, source, db_instance_class=None, port=None,
+                   availability_zone=None,
+                   auto_minor_version_upgrade=None,
+                   option_group_name=None,
+                   publicly_accessible=None,
+                   tags=None, region=None, key=None, keyid=None,
+                   profile=None):
+    '''
+    Create RDS replica
+    .. code-block:: yaml
+
+    Ensure myrds replica RDS exists:
+        boto_rds.create_replica:
+            - name: myreplica
+            - source: mydb
+    '''
+    ret = {'name': name,
+           'result': None,
+           'comment': '',
+           'changes': {}
+           }
+    source_exists = __salt__['boto_rds.exists'](source, region, key, keyid, profile)
+    if not source_exists:
+        ret['result'] = False
+        ret['comment'] = 'RDS source {0} does not exist.'.format(source)
+    replica_exists = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
+    if not replica_exists:
+        created = __salt__['boto_rds.create_read_replica'](name, source,
+                                                           availability_zone,
+                                                           auto_minor_version_upgrade,
+                                                           option_group_name,
+                                                           publicly_accessible,
+                                                           tags, region, key,
+                                                           profile)
+        if created:
+            config = __salt__['boto_rds.describe'](name, tags=None, region=None,
+                                                  key=None, keyid=None,
+                                                  profile=None)
+            ret['result'] = True
+            ret['comment'] = 'RDS replica {0} created.'.format(name)
+            ret['changes']['old'] = None
+            ret['changes']['new'] = config
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create RDS replica {0}.'.format(name)
+    ret['result'] = True
+    ret['comment'] = 'RDS replica {0} exists.'.format(name)
+    return ret
+
+
 def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
            tags=None, region=None, key=None, keyid=None, profile=None):
     ret = {'name': name,
