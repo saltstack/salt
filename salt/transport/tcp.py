@@ -360,14 +360,19 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
                     elif pull_sock in socks and socks[pull_sock] == zmq.POLLIN:
                         package = pull_sock.recv()
                         payload = frame_msg(salt.payload.unpackage(package)['payload'])
-                        for item in list(clients):
+                        to_remove = []
+                        for item in clients:
                             client, address = item
                             try:
                                 client.send(payload)
                             except socket.error as e:
-                                clients.remove(item)
-                                log.debug('Client at {0} has disconnected from publisher'.format(address))
-                        print ('sends done')
+                                to_remove.append(item)
+                        for item in to_remove:
+                            client, address = item
+                            log.debug('Client at {0} has disconnected from publisher'.format(address))
+                            client.close()
+                            clients.remove(item)
+
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
                         continue
