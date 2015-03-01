@@ -263,7 +263,6 @@ def create_replica(name, source, db_instance_class=None, port=None,
                    profile=None):
     '''
     Create RDS replica
-    
     .. code-block:: yaml
 
     Ensure myrds replica RDS exists:
