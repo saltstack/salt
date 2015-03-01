@@ -273,10 +273,10 @@ def create_read_replica(name, source_name, db_instance_class=None, port=None,
                                                            option_group_name,
                                                            publicly_accessible,
                                                            tags)
-        if not rds_replica:
+        if rds_replica:
             log.info('Created replica {0} from {1}'.format(name, source_name))
             return True
-        else:
+        if not rds_replica:
             msg = 'Failed to create RDS replica {0}'.format(name)
             log.error(msg)
             return False
