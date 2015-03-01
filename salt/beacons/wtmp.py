@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Beacon to fire events at login of users as registered in the wtmp file
+
+.. code-block:: yaml
+
+    beacons:
+      wtmp: {}
 '''
 # Import python libs
 import os
@@ -39,9 +44,15 @@ def _get_loc():
         return __context__[LOC_KEY]
 
 
+# TODO: add support for only firing events for specific users and login times
 def beacon(config):
     '''
     Read the last wtmp file and return information on the logins
+
+    .. code-block:: yaml
+
+        beacons:
+          wtmp: {}
     '''
     ret = []
     with open(WTMP, 'rb') as fp_:
