@@ -247,8 +247,8 @@ def create(name, allocated_storage, db_instance_class, engine,
 
 def create_read_replica(name, source_name, db_instance_class=None, port=None,
                         availability_zone=None, auto_minor_version_upgrade=None,
-                        option_group_name=None, publicly_accessible = None,
-                        tags = None,
+                        option_group_name=None, publicly_accessible=None,
+                        tags=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Create an RDS read replica
@@ -273,11 +273,11 @@ def create_read_replica(name, source_name, db_instance_class=None, port=None,
                                                            option_group_name,
                                                            publicly_accessible,
                                                            tags)
-        if rds_replica:
+        if not rds_replica:
             log.info('Created replica {0} from {1}'.format(name, source_name))
             return True
         else:
-            'Failed to create RDS replica {0}'.format(name)
+            msg = 'Failed to create RDS replica {0}'.format(name)
             log.error(msg)
             return False
     except boto.exception.BotoServerError as e:
