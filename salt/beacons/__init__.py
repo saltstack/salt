@@ -18,9 +18,9 @@ class Beacon(object):
     '''
     This class is used to eveluate and execute on the beacon system
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, functions):
         self.opts = opts
-        self.beacons = salt.loader.beacons(opts)
+        self.beacons = salt.loader.beacons(opts, functions)
         self.interval_map = dict()
 
     def process(self, config):

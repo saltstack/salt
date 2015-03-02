@@ -290,17 +290,17 @@ def states(opts, functions, whitelist=None):
                          )
 
 
-def beacons(opts, context=None):
+def beacons(opts, functions, context=None):
     '''
     Load the beacon modules
     '''
     if context is None:
         context = {}
     return LazyLoader(_module_dirs(opts, 'beacons', 'beacons'),
-                         opts,
-                         tag='beacons',
-                         pack={'__context__': context},
-                         )
+                      opts,
+                      tag='beacons',
+                      pack={'__context__': context,
+                            '__salt__': functions})
 
 
 def search(opts, returners, whitelist=None):
