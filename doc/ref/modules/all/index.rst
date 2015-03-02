@@ -52,6 +52,7 @@ Full list of builtin execution modules
     cmdmod
     composer
     config
+    container_resource
     cp
     cpan
     cron
@@ -249,6 +250,7 @@ Full list of builtin execution modules
     ssh
     state
     status
+    sudo
     supervisord
     svn
     swift
@@ -259,6 +261,7 @@ Full list of builtin execution modules
     system
     systemd
     test
+    test_virtual
     timezone
     tls
     tomcat

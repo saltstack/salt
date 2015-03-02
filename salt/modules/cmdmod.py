@@ -8,6 +8,7 @@ access to the master root execution access to all salt minions.
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import time
 import functools
 import glob
@@ -1421,10 +1422,10 @@ def tty(device, echo=None):
         }
 
 
-def run_chroot(root,
-               cmd,
+def run_chroot(root, cmd,
                stdin=None,
-               output_loglevel='debug'):
+               output_loglevel='debug',
+               **kw):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1467,7 +1468,11 @@ def run_chroot(root,
         sh_,
         cmd)
     run_func = __context__.pop('cmd.run_chroot.func', run_all)
-    ret = run_func(cmd, stdin=stdin, output_loglevel=output_loglevel)
+    # forward keywords, and filter pub ones
+    run_kw = copy.deepcopy(kw)
+    for a in [a for a in six.iterkeys(kw) if a.startswith('__')]:
+        run_kw.pop(a, None)
+    ret = run_func(cmd, stdin=stdin, output_loglevel=output_loglevel, **kw)
 
     # Kill processes running in the chroot
     for i in range(6):
