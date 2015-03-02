@@ -1127,12 +1127,15 @@ def replace(path,
                                         append_if_not_found) \
                                      else repl
 
+    # First check the whole file, whether the replacement has already been made
     try:
+        # open the file read-only and inplace=False, otherwise the result
+        # will be an empty file after iterating over it just for searching
         fi_file = fileinput.input(path,
-                        inplace=not (dry_run or search_only),
-                        backup=False if (dry_run or search_only) else backup,
+                        inplace=False,
+                        backup=False,
                         bufsize=bufsize,
-                        mode='rb')
+                        mode='r')
 
         for line in fi_file:
 
@@ -1142,12 +1145,9 @@ def replace(path,
 
                 if result:
                     return True  # `finally` block handles file closure
+
             else:
                 result, nrepl = re.subn(cpattern, repl, line, count)
-
-                # found anything? (even if no change)
-                if nrepl > 0:
-                    found = True
 
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, so we don't continue pre/appending
@@ -1163,6 +1163,28 @@ def replace(path,
                 if show_changes:
                     orig_file.append(line)
                     new_file.append(result)
+    finally:
+        fi_file.close()
+
+    try:
+        fi_file = fileinput.input(path,
+                        inplace=not (dry_run or search_only),
+                        backup=False if (dry_run or search_only or
+                                        (found and not has_changes))
+                                     else backup,
+                        bufsize=bufsize,
+                        mode='rb')
+
+        #Loop through the file only if necessary to create the backup
+        #and/or make the replacements
+        if has_changes or (not found and (prepend_if_not_found or
+                                          append_if_not_found)):
+            for line in fi_file:
+                result, nrepl = re.subn(cpattern, repl, line, count)
+
+                # found anything? (even if no change)
+                if nrepl > 0:
+                    found = True
 
                 if not dry_run:
                     print(result, end='', file=sys.stdout)
