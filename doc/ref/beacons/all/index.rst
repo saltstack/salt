@@ -12,5 +12,6 @@ Full list of builtin beacon modules
 
     inotify
     journald
+    load
     twilio_txt_msg
     wtmp
