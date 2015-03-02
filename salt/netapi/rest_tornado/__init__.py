@@ -21,7 +21,8 @@ try:
         has_tornado = True
     else:
         logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
-except ImportError as err:
+except (ImportError, TypeError) as err:
+    has_tornado = False
     logger.info('ImportError! {0}'.format(str(err)))
 
 import salt.auth

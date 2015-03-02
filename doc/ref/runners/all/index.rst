@@ -13,20 +13,25 @@ Full list of runner modules
     cache
     cloud
     doc
+    drac
     error
+    f5
     fileserver
     git_pillar
+    http
     jobs
     launchd
     lxc
     manage
     mine
     network
+    pagerduty
     pillar
     queue
     search
     state
     survey
+    test
     thin
     virt
     winrepo
