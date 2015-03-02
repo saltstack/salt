@@ -122,7 +122,6 @@ def installed(name,
               config='buildout.cfg',
               quiet=False,
               parts=None,
-              runas=None,
               user=None,
               env=(),
               buildout_ver=None,
@@ -138,6 +137,7 @@ def installed(name,
               onlyif=None,
               use_vt=False,
               loglevel='debug',
+              runas=None,
               output_loglevel=None):
     '''
     Install buildout in a specific directory
