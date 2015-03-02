@@ -36,16 +36,16 @@ class Maintenance(multiprocessing.Process):
     '''
     def __init__(self, opts):
         super(Maintenance, self).__init__()
-        self.opts.value = opts
+        self.opts = opts
 
     def run(self):
         '''
         Spin up a worker, do this in s multiprocess
         '''
         behaviors = ['salt.daemons.flo']
-        preloads = [('.salt.opts', dict(value=self.opts.value))]
+        preloads = [('.salt.opts', dict(value=self.opts))]
 
-        console_logdir = self.opts.value.get('ioflo_console_logdir', '')
+        console_logdir = self.opts.get('ioflo_console_logdir', '')
         if console_logdir:
             consolepath = os.path.join(console_logdir, 'maintenance.log')
         else:  # empty means log to std out
@@ -53,10 +53,10 @@ class Maintenance(multiprocessing.Process):
 
         ioflo.app.run.start(
                 name='maintenance',
-                period=float(self.opts.value['loop_interval']),
+                period=float(self.opts['loop_interval']),
                 stamp=0.0,
-                real=self.opts.value['ioflo_realtime'],
-                filepath=self.opts.value['maintenance_floscript'],
+                real=self.opts['ioflo_realtime'],
+                filepath=self.opts['maintenance_floscript'],
                 behaviors=behaviors,
                 username="",
                 password="",
@@ -64,7 +64,7 @@ class Maintenance(multiprocessing.Process):
                 houses=None,
                 metas=None,
                 preloads=preloads,
-                verbose=int(self.opts.value['ioflo_verbose']),
+                verbose=int(self.opts['ioflo_verbose']),
                 consolepath=consolepath,
                 )
 
