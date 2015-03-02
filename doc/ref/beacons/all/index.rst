@@ -11,3 +11,6 @@ Full list of builtin beacon modules
     :template: autosummary.rst.tmpl
 
     inotify
+    journald
+    twilio_txt_msg
+    wtmp

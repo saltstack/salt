@@ -1130,7 +1130,7 @@ class Minion(MinionBase):
                     func,
                     data['arg'],
                     data)
-                sys.modules[func.__module__].__context__['retcode'] = 0
+                minion_instance.functions.pack['__context__']['retcode'] = 0
                 if opts.get('sudo_user', ''):
                     sudo_runas = opts.get('sudo_user')
                     if 'sudo.salt_call' in minion_instance.functions:
@@ -1158,7 +1158,7 @@ class Minion(MinionBase):
                     ret['return'] = iret
                 else:
                     ret['return'] = return_data
-                ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                ret['retcode'] = minion_instance.functions.pack['__context__'].get(
                     'retcode',
                     0
                 )
