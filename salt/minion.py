@@ -2260,6 +2260,10 @@ class MultiSyndic(MinionBase):
     Make a MultiSyndic minion, this minion will handle relaying jobs and returns from
     all minions connected to it to the list of masters it is connected to.
 
+    Modes (controlled by `syndic_mode`:
+        sync: This mode will synchronize all events and publishes from higher level masters
+        cluster: This mode will only sync job publishes and returns
+
     Note: jobs will be returned best-effort to the requesting master. This also means
     (since we are using zmq) that if a job was fired and the master disconnects
     between the publish and return, that the return will end up in a zmq buffer
@@ -2278,6 +2282,8 @@ class MultiSyndic(MinionBase):
         opts['loop_interval'] = 1
         super(MultiSyndic, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
+        # sync (old behavior), cluster (only returns and publishes)
+        self.syndic_mode = self.opts.get('syndic_mode', 'sync')
 
         self._has_master = threading.Event()
 
@@ -2504,7 +2510,7 @@ class MultiSyndic(MinionBase):
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
-                if event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
+                if self.syndic_mode == 'cluster' and event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
                     log.debug('Return recieved with matching master_id, not forwarding')
                     continue
 
@@ -2525,7 +2531,7 @@ class MultiSyndic(MinionBase):
                 # TODO: config to forward these? If so we'll have to keep track of who
                 # has seen them
                 # if we are the top level masters-- don't forward all the minion events
-                if 'master_id' not in self.opts:
+                if self.syndic_mode == 'sync':
                     # Add generic event aggregation here
                     if 'retcode' not in event['data']:
                         self.raw_events.append(event)
