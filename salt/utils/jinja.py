@@ -111,13 +111,14 @@ class SaltCacheLoader(BaseLoader):
 
         self.check_cache(template)
 
-        tpldir = path.dirname(template).replace('\\', '/')
-        tpldata = {
-            'template': template,
-            'tpldir': tpldir,
-            'tpl': tpldir.replace('/', '.'),
-        }
-        environment.globals.update(tpldata)
+        if environment and template:
+            tpldir = path.dirname(template).replace('\\', '/')
+            tpldata = {
+                'template': template,
+                'tpldir': tpldir,
+                'tpl': tpldir.replace('/', '.'),
+            }
+            environment.globals.update(tpldata)
 
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
