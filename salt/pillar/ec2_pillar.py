@@ -29,7 +29,6 @@ the instance.
 from __future__ import absolute_import
 
 # Import python libs
-import os
 import re
 import logging
 from distutils.version import StrictVersion
@@ -37,7 +36,6 @@ from distutils.version import StrictVersion
 # Import AWS Boto and Salt libs
 import boto.ec2
 import boto.utils
-import salt.log
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -75,7 +73,7 @@ def ext_pillar(minion_id,
     '''
 
     log.debug("Querying EC2 tags for minion id {0}".format(minion_id))
-    
+
     # If minion_id is not in the format of an AWS EC2 instance, check to see
     # if there is a grain named 'instance-id' use that.  Because this is a
     # security risk, the master config must contain a use_grain: True option
@@ -119,7 +117,7 @@ def ext_pillar(minion_id,
 
     try:
         conn = boto.ec2.connect_to_region(region)
-    except:
+    except boto.exception as e:
         log.error("%s: invalid AWS credentials.", __name__)
         return None
 
@@ -133,5 +131,4 @@ def ext_pillar(minion_id,
         log.error("Couldn't retrieve instance information: %s", e)
         return None
 
-    return { 'ec2_tags': tags }
-
+    return {'ec2_tags': tags}
