@@ -1651,6 +1651,20 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
                     )
 
 
+class SaltRaetSetupEngines(ioflo.base.deeding.Deed):
+    '''
+    Start the engines!
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'proc_mgr': '.salt.usr.proc_mgr'}
+
+    def action(self):
+        '''
+        Only call once, this will start the engine processes
+        '''
+        salt.engines.start_engines(self.opts.value, self.proc_mgr.value)
+
+
 class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
     '''
     Create the Beacon subsystem
