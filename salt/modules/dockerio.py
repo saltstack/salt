@@ -1807,7 +1807,8 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
 
 def load(imagepath):
     '''
-    Load the specified file at imagepath into docker that was generated from a docker save command
+    Load the specified file at imagepath into docker that was generated from
+   a docker save command
     e.g. `docker load < imagepath`
 
     imagepath
@@ -1823,7 +1824,8 @@ def load(imagepath):
     status = base_status.copy()
     if os.path.isfile(imagepath):
         try:
-            ret = __salt__['cmd.run']('docker load < ' + imagepath)
+            dockercmd = ['docker', 'load', '-i', imagepath]
+            ret = __salt__['cmd.run'](dockercmd)
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
@@ -1873,7 +1875,8 @@ def save(image, filename):
 
     if ok:
         try:
-            ret = __salt__['cmd.run']('docker save ' + image + ' > ' + filename)
+            dockercmd = ['docker', '-o', filename, 'save', image]
+            ret = __salt__['cmd.run'](dockercmd)
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
