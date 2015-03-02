@@ -16,12 +16,13 @@ def start_engines(opts, proc_mgr):
     '''
     engines = salt.loader.engines(opts)
     for engine in opts.get('engines', []):
-        if engine in engines:
+        fun = '{0}.start'.format(engine)
+        if fun in engines:
             proc_mgr.add_process(
                     Engine,
                     args=(
                         opts,
-                        engine,
+                        fun,
                         opts['engines'][engine]
                         )
                     )
@@ -31,18 +32,18 @@ class Engine(multiprocessing.Process):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, service, config):
+    def __init__(self, opts, fun, config):
         '''
         Set up the process executor
         '''
         super(Engine, self).__init__()
         self.opts = opts
         self.config = config
-        self.service = service
+        self.fun = fun
 
     def run(self):
         '''
         Run the master service!
         '''
         self.engine = salt.loader.engines(self.opts)
-        self.engine[self.service]()
+        self.engine[self.fun]()
