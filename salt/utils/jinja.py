@@ -114,9 +114,9 @@ class SaltCacheLoader(BaseLoader):
         if environment and template:
             tpldir = path.dirname(template).replace('\\', '/')
             tpldata = {
-                'template': template,
+                'tplfile': template,
                 'tpldir': tpldir,
-                'tpl': tpldir.replace('/', '.'),
+                'tpldot': tpldir.replace('/', '.'),
             }
             environment.globals.update(tpldata)
 
