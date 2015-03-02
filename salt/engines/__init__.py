@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Initialize the engines system. This plugin system allows for
 complex services to be encapsulated within the salt plugin environment

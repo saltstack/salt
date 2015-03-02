@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 A simple test engine, not intended for real use but as an example
 '''
