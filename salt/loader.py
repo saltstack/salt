@@ -150,10 +150,9 @@ def engines(opts):
     '''
     Return the master services plugins
     '''
-    ret = LazyLoader(_module_dirs(opts, 'engines', 'engines'),
+    return LazyLoader(_module_dirs(opts, 'engines', 'engines'),
                       opts,
                       tag='engines')
-    return FilterDictWrapper(ret, 'start')
 
 
 def proxy(opts, functions, whitelist=None):
