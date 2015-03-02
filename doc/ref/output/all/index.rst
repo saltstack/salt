@@ -12,6 +12,7 @@ Follow one of the below links for further information and examples
     :toctree:
     :template: autosummary.rst.tmpl
 
+    compact
     highstate
     json_out
     key
@@ -21,6 +22,7 @@ Follow one of the below links for further information and examples
     no_return
     overstatestage
     pprint_out
+    progress
     raw
     txt
     virt_query
