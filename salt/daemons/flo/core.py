@@ -1656,13 +1656,16 @@ class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
     Create the Beacon subsystem
     '''
     Ioinits = {'opts': '.salt.opts',
-               'beacon': '.salt.beacon'}
+               'beacon': '.salt.beacon',
+               'modules': '.salt.loader.modules'}
 
     def action(self):
         '''
         Run the beacons
         '''
-        self.beacon.value = salt.beacons.Beacon(self.opts.value)
+        self.beacon.value = salt.beacons.Beacon(
+                self.opts.value,
+                self.modules.value)
 
 
 class SaltRaetBeacon(ioflo.base.deeding.Deed):
