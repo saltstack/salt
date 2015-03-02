@@ -18,6 +18,7 @@ import salt.daemons.masterapi
 import salt.utils.args
 import salt.utils.process
 import salt.transport
+import salt.engines
 from raet import raeting
 from raet.road.stacking import RoadStack
 from raet.road.estating import RemoteEstate
