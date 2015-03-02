@@ -7,28 +7,24 @@ import multiprocessing
 
 # Import salt libs
 import salt
+import salt.loader
 
 
-class StartEngines(object):
+def start_engines(opts, proc_mgr):
     '''
     Fire up the configured engines!
     '''
-    def __init__(self, opts, proc_mgr):
-        self.opts = opts
-        self.proc_mgr = proc_mgr
-        self.engines = salt.loader.engines(self.opts)
-
-    def run(self):
-        for engine in self.opts.get('engines', []):
-            if engine in self.engines:
-                self.proc_mgr.add_process(
-                        Engine,
-                        args=(
-                            self.opts,
-                            engine,
-                            self.opts['engines'][engine]
-                            )
+    engines = salt.loader.engines(opts)
+    for engine in opts.get('engines', []):
+        if engine in engines:
+            proc_mgr.add_process(
+                    Engine,
+                    args=(
+                        opts,
+                        engine,
+                        opts['engines'][engine]
                         )
+                    )
 
 
 class Engine(multiprocessing.Process):
