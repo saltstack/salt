@@ -6,9 +6,10 @@ Support IPMI commands over LAN
 
 :warning: pyghmi version >= 0.6.21
 
-you can install pyghmi using:
+you can install pyghmi using somthin like:
 
-    sudo git clone https://github.com/stackforge/pyghmi.git  /usr/lib/python2.6/site-packages/
+    git clone https://github.com/stackforge/pyghmi.git
+    sudo mv pyghmi/pyghmi /usr/lib/python2.6/site-packages/pyghmi
 
 The following configuration defaults can be define in the pillar:
 
