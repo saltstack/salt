@@ -1041,7 +1041,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # enforce depends
         Depends.enforce_dependencies(self._dict, self.tag)
-        return True
+        return mod
 
     def _load(self, key):
         '''
@@ -1050,19 +1050,33 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # if the key doesn't have a '.' then it isn't valid for this mod dict
         if not isinstance(key, six.string_types) or '.' not in key:
             raise KeyError
-        mod_name, _ = key.split('.', 1)
+        mod_name, func = key.split('.', 1)
         if mod_name in self.missing_modules:
             return True
         # if the modulename isn't in the whitelist, don't bother
         if self.whitelist and mod_name not in self.whitelist:
             raise KeyError
 
-        def _inner_load(mod_name):
+        def _inner_load(mod_name, func):
             for name in self._iter_files(mod_name):
                 if name in self.loaded_files:
                     continue
+
+                mod = self._load_module(name)
+
+                # load deep dependency if a function is coming from another import
+                # and mod need to be reloaded to set correctly opts
+                try:
+                    func_ref = getattr(mod, func)
+                    func_ref_module = getattr(func_ref, '__module__')
+                    if func_ref_module != name and func_ref_module != mod.__name__:
+                        self._load_module(func_ref_module)
+                        self._load_module(name)
+                except AttributeError:
+                    pass
+
                 # if we got what we wanted, we are done
-                if self._load_module(name) and key in self._dict:
+                if mod and key in self._dict:
                     return True
             return False
 
@@ -1073,7 +1087,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # filesystem
         while True:
             try:
-                ret = _inner_load(mod_name)
+                ret = _inner_load(mod_name, func)
                 if not reloaded and ret is not True:
                     self.refresh_file_mapping()
                     reloaded = True
