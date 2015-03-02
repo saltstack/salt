@@ -245,16 +245,17 @@ def gen_locale(locale):
         salt '*' locale.gen_locale 'en_IE@euro ISO-8859-15'
     '''
     on_debian = __grains__.get('os') == 'Debian'
+    on_ubuntu = __grains__.get('os') == 'Ubuntu'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
 
-    if on_debian or on_gentoo:
+    if on_debian or on_gentoo:  # file-based search
         search = '/usr/share/i18n/SUPPORTED'
         valid = __salt__['file.search'](search, '^{0}$'.format(locale))
-    else:
-        parts = _split_locale(locale)
-        parts['codeset'] = ''
-        parts['charmap'] = ''
-        search_locale = _join_locale(parts)
+    else:  # directory-based search
+        search_parts = _split_locale(locale)
+        search_parts['codeset'] = ''
+        search_parts['charmap'] = ''
+        search_locale = _join_locale(search_parts)
 
         search = '/usr/share/i18n/locales'
         valid = search_locale in os.listdir(search)
@@ -270,21 +271,22 @@ def gen_locale(locale):
             '{0}'.format(locale),
             append_if_not_found=True
         )
-    elif __grains__.get('os') == 'Ubuntu':
+    elif on_ubuntu:
+        parts = _split_locale(locale)
         __salt__['file.touch'](
-            '/var/lib/locales/supported.d/{0}'.format(locale.split('_')[0])
+            '/var/lib/locales/supported.d/{0}'.format(parts['language'])
         )
-        __salt__['file.append'](
-            '/var/lib/locales/supported.d/{0}'.format(locale.split('_')[0]),
-            '{0} {1}'.format(locale, locale.split('.')[1])
-        )
-        return __salt__['cmd.retcode'](
-            'locale-gen'
+        __salt__['file.replace'](
+            '/var/lib/locales/supported.d/{0}'.format(parts['language']),
+            locale,
+            locale,
+            append_if_not_found=True
         )
 
     cmd = ['locale-gen']
     if on_gentoo:
         cmd.append('--generate')
-    cmd.append(locale)
+    if not on_ubuntu:
+        cmd.append(locale)
 
     return __salt__['cmd.retcode'](cmd, python_shell=False)
