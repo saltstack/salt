@@ -22,6 +22,7 @@ import yaml
 
 # Import salt libs
 import salt
+import salt.utils
 import salt.fileclient
 from salt.utils.odict import OrderedDict
 
@@ -376,6 +377,11 @@ class SerializerExtension(Extension, object):
         if yaml_txt.endswith('\n...\n'):
             log.info('Yaml filter ended with "\n...\n". This trailing string '
                      'will be removed in Boron.')
+            salt.utils.warn_until(
+                'Boron',
+                'Please remove the log message above.',
+                _dont_call_warnings=True
+            )
         return Markup(yaml_txt)
 
     def format_python(self, value):

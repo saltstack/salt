@@ -116,6 +116,15 @@ deploy script (bootstrap-salt.sh, by default) will be run, which will
 auto-detect the operating system, and install Salt using its native package
 manager. These do not need to be handled by the developer in the cloud module.
 
+The ``salt.utils.cloud.validate_windows_cred()`` function has been extended to
+take the number of retries and retry_delay parameters in case a specific cloud
+provider has a delay between providing the Windows credentials and the
+credentials being available for use.  In their ``create()`` function, or as a
+a sub-function called during the creation process, developers should use the
+``win_deploy_auth_retries`` and ``win_deploy_auth_retry_delay`` parameters from
+the provider configuration to allow the end-user the ability to customize the
+number of tries and delay between tries for their particular provider.
+
 After the appropriate deploy function completes, a final event is fired
 which describes the virtual machine that has just been created. This event is
 tagged ``salt/cloud/<vm name>/created``. The payload contains the names of the
