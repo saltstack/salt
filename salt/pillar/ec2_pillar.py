@@ -33,9 +33,13 @@ import re
 import logging
 from distutils.version import StrictVersion
 
-# Import AWS Boto and Salt libs
-import boto.ec2
-import boto.utils
+# Import AWS Boto libs
+try:
+    import boto.ec2
+    import boto.utils
+    HAS_BOTO = True
+except ImportError:
+    HAS_BOTO = False
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -46,6 +50,8 @@ def __virtual__():
     Check for required version of boto and make this pillar available
     depending on outcome.
     '''
+    if not HAS_BOTO:
+        return False
     boto_version = StrictVersion(boto.__version__)
     required_boto_version = StrictVersion('2.8.0')
     if boto_version < required_boto_version:
