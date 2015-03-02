@@ -45,14 +45,30 @@ from salt.ext.six.moves import range
 log = logging.getLogger(__name__)
 
 
-STATE_INTERNAL_KEYWORDS = frozenset([
-    # These are keywords passed to state module functions which are to be used
-    # by salt in this state module and not on the actual state module function
-    'check_cmd',
-    'fail_hard',
-    'fun',
+# These are keywords passed to state module functions which are to be used
+# by salt in this state module and not on the actual state module function
+STATE_REQUISITE_KEYWORDS = frozenset([
     'onchanges',
     'onfail',
+    'prereq',
+    'prerequired',
+    'watch',
+    'require',
+    'listen',
+    ])
+STATE_REQUISITE_IN_KEYWORDS = frozenset([
+    'onchanges_in',
+    'onfail_in',
+    'prereq_in',
+    'watch_in',
+    'require_in',
+    'listen_in',
+    ])
+STATE_RUNTIME_KEYWORDS = frozenset([
+    'fun',
+    'state',
+    'check_cmd',
+    'fail_hard',
     'onlyif',
     'order',
     'prereq',
@@ -61,26 +77,24 @@ STATE_INTERNAL_KEYWORDS = frozenset([
     'reload_modules',
     'reload_grains',
     'reload_pillar',
-    'require',
-    'require_in',
     'saltenv',
-    'state',
-    'unless',
     'use',
-    'watch',
-    'watch_in',
-    '__id__',
-    '__sls__',
+    'use_in',
     '__env__',
+    '__sls__',
+    '__id__',
     '__pub_user',
     '__pub_arg',
     '__pub_jid',
     '__pub_fun',
     '__pub_tgt',
     '__pub_ret',
+    '__pub_pid',
     '__pub_tgt_type',
     '__prereq__',
-])
+    ])
+
+STATE_INTERNAL_KEYWORDS = STATE_REQUISITE_KEYWORDS.union(STATE_REQUISITE_IN_KEYWORDS).union(STATE_RUNTIME_KEYWORDS)
 
 
 def _odict_hashable(self):
@@ -634,6 +648,7 @@ class State(object):
         '''
         ret = {'result': False}
         cmd_opts = {}
+
         if 'shell' in self.opts['grains']:
             cmd_opts['shell'] = self.opts['grains'].get('shell')
         if 'onlyif' in low_data:
@@ -642,7 +657,8 @@ class State(object):
             else:
                 low_data_onlyif = low_data['onlyif']
             for entry in low_data_onlyif:
-                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
+                cmd = self.functions['cmd.retcode'](
+                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd != 0 and ret['result'] is False:
                     ret.update({'comment': 'onlyif execution failed',
@@ -659,7 +675,8 @@ class State(object):
             else:
                 low_data_unless = low_data['unless']
             for entry in low_data_unless:
-                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
+                cmd = self.functions['cmd.retcode'](
+                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
                 log.debug('Last command return code: {0}'.format(cmd))
                 if cmd == 0 and ret['result'] is False:
                     ret.update({'comment': 'unless execution succeeded',
@@ -681,7 +698,8 @@ class State(object):
         if 'shell' in self.opts['grains']:
             cmd_opts['shell'] = self.opts['grains'].get('shell')
         for entry in low_data['check_cmd']:
-            cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, **cmd_opts)
+            cmd = self.functions['cmd.retcode'](
+                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
             log.debug('Last command return code: {0}'.format(cmd))
             if cmd == 0 and ret['result'] is False:
                 ret.update({'comment': 'check_cmd determined the state succeeded', 'result': True})
@@ -1944,7 +1962,7 @@ class State(object):
 
     def call_listen(self, chunks, running):
         '''
-        Find all of the listen routines and call the associated mod_match runs
+        Find all of the listen routines and call the associated mod_watch runs
         '''
         listeners = []
         crefs = {}
@@ -1992,6 +2010,9 @@ class State(object):
                             low['sfun'] = chunk['fun']
                             low['fun'] = 'mod_watch'
                             low['__id__'] = 'listener_{0}'.format(low['__id__'])
+                            for req in STATE_REQUISITE_KEYWORDS:
+                                if req in low:
+                                    low.pop(req)
                             mod_watchers.append(low)
         ret = self.call_chunks(mod_watchers)
         running.update(ret)

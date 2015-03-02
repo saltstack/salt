@@ -293,7 +293,7 @@ class SyncClientMixin(object):
                     continue
                 completed_funcs.append(mod)
                 for global_key, value in six.iteritems(func_globals):
-                    self.functions[fun].__globals__[global_key] = value
+                    self.functions[mod_name].__globals__[global_key] = value
 
             # There are some descrepencies of what a "low" structure is
             # in the publisher world it is a dict including stuff such as jid,

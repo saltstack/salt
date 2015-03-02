@@ -23,14 +23,18 @@ Full list of builtin state modules
     blockdev
     boto_asg
     boto_cloudwatch_alarm
+    boto_dynamodb
     boto_elasticache
     boto_elb
     boto_iam_role
     boto_lc
+    boto_rds
     boto_route53
     boto_secgroup
     boto_sns
     boto_sqs
+    boto_vpc
+    bower
     chef
     cloud
     cmd

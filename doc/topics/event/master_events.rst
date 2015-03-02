@@ -1,3 +1,5 @@
+.. _event-master_events:
+
 ==================
 Salt Master Events
 ==================
@@ -68,12 +70,16 @@ Job events
     :var fun: The function the minion ran. E.g., ``test.ping``.
     :var return: The data returned from the execution module.
 
+.. _event-master_presence:
+
 Presence events
 ===============
 
 .. salt:event:: salt/presence/present
 
-    Fired on a set schedule.
+    Events fired on a regular interval about currently connected, newly
+    connected, or recently disconnected minions. Requires the
+    :conf_master:`presence_events` setting to be enabled.
 
     :var present: A list of minions that are currently connected to the Salt
         master.

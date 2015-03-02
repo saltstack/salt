@@ -12,6 +12,8 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.cloud
+import salt._compat
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
 
@@ -380,6 +382,9 @@ def dot_vals(value):
 def gather_bootstrap_script(bootstrap=None):
     '''
     Download the salt-bootstrap script, and return its location
+
+    bootstrap
+        URL of alternate bootstrap script
 
     CLI Example:
 

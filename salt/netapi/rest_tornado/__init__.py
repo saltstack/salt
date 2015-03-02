@@ -5,19 +5,23 @@ from __future__ import print_function
 from __future__ import absolute_import
 import hashlib
 import logging
+import distutils.version
 
 __virtualname__ = 'rest_tornado'
 
 logger = logging.getLogger(__virtualname__)
 
+# we require at least 4.0, as that includes all the Future's stuff we use
+min_tornado_version = '4.0'
+has_tornado = False
 try:
-    import tornado.httpserver
-    import tornado.ioloop
-    import tornado.web
-    import tornado.gen
-
-    has_tornado = True
-except ImportError as err:
+    import tornado
+    if distutils.version.StrictVersion(tornado.version) >= \
+       distutils.version.StrictVersion(min_tornado_version):
+        has_tornado = True
+    else:
+        logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
+except (ImportError, TypeError) as err:
     has_tornado = False
     logger.error('ImportError! {0}'.format(str(err)))
 

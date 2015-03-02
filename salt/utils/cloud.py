@@ -67,7 +67,7 @@ from salt.exceptions import (
 
 # Import third party libs
 import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin,W0611
 from jinja2 import Template
 import yaml
 
@@ -707,8 +707,8 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             host, port
         )
     )
-    creds = '-U {0}%{1} //{2}'.format(
-        username, password, host)
+    creds = "-U '{0}%{1}' //{2}".format(
+            username, password, host)
     trycount = 0
     while True:
         trycount += 1
@@ -734,17 +734,18 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             )
 
 
-def validate_windows_cred(host, username='Administrator', password=None, retries=10):
+def validate_windows_cred(host, username='Administrator', password=None, retries=10,
+                          retry_delay=1):
     '''
     Check if the windows credentials are valid
     '''
-    for _ in range(retries):
-        retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
+    for i in xrange(retries):
+        retcode = win_cmd("winexe -U '{0}%{1}' //{2} \"hostname\"".format(
             username, password, host
         ))
         if retcode == 0:
             break
-        time.sleep(1)
+        time.sleep(retry_delay)
     return retcode == 0
 
 
@@ -860,7 +861,7 @@ def deploy_windows(host,
 
         smb_conn = salt.utils.smb.get_conn(host, username, password)
 
-        creds = '-U {0}%{1} //{2}'.format(
+        creds = "-U '{0}%{1}' //{2}".format(
             username, password, host)
 
         salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
@@ -931,6 +932,7 @@ def deploy_windows(host,
         win_cmd('winexe {0} "sc stop salt-minion"'.format(
             creds,
         ))
+        time.sleep(5)
         win_cmd('winexe {0} "sc start salt-minion"'.format(
             creds,
         ))
@@ -1039,7 +1041,7 @@ def deploy_script(host,
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 ssh_kwargs['key_filename'] = key_filename
-            elif password and 'has_ssh_agent' in kwargs and kwargs['has_ssh_agent'] is False:
+            elif password and kwargs.get('has_ssh_agent', False) is False:
                 log.debug('Using {0} as the password'.format(password))
                 ssh_kwargs['password'] = password
 

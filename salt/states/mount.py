@@ -193,12 +193,16 @@ def mounted(name,
                     'defaults',
                     'delay_connect',
                     'intr',
+                    'loop',
+                    'nointr',
                     'nobootwait',
                     'nofail',
                     'password',
                     'reconnect',
                     'retry',
                     'soft',
+                    'auto',
+                    'users',
                 ]
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
@@ -225,6 +229,9 @@ def mounted(name,
                         if size_match.group('size_unit') == 'g':
                             converted_size = int(size_match.group('size_value')) * 1024 * 1024
                         opt = "size={0}k".format(converted_size)
+                    # make cifs option user synonym for option username which is reported by /proc/mounts
+                    if fstype in ['cifs'] and opt.split('=')[0] == 'user':
+                        opt = "username={0}".format(opt.split('=')[1])
 
                     if opt not in active[real_name]['opts'] \
                     and ('superopts' in active[real_name]

@@ -887,8 +887,9 @@ class Minion(MinionBase):
         # Process Beacons
         try:
             beacons = self.process_beacons(self.functions)
-        except Exception:
-            log.critical('The beacon errored: ', exec_info=True)
+        except Exception as exc:
+            log.critical('Beacon processing errored: {0}. No beacons will be procssed.'.format(traceback.format_exc(exc)))
+            beacons = None
         if beacons:
             self._fire_master(events=beacons)
             for beacon in beacons:

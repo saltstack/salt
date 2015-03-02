@@ -853,7 +853,8 @@ _OS_NAME_MAP = {
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
     'pidora': 'Fedora',
-    'scientific': 'ScientificLinux'
+    'scientific': 'ScientificLinux',
+    'synology': 'Synology'
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -974,6 +975,36 @@ def os_data():
             grains['systemd']['version'] = systemd_info[0].split()[1]
             grains['systemd']['features'] = systemd_info[1]
 
+        # Add init grain
+        grains['init'] = 'unknown'
+        try:
+            os.stat('/run/systemd/system')
+            grains['init'] = 'systemd'
+        except OSError:
+            with salt.utils.fopen('/proc/1/cmdline') as fhr:
+                init_cmdline = fhr.read().replace('\x00', ' ').split()
+                init_bin = salt.utils.which(init_cmdline[0])
+                supported_inits = ('upstart', 'sysvinit', 'systemd')
+                edge_len = max(len(x) for x in supported_inits) - 1
+                buf_size = __opts__['file_buffer_size']
+                try:
+                    with open(init_bin, 'rb') as fp_:
+                        buf = True
+                        edge = ''
+                        while buf:
+                            buf = edge + fp_.read(buf_size).lower()
+                            for item in supported_inits:
+                                if item in buf:
+                                    grains['init'] = item
+                                    buf = ''
+                                    break
+                            edge = buf[-edge_len:]
+                except (IOError, OSError) as exc:
+                    log.error(
+                        'Unable to read from init_bin ({0}): {1}'
+                        .format(init_bin, exc)
+                    )
+
         # Add lsb grains on any distro with lsb-release
         try:
             import lsb_release  # pylint: disable=import-error
@@ -1069,6 +1100,29 @@ def os_data():
                             grains['lsb_distrib_release'] = release.group()
                         if codename is not None:
                             grains['lsb_distrib_codename'] = codename.group()
+            elif os.path.isfile('/etc.defaults/VERSION') \
+                    and os.path.isfile('/etc.defaults/synoinfo.conf'):
+                grains['osfullname'] = 'Synology'
+                with salt.utils.fopen('/etc.defaults/VERSION', 'r') as fp_:
+                    synoinfo = {}
+                    for line in fp_:
+                        try:
+                            key, val = line.rstrip('\n').split('=')
+                        except ValueError:
+                            continue
+                        if key in ('majorversion', 'minorversion',
+                                   'buildnumber'):
+                            synoinfo[key] = val.strip('"')
+                    if len(synoinfo) != 3:
+                        log.warning(
+                            'Unable to determine Synology version info. '
+                            'Please report this, as it is likely a bug.'
+                        )
+                    else:
+                        grains['osrelease'] = (
+                            '{majorversion}.{minorversion}-{buildnumber}'
+                            .format(**synoinfo)
+                        )
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
@@ -1080,9 +1134,12 @@ def os_data():
         # It's worth noting that Ubuntu has patched their Python distribution
         # so that platform.linux_distribution() does the /etc/lsb-release
         # parsing, but we do it anyway here for the sake for full portability.
-        grains['osfullname'] = grains.get('lsb_distrib_id', osname).strip()
-        grains['osrelease'] = grains.get('lsb_distrib_release',
-                                         osrelease).strip()
+        if 'osfullname' not in grains:
+            grains['osfullname'] = \
+                grains.get('lsb_distrib_id', osname).strip()
+        if 'osrelease' not in grains:
+            grains['osrelease'] = \
+                grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename',
                                           oscodename).strip()
         distroname = _REPLACE_LINUX_RE.sub('', grains['osfullname']).strip()
@@ -1223,6 +1280,7 @@ def locale_info():
         # might do, per #2205
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
+    grains['locale_info']['detectedencoding'] = __salt_system_encoding__
     return grains
 
 

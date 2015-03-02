@@ -439,6 +439,7 @@ def mod_watch(name,
               sig=None,
               reload=False,
               full_restart=False,
+              init_delay=None,
               **kwargs):
     '''
     The service watcher, called to invoke the watch command.
@@ -482,6 +483,8 @@ def mod_watch(name,
                 verb = 'restart'
                 past_participle = verb + 'ed'
         else:
+            if 'service.stop' in __salt__:
+                __salt__['service.stop'](name)
             func = __salt__['service.start']
             verb = 'start'
             past_participle = verb + 'ed'
@@ -496,6 +499,8 @@ def mod_watch(name,
         return ret
 
     result = func(name)
+    if init_delay:
+        time.sleep(init_delay)
 
     ret['changes'] = {name: result}
     ret['result'] = result

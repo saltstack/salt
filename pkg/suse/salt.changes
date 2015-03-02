@@ -1,10 +1,44 @@
 -------------------------------------------------------------------
+Thu Feb 12 19:35:34 UTC 2015 - aboe76@gmail.com
+
+- New Bugfix release 2014.7.2:
+- fix package bug with fdupes.
+- keep sle 11 sp3 support.
++ Fix erroneous warnings for systemd service enabled check (issue 19606)
++ Fix FreeBSD kernel module loading, listing, and persistence kmod (issue 197151, issue 19682)
++ Allow case-sensitive npm package names in the npm state. This may break behavior 
+  for people expecting the state to lowercase their npm package names for them. 
+  The npm module was never affected by mandatory lowercasing. (issue 20329)
++ Deprecate the activate parameter for pip.install for both the module and the state. 
+  If bin_env is given and points to a virtualenv, there is no need to activate that virtualenv 
+  in a shell for pip to install to the virtualenv.
++ Fix a file-locking bug in gitfs (issue 18839)
+
+-------------------------------------------------------------------
+Thu Jan 15 17:50:52 UTC 2015 - aboe76@gmail.com
+
+- New Bugfix release 2014.7.1:
++ Fixed gitfs serving symlinks in file.recurse states (issue 17700)
++ Fixed holding of multiple packages (YUM) when combined with version pinning (issue 18468)
++ Fixed use of Jinja templates in masterless mode with non-roots fileserver backend (issue 17963)
++ Re-enabled pillar and compound matching for mine and publish calls. Note that pillar globbing is still disabled for those modes, for security reasons. (issue 17194)
++ Fix for tty: True in salt-ssh (issue 16847)
+- Needed to provide zsh completion because of the tarball missing the zsh completion script.
+- Removed man salt.1.gz file from salt-master because upstream removed it.
+- Added man salt.7.gz to salt-master package
+
+-------------------------------------------------------------------
 Mon Nov  3 21:35:31 UTC 2014 - aboe76@gmail.com
 
 - Updated to Major Release 2014.7.0
 - added python-zipp as depency
 - added recommend python-pygit2, this is the preferred gitfs backend of saltstack
 - added zsh-completion package
+- Removed Patch fix-service-py-version-parsing-sles.patch already fixed in this package
+- Removed Patch pass-all-systemd-list-units.patch already fixed in this package
+- Removed Patch disable-service-py-for-suse-family.patch already fixed in this package
+- Removed Patch allow-systemd-units-no-unit-files.patch already fixed in this package
+- Removed Patch allow-systemd-parameterized-services.patch already fixed in this package
 - More information at: http://docs.saltstack.com/en/latest/topics/releases/2014.7.0.html
 - SALT SSH ENHANCEMENTS:
   + Support for Fileserver Backends

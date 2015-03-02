@@ -17,6 +17,7 @@ authentication, it is also possible to pass private keys to use explicitly.
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import logging
 import os
 import os.path
@@ -578,6 +579,8 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     * unless succeeded (unless == 0)
     else return True
     '''
+    cmd_kwargs = copy.deepcopy(cmd_kwargs)
+    cmd_kwargs['python_shell'] = True
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
             return {'comment': 'onlyif execution failed',

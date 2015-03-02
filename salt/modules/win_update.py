@@ -26,7 +26,7 @@ try:
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils

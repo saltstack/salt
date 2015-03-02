@@ -62,7 +62,7 @@ try:
     HAS_KEYSTONE = True
 except ImportError:
     pass
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 
 def __virtual__():

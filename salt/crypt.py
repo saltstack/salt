@@ -4,10 +4,8 @@ The crypt module manages all of the cryptography functions for minions and
 masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 '''
-from __future__ import absolute_import
-from __future__ import print_function
-
 # Import python libs
+from __future__ import absolute_import, print_function
 import os
 import sys
 import time
@@ -16,7 +14,7 @@ import hashlib
 import logging
 import traceback
 import binascii
-from salt.ext.six.moves import zip
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
 try:
@@ -499,7 +497,8 @@ class SAuth(object):
                          'from master {0}'.format(self.opts['master']))
                 m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
                 uid = salt.utils.get_uid(self.opts.get('user', None))
-                salt.utils.fopen(m_pub_fn, 'w+', uid=uid).write(payload['pub_key'])
+                with salt.utils.fpopen(m_pub_fn, 'w+', uid=uid) as wfh:
+                    wfh.write(payload['pub_key'])
                 return True
             else:
                 log.error('Received signed public-key from master {0} '
@@ -677,6 +676,7 @@ class SAuth(object):
 
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
+            opts=self.opts
         )
 
         try:

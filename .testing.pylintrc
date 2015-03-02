@@ -209,7 +209,9 @@ additional-builtins=__opts__,
   __active_provider_name__,
   __master_opts__,
   __jid_event__,
-  __instance_id__
+  __instance_id__,
+  __salt_system_encoding__
+
 
 # List of strings which can identify a callback function by name. A callback
 # name must start or end with one of those strings.
