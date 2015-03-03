@@ -57,22 +57,9 @@ def default_config():
 
         salt -G 'kernel:Linux' sysctl.default_config
     '''
-    if salt.utils.systemd.booted(__context__):
-        for line in __salt__['cmd.run_stdout'](
-            'systemctl --version'
-        ).splitlines():
-            if line.startswith('systemd '):
-                version = line.split()[-1]
-                try:
-                    if int(version) >= 207:
-                        return _check_systemd_salt_config()
-                except ValueError:
-                    log.error(
-                        'Unexpected non-numeric systemd version {0!r} '
-                        'detected'.format(version)
-                    )
-                break
-
+    if salt.utils.systemd.booted(__context__) \
+            and salt.utils.systemd.version(__context__) >= 207:
+        return _check_systemd_salt_config()
     return '/etc/sysctl.conf'
 
 
