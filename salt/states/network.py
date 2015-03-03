@@ -111,18 +111,20 @@ all interfaces are ignored unless specified.
         - type: bond
         - ipaddr: 10.1.0.1
         - netmask: 255.255.255.0
+        - mode: 802.3ad
+        - addrfam: inet
+        - proto: static # or "dhcp"
         - dns:
           - 8.8.8.8
           - 8.8.4.4
         - ipv6:
         - enabled: False
-        - use_in:
+        - slaves:
           - network: eth2
           - network: eth3
         - require:
           - network: eth2
           - network: eth3
-        - mode: 802.3ad
         - miimon: 100
         - arp_interval: 250
         - downdelay: 200

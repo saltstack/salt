@@ -1207,8 +1207,9 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     elif iface_type == 'bond':
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
+            opts.pop('mode', None)
             iface_data['inet']['bonding'] = bonding
-            iface_data['inet']['bonding']['slaves'] = opts['slaves']
+            iface_data['inet']['bonding']['slaves'] =  " ".join([interface['network'] for interface in opts['slaves']])
             iface_data['inet']['bonding_keys'] = sorted(bonding)
 
     elif iface_type == 'slave':
