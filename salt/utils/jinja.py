@@ -111,6 +111,15 @@ class SaltCacheLoader(BaseLoader):
 
         self.check_cache(template)
 
+        if environment and template:
+            tpldir = path.dirname(template).replace('\\', '/')
+            tpldata = {
+                'tplfile': template,
+                'tpldir': tpldir,
+                'tpldot': tpldir.replace('/', '.'),
+            }
+            environment.globals.update(tpldata)
+
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
             filepath = path.join(spath, template)
