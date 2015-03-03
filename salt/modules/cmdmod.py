@@ -8,6 +8,7 @@ access to the master root execution access to all salt minions.
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import time
 import functools
 import glob
@@ -172,6 +173,7 @@ def _run(cmd,
          timeout=None,
          with_communicate=True,
          reset_system_locale=True,
+         ignore_retcode=False,
          saltenv='base',
          use_vt=False):
     '''
@@ -462,7 +464,10 @@ def _run(cmd,
         finally:
             proc.close(terminate=True, kill=True)
     try:
-        __context__['retcode'] = ret['retcode']
+        if ignore_retcode:
+            __context__['retcode'] = 0
+        else:
+            __context__['retcode'] = ret['retcode']
     except NameError:
         # Ignore the context error during grain generation
         pass
@@ -626,6 +631,7 @@ def run(cmd,
                output_loglevel=output_loglevel,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt)
 
@@ -818,6 +824,7 @@ def run_stdout(cmd,
                output_loglevel=output_loglevel,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt)
 
@@ -905,6 +912,7 @@ def run_stderr(cmd,
                output_loglevel=output_loglevel,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
                use_vt=use_vt,
                saltenv=saltenv)
 
@@ -992,6 +1000,7 @@ def run_all(cmd,
                output_loglevel=output_loglevel,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
                saltenv=saltenv,
                use_vt=use_vt)
 
@@ -1076,6 +1085,7 @@ def retcode(cmd,
               output_loglevel=output_loglevel,
               timeout=timeout,
               reset_system_locale=reset_system_locale,
+              ignore_retcode=ignore_retcode,
               saltenv=saltenv,
               use_vt=use_vt)
 
@@ -1246,6 +1256,7 @@ def script(source,
 
 
 def script_retcode(source,
+                   args=None,
                    cwd=None,
                    stdin=None,
                    runas=None,
@@ -1278,6 +1289,8 @@ def script_retcode(source,
     .. code-block:: bash
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh
+        salt '*' cmd.script_retcode salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
+        salt '*' cmd.script_retcode salt://scripts/windows_task.ps1 args=' -Input c:\\tmp\\infile.txt' shell='powershell'
 
     A string of standard input can be specified for the command to be run using
     the ``stdin`` parameter. This can be useful in cases where sensitive
@@ -1303,6 +1316,7 @@ def script_retcode(source,
         saltenv = __env__
 
     return script(source=source,
+                  args=args,
                   cwd=cwd,
                   stdin=stdin,
                   runas=runas,
@@ -1408,10 +1422,10 @@ def tty(device, echo=None):
         }
 
 
-def run_chroot(root,
-               cmd,
+def run_chroot(root, cmd,
                stdin=None,
-               output_loglevel='debug'):
+               output_loglevel='debug',
+               **kw):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1454,7 +1468,11 @@ def run_chroot(root,
         sh_,
         cmd)
     run_func = __context__.pop('cmd.run_chroot.func', run_all)
-    ret = run_func(cmd, stdin=stdin, output_loglevel=output_loglevel)
+    # forward keywords, and filter pub ones
+    run_kw = copy.deepcopy(kw)
+    for a in [a for a in six.iterkeys(kw) if a.startswith('__')]:
+        run_kw.pop(a, None)
+    ret = run_func(cmd, stdin=stdin, output_loglevel=output_loglevel, **kw)
 
     # Kill processes running in the chroot
     for i in range(6):

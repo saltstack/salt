@@ -245,6 +245,47 @@ def create(name, allocated_storage, db_instance_class, engine,
         return False
 
 
+def create_read_replica(name, source_name, db_instance_class=None, port=None,
+                        availability_zone=None, auto_minor_version_upgrade=None,
+                        option_group_name=None, publicly_accessible=None,
+                        tags=None,
+                        region=None, key=None, keyid=None, profile=None):
+    '''
+    Create an RDS read replica
+
+    CLI example to create an RDS  read replica::
+
+        salt myminion boto_rds.create_read_replica replicaname source_name
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    if not __salt__['boto_rds.exists'](source_name, region, key, keyid, profile):
+        return False
+    if __salt__['boto_rds.exists'](name, region, key, keyid, profile):
+        return True
+    try:
+        rds_replica = conn.create_db_instance_read_replica(name, source_name,
+                                                           db_instance_class,
+                                                           availability_zone,
+                                                           port,
+                                                           auto_minor_version_upgrade,
+                                                           option_group_name,
+                                                           publicly_accessible,
+                                                           tags)
+        if not rds_replica:
+            msg = 'Failed to create RDS replica {0}'.format(name)
+            log.error(msg)
+            return False
+        log.info('Created replica {0} from {1}'.format(name, source_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create RDS replica {0}'.format(name)
+        log.error(msg)
+        return False
+
+
 def create_option_group(name, engine_name, major_engine_version,
                         option_group_description, tags=None, region=None,
                         key=None, keyid=None, profile=None):

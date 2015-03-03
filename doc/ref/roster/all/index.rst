@@ -10,5 +10,8 @@ Full list of builtin roster modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    ansible
+    cache
+    cloud
     flat
     scan

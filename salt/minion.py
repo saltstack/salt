@@ -353,7 +353,6 @@ class SMinion(object):
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
-        self.beacons = salt.beacons.Beacon(opts)
 
     def _init_context_and_poller(self):
         self.context = zmq.Context()
@@ -691,6 +690,7 @@ class Minion(MinionBase):
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
+        self.beacons = salt.beacons.Beacon(opts, self.functions)
         uid = salt.utils.get_uid(user=opts.get('user', None))
         self.proc_dir = get_proc_dir(opts['cachedir'], uid=uid)
         self.schedule = salt.utils.schedule.Schedule(
@@ -1130,7 +1130,7 @@ class Minion(MinionBase):
                     func,
                     data['arg'],
                     data)
-                sys.modules[func.__module__].__context__['retcode'] = 0
+                minion_instance.functions.pack['__context__']['retcode'] = 0
                 if opts.get('sudo_user', ''):
                     sudo_runas = opts.get('sudo_user')
                     if 'sudo.salt_call' in minion_instance.functions:
@@ -1158,7 +1158,7 @@ class Minion(MinionBase):
                     ret['return'] = iret
                 else:
                     ret['return'] = return_data
-                ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                ret['retcode'] = minion_instance.functions.pack['__context__'].get(
                     'retcode',
                     0
                 )

@@ -15,7 +15,9 @@ Full list of builtin pillar modules
     cmd_yamlex
     cobbler
     django_orm
+    ec2_pillar
     etcd_pillar
+    file_encode
     file_tree
     foreman
     git_pillar

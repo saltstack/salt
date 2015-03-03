@@ -427,7 +427,7 @@ IPV4_ATTR_MAP = {
     'server':  __ipv4_quad,
     'hwaddr':  __mac,
     # tunnel
-    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP'], dtype=str),
+    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP', '802.3ad'], dtype=str),
     'endpoint':  __ipv4_quad,
     'dstaddr':  __ipv4_quad,
     'local':  __ipv4_quad,
@@ -1448,7 +1448,7 @@ def _write_file_ifaces(iface, data, **settings):
             tmp = source_template.render({'name': adapter, 'data': adapters[adapter]})
         else:
             tmp = eth_template.render({'name': adapter, 'data': adapters[adapter]})
-        ifcfg = tmp + ifcfg
+        ifcfg = ifcfg + tmp
         if adapter == iface:
             saved_ifcfg = tmp
 
@@ -1460,8 +1460,8 @@ def _write_file_ifaces(iface, data, **settings):
             filename = settings['filename']
         _SEPERATE_FILE = True
     else:
-        if 'filename' in adapter[adapter]['data']:
-            filename = adapter[adapter]['data']
+        if 'filename' in adapters[adapter]['data']:
+            filename = adapters[adapter]['data']
         else:
             filename = _DEB_NETWORK_FILE
 
