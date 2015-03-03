@@ -10,7 +10,9 @@ these containers.
 
 .. __: http://www.freedesktop.org/software/systemd/man/systemd-nspawn.html
 
-Container root directories will live under /var/lib/container.
+Minions running systemd >= 219 will place new containers in
+``/var/lib/machines``, while those running systemd < 219 will place them in
+``/var/lib/container``.
 
 .. note:
 
