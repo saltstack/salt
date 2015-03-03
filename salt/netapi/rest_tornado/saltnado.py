@@ -20,6 +20,10 @@ add the following to the Salt master config file.
     rest_tornado:
         # can be any port
         port: 8000
+        # address to bind to (defaults to 0.0.0.0)
+        address: 0.0.0.0
+        # socket backlog
+        backlog: 128
         ssl_crt: /etc/pki/api/certs/server.crt
         # no need to specify ssl_key if cert and key
         # are in one single file
