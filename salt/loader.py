@@ -146,6 +146,15 @@ def raw_mod(opts, _, functions, mod='modules'):
                       pack={'__salt__': functions})
 
 
+def engines(opts):
+    '''
+    Return the master services plugins
+    '''
+    return LazyLoader(_module_dirs(opts, 'engines', 'engines'),
+                      opts,
+                      tag='engines')
+
+
 def proxy(opts, functions, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion

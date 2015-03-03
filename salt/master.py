@@ -41,6 +41,7 @@ import salt.wheel
 import salt.minion
 import salt.search
 import salt.key
+import salt.engines
 import salt.fileserver
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
@@ -397,6 +398,7 @@ class Master(SMaster):
         process_manager.add_process(Publisher, args=(self.opts,))
         log.info('Creating master event publisher process')
         process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+        salt.engines.start_engines(self.opts, process_manager)
 
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')

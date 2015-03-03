@@ -18,6 +18,7 @@ import salt.daemons.masterapi
 import salt.utils.args
 import salt.utils.process
 import salt.transport
+import salt.engines
 from raet import raeting
 from raet.road.stacking import RoadStack
 from raet.road.estating import RemoteEstate
@@ -1649,6 +1650,20 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
             self._publish(
                     self.publish.value.popleft()
                     )
+
+
+class SaltRaetSetupEngines(ioflo.base.deeding.Deed):
+    '''
+    Start the engines!
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'proc_mgr': '.salt.usr.proc_mgr'}
+
+    def action(self):
+        '''
+        Only call once, this will start the engine processes
+        '''
+        salt.engines.start_engines(self.opts.value, self.proc_mgr.value)
 
 
 class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
