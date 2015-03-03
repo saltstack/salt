@@ -621,6 +621,7 @@ def create(vm_):
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
             vm_['password'] = sup.secure_password()
             conn.root_password(vm_['instance_id'], vm_['password'])
+        data = conn.ex_get_node_details(vm_['instance_id'])
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
