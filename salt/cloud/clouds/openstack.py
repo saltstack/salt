@@ -384,7 +384,7 @@ def managedcloud(vm_):
     )
 
 
-def networks(vm_):
+def networks(vm_, kwargs={}):
     conn = get_conn()
     networks = config.get_cloud_config_value(
         'networks', vm_, __opts__, search_global=False
