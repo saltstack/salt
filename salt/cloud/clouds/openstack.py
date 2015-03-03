@@ -386,7 +386,7 @@ def managedcloud(vm_):
     )
 
 
-def networks(vm_):
+def networks(vm_, kwargs={}):
     conn = get_conn()
     networks = config.get_cloud_config_value(
         'networks', vm_, __opts__, search_global=False
@@ -519,7 +519,7 @@ def request_instance(vm_=None, call=None):
             g for g in avail_groups if g.name in group_list
         ]
 
-    networks(vm_)
+    networks(vm_, kwargs)
 
     files = config.get_cloud_config_value(
         'files', vm_, __opts__, search_global=False
