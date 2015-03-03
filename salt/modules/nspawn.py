@@ -1228,7 +1228,7 @@ def pull_tar(url, name, verify=False):
     return _pull_image('tar', url, name, verify=verify)
 
 
-def pull_dkr(url, name, index=False):
+def pull_dkr(url, name, index):
     '''
     Execute a ``machinectl pull-dkr`` to download a docker image and add it to
     /var/lib/machines as a new container.
@@ -1243,7 +1243,7 @@ def pull_dkr(url, name, index=False):
     name
         Name for the new container
 
-    index : None
+    index
         URL of the Docker index server from which to pull (must be an
         ``http://`` or ``https://`` URL).
 
@@ -1251,8 +1251,8 @@ def pull_dkr(url, name, index=False):
 
     .. code-block:: bash
 
-        salt myminion nspawn.pull_dkr
-        salt myminion nspawn.pull_docker
+        salt myminion nspawn.pull_dkr centos/centos6 cent6 index=https://get.docker.com
+        salt myminion nspawn.pull_docker centos/centos6 cent6 index=https://get.docker.com
     '''
     return _pull_image('dkr', url, name, index=index)
 
