@@ -1201,6 +1201,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type == 'bridge':
         bridging = _parse_bridge_opts(opts, iface)
         if bridging:
+            opts.pop('mode', None)
             iface_data['inet']['bridging'] = bridging
             iface_data['inet']['bridging_keys'] = sorted(bridging)
 
