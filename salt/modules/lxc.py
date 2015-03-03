@@ -2162,6 +2162,9 @@ def destroy(name, stop=False):
         )
     return _change_state('lxc-destroy', name, None)
 
+# Compatibility between LXC and nspawn
+remove = destroy
+
 
 def exists(name):
     '''
