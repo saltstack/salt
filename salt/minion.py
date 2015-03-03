@@ -1205,7 +1205,7 @@ class Minion(MinionBase):
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
         else:
-            ret['return'] = '{0!r} is not available.'.format(function_name)
+            ret['return'] = minion_instance.functions.missing_fun_string(function_name)
             mod_name = function_name.split('.')[0]
             if mod_name in minion_instance.function_errors:
                 ret['return'] += ' Possible reasons: {0!r}'.format(minion_instance.function_errors[mod_name])
