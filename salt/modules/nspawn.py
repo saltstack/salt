@@ -1044,6 +1044,58 @@ def reboot(name, kill=False):
     return True
 
 
+def remove(name, stop=False):
+    '''
+    Remove the named container
+
+    .. warning::
+
+        This function will remove all data associated with the container. It
+        will not, however, remove the btrfs subvolumes created by pulling
+        container images (:mod:`nspawn.pull_raw
+        <salt.modules.nspawn.pull_raw>`, :mod:`nspawn.pull_tar
+        <salt.modules.nspawn.pull_tar>`, :mod:`nspawn.pull_dkr
+        <salt.modules.nspawn.pull_dkr>`).
+
+    stop : False
+        If ``True``, the container will be destroyed even if it is
+        running/frozen.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' nspawn.remove foo
+        salt '*' nspawn.remove foo stop=True
+    '''
+    _ensure_exists(name)
+    if not stop and state(name) != 'stopped':
+        raise CommandExecutionError(
+            'Container \'{0}\' is not stopped'.format(name)
+        )
+
+    def _failed_remove(name, exc):
+        raise CommandExecutionError(
+            'Unable to remove container \'{0}\': {1}'.format(name, exc)
+        )
+
+    if _sd_version() >= 219:
+        ret = _machinectl('remove {0}'.format(name))
+        if ret['retcode'] != 0:
+            __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
+            _failed_remove(name, ret['stderr'])
+    else:
+        try:
+            shutil.rmtree(os.path.join(_root(), name))
+        except OSError as exc:
+            _failed_remove(name, exc)
+    return True
+
+
+# Compatibility between LXC and nspawn
+destroy = remove
+
+
 # Everything below requres systemd >= 219
 # TODO: Write a decorator to keep these functions from being available to older
 #       systemd versions.
