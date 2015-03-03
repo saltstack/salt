@@ -2,7 +2,8 @@
 '''
 Watch files and translate the changes into salt events
 '''
-# Import python libs
+# Import Python libs
+from __future__ import absolute_import
 import collections
 
 # Import salt libs
@@ -134,6 +135,8 @@ def beacon(config):
                     r_mask |= _get_mask(mask)
             elif isinstance(mask, salt.ext.six.binary_type):
                 r_mask = _get_mask(mask)
+            else:
+                r_mask = mask
             mask = r_mask
             rec = config[path].get('recurse', False)
             auto_add = config[path].get('auto_add', False)
