@@ -22,7 +22,6 @@ Minions running systemd >= 219 will place new containers in
 '''
 # Import python libs
 import errno
-import fnmatch
 import logging
 import os
 import re
@@ -1065,7 +1064,7 @@ def _pull_image(pull_type, image, name, **kwargs):
             pull_opts.append('--verify=no')
         else:
             def _bad_verify():
-                raise SaltInvocationEror(
+                raise SaltInvocationError(
                     '\'verify\' must be one of the following: '
                     'signature, checksum'
                 )
@@ -1126,7 +1125,7 @@ def pull_raw(url, name, verify=False):
 
         salt myminion nspawn.pull_raw http://ftp.halifax.rwth-aachen.de/fedora/linux/releases/21/Cloud/Images/x86_64/Fedora-Cloud-Base-20141203-21.x86_64.raw.xz fedora21
     '''
-    return _pull_image('raw', url, name, verify)
+    return _pull_image('raw', url, name, verify=verify)
 
 
 def pull_tar(url, name, verify=False):
@@ -1158,7 +1157,7 @@ def pull_tar(url, name, verify=False):
 
         salt myminion nspawn.pull_tar http://foo.domain.tld/containers/archlinux-2015.02.01.tar.gz arch2
     '''
-    return _pull_image('tar', url, name, verify)
+    return _pull_image('tar', url, name, verify=verify)
 
 
 def pull_dkr(url, name, index=False):
@@ -1187,6 +1186,6 @@ def pull_dkr(url, name, index=False):
         salt myminion nspawn.pull_dkr
         salt myminion nspawn.pull_docker
     '''
-    return _pull_image('dkr', url, name, verify)
+    return _pull_image('dkr', url, name, index=index)
 
 pull_docker = pull_dkr

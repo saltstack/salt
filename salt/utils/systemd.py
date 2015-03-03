@@ -4,8 +4,14 @@ Contains systemd related help files
 '''
 # import python libs
 from __future__ import absolute_import
+import logging
 import os
 import subprocess
+
+# Import Salt libs
+from salt.exceptions import SaltInvocationError
+
+log = logging.getLogger(__name__)
 
 
 def booted(context):
