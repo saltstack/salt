@@ -651,7 +651,9 @@ def bootstrap_container(name, dist=None, version=None):
     minion is running as will be created, otherwise the needed bootstrapping
     tools will need to be available on the host.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion nspawn.bootstrap_container <name>
     '''
@@ -736,6 +738,12 @@ def list_stopped():
 def exists(name):
     '''
     Returns true if the named container exists
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion nspawn.exists <name>
     '''
     return name in list_all()
 
@@ -750,7 +758,13 @@ def _get_state(name):
 
 def state(name):
     '''
-    Return state of container
+    Return state of container (running or stopped)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion nspawn.state <name>
     '''
     _ensure_exists(name)
     return _get_state(name)
@@ -880,7 +894,9 @@ def start(name):
     '''
     Start the named container
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion nspawn.start <name>
     '''
