@@ -218,14 +218,16 @@ def at(*args, **kwargs):  # pylint: disable=C0103
                                                           _cmd_quote(args[0]),
                                                           echo_cmd)
     else:
-        cmd = '{3} "{1}" | {2} {0}'.format(args[0], ' '.join(args[1:]),
-            binary, echo_cmd)
+        cmd = '{3} "{1}" | {2} {0}'.format(_cmd_quote(args[0]),
+                                           _cmd_quote(' '.join(args[1:])),
+                                           binary,
+                                           echo_cmd)
 
     # Can't use _cmd here since we need to prepend 'echo_cmd'
     if 'runas' in kwargs:
-        output = __salt__['cmd.run']('{0}'.format(cmd), runas=kwargs['runas'])
+        output = __salt__['cmd.run']('{0}'.format(cmd), python_shell=True, runas=kwargs['runas'])
     else:
-        output = __salt__['cmd.run']('{0}'.format(cmd))
+        output = __salt__['cmd.run']('{0}'.format(cmd), python_shell=True)
 
     if output is None:
         return '\'at.at\' is not available.'
