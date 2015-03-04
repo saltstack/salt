@@ -26,6 +26,8 @@ import logging
 import os
 import re
 import shutil
+import time
+import tempfile
 
 # Import Salt libs
 import salt.defaults.exitcodes
@@ -40,6 +42,7 @@ __func_alias__ = {
     'list_': 'list',
 }
 __virtualname__ = 'nspawn'
+SEED_MARKER = '/nspawn.initial_seed'
 WANT = '/etc/systemd/system/multi-user.target.wants/systemd-nspawn@{0}.service'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -185,9 +188,9 @@ def _ensure_running(name):
     Raise an exception if the container does not exist
     '''
     if state(name) != 'running':
-        raise CommandExecutionError(
-            'Container \'{0}\' is stopped'.format(name)
-        )
+        return True
+    else:
+        return start(name)
 
 
 def _ensure_exists(name):
@@ -666,6 +669,151 @@ def bootstrap_container(name, dist=None, version=None):
     return globals()['_bootstrap_{0}'.format(dist)](name, version=version)
 
 
+def _needs_install(name):
+    ret = 0
+    has_minion = retcode(name, "command -v salt-minion")
+    # we assume that installing is when no minion is running
+    # but testing the executable presence is not enougth for custom
+    # installs where the bootstrap can do much more than installing
+    # the bare salt binaries.
+    if has_minion:
+        processes = run_stdout(name, 'ps aux')
+        if 'salt-minion' not in processes:
+            ret = 1
+        else:
+            retcode(name, 'salt-call --local service.stop salt-minion')
+    else:
+        ret = 1
+    return ret
+
+
+def bootstrap_salt(name,
+                   config=None,
+                   approve_key=True,
+                   install=True,
+                   pub_key=None,
+                   priv_key=None,
+                   bootstrap_url=None,
+                   force_install=False,
+                   unconditional_install=False,
+                   bootstrap_delay=None,
+                   bootstrap_args=None,
+                   bootstrap_shell=None):
+    '''
+    Bootstrap a container from package servers, if dist is None the os the
+    minion is running as will be created, otherwise the needed bootstrapping
+    tools will need to be available on the host.
+
+    CLI Example::
+
+        salt '*' nspawn.bootstrap_salt arch1
+    '''
+    if bootstrap_delay is not None:
+        try:
+            time.sleep(bootstrap_delay)
+        except TypeError:
+            # Bad input, but assume since a value was passed that
+            # a delay was desired, and sleep for 5 seconds
+            time.sleep(5)
+
+    c_info = info(name)
+    if not c_info:
+        return None
+
+    # default set here as we cannot set them
+    # in def as it can come from a chain of procedures.
+    if bootstrap_args:
+        # custom bootstrap args can be totally customized, and user could
+        # have inserted the placeholder for the config directory.
+        # For example, some salt bootstrap script do not use at all -c
+        if '{0}' not in bootstrap_args:
+            bootstrap_args += ' -c {0}'
+    else:
+        bootstrap_args = '-c {0}'
+    if not bootstrap_shell:
+        bootstrap_shell = 'sh'
+
+    orig_state = _ensure_running(name)
+    if not orig_state:
+        return orig_state
+    if not force_install:
+        needs_install = _needs_install(name)
+    else:
+        needs_install = True
+    seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
+    tmp = tempfile.mkdtemp()
+    if seeded and not unconditional_install:
+        ret = True
+    else:
+        ret = False
+        cfg_files = __salt__['seed.mkconfig'](
+            config, tmp=tmp, id_=name, approve_key=approve_key,
+            pub_key=pub_key, priv_key=priv_key)
+        if needs_install or force_install or unconditional_install:
+            if install:
+                rstr = __salt__['test.rand_str']()
+                configdir = '/tmp/.c_{0}'.format(rstr)
+                run(name,
+                    'install -m 0700 -d {0}'.format(configdir),
+                    python_shell=False)
+                bs_ = __salt__['config.gather_bootstrap_script'](
+                    bootstrap=bootstrap_url)
+                dest_dir = os.path.join('/tmp', rstr)
+                for cmd in [
+                    'mkdir -p {0}'.format(dest_dir),
+                    'chmod 700 {0}'.format(dest_dir),
+                ]:
+                    if run_stdout(name, cmd):
+                        log.error(
+                            ('tmpdir {0} creation'
+                             ' failed ({1}').format(dest_dir, cmd))
+                        return False
+                cp(name,
+                   bs_,
+                   '{0}/bootstrap.sh'.format(dest_dir),
+                   makedirs=True)
+                cp(name, cfg_files['config'],
+                   os.path.join(configdir, 'minion'))
+                cp(name, cfg_files['privkey'],
+                   os.path.join(configdir, 'minion.pem'))
+                cp(name, cfg_files['pubkey'],
+                   os.path.join(configdir, 'minion.pub'))
+                bootstrap_args = bootstrap_args.format(configdir)
+                cmd = ('{0} {2}/bootstrap.sh {1}'
+                       .format(bootstrap_shell,
+                               bootstrap_args.replace("'", "''"),
+                               dest_dir))
+                # log ASAP the forged bootstrap command which can be wrapped
+                # out of the output in case of unexpected problem
+                log.info('Running {0} in LXC container \'{1}\''
+                         .format(cmd, name))
+                ret = retcode(name, cmd, output_loglevel='info',
+                                  use_vt=True) == 0
+            else:
+                ret = False
+        else:
+            minion_config = salt.config.minion_config(cfg_files['config'])
+            pki_dir = minion_config['pki_dir']
+            cp(name, cfg_files['config'], '/etc/salt/minion')
+            cp(name, cfg_files['privkey'], os.path.join(pki_dir, 'minion.pem'))
+            cp(name, cfg_files['pubkey'], os.path.join(pki_dir, 'minion.pub'))
+            run(name,
+                'salt-call --local service.enable salt-minion',
+                python_shell=False)
+            ret = True
+        shutil.rmtree(tmp)
+        if orig_state == 'stopped':
+            stop(name)
+        elif orig_state == 'frozen':
+            freeze(name)
+        # mark seeded upon successful install
+        if ret:
+            run(name,
+                    'touch \'{0}\''.format(SEED_MARKER),
+                    python_shell=False)
+    return ret
+
+
 def list_all():
     '''
     Lists all nspawn containers
@@ -1094,6 +1242,123 @@ def remove(name, stop=False):
 
 # Compatibility between LXC and nspawn
 destroy = remove
+
+
+def _get_md5(name, path):
+    '''
+    Get the MD5 checksum of a file from a container
+    '''
+    output = run_stdout(name, 'md5sum "{0}"'.format(path), ignore_retcode=True)
+    try:
+        return output.split()[0]
+    except IndexError:
+        # Destination file does not exist or could not be accessed
+        return None
+
+
+def cp(name, source, dest, makedirs=False):
+    '''
+    Copy a file or directory from the host into a container.
+
+    name
+        Container name
+
+    source
+        File to be copied to the container
+
+    dest
+        Destination on the container. Must be an absolute path.
+
+        .. versionchanged:: 2015.2.0
+            If the destination is a directory, the file will be copied into
+            that directory.
+
+    makedirs : False
+
+        Create the parent directory on the container if it does not already
+        exist.
+
+        .. versionadded:: 2015.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.cp /tmp/foo /root/foo
+    '''
+    if _sd_version() >= 219:
+        pass
+
+    c_state = state(name)
+    if c_state != 'running':
+        raise CommandExecutionError(
+            'Container \'{0}\' {1}'.format(
+                name,
+                'is {0}'.format(c_state)
+                    if c_state is not None
+                    else 'does not exist'
+            )
+        )
+
+    log.debug('Copying {0} to container \'{1}\' as {2}'
+              .format(source, name, dest))
+
+    # Source file sanity checks
+    if not os.path.isabs(source):
+        raise SaltInvocationError('Source path must be absolute')
+    elif not os.path.exists(source):
+        raise SaltInvocationError(
+            'Source file {0} does not exist'.format(source)
+        )
+    elif not os.path.isfile(source):
+        raise SaltInvocationError('Source must be a regular file')
+    source_dir, source_name = os.path.split(source)
+
+    # Destination file sanity checks
+    if not os.path.isabs(dest):
+        raise SaltInvocationError('Destination path must be absolute')
+    if retcode(name,
+                   'test -d \'{0}\''.format(dest),
+                   ignore_retcode=True) == 0:
+        # Destination is a directory, full path to dest file will include the
+        # basename of the source file.
+        dest = os.path.join(dest, source_name)
+    else:
+        # Destination was not a directory. We will check to see if the parent
+        # dir is a directory, and then (if makedirs=True) attempt to create the
+        # parent directory.
+        dest_dir, dest_name = os.path.split(dest)
+        if retcode(name,
+                   'test -d \'{0}\''.format(dest_dir),
+                   ignore_retcode=True) != 0:
+            if makedirs:
+                result = run_all(name, 'mkdir -p \'{0}\''.format(dest_dir))
+                if result['retcode'] != 0:
+                    error = ('Unable to create destination directory {0} in '
+                             'container \'{1}\''.format(dest_dir, name))
+                    if result['stderr']:
+                        error += ': {0}'.format(result['stderr'])
+                    raise CommandExecutionError(error)
+            else:
+                raise SaltInvocationError(
+                    'Directory {0} does not exist on container \'{1}\''
+                    .format(dest_dir, name)
+                )
+
+    # Before we try to replace the file, compare checksums.
+    source_md5 = __salt__['file.get_sum'](source, 'md5')
+    if source_md5 != _get_md5(name, dest):
+        # Using cat here instead of opening the file, reading it into memory,
+        # and passing it as stdin to run(). This will keep down memory
+        # usage for the minion and make the operation run quicker.
+        __salt__['cmd.run_stdout'](
+            'cat "{0}" | {1} env -i {2} tee "{3}"'
+            .format(source, _nsenter(name), PATH, dest),
+            python_shell=True
+        )
+        return source_md5 == _get_md5(name, dest)
+    # Checksums matched, no need to copy, just return True
+    return True
 
 
 # Everything below requres systemd >= 219
