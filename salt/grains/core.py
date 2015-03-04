@@ -470,18 +470,27 @@ def _virtual(osdata):
     # detection.
     skip_cmds = ('AIX',)
 
+    # list of commands to be executed to determine the 'virtual' grain
+    _cmds = set()
+
+    # test first for virt-what, which covers most of the desired functionality
+    # on most platforms
+    if not salt.utils.is_windows() and osdata['kernel'] not in skip_cmds:
+        if salt.utils.which('virt-what'):
+            _cmds = (['virt-what'])
+        else:
+            log.info('Please install "virt-what" to improve results of the "virtual" grain.')
     # Check if enable_lspci is True or False
-    if __opts__.get('enable_lspci', True) is False:
-        _cmds = ('dmidecode', 'dmesg')
+    elif __opts__.get('enable_lspci', True) is False:
+        _cmds = (['dmidecode', 'dmesg'])
     elif osdata['kernel'] in skip_cmds:
         _cmds = ()
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
-            _cmds = ('dmidecode', 'dmesg')
+            _cmds = (['dmidecode', 'dmesg'])
         else:
-            _cmds = ('dmidecode', 'lspci', 'dmesg')
-
+            _cmds = (['dmidecode', 'lspci', 'dmesg'])
     failed_commands = set()
     for command in _cmds:
         args = []
@@ -570,6 +579,13 @@ def _virtual(osdata):
             elif 'virtio' in model:
                 grains['virtual'] = 'kvm'
             # Break out of the loop so the next log message is not issued
+            break
+        elif command == 'virt-what':
+            # if 'virt-what' returns nothing, it's either an undetected platform
+            # so we default just as virt-what to 'physical', otherwise use the
+            # platform detected/returned by virt-what
+            if output:
+                grains['virtual'] = output.lower()
             break
     else:
         if osdata['kernel'] in skip_cmds:
