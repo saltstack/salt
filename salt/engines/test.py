@@ -27,7 +27,7 @@ def start():
             opts=__opts__,
             sock_dir=__opts__['sock_dir'])
         log.debug('test engine started')
- 
+
     while True:
         event = event_bus.get_event()
         jevent = json.dumps(event)
