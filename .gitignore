@@ -1,4 +1,5 @@
 /build
+/src
 *.py[co]
 pkg/arch/*.tar.xz
 *.swp
