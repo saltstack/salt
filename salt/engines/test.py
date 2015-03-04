@@ -16,9 +16,18 @@ def start():
     '''
     Listen to events and write them to a log file
     '''
-    event_bus = salt.utils.event.get_master_event(
-            __opts__,
-            __opts__['sock_dir'])
+    if __opts__.get('id').endswith('_master'):
+        event_bus = salt.utils.event.get_master_event(
+                __opts__,
+                __opts__['sock_dir'])
+    else:
+        event_bus = salt.utils.event.get_event(
+            'minion',
+            transport=__opts__['transport'],
+            opts=__opts__,
+            sock_dir=__opts__['sock_dir'])
+        log.debug('test engine started')
+
     while True:
         event = event_bus.get_event()
         jevent = json.dumps(event)
