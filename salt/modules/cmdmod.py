@@ -1186,6 +1186,6 @@ def exec_code(lang, code, cwd=None):
         fp_.write(code)
 
     cmd = '{0} {1}'.format(lang, codefile)
-    ret = run(cmd, cwd=cwd)
+    stdout = run(cmd, cwd=cwd)
     os.remove(codefile)
-    return ret
+    return stdout
