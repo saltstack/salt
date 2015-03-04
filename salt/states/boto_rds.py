@@ -287,7 +287,7 @@ def create_replica(name, source, db_instance_class=None, port=None,
                                                            option_group_name,
                                                            publicly_accessible,
                                                            tags, region, key,
-                                                           profile)
+                                                           keyid, profile)
         if created:
             config = __salt__['boto_rds.describe'](name, tags=None, region=None,
                                                   key=None, keyid=None,
