@@ -804,8 +804,6 @@ def bootstrap_salt(name,
         shutil.rmtree(tmp)
         if orig_state == 'stopped':
             stop(name)
-        elif orig_state == 'frozen':
-            freeze(name)
         # mark seeded upon successful install
         if ret:
             run(name,
