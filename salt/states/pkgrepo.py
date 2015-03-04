@@ -387,7 +387,9 @@ def absent(name, **kwargs):
            'comment': ''}
     repo = {}
     if 'ppa' in kwargs and __grains__['os'] == 'Ubuntu':
-        kwargs['name'] = kwargs.pop('ppa')
+        name = kwargs.pop('ppa')
+        if not name.startswith('ppa:'):
+            name = 'ppa:' + name
 
     try:
         repo = __salt__['pkg.get_repo'](

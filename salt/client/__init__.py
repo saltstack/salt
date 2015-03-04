@@ -36,6 +36,7 @@ import salt.minion
 import salt.payload
 import salt.transport
 import salt.loader
+import salt.minion
 import salt.utils
 import salt.utils.args
 import salt.utils.event

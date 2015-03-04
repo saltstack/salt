@@ -46,7 +46,7 @@ import salt.ext.six as six
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
-# pylint: disable=import-error,no-name-in-module
+# pylint: enable=import-error,no-name-in-module
 try:
     import requests
     HAS_REQUESTS = True
@@ -257,11 +257,11 @@ def query(url,
         result_text = result.text
         result_cookies = result.cookies
     else:
-        request = urllib2.Request(url)
-        handlers = (
+        request = urllib2.Request(url, data)
+        handlers = [
             urllib2.HTTPHandler,
             urllib2.HTTPCookieProcessor(sess_cookies)
-        )
+        ]
 
         if url.startswith('https') or port == 443:
             if not HAS_MATCHHOSTNAME:

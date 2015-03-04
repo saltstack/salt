@@ -740,7 +740,10 @@ def interface_ip(iface):
     '''
     Return the interface details
     '''
-    return interfaces().get(iface, {}).get('inet', {})[0].get('address', {})
+    try:
+        return interfaces().get(iface, {}).get('inet', {})[0].get('address', {})
+    except KeyError:
+        return {}  # iface has no IP
 
 
 def subnets():
@@ -804,14 +807,16 @@ def ip_in_subnet(ip_addr, cidr):
     return (ipaddr & mask) == (netaddr & mask)
 
 
-def ip_addrs(interface=None, include_loopback=False):
+def ip_addrs(interface=None, include_loopback=False, interface_data=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     '''
     ret = set()
-    ifaces = interfaces()
+    ifaces = interface_data \
+        if isinstance(interface_data, dict) \
+        else interfaces()
     if interface is None:
         target_ifaces = ifaces
     else:
@@ -832,14 +837,16 @@ def ip_addrs(interface=None, include_loopback=False):
     return sorted(list(ret))
 
 
-def ip_addrs6(interface=None, include_loopback=False):
+def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
     '''
     Returns a list of IPv6 addresses assigned to the host. ::1 is ignored,
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
     '''
     ret = set()
-    ifaces = interfaces()
+    ifaces = interface_data \
+        if isinstance(interface_data, dict) \
+        else interfaces()
     if interface is None:
         target_ifaces = ifaces
     else:

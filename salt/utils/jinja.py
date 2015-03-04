@@ -22,6 +22,7 @@ import yaml
 
 # Import salt libs
 import salt
+import salt.utils
 import salt.fileclient
 from salt.utils.odict import OrderedDict
 
@@ -52,7 +53,8 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None, pillar_rend=False):
+    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None,
+                 pillar_rend=False):
         if env is not None:
             salt.utils.warn_until(
                 'Boron',
@@ -80,8 +82,7 @@ class SaltCacheLoader(BaseLoader):
         '''
         if not self._file_client:
             self._file_client = salt.fileclient.get_file_client(
-                    self.opts,
-                    self.pillar_rend)
+                self.opts, self.pillar_rend)
         return self._file_client
 
     def cache_file(self, template):
@@ -330,7 +331,7 @@ class SerializerExtension(Extension, object):
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-        'load_text', 'import_text'])
+                'load_text', 'import_text'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -359,7 +360,9 @@ class SerializerExtension(Extension, object):
         '''
         def explore(data):
             if isinstance(data, (dict, OrderedDict)):
-                return PrintableDict([(key, explore(value)) for key, value in six.iteritems(data)])
+                return PrintableDict(
+                    [(key, explore(value)) for key, value in six.iteritems(data)]
+                )
             elif isinstance(data, (list, tuple, set)):
                 return data.__class__([explore(value) for value in data])
             return data
@@ -369,8 +372,17 @@ class SerializerExtension(Extension, object):
         return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
 
     def format_yaml(self, value, flow_style=True):
-        return Markup(yaml.dump(value, default_flow_style=flow_style,
-                                Dumper=OrderedDictDumper).strip())
+        yaml_txt = yaml.dump(value, default_flow_style=flow_style,
+                             Dumper=OrderedDictDumper).strip()
+        if yaml_txt.endswith('\n...\n'):
+            log.info('Yaml filter ended with "\n...\n". This trailing string '
+                     'will be removed in Boron.')
+            salt.utils.warn_until(
+                'Boron',
+                'Please remove the log message above.',
+                _dont_call_warnings=True
+            )
+        return Markup(yaml_txt)
 
     def format_python(self, value):
         return Markup(pprint.pformat(value).strip())
@@ -382,7 +394,7 @@ class SerializerExtension(Extension, object):
             return yaml.safe_load(value)
         except AttributeError:
             raise TemplateRuntimeError(
-                    'Unable to load yaml from {0}'.format(value))
+                'Unable to load yaml from {0}'.format(value))
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
@@ -391,13 +403,15 @@ class SerializerExtension(Extension, object):
             return json.loads(value)
         except (ValueError, TypeError, AttributeError):
             raise TemplateRuntimeError(
-                    'Unable to load json from {0}'.format(value))
+                'Unable to load json from {0}'.format(value))
 
     def load_text(self, value):
         if isinstance(value, TemplateModule):
             value = str(value)
 
         return value
+
+    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':
@@ -406,7 +420,7 @@ class SerializerExtension(Extension, object):
             return self.parse_json(parser)
         elif parser.stream.current.value == 'import_text':
             return self.parse_text(parser)
-        elif parser.stream.current.value in ('load_yaml', 'load_json', 'load_text'):
+        elif parser.stream.current.value in self._load_parsers:
             return self.parse_load(parser)
 
         parser.fail('Unknown format ' + parser.stream.current.value,
@@ -422,8 +436,8 @@ class SerializerExtension(Extension, object):
         parser.stream.expect('name:as')
         target = parser.parse_assign_target()
         macro_name = '_' + parser.free_identifier().name
-        macro_body = parser.parse_statements(('name:endload',),
-                                          drop_needle=True)
+        macro_body = parser.parse_statements(
+            ('name:endload',), drop_needle=True)
 
         return [
             nodes.Macro(

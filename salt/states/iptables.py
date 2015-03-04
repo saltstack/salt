@@ -346,6 +346,7 @@ def append(name, table='filter', family='ipv4', **kwargs):
             if '__agg__' in rule:
                 del rule['__agg__']
             if 'save' in rule and rule['save']:
+                save = True
                 if rule['save'] is not True:
                     save_file = rule['save']
                 else:
@@ -469,6 +470,7 @@ def insert(name, table='filter', family='ipv4', **kwargs):
             if '__agg__' in rule:
                 del rule['__agg__']
             if 'save' in rule and rule['save']:
+                save = True
                 if rule['save'] is not True:
                     save_file = rule['save']
                 else:

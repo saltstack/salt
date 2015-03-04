@@ -39,7 +39,7 @@ except ImportError:
         def stub_function(self):
             pass
         return stub_function
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import Salt Libs
 from salt.utils.odict import OrderedDict
@@ -310,5 +310,5 @@ class BotoSecgroupTestCase(TestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoSecgroupTestCase, needs_daemon=False)

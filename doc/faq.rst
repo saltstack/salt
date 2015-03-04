@@ -14,6 +14,17 @@ and proprietary projects.
 .. _`'Halite' web interface`: https://github.com/saltstack/halite
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
 
+I think I found a bug! What should I do?
+-----------------------------------------
+
+The salt-users mailing list as well as the salt IRC channel can both be helpful
+resources to confirm if others are seeing the issue and to assist with
+immediate debugging.
+
+To report a bug to the Salt project, please follow the instructions in :doc:
+`reporting a bug <topics/development/reporting_bugs>`.
+
+
 What ports should I open on my firewall?
 ----------------------------------------
 

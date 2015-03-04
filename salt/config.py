@@ -411,7 +411,7 @@ DEFAULT_MINION_OPTS = {
     'modules_max_memory': -1,
     'grains_refresh_every': 0,
     'minion_id_caching': True,
-    'keysize': 4096,
+    'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 60,
     'auth_tries': 7,
@@ -436,6 +436,7 @@ DEFAULT_MINION_OPTS = {
     'username': None,
     'password': None,
     'zmq_filtering': False,
+    'zmq_monitor': False,
     'cache_sreqs': True,
     'cmd_safe': True,
 }
@@ -583,7 +584,7 @@ DEFAULT_MASTER_OPTS = {
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
     'sign_pub_messages': False,
-    'keysize': 4096,
+    'keysize': 2048,
     'transport': 'zeromq',
     'enumerate_proxy_minions': False,
     'gather_job_timeout': 5,
@@ -1361,12 +1362,11 @@ def old_to_new(opts):
     for provider in providers:
 
         provider_config = {}
-        for opt in opts:
-            if not opt.startswith(provider):
-                continue
-            value = opts.pop(opt)
-            name = opt.split('.', 1)[1]
-            provider_config[name] = value
+        for opt, val in opts.items():
+            if provider in opt:
+                value = val
+                name = opt.split('.', 1)[1]
+                provider_config[name] = value
 
         lprovider = provider.lower()
         if provider_config:

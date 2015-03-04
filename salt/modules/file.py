@@ -473,8 +473,15 @@ def chgrp(path, group):
 
 def get_sum(path, form='sha256'):
     '''
-    Return the sum for the given file, default is md5, sha1, sha224, sha256,
-    sha384, sha512 are supported
+    Return the checksum for the given file. The following checksum algorithms
+    are supported:
+
+    * md5
+    * sha1
+    * sha224
+    * sha256 **(default)**
+    * sha384
+    * sha512
 
     path
         path to the file or directory
@@ -1067,6 +1074,7 @@ def replace(path,
             dry_run=False,
             search_only=False,
             show_changes=True,
+            ignore_if_missing=False,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1133,6 +1141,13 @@ def replace(path,
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the
             diff.
+    ignore_if_missing
+        .. versionadded:: Beryllium
+
+        When this parameter is ``True``, ``file.replace`` will return ``False`` if the
+        file doesn't exist. When this parameter is ``False``, ``file.replace`` will
+        throw an error if the file doesn't exist.
+        Default is ``False`` (to maintain compatibility with prior behaviour).
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1151,10 +1166,19 @@ def replace(path,
         salt '*' file.replace /etc/httpd/httpd.conf pattern='LogLevel warn' repl='LogLevel info'
         salt '*' file.replace /some/file pattern='before' repl='after' flags='[MULTILINE, IGNORECASE]'
     '''
-    path = os.path.expanduser(path)
+    symlink = False
+    if is_link(path):
+        symlink = True
+        target_path = os.readlink(path)
+        given_path = os.path.expanduser(path)
+
+    path = os.path.realpath(os.path.expanduser(path))
 
     if not os.path.exists(path):
-        raise SaltInvocationError('File not found: {0}'.format(path))
+        if ignore_if_missing:
+            return False
+        else:
+            raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -1169,7 +1193,7 @@ def replace(path,
         raise SaltInvocationError('Choose between append or prepend_if_not_found')
 
     flags_num = _get_flags(flags)
-    cpattern = re.compile(pattern, flags_num)
+    cpattern = re.compile(str(pattern), flags_num)
     if bufsize == 'file':
         bufsize = os.path.getsize(path)
 
@@ -1224,6 +1248,14 @@ def replace(path,
                         backup=False if (dry_run or search_only or found) else backup,
                         bufsize=bufsize,
                         mode='r' if (dry_run or search_only or found) else 'rb')
+
+        if symlink and (backup and not (dry_run or search_only or found)):
+            symlink_backup = given_path + backup
+            # Always clobber any existing symlink backup
+            # to match the behavior of the 'backup' option
+            if os.path.exists(symlink_backup):
+                os.remove(symlink_backup)
+            os.symlink(target_path + backup, given_path + backup)
 
         if not found:
             for line in fi_file:
@@ -1486,6 +1518,7 @@ def search(path,
         pattern,
         flags=0,
         bufsize=1,
+        ignore_if_missing=False,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1510,7 +1543,8 @@ def search(path,
             bufsize=bufsize,
             dry_run=True,
             search_only=True,
-            show_changes=False)
+            show_changes=False,
+            ignore_if_missing=ignore_if_missing)
 
 
 def patch(originalfile, patchfile, options='', dry_run=False):

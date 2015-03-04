@@ -34,12 +34,29 @@
         This work was inspired by the Salt logging handlers for LogStash and
         Sentry and by the log4mongo Python implementation.
 '''
-
+# Import python libs
+from __future__ import absolute_import
 import socket
 import logging
-from log4mongo.handlers import MongoHandler, MongoFormatter
+
+# Import salt libs
 from salt.log.mixins import NewStyleClassMixIn
 from salt.log.setup import LOG_LEVELS
+
+# Import third party libs
+try:
+    from log4mongo.handlers import MongoHandler, MongoFormatter
+    HAS_MONGO = True
+except ImportError:
+    HAS_MONGO = False
+
+__virtualname__ = 'mongo'
+
+
+def __virtual__():
+    if not HAS_MONGO:
+        return False
+    return __virtualname__
 
 
 class FormatterWithHost(logging.Formatter, NewStyleClassMixIn):
@@ -65,10 +82,9 @@ def setup_handlers():
         'write_concern': 'w'
     }
 
-    config_opts = {
-        arg_name: __opts__[handler_id].get(config_opt)
-        for config_opt, arg_name in config_fields.iteritems()
-    }
+    config_opts = {}
+    for config_opt, arg_name in config_fields.iteritems():
+        config_opts[arg_name] = __opts__[handler_id].get(config_opt)
 
     config_opts['level'] = LOG_LEVELS[
         __opts__[handler_id].get(

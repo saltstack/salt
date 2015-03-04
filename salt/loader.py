@@ -146,6 +146,15 @@ def raw_mod(opts, _, functions, mod='modules'):
                       pack={'__salt__': functions})
 
 
+def engines(opts):
+    '''
+    Return the master services plugins
+    '''
+    return LazyLoader(_module_dirs(opts, 'engines', 'engines'),
+                      opts,
+                      tag='engines')
+
+
 def proxy(opts, functions, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
@@ -279,7 +288,7 @@ def states(opts, functions, whitelist=None):
                       whitelist=whitelist)
 
 
-def beacons(opts, context=None):
+def beacons(opts, functions, context=None):
     '''
     Load the beacon modules
     '''
@@ -288,7 +297,8 @@ def beacons(opts, context=None):
     return LazyLoader(_module_dirs(opts, 'beacons', 'beacons'),
                       opts,
                       tag='beacons',
-                      pack={'__context__': context})
+                      pack={'__context__': context,
+                            '__salt__': functions})
 
 
 def search(opts, returners, whitelist=None):
@@ -509,11 +519,13 @@ def runner(opts):
     '''
     Directly call a function inside a loader directory
     '''
-    return LazyLoader(_module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
+    ret = LazyLoader(_module_dirs(opts, 'runners', 'runner', ext_type_dirs='runner_dirs'),
                      opts,
                      tag='runners',
-                     pack={'__salt__': minion_mods(opts)},
                      )
+    # TODO: change from __salt__ to something else, we overload __salt__ too much
+    ret.pack['__salt__'] = ret
+    return ret
 
 
 def queues(opts):
@@ -895,6 +907,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         fpath, suffix = self.file_mapping[name]
         self.loaded_files.append(name)
         try:
+            sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
             else:
@@ -948,6 +961,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 exc_info=True
             )
             return mod
+        finally:
+            sys.path.pop()
 
         if hasattr(mod, '__opts__'):
             mod.__opts__.update(self.opts)
@@ -1037,7 +1052,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load a single item if you have it
         '''
         # if the key doesn't have a '.' then it isn't valid for this mod dict
-        if key is None or '.' not in key:
+        if key is None or not isinstance(key, six.string_types) or '.' not in key:
             raise KeyError
         mod_name, _ = key.split('.', 1)
         if mod_name in self.missing_modules:

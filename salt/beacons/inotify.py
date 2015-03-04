@@ -6,11 +6,19 @@ Watch files and translate the changes into salt events
 from __future__ import absolute_import
 import collections
 
+# Import salt libs
+import salt.ext.six
+
 # Import third party libs
 try:
     import pyinotify
     HAS_PYINOTIFY = True
     DEFAULT_MASK = pyinotify.IN_CREATE | pyinotify.IN_DELETE | pyinotify.IN_MODIFY
+    MASKS = {}
+    for var in dir(pyinotify):
+        if var.startswith('IN_'):
+            key = var[3:].lower()
+            MASKS[key] = getattr(pyinotify, var)
 except ImportError:
     HAS_PYINOTIFY = False
     DEFAULT_MASK = None
@@ -22,6 +30,13 @@ def __virtual__():
     if HAS_PYINOTIFY:
         return __virtualname__
     return False
+
+
+def _get_mask(mask):
+    '''
+    Return the int that represents the mask
+    '''
+    return MASKS.get(mask, 0)
 
 
 def _enqueue(revent):
@@ -46,6 +61,43 @@ def _get_notifier():
 def beacon(config):
     '''
     Watch the configured files
+
+    Example Config
+
+    .. code-block:: yaml
+
+        beacons:
+          inotify:
+            /path/to/file/or/dir:
+              mask:
+                - open
+                - create
+                - close_write
+              recurse: True
+              auto_add: True
+
+    The mask can be a single option from:
+      access
+      attrib
+      close_nowrite
+      close_write
+      create
+      delete
+      delete_self
+      excl_unlink
+      ignored
+      modify
+      moved_from
+      moved_to
+      move_self
+      oneshot
+      onlydir
+      open
+      unmount
+    recurse:
+      Tell the beacon to recursively watch files in the directory
+    auto_add:
+      Automatically start adding files that are created in the watched directory
     '''
     ret = []
     notifier = _get_notifier()
@@ -77,7 +129,14 @@ def beacon(config):
     for path in config:
         if isinstance(config[path], dict):
             mask = config[path].get('mask', DEFAULT_MASK)
-            rec = config[path].get('rec', False)
+            if isinstance(mask, list):
+                r_mask = 0
+                for sub in mask:
+                    r_mask |= _get_mask(mask)
+            elif isinstance(mask, salt.ext.six.binary_type):
+                r_mask = _get_mask(mask)
+            mask = r_mask
+            rec = config[path].get('recurse', False)
             auto_add = config[path].get('auto_add', False)
         else:
             mask = DEFAULT_MASK

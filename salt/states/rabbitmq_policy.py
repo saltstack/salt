@@ -15,7 +15,7 @@ Example:
         rabbitmq_policy.present:
             - name: HA
             - pattern: '.*'
-            - definition: '{"ha-mode": "all"}'
+            - definition: '{"ha-mode":"all"}'
 '''
 from __future__ import absolute_import
 

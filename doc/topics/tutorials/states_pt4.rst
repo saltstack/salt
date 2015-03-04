@@ -33,6 +33,18 @@ same relative path in more than one root, then the top-most match "wins". For
 example, if ``/srv/salt/foo.txt`` and ``/mnt/salt-nfs/base/foo.txt`` both
 exist, then ``salt://foo.txt`` will point to ``/srv/salt/foo.txt``.
 
+.. note::
+
+    When using multiple fileserver backends, the order in which they are listed
+    in the :conf_master:`fileserver_backend` parameter also matters. If both
+    ``roots`` and ``git`` backends contain a file with the same relative path,
+    and ``roots`` appears before ``git`` in the
+    :conf_master:`fileserver_backend` list, then the file in ``roots`` will
+    "win", and the file in gitfs will be ignored.
+
+    A more thorough explanation of how Salt's modular fileserver works can be
+    found :ref:`here <file-server-backends>`. We recommend reading this.
+
 Environment configuration
 =========================
 

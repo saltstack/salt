@@ -65,7 +65,7 @@ try:
     HAS_UTMP = True
 except ImportError:
     HAS_UTMP = False
-# pylint: disable=import-error,unused-import
+# pylint: enable=import-error,unused-import
 
 
 def _get_proc_name(proc):
@@ -181,5 +181,5 @@ class PsTestCase(TestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(PsTestCase, needs_daemon=False)

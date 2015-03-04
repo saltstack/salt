@@ -15,7 +15,8 @@ A REST API for Salt
     <acl-eauth>` system which requires additional configuration not described
     here.
 
-    Example production-ready configuration; add to the Salt master config file:
+    Example production-ready configuration; add to the Salt master config file
+    and restart the ``salt-master`` and ``salt-api`` daemons:
 
     .. code-block:: yaml
 
@@ -28,12 +29,13 @@ A REST API for Salt
     authentication credentials will be sent over the wire.
 
     A self-signed certificate can be generated using the
-    :py:func:`~salt.modules.tls.create_self_signed_cert` function in Salt (note
-    the dependencies for this module).
+    :py:func:`~salt.modules.tls.create_self_signed_cert` execution function.
+    Running this function requires pyOpenSSL and the ``salt-call`` script is
+    available in the ``salt-minion`` package.
 
     .. code-block:: bash
 
-        salt-call tls.create_self_signed_cert
+        salt-call --local tls.create_self_signed_cert
 
     All available configuration options are detailed below. These settings
     configure the CherryPy HTTP server and do not apply when using an external
@@ -146,7 +148,6 @@ The token may be sent in one of two ways:
       curl -sSk https://localhost:8000 \
             -b ~/cookies.txt \
             -H 'Accept: application/x-yaml' \
-            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\
             -d client=local \
             -d tgt='*' \
             -d fun=test.ping
@@ -247,7 +248,7 @@ import cherrypy
 from cherrypy.lib import cpstats
 import yaml
 import salt.ext.six as six
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 
 # Import Salt libs

@@ -13,6 +13,9 @@ class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this
     '''
+    def __init__(self, message=''):
+        super(SaltException, self).__init__(message)
+        self.strerror = message
 
     def pack(self):
         '''
@@ -77,6 +80,12 @@ class MinionError(SaltException):
     '''
 
 
+class FileserverConfigError(SaltException):
+    '''
+    Used when invalid fileserver settings are detected
+    '''
+
+
 class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
@@ -98,13 +107,13 @@ class SaltRenderError(SaltException):
     of the error.
     '''
     def __init__(self,
-                 error,
+                 message,
                  line_num=None,
                  buf='',
                  marker='    <======================',
                  trace=None):
-        self.error = error
-        exc_str = copy.deepcopy(error)
+        self.error = message
+        exc_str = copy.deepcopy(message)
         self.line_num = line_num
         self.buffer = buf
         self.context = ''

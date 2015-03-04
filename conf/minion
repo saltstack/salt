@@ -464,7 +464,7 @@
 #state_output_profile: True
 
 # Fingerprint of the master public key to double verify the master is valid,
-# the master fingerprint can be found by running "salt-key -F master" on the
+# the master fingerprint can be found by running "salt-key -f master.pub" on the
 # salt master.
 #master_finger: ''
 
@@ -523,6 +523,24 @@
 #
 #log_granular_levels: {}
 
+# To diagnose issues with minions disconnecting or missing returns, ZeroMQ
+# supports the use of monitor sockets # to log connection events. This
+# feature requires ZeroMQ 4.0 or higher.
+#
+# To enable ZeroMQ monitor sockets, set 'zmq_monitor' to 'True' and log at a
+# debug level or higher.
+#
+# A sample log event is as follows:
+#
+# [DEBUG   ] ZeroMQ event: {'endpoint': 'tcp://127.0.0.1:4505', 'event': 512,
+# 'value': 27, 'description': 'EVENT_DISCONNECTED'}
+#
+# All events logged will include the string 'ZeroMQ event'. A connection event
+# should be logged on the as the minion starts up and initially connects to the
+# master. If not, check for debug log level and that the necessary version of
+# ZeroMQ is installed.
+#
+#zmq_monitor: False
 
 ######      Module configuration      #####
 ###########################################

@@ -14,6 +14,7 @@ import salt.crypt
 import salt.payload
 import salt.utils.network
 import salt.utils.event
+from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -38,7 +39,11 @@ def _auth():
     Return the auth object
     '''
     if 'auth' not in __context__:
-        __context__['auth'] = salt.crypt.SAuth(__opts__)
+        try:
+            __context__['auth'] = salt.crypt.SAuth(__opts__)
+        except SaltClientError:
+            log.error('Could not authenticate with master.'
+                      'Mine data will not be transmitted.')
     return __context__['auth']
 
 
@@ -51,20 +56,23 @@ def _mine_function_available(func):
 
 
 def _mine_send(load, opts):
-    if opts.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-
     eventer = salt.utils.event.MinionEvent(opts)
     event_ret = eventer.fire_event(load, '_minion_mine')
     # We need to pause here to allow for the decoupled nature of
     # events time to allow the mine to propagate
-    time.sleep(2.0)
+    time.sleep(0.5)
     return event_ret
 
 
 def _mine_get(load, opts):
     if opts.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
+        try:
+            load['tok'] = _auth().gen_token('salt')
+        except AttributeError:
+            log.error('Mine could not authenticate with master. '
+                      'Mine could not be retreived.'
+                      )
+            return False
     channel = salt.transport.Channel.factory(opts)
     ret = channel.send(load)
     return ret

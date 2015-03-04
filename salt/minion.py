@@ -54,6 +54,12 @@ try:
     HAS_RESOURCE = True
 except ImportError:
     pass
+
+try:
+    import zmq.utils.monitor
+    HAS_ZMQ_MONITOR = True
+except ImportError:
+    HAS_ZMQ_MONITOR = False
 # pylint: enable=import-error
 
 # Import salt libs
@@ -347,7 +353,6 @@ class SMinion(object):
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
-        self.beacons = salt.beacons.Beacon(opts)
 
     def _init_context_and_poller(self):
         self.context = zmq.Context()
@@ -685,6 +690,7 @@ class Minion(MinionBase):
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
+        self.beacons = salt.beacons.Beacon(opts, self.functions)
         uid = salt.utils.get_uid(user=opts.get('user', None))
         self.proc_dir = get_proc_dir(opts['cachedir'], uid=uid)
         self.schedule = salt.utils.schedule.Schedule(
@@ -873,6 +879,32 @@ class Minion(MinionBase):
                 continue
             mod_opts[key] = val
         return mod_opts
+
+    def _process_beacons(self):
+        '''
+        Process each beacon and send events if appropriate
+        '''
+        # Process Beacons
+        try:
+            beacons = self.process_beacons(self.functions)
+        except Exception as exc:
+            log.critical('Beacon processing errored: {0}. No beacons will be procssed.'.format(traceback.format_exc(exc)))
+            beacons = None
+        if beacons:
+            self._fire_master(events=beacons)
+            for beacon in beacons:
+                serialized_data = salt.utils.dicttrim.trim_dict(
+                    self.serial.dumps(beacon['data']),
+                    self.opts.get('max_event_size', 1048576),
+                    is_msgpacked=True,
+                )
+                log.debug('Sending event - data = {0}'.format(beacon['data']))
+                event = '{0}{1}{2}'.format(
+                        beacon['tag'],
+                        salt.utils.event.TAGEND,
+                        serialized_data)
+                self.handle_event(event)
+                self.epub_sock.send(event)
 
     def _load_modules(self, force_refresh=False, notify=False):
         '''
@@ -1098,7 +1130,7 @@ class Minion(MinionBase):
                     func,
                     data['arg'],
                     data)
-                sys.modules[func.__module__].__context__['retcode'] = 0
+                minion_instance.functions.pack['__context__']['retcode'] = 0
                 if opts.get('sudo_user', ''):
                     sudo_runas = opts.get('sudo_user')
                     if 'sudo.salt_call' in minion_instance.functions:
@@ -1126,7 +1158,7 @@ class Minion(MinionBase):
                     ret['return'] = iret
                 else:
                     ret['return'] = return_data
-                ret['retcode'] = sys.modules[func.__module__].__context__.get(
+                ret['retcode'] = minion_instance.functions.pack['__context__'].get(
                     'retcode',
                     0
                 )
@@ -1387,6 +1419,28 @@ class Minion(MinionBase):
                 zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
             )
 
+    def _set_monitor_socket(self):
+        if not HAS_ZMQ_MONITOR or not self.opts['zmq_monitor']:
+            return
+        self.monitor_socket = self.socket.get_monitor_socket()
+        t = threading.Thread(target=self._socket_monitor, args=(self.monitor_socket,))
+        t.start()
+
+    def _socket_monitor(self, monitor):
+        event_map = {}
+        for name in dir(zmq):
+            if name.startswith('EVENT_'):
+                value = getattr(zmq, name)
+                event_map[value] = name
+        while monitor.poll():
+            evt = zmq.utils.monitor.recv_monitor_message(monitor)
+            evt.update({'description': event_map[evt['event']]})
+            log.debug("ZeroMQ event: {0}".format(evt))
+            if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
+                break
+        monitor.close()
+        log.trace("event monitor thread done!")
+
     def _set_reconnect_ivl(self):
         recon_delay = self.opts['recon_default']
 
@@ -1597,6 +1651,7 @@ class Minion(MinionBase):
         '''
         channel = salt.transport.Channel.factory(self.opts)
         load = salt.utils.event.SaltEvent.unpack(package)[1]
+        load['tok'] = self.tok
         ret = channel.send(load)
         return ret
 
@@ -1739,6 +1794,7 @@ class Minion(MinionBase):
 
         self._set_reconnect_ivl()
         self._setsockopts()
+        self._set_monitor_socket()
 
         self.socket.connect(self.master_pub)
         self.poller.register(self.socket, zmq.POLLIN)
@@ -1788,7 +1844,6 @@ class Minion(MinionBase):
             self._windows_thread_cleanup()
             try:
                 socks = self._do_poll(loop_interval)
-
                 if ping_interval > 0:
                     if socks or not ping_at:
                         ping_at = time.time() + ping_interval
@@ -1798,17 +1853,8 @@ class Minion(MinionBase):
                         ping_at = time.time() + ping_interval
 
                 self._do_socket_recv(socks)
-
-                # Check the event system
-                if socks.get(self.epull_sock) == zmq.POLLIN:
-                    package = self.epull_sock.recv(zmq.NOBLOCK)
-                    try:
-                        self.handle_event(package)
-                        self.epub_sock.send(package)
-                    except Exception:
-                        log.debug('Exception while handling events', exc_info=True)
-                    # Add an extra fallback in case a forked process leeks through
-                    multiprocessing.active_children()
+                self._do_event_poll(socks)
+                self._process_beacons()
 
             except zmq.ZMQError as exc:
                 # The interrupt caused by python handling the
@@ -1827,26 +1873,6 @@ class Minion(MinionBase):
                     'An exception occurred while polling the minion',
                     exc_info=True
                 )
-            # Process Beacons
-            try:
-                beacons = self.process_beacons(self.functions)
-            except Exception:
-                log.critical('The beacon errored: ', exec_info=True)
-            if beacons:
-                self._fire_master(events=beacons)
-                for beacon in beacons:
-                    serialized_data = salt.utils.dicttrim.trim_dict(
-                        self.serial.dumps(beacon['data']),
-                        self.opts.get('max_event_size', 1048576),
-                        is_msgpacked=True,
-                    )
-                    log.debug('Sending event - data = {0}'.format(beacon['data']))
-                    event = '{0}{1}{2}'.format(
-                            beacon['tag'],
-                            salt.utils.event.TAGEND,
-                            serialized_data)
-                    self.handle_event(event)
-                    self.epub_sock.send(event)
 
     def tune_in_no_block(self):
         '''
@@ -1892,6 +1918,18 @@ class Minion(MinionBase):
         return dict(self.poller.poll(
             loop_interval * 1000)
         )
+
+    def _do_event_poll(self, socks):
+        # Check the event system
+        if socks.get(self.epull_sock) == zmq.POLLIN:
+            package = self.epull_sock.recv(zmq.NOBLOCK)
+            try:
+                self.handle_event(package)
+                self.epub_sock.send(package)
+            except Exception:
+                log.debug('Exception while handling events', exc_info=True)
+            # Add an extra fallback in case a forked process leaks through
+            multiprocessing.active_children()
 
     def _do_socket_recv(self, socks):
         if socks.get(self.socket) == zmq.POLLIN:

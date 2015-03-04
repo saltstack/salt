@@ -341,9 +341,14 @@ def latest_version(*names, **kwargs):
         refresh_db(_get_branch_option(**kwargs), repo_arg, exclude_arg)
 
     # Get updates for specified package(s)
-    updates = _repoquery_pkginfo(
-        '{0} {1} --pkgnarrow=available {2}'
-        .format(repo_arg, exclude_arg, ' '.join(names))
+    # Sort by version number (highest to lowest) for loop below
+    updates = sorted(
+        _repoquery_pkginfo(
+            '{0} {1} --pkgnarrow=available {2}'
+            .format(repo_arg, exclude_arg, ' '.join(names))
+        ),
+        key=lambda pkginfo: _LooseVersion(pkginfo.version),
+        reverse=True
     )
 
     for name in names:

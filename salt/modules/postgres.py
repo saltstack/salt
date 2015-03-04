@@ -73,8 +73,7 @@ def __virtual__():
     return False
 
 
-def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
-              run_cmd='cmd.run_all'):
+def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     '''
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
@@ -114,7 +113,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
 
-    ret = __salt__[run_cmd](cmd, python_shell=False, **kwargs)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, **kwargs)
 
     if ret.get('retcode', 0) != 0:
         log.error('Error connecting to Postgresql server')
@@ -550,6 +549,35 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             retrow['password'] = row['password']
         ret[row['name']] = retrow
 
+    # for each role, determine the inherited roles
+    for role in six.iterkeys(ret):
+        rdata = ret[role]
+        groups = rdata.setdefault('groups', [])
+        query = (
+            'select rolname'
+            ' from pg_user'
+            ' join pg_auth_members'
+            '      on (pg_user.usesysid=pg_auth_members.member)'
+            ' join pg_roles '
+            '      on (pg_roles.oid=pg_auth_members.roleid)'
+            ' where pg_user.usename=\'{0}\''
+        ).format(role)
+        try:
+            rows = psql_query(query,
+                              runas=runas,
+                              host=host,
+                              user=user,
+                              port=port,
+                              maintenance_db=maintenance_db,
+                              password=password)
+            for row in rows:
+                if row['rolname'] not in groups:
+                    groups.append(row['rolname'])
+        except Exception:
+            # do not fail here, it is just a bonus
+            # to try to determine groups, but the query
+            # is not portable amongst all pg versions
+            continue
     return ret
 
 

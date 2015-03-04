@@ -83,7 +83,7 @@ def __virtual__():
         'Linux': 'modinfo zfs',
     }
     cmd = kernel_module_chk.get(__grains__['kernel'], '')
-    if cmd and salt_cmd.retcode(cmd) == 0:
+    if cmd and salt_cmd.retcode(cmd, output_loglevel='quiet') == 0:
         # Build dynamic functions and allow loading module
         _build_zfs_cmd_list()
         return 'zfs'

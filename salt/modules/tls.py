@@ -58,9 +58,13 @@ def cert_base_path(cacert_path=None):
         salt '*' tls.cert_base_path
     '''
     if not cacert_path:
-        cacert_path = __salt__['config.option']('ca.contextual_cert_base_path')
+        cacert_path = __context__.get(
+            'ca.contextual_cert_base_path',
+            __salt__['config.option']('ca.contextual_cert_base_path'))
     if not cacert_path:
-        cacert_path = __salt__['config.option']('ca.cert_base_path')
+        cacert_path = __context__.get(
+            'ca.cert_base_path',
+            __salt__['config.option']('ca.cert_base_path'))
     return cacert_path
 
 
@@ -83,7 +87,7 @@ def set_ca_path(cacert_path):
         salt '*' tls.set_ca_path /etc/certs
     '''
     if cacert_path:
-        __opts__['ca.contextual_cert_base_path'] = cacert_path
+        __context__['ca.contextual_cert_base_path'] = cacert_path
     return cert_base_path()
 
 
@@ -506,7 +510,7 @@ def create_ca(ca_name,
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = ('Created Private Key: "{1}/{2}/{3}_ca_cert.key." ').format(
+    ret = ('Created Private Key: "{0}/{1}/{2}_ca_cert.key." ').format(
         ca_name, cert_base_path(), ca_name)
     ret += ('Created CA "{0}": "{1}/{2}/{3}_ca_cert.crt."').format(
         ca_name, cert_base_path(), ca_name, ca_name)
@@ -858,7 +862,7 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
         cert_filename = CN
 
     if os.path.exists(
-            '{0}/{1}/{2}.crt'.format(cert_base_path(),
+            '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
                                      ca_name, cert_filename)
     ):
         return 'Certificate "{0}" already exists'.format(cert_filename)

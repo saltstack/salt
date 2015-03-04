@@ -60,6 +60,7 @@ class SysModuleTest(integration.ModuleCase):
         noexample = set()
         allow_failure = (
                 'cp.recv',
+                'lxc.run_cmd',
                 'pkg.expand_repo_def',
                 'runtests_decorators.depends',
                 'runtests_decorators.depends_will_fallback',
@@ -67,6 +68,9 @@ class SysModuleTest(integration.ModuleCase):
                 'runtests_decorators.missing_depends_will_fallback',
                 'yumpkg.expand_repo_def',
                 'yumpkg5.expand_repo_def',
+                'container_resource.run',
+                'nspawn.stop',
+                'nspawn.restart',
         )
 
         for fun in docs:

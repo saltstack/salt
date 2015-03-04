@@ -23,14 +23,19 @@ Full list of builtin state modules
     blockdev
     boto_asg
     boto_cloudwatch_alarm
+    boto_dynamodb
     boto_elasticache
     boto_elb
     boto_iam_role
     boto_lc
+    boto_rds
     boto_route53
     boto_secgroup
     boto_sns
     boto_sqs
+    boto_vpc
+    bower
+    cabal
     chef
     cloud
     cmd
@@ -62,6 +67,7 @@ Full list of builtin state modules
     influxdb_database
     influxdb_user
     ini_manage
+    ipmi
     ipset
     iptables
     jboss7
@@ -84,6 +90,7 @@ Full list of builtin state modules
     module
     mongodb_database
     mongodb_user
+    monit
     mount
     mysql_database
     mysql_grants
@@ -146,6 +153,7 @@ Full list of builtin state modules
     user
     vbox_guest
     virtualenv_mod
+    win_dacl
     win_dns_client
     win_firewall
     win_network

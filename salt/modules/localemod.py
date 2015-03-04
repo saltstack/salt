@@ -126,19 +126,22 @@ def set_locale(locale):
     if 'Arch' in __grains__['os_family']:
         return _localectl_set(locale)
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
-        )
+        if not __salt__['file.file_exists']('/etc/sysconfig/i18n'):
+            __salt__['file.touch']('/etc/sysconfig/i18n')
         if __salt__['cmd.retcode']('grep "^LANG=" /etc/sysconfig/i18n') != 0:
             __salt__['file.append']('/etc/sysconfig/i18n',
                                     '"\nLANG={0}"'.format(locale))
+        else:
+            __salt__['file.replace'](
+                '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
+            )
     elif 'Debian' in __grains__['os_family']:
-        __salt__['file.sed'](
+        __salt__['file.replace'](
             '/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale)
         )
         if __salt__['cmd.retcode']('grep "^LANG=" /etc/default/locale') != 0:
             __salt__['file.append']('/etc/default/locale',
-                                    '"\nLANG={0}"'.format(locale))
+                                    '\nLANG="{0}"'.format(locale))
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale set {0}'.format(locale)
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0

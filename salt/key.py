@@ -27,7 +27,7 @@ from salt.utils.event import tagify
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import input
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 try:
     import msgpack
 except ImportError:
@@ -661,8 +661,9 @@ class Key(object):
             ret[os.path.basename(dir_)] = []
             try:
                 for fn_ in salt.utils.isorted(os.listdir(dir_)):
-                    if os.path.isfile(os.path.join(dir_, fn_)):
-                        ret[os.path.basename(dir_)].append(fn_)
+                    if not fn_.startswith('.'):
+                        if os.path.isfile(os.path.join(dir_, fn_)):
+                            ret[os.path.basename(dir_)].append(fn_)
             except (OSError, IOError):
                 # key dir kind is not created yet, just skip
                 continue

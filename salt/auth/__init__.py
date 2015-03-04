@@ -209,7 +209,9 @@ class Authorize(object):
 
         if 'django' in auth_data and '^model' in auth_data['django']:
             auth_from_django = salt.auth.django.retrieve_auth_entries()
-            auth_data = salt.utils.dictupdate.merge(auth_data, auth_from_django)
+            auth_data = salt.utils.dictupdate.merge(auth_data,
+                                                    auth_from_django,
+                                                    strategy='list')
 
         #for auth_back in self.opts.get('external_auth_sources', []):
         #    fstr = '{0}.perms'.format(auth_back)
@@ -338,7 +340,8 @@ class Resolver(object):
             sreq = salt.payload.SREQ(
                     'tcp://{0}:{1}'.format(
                         salt.utils.ip_bracket(self.opts['interface']),
-                        self.opts['ret_port'])
+                        self.opts['ret_port']),
+                        opts=self.opts
                 )
             tdata = sreq.send('clear', load)
             return tdata

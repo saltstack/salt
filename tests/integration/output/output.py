@@ -14,8 +14,8 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.output import display_output
 import integration
+from salt.output import display_output
 
 
 class OutputReturnTest(integration.ShellCase):
