@@ -94,7 +94,7 @@ adding a ``-T`` option when authenticating:
     $ salt -T -a pam web\* test.ping
 
 Now a token will be created that has a expiration of 12 hours (by default).
-This token is stored in a file named ``.salt_token`` in the active user's home
+This token is stored in a file named ``salt_token`` in the active user's home
 directory.
 
 Once the token is created, it is sent with all subsequent communications.
