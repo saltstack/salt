@@ -2,12 +2,14 @@
 '''
 A simple test engine, not intended for real use but as an example
 '''
-# Import salt libs
-import salt.utils.event
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import logging
+
+# Import salt libs
+import salt.utils.event
 
 log = logging.getLogger(__name__)
 
