@@ -684,7 +684,6 @@ def create(vm_):
                 )
             )
         data = conn.ex_get_node_details(vm_['instance_id'])
-        log.debug(pprint.pformat(data.__dict__))
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
             vm_['password'] = sup.secure_password()
             conn.ex_set_password(data, vm_['password'])
