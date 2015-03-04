@@ -19,10 +19,11 @@ import logging
 import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.ext.six import string_types
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # Import third party libs
 try:
-    import _winreg
+    import salt.ext.six.moves.winreg
     import win32security
     import ntsecuritycon
     HAS_WINDOWS_MODULES = True
@@ -61,10 +62,10 @@ class daclConstants(object):
         self.rights = {
             win32security.SE_REGISTRY_KEY: {
                 'READ': {
-                    'BITS': _winreg.KEY_READ,
+                    'BITS': salt.ext.six.moves.winreg.KEY_READ,
                     'TEXT': 'read'},
                 'FULLCONTROL': {
-                    'BITS': _winreg.KEY_ALL_ACCESS,
+                    'BITS': salt.ext.six.moves.winreg.KEY_ALL_ACCESS,
                     'TEXT': 'full control'}
             },
             win32security.SE_FILE_OBJECT: {
@@ -177,8 +178,8 @@ class daclConstants(object):
             }
         }
         self.reflection_mask = {
-            True: _winreg.KEY_ALL_ACCESS,
-            False: _winreg.KEY_ALL_ACCESS | _winreg.KEY_WOW64_64KEY,
+            True: salt.ext.six.moves.winreg.KEY_ALL_ACCESS,
+            False: salt.ext.six.moves.winreg.KEY_ALL_ACCESS | salt.ext.six.moves.winreg.KEY_WOW64_64KEY,
             }
         self.objectType = {
             'FILE': win32security.SE_FILE_OBJECT,
