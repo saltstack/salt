@@ -20,7 +20,9 @@ Minions running systemd >= 219 will place new containers in
     already be present on any systemd host, as part of the **util-linux**
     package.
 '''
+
 # Import python libs
+from __future__ import absolute_import
 import errno
 import logging
 import os
@@ -33,6 +35,7 @@ import salt.ext.six as six
 import salt.utils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 log = logging.getLogger(__name__)
 
