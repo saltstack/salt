@@ -195,6 +195,24 @@ def user_present(name,
                             ret['changes']['roles'].append(newrole)
                         else:
                             ret['changes']['roles'] = [newrole]
+                roles_to_remove = list(set(tenant_roles) - set(roles[tenant_role]))
+                for role in roles_to_remove:
+                    if __opts__['test']:
+                        ret['result'] = None
+                        if 'roles' in ret['changes']:
+                            ret['changes']['roles'].append(role)
+                        else:
+                            ret['changes']['roles'] = [role]
+                        continue
+                    addargs = dict({'user': name, 'role': role,
+                                    'tenant': tenant_role,
+                                    'profile': profile},
+                                   **connection_args)
+                    oldrole = __salt__['keystone.user_role_remove'](**addargs)
+                    if 'roles' in ret['changes']:
+                        ret['changes']['roles'].append(oldrole)
+                    else:
+                        ret['changes']['roles'] = [oldrole]
     else:
         # Create that user!
         if __opts__['test']:
