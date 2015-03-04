@@ -233,12 +233,19 @@ def get(key, default='', delimiter=':', merge=None):
         The ``delimiter`` argument was added, to allow delimiters other than
         ``:`` to be used.
 
-    This function traverses these data stores in this order:
+    This function traverses these data stores in this order, returning the
+    first match found:
 
     - Minion config file
     - Minion's grains
     - Minion's pillar data
     - Master config file
+
+    This means that if there is a value that is going to be the same for the
+    majority of minions, it can be configured in the Master config file, and
+    then overridden using the grains, pillar, or Minion config file.
+
+    **Arguments**
 
     delimiter
         .. versionadded:: 2015.2.0
