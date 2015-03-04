@@ -375,3 +375,24 @@ to ``False``:
 .. code-block:: yaml
 
     pillar_opts: False
+
+
+Master Provided Pillar Error
+============================
+
+By default if there is an error rendering a pillar, the detailed error is
+hidden and replaced with:
+
+.. code-block:: bash
+
+    Rendering SLS 'my.sls' failed. Please see master log for details.
+
+The error is protected because it's possible to contain templating data
+which would give that minion information it shouldn't know, like a password!
+
+To have the master provide the detailed error that could potentially carry
+protected data set ``pillar_safe_render_error`` to ``False``:
+
+.. code-block:: yaml
+
+    pillar_safe_render_error: True
