@@ -3,64 +3,23 @@
 :requires: libnacl
 https://github.com/saltstack/libnacl
 
-This module helps include encrypted passwords in pillars and grains.
+This runner helps create encrypted passwords that can be included in pillars.
 This is often usefull if you wish to store your pillars in source control or
 share your pillar data with others that you trust. I dont advise making your pillars public
 regardless if they are encrypted or not.
 
-The nacl lib uses 32byte keys, these keys are base64 encoded to make your life more simple.
-To generate your `key` or `keyfile` you can use:
-
-    salt-call nacl.keygen keyfile=/root/.nacl
-
-Now with your key, you can encrypt some data
-
-    salt-call nacl.enc mypass keyfile=/root/.nacl
-    DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=
-
-To decrypt the data
-
-    salt-call nacl.dec data='DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=' keyfile=/root/.nacl
-    mypass
-
-The following optional configurations can be defined in the
-minion or master config. Avoide storeing the config in pillars!
+The following configurations can be defined in the master config
+so your users can create encrypted passwords using the runner nacl.
 
     cat /etc/salt/master.d/nacl.conf
     nacl.config:
         key: None
         keyfile: /root/.nacl
 
-When the key is defined in the master config you can use it from the nacl runner:
+Now with the config in the master you can use the runner nacl like:
 
-    salt-run nacl.enc 'myotherpass'
+    salt-run nacl.enc 'data'
 
-Now you can create a pillar with protected data like:
-
-    pillarexample:
-        user: root
-        password: {{ salt.nacl.dec('DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=') }}
-
-Or do somthing interesting with grains like:
-
-    salt-call nacl.enc minionname:dbrole
-    AL24Z2C5OlkReer3DuQTFdrNLchLuz3NGIhGjZkLtKRYry/b/CksWM8O9yskLwH2AGVLoEXI5jAa
-
-    salt minionname grains.setval role 'AL24Z2C5OlkReer3DuQTFdrNLchLuz3NGIhGjZkLtKRYry/b/CksWM8O9yskLwH2AGVLoEXI5jAa'
-
-    {%- set r = grains.get('role') %}
-    {%- set role = None %}
-    {%- if r and 'nacl.dec' in salt %}
-        {%- set r = salt['nacl.dec'](r,keyfile='/root/.nacl').split(':') %}
-        {%- if opts['id'] == r[0] %}
-            {%- set role = r[1] %}
-        {%- endif %}
-    {%- endif %}
-    base:
-        {%- if role %}
-        '{{ opts['id'] }}':
-            - {{ role }}
-        {%- endif %}
 '''
 
 from __future__ import absolute_import
@@ -92,7 +51,7 @@ def _get_config(**kwargs):
         'keyfile': None,
     }
     config_key = '{0}.config'.format(__virtualname__)
-    config.update(__salt__['config.get'](config_key, {}))
+    config.update(__opts__.get(config_key, {}))
     for k in set(config.keys()) & set(kwargs.keys()):
         config[k] = kwargs[k]
     return config
@@ -126,9 +85,9 @@ def keygen(keyfile=None):
 
     .. code-block:: bash
 
-        salt-call nacl.keygen
-        salt-call nacl.keygen keyfile=/root/.nacl
-        salt-call --out=newline_values_only nacl.keygen > /root/.nacl
+        salt-run nacl.keygen
+        salt-run nacl.keygen keyfile=/root/.nacl
+        salt-run --out=newline_values_only nacl.keygen > /root/.nacl
     '''
     b = libnacl.secret.SecretBox()
     key = b.sk
@@ -150,9 +109,9 @@ def enc(data, **kwargs):
 
     .. code-block:: bash
 
-        salt-call nacl.enc datatoenc
-        salt-call nacl.enc datatoenc keyfile=/root/.nacl
-        salt-call nacl.enc datatoenc key='cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
+        salt-run nacl.enc datatoenc
+        salt-run nacl.enc datatoenc keyfile=/root/.nacl
+        salt-run nacl.enc datatoenc key='cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
     '''
     key = _get_key(**kwargs)
     sk = base64.b64decode(key)
@@ -168,9 +127,9 @@ def dec(data, **kwargs):
 
     .. code-block:: bash
 
-        salt-call nacl.dec pEXHQM6cuaF7A=
-        salt-call nacl.dec data='pEXHQM6cuaF7A=' keyfile=/root/.nacl
-        salt-call nacl.dec data='pEXHQM6cuaF7A=' key='cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
+        salt-run nacl.dec pEXHQM6cuaF7A=
+        salt-run nacl.dec data='pEXHQM6cuaF7A=' keyfile=/root/.nacl
+        salt-run nacl.dec data='pEXHQM6cuaF7A=' key='cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
     '''
     key = _get_key(**kwargs)
     sk = base64.b64decode(key)
