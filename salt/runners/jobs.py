@@ -254,6 +254,41 @@ def print_job(jid, ext_source=None, outputter=None):
         return ret
 
 
+def last_run(ext_source=None,
+             outputter=None,
+             metadata=None,
+             function=None,
+             target=None,
+             display_progress=False):
+    '''
+    List all detectable jobs and associated functions
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.last_run
+
+        salt-run jobs.last_run target=nodename
+
+        salt-run jobs.last_run function='cmd.run'
+
+        salt-run jobs.last_run metadata="{'foo': 'bar'}"
+    '''
+
+    if metadata:
+        if not isinstance(metadata, dict):
+            log.info('The metadata parameter must be specified as a dictionary')
+            return False
+
+    _all_jobs = list_jobs(ext_source, outputter, metadata, function, target, display_progress)
+    if _all_jobs:
+        last_job = sorted(_all_jobs)[-1]
+        return print_job(last_job, ext_source, outputter)
+    else:
+        return False
+
+
 def _get_returner(returner_types):
     '''
     Helper to iterate over returner_types and pick the first one
