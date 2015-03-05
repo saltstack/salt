@@ -39,8 +39,15 @@ def _valid_composer(composer):
 def did_composer_install(dir):
     '''
     Test to see if the composer.lock file exists in this directory
-    :param dir: Directory to check for composer.lock
-    :return: Bool True if composer.lock exists in dir
+
+    dir
+        Directory location of the composer.json file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' composer.did_composer_install /var/www/application
     '''
     lockFile = "{0}/composer.lock".format(dir)
     if os.path.exists(lockFile):
