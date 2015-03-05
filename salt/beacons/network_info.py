@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Beacon to monitor statistics from ethernet adapters
+
+.. versionadded:: 2015.2.0
 '''
 
 # Import Python libs
