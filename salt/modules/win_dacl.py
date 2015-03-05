@@ -23,16 +23,12 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # Import third party libs
 try:
-    import salt.ext.six.moves.winreg
+    import salt.ext.six.moves.winreg  # pylint: disable=import-error
     import win32security
     import ntsecuritycon
     HAS_WINDOWS_MODULES = True
 except ImportError:
-    try:
-        import winreg as _winreg
-        HAS_WINDOWS_MODULES = True
-    except ImportError:
-        HAS_WINDOWS_MODULES = False
+    HAS_WINDOWS_MODULES = False
 
 log = logging.getLogger(__name__)
 
