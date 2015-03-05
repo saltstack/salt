@@ -87,12 +87,12 @@ def lookup_jid(jid,
     outputter
         The outputter to use. Default: `None`.
 
-        .. versionadded:: Lithium
+        .. versionadded:: 2015.2.0
 
     display_progress
         Displays progress events when set to `True`. Default: `False`.
 
-        .. versionadded:: Lithium
+        .. versionadded:: 2015.2.0
 
     CLI Example:
 
