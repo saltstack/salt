@@ -20,8 +20,11 @@ def start_engines(opts, proc_mgr):
     else:
         funcs = salt.loader.minion_mods(opts)
     engines = salt.loader.engines(opts, funcs)
+    engines_opt = opts.get('engines', [])
+    if isinstance(engines_opt, dict):
+        engines_opt = [{k: v} for k, v in engines_opt.items()]
 
-    for engine in opts.get('engines', []):
+    for engine in engines_opt:
         if isinstance(engine, dict):
             engine, engine_opts = engine.items()[0]
         else:
