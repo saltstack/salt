@@ -9,9 +9,9 @@ Note that long polling is utilized to avoid excessive CPU usage.
 
     Example Config:
         engines:
-          sqs_events:
-            queue: test
-            profile: my-sqs-profile #optional
+          - sqs_events:
+             queue: test
+             profile: my-sqs-profile #optional
 
     Explicit sqs credentials are accepted but this engine can also utilize
     IAM roles assigned to the instance through Instance Profiles. Dynamic
