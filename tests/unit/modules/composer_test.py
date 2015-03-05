@@ -17,7 +17,7 @@ from salttesting.mock import (
 
 # Import Salt Libs
 from salt.modules import composer
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError, SaltInvocationError
 
 
 # Globals
@@ -37,14 +37,12 @@ class ComposerTestCase(TestCase):
         Test for Install composer dependencies for a directory.
         '''
         mock = MagicMock(return_value=False)
-        msg = "'composer.install' is not available. Couldn't find 'composer'."
         with patch.object(composer, '_valid_composer', mock):
-            self.assertEqual(composer.install('dir'), msg)
+            self.assertRaises(CommandNotFoundError, composer.install, 'd')
 
         mock = MagicMock(return_value=True)
-        msg = "'dir' is required for 'composer.install'"
         with patch.object(composer, '_valid_composer', mock):
-            self.assertEqual(composer.install(None), msg)
+            self.assertRaises(SaltInvocationError, composer.install, None)
 
         mock = MagicMock(return_value=True)
         with patch.object(composer, '_valid_composer', mock):
@@ -62,10 +60,102 @@ class ComposerTestCase(TestCase):
 
         mock = MagicMock(return_value=True)
         with patch.object(composer, '_valid_composer', mock):
-            mock = MagicMock(return_value={'retcode': 0, 'stderr': 'A',
-                                           'stdout': 'B'})
+            rval = {'retcode': 0, 'stderr': 'A', 'stdout': 'B'}
+            mock = MagicMock(return_value=rval)
             with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual(composer.install('dir'), 'B')
+                self.assertEqual(composer.install('dir'), rval)
+
+    def test_update(self):
+        '''
+        Test for Update composer dependencies for a directory.
+        '''
+        mock = MagicMock(return_value=False)
+        with patch.object(composer, '_valid_composer', mock):
+            self.assertRaises(CommandNotFoundError, composer.update, 'd')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            mock = MagicMock(return_value=True)
+            with patch.object(composer, 'did_composer_install', mock):
+                self.assertRaises(SaltInvocationError, composer.update, None)
+
+        # Test update with error exit status throws exception
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            mock = MagicMock(return_value=True)
+            with patch.object(composer, 'did_composer_install', mock):
+                mock = MagicMock(return_value={'retcode': 1, 'stderr': 'A'})
+                with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
+                    self.assertRaises(CommandExecutionError, composer.update, 'd')
+
+        # Test update with existing composer.lock and quiet=True
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            mock = MagicMock(return_value=True)
+            with patch.object(composer, 'did_composer_install', mock):
+                mock = MagicMock(return_value={'retcode': 0, 'stderr': 'A'})
+                with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
+                    self.assertTrue(composer.update('dir', None, None, None, None,
+                                                    None, None, None, None, None,
+                                                    True))
+
+        # Test update with no composer.lock and quiet=True
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            mock = MagicMock(return_value=False)
+            with patch.object(composer, 'did_composer_install', mock):
+                mock = MagicMock(return_value={'retcode': 0, 'stderr': 'A'})
+                with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
+                    self.assertTrue(composer.update('dir', None, None, None, None,
+                                                    None, None, None, None, None,
+                                                    True))
+
+        # Test update with existing composer.lock
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            mock = MagicMock(return_value=True)
+            with patch.object(composer, 'did_composer_install', mock):
+                rval = {'retcode': 0, 'stderr': 'A', 'stdout': 'B'}
+                mock = MagicMock(return_value=rval)
+                with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
+                    self.assertEqual(composer.update('dir'), rval)
+
+        # Test update with no composer.lock
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            mock = MagicMock(return_value=False)
+            with patch.object(composer, 'did_composer_install', mock):
+                rval = {'retcode': 0, 'stderr': 'A', 'stdout': 'B'}
+                mock = MagicMock(return_value=rval)
+                with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
+                    self.assertEqual(composer.update('dir'), rval)
+
+    def test_selfupdate(self):
+        '''
+        Test for Install composer dependencies for a directory.
+        '''
+        mock = MagicMock(return_value=False)
+        with patch.object(composer, '_valid_composer', mock):
+            self.assertRaises(CommandNotFoundError, composer.selfupdate)
+
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            mock = MagicMock(return_value={'retcode': 1, 'stderr': 'A'})
+            with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
+                self.assertRaises(CommandExecutionError, composer.selfupdate)
+
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            mock = MagicMock(return_value={'retcode': 0, 'stderr': 'A'})
+            with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
+                self.assertTrue(composer.selfupdate(quiet=True))
+
+        mock = MagicMock(return_value=True)
+        with patch.object(composer, '_valid_composer', mock):
+            rval = {'retcode': 0, 'stderr': 'A', 'stdout': 'B'}
+            mock = MagicMock(return_value=rval)
+            with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
+                self.assertEqual(composer.selfupdate(), rval)
 
 
 if __name__ == '__main__':
