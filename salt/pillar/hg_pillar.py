@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2014 Floris Bruynooghe <flub@devork.be>
 
-"""Use remote Mercurial repository as a Pillar source
+'''Use remote Mercurial repository as a Pillar source
 
 The module depends on the ``hglib`` python module being available.
 This is the same requirement as for hgfs_ so should not pose any extra
@@ -13,7 +13,7 @@ This external Pillar source can be configued in the master config file as such:
 
    ext_pillar:
      - hg: ssh://hg@example.co/user/repo
-"""
+'''
 
 import copy
 import hashlib
@@ -37,7 +37,9 @@ __opts__ = {}
 
 
 def __virtual__():
-    """Only load if hglib is available"""
+    '''
+    Only load if hglib is available
+    '''
     ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
     if not any(['hg' in x for x in ext_pillar_sources]):
         return False
@@ -48,10 +50,11 @@ def __virtual__():
 
 
 def __init__(__opts__):
-    """Initialise
+    '''
+    Initialise
 
     This is called every time a minion calls this external pillar.
-    """
+    '''
 
 
 def ext_pillar(minion_id, pillar, repo, branch='default', root=None):
@@ -77,17 +80,23 @@ def ext_pillar(minion_id, pillar, repo, branch='default', root=None):
 
 
 def update(repo_uri):
-    """Execute an hg pull on all the repos"""
+    '''
+    Execute an hg pull on all the repos
+    '''
     with Repo(repo_uri) as repo:
         repo.pull()
 
 
 def envs():
-    """Return a list of branches that can be used as environments"""
+    '''
+    Return a list of branches that can be used as environments
+    '''
 
 
 def purge_cache():
-    """Purge the hg_pillar cache"""
+    '''
+    Purge the hg_pillar cache
+    '''
 
 
 class Repo(object):
@@ -113,14 +122,18 @@ class Repo(object):
         self.repo.pull()
 
     def update(self, branch='default'):
-        ''' ensure we are using the latest revision in the hg repository '''
+        '''
+        Ensure we are using the latest revision in the hg repository
+        '''
         log.debug('Updating hg repo from hg_pillar module (pull)')
         self.repo.pull()
         log.debug('Updating hg repo from hg_pillar module (update)')
         self.repo.update(branch, clean=True)
 
     def close(self):
-        """Cleanup mercurial command server"""
+        '''
+        Cleanup mercurial command server
+        '''
         self.repo.close()
 
     def __enter__(self):
