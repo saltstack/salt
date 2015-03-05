@@ -23,7 +23,7 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # Import third party libs
 try:
-    import salt.ext.six.moves.winreg  # pylint: disable=import-error
+    import salt.ext.six.moves.winreg  # pylint: disable=redefined-builtin
     import win32security
     import ntsecuritycon
     HAS_WINDOWS_MODULES = True
