@@ -119,7 +119,7 @@ def start(queue, profile=None):
     q = sqs.get_queue(queue)
 
     while True:
-        msgs = q.get_messages(wait_time_seconds=1000)
+        msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
             event_bus.fire_event({'message': msg.get_body()},
                                  'salt/engine/sqs')
