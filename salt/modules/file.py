@@ -1065,11 +1065,20 @@ def _get_flags(flags):
 def _mkstemp_copy(path,
                   preserve_inode=True):
     '''
-    Create a temp file and copy the contents of `path` to the temp file.
+    Create a temp file and move/copy the contents of ``path`` to the temp file.
     Return the path to the temp file.
-    
-    >>> _mkstemp_copy('/root/foo')
-    /tmp/tmpF48QrH
+
+    path
+        The full path to the file whose contents will be moved/copied to a temp file.
+        Whether it's moved or copied depends on the value of ``preserve_inode``.
+    preserve_inode
+        Preserve the inode of the file, so that any hard links continue to share the
+        inode with the original filename. This works by *copying* the file, reading
+        from the copy, and writing to the file at the original inode. If ``False``, the
+        file will be *moved* rather than copied, and a new file will be written to a
+        new inode, but using the original filename. Hard links will then share an inode
+        with the backup, instead (if using ``backup`` to create a backup copy).
+        Default is ``True``.
     '''
     temp_file = None
     # Create the temp file
@@ -1080,11 +1089,11 @@ def _mkstemp_copy(path,
             "Unable to create temp file. "
             "Exception: {0}".format(exc)
             )
-    # use `copy` to preserve the original file's
-    # inode, and thus preserve hardlinks to the
-    # file. otherwise, use `move` to preserve
-    # prior behavior, which results in writing
-    # the file to a new inode.
+    # use `copy` to preserve the inode of the
+    # original file, and thus preserve hardlinks
+    # to the inode. otherwise, use `move` to
+    # preserve prior behavior, which results in
+    # writing the file to a new inode.
     if preserve_inode:
         try:
             shutil.copy2(path, temp_file)
@@ -1105,6 +1114,7 @@ def _mkstemp_copy(path,
                 )
 
     return temp_file
+
 
 def replace(path,
             pattern,
@@ -1280,7 +1290,7 @@ def replace(path,
                     if has_changes is False and result != line:
                         has_changes = True
 
-                    # Keep track of show_changes here, in case the file isn't 
+                    # Keep track of show_changes here, in case the file isn't
                     # modified
                     if show_changes:
                         orig_file.append(line)
