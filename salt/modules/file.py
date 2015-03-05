@@ -1062,7 +1062,8 @@ def _get_flags(flags):
     return flags
 
 
-def _mkstemp_copy(path):
+def _mkstemp_copy(path,
+                  preserve_inode=True):
     '''
     Create a temp file and copy the contents of `path` to the temp file.
     Return the path to the temp file.
@@ -1079,15 +1080,29 @@ def _mkstemp_copy(path):
             "Unable to create temp file. "
             "Exception: {0}".format(exc)
             )
-    # Move the target file to the temp file
-    try:
-        shutil.move(path, temp_file)
-    except (OSError, IOError) as exc:
-        raise CommandExecutionError(
-            "Unable to move file '{0}' to the"
-            "temp file '{1}'."
-            "Exception: {2}".format(path, temp_file, exc)
-            )
+    # use `copy` to preserve the original file's
+    # inode, and thus preserve hardlinks to the
+    # file. otherwise, use `move` to preserve
+    # prior behavior, which results in writing
+    # the file to a new inode.
+    if preserve_inode:
+        try:
+            shutil.copy2(path, temp_file)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to copy file '{0}' to the"
+                "temp file '{1}'."
+                "Exception: {2}".format(path, temp_file, exc)
+                )
+    else:
+        try:
+            shutil.move(path, temp_file)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to move file '{0}' to the"
+                "temp file '{1}'."
+                "Exception: {2}".format(path, temp_file, exc)
+                )
 
     return temp_file
 
@@ -1285,8 +1300,8 @@ def replace(path,
     if has_changes and not dry_run:
         # Write the replacement text in this block.
         try:
-            # Create a copy to read from and for later use as a backup
-            temp_file = _mkstemp_copy(path)
+            # Create a copy to read from and to use as a backup later
+            temp_file = _mkstemp_copy(path=path, preserve_inode=False)
         except (OSError, IOError) as exc:
             raise CommandExecutionError("Exception: {0}".format(exc))
 
@@ -1333,7 +1348,7 @@ def replace(path,
         if not dry_run:
             try:
                 # Create a copy to read from and for later use as a backup
-                temp_file = _mkstemp_copy(path)
+                temp_file = _mkstemp_copy(path=path, preserve_inode=False)
             except (OSError, IOError) as exc:
                 raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
