@@ -46,7 +46,7 @@ paradigm. This allows for many new capabilities to be added to Salt in the
 upcoming releases.
 
 Please keep in mind that this is a beta release of RAET and we hope for bugs to
-be worked out, performance to be better realized and more in the Lithium
+be worked out, performance to be better realized and more in the 2015.2.0
 release.
 
 Simply stated, users running Salt with RAET should expect some hiccups as we

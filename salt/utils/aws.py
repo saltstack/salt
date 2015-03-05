@@ -2,7 +2,7 @@
 '''
 Connection library for AWS
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 
 This is a base library used by a number of AWS services.
 
