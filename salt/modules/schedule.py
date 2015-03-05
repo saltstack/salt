@@ -48,7 +48,8 @@ SCHEDULE_CONF = [
         'enabled',
         'return_job',
         'metadata',
-        'cron'
+        'cron',
+        'until',
 ]
 
 
@@ -261,7 +262,7 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
-    for item in ['range', 'when', 'cron', 'returner', 'return_config']:
+    for item in ['range', 'when', 'cron', 'returner', 'return_config', 'until']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 
