@@ -47,4 +47,5 @@ class Engine(multiprocessing.Process):
         Run the master service!
         '''
         self.engine = salt.loader.engines(self.opts)
-        self.engine[self.fun]()
+        kwargs = self.config or {}
+        self.engine[self.fun](**kwargs)
