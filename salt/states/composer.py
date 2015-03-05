@@ -118,7 +118,7 @@ def installed(name,
 
     # The state of the system does need to be changed. Check if we're running
     # in ``test=true`` mode.
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
         ret['changes'] = {
             'old': 'composer install has not yet been run in {0}'.format(name),
@@ -232,7 +232,7 @@ def update(name,
 
     # The state of the system does need to be changed. Check if we're running
     # in ``test=true`` mode.
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
         ret['changes'] = {
             'old': old_status,
