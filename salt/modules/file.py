@@ -1090,8 +1090,8 @@ def _mkstemp_copy(path,
             shutil.copy2(path, temp_file)
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
-                "Unable to copy file '{0}' to the"
-                "temp file '{1}'."
+                "Unable to copy file '{0}' to the "
+                "temp file '{1}'. "
                 "Exception: {2}".format(path, temp_file, exc)
                 )
     else:
@@ -1099,8 +1099,8 @@ def _mkstemp_copy(path,
             shutil.move(path, temp_file)
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
-                "Unable to move file '{0}' to the"
-                "temp file '{1}'."
+                "Unable to move file '{0}' to the "
+                "temp file '{1}'. "
                 "Exception: {2}".format(path, temp_file, exc)
                 )
 
@@ -1367,8 +1367,8 @@ def replace(path,
             shutil.move(temp_file, backup_name)
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
-                "Unable to move the temp file '{0}' to the"
-                "backup file '{1}'."
+                "Unable to move the temp file '{0}' to the "
+                "backup file '{1}'. "
                 "Exception: {2}".format(path, temp_file, exc)
                 )
         if symlink:
@@ -1383,8 +1383,8 @@ def replace(path,
                 os.symlink(target_backup, symlink_backup)
             except:
                 raise CommandExecutionError(
-                    "Unable create backup symlink '{0}'."
-                    "Target was '{1}'."
+                    "Unable create backup symlink '{0}'. "
+                    "Target was '{1}'. "
                     "Exception: {2}".format(symlink_backup, target_backup,
                                             exc)
                     )
@@ -1393,7 +1393,7 @@ def replace(path,
             os.remove(temp_file)
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
-                "Unable to delete temp file '{0}'."
+                "Unable to delete temp file '{0}'. "
                 "Exception: {1}".format(temp_file, exc)
                 )
 
