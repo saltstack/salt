@@ -1062,6 +1062,35 @@ def _get_flags(flags):
     return flags
 
 
+def _mkstemp_copy(path):
+    '''
+    Create a temp file and copy the contents of `path` to the temp file.
+    Return the path to the temp file.
+    
+    >>> _mkstemp_copy('/root/foo')
+    /tmp/tmpF48QrH
+    '''
+    temp_file = None
+    # Create the temp file
+    try:
+        temp_file = salt.utils.mkstemp()
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to create temp file. "
+            "Exception: {0}".format(exc)
+            )
+    # Move the target file to the temp file
+    try:
+        shutil.move(path, temp_file)
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to move file '{0}' to the"
+            "temp file '{1}'."
+            "Exception: {2}".format(path, temp_file, exc)
+            )
+
+    return temp_file
+
 def replace(path,
             pattern,
             repl,
@@ -1209,7 +1238,7 @@ def replace(path,
     # First check the whole file, determine whether to make the replacement
     # Searching first avoids modifying the time stamp if there are no changes
     try:
-        #use a read-only handle to open the file
+        # Use a read-only handle to open the file
         with salt.utils.fopen(path,
                               mode='rb',
                               buffering=bufsize) as r_file:
@@ -1248,42 +1277,26 @@ def replace(path,
             "Exception: {1}".format(path, exc)
             )
 
-    # Just search; we've searched the whole file now; if we didn't return True
+    # Just search. We've searched the whole file now; if we didn't return True
     # already, then the pattern isn't present, so return False.
     if search_only:
         return False
 
-    # Check flags to test whether we'll have to make changes to the file,
-    # and if so then create a temp file to store the contents of the file
-    if not dry_run and (has_changes or (not found and
-                       (append_if_not_found or prepend_if_not_found))):
-        # Create the temp file
-        try:
-            temp_file = salt.utils.mkstemp()
-        except (OSError, IOError) as exc:
-            raise CommandExecutionError(
-                "Unable to create temp file. "
-                "Exception: {0}".format(exc)
-                )
-        # Move the target file to the temp file
-        try:
-            shutil.move(path, temp_file)
-        except (OSError, IOError) as exc:
-            raise CommandExecutionError(
-                "Unable to move file '{0}' to the"
-                "temp file '{1}'."
-                "Exception: {2}".format(path, temp_file, exc)
-                )
-
     if has_changes and not dry_run:
         # Write the replacement text in this block.
         try:
-            # open the file in write mode
+            # Create a copy to read from and for later use as a backup
+            temp_file = _mkstemp_copy(path)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError("Exception: {0}".format(exc))
+
+        try:
+            # Open the file in write mode
             with salt.utils.fopen(path,
                         mode='wb',
                         buffering=bufsize) as w_file:
                 try:
-                    # open the temp file in read mode
+                    # Open the temp file in read mode
                     with salt.utils.fopen(temp_file,
                                           mode='rb',
                                           buffering=bufsize) as r_file:
@@ -1318,7 +1331,11 @@ def replace(path,
             new_file.append(not_found_content + '\n')
         has_changes = True
         if not dry_run:
-            # backup already done in filter part
+            try:
+                # Create a copy to read from and for later use as a backup
+                temp_file = _mkstemp_copy(path)
+            except (OSError, IOError) as exc:
+                raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
             try:
                 f = salt.utils.atomicfile.atomic_open(path, 'wb')
