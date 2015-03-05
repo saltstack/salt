@@ -227,7 +227,7 @@ def update(name,
     is_installed = __salt__['composer.did_composer_install'](name)
     if is_installed:
         old_status = "composer install has not yet been run in {0}".format(name)
-    else
+    else:
         old_status = "composer install has been run in {0}".format(name)
 
     # The state of the system does need to be changed. Check if we're running
