@@ -1200,73 +1200,109 @@ def replace(path,
     repl = str(repl)
 
     found = False
+    temp_file = None
+    content = str(not_found_content) if not_found_content and \
+                                       (prepend_if_not_found or
+                                        append_if_not_found) \
+                                     else repl
 
-    # First check the whole file, whether the replacement has already been made
+    # First check the whole file, determine whether to make the replacement
+    # Searching first avoids modifying the time stamp if there are no changes
     try:
-        # open the file read-only and inplace=False, otherwise the result
-        # will be an empty file after iterating over it just for searching
-        fi_file = fileinput.input(path,
-                        inplace=False,
-                        backup=False,
-                        bufsize=bufsize,
-                        mode='r')
+        #use a read-only handle to open the file
+        with salt.utils.fopen(path,
+                              mode='rb',
+                              buffering=bufsize) as r_file:
+            for line in r_file:
+                if search_only:
+                    # Just search; bail as early as a match is found
+                    if re.search(cpattern, line):
+                        return True  # `with` block handles file closure
+                else:
+                    result, nrepl = re.subn(cpattern, repl, line, count)
 
-        for line in fi_file:
+                    # found anything? (even if no change)
+                    if nrepl > 0:
+                        found = True
 
-            line = line.strip()
+                    if prepend_if_not_found or append_if_not_found:
+                        # Search for content, so we don't continue pre/appending
+                        # the content if it's been pre/appended in a previous run.
+                        if re.search(content, line):
+                            # Content was found, so set found.
+                            found = True
 
-            if (prepend_if_not_found or append_if_not_found) and not_found_content:
-                if line == not_found_content:
-                    if search_only:
-                        return True
-                    found = True
-                    break
+                    # Identity check each potential change until one change is made
+                    if has_changes is False and result != line:
+                        has_changes = True
 
-            else:
-                if line == repl:
-                    if search_only:
-                        return True
-                    found = True
-                    break
+                    # Keep track of show_changes here, in case the file isn't 
+                    # modified
+                    if show_changes:
+                        orig_file.append(line)
+                        new_file.append(result)
 
-    finally:
-        fi_file.close()
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to open file '{0}'. "
+            "Exception: {1}".format(path, exc)
+            )
 
-    try:
-        fi_file = fileinput.input(path,
-                        inplace=not (dry_run or search_only),
-                        backup=False if (dry_run or search_only or found) else backup,
-                        bufsize=bufsize,
-                        mode='r' if (dry_run or search_only or found) else 'rb')
+    # Just search; we've searched the whole file now; if we didn't return True
+    # already, then the pattern isn't present, so return False.
+    if search_only:
+        return False
 
-        if symlink and (backup and not (dry_run or search_only or found)):
-            symlink_backup = given_path + backup
-            # Always clobber any existing symlink backup
-            # to match the behavior of the 'backup' option
-            if os.path.exists(symlink_backup):
-                os.remove(symlink_backup)
-            os.symlink(target_path + backup, given_path + backup)
+    # Check flags to test whether we'll have to make changes to the file,
+    # and if so then create a temp file to store the contents of the file
+    if not dry_run and (has_changes or (not found and
+                       (append_if_not_found or prepend_if_not_found))):
+        # Create the temp file
+        try:
+            temp_file = salt.utils.mkstemp()
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to create temp file. "
+                "Exception: {0}".format(exc)
+                )
+        # Move the target file to the temp file
+        try:
+            shutil.move(path, temp_file)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to move file '{0}' to the"
+                "temp file '{1}'."
+                "Exception: {2}".format(path, temp_file, exc)
+                )
 
-        if not found:
-            for line in fi_file:
-                result, nrepl = re.subn(cpattern, repl, line, count)
-
-                # found anything? (even if no change)
-                if nrepl > 0:
-                    found = True
-
-                # Identity check each potential change until one change is made
-                if has_changes is False and result != line:
-                    has_changes = True
-
-                if show_changes:
-                    orig_file.append(line)
-                    new_file.append(result)
-
-                if not dry_run:
-                    print(result, end='', file=sys.stdout)
-    finally:
-        fi_file.close()
+    if has_changes and not dry_run:
+        # Write the replacement text in this block.
+        try:
+            # open the file in write mode
+            with salt.utils.fopen(path,
+                        mode='wb',
+                        buffering=bufsize) as w_file:
+                try:
+                    # open the temp file in read mode
+                    with salt.utils.fopen(temp_file,
+                                          mode='rb',
+                                          buffering=bufsize) as r_file:
+                        for line in r_file:
+                            result, nrepl = re.subn(cpattern, repl,
+                                                    line, count)
+                            try:
+                                w_file.write(result)
+                            except (OSError, IOError) as exc:
+                                raise CommandExecutionError(
+                                    "Unable to write file '{0}'. Contents may "
+                                    "be truncated. Temporary file contains copy "
+                                    "at '{1}'. "
+                                    "Exception: {2}".format(path, temp_file, exc)
+                                    )
+                except (OSError, IOError) as exc:
+                    raise CommandExecutionError("Exception: {0}".format(exc))
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError("Exception: {0}".format(exc))
 
     if not found and (append_if_not_found or prepend_if_not_found):
         if None == not_found_content:
@@ -1290,6 +1326,44 @@ def replace(path,
                     f.write(line)
             finally:
                 f.close()
+
+    if backup and has_changes and not dry_run:
+        # keep the backup only if it was requested
+        # and only if there were any changes
+        backup_name = '{0}{1}'.format(path, backup)
+        try:
+            shutil.move(temp_file, backup_name)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to move the temp file '{0}' to the"
+                "backup file '{1}'."
+                "Exception: {2}".format(path, temp_file, exc)
+                )
+        if symlink:
+            symlink_backup = '{0}{1}'.format(given_path, backup)
+            target_backup = '{0}{1}'.format(target_path, backup)
+            # Always clobber any existing symlink backup
+            # to match the behaviour of the 'backup' option
+            try:
+                os.symlink(target_backup, symlink_backup)
+            except OSError:
+                os.remove(symlink_backup)
+                os.symlink(target_backup, symlink_backup)
+            except:
+                raise CommandExecutionError(
+                    "Unable create backup symlink '{0}'."
+                    "Target was '{1}'."
+                    "Exception: {2}".format(symlink_backup, target_backup,
+                                            exc)
+                    )
+    elif temp_file:
+        try:
+            os.remove(temp_file)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to delete temp file '{0}'."
+                "Exception: {1}".format(temp_file, exc)
+                )
 
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
