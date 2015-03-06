@@ -388,13 +388,6 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
 }
 
 
-DEBIAN_ATTR_TO_SALT_ATTR_MAP = dict(
-    (v, k) for (k, v) in SALT_ATTR_TO_DEBIAN_ATTR_MAP.items())
-
-#TODO
-DEBIAN_ATTR_TO_SALT_ATTR_MAP['address'] = 'address'
-DEBIAN_ATTR_TO_SALT_ATTR_MAP['hwaddress'] = 'hwaddress'
-
 IPV4_VALID_PROTO = ['bootp', 'dhcp', 'static', 'manual', 'loopback']
 
 IPV4_ATTR_MAP = {
@@ -574,11 +567,10 @@ def _parse_interfaces(interface_files=None):
 
                     attr, valuestr = line.rstrip().split(None, 1)
                     if _attrmaps_contain_attr(attr):
-                        _attr = DEBIAN_ATTR_TO_SALT_ATTR_MAP.get(attr, attr)
-                        if '-' in _attr:
-                            attrname = _attr.replace('-', '_')
+                        if '-' in attr:
+                            attrname = attr.replace('-', '_')
                         else:
-                            attrname = _attr
+                            attrname = attr
                         (valid, value, errmsg) = _validate_interface_option(
                             attr, valuestr, addrfam)
                         iface_dict[attrname] = value
