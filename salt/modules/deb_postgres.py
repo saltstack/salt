@@ -13,12 +13,11 @@ import pipes
 import salt.utils
 
 # Import 3rd-party libs
-import salt.ext.six as six
-
 
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'postgres'
+
 
 def __virtual__():
     '''
@@ -28,6 +27,7 @@ def __virtual__():
         return __virtualname__
     return False
 
+
 def cluster_create(version,
                    name='main',
                    port=None,
@@ -35,7 +35,7 @@ def cluster_create(version,
                    encoding=None,
                    datadir=None):
     '''
-    Adds a cluster to the Postgres server. 
+    Adds a cluster to the Postgres server.
 
     .. warning:
 
@@ -52,8 +52,6 @@ def cluster_create(version,
         salt '*' postgres.cluster_create '9.3' locale='fr_FR'
 
     '''
-    # XXX version should be a string, but it requires to use "'9.3'" in cmd line
-    # assert isinstance(version, six.string_types)
     cmd = [salt.utils.which('pg_createcluster')]
     if port:
         cmd += ['--port', str(port)]
@@ -67,9 +65,11 @@ def cluster_create(version,
     cmdstr = ' '.join([pipes.quote(c) for c in cmd])
     ret = __salt__['cmd.run_all'](cmdstr, python_shell=False)
     if ret.get('retcode', 0) != 0:
-        log.error('Error creating a Postgresql cluster {0}/{1}'.format(version, name))
+        log.error('Error creating a Postgresql'
+                  ' cluster {0}/{1}'.format(version, name))
         return False
     return ret
+
 
 def cluster_list(verbose=False):
     '''
@@ -108,6 +108,7 @@ def cluster_exists(version,
     '''
     return '{0}/{1}'.format(version, name) in cluster_list()
 
+
 def cluster_remove(version,
                    name='main',
                    stop=False):
@@ -132,20 +133,28 @@ def cluster_remove(version,
     cmd += [version, name]
     cmdstr = ' '.join([pipes.quote(c) for c in cmd])
     ret = __salt__['cmd.run_all'](cmdstr, python_shell=False)
-    # FIXME - return Boolean ? 
+    # FIXME - return Boolean ?
     if ret.get('retcode', 0) != 0:
-        log.error('Error removing a Postgresql cluster {0}/{1}'.format(version, name))
+        log.error('Error removing a Postgresql'
+                  ' cluster {0}/{1}'.format(version, name))
     else:
-        ret['changes'] = 'Successfully removed cluster {0}/{1}'.format(version, name)
+        ret['changes'] = ('Successfully removed'
+                          ' cluster {0}/{1}').format(version, name)
     return ret
-    
+
+
 def _parse_pg_lscluster(output):
     '''
     Helper function to parse the output of pg_lscluster
     '''
     cluster_dict = {}
     for line in output.splitlines():
-        v,n,p,s,u,d,l = line.split()
-        cluster_dict['{0}/{1}'.format(v,n)] = {'port':int(p), 'status':s, 
-                                               'user':u, 'datadir':d, 'log':l}
+        version, name, port, status, user, datadir, log = (
+            line.split())
+        cluster_dict['{0}/{1}'.format(version, name)] = {
+            'port': int(port),
+            'status': status,
+            'user': user,
+            'datadir': datadir,
+            'log': log}
     return cluster_dict
