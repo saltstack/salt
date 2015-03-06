@@ -212,7 +212,7 @@ def latest(name,
 
             # only do something, if the specified rev differs from the
             # current_rev and remote_rev
-            if current_rev in [rev, remote_rev]:
+            if current_rev in [rev, remote_rev] or remote_rev.startswith(current_rev):
                 new_rev = current_rev
             else:
 
