@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Linode Cloud Module using Apache Libcloud ORlinode-python bindings
-==================================================================
+Linode Cloud Module using Apache Libcloud OR linode-python bindings
+============================================-======================
 
 The Linode cloud module is used to control access to the Linode VPS system
 
@@ -37,7 +37,6 @@ Cloning requires a post 2015-02-01 salt-bootstrap.
 from __future__ import absolute_import
 
 # Import python libs
-import copy
 import pprint
 import logging
 import time
@@ -81,9 +80,12 @@ LINODE_STATUS = {
      '4': 'Saved to Disk (not in use)',
 }
 
-# Linode-python is now returning some complex types that
-# are not serializable by msgpack.  Kill those.
+
 def remove_complex_types(dictionary):
+    '''
+    Linode-python is now returning some complex types that
+    are not serializable by msgpack.  Kill those.
+    '''
 
     for k, v in dictionary.iteritems():
         if isinstance(v, dict):
@@ -221,11 +223,11 @@ if HAS_LIBCLOUD:
         loc = config.get_cloud_config_value('location', vm_, __opts__, default=2)
         for location in locations:
             if str(loc) in (str(location.id), str(location.name)):
-                return location 
+                return location
 
     def get_disk_size(vm_, size, swap):
         '''
-        Return the size of of the root disk in MB 
+        Return the size of of the root disk in MB
         '''
         return config.get_cloud_config_value(
             'disk_size', vm_, __opts__, default=size.disk - swap
@@ -244,14 +246,12 @@ if HAS_LINODEPY:
         images = avail_images(conn)
         return images[vm_['image']]['id']
 
-
     def get_size(conn, vm_):
         '''
         Return available size from Linode (Linode calls them "plans")
         '''
         sizes = avail_sizes(conn)
         return sizes[vm_['size']]
-
 
     def avail_sizes(conn=None):
         '''
@@ -272,7 +272,6 @@ if HAS_LINODEPY:
 
         return remove_complex_types(sizes)
 
-
     def avail_locations(conn=None):
         '''
         return available datacenter locations
@@ -288,7 +287,6 @@ if HAS_LINODEPY:
 
         return locations
 
-
     def avail_images(conn=None):
         '''
         Return available images
@@ -301,7 +299,6 @@ if HAS_LINODEPY:
             images[d['LABEL']]['id'] = d['DISTRIBUTIONID']
             images[d['LABEL']]['extra'] = d
         return images
-
 
     def get_ips(conn=None, LinodeID=None):
         '''
@@ -322,7 +319,6 @@ if HAS_LINODEPY:
             all_ips[key].append(i['IPADDRESS'])
 
         return all_ips
-
 
     def linodes(full=False, include_ips=False, conn=None):
         '''
@@ -354,7 +350,6 @@ if HAS_LINODEPY:
             results[n['LABEL']] = thisnode
         return results
 
-
     def stop(*args, **kwargs):
         '''
         Execute a "stop" action on a VM in Linode.
@@ -379,7 +374,6 @@ if HAS_LINODEPY:
         else:
             return {'action': 'stop',
                     'success': False}
-
 
     def start(*args, **kwargs):
         '''
@@ -409,7 +403,6 @@ if HAS_LINODEPY:
         else:
             return {'action': 'start',
                     'success': False}
-
 
     def clone(*args, **kwargs):
         '''
@@ -458,20 +451,17 @@ if HAS_LINODEPY:
 
         return node_data
 
-
     def list_nodes():
         '''
         Return basic data on nodes
         '''
         return linodes(full=False, include_ips=True)
 
-
     def list_nodes_full():
         '''
         Return all data on nodes
         '''
         return linodes(full=True, include_ips=True)
-
 
     def get_node(LinodeID=None, name=None, full=False):
         '''
@@ -493,12 +483,10 @@ if HAS_LINODEPY:
 
         return None
 
-
     def destroy(vm_):
         conn = get_conn()
         machines = linodes(full=False, include_ips=False)
         return conn.linode_delete(LinodeID=machines[vm_]['id'], skipChecks=True)
-
 
     def get_location(conn, vm_):
         '''
@@ -516,12 +504,12 @@ if HAS_LINODEPY:
 
         # Was this an id that matches something in locations?
         if str(loc) not in [locations[k]['id'] for k in locations]:
-            # No, let's try to match it against the full 
+            # No, let's try to match it against the full
             # name and the abbreviation and return the id
             for key in locations:
                 if str(loc).lower() in (key,
                                         str(locations[key]['id']).lower(),
-                                        str(locations[key]['abbreviation']).\
+                                        str(locations[key]['abbreviation']).
                                           lower()):
                     return locations[key]['id']
         else:
@@ -530,8 +518,6 @@ if HAS_LINODEPY:
         # No match.  Return None, cloud provider will
         # use a default or throw an exception
         return None
-
-
 
     def get_disk_size(vm_, size, swap):
         '''
@@ -663,7 +649,7 @@ def get_one_kernel(conn=None, name=None):
     return None
 
 
-def waitfor_status(conn=None, LinodeID=None, status=None, 
+def waitfor_status(conn=None, LinodeID=None, status=None,
                    timeout=300, quiet=True):
     '''
     Wait for a certain status
@@ -704,7 +690,7 @@ def waitfor_job(conn=None, LinodeID=None, JobID=None, timeout=300, quiet=True):
         try:
             result = conn.linode_job_list(LinodeID=LinodeID, JobID=JobID)
         except linode.ApiError as exc:
-            log.info('Waiting for job {0} on host {1} returned {2}'.\
+            log.info('Waiting for job {0} on host {1} returned {2}'.
                          format(LinodeID, JobID, exc))
             return False
 
@@ -713,10 +699,10 @@ def waitfor_job(conn=None, LinodeID=None, JobID=None, timeout=300, quiet=True):
 
         time.sleep(interval)
         if not quiet:
-            log.info('Still waiting on Job {0} for {1}'.format(JobID, 
+            log.info('Still waiting on Job {0} for {1}'.format(JobID,
                                                                LinodeID))
         else:
-            log.debug('Still waiting on Job {0} for {1}'.format(JobID, 
+            log.debug('Still waiting on Job {0} for {1}'.format(JobID,
                                                                 LinodeID))
     return False
 
