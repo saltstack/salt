@@ -20,12 +20,14 @@ Module to provide Postgres compatibility to salt.
 :note: This module uses MD5 hashing which may not be compliant with certain
     security audits.
 '''
+
 # This pylint error is popping up where there are no colons?
 # pylint: disable=E8203
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import StringIO
 import hashlib
@@ -40,7 +42,11 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+
 
 log = logging.getLogger(__name__)
 
@@ -67,8 +73,7 @@ def __virtual__():
     return False
 
 
-def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
-              run_cmd="cmd.run_all"):
+def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     '''
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
@@ -108,7 +113,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
 
-    ret = __salt__[run_cmd](cmd, **kwargs)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, **kwargs)
 
     if ret.get('retcode', 0) != 0:
         log.error('Error connecting to Postgresql server')
@@ -378,7 +383,7 @@ def db_create(name,
         'TABLESPACE': tablespace,
     }
     with_chunks = []
-    for key, value in with_args.iteritems():
+    for key, value in six.iteritems(with_args):
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
@@ -544,6 +549,35 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             retrow['password'] = row['password']
         ret[row['name']] = retrow
 
+    # for each role, determine the inherited roles
+    for role in six.iterkeys(ret):
+        rdata = ret[role]
+        groups = rdata.setdefault('groups', [])
+        query = (
+            'select rolname'
+            ' from pg_user'
+            ' join pg_auth_members'
+            '      on (pg_user.usesysid=pg_auth_members.member)'
+            ' join pg_roles '
+            '      on (pg_roles.oid=pg_auth_members.roleid)'
+            ' where pg_user.usename=\'{0}\''
+        ).format(role)
+        try:
+            rows = psql_query(query,
+                              runas=runas,
+                              host=host,
+                              user=user,
+                              port=port,
+                              maintenance_db=maintenance_db,
+                              password=password)
+            for row in rows:
+                if row['rolname'] not in groups:
+                    groups.append(row['rolname'])
+        except Exception:
+            # do not fail here, it is just a bonus
+            # to try to determine groups, but the query
+            # is not portable amongst all pg versions
+            continue
     return ret
 
 
@@ -571,7 +605,7 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
         return all_users.get(name, None)
     except AttributeError:
         log.error('Could not retrieve Postgres role. Is Postgres running?')
-        return False
+        return None
 
 
 def user_exists(name,
@@ -665,14 +699,14 @@ def _role_cmd_args(name,
         # first is passwd set
         # second is for handling NOPASSWD
         and (
-            isinstance(rolepassword, string_types) and bool(rolepassword)
+            isinstance(rolepassword, six.string_types) and bool(rolepassword)
         )
         or (
             isinstance(rolepassword, bool)
         )
     ):
         skip_passwd = True
-    if isinstance(rolepassword, string_types) and bool(rolepassword):
+    if isinstance(rolepassword, six.string_types) and bool(rolepassword):
         escaped_password = '{0!r}'.format(
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),
@@ -707,7 +741,7 @@ def _role_cmd_args(name,
         sub_cmd = sub_cmd.replace(' WITH', '')
     if groups:
         for group in groups.split(','):
-            sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
+            sub_cmd = '{0}; GRANT "{1}" TO "{2}"'.format(sub_cmd, group, name)
     return sub_cmd
 
 
@@ -851,7 +885,7 @@ def _role_update(name,
         log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
         return False
 
-    sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
+    sub_cmd = 'ALTER ROLE "{0}" WITH'.format(name)
     sub_cmd = '{0} {1}'.format(sub_cmd, _role_cmd_args(
         name,
         encrypted=encrypted,
@@ -1538,7 +1572,7 @@ def owner_to(dbname,
 
     sqlfile.write('commit;\n')
     sqlfile.flush()
-    os.chmod(sqlfile.name, 0644)  # ensure psql can read the file
+    os.chmod(sqlfile.name, 0o644)  # ensure psql can read the file
 
     # run the generated sqlfile in the db
     cmdret = _psql_prepare_and_run(['-f', sqlfile.name],

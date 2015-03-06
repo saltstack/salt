@@ -2,6 +2,7 @@
 '''
 Install Python packages with pip to either the system or a virtualenv
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -11,7 +12,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # It would be cool if we could use __virtual__() in this module, though, since
@@ -37,12 +38,14 @@ def _get_pip_bin(bin_env):
         which_result = __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
+        if salt.utils.is_windows():
+            return which_result.encode('string-escape')
         return which_result
 
     # try to get pip bin from env
     if os.path.isdir(bin_env):
         if salt.utils.is_windows():
-            pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe')
+            pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe').encode('string-escape')
         else:
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
@@ -87,33 +90,6 @@ def _get_env_activate(bin_env):
         if os.path.isfile(activate_bin):
             return activate_bin
     raise CommandNotFoundError('Could not find a `activate` binary')
-
-
-def _get_user(user, runas):
-    '''
-    Return user to use and handle runas dperecation mwarnings
-    '''
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.',
-            stacklevel=3
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
-
-    return user
 
 
 def _process_requirements(requirements, cmd, saltenv, user, no_chown):
@@ -185,7 +161,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             global_options=None,
             install_options=None,
             user=None,
-            runas=None,
             no_chown=False,
             cwd=None,
             activate=False,
@@ -197,6 +172,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             process_dependency_links=False,
             __env__=None,
             saltenv='base',
+            env_vars=None,
             use_vt=False):
     '''
     Install packages with pip
@@ -284,11 +260,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         install command.
     user
         The user under which to run pip
-
-    .. note::
-        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
-        used instead.
-
     no_chown
         When user is given, do not attempt to copy and chown
         a requirements file
@@ -297,6 +268,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     activate
         Activates the virtual environment, if given via bin_env,
         before running install.
+
+        .. deprecated:: 2014.7.2
+            If `bin_env` is given, pip will already be sourced from that
+            virualenv, making `activate` effectively a noop.
+
     pre_releases
         Include pre-releases in the available versions
     cert
@@ -311,6 +287,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Enable the processing of dependency links
     use_vt
         Use VT terminal emulation (see ouptut while installing)
+    env_vars
+        Set environment variables that some builds will depend on. For example,
+        a Python C-module may have a Makefile that needs INCLUDE_PATH set to
+        pick up a header file while compiling.
+
 
     CLI Example:
 
@@ -341,6 +322,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         )
         bin_env = env
 
+    if activate:
+        salt.utils.warn_until(
+                'Boron',
+                'Passing \'activate\' to the pip module is deprecated. If '
+                'bin_env refers to a virtualenv, there is no need to activate '
+                'that virtualenv before using pip to install packages in it.'
+        )
+
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
             'Boron',
@@ -351,13 +340,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         # Backwards compatibility
         saltenv = __env__
 
-    user = _get_user(user, runas)
-
     cmd = [_get_pip_bin(bin_env), 'install']
-
-    if activate and bin_env:
-        if not salt.utils.is_windows():
-            cmd = ['.', _get_env_activate(bin_env), '&&'] + cmd
 
     cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
                                                         saltenv=saltenv, user=user,
@@ -503,7 +486,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if pre_releases:
         # Check the locally installed pip version
         pip_version_cmd = '{0} --version'.format(_get_pip_bin(bin_env))
-        output = __salt__['cmd.run_all'](pip_version_cmd, use_vt=use_vt).get('stdout', '')
+        output = __salt__['cmd.run_all'](pip_version_cmd,
+                                         use_vt=use_vt,
+                                         python_shell=False).get('stdout', '')
         pip_version = output.split()[1]
 
         # From pip v1.4 the --pre flag is available
@@ -576,11 +561,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if process_dependency_links:
         cmd.append('--process-dependency-links')
 
+    if env_vars:
+        os.environ.update(env_vars)
+
     try:
-        cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+        cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-        return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+        return __salt__['cmd.run_all'](' '.join(cmd), python_shell=False, **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
             try:
@@ -596,7 +584,6 @@ def uninstall(pkgs=None,
               proxy=None,
               timeout=None,
               user=None,
-              runas=None,
               no_chown=False,
               cwd=None,
               __env__=None,
@@ -631,11 +618,6 @@ def uninstall(pkgs=None,
         Set the socket timeout (default 15 seconds)
     user
         The user under which to run pip
-
-    .. note::
-        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
-        used instead.
-
     no_chown
         When user is given, do not attempt to copy and chown
         a requirements file
@@ -665,8 +647,6 @@ def uninstall(pkgs=None,
         )
         # Backwards compatibility
         saltenv = __env__
-
-    user = _get_user(user, runas)
 
     cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
                                                         saltenv=saltenv, user=user,
@@ -710,7 +690,7 @@ def uninstall(pkgs=None,
                             pass
         cmd.extend(pkgs)
 
-    cmd_kwargs = dict(runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+    cmd_kwargs = dict(python_shell=False, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -726,7 +706,6 @@ def uninstall(pkgs=None,
 
 def freeze(bin_env=None,
            user=None,
-           runas=None,
            cwd=None,
            use_vt=False):
     '''
@@ -741,11 +720,6 @@ def freeze(bin_env=None,
         (/home/code/path/to/virtualenv/)
     user
         The user under which to run pip
-
-    .. note::
-        The ``runas`` argument is deprecated as of 0.16.2. ``user`` should be
-        used instead.
-
     cwd
         Current working directory to run pip from
 
@@ -755,10 +729,8 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
-    user = _get_user(user, runas)
-
     cmd = [_get_pip_bin(bin_env), 'freeze']
-    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
@@ -772,7 +744,6 @@ def freeze(bin_env=None,
 def list_(prefix=None,
           bin_env=None,
           user=None,
-          runas=None,
           cwd=None):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
@@ -790,9 +761,7 @@ def list_(prefix=None,
     pip_version_cmd = [pip_bin, '--version']
     cmd = [pip_bin, 'freeze']
 
-    user = _get_user(user, runas)
-
-    cmd_kwargs = dict(runas=user, cwd=cwd)
+    cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -811,6 +780,9 @@ def list_(prefix=None,
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
+            continue
+        elif line.startswith('-e hg+not trust'):
+            # ignore hg + not trust problem
             continue
         elif line.startswith('-e'):
             line = line.split('-e ')[1]
@@ -845,7 +817,7 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)))
+    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:
@@ -854,7 +826,6 @@ def version(bin_env=None):
 
 def list_upgrades(bin_env=None,
                   user=None,
-                  runas=None,
                   cwd=None):
     '''
     Check whether or not an upgrade is available for all packages
@@ -869,9 +840,7 @@ def list_upgrades(bin_env=None,
     pip_bin = _get_pip_bin(bin_env)
     cmd = [pip_bin, "list", "--outdated"]
 
-    user = _get_user(user, runas)
-
-    cmd_kwargs = dict(runas=user, cwd=cwd)
+    cmd_kwargs = dict(cwd=cwd, runas=user)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -895,9 +864,10 @@ def list_upgrades(bin_env=None,
 def upgrade_available(pkg,
                       bin_env=None,
                       user=None,
-                      runas=None,
                       cwd=None):
     '''
+    .. versionadded:: Lithium
+
     Check whether or not an upgrade is available for a given package
 
     CLI Example:
@@ -906,15 +876,16 @@ def upgrade_available(pkg,
 
         salt '*' pip.upgrade_available <package name>
     '''
-    return pkg in list_upgrades(bin_env=bin_env, user=user, runas=runas, cwd=cwd)
+    return pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd)
 
 
 def upgrade(bin_env=None,
             user=None,
-            runas=None,
             cwd=None,
             use_vt=False):
     '''
+    .. versionadded:: Lithium
+
     Upgrades outdated pip packages
 
     Returns a dict containing the changes.
@@ -933,13 +904,12 @@ def upgrade(bin_env=None,
            'result': True,
            'comment': '',
            }
-    user = _get_user(user, runas)
     pip_bin = _get_pip_bin(bin_env)
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
     cmd = [pip_bin, "install", "-U"]
-    cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt)
+    cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     errors = False

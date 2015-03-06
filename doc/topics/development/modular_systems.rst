@@ -82,6 +82,7 @@ This provides a console that has access to all the vars and functions, and even
 supports tab-completion.
 
 .. code-block:: python
+
     print(test)
     test123
 

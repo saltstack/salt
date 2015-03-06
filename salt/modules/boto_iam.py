@@ -28,15 +28,18 @@ Connection module for Amazon IAM
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import urllib
 import json
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+# pylint: disable=import-error
+from salt.ext.six import string_types
+from salt.ext.six.moves.urllib.parse import unquote as _unquote  # pylint: disable=no-name-in-module
 try:
     import boto
     import boto.iam
@@ -44,9 +47,9 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+# pylint: enable=import-error
 
 # Import salt libs
-from salt._compat import string_types
 import salt.utils.odict as odict
 
 
@@ -341,7 +344,7 @@ def get_role_policy(role_name, policy_name, region=None, key=None,
         # I _hate_ you for not giving me an object boto.
         _policy = _policy.get_role_policy_response.policy_document
         # Policy is url encoded
-        _policy = urllib.unquote(_policy)
+        _policy = _unquote(_policy)
         _policy = json.loads(_policy, object_pairs_hook=odict.OrderedDict)
         return _policy
     except boto.exception.BotoServerError:
@@ -411,6 +414,42 @@ def delete_role_policy(role_name, policy_name, region=None, key=None,
         msg = 'Failed to delete {0} policy for role {1}.'
         log.error(msg.format(policy_name, role_name))
         return False
+
+
+def get_account_id(region=None, key=None, keyid=None, profile=None):
+    '''
+    Get a the AWS account id associated with the used credentials.
+
+    CLI example::
+
+        salt myminion boto_iam.get_account_id
+    '''
+    cache_key = 'boto_iam.account_id'
+    if cache_key not in __context__:
+        conn = _get_conn(region, key, keyid, profile)
+        try:
+            ret = conn.get_user()
+            # The get_user call returns an user ARN:
+            #    arn:aws:iam::027050522557:user/salt-test
+            arn = ret['get_user_response']['get_user_result']['user']['arn']
+        except boto.exception.BotoServerError:
+            # If call failed, then let's try to get the ARN from the metadata
+            timeout = boto.config.getfloat(
+                'Boto', 'metadata_service_timeout', 1.0
+            )
+            attempts = boto.config.getint(
+                'Boto', 'metadata_service_num_attempts', 1
+            )
+            metadata = boto.utils.get_instance_metadata(
+                timeout=timeout, num_retries=attempts
+            )
+            try:
+                arn = metadata['iam']['info']['InstanceProfileArn']
+            except KeyError:
+                log.error('Failed to get user or metadata ARN information in'
+                          ' boto_iam.get_account_id.')
+        __context__[cache_key] = arn.split(':')[4]
+    return __context__[cache_key]
 
 
 def _get_conn(region, key, keyid, profile):

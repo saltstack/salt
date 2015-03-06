@@ -2,6 +2,7 @@
 '''
 Create virtualenv environments
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import glob
@@ -13,7 +14,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.exceptions
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 KNOWN_BINARY_NAMES = frozenset(
     ['virtualenv',
@@ -52,7 +53,6 @@ def create(path,
            symlinks=None,
            upgrade=None,
            user=None,
-           runas=None,
            use_vt=False,
            saltenv='base'):
     '''
@@ -106,25 +106,6 @@ def create(path,
     # raise CommandNotFoundError if venv_bin is missing
     salt.utils.check_or_die(venv_bin)
 
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise salt.exceptions.CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
-
     cmd = [venv_bin]
 
     if 'pyvenv' not in venv_bin:
@@ -154,7 +135,9 @@ def create(path,
         except ImportError:
             # Unable to import?? Let's parse the version from the console
             version_cmd = '{0} --version'.format(venv_bin)
-            ret = __salt__['cmd.run_all'](version_cmd, runas=user)
+            ret = __salt__['cmd.run_all'](
+                    version_cmd, runas=user, python_shell=False
+                )
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise salt.exceptions.CommandExecutionError(
                     'Unable to get the virtualenv version output using {0!r}. '
@@ -177,10 +160,9 @@ def create(path,
                 cmd.append('--distribute')
 
         if python is not None and python.strip() != '':
-            if not os.access(python, os.X_OK):
+            if not salt.utils.which(python):
                 raise salt.exceptions.CommandExecutionError(
-                    'Requested python ({0}) does not appear '
-                    'executable.'.format(python)
+                    'Cannot find requested python ({0}).'.format(python)
                 )
             cmd.append('--python={0}'.format(python))
         if extra_search_dir is not None:
@@ -246,7 +228,7 @@ def create(path,
     cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=user)
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
     if ret['retcode'] > 0:
         # Something went wrong. Let's bail out now!
         return ret
@@ -330,7 +312,8 @@ def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
             runas=user,
             cwd=cwd,
             env={'VIRTUAL_ENV': cwd},
-            use_vt=use_vt
+            use_vt=use_vt,
+            python_shell=False,
         )
     finally:
         os.remove(tmppath)

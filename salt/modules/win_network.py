@@ -2,6 +2,7 @@
 '''
 Module for gathering and managing network information
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -41,8 +42,8 @@ def ping(host):
 
         salt '*' network.ping archlinux.org
     '''
-    cmd = 'ping -n 4 {0}'.format(salt.utils.network.sanitize_host(host))
-    return __salt__['cmd.run'](cmd)
+    cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
+    return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def netstat():
@@ -56,8 +57,8 @@ def netstat():
         salt '*' network.netstat
     '''
     ret = []
-    cmd = 'netstat -nao'
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['netstat', '-nao']
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         comps = line.split()
         if line.startswith('  TCP'):
@@ -88,8 +89,8 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    cmd = 'tracert {0}'.format(salt.utils.network.sanitize_host(host))
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['tracert', salt.utils.network.sanitize_host(host)]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if ' ' not in line:
             continue
@@ -143,8 +144,8 @@ def nslookup(host):
     '''
     ret = []
     addresses = []
-    cmd = 'nslookup {0}'.format(salt.utils.network.sanitize_host(host))
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['nslookup', salt.utils.network.sanitize_host(host)]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if addresses:
             # We're in the last block listing addresses
@@ -176,8 +177,8 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     '''
-    cmd = 'dig {0}'.format(salt.utils.network.sanitize_host(host))
-    return __salt__['cmd.run'](cmd)
+    cmd = ['dig', salt.utils.network.sanitize_host(host)]
+    return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def interfaces_names():

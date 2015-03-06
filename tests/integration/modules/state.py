@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 
@@ -13,6 +14,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -61,6 +65,66 @@ class StateModuleTest(integration.ModuleCase,
         '''
         sls = self.run_function('state.show_sls', mods='recurse_ok_two')
         self.assertIn('/etc/nagios/nrpe.cfg', sls)
+
+    def _remove_request_cache_file(self):
+        '''
+        remove minion state request file
+        '''
+        cache_file = os.path.join(integration.RUNTIME_CONFIGS['minion']['cachedir'], 'req_state.p')
+        if os.path.exists(cache_file):
+            os.remove(cache_file)
+
+    def test_request(self):
+        '''
+        verify sending a state request to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        ret = self.run_function('state.request', mods='modules.state.requested')
+        self.assertSaltTrueReturn(ret)
+
+    def test_check_request(self):
+        '''
+        verify checking a state request sent to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        self.run_function('state.request', mods='modules.state.requested')
+        ret = self.run_function('state.check_request')
+        result = ret['default']['test_run']['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+        self.assertTrue(result)
+
+    def test_clear_request(self):
+        '''
+        verify clearing a state request sent to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        self.run_function('state.request', mods='modules.state.requested')
+        ret = self.run_function('state.clear_request')
+        self.assertTrue(ret)
+
+    def test_run_request_succeeded(self):
+        '''
+        verify running a state request sent to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        self.run_function('state.request', mods='modules.state.requested')
+        ret = self.run_function('state.run_request')
+        result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+        self.assertTrue(result)
+
+    def test_run_request_failed_no_request_staged(self):
+        '''
+        verify not running a state request sent to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        self.run_function('state.request', mods='modules.state.requested')
+        self.run_function('state.clear_request')
+        ret = self.run_function('state.run_request')
+        self.assertEqual(ret, {})
 
     def test_issue_1896_file_append_source(self):
         '''
@@ -373,73 +437,81 @@ fi
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo A" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo B" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo C" run',
-                'result': True}
+                'result': True,
+                'changes': True}
         }
         expected_result = {
             'cmd_|-A_|-echo A fifth_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo A fifth" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo B third" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo C second" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-D_|-echo D first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo D first" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-E_|-echo E fourth_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo E fourth" run',
-                'result': True}
+                'result': True,
+                'changes': True}
         }
         expected_req_use_result = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo A" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo B" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo C" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-D_|-echo D_|-run': {
                 '__run_num__': 5,
                 'comment': 'Command "echo D" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-E_|-echo E_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo E" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-F_|-echo F_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo F" run',
-                'result': True}
+                'result': True,
+                'changes': True}
         }
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.mixed_simple')
+        result = self.normalize_ret(ret)
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
         self.assertEqual(expected_simple_result, result)
 
         # test Traceback recursion prereq+require #8785
@@ -468,15 +540,23 @@ fi
 
         # undetected infinite loopS prevents this test from running...
         # TODO: this is actually failing badly
-        #result = {}
         #ret = self.run_function('state.sls', mods='requisites.mixed_complex1')
-        #for item, descr in ret.iteritems():
-        #    result[item] = {
-        #        '__run_num__': descr['__run_num__'],
-        #        'comment': descr['comment'],
-        #        'result': descr['result']
-        #    }
+        #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result, result)
+
+    def normalize_ret(self, ret):
+        '''
+        Normalize the return to the format that we'll use for result checking
+        '''
+        result = {}
+        for item, descr in six.iteritems(ret):
+            result[item] = {
+                '__run_num__': descr['__run_num__'],
+                'comment': descr['comment'],
+                'result': descr['result'],
+                'changes': descr['changes'] != {}  # whether there where any changes
+            }
+        return result
 
     def test_requisites_require_ordering_and_errors(self):
         '''
@@ -488,59 +568,61 @@ fi
             'cmd_|-A_|-echo A fifth_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo A fifth" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-B_|-echo B second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo B second" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-C_|-echo C third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo C third" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-D_|-echo D first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo D first" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-E_|-echo E fourth_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo E fourth" run',
-                'result': True
+                'result': True,
+                'changes': True,
             },
             'cmd_|-F_|-echo F_|-run': {
                 '__run_num__': 5,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       foobar: A\n',
-                'result': False
+                'result': False,
+                'changes': False,
             },
             'cmd_|-G_|-echo G_|-run': {
                 '__run_num__': 6,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
-                'result': False
+                'result': False,
+                'changes': False,
             },
             'cmd_|-H_|-echo H_|-run': {
                 '__run_num__': 7,
                 'comment': 'The following requisites were not found:\n'
                            + '                   require:\n'
                            + '                       cmd: Z\n',
-                'result': False
+                'result': False,
+                'changes': False,
             }
         }
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.require')
+        result = self.normalize_ret(ret)
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
         self.assertEqual(expected_result, result)
 
         ret = self.run_function('state.sls', mods='requisites.require_error1')
@@ -581,25 +663,22 @@ fi
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo A" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo B" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo C" run',
-                'result': True},
+                'result': True,
+                'changes': True},
         }
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.fullsls_require')
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
+        result = self.normalize_ret(ret)
         self.assertEqual(expected_result, result)
 
         # TODO: not done
@@ -621,105 +700,126 @@ fi
             'cmd_|-A_|-echo A third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo A third" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo B first" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo C second" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-I_|-echo I_|-run': {
                 '__run_num__': 3,
                 'comment': 'The following requisites were not found:\n'
                            + '                   prereq:\n'
                            + '                       cmd: Z\n',
-                'result': False},
+                'result': False,
+                'changes': False},
             'cmd_|-J_|-echo J_|-run': {
                 '__run_num__': 4,
                 'comment': 'The following requisites were not found:\n'
                            + '                   prereq:\n'
                            + '                       foobar: A\n',
-                'result': False}
+                'result': False,
+                'changes': False}
         }
         expected_result_simple2 = {
             'cmd_|-A_|-echo A_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo A" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo B" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo C" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-D_|-echo D_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo D" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-E_|-echo E_|-run': {
                 '__run_num__': 4,
                 'comment': 'Command "echo E" run',
-                'result': True}
+                'result': True,
+                'changes': True}
+        }
+        expected_result_simple3 = {
+            'cmd_|-A_|-echo A first_|-run': {
+                '__run_num__': 0,
+                'comment': 'Command "echo A first" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-B_|-echo B second_|-run': {
+                '__run_num__': 1,
+                'comment': 'Command "echo B second" run',
+                'result': True,
+                'changes': True,
+            },
+            'cmd_|-C_|-echo C third_|-wait': {
+                '__run_num__': 2,
+                'comment': '',
+                'result': True,
+                'changes': False,
+            }
         }
         expected_result_complex = {
             'cmd_|-A_|-echo A fourth_|-run': {
                 '__run_num__': 3,
                 'comment': 'Command "echo A fourth" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-B_|-echo B first_|-run': {
                 '__run_num__': 0,
                 'comment': 'Command "echo B first" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-C_|-echo C second_|-run': {
                 '__run_num__': 1,
                 'comment': 'Command "echo C second" run',
-                'result': True},
+                'result': True,
+                'changes': True},
             'cmd_|-D_|-echo D third_|-run': {
                 '__run_num__': 2,
                 'comment': 'Command "echo D third" run',
-                'result': True},
+                'result': True,
+                'changes': True},
         }
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple')
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
+        result = self.normalize_ret(ret)
         self.assertEqual(expected_result_simple, result)
 
         # same test, but not using lists in yaml syntax
         # TODO: issue #8235, prereq ignored when not used in list syntax
         # Currently fails badly with :
         # TypeError encountered executing state.sls: string indices must be integers, not str.
-        #result = {}
         #expected_result_simple.pop('cmd_|-I_|-echo I_|-run')
         #expected_result_simple.pop('cmd_|-J_|-echo J_|-run')
         #ret = self.run_function('state.sls', mods='requisites.prereq_simple_nolist')
-        #for item, descr in ret.iteritems():
-        #    result[item] = {
-        #        '__run_num__': descr['__run_num__'],
-        #        'comment': descr['comment'],
-        #        'result': descr['result']
-        #    }
+        #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result_simple, result)
 
-        result = {}
         ret = self.run_function('state.sls', mods='requisites.prereq_simple2')
+        result = self.normalize_ret(ret)
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
-            result[item] = {
-                '__run_num__': descr['__run_num__'],
-                'comment': descr['comment'],
-                'result': descr['result']
-            }
         self.assertEqual(expected_result_simple2, result)
+
+        ret = self.run_function('state.sls', mods='requisites.prereq_simple3')
+        result = self.normalize_ret(ret)
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual(expected_result_simple3, result)
 
         #ret = self.run_function('state.sls', mods='requisites.prereq_error_nolist')
         #self.assertEqual(
@@ -748,14 +848,8 @@ fi
 
         # issue #8211, chaining complex prereq & prereq_in
         # TODO: Actually this test fails
-        #result = {}
         #ret = self.run_function('state.sls', mods='requisites.prereq_complex')
-        #for item, descr in ret.iteritems():
-        #    result[item] = {
-        #        '__run_num__': descr['__run_num__'],
-        #        'comment': descr['comment'],
-        #        'result': descr['result']
-        #    }
+        #result = self.normalize_ret(ret)
         #self.assertEqual(expected_result_complex, result)
 
         # issue #8210 : prereq recursion undetected
@@ -774,7 +868,7 @@ fi
         # TODO issue #8235 & #8774 some examples are still commented in the test file
         ret = self.run_function('state.sls', mods='requisites.use')
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
+        for item, descr in six.iteritems(ret):
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
         # TODO: issue #8802 : use recursions undetected
@@ -812,6 +906,116 @@ fi
                 self.assertIn('Comte', data)
         finally:
             os.unlink(tgt)
+
+    # onchanges tests
+
+    def test_onchanges_requisite(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple')
+
+        # First, test the result of the state run when changes are expected to happen
+        test_data = state_run['cmd_|-test_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when changes are not expected to happen
+        test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onchanges req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onchanges_in_requisite(self):
+        '''
+        Tests a simple state using the onchanges_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_in_simple')
+
+        # First, test the result of the state run of when changes are expected to happen
+        test_data = state_run['cmd_|-test_changes_expected_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when changes are not expected to happen
+        test_data = state_run['cmd_|-test_changes_not_expected_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onchanges req did not change'
+        self.assertIn(expected_result, test_data)
+
+    # onfail tests
+
+    def test_onfail_requisite(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple')
+
+        # First, test the result of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onfail_in_requisite(self):
+        '''
+        Tests a simple state using the onfail_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_in_simple')
+
+        # First, test the result of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    # listen tests
+
+    def test_listen_requisite(self):
+        '''
+        Tests a simple state using the listen requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_simple')
+
+        # First, test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        # Then, test the result of the state run when a listener should not trigger
+        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        self.assertNotIn(absent_state, state_run)
+
+    def test_listen_in_requisite(self):
+        '''
+        Tests a simple state using the listen_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_in_simple')
+
+        # First, test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        # Then, test the result of the state run when a listener should not trigger
+        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        self.assertNotIn(absent_state, state_run)
 
 
 if __name__ == '__main__':

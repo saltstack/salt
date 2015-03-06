@@ -5,7 +5,7 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import re
 import sys
@@ -13,8 +13,10 @@ import copy
 import json
 import time
 import errno
+import signal
 import shutil
 import pprint
+import atexit
 import logging
 import tempfile
 import subprocess
@@ -25,7 +27,6 @@ try:
     import pwd
 except ImportError:
     pass
-
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
@@ -42,6 +43,7 @@ from salttesting import TestCase
 from salttesting.case import ShellTestCase
 from salttesting.mixins import CheckShellBinaryNameAndVersionMixIn
 from salttesting.parser import PNUM, print_header, SaltTestcaseParser
+from salttesting.helpers import requires_sshd_server
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
 
 # Update sys.path
@@ -49,7 +51,6 @@ ensure_in_syspath(CODE_DIR, SALT_LIBS)
 
 # Import Salt libs
 import salt
-import salt._compat
 import salt.config
 import salt.minion
 import salt.runner
@@ -64,11 +65,12 @@ from salt.utils.immutabletypes import freeze
 try:
     import salt.master
 except ImportError:
-    # Not required fro raet tests
+    # Not required for raet tests
     pass
 
 # Import 3rd-party libs
 import yaml
+import salt.ext.six as six
 
 if os.uname()[0] == 'Darwin':
     SYS_TMP_DIR = '/tmp'
@@ -89,6 +91,16 @@ CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
 RUNTIME_CONFIGS = {}
 
 log = logging.getLogger(__name__)
+
+
+def cleanup_runtime_config_instance(to_cleanup):
+    # Explicit and forced cleanup
+    for key in list(to_cleanup.keys()):
+        instance = to_cleanup.pop(key)
+        del instance
+
+
+atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
 
 
 def run_tests(*test_cases, **kwargs):
@@ -395,13 +407,18 @@ class TestDaemon(object):
         if keygen_ed25519_err:
             print('ssh-keygen had errors: {0}'.format(keygen_ed25519_err))
 
-        with open(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
+        with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
-            ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
-            ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
-            ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
+            if not keygen_dsa_err:
+                ssh_config.write('HostKey {0}\n'.format(server_dsa_priv_key_file))
+            if not keygen_escda_err:
+                ssh_config.write('HostKey {0}\n'.format(server_ecdsa_priv_key_file))
+            if not keygen_ed25519_err:
+                ssh_config.write('HostKey {0}\n'.format(server_ed25519_priv_key_file))
+
+        self.sshd_pidfile = os.path.join(TMP_CONF_DIR, 'sshd.pid')
         self.sshd_process = subprocess.Popen(
-            [sshd, '-f', 'sshd_config'],
+            [sshd, '-f', 'sshd_config', '-oPidFile={0}'.format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -410,9 +427,12 @@ class TestDaemon(object):
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
             print('sshd had errors on startup: {0}'.format(sshd_err))
+        else:
+            os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, TMP_CONF_DIR)
-        with open(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+        with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+            roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
             roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
 
     @property
@@ -440,6 +460,10 @@ class TestDaemon(object):
         running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['user'] = running_tests_user
+        tests_know_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
+        with salt.utils.fopen(tests_know_hosts_file, 'w') as known_hosts:
+            known_hosts.write('')
+        master_opts['known_hosts_file'] = tests_know_hosts_file
 
         minion_config_path = os.path.join(CONF_DIR, 'minion')
         minion_opts = salt.config._read_conf_file(minion_config_path)
@@ -532,7 +556,7 @@ class TestDaemon(object):
 
         for entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
-            open(os.path.join(TMP_CONF_DIR, entry), 'w').write(
+            salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w').write(
                 yaml.dump(computed_config, default_flow_style=False)
             )
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
@@ -644,7 +668,7 @@ class TestDaemon(object):
         wait_minion_connections.terminate()
         if wait_minion_connections.exitcode > 0:
             print(
-                '\n {RED_BOLD}*{ENDC} ERROR: Minions failed to connect'.format(
+                '\n {LIGHT_RED}*{ENDC} ERROR: Minions failed to connect'.format(
                     **self.colors
                 )
             )
@@ -716,8 +740,15 @@ class TestDaemon(object):
         if hasattr(self, 'sshd_process'):
             try:
                 self.sshd_process.kill()
-            except OSError:
-                pass
+            except OSError as exc:
+                if exc.errno != 3:
+                    raise
+            with salt.utils.fopen(self.sshd_pidfile) as fhr:
+                try:
+                    os.kill(int(fhr.read()), signal.SIGKILL)
+                except OSError as exc:
+                    if exc.errno != 3:
+                        raise
 
     def _exit_mockbin(self):
         path = os.environ.get('PATH', '')
@@ -759,7 +790,7 @@ class TestDaemon(object):
 
             if job_finished is False:
                 sys.stdout.write(
-                    '   * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
+                    '   * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                         '{0}'.format(expire - now).rsplit('.', 1)[0],
                         ', '.join(running),
                         **self.colors
@@ -770,7 +801,7 @@ class TestDaemon(object):
             now = datetime.now()
         else:  # pylint: disable=W0120
             sys.stdout.write(
-                '\n {RED_BOLD}*{ENDC} ERROR: Failed to get information '
+                '\n {LIGHT_RED}*{ENDC} ERROR: Failed to get information '
                 'back\n'.format(**self.colors)
             )
             sys.stdout.flush()
@@ -781,7 +812,7 @@ class TestDaemon(object):
             list(targets), 'saltutil.running', expr_form='list'
         )
         return [
-            k for (k, v) in running.iteritems() if v and v[0]['jid'] == jid
+            k for (k, v) in six.iteritems(running) if v and v[0]['jid'] == jid
         ]
 
     def wait_for_minion_connections(self, targets, timeout):
@@ -806,7 +837,7 @@ class TestDaemon(object):
                 )
             )
             sys.stdout.write(
-                ' * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
+                ' * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                     '{0}'.format(expire - now).rsplit('.', 1)[0],
                     ', '.join(expected_connections),
                     **self.colors
@@ -842,7 +873,7 @@ class TestDaemon(object):
             now = datetime.now()
         else:  # pylint: disable=W0120
             print(
-                '\n {RED_BOLD}*{ENDC} WARNING: Minions failed to connect '
+                '\n {LIGHT_RED}*{ENDC} WARNING: Minions failed to connect '
                 'back. Tests requiring them WILL fail'.format(**self.colors)
             )
             try:
@@ -871,12 +902,12 @@ class TestDaemon(object):
         jid_info = self.client.run_job(
             list(targets), 'saltutil.sync_{0}'.format(modules_kind),
             expr_form='list',
-            timeout=9999999999999999,
+            timeout=999999999999999,
         )
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
             print(
-                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync {0}. '
+                ' {LIGHT_RED}*{ENDC} WARNING: Minions failed to sync {0}. '
                 'Tests requiring these {0} WILL fail'.format(
                     modules_kind, **self.colors)
             )
@@ -885,16 +916,16 @@ class TestDaemon(object):
         while syncing:
             rdata = self.client.get_full_returns(jid_info['jid'], syncing, 1)
             if rdata:
-                for name, output in rdata.iteritems():
+                for name, output in six.iteritems(rdata):
                     if not output['ret']:
                         # Already synced!?
                         syncing.remove(name)
                         continue
 
-                    if isinstance(output['ret'], salt._compat.string_types):
+                    if isinstance(output['ret'], six.string_types):
                         # An errors has occurred
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} Failed to sync {2}: '
+                            ' {LIGHT_RED}*{ENDC} {0} Failed to sync {2}: '
                             '{1}'.format(
                                 name, output['ret'],
                                 modules_kind,
@@ -915,7 +946,7 @@ class TestDaemon(object):
                         syncing.remove(name)
                     except KeyError:
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} already synced??? '
+                            ' {LIGHT_RED}*{ENDC} {0} already synced??? '
                             '{1}'.format(name, output, **self.colors)
                         )
         return True
@@ -1072,7 +1103,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, salt._compat.string_types):
+                if not isinstance(item, six.string_types):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
@@ -1140,14 +1171,17 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-ssh
         '''
-        arg_str = '-c {0} -i --priv {1} --roster-file {2} localhost {3} --out=json'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
-    def run_run(self, arg_str, with_retcode=False, catch_stderr=False):
+    def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60):
         '''
         Execute salt-run
         '''
-        arg_str = '-c {0} {1}'.format(self.get_config_dir(), arg_str)
+        arg_str = '-c {0}{async_flag} -t {timeout} {1}'.format(self.get_config_dir(),
+                                                  arg_str,
+                                                  timeout=timeout,
+                                                  async_flag=' --async' if async else '')
         return self.run_script('salt-run', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_run_plus(self, fun, options='', *arg, **kwargs):
@@ -1200,7 +1234,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
 
 class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
 
-    _call_binary_expected_version_ = salt.__version__
+    _call_binary_expected_version_ = salt.version.__version__
 
     def test_salt_with_git_version(self):
         if getattr(self, '_call_binary_', None) is None:
@@ -1259,6 +1293,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         self.assertIn(parsed_version.string, out)
 
 
+@requires_sshd_server
 class SSHCase(ShellCase):
     '''
     Execute a command via salt-ssh
@@ -1299,8 +1334,8 @@ class SaltReturnAssertsMixIn(object):
         if isinstance(keys, tuple):
             # If it's a tuple, turn it into a list
             keys = list(keys)
-        elif isinstance(keys, basestring):
-            # If it's a basestring , make it a one item list
+        elif isinstance(keys, six.string_types):
+            # If it's a string, make it a one item list
             keys = [keys]
         elif not isinstance(keys, list):
             # If we've reached here, it's a bad type passed to keys
@@ -1311,7 +1346,7 @@ class SaltReturnAssertsMixIn(object):
         self.assertReturnNonEmptySaltType(ret)
         keys = self.__return_valid_keys(keys)
         okeys = keys[:]
-        for part in ret.itervalues():
+        for part in six.itervalues(ret):
             try:
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
@@ -1339,7 +1374,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not True. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(six.itervalues(ret)[0])
                     )
                 )
             except (AttributeError, IndexError):
@@ -1357,7 +1392,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not False. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(six.itervalues(ret)[0])
                     )
                 )
             except (AttributeError, IndexError):
@@ -1373,7 +1408,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not None. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(six.itervalues(ret)[0])
                     )
                 )
             except (AttributeError, IndexError):
@@ -1394,7 +1429,7 @@ class SaltReturnAssertsMixIn(object):
     def assertSaltCommentRegexpMatches(self, ret, pattern):
         return self.assertInSaltReturnRegexpMatches(ret, pattern, 'comment')
 
-    def assertInSalStatetWarning(self, in_comment, ret):
+    def assertInSaltStateWarning(self, in_comment, ret):
         return self.assertIn(
             in_comment, self.__getWithinSaltReturn(ret, 'warnings')
         )

@@ -8,9 +8,9 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import threading
-from Queue import Queue, Empty
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -19,6 +19,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 from salt.utils import event
+
+# Import 3rd-party libs
+from salt.ext.six.moves.queue import Queue, Empty  # pylint: disable=import-error,no-name-in-module
 
 
 class EventModuleTest(integration.ModuleCase):

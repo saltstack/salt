@@ -2,6 +2,7 @@
 '''
 Module for viewing and modifying sysctl parameters
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -21,7 +22,7 @@ def __virtual__():
     return __virtualname__ if __grains__['os'] == 'MacOS' else False
 
 
-def show():
+def show(config_file=False):
     '''
     Return a list of sysctl parameters for this minion
 
@@ -47,7 +48,7 @@ def show():
     )
     cmd = 'sysctl -a'
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     comps = ['']
     for line in out.splitlines():
         # This might need to be converted to a regex, and more, as sysctl output
@@ -87,7 +88,7 @@ def get(name):
         salt '*' sysctl.get hw.physmem
     '''
     cmd = 'sysctl -n {0}'.format(name)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     return out
 
 
@@ -109,7 +110,7 @@ def assign(name, value):
     '''
     ret = {}
     cmd = 'sysctl -w {0}="{1}"'.format(name, value)
-    data = __salt__['cmd.run_all'](cmd)
+    data = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if data['retcode'] != 0:
         raise CommandExecutionError('sysctl failed: {0}'.format(

@@ -2,6 +2,7 @@
 '''
 Module for viewing and modifying OpenBSD sysctl parameters
 '''
+from __future__ import absolute_import
 import os
 
 # Import salt libs
@@ -19,7 +20,7 @@ def __virtual__():
     return __virtualname__ if __grains__['os'] == 'OpenBSD' else False
 
 
-def show():
+def show(config_file=False):
     '''
     Return a list of sysctl parameters for this minion
 

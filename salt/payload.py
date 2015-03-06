@@ -6,8 +6,10 @@ in here
 '''
 
 # Import python libs
-#import sys  # Use of sys is commented out below
+from __future__ import absolute_import
+# import sys  # Use if sys is commented out below
 import logging
+import gc
 
 # Import salt libs
 import salt.log
@@ -15,6 +17,7 @@ import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -33,7 +36,7 @@ try:
 except ImportError:
     # Fall back to msgpack_pure
     try:
-        import msgpack_pure as msgpack
+        import msgpack_pure as msgpack  # pylint: disable=import-error
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
@@ -42,7 +45,7 @@ except ImportError:
         log.fatal('Unable to import msgpack or msgpack_pure python modules')
         # Don't exit if msgpack is not available, this is to make local mode
         # work without msgpack
-        #sys.exit(salt.exitcodes.EX_GENERIC)
+        #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def package(payload):
@@ -91,13 +94,15 @@ class Serial(object):
         Run the correct loads serialization format
         '''
         try:
+            gc.disable()  # performance optimization for msgpack
             return msgpack.loads(msg, use_list=True)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
-                         'In an attempt to keep Salt running, returning an empty dict.'
                          'This often happens when trying to read a file not in binary mode.'
                          'Please open an issue and include the following error: {1}'.format(msg, exc))
-            return {}
+            raise
+        finally:
+            gc.enable()
 
     def load(self, fn_):
         '''
@@ -105,7 +110,8 @@ class Serial(object):
         '''
         data = fn_.read()
         fn_.close()
-        return self.loads(data)
+        if data:
+            return self.loads(data)
 
     def dumps(self, msg):
         '''
@@ -127,7 +133,7 @@ class Serial(object):
             # list/tuple
             def odict_encoder(obj):
                 if isinstance(obj, dict):
-                    for key, value in obj.copy().iteritems():
+                    for key, value in six.iteritems(obj.copy()):
                         obj[key] = odict_encoder(value)
                     return dict(obj)
                 elif isinstance(obj, (list, tuple)):
@@ -154,13 +160,14 @@ class SREQ(object):
     '''
     Create a generic interface to wrap salt zeromq req calls.
     '''
-    def __init__(self, master, id_='', serial='msgpack', linger=0):
+    def __init__(self, master, id_='', serial='msgpack', linger=0, opts=None):
         self.master = master
         self.id_ = id_
         self.serial = Serial(serial)
         self.linger = linger
         self.context = zmq.Context()
         self.poller = zmq.Poller()
+        self.opts = opts
 
     @property
     def socket(self):
@@ -175,6 +182,7 @@ class SREQ(object):
                     zmq.RECONNECT_IVL_MAX, 5000
                 )
 
+            self._set_tcp_keepalive()
             if self.master.startswith('tcp://['):
                 # Hint PF type if bracket enclosed IPv6 address
                 if hasattr(zmq, 'IPV6'):
@@ -187,16 +195,38 @@ class SREQ(object):
             self._socket.connect(self.master)
         return self._socket
 
+    def _set_tcp_keepalive(self):
+        if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
+            if 'tcp_keepalive' in self.opts:
+                self._socket.setsockopt(
+                    zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+                )
+            if 'tcp_keepalive_idle' in self.opts:
+                self._socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+                )
+            if 'tcp_keepalive_cnt' in self.opts:
+                self._socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+                )
+            if 'tcp_keepalive_intvl' in self.opts:
+                self._socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+                )
+
     def clear_socket(self):
         '''
         delete socket if you have it
         '''
         if hasattr(self, '_socket'):
             if isinstance(self.poller.sockets, dict):
-                for socket in self.poller.sockets.keys():
+                sockets = list(self.poller.sockets.keys())
+                for socket in sockets:
+                    log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket)
             else:
                 for socket in self.poller.sockets:
+                    log.trace('Unregistering socket: {0}'.format(socket))
                     self.poller.unregister(socket[0])
             del self._socket
 
@@ -235,7 +265,8 @@ class SREQ(object):
 
     def destroy(self):
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets.keys():
+            sockets = list(self.poller.sockets.keys())
+            for socket in sockets:
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, 1)
                     socket.close()

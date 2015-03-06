@@ -4,6 +4,7 @@ Manage users on Mac OS 10.7+
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import pwd
 except ImportError:
@@ -13,10 +14,18 @@ import random
 import string
 import time
 
+# Import 3rdp-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import string_types
+from salt.ext.six import string_types
+
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 log = logging.getLogger(__name__)
 
@@ -47,15 +56,17 @@ def _dscl(cmd, ctype='create'):
         source, noderoot = '.', ''
     else:
         source, noderoot = 'localhost', '/Local/Default'
+
+    # Note, it's OK that cmd is not quoted here, we clean it up below
     return __salt__['cmd.run_all'](
         'dscl {0} -{1} {2}{3}'.format(source, ctype, noderoot, cmd),
-        output_loglevel='quiet' if ctype == 'passwd' else False
+        output_loglevel='quiet' if ctype == 'passwd' else 'warning'
     )
 
 
 def _first_avail_uid():
     uids = set(x.pw_uid for x in pwd.getpwall())
-    for idx in xrange(501, 2 ** 32):
+    for idx in range(501, 2 ** 32):
         if idx not in uids:
             return idx
 
@@ -101,18 +112,22 @@ def add(name,
     if not isinstance(gid, int):
         raise SaltInvocationError('gid must be an integer')
 
-    _dscl('/Users/{0} UniqueID {1!r}'.format(name, uid))
-    _dscl('/Users/{0} PrimaryGroupID {1!r}'.format(name, gid))
-    _dscl('/Users/{0} UserShell {1!r}'.format(name, shell))
-    _dscl('/Users/{0} NFSHomeDirectory {1!r}'.format(name, home))
-    _dscl('/Users/{0} RealName {1!r}'.format(name, fullname))
+    _dscl('/Users/{0} UniqueID {1!r}'.format(_cmd_quote(name), uid))
+    _dscl('/Users/{0} PrimaryGroupID {1!r}'.format(_cmd_quote(name), gid))
+    _dscl('/Users/{0} UserShell {1!r}'.format(_cmd_quote(name),
+                                              _cmd_quote(shell)))
+    _dscl('/Users/{0} NFSHomeDirectory {1!r}'.format(_cmd_quote(name),
+                                                     _cmd_quote(home)))
+    _dscl('/Users/{0} RealName {1!r}'.format(_cmd_quote(name),
+                                             _cmd_quote(fullname)))
 
     # Set random password, since without a password the account will not be
     # available. TODO: add shadow module
     randpass = ''.join(
-        random.SystemRandom().choice(string.letters + string.digits) for x in xrange(20)
+        random.SystemRandom().choice(string.letters + string.digits) for x in range(20)
     )
-    _dscl('/Users/{0} {1!r}'.format(name, randpass), ctype='passwd')
+    _dscl('/Users/{0} {1!r}'.format(_cmd_quote(name),
+                                    _cmd_quote(randpass)), ctype='passwd')
 
     # dscl buffers changes, sleep before setting group membership
     time.sleep(1)
@@ -141,7 +156,7 @@ def delete(name, *args):
     # group membership is managed separately from users and an entry for the
     # user will persist even after the user is removed.
     chgroups(name, ())
-    return _dscl('/Users/{0}'.format(name), ctype='delete')['retcode'] == 0
+    return _dscl('/Users/{0}'.format(_cmd_quote(name)), ctype='delete')['retcode'] == 0
 
 
 def getent(refresh=False):
@@ -182,7 +197,9 @@ def chuid(name, uid):
     if uid == pre_info['uid']:
         return True
     _dscl(
-        '/Users/{0} UniqueID {1!r} {2!r}'.format(name, pre_info['uid'], uid),
+        '/Users/{0} UniqueID {1!r} {2!r}'.format(_cmd_quote(name),
+                                                 pre_info['uid'],
+                                                 uid),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -210,8 +227,9 @@ def chgid(name, gid):
         return True
     _dscl(
         '/Users/{0} PrimaryGroupID {1!r} {2!r}'.format(
-            name, pre_info['gid'], gid
-        ),
+            _cmd_quote(name),
+            pre_info['gid'],
+            gid),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -237,8 +255,9 @@ def chshell(name, shell):
         return True
     _dscl(
         '/Users/{0} UserShell {1!r} {2!r}'.format(
-            name, pre_info['shell'], shell
-        ),
+            _cmd_quote(name),
+            _cmd_quote(pre_info['shell']),
+            _cmd_quote(shell)),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -264,8 +283,9 @@ def chhome(name, home):
         return True
     _dscl(
         '/Users/{0} NFSHomeDirectory {1!r} {2!r}'.format(
-            name, pre_info['home'], home
-        ),
+            _cmd_quote(name),
+            _cmd_quote(pre_info['home']),
+           _cmd_quote(home)),
         ctype='change'
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -291,7 +311,7 @@ def chfullname(name, fullname):
     if fullname == pre_info['fullname']:
         return True
     _dscl(
-        '/Users/{0} RealName {1!r}'.format(name, fullname),
+        '/Users/{0} RealName {1!r}'.format(_cmd_quote(name), fullname),
         # use a "create" command, because a "change" command would fail if
         # current fullname is an empty string. The "create" will just overwrite
         # this field.
@@ -346,14 +366,16 @@ def chgroups(name, groups, append=False):
     # Add groups from which user is missing
     for group in desired - ugrps:
         _dscl(
-            '/Groups/{0} GroupMembership {1}'.format(group, name),
+            '/Groups/{0} GroupMembership {1}'.format(_cmd_quote(group),
+                                                     _cmd_quote(name)),
             ctype='append'
         )
     if not append:
         # Remove from extra groups
         for group in ugrps - desired:
             _dscl(
-                '/Groups/{0} GroupMembership {1}'.format(group, name),
+                '/Groups/{0} GroupMembership {1}'.format(_cmd_quote(group),
+                                                         _cmd_quote(name)),
                 ctype='delete'
             )
     time.sleep(1)

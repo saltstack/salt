@@ -2,6 +2,7 @@
 '''
 Wrap the cp module allowing for managed ssh file transfers
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.client.ssh
@@ -49,7 +50,7 @@ def get_url(path, dest, saltenv='base'):
 
 def list_states(saltenv='base'):
     '''
-    List all the avilable state modules in an environment
+    List all the available state modules in an environment
     '''
     return __context__['fileclient'].list_states(saltenv)
 

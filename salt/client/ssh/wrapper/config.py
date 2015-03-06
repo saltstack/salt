@@ -4,12 +4,16 @@ Return config information
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import re
 import os
 
 # Import salt libs
 import salt.utils
 import salt.syspaths as syspaths
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Set up the default values for all systems
 DEFAULTS = {'mongo.db': 'salt',
@@ -240,10 +244,10 @@ def dot_vals(value):
         salt '*' config.dot_vals host
     '''
     ret = {}
-    for key, val in __pillar__.get('master', {}).items():
+    for key, val in six.iteritems(__pillar__.get('master', {})):
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
-    for key, val in __opts__.items():
+    for key, val in six.iteritems(__opts__):
         if key.startswith('{0}.'.format(value)):
             ret[key] = val
     return ret

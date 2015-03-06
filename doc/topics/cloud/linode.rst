@@ -10,7 +10,7 @@ Dependencies
 
 Configuration
 =============
-Linode requires a single API key, but the default root password for new 
+Linode requires a single API key, but the default root password for new
 instances also needs to be set:
 
 .. code-block:: yaml
@@ -25,7 +25,7 @@ instances also needs to be set:
       ssh_key_file: ~/.ssh/id_ed25519
       provider: linode
 
-The password needs to be 8 characters and contain lowercase, uppercase and 
+The password needs to be 8 characters and contain lowercase, uppercase, and
 numbers.
 
 Profiles

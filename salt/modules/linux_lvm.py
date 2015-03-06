@@ -2,12 +2,14 @@
 '''
 Support for Linux LVM2
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os.path
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'lvm'
@@ -69,7 +71,9 @@ def pvdisplay(pvname=''):
         salt '*' lvm.pvdisplay /dev/md0
     '''
     ret = {}
-    cmd = ['pvdisplay', '-c', pvname]
+    cmd = ['pvdisplay', '-c']
+    if pvname:
+        cmd.append(pvname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
@@ -107,7 +111,9 @@ def vgdisplay(vgname=''):
         salt '*' lvm.vgdisplay nova-volumes
     '''
     ret = {}
-    cmd = ['vgdisplay', '-c', vgname]
+    cmd = ['vgdisplay', '-c']
+    if vgname:
+        cmd.append(vgname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
@@ -150,7 +156,9 @@ def lvdisplay(lvname=''):
         salt '*' lvm.lvdisplay /dev/vg_myserver/root
     '''
     ret = {}
-    cmd = ['lvdisplay', '-c', lvname]
+    cmd = ['lvdisplay', '-c']
+    if lvname:
+        cmd.append(lvname)
     cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if cmd_ret['retcode'] != 0:
@@ -200,7 +208,7 @@ def pvcreate(devices, **kwargs):
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
              'restorefile', 'norestorefile', 'labelsector',
              'setphysicalvolumesize')
-    for var in kwargs.keys():
+    for var in kwargs:
         if kwargs[var] and var in valid:
             cmd.append('--{0}'.format(var))
             cmd.append(kwargs[var])
@@ -246,7 +254,7 @@ def vgcreate(vgname, devices, **kwargs):
         cmd.append(device)
     valid = ('clustered', 'maxlogicalvolumes', 'maxphysicalvolumes',
              'vgmetadatacopies', 'metadatacopies', 'physicalextentsize')
-    for var in kwargs.keys():
+    for var in kwargs:
         if kwargs[var] and var in valid:
             cmd.append('--{0}'.format(var))
             cmd.append(kwargs[var])
@@ -256,7 +264,29 @@ def vgcreate(vgname, devices, **kwargs):
     return vgdata
 
 
-def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv='', **kwargs):
+def vgextend(vgname, devices):
+    '''
+    Add physical volumes to an LVM volume group
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt mymachine lvm.vgextend my_vg /dev/sdb1,/dev/sdb2
+        salt mymachine lvm.vgextend my_vg /dev/sdb1
+    '''
+    if not vgname or not devices:
+        return 'Error: vgname and device(s) are both required'
+
+    cmd = ['vgextend', vgname]
+    for device in devices.split(','):
+        cmd.append(device)
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    vgdata = {'Output from vgextend': out[0].strip()}
+    return vgdata
+
+
+def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv=None, **kwargs):
     '''
     Create a new logical volume, with option for which physical volume to be used
 
@@ -265,39 +295,45 @@ def lvcreate(lvname, vgname, size=None, extents=None, snapshot=None, pv='', **kw
     .. code-block:: bash
 
         salt '*' lvm.lvcreate new_volume_name vg_name size=10G
-        salt '*' lvm.lvcreate new_volume_name vg_name extents=100 /dev/sdb
+        salt '*' lvm.lvcreate new_volume_name vg_name extents=100 pv=/dev/sdb
         salt '*' lvm.lvcreate new_snapshot    vg_name snapshot=volume_name size=3G
     '''
     if size and extents:
-        return 'Error: Please specify only size or extents'
+        return 'Error: Please specify only one of size or extents'
 
     valid = ('activate', 'chunksize', 'contiguous', 'discards', 'stripes',
              'stripesize', 'minor', 'persistent', 'mirrors', 'noudevsync',
              'monitor', 'ignoremonitoring', 'permission', 'poolmetadatasize',
              'readahead', 'regionsize', 'thin', 'thinpool', 'type',
              'virtualsize', 'zero')
-    no_parameter = ('noudevsync', 'ignoremonitoring')
-    extra_arguments = [
-        '--{0}'.format(k) if k in no_parameter else '--{0} {1}'.format(k, v)
-        for k, v in kwargs.iteritems() if k in valid
-    ]
+    no_parameter = ('noudevsync', 'ignoremonitoring', )
 
-    cmd = ['lvcreate', '-n', lvname]
+    extra_arguments = []
+    if kwargs:
+        for k, v in six.iteritems(kwargs):
+            if k in no_parameter:
+                extra_arguments.append('--{0}'.format(k))
+            elif k in valid:
+                extra_arguments.extend(['--{0}'.format(k), '{0}'.format(v)])
+
+    cmd = [salt.utils.which('lvcreate'), '-n', lvname]
 
     if snapshot:
-        cmd += ['-s', '{0}/{1}'.format(vgname, snapshot)]
+        cmd.extend(['-s', '{0}/{1}'.format(vgname, snapshot)])
     else:
         cmd.append(vgname)
 
     if size:
-        cmd += ['-L', size]
+        cmd.extend(['-L', '{0}'.format(size)])
     elif extents:
-        cmd += ['-l', extents]
+        cmd.extend(['-l', '{0}'.format(extents)])
     else:
         return 'Error: Either size or extents must be specified'
 
-    cmd.append(pv)
-    cmd += extra_arguments
+    if pv:
+        cmd.append(pv)
+    if extra_arguments:
+        cmd.extend(extra_arguments)
 
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     lvdev = '/dev/{0}/{1}'.format(vgname, lvname)

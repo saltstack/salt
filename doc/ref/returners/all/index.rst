@@ -14,8 +14,11 @@ Full list of builtin returner modules
     cassandra_return
     couchbase_return
     couchdb_return
+    django_return
     elasticsearch_return
     etcd_return
+    hipchat_return
+    kafka_return
     local
     local_cache
     memcache_return
@@ -25,8 +28,12 @@ Full list of builtin returner modules
     mysql
     odbc
     postgres
+    postgres_local_cache
     redis_return
     sentry_return
+    slack_returner
+    sms_return
     smtp_return
     sqlite3_return
     syslog_return
+    xmpp_return

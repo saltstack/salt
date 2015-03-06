@@ -26,6 +26,8 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 '''
 # pylint: disable=E0102
 
+from __future__ import absolute_import
+
 # Import python libs
 import copy
 import pprint
@@ -721,7 +723,7 @@ def list_nodes(call=None):
                 nodes['error']['Errors']['Error']['Message']
             )
         )
-    for node in nodes.keys():
+    for node in nodes:
         ret[node] = {
             'id': nodes[node]['hostname'],
             'ram': nodes[node]['memoryCount'],

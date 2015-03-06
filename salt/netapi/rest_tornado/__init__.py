@@ -1,21 +1,29 @@
 # encoding: utf-8
+
+from __future__ import print_function
+
+from __future__ import absolute_import
 import hashlib
 import logging
+import distutils.version
 
 __virtualname__ = 'rest_tornado'
 
 logger = logging.getLogger(__virtualname__)
 
+# we require at least 4.0, as that includes all the Future's stuff we use
+min_tornado_version = '4.0'
+has_tornado = False
 try:
-    import tornado.httpserver
-    import tornado.ioloop
-    import tornado.web
-    import tornado.gen
-
-    has_tornado = True
-except ImportError as err:
+    import tornado
+    if distutils.version.StrictVersion(tornado.version) >= \
+       distutils.version.StrictVersion(min_tornado_version):
+        has_tornado = True
+    else:
+        logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
+except (ImportError, TypeError) as err:
     has_tornado = False
-    logger.info('ImportError! {0}'.format(str(err)))
+    logger.error('ImportError! {0}'.format(str(err)))
 
 import salt.auth
 
@@ -33,21 +41,16 @@ def start():
     '''
     Start the saltnado!
     '''
-    from . import saltnado
+    try:
+        from . import saltnado
+    except ImportError:
+        logger.error('ImportError! {0}'.format(str(err)))
+        return None
 
     mod_opts = __opts__.get(__virtualname__, {})
 
-    if mod_opts.get('websockets', False):
-        from . import saltnado_websockets
-
     if 'num_processes' not in mod_opts:
         mod_opts['num_processes'] = 1
-
-    token_pattern = r"([0-9A-Fa-f]{0})".format(len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest()))
-
-    all_events_pattern = r"/all_events/{0}".format(token_pattern)
-    formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
-    logger.debug("All events URL pattern is {0}".format(all_events_pattern))
 
     paths = [
         (r"/", saltnado.SaltAPIHandler),
@@ -63,6 +66,12 @@ def start():
 
     # if you have enabled websockets, add them!
     if mod_opts.get('websockets', False):
+        from . import saltnado_websockets
+
+        token_pattern = r"([0-9A-Fa-f]{0})".format(len(getattr(hashlib, __opts__.get('hash_type', 'md5'))().hexdigest()))
+        all_events_pattern = r"/all_events/{0}".format(token_pattern)
+        formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
+        logger.debug("All events URL pattern is {0}".format(all_events_pattern))
         paths += [
             # Matches /all_events/[0-9A-Fa-f]{n}
             # Where n is the length of hexdigest
@@ -101,7 +110,7 @@ def start():
         http_server.bind(mod_opts['port'])
         http_server.start(mod_opts['num_processes'])
     except:
-        print 'Rest_tornado unable to bind to port {0}'.format(mod_opts['port'])
+        print('Rest_tornado unable to bind to port {0}'.format(mod_opts['port']))
         raise SystemExit(1)
 
     try:

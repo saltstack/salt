@@ -57,8 +57,10 @@ def options_present(name, sections=None):
             current_value = __salt__['ini.get_option'](name,
                                                        section,
                                                        key)
-            if current_value == sections[section][key]:
+            # Test if the change is necessary
+            if current_value == str(sections[section][key]):
                 continue
+
             ret['changes'] = __salt__['ini.set_option'](name,
                                                         sections)
             if 'error' in ret['changes']:
@@ -202,8 +204,8 @@ class _DictDiffer(object):
     def __init__(self, current_dict, past_dict):
         self.current_dict = current_dict
         self.past_dict = past_dict
-        self.set_current = set(current_dict.keys())
-        self.set_past = set(past_dict.keys())
+        self.set_current = set(current_dict)
+        self.set_past = set(past_dict)
         self.intersect = self.set_current.intersection(self.set_past)
 
     def added(self):

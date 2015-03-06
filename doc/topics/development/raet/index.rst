@@ -20,7 +20,7 @@ OSI Layers
 
 Link is hidden from Raet
 Network is IP host address and Udp Port
-Transport is Raet transactions, service kind, tail error checking, 
+Transport is Raet transactions, service kind, tail error checking,
 Could include header signing as part of transport reliable delivery serialization of header
 Session is session id key exchange for signing. Grouping is Road (like 852 channel)
 Presentation is Encrypt Decrypt body Serialize Deserialize Body
@@ -33,16 +33,16 @@ Header
 
 JSON Header (Tradeoff some processing speed for extensibility, ease of use, readability)
 
-Body initially JSON but support for "packed" binary body 
+Body initially JSON but support for "packed" binary body
 
 
 Packet
 ------
 
-Header ASCII Safe JSON 
+Header ASCII Safe JSON
 Header termination:
 Empty line given by double pair of carriage return linefeed
-/r/n/r/n 
+/r/n/r/n
 10 13 10 13
 ADAD
 1010 1101 1010 1101
@@ -52,12 +52,12 @@ string unless they are escaped with backslash, so the 4 byte combination is ille
 json that does not have multi-byte unicode characters.
 
 These means the header must be ascii safe  so no multibyte utf-8 strings
-allowed in header. 
+allowed in header.
 
 Following Header Terminator is variable length signature block. This is binary
 and the length is provided in the header.
 
-Following the signature block is the packet body or data. 
+Following the signature block is the packet body or data.
 This may either be JSON or packed binary.
 The format is given in the json header
 
@@ -100,7 +100,7 @@ dt = DateTime Stamp
 sn = Segment Number
 sc = Segment Count
 
-pf = Pending Segment Flag 
+pf = Pending Segment Flag
 af = All Flag   (Resent all Segments not just one)
 
 nk = Auth header kind
@@ -131,7 +131,7 @@ Minion
 Session
 -------
 Session is important for security. Want one session opened and then multiple
-transactions within session. 
+transactions within session.
 
 Session ID
 SID
@@ -146,9 +146,9 @@ Four Service Types
 
 A) One or more maybe (unacknowledged repeat) maybe means no guarantee
 
-B) Exactly one at most  (ack with retries) (duplicate detection idempotent) 
+B) Exactly one at most  (ack with retries) (duplicate detection idempotent)
         at most means fixed number of retries has finite probability of failing
-        B1) finite retries 
+        B1) finite retries
         B2) infinite retries with exponential back-off up to a maximum delay
 
 C) Exactly one of sequence at most (sequence numbered)
@@ -160,7 +160,7 @@ D) End to End (Application layer Request Response)
 Initially unicast messaging
 Eventually support for Multicast
 
-The use case for C) is to fragment large packets as once a UDP packet 
+The use case for C) is to fragment large packets as once a UDP packet
 exceeds the frame size its reliability goes way down
 So its more reliable to fragment large packets.
 
@@ -169,25 +169,25 @@ Better approach might be to have more modularity.
 Services Levels
 
     1) Maybe one or more
-        A) Fire and forget 
+        A) Fire and forget
             no transaction either side
         B) Repeat, no ack, no dupdet
-            repeat counter send side, 
+            repeat counter send side,
             no transaction on receive side
         C) Repeat, no Ack, dupdet
-            repeat counter send side, 
+            repeat counter send side,
             dup detection transaction receive side
     2) More or Less Once
-        A) retry finite, ack no dupdet  
+        A) retry finite, ack no dupdet
             retry timer send side, finite number of retires
             ack receive side no dupdet
     3) At most Once
         A) retry finite, ack, dupdet
             retry timer send side, finite number of retires
             ack receive side dupdet
-    4) Exactly once  
-        A) ack retry 
-            retry timer send side,  
+    4) Exactly once
+        A) ack retry
+            retry timer send side,
             ack and duplicate detection receive side
             Infinite retries with exponential backoff
     5) Sequential sequence number
@@ -216,7 +216,7 @@ C) One of sequence
 D) End to End
 
 A) Sender creates transaction id for number of repeats but receiver does not
-keep transaction alive 
+keep transaction alive
 
 B1) Sender creates transaction id  keeps it for retries.
 Receiver keeps it to send ack then kills so retry could be duplicate not detected
@@ -224,7 +224,7 @@ Receiver keeps it to send ack then kills so retry could be duplicate not detecte
 B2) Sender creates transaction id keeps for retries
 Receiver keeps tid for acks on any retires so no duplicates.
 
-C) Sender creates TID and Sequence Number. 
+C) Sender creates TID and Sequence Number.
 Receiver checks for out of order sequence and can request retry.
 
 D) Application layer sends response. So question is do we keep transaction open
@@ -257,7 +257,7 @@ Sender Side:
    Sequence number without acks (look for resend requests)
    Sequence with ack (wait for ack before sending next in sequence)
    Segmentation
-   
+
 Receiver Side:
    Nothing just accept packet
    Acknowledge (can delete transaction after acknowledge)

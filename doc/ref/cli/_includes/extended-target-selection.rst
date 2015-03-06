@@ -7,7 +7,7 @@
     Make sure that the compound target is encapsulated in quotes.
 
 .. option:: -I, --pillar
-    
+
     Instead of using shell globs to evaluate the target, use a pillar value to
     identify targets. The syntax for the target is the pillar key followed by
     a glob expression: "role:production*"

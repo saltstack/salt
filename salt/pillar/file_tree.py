@@ -14,7 +14,7 @@ Example configuration:
           raw_data: False
 
 The ``root_dir`` parameter is required and points to the directory where files
-for each host are stored. The ``follow_dir_links`` paramater is optional
+for each host are stored. The ``follow_dir_links`` parameter is optional
 and defaults to False. If ``follow_dir_links`` is set to True, file_tree will
 follow symbolic links to other directories. Be careful when using
 ``follow_dir_links``, the current implementation is dumb and will run into
@@ -95,6 +95,7 @@ will result in the following pillar tree for minion in the node group
                 file2.txt:
                     Contents of file #2.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -105,6 +106,7 @@ from copy import deepcopy
 # Import salt libs
 import salt.utils
 import salt.utils.minions
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -129,7 +131,7 @@ def _dict_merge(dict_a, dict_b):
     if not isinstance(dict_b, dict):
         return dict_b
     result = deepcopy(dict_a)
-    for key, value in dict_b.iteritems():
+    for key, value in six.iteritems(dict_b):
         if key in result and isinstance(result[key], dict):
             result[key] = _dict_merge(result[key], value)
         else:
@@ -171,9 +173,10 @@ def _construct_pillar(top_dir, follow_dir_links, raw_data=False):
                 continue
 
             try:
-                pillar_node[file_name] = open(file_path, 'rb').read()
-                if raw_data is False and pillar_node[file_name].endswith('\n'):
-                    pillar_node[file_name] = pillar_node[file_name][:-1]
+                with salt.utils.fopen(file_path, 'rb') as fhr:
+                    pillar_node[file_name] = fhr.read()
+                    if raw_data is False and pillar_node[file_name].endswith('\n'):
+                        pillar_node[file_name] = pillar_node[file_name][:-1]
             except IOError as err:
                 log.error('%s', str(err))
 

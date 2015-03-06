@@ -16,7 +16,6 @@
 #script: bootstrap-salt
 
 
-
 ##########################################
 #####         Logging Settings       #####
 ##########################################
@@ -75,7 +74,7 @@
 #####         Misc Defaults          #####
 ##########################################
 
-# Whether or not to remove the accompnaying SSH key from the known_hosts file
+# Whether or not to remove the accompanying SSH key from the known_hosts file
 # when an instance is destroyed.
 #
 # Default: 'False'

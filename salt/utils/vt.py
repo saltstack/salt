@@ -19,6 +19,7 @@
     .. __: https://github.com/pexpect/pexpect
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -45,7 +46,7 @@ else:
     import resource
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
 log = logging.getLogger(__name__)

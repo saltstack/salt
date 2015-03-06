@@ -14,6 +14,7 @@ client applications.
     http://docs.saltstack.com/ref/clients/index.html
 
 '''
+from __future__ import absolute_import
 # Import Python libs
 import os
 
@@ -250,7 +251,7 @@ class APIClient(object):
         {
             'token': 'tokenstring',
             'start': starttimeinfractionalseconds,
-            'expire': expiretimeinfactionalseconds,
+            'expire': expiretimeinfractionalseconds,
             'name': 'usernamestring',
             'user': 'usernamestring',
             'username': 'usernamestring',

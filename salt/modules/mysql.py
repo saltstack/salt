@@ -35,6 +35,7 @@ Module to provide MySQL compatibility to salt.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import logging
 import re
@@ -45,6 +46,9 @@ import shlex
 import salt.utils
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
+from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
 try:
     import MySQLdb
     import MySQLdb.cursors
@@ -53,6 +57,7 @@ try:
     HAS_MYSQLDB = True
 except ImportError:
     HAS_MYSQLDB = False
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -344,21 +349,21 @@ def _grant_to_tokens(grant):
     # the shell escape is \` but mysql escape is ``. Spaces should not be
     # exploded as users or db names could contain spaces.
     # Examples of splitting:
-    #"GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
-    #                                  TO 'foo'@'localhost' WITH GRANT OPTION"
-    #['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
-    # 'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
-    #"'localhost'", 'WITH', 'GRANT', 'OPTION']
+    # "GRANT SELECT, LOCK TABLES, UPDATE, CREATE ON `test ``(:=saltdb)`.*
+    #                                   TO 'foo'@'localhost' WITH GRANT OPTION"
+    # ['GRANT', 'SELECT', ',', 'LOCK', 'TABLES', ',', 'UPDATE', ',', 'CREATE',
+    #  'ON', '`test `', '`(:=saltdb)`', '.', '*', 'TO', "'foo'", '@',
+    # "'localhost'", 'WITH', 'GRANT', 'OPTION']
     #
-    #'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
-    #                                  TO \'foo \' bar\'@\'localhost\''
-    #['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
-    # '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
-    # '@', "'localhost'"]
+    # 'GRANT SELECT, INSERT, UPDATE, CREATE ON `te s.t\'"sa;ltdb`.`tbl ``\'"xx`
+    #                                   TO \'foo \' bar\'@\'localhost\''
+    # ['GRANT', 'SELECT', ',', 'INSERT', ',', 'UPDATE', ',', 'CREATE', 'ON',
+    #  '`te s.t\'"sa;ltdb`', '.', '`tbl `', '`\'"xx`', 'TO', "'foo '", "bar'",
+    #  '@', "'localhost'"]
     #
-    #"GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
-    #['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
-    # '@', "'localhost'"]
+    # "GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'"
+    # ['GRANT', 'USAGE', 'ON', '*', '.', '*', 'TO', '\'user ";--,?:&/\\\'',
+    #  '@', "'localhost'"]
     lex = shlex.shlex(grant_sql)
     lex.quotes = '\'`'
     lex.whitespace_split = False
@@ -416,6 +421,9 @@ def _grant_to_tokens(grant):
                     phrase = 'tables'
             except IndexError:
                 break
+
+        elif phrase == 'tables':
+            database += token
 
         elif phrase == 'user':
             if dict_mode:
@@ -571,7 +579,7 @@ def query(database, query, **connection_args):
     # into Python objects. It leaves them as strings.
     orig_conv = MySQLdb.converters.conversions
     conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str] * len(orig_conv.keys())))
+    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
     # some converters are lists, do not break theses
     conv[FIELD_TYPE.BLOB] = [
         (FLAG.BINARY, str),
@@ -772,7 +780,7 @@ def free_slave(**connection_args):
         return 'failed'
 
 
-#Database related actions
+# Database related actions
 def db_list(**connection_args):
     '''
     Return a list of databases of a MySQL server using the output
@@ -1029,7 +1037,6 @@ def user_exists(user,
             and password:
         # Clear the previous error
         __context__['mysql.error'] = None
-        log.info('Retrying with "{0}" as connection password for {1} ...'.format(password, user))
         connection_args['connection_pass'] = password
         dbc = _connect(**connection_args)
     if dbc is None:
@@ -1322,7 +1329,7 @@ def user_remove(user,
     args['user'] = user
     args['host'] = host
     try:
-        result = _execute(cur, qry, args)
+        _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = 'MySQL Error {0}: {1}'.format(*exc)
         __context__['mysql.error'] = err
@@ -1461,8 +1468,7 @@ def __ssl_option_sanitize(ssl_option):
 
     # Like most other "salt dsl" YAML structures, ssl_option is a list of single-element dicts
     for opt in ssl_option:
-        key = opt.keys()[0]
-        value = opt[key]
+        key = next(six.iterkeys(opt))
 
         normal_key = key.strip().upper()
 
@@ -1847,7 +1853,8 @@ def get_master_status(**connection_args):
     '''
     Retrieves the master status from the minion.
 
-    Returns:
+    Returns::
+
         {'host.domain.com': {'Binlog_Do_DB': '',
                          'Binlog_Ignore_DB': '',
                          'File': 'mysql-bin.000021',

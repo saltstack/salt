@@ -21,22 +21,31 @@ Full list of builtin execution modules
     apache
     aptpkg
     archive
+    artifactory
     at
     augeas_cfg
     aws_sqs
     blockdev
     bluez
     boto_asg
+    boto_cfn
     boto_cloudwatch
+    boto_dynamodb
     boto_elasticache
     boto_elb
     boto_iam
+    boto_rds
     boto_route53
     boto_secgroup
+    boto_sns
     boto_sqs
+    boto_vpc
+    bower
     brew
     bridge
     bsd_shadow
+    btrfs
+    cabal
     cassandra
     chef
     chocolatey
@@ -44,9 +53,13 @@ Full list of builtin execution modules
     cmdmod
     composer
     config
+    container_resource
     cp
+    cpan
     cron
+    cyg
     daemontools
+    darwin_pkgutil
     darwin_sysctl
     data
     ddns
@@ -55,6 +68,7 @@ Full list of builtin execution modules
     debian_ip
     debian_service
     defaults
+    devmap
     dig
     disk
     djangomod
@@ -62,14 +76,18 @@ Full list of builtin execution modules
     dnsutil
     dockerio
     dpkg
+    drac
+    drbd
     ebuild
     eix
+    elasticsearch
     environ
     eselect
     etcd_mod
     event
     extfs
     file
+    firewalld
     freebsd_sysctl
     freebsdjail
     freebsdkmod
@@ -84,6 +102,7 @@ Full list of builtin execution modules
     glance
     glusterfs
     gnomedesktop
+    gpg
     grains
     groupadd
     grub_legacy
@@ -92,16 +111,23 @@ Full list of builtin execution modules
     haproxyconn
     hashutil
     hg
+    hipchat
     hosts
     htpasswd
+    http
+    ilo
     img
     incron
     influx
     ini_manage
     introspect
+    ipmi
     ipset
     iptables
+    jboss7
+    jboss7_cli
     junos
+    kerberos
     key
     keyboard
     keystone
@@ -132,19 +158,26 @@ Full list of builtin execution modules
     monit
     moosefs
     mount
+    mssql
     munin
     mysql
+    nacl
     nagios
     netbsd_sysctl
     netbsdservice
+    netscaler
     network
+    neutron
     nfs3
     nftables
     nginx
     nova
     npm
+    nspawn
     omapi
+    openbsd_sysctl
     openbsdpkg
+    openbsdrcctl
     openbsdservice
     openstack_config
     oracle
@@ -176,6 +209,7 @@ Full list of builtin execution modules
     quota
     rabbitmq
     raet_publish
+    random_org
     rbenv
     rdp
     redismod
@@ -189,17 +223,21 @@ Full list of builtin execution modules
     riak
     rpm
     rsync
+    runit
     rvm
     s3
     saltcloudmod
     saltutil
     schedule
+    scsi
+    sdb
     seed
     selinux
     sensors
     serverdensity_device
     service
     shadow
+    slack_notify
     smartos_imgadm
     smartos_vmadm
     smf
@@ -208,32 +246,40 @@ Full list of builtin execution modules
     solaris_group
     solaris_shadow
     solaris_user
+    solarisips
     solarispkg
     solr
+    splunk_search
     sqlite3
     ssh
     state
     status
+    sudo
     supervisord
     svn
     swift
     sysbench
     syslog_ng
     sysmod
+    sysrc
     system
     systemd
     test
+    test_virtual
     timezone
     tls
     tomcat
+    tuned
     twilio_notify
     upstart
     useradd
     uwsgi
     varnish
+    vbox_guest
     virt
     virtualenv_mod
     win_autoruns
+    win_dacl
     win_disk
     win_dns_client
     win_file
@@ -254,10 +300,12 @@ Full list of builtin execution modules
     win_update
     win_useradd
     xapi
+    xfs
     xmpp
     yumpkg
     zcbuildout
     zfs
+    zk_concurrency
     znc
     zpool
     zypper

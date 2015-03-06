@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Route53 records
-======================
 
 .. versionadded:: 2014.7.0
 
@@ -32,7 +31,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 
@@ -90,7 +89,8 @@ def present(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        wait_for_sync=True):
     '''
     Ensure the Route53 record is present.
 
@@ -124,6 +124,9 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    wait_for_sync
+        Wait for an INSYNC change status from Route53.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -139,7 +142,7 @@ def present(
         added = __salt__['boto_route53.add_record'](name, value, zone,
                                                     record_type, identifier,
                                                     ttl, region, key, keyid,
-                                                    profile)
+                                                    profile, wait_for_sync)
         if added:
             ret['changes']['old'] = None
             ret['changes']['new'] = {'name': name,
@@ -178,7 +181,8 @@ def present(
                                                              record_type,
                                                              identifier, ttl,
                                                              region, key,
-                                                             keyid, profile)
+                                                             keyid, profile,
+                                                             wait_for_sync)
             if updated:
                 ret['changes']['old'] = record
                 ret['changes']['new'] = {'name': name,
@@ -203,7 +207,8 @@ def absent(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        wait_for_sync=True):
     '''
     Ensure the Route53 record is deleted.
 
@@ -228,6 +233,9 @@ def absent(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    wait_for_sync
+        Wait for an INSYNC change status from Route53.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
@@ -244,7 +252,8 @@ def absent(
                                                          record_type,
                                                          identifier, False,
                                                          region, key, keyid,
-                                                         profile)
+                                                         profile,
+                                                         wait_for_sync)
         if deleted:
             ret['changes']['old'] = record
             ret['changes']['new'] = None

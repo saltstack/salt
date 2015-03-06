@@ -6,6 +6,7 @@ Riak Salt Module
 Author: David Boucha <boucha@gmail.com>
 
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -59,7 +60,8 @@ def cluster_join(riak_user=None, riak_host=None):
     if not all((riak_user, riak_host)):
         return False
     return not bool(__salt__['cmd.retcode'](
-        'riak-admin cluster join {0}@{1}'.format(riak_user, riak_host))
+        'riak-admin cluster join {0}@{1}'.format(riak_user, riak_host),
+        python_shell=False)
         )
 
 

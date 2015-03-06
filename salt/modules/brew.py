@@ -2,6 +2,7 @@
 '''
 Homebrew for Mac OS X
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import copy
@@ -35,16 +36,16 @@ def _list_taps():
     return _call_brew(cmd)['stdout'].splitlines()
 
 
-def _tap(tap):
+def _tap(tap, runas=None):
     '''
-    Add unofficial Github repos to the list of formulas that brew tracks,
+    Add unofficial GitHub repos to the list of formulas that brew tracks,
     updates, and installs from.
     '''
     if tap in _list_taps():
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if _call_brew(cmd)['retcode']:
+    if __salt__['cmd.retcode'](cmd, python_shell=False, runas=runas):
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -65,7 +66,10 @@ def _call_brew(cmd):
     Calls the brew command with the user user account of brew
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
-    return __salt__['cmd.run_all'](cmd, runas=user, output_loglevel='trace')
+    return __salt__['cmd.run_all'](cmd,
+                                   runas=user,
+                                   output_loglevel='trace',
+                                   python_shell=False)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -240,7 +244,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             salt '*' pkg.install <package name>
 
     taps
-        Unofficial Github repos to use when updating and installing formulas.
+        Unofficial GitHub repos to use when updating and installing formulas.
 
         CLI Example:
 

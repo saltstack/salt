@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Cloudwatch alarms
-========================
 
 .. versionadded:: 2014.7.0
 
@@ -54,7 +53,11 @@ as a passed in dict, or as a string to pull from pillars or minion config:
               - arn:aws:sns:us-east-1:1111111:myalerting-action
 '''
 
-from salt._compat import string_types
+# Import Python libs
+from __future__ import absolute_import
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -109,14 +112,14 @@ def present(
     # AWS type transformations
     difference = []
     if alarm_details:
-        for k, v in attributes.items():
+        for k, v in six.iteritems(attributes):
             if k not in alarm_details:
                 difference.append("{0}={1} (new)".format(k, v))
                 continue
             v2 = alarm_details[k]
             if v == v2:
                 continue
-            if isinstance(v, string_types) and str(v) == str(v2):
+            if isinstance(v, six.string_types) and str(v) == str(v2):
                 continue
             if isinstance(v, float) and v == float(v2):
                 continue

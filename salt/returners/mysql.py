@@ -64,6 +64,21 @@ Use the following mysql database schema::
       KEY `fun` (`fun`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+    --
+    -- Table structure for table `salt_events`
+    --
+
+    DROP TABLE IF EXISTS `salt_events`;
+    CREATE TABLE `salt_events` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `tag` varchar(255) NOT NULL,
+    `data` varchar(1024) NOT NULL,
+    `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `master_id` varchar(255) NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `tag` (`tag`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 Required python modules: MySQLdb
 
   To use the mysql returner, append '--return mysql' to the salt command. ex:
@@ -74,6 +89,7 @@ Required python modules: MySQLdb
 
     salt '*' test.ping --return mysql --return_config alternative
 '''
+from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
@@ -85,6 +101,8 @@ import logging
 
 # Import salt libs
 import salt.returners
+import salt.utils.jid
+import salt.exceptions
 
 # Import third party libs
 try:
@@ -139,16 +157,30 @@ def _get_serv(ret=None, commit=False):
     Return a mysql cursor
     '''
     _options = _get_options(ret)
-    conn = MySQLdb.connect(host=_options.get('host'),
-                           user=_options.get('user'),
-                           passwd=_options.get('pass'),
-                           db=_options.get('db'),
-                           port=_options.get('port'))
+
+    if __context__ and 'mysql_returner_conn' in __context__:
+        log.debug('Reusing MySQL connection pool')
+        conn = __context__['mysql_returner_conn']
+    else:
+        log.debug('Generating new MySQL connection pool')
+        try:
+            conn = MySQLdb.connect(host=_options.get('host'),
+                                   user=_options.get('user'),
+                                   passwd=_options.get('pass'),
+                                   db=_options.get('db'),
+                                   port=_options.get('port'))
+
+            try:
+                __context__['mysql_returner_conn'] = conn
+            except TypeError:
+                pass
+        except MySQLdb.connections.OperationalError as exc:
+            raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
     cursor = conn.cursor()
     try:
         yield cursor
     except MySQLdb.DatabaseError as err:
-        error, = err.args
+        error = err.args
         sys.stderr.write(str(error))
         cursor.execute("ROLLBACK")
         raise err
@@ -157,24 +189,41 @@ def _get_serv(ret=None, commit=False):
             cursor.execute("COMMIT")
         else:
             cursor.execute("ROLLBACK")
-    finally:
-        conn.close()
 
 
 def returner(ret):
     '''
     Return data to a mysql server
     '''
-    with _get_serv(ret, commit=True) as cur:
-        sql = '''INSERT INTO `salt_returns`
-                (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
-                VALUES (%s, %s, %s, %s, %s, %s)'''
+    try:
+        with _get_serv(ret, commit=True) as cur:
+            sql = '''INSERT INTO `salt_returns`
+                    (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
+                    VALUES (%s, %s, %s, %s, %s, %s)'''
 
-        cur.execute(sql, (ret['fun'], ret['jid'],
-                          json.dumps(ret['return']),
-                          ret['id'],
-                          ret['success'],
-                          json.dumps(ret)))
+            cur.execute(sql, (ret['fun'], ret['jid'],
+                              json.dumps(ret['return']),
+                              ret['id'],
+                              ret.get('success', False),
+                              json.dumps(ret)))
+    except salt.exceptions.SaltMasterError:
+        log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
+
+
+def event_return(events):
+    '''
+    Return event to mysql server
+
+    Requires that configuration be enabled via 'event_return'
+    option in master config.
+    '''
+    with _get_serv(events, commit=True) as cur:
+        for event in events:
+            tag = event.get('tag', '')
+            data = event.get('data', '')
+            sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
+                     VALUES (%s, %s, %s)'''
+            cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
 
 
 def save_load(jid, load):
@@ -196,13 +245,11 @@ def get_load(jid):
     '''
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT load FROM `jids`
-                WHERE `jid` = '%s';'''
-
+        sql = '''SELECT `load` FROM `jids` WHERE `jid` = %s;'''
         cur.execute(sql, (jid,))
         data = cur.fetchone()
         if data:
-            return json.loads(data)
+            return json.loads(data[0])
         return {}
 
 
@@ -280,3 +327,10 @@ def get_minions():
         for minion in data:
             ret.append(minion[0])
         return ret
+
+
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

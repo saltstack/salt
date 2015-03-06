@@ -45,7 +45,7 @@ Glossary
         <all-salt.returners>`.
 
     External Pillar
-        A module that accepts arbitrary arguments and returns a dictionary. 
+        A module that accepts arbitrary arguments and returns a dictionary.
         The dictionary is automatically added to a pillar for a minion.
 
     Event

@@ -32,6 +32,7 @@ Provide test case states that enable easy testing of things to do with
         - comment: bar.baz
 
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -165,7 +166,7 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         Accepts True, False, and 'Random'
         Default is True
     result:
-        Do we return sucessfuly or not?
+        Do we return successfully or not?
         Accepts True, False, and 'Random'
         Default is True
     comment:
@@ -223,6 +224,32 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'This is a test'
+
+    return ret
+
+
+def show_notification(name, text=None, **kwargs):
+    '''
+    Simple notification using text argument.
+
+    .. versionadded:: Beryllium
+
+    name
+        A unique string.
+
+    text
+        Text to return in the comment.
+    '''
+
+    if not text:
+        raise SaltInvocationError('Missing required argument text.')
+
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': text
+    }
 
     return ret
 

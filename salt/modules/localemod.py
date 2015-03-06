@@ -2,13 +2,17 @@
 '''
 Module for managing locales on POSIX-like systems.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 import re
+import os
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
@@ -62,9 +66,9 @@ def _localectl_set(locale=''):
     locale_params = _parse_localectl()
     locale_params['LANG'] = str(locale)
     args = ' '.join(['{0}="{1}"'.format(k, v)
-                     for k, v in locale_params.iteritems()])
+                     for k, v in six.iteritems(locale_params)])
     cmd = 'localectl set-locale {0}'.format(args)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def list_avail():
@@ -122,43 +126,89 @@ def set_locale(locale):
     if 'Arch' in __grains__['os_family']:
         return _localectl_set(locale)
     elif 'RedHat' in __grains__['os_family']:
-        __salt__['file.sed'](
-            '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
-        )
-        __salt__['cmd.run'](
-            'grep "^LANG=" /etc/sysconfig/i18n || echo "\nLANG={0}" '
-            '>> /etc/sysconfig/i18n'.format(locale)
-        )
+        if not __salt__['file.file_exists']('/etc/sysconfig/i18n'):
+            __salt__['file.touch']('/etc/sysconfig/i18n')
+        if __salt__['cmd.retcode']('grep "^LANG=" /etc/sysconfig/i18n') != 0:
+            __salt__['file.append']('/etc/sysconfig/i18n',
+                                    '"\nLANG={0}"'.format(locale))
+        else:
+            __salt__['file.replace'](
+                '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
+            )
     elif 'Debian' in __grains__['os_family']:
-        __salt__['file.sed'](
+        __salt__['file.replace'](
             '/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale)
         )
-        __salt__['cmd.run'](
-            'grep "^LANG=" /etc/default/locale || '
-            'echo "\nLANG={0}" >> /etc/default/locale'.format(locale)
-        )
+        if __salt__['cmd.retcode']('grep "^LANG=" /etc/default/locale') != 0:
+            __salt__['file.append']('/etc/default/locale',
+                                    '\nLANG="{0}"'.format(locale))
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale set {0}'.format(locale)
-        return __salt__['cmd.retcode'](cmd) == 0
+        return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
     return True
 
 
+def _split_locale(locale):
+    '''
+    Split a locale specifier.  The general format is
+
+    language[_territory][.codeset][@modifier] [charmap]
+
+    For example:
+
+    ca_ES.UTF-8@valencia UTF-8
+    '''
+    def split(st, char):
+        '''
+        Split a string `st` once by `char`; always return a two-element list
+        even if the second element is empty.
+        '''
+        split_st = st.split(char, 1)
+        if len(split_st) == 1:
+            split_st.append('')
+        return split_st
+
+    parts = {}
+    work_st, parts['charmap'] = split(locale, ' ')
+    work_st, parts['modifier'] = split(work_st, '@')
+    work_st, parts['codeset'] = split(work_st, '.')
+    parts['language'], parts['territory'] = split(work_st, '_')
+    return parts
+
+
+def _join_locale(parts):
+    '''
+    Join a locale specifier split in the format returned by _split_locale.
+    '''
+    locale = parts['language']
+    if parts.get('territory'):
+        locale += '_' + parts['territory']
+    if parts.get('codeset'):
+        locale += '.' + parts['codeset']
+    if parts.get('modifier'):
+        locale += '@' + parts['modifier']
+    if parts.get('charmap'):
+        locale += ' ' + parts['charmap']
+    return locale
+
+
 def _normalize_locale(locale):
-    lang_encoding = locale.split('.')
-    lang_split = lang_encoding[0].split('_')
-    if len(lang_split) > 1:
-        lang_split[1] = lang_split[1].upper()
-    lang_encoding[0] = '_'.join(lang_split)
-    if len(lang_encoding) > 1:
-        if len(lang_split) > 1:
-            lang_encoding[1] = lang_encoding[1].lower().replace('-', '')
-    return '.'.join(lang_encoding)
+    '''
+    Format a locale specifier according to the format returned by `locale -a`.
+    '''
+    parts = _split_locale(locale)
+    parts['territory'] = parts['territory'].upper()
+    parts['codeset'] = parts['codeset'].lower().replace('-', '')
+    parts['charmap'] = ''
+    return _join_locale(parts)
 
 
 def avail(locale):
     '''
-    Check if a locale is available
+    Check if a locale is available.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -166,32 +216,66 @@ def avail(locale):
 
         salt '*' locale.avail 'en_US.UTF-8'
     '''
-    normalized_locale = _normalize_locale(locale)
+    try:
+        normalized_locale = _normalize_locale(locale)
+    except IndexError:
+        log.error('Unable to validate locale "{0}"'.format(locale))
+        return False
     avail_locales = __salt__['locale.list_avail']()
     locale_exists = next((True for x in avail_locales
        if _normalize_locale(x.strip()) == normalized_locale), False)
     return locale_exists
 
 
+@decorators.which('locale-gen')
 def gen_locale(locale):
     '''
-    Generate a locale
+    Generate a locale.
+
+    .. versionadded:: 2014.7.0
+
+    :param locale: Any locale listed in /usr/share/i18n/locales or
+        /usr/share/i18n/SUPPORTED for debian and gentoo based distros
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' locale.gen_locale 'en_US.UTF-8'
+        salt '*' locale.gen_locale en_US.UTF-8
+        salt '*' locale.gen_locale 'en_IE@euro ISO-8859-15'
     '''
-    if __grains__.get('os') == 'Debian':
+    on_debian = __grains__.get('os') == 'Debian'
+    on_gentoo = __grains__.get('os_family') == 'Gentoo'
+    on_suse = __grains__.get('os_family') == 'Suse'
+
+    if on_debian or on_gentoo:
+        search = '/usr/share/i18n/SUPPORTED'
+        valid = __salt__['file.search'](search, '^{0}$'.format(locale))
+    else:
+        parts = _split_locale(locale)
+        parts['codeset'] = ''
+        parts['charmap'] = ''
+        search_locale = _join_locale(parts)
+
+        if on_suse:
+            search = '/usr/share/locales'
+        else:
+            search = '/usr/share/i18n/locales'
+        try:
+            valid = search_locale in os.listdir(search)
+        except OSError:
+            return False
+
+    if not valid:
+        log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
+        return False
+
+    if on_debian or on_gentoo:
         __salt__['file.replace'](
             '/etc/locale.gen',
-            '# {0} '.format(locale),
-            '{0} '.format(locale),
+            r'^#\s*{0}$'.format(locale),
+            '{0}'.format(locale),
             append_if_not_found=True
-        )
-        __salt__['cmd.run'](
-            'locale-gen {0}'.format(locale)
         )
     elif __grains__.get('os') == 'Ubuntu':
         __salt__['file.touch'](
@@ -201,8 +285,13 @@ def gen_locale(locale):
             '/var/lib/locales/supported.d/{0}'.format(locale.split('_')[0]),
             '{0} {1}'.format(locale, locale.split('.')[1])
         )
-        __salt__['cmd.run'](
+        return __salt__['cmd.retcode'](
             'locale-gen'
         )
 
-    return True
+    cmd = ['locale-gen']
+    if on_gentoo:
+        cmd.append('--generate')
+    cmd.append(locale)
+
+    return __salt__['cmd.retcode'](cmd, python_shell=False)

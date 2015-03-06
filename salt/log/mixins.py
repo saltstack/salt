@@ -10,6 +10,7 @@
 
     Some mix-in classes to be used in salt's logging
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys

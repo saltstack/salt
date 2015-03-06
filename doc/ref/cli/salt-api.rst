@@ -9,7 +9,7 @@ Synopsis
 
 .. code-block:: bash
 
-    salt-api 
+    salt-api
 
 Description
 ===========

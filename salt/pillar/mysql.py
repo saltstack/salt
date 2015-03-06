@@ -175,6 +175,7 @@ More complete example
             as_list: True
             with_lists: [1,3]
 '''
+from __future__ import absolute_import
 
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
@@ -187,6 +188,7 @@ import logging
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -244,7 +246,7 @@ def _get_serv():
         conn.close()
 
 
-class merger(object):
+class Merger(object):
     '''
         This class receives and processes the database rows in a database
         agnostic way.
@@ -283,20 +285,18 @@ class merger(object):
 
         # And then the keywords...
         # They aren't in definition order, but they can't conflict each other.
-        klist = kwargs.keys()
+        klist = list(kwargs.keys())
         klist.sort()
         qbuffer.extend([[k, kwargs[k]] for k in klist])
 
         # Filter out values that don't have queries.
-        qbuffer = filter(
-            lambda x: (
+        qbuffer = [x for x in qbuffer if (
                 (isinstance(x[1], str) and len(x[1]))
                 or
                 (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
                 or
                 (isinstance(x[1], dict) and 'query' in x[1] and len(x[1]['query']))
-            ),
-            qbuffer)
+            )]
 
         # Next, turn the whole buffer in to full dicts.
         for qb in qbuffer:
@@ -408,7 +408,7 @@ class merger(object):
                         crd[ret[nk]] = []
                     crd[ret[nk]].append(ret[self.num_fields-1])
                 else:
-                    if not self.ignore_null or ret[self.num_fields-1]:
+                    if not self.ignore_null or ret[self.num_fields-1] is not None:
                         crd[ret[nk]] = ret[self.num_fields-1]
             else:
                 # Otherwise, the field name is the key but we have a spare.
@@ -442,16 +442,16 @@ class merger(object):
                         else:
                             crd[nk] = [crd[nk], ret[i]]
                     else:
-                        if not self.ignore_null or ret[i]:
+                        if not self.ignore_null or ret[i] is not None:
                             crd[nk] = ret[i]
         # Get key list and work backwards.  This is inner-out processing
-        ks = listify_dicts.keys()
+        ks = list(listify_dicts.keys())
         ks.reverse()
         for i in ks:
             d = listify_dicts[i]
             for k in listify[i]:
                 if isinstance(d[k], dict):
-                    d[k] = d[k].values()
+                    d[k] = list(d[k].values())
                 elif isinstance(d[k], list):
                     d[k] = [d[k]]
 
@@ -469,7 +469,7 @@ def ext_pillar(minion_id,
     #    log.debug('ext_pillar MySQL kwargs: {0}'.format(kwargs))
     #
     # Most of the heavy lifting is in this class for ease of testing.
-    return_data = merger()
+    return_data = Merger()
     qbuffer = return_data.extract_queries(args, kwargs)
     with _get_serv() as cur:
         for root, details in qbuffer:
@@ -477,7 +477,7 @@ def ext_pillar(minion_id,
             cur.execute(details['query'], (minion_id,))
 
             # Extract the field names MySQL has returned and process them
-            # All heavy lifting is done in the merger class to decouple the
+            # All heavy lifting is done in the Merger class to decouple the
             # logic from MySQL.  Makes it easier to test.
             return_data.process_fields([row[0] for row in cur.description],
                                        details['depth'])

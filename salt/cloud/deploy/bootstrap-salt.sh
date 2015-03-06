@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2014.10.14"
+__ScriptVersion="2015.02.28"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -202,6 +202,7 @@ _INSECURE_DL=${BS_INSECURE_DL:-$BS_FALSE}
 _WGET_ARGS=${BS_WGET_ARGS:-}
 _CURL_ARGS=${BS_CURL_ARGS:-}
 _FETCH_ARGS=${BS_FETCH_ARGS:-}
+_ENABLE_EXTERNAL_ZMQ_REPOS=${BS_ENABLE_EXTERNAL_ZMQ_REPOS:-$BS_FALSE}
 _SALT_MASTER_ADDRESS=${BS_SALT_MASTER_ADDRESS:-null}
 _SALT_MINION_ID="null"
 # __SIMPLIFY_VERSION is mostly used in Solaris based distributions
@@ -242,6 +243,7 @@ usage() {
   -D  Show debug output.
   -c  Temporary configuration directory
   -g  Salt repository URL. (default: git://github.com/saltstack/salt.git)
+  -G  Instead of cloning from git://github.com/saltstack/salt.git, clone from https://github.com/saltstack/salt.git (Usually necessary on systems which have the regular git protocol port blocked, where https usually is not)
   -k  Temporary directory holding the minion keys which will pre-seed
       the master.
   -s  Sleep time used when waiting for daemons to start, restart and when checking
@@ -271,12 +273,13 @@ usage() {
   -p  Extra-package to install while installing salt dependencies. One package
       per -p flag. You're responsible for providing the proper package name.
   -H  Use the specified http proxy for the installation
+  -Z  Enable external software source for newer ZeroMQ(Only available for RHEL/CentOS/Fedora based distributions)
 
 EOT
 }   # ----------  end of function usage  ----------
 
 
-while getopts ":hvnDc:g:k:MSNXCPFUKIA:i:Lp:H:" opt
+while getopts ":hvnDc:Gg:k:MSNXCPFUKIA:i:Lp:H:Z" opt
 do
   case "${opt}" in
 
@@ -297,6 +300,13 @@ do
          fi
          ;;
     g ) _SALT_REPO_URL=$OPTARG                          ;;
+    G ) if [ "${_SALT_REPO_URL}" = "${_SALTSTACK_REPO_URL}" ]; then
+            _SALTSTACK_REPO_URL="https://github.com/saltstack/salt.git"
+            _SALT_REPO_URL=${_SALTSTACK_REPO_URL}
+        else
+            _SALTSTACK_REPO_URL="https://github.com/saltstack/salt.git"
+        fi
+         ;;
     k )  _TEMP_KEYS_DIR="$OPTARG"
          # If the configuration directory does not exist, error out
          if [ ! -d "$_TEMP_KEYS_DIR" ]; then
@@ -319,6 +329,7 @@ do
     L )  _INSTALL_CLOUD=$BS_TRUE                        ;;
     p )  _EXTRA_PACKAGES="$_EXTRA_PACKAGES $OPTARG"     ;;
     H )  _HTTP_PROXY="$OPTARG"                          ;;
+    Z)   _ENABLE_EXTERNAL_ZMQ_REPOS=$BS_TRUE            ;;
 
 
     \?)  echo
@@ -976,11 +987,12 @@ __debian_derivatives_translation() {
     # If the file does not exist, return
     [ ! -f /etc/os-release ] && return
 
-    DEBIAN_DERIVATIVES="(kali)"
+    DEBIAN_DERIVATIVES="(kali|linuxmint)"
     # Mappings
     kali_1_debian_base="7.0"
+    linuxmint_1_debian_base="8.0"
 
-    # Detect derivates, Kali *only* for now
+    # Detect derivates, Kali and LinuxMint *only* for now
     rv=$(grep ^ID= /etc/os-release | sed -e 's/.*=//')
 
     # Translate Debian derivatives to their base Debian version
@@ -991,6 +1003,10 @@ __debian_derivatives_translation() {
             kali)
                 _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
                 _debian_derivative="kali"
+                ;;
+            linuxmint)
+                _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
+                _debian_derivative="linuxmint"
                 ;;
         esac
 
@@ -1124,7 +1140,10 @@ __git_clone_and_checkout() {
 
     echodebug "Installed git version: $(git --version | awk '{ print $3 }')"
 
-    __SALT_GIT_CHECKOUT_PARENT_DIR=$(dirname "${__SALT_GIT_CHECKOUT_DIR}")
+    local __SALT_GIT_CHECKOUT_PARENT_DIR=$(dirname "${__SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)
+    __SALT_GIT_CHECKOUT_PARENT_DIR="${__SALT_GIT_CHECKOUT_PARENT_DIR:-/tmp/git}"
+    local __SALT_CHECKOUT_REPONAME="$(basename "${__SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)"
+    __SALT_CHECKOUT_REPONAME="${__SALT_CHECKOUT_REPONAME:-salt}"
     [ -d "${__SALT_GIT_CHECKOUT_PARENT_DIR}" ] || mkdir "${__SALT_GIT_CHECKOUT_PARENT_DIR}"
     cd "${__SALT_GIT_CHECKOUT_PARENT_DIR}"
     if [ -d "${__SALT_GIT_CHECKOUT_DIR}" ]; then
@@ -1170,7 +1189,7 @@ __git_clone_and_checkout() {
             if [ "$(git clone --help | grep 'single-branch')" != "" ]; then
                 # The "--single-branch" option is supported, attempt shallow cloning
                 echoinfo "Attempting to shallow clone $GIT_REV from Salt's repository ${_SALT_REPO_URL}"
-                git clone --depth 1 --branch "$GIT_REV" "$_SALT_REPO_URL"
+                git clone --depth 1 --branch "$GIT_REV" "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME"
                 if [ $? -eq 0 ]; then
                     cd "${__SALT_GIT_CHECKOUT_DIR}"
                     __SHALLOW_CLONE="${BS_TRUE}"
@@ -1178,17 +1197,17 @@ __git_clone_and_checkout() {
                     # Shallow clone above failed(missing upstream tags???), let's resume the old behaviour.
                     echowarn "Failed to shallow clone."
                     echoinfo "Resuming regular git clone and remote SaltStack repository addition procedure"
-                    git clone "$_SALT_REPO_URL" || return 1
+                    git clone "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME" || return 1
                     cd "${__SALT_GIT_CHECKOUT_DIR}"
                 fi
             else
                 echodebug "Shallow cloning not possible. Required git version not met."
-                git clone "$_SALT_REPO_URL" || return 1
+                git clone "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME" || return 1
                 cd "${__SALT_GIT_CHECKOUT_DIR}"
             fi
         else
             echowarn "The git revision being installed does not match a Salt version tag. Shallow cloning disabled"
-            git clone "$_SALT_REPO_URL" || return 1
+            git clone "$_SALT_REPO_URL" "$__SALT_CHECKOUT_REPONAME" || return 1
             cd "${__SALT_GIT_CHECKOUT_DIR}"
         fi
 
@@ -1237,7 +1256,7 @@ __check_end_of_life_versions() {
 
     case "${DISTRO_NAME_L}" in
         debian)
-            # Debian versions bellow 6 are not supported
+            # Debian versions below 6 are not supported
             if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
@@ -1540,7 +1559,7 @@ __check_services_debian() {
     servicename=$1
     echodebug "Checking if service ${servicename} is enabled"
 
-    # shellcheck disable=SC2086,SC2046
+    # shellcheck disable=SC2086,SC2046,SC2144
     if [ -f /etc/rc$(runlevel | awk '{ print $2 }').d/S*${servicename} ]; then
         echodebug "Service ${servicename} is enabled"
         return 0
@@ -1695,6 +1714,10 @@ install_ubuntu_deps() {
     __apt_get_install_noinput python-apt
 
     if [ "$DISTRO_MAJOR_VERSION" -gt 12 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -gt 03 ]); then
+        if [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]; then
+            echoinfo "Installing ZMQ>=4/PyZMQ>=14 from Chris Lea's PPA repository"
+            add-apt-repository -y ppa:chris-lea/zeromq || return 1
+        fi
         __apt_get_install_noinput python-requests
         __PIP_PACKAGES=""
     else
@@ -1934,8 +1957,6 @@ install_debian_deps() {
         # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
         __PACKAGES="${__PACKAGES} python-pip"
         __PIP_PACKAGES="${__PIP_PACKAGES} requests"
-    else
-        __PACKAGES="${__PACKAGES} python-requests"
     fi
 
     # shellcheck disable=SC2086
@@ -1969,6 +1990,9 @@ install_debian_6_deps() {
     export DEBIAN_FRONTEND=noninteractive
 
     apt-get update
+
+    # Make sure wget is available
+    __apt_get_install_noinput wget
 
     # Install Keys
     __apt_get_install_noinput debian-archive-keyring && apt-get update
@@ -2015,13 +2039,9 @@ _eof
     fi
 
     # Debian Backports
-    if [ "$(grep -R 'backports.debian.org' /etc/apt)" = "" ]; then
-        echo "deb http://backports.debian.org/debian-backports squeeze-backports main" >> \
+    if [ "$(grep -R 'squeeze-backports' /etc/apt | grep -v "^#")" = "" ]; then
+        echo "deb http://http.debian.net/debian-backports squeeze-backports main" >> \
             /etc/apt/sources.list.d/backports.list
-
-        # Add the backports key
-        gpg --keyserver pgpkeys.mit.edu --recv-key 8B48AD6246925553
-        gpg -a --export 8B48AD6246925553 | apt-key add -
     fi
 
     # Saltstack's Stable Debian repository
@@ -2067,8 +2087,18 @@ install_debian_7_deps() {
     export DEBIAN_FRONTEND=noninteractive
 
     apt-get update
+
+    # Make sure wget is available
+    __apt_get_install_noinput wget
+
     # Install Keys
     __apt_get_install_noinput debian-archive-keyring && apt-get update
+
+    # Debian Backports
+    if [ "$(grep -R 'wheezy-backports' /etc/apt | grep -v "^#")" = "" ]; then
+        echo "deb http://http.debian.net/debian wheezy-backports main" >> \
+            /etc/apt/sources.list.d/backports.list
+    fi
 
     # Saltstack's Stable Debian repository
     if [ "$(grep -R 'wheezy-saltstack' /etc/apt)" = "" ]; then
@@ -2079,49 +2109,18 @@ install_debian_7_deps() {
     # shellcheck disable=SC2086
     wget $_WGET_ARGS -q http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key -O - | apt-key add - || return 1
 
-    if [ "$_PIP_ALLOWED" -eq $BS_TRUE ]; then
-        echowarn "PyZMQ will be installed from PyPI in order to compile it against ZMQ3"
-        echowarn "This is required for long term stable minion connections to the master."
-        echowarn "YOU WILL END UP WITH QUITE A FEW PACKAGES FROM DEBIAN UNSTABLE"
-        echowarn "Sleeping for 5 seconds so you can cancel..."
-        sleep 5
-
-        if [ ! -f /etc/apt/sources.list.d/debian-unstable.list ]; then
-           cat <<_eof > /etc/apt/sources.list.d/debian-unstable.list
-deb http://ftp.debian.org/debian unstable main
-deb-src http://ftp.debian.org/debian unstable main
-_eof
-
-           cat <<_eof > /etc/apt/preferences.d/libzmq3-debian-unstable.pref
-Package: libzmq3
-Pin: release a=unstable
-Pin-Priority: 800
-
-Package: libzmq3-dev
-Pin: release a=unstable
-Pin-Priority: 800
-_eof
-        fi
-
-        apt-get update
-        __apt_get_install_noinput -t unstable libzmq3 libzmq3-dev || return 1
-        __PACKAGES="build-essential python-dev python-pip python-requests python-apt"
-        # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
-        __PACKAGES="${__PACKAGES} procps pciutils"
-        # shellcheck disable=SC2086
-        __apt_get_install_noinput ${__PACKAGES} || return 1
-    else
-        apt-get update || return 1
-        __PACKAGES="python-zmq python-requests python-apt"
-        # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
-        __PACKAGES="${__PACKAGES} procps pciutils"
-        # shellcheck disable=SC2086
-        __apt_get_install_noinput ${__PACKAGES} || return 1
-
-    fi
+    apt-get update || return 1
+    __apt_get_install_noinput -t wheezy-backports libzmq3 libzmq3-dev python-zmq python-requests python-apt || return 1
+    # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
+    __PACKAGES="procps pciutils"
+    # shellcheck disable=SC2086
+    __apt_get_install_noinput ${__PACKAGES} || return 1
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
+        __PACKAGES="build-essential python-dev python-pip"
+        # shellcheck disable=SC2086
+        __apt_get_install_noinput ${__PACKAGES} || return 1
         pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
@@ -2360,6 +2359,10 @@ install_debian_check_services() {
 #   Fedora Install Functions
 #
 install_fedora_deps() {
+    if [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]; then
+        __install_saltstack_copr_zeromq_repository || return 1
+    fi
+
     __PACKAGES="yum-utils PyYAML libyaml m2crypto python-crypto python-jinja2 python-msgpack python-zmq python-requests"
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
@@ -2415,7 +2418,7 @@ install_fedora_stable_post() {
 install_fedora_git_deps() {
     install_fedora_deps || return 1
 
-    yum install -y git || return 1
+    yum install -y git systemd-python || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -2522,7 +2525,7 @@ __install_epel_repository() {
     elif [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
         rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/6/${EPEL_ARCH}/epel-release-6-8.noarch.rpm" || return 1
     elif [ "$DISTRO_MAJOR_VERSION" -eq 7 ]; then
-        rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/7/${EPEL_ARCH}/e/epel-release-7-2.noarch.rpm" || return 1
+        rpm -Uvh --force "http://download.fedoraproject.org/pub/epel/7/${EPEL_ARCH}/e/epel-release-7-5.noarch.rpm" || return 1
     else
         echoerror "Failed add EPEL repository support."
         return 1
@@ -2531,8 +2534,38 @@ __install_epel_repository() {
     return 0
 }
 
+__install_saltstack_copr_zeromq_repository() {
+    echoinfo "Installing Zeromq >=4 and PyZMQ>=14 from SaltStack's COPR repository"
+    if [ ! -s /etc/yum.repos.d/saltstack-zeromq4.repo ]; then
+        if [ "${DISTRO_NAME_L}" = "fedora" ]; then
+            __REPOTYPE="${DISTRO_NAME_L}"
+        else
+            __REPOTYPE="epel"
+        fi
+        __fetch_url /etc/yum.repos.d/saltstack-zeromq4.repo \
+                         "http://copr.fedoraproject.org/coprs/saltstack/zeromq4/repo/${__REPOTYPE}-${DISTRO_MAJOR_VERSION}/saltstack-zeromq4-${__REPOTYPE}-${DISTRO_MAJOR_VERSION}.repo" || return 1
+    fi
+    return 0
+}
+
+__install_saltstack_copr_salt_el5_repository() {
+    if [ ! -s /etc/yum.repos.d/saltstack-salt-el5-epel-5.repo ]; then
+        __fetch_url /etc/yum.repos.d/saltstack-salt-el5-epel-5.repo \
+            "http://copr.fedoraproject.org/coprs/saltstack/salt-el5/repo/epel-5/saltstack-salt-el5-epel-5.repo" || return 1
+    fi
+    return 0
+}
+
 install_centos_stable_deps() {
     __install_epel_repository || return 1
+    if [ "$DISTRO_MAJOR_VERSION" -eq 5 ]; then
+        __install_saltstack_copr_salt_el5_repository || return 1
+    fi
+
+    if [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ] && [ "$DISTRO_MAJOR_VERSION" -gt 5 ]; then
+        yum -y install python-hashlib || return 1
+        __install_saltstack_copr_zeromq_repository || return 1
+    fi
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
         yum -y update || return 1
@@ -2571,7 +2604,7 @@ install_centos_stable_deps() {
         if [ "$DISTRO_MAJOR_VERSION" -eq 5 ]; then
             easy_install-2.6 "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
         else
-            pip-python install "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+            pip install "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
         fi
     fi
 
@@ -2597,9 +2630,13 @@ install_centos_stable() {
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} salt-minion"
     fi
-    if [ "$_INSTALL_MASTER" -eq $BS_TRUE ] || [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ]; then
+    if [ "$_INSTALL_MASTER" -eq $BS_TRUE ];then
         __PACKAGES="${__PACKAGES} salt-master"
+    fi   
+    if [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ];then
+        __PACKAGES="${__PACKAGES} salt-syndic"
     fi
+    
     if [ "$DISTRO_NAME_L" = "oracle_linux" ]; then
         # We need to install one package at a time because --enablerepo=X disables ALL OTHER REPOS!!!!
         for package in ${__PACKAGES}; do
@@ -2643,9 +2680,9 @@ install_centos_git_deps() {
     install_centos_stable_deps || return 1
     if [ "$DISTRO_NAME_L" = "oracle_linux" ]; then
         # try both ways --enablerepo=X disables ALL OTHER REPOS!!!!
-        yum -y install git || yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+        yum install -y git systemd-python || yum install -y git systemd-python --enablerepo=${_EPEL_REPO} || return 1
     else
-        yum -y install git --enablerepo=${_EPEL_REPO} || return 1
+        yum install -y git systemd-python --enablerepo=${_EPEL_REPO} || return 1
     fi
 
     __git_clone_and_checkout || return 1
@@ -2674,7 +2711,8 @@ install_centos_git() {
 }
 
 install_centos_git_post() {
-    for fname in minion master minion api; do
+    SYSTEMD_RELOAD=$BS_FALSE
+    for fname in minion master syndic api; do
 
         # Skip if not meant to be installed
         [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
@@ -2682,8 +2720,18 @@ install_centos_git_post() {
         [ $fname = "api" ] && ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || [ "$(which salt-${fname} 2>/dev/null)" = "" ]) && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
-        # While the RPM's use init.d, so will we.
-        if [ ! -f /etc/init.d/salt-$fname ] || ([ -f /etc/init.d/salt-$fname ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
+        if [ -f /bin/systemctl ]; then
+            if [ ! -f /usr/lib/systemd/system/salt-${fname}.service ] || ([ -f /usr/lib/systemd/system/salt-${fname}.service ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
+                copyfile "${__SALT_GIT_CHECKOUT_DIR}/pkg/rpm/salt-${fname}.service" /usr/lib/systemd/system/
+            fi
+
+            # Skip salt-api since the service should be opt-in and not necessarily started on boot
+            [ $fname = "api" ] && continue
+
+            /bin/systemctl enable salt-${fname}.service
+            SYSTEMD_RELOAD=$BS_TRUE
+
+        elif [ ! -f /etc/init.d/salt-$fname ] || ([ -f /etc/init.d/salt-$fname ] && [ $_FORCE_OVERWRITE -eq $BS_TRUE ]); then
             copyfile "${__SALT_GIT_CHECKOUT_DIR}/pkg/rpm/salt-${fname}" /etc/init.d/
             chmod +x /etc/init.d/salt-${fname}
 
@@ -2707,6 +2755,10 @@ install_centos_git_post() {
         #    /sbin/chkconfig salt-${fname} on
         #fi
     done
+
+    if [ "$SYSTEMD_RELOAD" -eq $BS_TRUE ]; then
+        /bin/systemctl daemon-reload
+    fi
 }
 
 install_centos_restart_daemons() {
@@ -2799,6 +2851,10 @@ install_centos_check_services() {
 __test_rhel_optionals_packages() {
     __install_epel_repository || return 1
 
+    if [ "$DISTRO_MAJOR_VERSION" -ge 7 ]; then
+        yum-config-manager --enable \*server-optional || return 1
+    fi
+
     if [ "$DISTRO_MAJOR_VERSION" -ge 6 ]; then
         # Let's enable package installation testing, kind of, --dry-run
         echoinfo "Testing if packages usually on the optionals repository are available:"
@@ -2878,11 +2934,6 @@ install_red_hat_linux_git_deps() {
     fi
     install_centos_git_deps || return 1
     return 0
-}
-
-install_red_hat_enterprise_linux_7_stable_deps() {
-    echoerror "Stable version is not available on RHEL 7 Beta/RC. Please set installation type to git."
-    return 1
 }
 
 install_red_hat_enterprise_linux_stable_deps() {
@@ -3316,8 +3367,17 @@ install_amazon_linux_ami_testing_post() {
 #
 install_arch_linux_stable_deps() {
 
+    echoinfo "Running pacman db upgrade" 
+    pacman-db-upgrade || return 1
+
     if [ ! -f /etc/pacman.d/gnupg ]; then
         pacman-key --init && pacman-key --populate archlinux || return 1
+    fi
+
+    pacman -Sy --noconfirm --needed pacman || return 1
+
+    if [ "$(which pacman-db-upgrade)" != "" ]; then
+        pacman-db-upgrade || return 1
     fi
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
@@ -3339,12 +3399,11 @@ install_arch_linux_stable_deps() {
 install_arch_linux_git_deps() {
     install_arch_linux_stable_deps
 
-    pacman -Sy --noconfirm --needed pacman || return 1
     # Don't fail if un-installing python2-distribute threw an error
-    pacman -R --noconfirm --needed python2-distribute
+    pacman -R --noconfirm python2-distribute
     pacman -Sy --noconfirm --needed git python2-crypto python2-setuptools python2-jinja \
         python2-m2crypto python2-markupsafe python2-msgpack python2-psutil python2-yaml \
-        python2-pyzmq zeromq python2-requests || return 1
+        python2-pyzmq zeromq python2-requests python2-systemd || return 1
 
     __git_clone_and_checkout || return 1
 
@@ -3570,6 +3629,10 @@ install_freebsd_9_stable_deps() {
         /usr/local/sbin/pkg install ${SALT_PKG_FLAGS} -y ${_EXTRA_PACKAGES} || return 1
     fi
 
+    if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
+        pkg upgrade -y || return 1
+    fi
+
     return 0
 }
 
@@ -3656,9 +3719,9 @@ install_freebsd_git() {
     # Install from git
     if [ ! -f salt/syspaths.py ]; then
         # We still can't provide the system paths, salt 0.16.x
-        /usr/local/bin/python setup.py install || return 1
+        /usr/local/bin/python2 setup.py install || return 1
     else
-        /usr/local/bin/python setup.py install \
+        /usr/local/bin/python2 setup.py install \
             --salt-root-dir=/usr/local \
             --salt-config-dir="${_SALT_ETC_DIR}" \
             --salt-cache-dir=/var/cache/salt \
@@ -3937,6 +4000,12 @@ install_opensuse_git_deps() {
     zypper --non-interactive install --auto-agree-with-licenses git || return 1
 
     __git_clone_and_checkout || return 1
+
+    if [ -f "${__SALT_GIT_CHECKOUT_DIR}/pkg/suse/use-forking-daemon.patch" ]; then
+        cd "${__SALT_GIT_CHECKOUT_DIR}"
+        echowarn "Applying patch to systemd service unit file"
+        patch -p1 < pkg/suse/use-forking-daemon.patch || return 1
+    fi
 
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then

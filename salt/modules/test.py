@@ -2,6 +2,7 @@
 '''
 Module for running arbitrary tests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
@@ -15,8 +16,21 @@ import random
 import salt
 import salt.version
 import salt.loader
+import salt.ext.six as six
+from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'true_': 'true',
+    'false_': 'false'
+}
+
+
+@depends('non_existantmodulename')
+def missing_func():
+    return 'foo'
 
 
 def echo(text):
@@ -91,7 +105,7 @@ def version():
 
         salt '*' test.version
     '''
-    return salt.__version__
+    return salt.version.__version__
 
 
 def versions_information():
@@ -212,7 +226,7 @@ def arg_type(*args, **kwargs):
         ret['args'].append(str(type(argument)))
 
     # all the kwargs
-    for key, val in kwargs.iteritems():
+    for key, val in six.iteritems(kwargs):
         ret['kwargs'][key] = str(type(val))
 
     return ret
@@ -236,8 +250,8 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to the passed number, and the
-    timeit took to compute in seconds. Used for performance tests
+    Return a Fibonacci sequence up to but not including the passed number,
+    and the time it took to compute in seconds. Used for performance tests.
 
     CLI Example:
 
@@ -447,3 +461,42 @@ def tty(*args, **kwargs):  # pylint: disable=W0613
         salt '*' test.tty pts3 'This is a test'
     '''
     return 'ERROR: This function has been moved to cmd.tty'
+
+
+def assertion(assertion):
+    '''
+    Assert the given argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.assert False
+    '''
+    assert assertion
+
+
+def true_():
+    '''
+    Always return True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.true
+    '''
+    return True
+
+
+def false_():
+    '''
+    Always return False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.false
+    '''
+    return False

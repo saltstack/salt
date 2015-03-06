@@ -27,6 +27,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import time
 import pprint
@@ -43,6 +44,9 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -181,7 +185,7 @@ def _getVmById(vmid, allDetails=False):
     '''
     Retrieve a VM based on the ID.
     '''
-    for vm_name, vm_details in get_resources_vms(includeConfig=allDetails).items():
+    for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=allDetails)):
         if str(vm_details['vmid']) == str(vmid):
             return vm_details
 
@@ -203,7 +207,7 @@ def _check_ip_available(ip_addr):
     This function can be used to prevent VMs being created with duplicate
     IP's or to generate a warning.
     '''
-    for vm_name, vm_details in get_resources_vms(includeConfig=True).items():
+    for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=True)):
         vm_config = vm_details['config']
         if ip_addr in vm_config['ip_address'] or vm_config['ip_address'] == ip_addr:
             log.debug('IP "{0}" is already defined'.format(ip_addr))
@@ -382,7 +386,7 @@ def avail_images(call=None, location='local'):
         )
 
     ret = {}
-    for host_name, host_details in avail_locations().items():
+    for host_name, host_details in six.iteritems(avail_locations()):
         for item in query('get', 'nodes/{0}/storage/{1}/content'.format(host_name, location)):
             ret[item['volid']] = item
     return ret
@@ -404,7 +408,7 @@ def list_nodes(call=None):
         )
 
     ret = {}
-    for vm_name, vm_details in get_resources_vms(includeConfig=True).items():
+    for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=True)):
         log.debug('VM_Name: {0}'.format(vm_name))
         log.debug('vm_details: {0}'.format(vm_details))
 
@@ -477,12 +481,6 @@ def create(vm_):
         salt-cloud -p proxmox-ubuntu vmhostname
     '''
     ret = {}
-    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
-    if deploy is True and salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'sshpass\' binary is not '
-            'present on the system.'
-        )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -541,7 +539,7 @@ def create(vm_):
 
     # Wait until the VM has fully started
     log.debug('Waiting for state "running" for vm {0} on {1}'.format(vmid, host))
-    if not wait_for_state(vmid, host, nodeType, 'running'):
+    if not wait_for_state(vmid, 'running'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
 
     ssh_username = config.get_cloud_config_value(
@@ -647,7 +645,6 @@ def create(vm_):
             transport=__opts__['transport']
         )
 
-        deployed = False
         if win_installer:
             deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
         else:
@@ -766,7 +763,7 @@ def get_vmconfig(vmid, node=None, node_type='openvz'):
     '''
     if node is None:
         # We need to figure out which node this VM is on.
-        for host_name, host_details in avail_locations().items():
+        for host_name, host_details in six.iteritems(avail_locations()):
             for item in query('get', 'nodes/{0}/{1}'.format(host_name, node_type)):
                 if item['vmid'] == vmid:
                     node = host_name
@@ -799,9 +796,9 @@ def wait_for_created(upid, timeout=300):
         info = _lookup_proxmox_task(upid)
 
 
-def wait_for_state(vmid, node, nodeType, state, timeout=300):
+def wait_for_state(vmid, state, timeout=300):
     '''
-    Wait until a specific state has been reached on  a node
+    Wait until a specific state has been reached on a node
     '''
     start_time = time.time()
     node = get_vm_status(vmid=vmid)
@@ -855,7 +852,7 @@ def destroy(name, call=None):
         stop(name, vmobj['vmid'], 'action')
 
         # wait until stopped
-        if not wait_for_state(vmobj['vmid'], vmobj['node'], vmobj['type'], 'stopped'):
+        if not wait_for_state(vmobj['vmid'], 'stopped'):
             return {'Error': 'Unable to stop {0}, command timed out'.format(name)}
 
         query('delete', 'nodes/{0}/{1}'.format(

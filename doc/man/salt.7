@@ -6050,7 +6050,7 @@ Ubuntu 10.x/11.x/12.x/13.04
 .INDENT 0.0
 .INDENT 3.5
 In the event you do not see your distribution or version available please
-review the develop branch on Github as it main contain updates that are
+review the develop branch on GitHub as it main contain updates that are
 not present in the stable release:
 \fI\%https://github.com/saltstack/salt\-bootstrap/tree/develop\fP
 .UNINDENT
@@ -8333,7 +8333,7 @@ to within \fB/srv/salt/prod\fP, they are still available from the same
 The best way to continue learning about Salt States is to read through the
 \fBreference documentation\fP and to look through examples
 of existing \fIstate trees\fP\&. Many pre\-configured state trees
-can be found on Github in the \fI\%saltstack\-formulas\fP collection of repositories.
+can be found on GitHub in the \fI\%saltstack\-formulas\fP collection of repositories.
 .sp
 If you have any questions, suggestions, or just want to chat with other people
 who are using Salt, we have a very \fBactive community\fP
@@ -11552,9 +11552,9 @@ can use the \fI\%Freenode webchat client\fP right from your browser.
 .sp
 If you wish to discuss the development of Salt itself join us in
 \fB#salt\-devel\fP\&.
-.SS Follow on Github
+.SS Follow on GitHub
 .sp
-The Salt code is developed via Github. Follow Salt for constant updates on what
+The Salt code is developed via GitHub. Follow Salt for constant updates on what
 is happening in Salt development:
 .sp
 \fI\%https://github.com/saltstack/salt\fP
@@ -17283,28 +17283,33 @@ definition.
 .SS wait_for_ip_timeout
 .sp
 The amount of time Salt Cloud should wait for a VM to start and get an IP back
-from the cloud provider. Default: 5 minutes.
+from the cloud provider. 
+Default: varies by cloud provider ( between 5 and 15 minutes)
 .SS wait_for_ip_interval
 .sp
 The amount of time Salt Cloud should sleep while querying for the VM\(aqs IP.
-Default: 5 seconds.
+Default: varies by cloud provider ( between .5 and 10 seconds)
 .SS ssh_connect_timeout
 .sp
 The amount of time Salt Cloud should wait for a successful SSH connection to
-the VM. Default: 5 minutes.
+the VM. 
+Default: varies by cloud provider ( between 5 and 15 minutes)
 .SS wait_for_passwd_timeout
 .sp
 The amount of time until an ssh connection can be established via password or
-ssh key. Default 15 seconds.
+ssh key. 
+Default: varies by cloud provider ( mostly 15 seconds)
 .SS wait_for_fun_timeout
 .sp
 Some cloud drivers check for an available IP or a successful SSH connection
 using a function, namely, SoftLayer and SoftLayer\-HW. So, the amount of time
-Salt Cloud should retry such functions before failing. Default: 5 minutes.
+Salt Cloud should retry such functions before failing. 
+Default: 15 minutes.
 .SS wait_for_spot_timeout
 .sp
 The amount of time Salt Cloud should wait before an EC2 Spot instance is
 available. This setting is only available for the EC2 cloud driver.
+Default: 10 minutes
 .SS Getting Started With OpenStack
 .sp
 OpenStack is one the most popular cloud projects. It\(aqs an open source project
@@ -19970,8 +19975,8 @@ the lines below, depending on the relevant Python version:
 .sp
 .nf
 .ft C
-pip install \-r dev_requirements_python26.txt
-pip install \-r dev_requirements_python27.txt
+pip install \-r requirements/dev_python26.txt
+pip install \-r requirements/dev_python27.txt
 .ft P
 .fi
 .UNINDENT
@@ -28783,7 +28788,7 @@ salt \(aq*\(aq pkg.install <package name>
 .UNINDENT
 .TP
 .B taps
-Unofficial Github repos to use when updating and installing formulas.
+Unofficial GitHub repos to use when updating and installing formulas.
 .sp
 CLI Example:
 .INDENT 7.0
@@ -74257,7 +74262,7 @@ trees can be made to bleed through environments.
 \fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
-Environments in Salt are very flexible, this section defines how the top
+Environments in Salt are very flexible. This section defines how the top
 file can be used to define what states from what environments are to be
 used for specific minions.
 .sp
@@ -97011,7 +97016,7 @@ winrepo.genrepo\fP
 .SS Git Hosted Repo
 .sp
 Windows software package definitions can also be hosted in one or more git
-repositories. The default repo is one hosted on Github.com by SaltStack,Inc., which
+repositories. The default repo is one hosted on GitHub.com by SaltStack,Inc., which
 includes package definitions for open source software. This repo points to the
 HTTP or ftp locations of the installer files. Anyone is welcome to send a pull
 request to this repo to add new package definitions. Browse the repo
@@ -102685,7 +102690,7 @@ This makes 21 new developers since 0.9.4 was released!
 .sp
 To keep up with the growing community follow Salt on Ohloh
 (\fI\%http://www.ohloh.net/p/salt\fP), to join the Salt development community, fork
-Salt on Github, and get coding (\fI\%https://github.com/saltstack/salt\fP)!
+Salt on GitHub, and get coding (\fI\%https://github.com/saltstack/salt\fP)!
 .SS Major Features
 .SS SPEED! Pickle to msgpack
 .sp

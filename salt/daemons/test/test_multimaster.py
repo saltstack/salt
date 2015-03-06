@@ -3,9 +3,11 @@
 Tests of utilities that support multiple masters in Salt Raet
 
 '''
+from __future__ import absolute_import
 # pylint: skip-file
 # pylint: disable=C0103
 import sys
+from salt.ext.six.moves import map
 if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
@@ -341,7 +343,7 @@ def runSome():
                 'testExtractMastersMultiple',
             ]
 
-    tests.extend(map(BasicTestCase, names))
+    tests.extend(list(list(map(BasicTestCase, names))))
 
     suite = unittest.TestSuite(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)

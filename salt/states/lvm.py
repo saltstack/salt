@@ -21,6 +21,7 @@ A state module to manage LVMs
         - stripes: 5
         - stripesize: 8K
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -62,7 +63,7 @@ def pv_present(name, **kwargs):
 
         if __salt__['lvm.pvdisplay'](name):
             ret['comment'] = 'Created Physical Volume {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['created'] = changes
         else:
             ret['comment'] = 'Failed to create Physical Volume {0}'.format(name)
             ret['result'] = False
@@ -95,7 +96,7 @@ def pv_absent(name):
             ret['result'] = False
         else:
             ret['comment'] = 'Removed Physical Volume {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['removed'] = changes
     return ret
 
 
@@ -120,6 +121,35 @@ def vg_present(name, devices=None, **kwargs):
 
     if __salt__['lvm.vgdisplay'](name):
         ret['comment'] = 'Volume Group {0} already present'.format(name)
+        for device in devices.split(','):
+            pvs = __salt__['lvm.pvdisplay'](device)
+            if pvs and pvs.get(device, None):
+                if pvs[device]['Volume Group Name'] == name:
+                    ret['comment'] = '{0}\n{1}'.format(
+                        ret['comment'],
+                        '{0} is part of Volume Group'.format(device))
+                elif pvs[device]['Volume Group Name'] == '#orphans_lvm2':
+                    __salt__['lvm.vgextend'](name, device)
+                    pvs = __salt__['lvm.pvdisplay'](device)
+                    if pvs[device]['Volume Group Name'] == name:
+                        ret['changes'].update(
+                            {device: 'added to {0}'.format(name)})
+                    else:
+                        ret['comment'] = '{0}\n{1}'.format(
+                            ret['comment'],
+                            '{0} could not be added'.format(device))
+                        ret['result'] = False
+                else:
+                    ret['comment'] = '{0}\n{1}'.format(
+                        ret['comment'],
+                        '{0} is part of {1}'.format(
+                            device, pvs[device]['Volume Group Name']))
+                    ret['result'] = False
+            else:
+                ret['comment'] = '{0}\n{1}'.format(
+                    ret['comment'],
+                    'pv {0} is not present'.format(device))
+                ret['result'] = False
     elif __opts__['test']:
         ret['comment'] = 'Volume Group {0} is set to be created'.format(name)
         ret['result'] = None
@@ -129,7 +159,7 @@ def vg_present(name, devices=None, **kwargs):
 
         if __salt__['lvm.vgdisplay'](name):
             ret['comment'] = 'Created Volume Group {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['created'] = changes
         else:
             ret['comment'] = 'Failed to create Volume Group {0}'.format(name)
             ret['result'] = False
@@ -159,7 +189,7 @@ def vg_absent(name):
 
         if not __salt__['lvm.vgdisplay'](name):
             ret['comment'] = 'Removed Volume Group {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['removed'] = changes
         else:
             ret['comment'] = 'Failed to remove Volume Group {0}'.format(name)
             ret['result'] = False
@@ -228,7 +258,7 @@ def lv_present(name,
 
         if __salt__['lvm.lvdisplay'](lvpath):
             ret['comment'] = 'Created Logical Volume {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['created'] = changes
         else:
             ret['comment'] = 'Failed to create Logical Volume {0}'.format(name)
             ret['result'] = False
@@ -262,7 +292,7 @@ def lv_absent(name, vgname=None):
 
         if not __salt__['lvm.lvdisplay'](lvpath):
             ret['comment'] = 'Removed Logical Volume {0}'.format(name)
-            ret['changes'] = changes
+            ret['changes']['removed'] = changes
         else:
             ret['comment'] = 'Failed to remove Logical Volume {0}'.format(name)
             ret['result'] = False

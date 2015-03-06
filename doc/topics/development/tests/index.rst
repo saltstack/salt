@@ -8,8 +8,8 @@ the lines below, depending on the relevant Python version:
 
 .. code-block:: bash
 
-    pip install -r dev_requirements_python26.txt
-    pip install -r dev_requirements_python27.txt
+    pip install -r requirements/dev_python26.txt
+    pip install -r requirements/dev_python27.txt
 
 .. note::
 
@@ -43,8 +43,7 @@ specific groups of tests or individual tests:
 * Run unit and integration tests for states: ``./tests/runtests.py --state``
 * Run integration tests for an individual module: ``./tests/runtests.py -n integration.modules.virt``
 * Run unit tests for an individual module: ``./tests/runtests.py -n unit.modules.virt_test``
-* Run an individual test by using the class and test name (this example is for the ``test_default_kvm_profile`` test in the
-``integration.module.virt``): ``./tests/runtests.py -n ingtegration.module.virt.VirtTest.test_default_kvm_profile``
+* Run an individual test by using the class and test name (this example is for the ``test_default_kvm_profile`` test in the ``integration.module.virt``): ``./tests/runtests.py -n ingtegration.module.virt.VirtTest.test_default_kvm_profile``
 
 
 Running Unit Tests Without Integration Test Daemons
@@ -246,7 +245,7 @@ minions. This allows the syndic interface to be tested and master/minion
 communication to be verified. All of the integration tests are executed as
 live salt commands sent through the started daemons.
 
-Integration tests are particularly good at testing modules, states and shell
+Integration tests are particularly good at testing modules, states, and shell
 commands.
 
 * :doc:`Writing integration tests <integration>`

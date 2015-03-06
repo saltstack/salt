@@ -48,12 +48,13 @@ In order to have the returner apply to all minions:
 
     ext_job_cache: elasticsearch
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import datetime
 
 # Import Salt libs
-import salt.utils
+import salt.utils.jid
 
 __virtualname__ = 'elasticsearch'
 
@@ -140,7 +141,7 @@ def returner(ret):
     '''
     es_ = _get_instance()
     _create_index(es_, __salt__['config.get']('elasticsearch:index'))
-    the_time = datetime.datetime.now().isoformat()
+    the_time = datetime.datetime.utcnow().isoformat()
     ret['@timestamp'] = the_time
     es_.index(index=__salt__['config.get']('elasticsearch:index'),
              doc_type='returner',
@@ -148,9 +149,8 @@ def returner(ret):
              )
 
 
-def prep_jid(nocache):  # pylint: disable=unused-argument
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
-    Prepare the jid, including doing any pre-processing and
-    returning the jid to use
+    Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

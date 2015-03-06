@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 # Import Python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -44,6 +45,20 @@ class NetapiClientTest(TestCase):
         ret.pop('jid', None)
         self.assertEqual(ret, {'minions': ['minion', 'sub_minion']})
 
+    def test_jid(self):
+        '''
+        Tests whether a predetermined jid successfully passes through netapi to
+        salt and back.
+        '''
+        low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping',
+               'jid': '123abc'}
+        low.update(self.eauth_creds)
+
+        ret = self.netapi.run(low)
+
+        self.assertEqual(ret, {'jid': '123abc',
+                               'minions': ['minion', 'sub_minion']})
+
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
         low.update(self.eauth_creds)
@@ -65,7 +80,7 @@ class NetapiClientTest(TestCase):
         data.pop('_stamp', None)
 
         self.maxDiff = None
-        self.assertEqual(ret, {
+        self.assertEqual({
             'data': {
                 'return': {
                     'minions_pre': [],
@@ -79,7 +94,7 @@ class NetapiClientTest(TestCase):
                 'success': True,
                 'user': 'saltdev_auto',
                 'fun': 'wheel.key.list_all'
-            }})
+            }}, ret)
 
     def test_wheel_async(self):
         low = {'client': 'wheel_async', 'fun': 'key.list_all'}
@@ -90,7 +105,12 @@ class NetapiClientTest(TestCase):
         self.assertIn('tag', ret)
 
     def test_runner(self):
-        low = {'client': 'runner', 'fun': 'cache.grains'}
+        # TODO: fix race condition in init of event-- right now the event class
+        # will finish init even if the underlying zmq socket hasn't connected yet
+        # this is problematic for the runnerclient's master_call method if the
+        # runner is quick
+        #low = {'client': 'runner', 'fun': 'cache.grains'}
+        low = {'client': 'runner', 'fun': 'test.sleep', 'arg': [2]}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)

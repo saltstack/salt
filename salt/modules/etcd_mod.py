@@ -22,6 +22,7 @@ or clusters are available.
     etcd.host: 127.0.0.1
     etcd.port: 4001
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

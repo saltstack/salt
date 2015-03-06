@@ -2,6 +2,7 @@
 '''
 The sys module provides information about the available functions on the minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import fnmatch
@@ -13,10 +14,15 @@ import salt.utils
 import salt.state
 from salt.utils.doc import strip_rst as _strip_rst
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'sys'
+
+__proxyenabled__ = '*'
 
 
 def __virtual__():
@@ -70,9 +76,10 @@ def doc(*args):
         else:
             target_mod = ''
         if _use_fnmatch:
-            for fun in fnmatch.filter(__salt__.keys(), target_mod):
-                docs[fun] = __salt__[fun].__doc__
-        else:
+            for fun in fnmatch.filter(__salt__.keys(), target_mod):  # pylint: disable=incompatible-py3-code
+                docs[fun] = __salt__[fun].__doc__                    # There's no problem feeding fnmatch.filter()
+        else:                                                        # with a Py3's dict_keys() instance
+
             for fun in __salt__:
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = __salt__[fun].__doc__
@@ -235,7 +242,7 @@ def returner_doc(*args):
     returners_ = salt.loader.returners(__opts__, [])
     docs = {}
     if not args:
-        for fun in returners_.keys():
+        for fun in returners_:
             docs[fun] = returners_[fun].__doc__
         return _strip_rst(docs)
 
@@ -251,10 +258,11 @@ def returner_doc(*args):
         else:
             target_mod = ''
         if _use_fnmatch:
-            for fun in fnmatch.filter(returners_.keys(), target_mod):
-                docs[fun] = returners_[fun].__doc__
+            for fun in returners_:
+                if fun == module or fun.startswith(target_mod):
+                    docs[fun] = returners_[fun].__doc__
         else:
-            for fun in returners_.keys():
+            for fun in six.iterkeys(returners_):
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
     return _strip_rst(docs)
@@ -290,21 +298,22 @@ def renderer_doc(*args):
     renderers_ = salt.loader.render(__opts__, [])
     docs = {}
     if not args:
-        for fun in renderers_.keys():
+        for fun in six.iterkeys(renderers_):
             docs[fun] = renderers_[fun].__doc__
         return _strip_rst(docs)
 
     for module in args:
         if '*' in module:
-            for fun in fnmatch.filter(renderers_.keys(), module):
-                docs[fun] = renderers_[fun].__doc__
+            for fun in fnmatch.filter(renderers_.keys(), module):  # pylint: disable=incompatible-py3-code
+                docs[fun] = renderers_[fun].__doc__                # There's no problem feeding fnmatch.filter()
+                                                                   # with a Py3's dict_keys() instance
         else:
-            for fun in renderers_.keys():
+            for fun in six.iterkeys(renderers_):
                 docs[fun] = renderers_[fun].__doc__
     return _strip_rst(docs)
 
 
-def list_functions(*args, **kwargs):
+def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all modules. Optionally, specify a module or modules
     from which to list.
@@ -501,7 +510,7 @@ def runner_argspec(module=''):
     return salt.utils.argspec_report(run_.functions, module)
 
 
-def list_state_functions(*args, **kwargs):
+def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2014.7.0
 
@@ -524,8 +533,8 @@ def list_state_functions(*args, **kwargs):
         salt '*' sys.list_state_functions 'file.s*'
 
     '''
-    ### NOTE: **kwargs is used here to prevent a traceback when garbage
-    ###       arguments are tacked on to the end.
+    # NOTE: **kwargs is used here to prevent a traceback when garbage
+    #       arguments are tacked on to the end.
 
     st_ = salt.state.State(__opts__)
     if not args:
@@ -630,7 +639,7 @@ def list_runners(*args):
     return sorted(runners)
 
 
-def list_runner_functions(*args, **kwargs):
+def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2014.7.0
 
@@ -703,7 +712,7 @@ def list_returners(*args):
     returners = set()
 
     if not args:
-        for func in returners_.keys():
+        for func in six.iterkeys(returners_):
             comps = func.split('.')
             if len(comps) < 2:
                 continue
@@ -711,15 +720,15 @@ def list_returners(*args):
         return sorted(returners)
 
     for module in args:
-        for func in fnmatch.filter(returners_.keys(), module):
-            comps = func.split('.')
-            if len(comps) < 2:
+        for func in fnmatch.filter(returners_.keys(), module):  # pylint: disable=incompatible-py3-code
+            comps = func.split('.')                             # There's no problem feeding fnmatch.filter()
+            if len(comps) < 2:                                  # with a Py3's dict_keys() instance
                 continue
             returners.add(comps[0])
     return sorted(returners)
 
 
-def list_returner_functions(*args, **kwargs):
+def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     .. versionadded:: 2014.7.0
 
@@ -741,13 +750,13 @@ def list_returner_functions(*args, **kwargs):
         salt '*' sys.list_returner_functions 'sqlite3.get_*'
 
     '''
-    ### NOTE: **kwargs is used here to prevent a traceback when garbage
-    ###       arguments are tacked on to the end.
+    # NOTE: **kwargs is used here to prevent a traceback when garbage
+    #       arguments are tacked on to the end.
 
     returners_ = salt.loader.returners(__opts__, [])
     if not args:
         # We're being asked for all functions
-        return sorted(returners_.keys())
+        return sorted(returners_)
 
     names = set()
     for module in args:
@@ -760,10 +769,11 @@ def list_returner_functions(*args, **kwargs):
             # sysctl
             module = module + '.' if not module.endswith('.') else module
         if _use_fnmatch:
-            for func in fnmatch.filter(returners_.keys(), target_mod):
-                names.add(func)
+            for func in returners_:
+                if func.startswith(module):
+                    names.add(func)
         else:
-            for func in returners_.keys():
+            for func in six.iterkeys(returners_):
                 if func.startswith(module):
                     names.add(func)
     return sorted(names)
@@ -792,7 +802,7 @@ def list_renderers(*args):
     ren = set()
 
     if not args:
-        for func in ren_.keys():
+        for func in six.iterkeys(ren_):
             ren.add(func)
         return sorted(ren)
 

@@ -44,19 +44,22 @@ the default location::
     salt '*' test.ping --return carbon --return_config alternative
 '''
 
-
 # Import python libs
-from contextlib import contextmanager
+from __future__ import absolute_import
 import collections
 import logging
-import cPickle as pickle
 import socket
 import struct
 import time
+from contextlib import contextmanager
 
 # Import salt libs
-import salt.utils
+import salt.utils.jid
 import salt.returners
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import cPickle, map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -125,7 +128,7 @@ def _send_picklemetrics(metrics):
     metrics = [(metric_name, (timestamp, value))
                for (metric_name, value, timestamp) in metrics]
 
-    data = pickle.dumps(metrics, -1)
+    data = cPickle.dumps(metrics, -1)
     payload = struct.pack('!L', len(data)) + data
 
     return payload
@@ -161,7 +164,7 @@ def _walk(path, value, metrics, timestamp, skip):
     '''
 
     if isinstance(value, collections.Mapping):
-        for key, val in value.items():
+        for key, val in six.iteritems(value):
             _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
     else:
         try:
@@ -232,8 +235,8 @@ def returner(ret):
             total_sent_bytes += sent_bytes
 
 
-def prep_jid(nocache):  # pylint: disable=unused-argument
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

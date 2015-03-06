@@ -6,6 +6,7 @@ Support for haproxy
 '''
 
 from __future__ import generators
+from __future__ import absolute_import
 
 # Import python libs
 import stat

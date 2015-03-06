@@ -25,11 +25,15 @@ as either absent or present
 '''
 
 # Import python libs
-import logging
+from __future__ import absolute_import
 import os
+import logging
 
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -194,7 +198,7 @@ def present(name,
         will be assigned
 
     gid
-        The default group id
+        The default group id. Also accepts group name.
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
@@ -304,10 +308,10 @@ def present(name,
         Date that account expires, represented in days since epoch (January 1,
         1970).
     '''
-    fullname = str(fullname) if fullname is not None else fullname
-    roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
-    workphone = str(workphone) if workphone is not None else workphone
-    homephone = str(homephone) if homephone is not None else homephone
+    fullname = salt.utils.sdecode(fullname) if fullname is not None else fullname
+    roomnumber = salt.utils.sdecode(roomnumber) if roomnumber is not None else roomnumber
+    workphone = salt.utils.sdecode(workphone) if workphone is not None else workphone
+    homephone = salt.utils.sdecode(homephone) if homephone is not None else homephone
 
     ret = {'name': name,
            'changes': {},
@@ -373,7 +377,7 @@ def present(name,
             ret['result'] = None
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
-            for key, val in changes.items():
+            for key, val in six.iteritems(changes):
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
@@ -382,7 +386,7 @@ def present(name,
         if __grains__['kernel'] == 'OpenBSD':
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
-        for key, val in changes.items():
+        for key, val in six.iteritems(changes):
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
@@ -523,7 +527,7 @@ def present(name,
                         ret['result'] = False
                     ret['changes']['mindays'] = mindays
                 if maxdays:
-                    __salt__['shadow.set_maxdays'](name, mindays)
+                    __salt__['shadow.set_maxdays'](name, maxdays)
                     spost = __salt__['shadow.info'](name)
                     if spost['max'] != maxdays:
                         ret['comment'] = 'User {0} created but failed to set' \
@@ -546,7 +550,7 @@ def present(name,
                     if spost['warn'] != warndays:
                         ret['comment'] = 'User {0} created but failed to set' \
                                          ' warn days to' \
-                                         ' {1}'.format(name, mindays)
+                                         ' {1}'.format(name, warndays)
                         ret['result'] = False
                     ret['changes']['warndays'] = warndays
                 if expire:

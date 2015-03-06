@@ -2,6 +2,7 @@
 '''
 Support for the Git SCM
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -10,6 +11,8 @@ import subprocess
 # Import salt libs
 from salt import utils
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
+from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
 
 
 def __virtual__():
@@ -50,6 +53,7 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
                                              cwd=cwd,
                                              runas=runas,
                                              env=env,
+                                             python_shell=False,
                                              **kwargs)
 
             # if the command was successful, no need to try additional IDs
@@ -66,13 +70,16 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
                                          cwd=cwd,
                                          runas=runas,
                                          env=env,
+                                         python_shell=False,
                                          **kwargs)
         retcode = result['retcode']
 
         if retcode == 0:
             return result['stdout']
         else:
-            raise CommandExecutionError(result['stderr'])
+            raise CommandExecutionError(
+                'Command {0!r} failed. Stderr: {1!r}'.format(cmd,
+                                                             result['stderr']))
 
 
 def _git_getdir(cwd, user=None):
@@ -95,6 +102,20 @@ def _check_git():
     Check if git is available
     '''
     utils.check_or_die('git')
+
+
+def _add_http_basic_auth(repository, https_user=None, https_pass=None):
+    if https_user is None and https_pass is None:
+        return repository
+    else:
+        urltuple = _urlparse(repository)
+        if urltuple.scheme == 'https':
+            netloc = "{0}:{1}@{2}".format(https_user, https_pass,
+                                          urltuple.netloc)
+            urltuple = urltuple._replace(netloc=netloc)
+            return _urlunparse(urltuple)
+        else:
+            raise ValueError('Basic Auth only supported for HTTPS scheme')
 
 
 def current_branch(cwd, user=None):
@@ -140,7 +161,8 @@ def revision(cwd, rev='HEAD', short=False, user=None):
     return _git_run(cmd, cwd, runas=user)
 
 
-def clone(cwd, repository, opts=None, user=None, identity=None):
+def clone(cwd, repository, opts=None, user=None, identity=None,
+          https_user=None, https_pass=None):
     '''
     Clone a new repository
 
@@ -159,6 +181,12 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
     identity : None
         A path to a private key to use over SSH
 
+    https_user : None
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass : None
+        HTTP Basic Auth password for HTTPS (only) clones
+
     CLI Example:
 
     .. code-block:: bash
@@ -170,6 +198,8 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
 
     '''
     _check_git()
+
+    repository = _add_http_basic_auth(repository, https_user, https_pass)
 
     if not opts:
         opts = ''
@@ -201,7 +231,10 @@ def describe(cwd, rev='HEAD', user=None):
         salt '*' git.describe /path/to/repo develop
     '''
     cmd = 'git describe {0}'.format(rev)
-    return __salt__['cmd.run_stdout'](cmd, cwd=cwd, runas=user)
+    return __salt__['cmd.run_stdout'](cmd,
+                                      cwd=cwd,
+                                      runas=user,
+                                      python_shell=False)
 
 
 def archive(cwd, output, rev='HEAD', fmt=None, prefix=None, user=None):
@@ -693,7 +726,8 @@ def remote_get(cwd, remote='origin', user=None):
         return None
 
 
-def remote_set(cwd, name='origin', url=None, user=None):
+def remote_set(cwd, name='origin', url=None, user=None, https_user=None,
+               https_pass=None):
     '''
     sets a remote with name and URL like git remote add <remote_name> <remote_url>
 
@@ -706,6 +740,12 @@ def remote_set(cwd, name='origin', url=None, user=None):
     user : None
         Run git as a user other than what the minion runs as
 
+    https_user : None
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass : None
+        HTTP Basic Auth password for HTTPS (only) clones
+
     CLI Example:
 
     .. code-block:: bash
@@ -716,6 +756,7 @@ def remote_set(cwd, name='origin', url=None, user=None):
     if remote_get(cwd, name):
         cmd = 'git remote rm {0}'.format(name)
         _git_run(cmd, cwd=cwd, runas=user)
+    url = _add_http_basic_auth(url, https_user, https_pass)
     cmd = 'git remote add {0} {1}'.format(name, url)
     _git_run(cmd, cwd=cwd, runas=user)
     return remote_get(cwd=cwd, remote=name, user=None)
@@ -835,14 +876,14 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
         raise SaltInvocationError('Either `is_global` must be set to True or '
                                   'you must provide `cwd`')
 
-    scope = '--local'
     if is_global:
-        scope = '--global'
+        cmd = 'git config --global {0} "{1}"'.format(setting_name, setting_value)
+    else:
+        cmd = 'git config {0} "{1}"'.format(setting_name, setting_value)
 
     _check_git()
 
-    return _git_run('git config {0} {1} {2}'.format(scope, setting_name, setting_value),
-                    cwd=cwd, runas=user)
+    return _git_run(cmd, cwd=cwd, runas=user)
 
 
 def config_get(cwd=None, setting_name=None, user=None):
@@ -875,7 +916,8 @@ def config_get(cwd=None, setting_name=None, user=None):
     return _git_run('git config {0}'.format(setting_name), cwd=cwd, runas=user)
 
 
-def ls_remote(cwd, repository="origin", branch="master", user=None, identity=None):
+def ls_remote(cwd, repository="origin", branch="master", user=None,
+              identity=None, https_user=None, https_pass=None):
     '''
     Returns the upstream hash for any given URL and branch.
 
@@ -895,6 +937,12 @@ def ls_remote(cwd, repository="origin", branch="master", user=None, identity=Non
     identity : none
         a path to a private key to use over ssh
 
+    https_user : None
+        HTTP Basic Auth username for HTTPS (only) clones
+
+    https_pass : None
+        HTTP Basic Auth password for HTTPS (only) clones
+
     CLI Example:
 
     .. code-block:: bash
@@ -903,5 +951,6 @@ def ls_remote(cwd, repository="origin", branch="master", user=None, identity=Non
 
     '''
     _check_git()
+    repository = _add_http_basic_auth(repository, https_user, https_pass)
     cmd = "git ls-remote -h " + repository + " " + branch + " | cut -f 1"
     return _git_run(cmd, cwd=cwd, runas=user, identity=identity)

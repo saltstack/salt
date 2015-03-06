@@ -20,6 +20,10 @@ specification as defined in the MySQL documentation:
 * db_name.tbl_name
 * etc...
 
+This state is not able to set password for the permission from the
+specified host. See :py:mod:`salt.states.mysql_user` for further
+instructions.
+
 .. code-block:: yaml
 
    frank_exampledb:
@@ -41,6 +45,7 @@ specification as defined in the MySQL documentation:
        - database: somedb.sometable
        - user: joe
 '''
+from __future__ import absolute_import
 
 import sys
 
@@ -82,7 +87,7 @@ def present(name,
         The grant priv_type (i.e. select,insert,update OR all privileges)
 
     database
-        The database priv_level (ie. db.tbl OR db.*)
+        The database priv_level (i.e. db.tbl OR db.*)
 
     user
         The user to apply the grant to

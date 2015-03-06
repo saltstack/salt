@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
 # Import salt libs
-import salt.cli
+from salt.scripts import salt_api
 
-def main():
-    sapi = salt.cli.SaltAPI()
-    sapi.run()
 
 if __name__ == '__main__':
-    main()
+    salt_api()

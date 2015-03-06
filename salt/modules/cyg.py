@@ -4,15 +4,21 @@ Manage cygwin packages.
 
 Module file to accompany the cyg state.
 """
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 import re
 import os
 import bz2
-from urllib import urlopen
+
+# Import 3rd-party libs
+from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
+
+# Import Salt libs
 import salt.utils
 from salt.exceptions import SaltInvocationError
+
 
 LOG = logging.getLogger(__name__)
 
@@ -28,6 +34,7 @@ def __virtual__():
     if salt.utils.is_windows():
         return __virtualname__
     return False
+
 
 __func_alias__ = {
     'list_': 'list'
@@ -72,7 +79,7 @@ def _get_all_packages(mirror=DEFAULT_MIRROR,
     if not len(__context__['cyg.all_packages'][mirror]):
         pkg_source = '/'.join([mirror, cyg_arch, 'setup.bz2'])
 
-        file_data = urlopen(pkg_source).read()
+        file_data = _urlopen(pkg_source).read()
         file_lines = bz2.decompress(file_data).decode('utf_8',
                                                       errors='replace'
                                                      ).splitlines()
@@ -90,13 +97,14 @@ def check_valid_package(package,
                         mirrors=None):
     """Check if the package is valid on the given mirrors."""
     if mirrors is None:
-        mirrors = {DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}
+        mirrors = [{DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}]
 
     LOG.debug('Checking Valid Mirrors: {0}'.format(mirrors))
 
     for mirror in mirrors:
-        if package in _get_all_packages(mirror, cyg_arch):
-            return True
+        for mirror_url, key in mirror.items():
+            if package in _get_all_packages(mirror_url, cyg_arch):
+                return True
     return False
 
 
@@ -122,19 +130,21 @@ def _run_silent_cygwin(cyg_arch='x86_64',
     elif os.path.exists(cyg_setup_path):
         os.remove(cyg_setup_path)
 
-    file_data = urlopen(cyg_setup_source)
-    open(cyg_setup_path, "wb").write(file_data.read())
+    file_data = _urlopen(cyg_setup_source)
+    with salt.utils.fopen(cyg_setup_path, "wb") as fhw:
+        fhw.write(file_data.read())
 
     setup_command = cyg_setup_path
     options = []
     options.append('--local-package-dir {0}'.format(cyg_cache_dir))
 
     if mirrors is None:
-        mirrors = {DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}
-    for mirror, key in mirrors.items():
-        options.append('--site {0}'.format(mirror))
-        if key:
-            options.append('--pubkey {0}'.format(key))
+        mirrors = [{DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}]
+    for mirror in mirrors:
+        for mirror_url, key in mirror.items():
+            options.append('--site {0}'.format(mirror_url))
+            if key:
+                options.append('--pubkey {0}'.format(key))
     options.append('--no-desktop')
     options.append('--quiet-mode')
     options.append('--disable-buggy-antivirus')
@@ -157,15 +167,11 @@ def _run_silent_cygwin(cyg_arch='x86_64',
 
 def _cygcheck(args, cyg_arch='x86_64'):
     """Run the cygcheck executable."""
-    bashcmd = ' '.join([
-        os.sep.join(['c:', _get_cyg_dir(cyg_arch), 'bin', 'bash']),
-        '--login', '-c'])
-    cygcheck = '\'cygcheck {0}\''.format(args)
-    cmdline = ' '.join([bashcmd, cygcheck])
+    cmd = ' '.join([
+        os.sep.join(['c:', _get_cyg_dir(cyg_arch), 'bin', 'cygcheck']),
+        '-c', args])
 
-    ret = __salt__['cmd.run_all'](
-        cmdline
-    )
+    ret = __salt__['cmd.run_all'](cmd)
 
     if ret['retcode'] == 0:
         return ret['stdout']
@@ -191,6 +197,7 @@ def install(packages=None,
     .. code-block:: bash
 
         salt '*' cyg.install dos2unix
+        salt '*' cyg.install dos2unix mirrors=[{'http://mirror': 'http://url/to/public/key}]
     """
     args = []
     # If we want to install packages
@@ -222,6 +229,7 @@ def uninstall(packages,
     .. code-block:: bash
 
         salt '*' cyg.uninstall dos2unix
+        salt '*' cyg.uninstall dos2unix mirrors=[{'http://mirror': 'http://url/to/public/key}]
     """
     args = []
     if packages is not None:
@@ -247,6 +255,7 @@ def update(cyg_arch='x86_64', mirrors=None):
     .. code-block:: bash
 
         salt '*' cyg.update
+        salt '*' cyg.update dos2unix mirrors=[{'http://mirror': 'http://url/to/public/key}]
     """
     args = []
     args.append('--upgrade-also')

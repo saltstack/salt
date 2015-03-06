@@ -2,6 +2,7 @@
 '''
 Module for using the locate utilities
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -118,5 +119,5 @@ def locate(pattern, database='', limit=0, **kwargs):
     if 'regex' in kwargs and bool(kwargs['regex']) is True:
         options += ' --regex'
     cmd = 'locate {0} {1}'.format(options, pattern)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out

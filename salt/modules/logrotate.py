@@ -2,6 +2,7 @@
 '''
 Module for managing logrotate.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

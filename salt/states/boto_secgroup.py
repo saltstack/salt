@@ -69,6 +69,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -76,6 +77,7 @@ import logging
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -183,6 +185,63 @@ def _security_group_present(
     return ret
 
 
+def _split_rules(rules):
+    '''
+    Split rules with lists into individual rules.
+
+    We accept some attributes as lists or strings. The data we get back from
+    the execution module lists rules as individual rules. We need to split the
+    provided rules into individual rules to compare them.
+    '''
+    split = []
+    for rule in rules:
+        cidr_ip = rule.get('cidr_ip')
+        group_name = rule.get('source_group_name')
+        group_id = rule.get('source_group_group_id')
+        if cidr_ip and not isinstance(cidr_ip, string_types):
+            for ip in cidr_ip:
+                _rule = rule.copy()
+                _rule['cidr_ip'] = ip
+                split.append(_rule)
+        elif group_name and not isinstance(group_name, string_types):
+            for name in group_name:
+                _rule = rule.copy()
+                _rule['source_group_name'] = name
+                split.append(_rule)
+        elif group_id and not isinstance(group_id, string_types):
+            for _id in group_id:
+                _rule = rule.copy()
+                _rule['source_group_group_id'] = _id
+                split.append(_rule)
+        else:
+            split.append(rule)
+    return split
+
+
+def _check_rule(rule, _rule):
+    '''
+    Check to see if two rules are the same. Needed to compare rules fetched
+    from boto, since they may not completely match rules defined in sls files
+    but may be functionally equivalent.
+    '''
+    if (rule['ip_protocol'] == _rule['ip_protocol'] and
+            str(rule['from_port']) == str(_rule['from_port']) and
+            str(rule['to_port']) == str(_rule['to_port'])):
+        _cidr_ip = _rule.get('cidr_ip')
+        if _cidr_ip and _cidr_ip == rule.get('cidr_ip'):
+            return True
+        _owner_id = _rule.get('source_group_owner_id')
+        if _owner_id and _owner_id == rule.get('source_group_owner_id'):
+            return True
+        _group_id = _rule.get('source_group_group_id')
+        if _group_id and _group_id == rule.get('source_group_group_id'):
+            return True
+        _group_name = _rule.get('source_group_name')
+        if _group_name and _group_id == rule.get('source_group_name'):
+            return True
+    return False
+
+
 def _get_rule_changes(rules, _rules):
     '''
     given a list of desired rules (rules) and existing rules (_rules) return
@@ -196,8 +255,6 @@ def _get_rule_changes(rules, _rules):
     for rule in rules:
         try:
             ip_protocol = rule.get('ip_protocol')
-            to_port = rule.get('to_port')
-            from_port = rule.get('from_port')
         except KeyError:
             raise SaltInvocationError('ip_protocol, to_port, and from_port are'
                                       ' required arguments for security group'
@@ -209,7 +266,6 @@ def _get_rule_changes(rules, _rules):
         cidr_ip = rule.get('cidr_ip', None)
         group_name = rule.get('source_group_name', None)
         group_id = rule.get('source_group_group_id', None)
-        owner_id = rule.get('source_group_owner_id', None)
         if cidr_ip and (group_id or group_name):
             raise SaltInvocationError('cidr_ip and source groups can not both'
                                       ' be specified in security group rules.')
@@ -225,46 +281,26 @@ def _get_rule_changes(rules, _rules):
         # for each rule in existing security group ruleset determine if
         # new rule exists
         for _rule in _rules:
-            if (ip_protocol == _rule['ip_protocol'] and
-                    from_port == _rule['from_port'] and
-                    to_port == _rule['to_port']):
-                _cidr_ip = _rule.get('cidr_ip', None)
-                _owner_id = _rule.get('source_group_owner_id', None)
-                _group_id = _rule.get('source_group_group_id', None)
-                _group_name = _rule.get('source_group_name', None)
-                if (cidr_ip == _cidr_ip or owner_id == _owner_id or
-                        group_id == _group_id or group_name == _group_name):
-                    rule_found = True
+            if _check_rule(rule, _rule):
+                rule_found = True
+                break
         if not rule_found:
             to_create.append(rule)
     # for each rule in existing security group configuration
     # 1. determine if rules needed to be deleted
     for _rule in _rules:
-        _ip_protocol = _rule.get('ip_protocol')
-        _to_port = _rule.get('to_port')
-        _from_port = _rule.get('from_port')
-        _cidr_ip = _rule.get('cidr_ip', None)
-        _owner_id = _rule.get('source_group_owner_id', None)
-        _group_id = _rule.get('source_group_group_id', None)
-        _group_name = _rule.get('source_group_name', None)
         rule_found = False
         for rule in rules:
-            cidr_ip = rule.get('cidr_ip', None)
-            group_name = rule.get('source_group_name', None)
-            group_id = rule.get('source_group_group_id', None)
-            owner_id = rule.get('source_group_owner_id', None)
-            if (rule['ip_protocol'] == _ip_protocol and
-                    rule['from_port'] == _from_port and
-                    rule['to_port'] == _to_port):
-                if (cidr_ip == _cidr_ip or owner_id == _owner_id or
-                        group_id == _group_id or group_name == _group_name):
-                    rule_found = True
+            if _check_rule(rule, _rule):
+                rule_found = True
+                break
         if not rule_found:
             # Can only supply name or id, not both. Since we're deleting
             # entries, it doesn't matter which we pick.
             _rule.pop('source_group_name', None)
             to_delete.append(_rule)
-
+    log.debug('Rules to be deleted: {0}'.format(to_delete))
+    log.debug('Rules to be created: {0}'.format(to_create))
     return (to_delete, to_create)
 
 
@@ -290,6 +326,7 @@ def _rules_present(
         ret['comment'] = msg.format(name)
         ret['result'] = False
         return ret
+    rules = _split_rules(rules)
     if vpc_id:
         for rule in rules:
             _source_group_name = rule.get('source_group_name', None)

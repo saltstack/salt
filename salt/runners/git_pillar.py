@@ -2,6 +2,7 @@
 '''
 Directly manage the salt git_pillar plugin
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.pillar.git_pillar

@@ -71,7 +71,7 @@ Default: ``None``
 The id to be passed in the publish job to minions. This is used for MultiSyndics
 to return the job to the requesting master.
 
-.. note:: 
+.. note::
 
     This must be the same string as the syndic is configured with.
 
@@ -115,7 +115,7 @@ seeing on the console(and then salt-master crashes):
 By default this value will be the one of `ulimit -Hn`, i.e., the hard limit for
 max open files.
 
-To set a different value than the default one, uncomment and configure this
+To set a different value than the default one, uncomment, and configure this
 setting. Remember that this value CANNOT be higher than the hard limit. Raising
 the hard limit depends on the OS and/or distribution, a good way to find the
 limit is to search the internet for something like this:
@@ -444,8 +444,12 @@ performance of max_minions.
 
 Default: False
 
-When enabled the master regularly sends events of currently connected, lost
-and newly connected minions on the eventbus.
+Causes the master to periodically look for actively connected minions.
+:ref:`Presence events <event-master_presence>` are fired on the event bus on a
+regular interval with a list of connected minions, as well as events with lists
+of newly connected or disconnected minions. This is a master-only operation
+that does not send executions to minions. Note, this does not detect minions
+that connect to a master via localhost.
 
 .. code-block:: yaml
 
@@ -905,8 +909,8 @@ Example:
 Default: ``md5``
 
 The hash_type is the hash to use when discovering the hash of a file on
-the master server. The default is md5, but sha1, sha224, sha256, sha384
-and sha512 are also supported.
+the master server. The default is md5, but sha1, sha224, sha256, sha384, and
+sha512 are also supported.
 
 .. code-block:: yaml
 
@@ -2158,7 +2162,8 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`.
+:conf_log:`log_level_logfile`. When it is not set explicitly 
+it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml
 

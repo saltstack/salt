@@ -4,6 +4,7 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 import random
 import string
@@ -15,15 +16,18 @@ from salttesting.helpers import ensure_in_syspath, expensiveTest
 ensure_in_syspath('../../../')
 
 # Import Salt Libs
-import integration
+import integration  # pylint: disable=import-error
 from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
+# pylint: disable=import-error
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
-    import azure  # pylint: disable=W0611
+    import azure  # pylint: disable=unused-import
     HAS_AZURE = True
 except ImportError:
     HAS_AZURE = False
+# pylint: enable=import-error
 
 
 def __random_name(size=6):
@@ -136,5 +140,5 @@ class AzureTest(integration.ShellCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(AzureTest)

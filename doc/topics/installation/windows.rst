@@ -20,6 +20,24 @@ minion exe>` should match the contents of the corresponding md5 file.
 
 .. admonition:: Download here
 
+    * 2014.7.2
+    * `Salt-Minion-2014.7.2-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.2-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.2-x86-Setup.exe.md5>`__
+    * `Salt-Minion-2014.7.2-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.2-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.2-AMD64-Setup.exe.md5>`__
+
+    * 2014.7.1
+    * `Salt-Minion-2014.7.1-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.1-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.1-x86-Setup.exe.md5>`__
+    * `Salt-Minion-2014.7.1-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.1-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.1-AMD64-Setup.exe.md5>`__
+
+    * 2014.7.0
+    * Salt-Minion-2014.7.0-1-win32-Setup.exe | md5
+    * Salt-Minion-2014.7.0-AMD64-Setup.exe | md5
+    .. note::
+        The 2014.7.0 installers have been removed because of a regression. Please use the 2014.7.1 release instead.
+
+    * 2014.1.13
+    * `Salt-Minion-2014.1.13-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-x86-Setup.exe.md5>`__
+    * `Salt-Minion-2014.1.13-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-AMD64-Setup.exe.md5>`__
+
     * 2014.1.11
     * `Salt-Minion-2014.1.11-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-win32-Setup.exe.md5>`__
     * `Salt-Minion-2014.1.11-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-AMD64-Setup.exe.md5>`__
@@ -111,7 +129,7 @@ minion exe>` should match the contents of the corresponding md5 file.
 
 .. note::
 
-    The executables above will install dependencies that the Salt minion
+    The executables above will install all dependencies that the Salt minion
     requires.
 
 The 64bit installer has been tested on Windows 7 64bit and Windows Server
@@ -153,7 +171,7 @@ Setting up a Windows build environment
 2.  Install `msysgit`_
 
 3.  Clone the Salt git repository from GitHub
-    
+
     .. code-block:: bash
 
         git clone git://github.com/saltstack/salt.git
@@ -168,11 +186,11 @@ Setting up a Windows build environment
     .. code-block:: bash
 
         python ez_setup.py
-    
+
 7.  Install Pip
 
     .. code-block:: bash
-        
+
         easy_install pip
 
 8.  Install the latest point release of `OpenSSL for Windows`_
@@ -206,39 +224,63 @@ Setting up a Windows build environment
     .. code-block:: bash
 
         easy_install pyzmq
-        
+
 17. Install PyYAML
 
     .. code-block:: bash
 
         easy_install pyyaml
-        
+
 18. Install bbfreeze
 
     .. code-block:: bash
 
         easy_install bbfreeze
 
-19. Install wmi 
+19. Install wmi
 
     .. code-block:: bash
 
         pip install wmi
 
-20. Install esky 
+20. Install requests
+
+    .. code-block:: bash
+
+        pip install requests
+
+21. Install markupsafe
+
+    .. code-block:: bash
+
+        pip install markupsafe
+
+22. Install six
+
+    .. code-block:: bash
+
+        pip install six
+
+23. Install esky
 
     .. code-block:: bash
 
         pip install esky
 
-21. Install Salt
+24. Install certifi
+
+    .. code-block:: bash
+
+        pip install certifi
+
+25. Install Salt
 
     .. code-block:: bash
 
         cd salt
         python setup.py install
 
-22. Build a frozen binary distribution of Salt
+26. Build a frozen binary distribution of Salt
 
     .. code-block:: bash
 
@@ -349,4 +391,3 @@ this, salt-minion can't report some installed packages.
 .. _Cython: http://www.lfd.uci.edu/~gohlke/pythonlibs/#cython
 .. _jinja2: http://www.lfd.uci.edu/~gohlke/pythonlibs/#jinja2
 .. _msgpack: http://www.lfd.uci.edu/~gohlke/pythonlibs/#msgpack
-

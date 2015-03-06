@@ -12,7 +12,12 @@ Useful for playing the game: " some of these things are not like the others... "
 when identifying discrepancies in a large infrastructure managed by salt.
 '''
 
+from __future__ import print_function
+
+from __future__ import absolute_import
+
 import salt.client
+from salt.ext.six.moves import range
 
 
 def hash(*args, **kwargs):
@@ -45,16 +50,16 @@ def hash(*args, **kwargs):
 
     bulk_ret = _get_pool_results(*args, **kwargs)
     for k in bulk_ret:
-        print 'minion pool :\n' \
-              '------------'
-        print k['pool']
-        print 'pool size :\n' \
-              '----------'
-        print '    ' + str(len(k['pool']))
-        print 'pool result :\n' \
-              '-------'
-        print '    ' + str(k['result'])
-        print '\n'
+        print('minion pool :\n'
+              '------------')
+        print(k['pool'])
+        print('pool size :\n'
+              '----------')
+        print('    ' + str(len(k['pool'])))
+        print('pool result :\n'
+              '-------')
+        print('    ' + str(k['result']))
+        print('\n')
 
     return bulk_ret
 
@@ -97,29 +102,29 @@ def diff(*args, **kwargs):
 
     is_first_time = True
     for k in bulk_ret:
-        print 'minion pool :\n' \
-              '------------'
-        print k['pool']
-        print 'pool size :\n' \
-              '----------'
-        print '    ' + str(len(k['pool']))
+        print('minion pool :\n'
+              '------------')
+        print(k['pool'])
+        print('pool size :\n'
+              '----------')
+        print('    ' + str(len(k['pool'])))
         if is_first_time:
             is_first_time = False
-            print 'pool result :\n' \
-                  '------------'
-            print '    ' + bulk_ret[0]['result']
-            print
+            print('pool result :\n'
+                  '------------')
+            print('    ' + bulk_ret[0]['result'])
+            print()
             continue
 
         outs = ('differences from "{0}" results :').format(
             bulk_ret[0]['pool'][0])
-        print outs
-        print '-' * (len(outs) - 1)
+        print(outs)
+        print('-' * (len(outs) - 1))
         from_result = bulk_ret[0]['result'].splitlines()
-        for i in xrange(0, len(from_result)):
+        for i in range(0, len(from_result)):
             from_result[i] += '\n'
         to_result = k['result'].splitlines()
-        for i in xrange(0, len(to_result)):
+        for i in range(0, len(to_result)):
             to_result[i] += '\n'
         outs = ''
         outs += ''.join(difflib.unified_diff(from_result,
@@ -127,8 +132,8 @@ def diff(*args, **kwargs):
                                              fromfile=bulk_ret[0]['pool'][0],
                                              tofile=k['pool'][0],
                                              n=0))
-        print outs
-        print
+        print(outs)
+        print()
 
     return bulk_ret
 

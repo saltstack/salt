@@ -3,15 +3,20 @@
 Test module for syslog_ng
 '''
 
+# Import Python modules
+from __future__ import absolute_import
+from textwrap import dedent
+
 # Import Salt Testing libs
-import salt
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from textwrap import dedent
+
 
 ensure_in_syspath('../../')
 
+# Import Salt libs
+import salt
 from salt.modules import syslog_ng
 
 syslog_ng.__salt__ = {}
@@ -250,7 +255,7 @@ class SyslogNGTestCase(TestCase):
                               expected_output=mock_return_value)
 
     def _assert_template(self,
-                         mock_funtion_args,
+                         mock_function_args,
                          mock_return_value,
                          function_to_call,
                          expected_output,
@@ -261,7 +266,7 @@ class SyslogNGTestCase(TestCase):
         installed = True
         if not salt.utils.which("syslog-ng"):
             installed = False
-            if "syslog-ng-ctl" in mock_funtion_args:
+            if "syslog-ng-ctl" in mock_function_args:
                 expected_output = _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE
             else:
                 expected_output = _SYSLOG_NG_NOT_INSTALLED_RETURN_VALUE
@@ -276,7 +281,7 @@ class SyslogNGTestCase(TestCase):
                 self.assertTrue(mock_function.called)
                 self.assertEqual(len(mock_function.call_args), 2)
                 mock_param = mock_function.call_args
-                self.assertTrue(mock_param[0][0].endswith(mock_funtion_args))
+                self.assertTrue(mock_param[0][0].endswith(mock_function_args))
 
 
 if __name__ == '__main__':

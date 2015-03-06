@@ -5,6 +5,7 @@ Module for interfacing to the REST example
 pre-pre-ALPHA QUALITY code.
 
 '''
+from __future__ import absolute_import
 
 # Import python libraries
 import logging

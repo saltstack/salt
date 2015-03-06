@@ -62,6 +62,7 @@ these states. Here is some example SLS:
     ``python-apt`` will need to be manually installed if it is not present.
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import sys
@@ -194,6 +195,10 @@ def managed(name, **kwargs):
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
 
+    clean_file
+       If set to true, empty file before config repo, dangerous if use
+       multiple sources in one file.
+
     refresh_db
        If set to false this will skip refreshing the apt package database on
        debian based systems.
@@ -243,6 +248,15 @@ def managed(name, **kwargs):
             'Failed to configure repo {0!r}: {1}'.format(name, exc)
         return ret
 
+    # aptpkg supports "disabled", yumpkg supports "enabled"
+    # lets just provide both to everyone.
+    if 'enabled' in kwargs and 'disabled' not in kwargs:
+        kw_enabled = kwargs['enabled'] in (['true', 'True', 'TRUE', True, 1])
+        kwargs['disabled'] = not kw_enabled
+    if 'disabled' in kwargs and 'enabled' not in kwargs:
+        kw_disabled = kwargs['disabled'] in (['true', 'True', 'TRUE', True, 1])
+        kwargs['enabled'] = not kw_disabled
+
     # this is because of how apt-sources works.  This pushes distro logic
     # out of the state itself and into a module that it makes more sense
     # to use.  Most package providers will simply return the data provided
@@ -259,7 +273,7 @@ def managed(name, **kwargs):
         for kwarg in sanitizedkwargs:
             if kwarg == 'repo':
                 pass
-            elif kwarg not in repo.keys():
+            elif kwarg not in repo:
                 notset = True
             elif kwarg == 'comps':
                 if sorted(sanitizedkwargs[kwarg]) != sorted(repo[kwarg]):
@@ -280,6 +294,7 @@ def managed(name, **kwargs):
             ret['comment'] = ('Package repo {0!r} already configured'
                               .format(name))
             return ret
+
     if __opts__['test']:
         ret['comment'] = ('Package repo {0!r} will be configured. This may '
                           'cause pkg states to behave differently than stated '
@@ -287,6 +302,11 @@ def managed(name, **kwargs):
                           'to the differences in the configured repositories.'
                           .format(name))
         return ret
+
+    # empty file before configure
+    if kwargs.get('clean_file', False):
+        open(kwargs['file'], 'w').close()
+
     try:
         if __grains__['os_family'] == 'Debian':
             __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
@@ -367,7 +387,9 @@ def absent(name, **kwargs):
            'comment': ''}
     repo = {}
     if 'ppa' in kwargs and __grains__['os'] == 'Ubuntu':
-        kwargs['name'] = kwargs.pop('ppa')
+        name = kwargs.pop('ppa')
+        if not name.startswith('ppa:'):
+            name = 'ppa:' + name
 
     try:
         repo = __salt__['pkg.get_repo'](
@@ -392,7 +414,7 @@ def absent(name, **kwargs):
         return ret
     __salt__['pkg.del_repo'](repo=name, **kwargs)
     repos = __salt__['pkg.list_repos']()
-    if name not in repos.keys():
+    if name not in repos:
         ret['result'] = True
         ret['changes'] = {'repo': name}
         ret['comment'] = 'Removed package repo {0}'.format(name)

@@ -5,7 +5,7 @@ Salt 0.15.0 Release Notes
 :release: 2013-05-03
 
 The many new features of Salt 0.15.0 have arrived! Salt 0.15.0 comes with many
-smaller features and a few larger ones. 
+smaller features and a few larger ones.
 
 These features range from better debugging tools to the new Salt Mine system.
 

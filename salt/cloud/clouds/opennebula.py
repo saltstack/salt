@@ -20,6 +20,7 @@ at ``/etc/salt/cloud.providers`` or
       provider: opennebula
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -41,7 +42,7 @@ from salt.exceptions import (
 
 # Attempt to import xmlrpclib and lxml
 try:
-    import xmlrpclib
+    import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
     from lxml import etree
     HAS_XMLLIBS = True
 except ImportError:
@@ -78,7 +79,7 @@ def _get_xml_rpc():
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__
     )
-    server = xmlrpclib.ServerProxy(xml_rpc)
+    server = salt.ext.six.moves.xmlrpc_client.ServerProxy(xml_rpc)
 
     return server, user, password
 

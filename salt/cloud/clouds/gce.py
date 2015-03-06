@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=C0302
 '''
 Copyright 2013 Google Inc. All Rights Reserved.
 
@@ -42,65 +41,6 @@ Setting up Service Account Authentication:
     /etc/salt/cloud file as 'service_account_private_key' setting.
   - Consider using a more secure location for your private key.
 
-Supported commands:
-  # Create a few instances fro profile_name in /etc/salt/cloud.profiles
-  - salt-cloud -p profile_name inst1 inst2 inst3
-  # Delete an instance
-  - salt-cloud -d inst1
-  # Look up data on an instance
-  - salt-cloud -a show_instance inst2
-  # List available locations (aka 'zones') for provider 'gce'
-  - salt-cloud --list-locations gce
-  # List available instance sizes (aka 'machine types') for provider 'gce'
-  - salt-cloud --list-sizes gce
-  # List available images for provider 'gce'
-  - salt-cloud --list-images gce
-  # Create a persistent disk
-  - salt-cloud -f create_disk gce disk_name=pd location=us-central1-b ima...
-  # Permanently delete a persistent disk
-  - salt-cloud -f delete_disk gce disk_name=pd
-  # Attach an existing disk to an existing instance
-  - salt-cloud -a attach_disk myinstance disk_name=mydisk mode=READ_ONLY
-  # Detach a disk from an instance
-  - salt-cloud -a detach_disk myinstance disk_name=mydisk
-  # Show information about the named disk
-  - salt-cloud -a show_disk myinstance disk_name=pd
-  - salt-cloud -f show_disk gce disk_name=pd
-  # Create a snapshot of a persistent disk
-  - salt-cloud -f create_snapshot gce name=snap-1 disk_name=pd
-  # Permanently delete a disk snapshot
-  - salt-cloud -f delete_snapshot gce name=snap-1
-  # Show information about the named snapshot
-  - salt-cloud -f show_snapshot gce name=snap-1
-  # Create a network
-  - salt-cloud -f create_network gce name=mynet cidr=10.10.10.0/24
-  # Delete a network
-  - salt-cloud -f delete_network gce name=mynet
-  # Show info for a network
-  - salt-cloud -f show_network gce name=mynet
-  # Create a firewall rule
-  - salt-cloud -f create_fwrule gce name=fw1 network=mynet allow=tcp:80
-  # Delete a firewall rule
-  - salt-cloud -f delete_fwrule gce name=fw1
-  # Show info for a firewall rule
-  -salt-cloud -f show_fwrule gce name=fw1
-  # Create a load-balancer HTTP health check
-  - salt-cloud -f create_hc gce name=hc path=/ port=80
-  # Delete a load-balancer HTTP health check
-  - salt-cloud -f delete_hc gce name=hc
-  # Show info about an HTTP health check
-  - salt-cloud -f show_hc gce name=hc
-  # Create a load-balancer configuration
-  - salt-cloud -f create_lb gce name=lb region=us-central1 ports=80 ...
-  # Delete a load-balancer configuration
-  - salt-cloud -f delete_lb gce name=lb
-  # Show details about load-balancer
-  - salt-cloud -f show_lb gce name=lb
-  # Add member to load-balancer
-  - salt-cloud -f attach_lb gce name=lb member=www1
-  # Remove member from load-balancer
-  - salt-cloud -f detach_lb gce name=lb member=www1
-
 .. code-block:: yaml
 
     my-gce-config:
@@ -111,17 +51,33 @@ Supported commands:
       # The location of the private key (PEM format)
       service_account_private_key: /home/erjohnso/PRIVKEY.pem
       provider: gce
+      # Specify whether to use public or private IP for deploy script.
+      # Valid options are:
+      #     private_ips - The salt-master is also hosted with GCE
+      #     public_ips - The salt-master is hosted outside of GCE
+      ssh_interface: public_ips
 
 :maintainer: Eric Johnson <erjohnso@google.com>
 :maturity: new
 :depends: libcloud >= 0.14.1
 :depends: pycrypto >= 2.1
 '''
-# custom UA
-_UA_PRODUCT = 'salt-cloud'
-_UA_VERSION = '0.2.0'
+# pylint: disable=invalid-name,function-redefined
 
+# Import python libs
+from __future__ import absolute_import
+import os
+import re
+import copy
+import stat
+import pprint
+import logging
+from ast import literal_eval
+
+# Import 3rd-party libs
+import salt.ext.six as six
 # The import section is mostly libcloud boilerplate
+# pylint: disable=import-error
 try:
     from libcloud.compute.types import Provider
     from libcloud.compute.providers import get_driver
@@ -134,15 +90,7 @@ try:
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
-
-# Import python libs
-import re
-import copy
-import pprint
-import logging
-import os
-import stat
-from ast import literal_eval
+# pylint: enable=import-error
 
 # Import salt libs
 from salt.utils import namespaced_function
@@ -150,16 +98,18 @@ from salt.utils import namespaced_function
 # Import saltcloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.libcloudfuncs import *  # pylint: disable=W0401,W0614
+from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
 )
 
-
-# pylint: disable=C0103,E0602,E0102
 # Get logging started
 log = logging.getLogger(__name__)
+
+# custom UA
+_UA_PRODUCT = 'salt-cloud'
+_UA_VERSION = '0.2.0'
 
 # Redirect GCE functions to this module namespace
 avail_locations = namespaced_function(avail_locations, globals())
@@ -183,7 +133,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    for provider, details in __opts__['providers'].iteritems():
+    for provider, details in six.iteritems(__opts__['providers']):
         if 'provider' not in details or details['provider'] != 'gce':
             continue
 
@@ -285,6 +235,16 @@ def _expand_disk(disk):
     zone = ret['extra']['zone']
     ret['extra']['zone'] = {}
     ret['extra']['zone'].update(zone.__dict__)
+    return ret
+
+
+def _expand_address(addy):
+    '''
+    Convert the libcloud GCEAddress object into something more serializable.
+    '''
+    ret = {}
+    ret.update(addy.__dict__)
+    ret['extra']['zone'] = addy.region.name
     return ret
 
 
@@ -457,20 +417,31 @@ def __get_metadata(vm_):
     else:
         metadata['salt-cloud-profile'] = vm_['profile']
         items = []
-        for k, v in metadata.items():
+        for k, v in six.iteritems(metadata):
             items.append({'key': k, 'value': v})
         metadata = {'items': items}
     return metadata
 
 
-def __get_host(node):
+def __get_host(node, vm_):
     '''
     Return public IP, private IP, or hostname for the libcloud 'node' object
     '''
-    if len(node.public_ips) > 0:
-        return node.public_ips[0]
-    if len(node.private_ips) > 0:
-        return node.private_ips[0]
+    if __get_ssh_interface(vm_) == 'private_ips':
+        ip_address = node.private_ips[0]
+        log.info('Salt node data. Private_ip: {0}'.format(ip_address))
+    else:
+        ip_address = node.public_ips[0]
+        log.info('Salt node data. Public_ip: {0}'.format(ip_address))
+
+#    if len(node.public_ips) > 0:
+#        return node.public_ips[0]
+#    if len(node.private_ips) > 0:
+#        return node.private_ips[0]
+
+    if len(ip_address) > 0:
+        return ip_address
+
     return node.name
 
 
@@ -482,6 +453,35 @@ def __get_network(conn, vm_):
         'network', vm_, __opts__,
         default='default', search_global=False)
     return conn.ex_get_network(network)
+
+
+def __get_ssh_interface(vm_):
+    '''
+    Return the ssh_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    return config.get_cloud_config_value(
+        'ssh_interface', vm_, __opts__, default='public_ips',
+        search_global=False
+    )
+
+
+def __create_orget_address(conn, name, region):
+    '''
+    Reuse or create a static IP address.
+    Returns a native GCEAddress construct to use with libcloud.
+    '''
+    try:
+        addy = conn.ex_get_address(name, region)
+    except ResourceNotFoundError:  # pylint: disable=W0703
+        addr_kwargs = {
+            'name': name,
+            'region': region
+        }
+        new_addy = create_address(addr_kwargs, "function")
+        addy = conn.ex_get_address(new_addy['name'], new_addy['region'])
+
+    return addy
 
 
 def _parse_allow(allow):
@@ -987,6 +987,161 @@ def show_hc(kwargs=None, call=None):
     return _expand_item(conn.ex_get_healthcheck(kwargs['name']))
 
 
+def create_address(kwargs=None, call=None):
+    '''
+    Create a static address in a region.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_address gce name=my-ip region=us-central1 address=IP
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_address function must be called with -f or --function.'
+        )
+
+    if not kwargs or 'name' not in kwargs:
+        log.error(
+            'A name must be specified when creating an address.'
+        )
+        return False
+    if 'region' not in kwargs:
+        log.error(
+            'A region must be specified for the address.'
+        )
+        return False
+
+    name = kwargs['name']
+    ex_region = kwargs['region']
+    ex_address = kwargs.get("address", None)
+
+    conn = get_conn()
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'create address',
+        'salt/cloud/address/creating',
+        kwargs,
+        transport=__opts__['transport']
+    )
+
+    addy = conn.ex_create_address(name, ex_region, ex_address)
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'created address',
+        'salt/cloud/address/created',
+        kwargs,
+        transport=__opts__['transport']
+    )
+
+    log.info('Created GCE Address '+name)
+
+    return _expand_address(addy)
+
+
+def delete_address(kwargs=None, call=None):
+    '''
+    Permanently delete a static address.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f delete_address gce name=my-ip
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_address function must be called with -f or --function.'
+        )
+
+    if not kwargs or 'name' not in kwargs:
+        log.error(
+            'A name must be specified when deleting an address.'
+        )
+        return False
+
+    if not kwargs or 'region' not in kwargs:
+        log.error(
+            'A region must be specified when deleting an address.'
+        )
+        return False
+
+    name = kwargs['name']
+    ex_region = kwargs['region']
+
+    conn = get_conn()
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'delete address',
+        'salt/cloud/address/deleting',
+        {
+            'name': name,
+        },
+        transport=__opts__['transport']
+    )
+
+    try:
+        result = conn.ex_destroy_address(
+            conn.ex_get_address(name, ex_region)
+        )
+    except ResourceNotFoundError as exc:
+        log.error(
+            'Address {0} could not be found (region {1})\n'
+            'The following exception was thrown by libcloud:\n{2}'.format(
+                name, ex_region, exc),
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return False
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'deleted address',
+        'salt/cloud/address/deleted',
+        {
+            'name': name,
+        },
+        transport=__opts__['transport']
+    )
+
+    log.info('Deleted GCE Address ' + name)
+
+    return result
+
+
+def show_address(kwargs=None, call=None):
+    '''
+    Show the details of an existing static address.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f show_address gce name=mysnapshot region=us-central1
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_snapshot function must be called with -f or --function.'
+        )
+    if not kwargs or 'name' not in kwargs:
+        log.error(
+            'Must specify name.'
+        )
+        return False
+
+    if not kwargs or 'region' not in kwargs:
+        log.error(
+            'Must specify region.'
+        )
+        return False
+
+    conn = get_conn()
+    return _expand_address(conn.ex_get_address(kwargs['name'], kwargs['region']))
+
+
 def create_lb(kwargs=None, call=None):
     '''
     Create a load-balancer configuration.
@@ -1031,14 +1186,18 @@ def create_lb(kwargs=None, call=None):
     protocol = kwargs.get('protocol', 'tcp')
     algorithm = kwargs.get('algorithm', None)
     ex_healthchecks = kwargs.get('healthchecks', None)
+
     # pylint: disable=W0511
-    # TODO(erjohnso): need to support GCEAddress, but that requires adding
-    #                 salt functions to create/destroy/show address...
-    ex_address = None
+
+    conn = get_conn()
+    lb_conn = get_lb_conn(conn)
+
+    ex_address = kwargs.get('address', None)
+    if ex_address is not None:
+        ex_address = __create_orget_address(conn, ex_address, ex_region)
+
     if ex_healthchecks:
         ex_healthchecks = ex_healthchecks.split(',')
-
-    lb_conn = get_lb_conn(get_conn())
 
     salt.utils.cloud.fire_event(
         'event',
@@ -1386,6 +1545,7 @@ def delete_disk(kwargs=None, call=None):
 
 
 def create_disk(kwargs=None, call=None):
+
     '''
     Create a new persistent disk. Must specify `disk_name` and `location`.
     Can also specify an `image` or `snapshot` but if neither of those are
@@ -1843,7 +2003,7 @@ def destroy(vm_name, call=None):
         )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        salt.utils.cloud.delete_minion_cachedir(vm_name, __active_provider_name__.split(':')[0], __opts__)
 
     return inst_deleted
 
@@ -1880,6 +2040,7 @@ def create(vm_=None, call=None):
     }
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
+
         # This only exists in current trunk of libcloud and should be in next
         # release
         kwargs.update({
@@ -1896,6 +2057,9 @@ def create(vm_=None, call=None):
 
     if 'external_ip' in kwargs and kwargs['external_ip'] == "None":
         kwargs['external_ip'] = None
+    elif kwargs['external_ip'] != 'ephemeral':
+        region = '-'.join(kwargs['location'].name.split('-')[:2])
+        kwargs['external_ip'] = __create_orget_address(conn, kwargs['external_ip'], region)
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
@@ -1938,7 +2102,7 @@ def create(vm_=None, call=None):
         ssh_user, ssh_key = __get_ssh_credentials(vm_)
         deploy_kwargs = {
             'opts': __opts__,
-            'host': __get_host(node_data),
+            'host': __get_host(node_data, vm_),
             'username': ssh_user,
             'key_filename': ssh_key,
             'script': deploy_script.script,

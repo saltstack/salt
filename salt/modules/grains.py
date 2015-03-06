@@ -4,15 +4,20 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
-from __future__ import print_function
-import collections
+from __future__ import absolute_import, print_function
+import os
 import copy
 import math
-import operator
-import os
 import random
-import yaml
 import logging
+import operator
+import collections
+from functools import reduce
+
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.utils
@@ -27,9 +32,9 @@ __grains__ = {}
 
 # Change the default outputter to make it more readable
 __outputter__ = {
-    'items': 'grains',
-    'item': 'grains',
-    'setval': 'grains',
+    'items': 'nested',
+    'item': 'nested',
+    'setval': 'nested',
 }
 
 # http://stackoverflow.com/a/12414913/127816
@@ -135,7 +140,7 @@ def items(sanitize=False):
     '''
     if salt.utils.is_true(sanitize):
         out = dict(__grains__)
-        for key, func in _SANITIZERS.items():
+        for key, func in six.iteritems(_SANITIZERS):
             if key in out:
                 out[key] = func(out[key])
         return out
@@ -167,7 +172,7 @@ def item(*args, **kwargs):
         except KeyError:
             pass
     if salt.utils.is_true(kwargs.get('sanitize')):
-        for arg, func in _SANITIZERS.items():
+        for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
@@ -209,11 +214,11 @@ def setvals(grains, destructive=False):
         with salt.utils.fopen(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
-            except Exception as e:
-                return 'Unable to read existing grains file: {0}'.format(e)
+            except yaml.YAMLError as exc:
+                return 'Unable to read existing grains file: {0}'.format(exc)
         if not isinstance(grains, dict):
             grains = {}
-    for key, val in new_grains.items():
+    for key, val in six.iteritems(new_grains):
         if val is None and destructive is True:
             if key in grains:
                 del grains[key]
@@ -239,8 +244,9 @@ def setvals(grains, destructive=False):
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
         log.error(msg.format(fn_))
-    # Sync the grains
-    __salt__['saltutil.sync_grains']()
+    if not __opts__.get('local', False):
+        # Sync the grains
+        __salt__['saltutil.sync_grains']()
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
@@ -367,11 +373,9 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         }, default='Debian') %}
 
         myapache:
-          pkg:
-            - installed
+          pkg.installed:
             - name: {{ apache.pkg }}
-          service:
-            - running
+          service.running:
             - name: {{ apache.srv }}
 
     Values in the lookup table may be overridden by values in Pillar. An
@@ -409,38 +413,46 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         Python version from the default Python version provided by the OS
         (e.g., ``python26-mysql`` instead of ``python-mysql``).
     :param default: default lookup_dict's key used if the grain does not exists
-         or if the grain value has no match on lookup_dict.
-    :param base: A dictionary to use as a base set of defaults.  The grain-selected
-        ``lookup_dict`` is merged over this and then finally the ``merge``
-        dictionary is merged.
+        or if the grain value has no match on lookup_dict.  If unspecified
+        the value is "default".
 
-         .. versionadded:: 2014.1.0
+        .. versionadded:: 2014.1.0
+
+    :param base: A lookup_dict key to use for a base dictionary.  The
+        grain-selected ``lookup_dict`` is merged over this and then finally
+        the ``merge`` dictionary is merged.  This allows common values for
+        each case to be collected in the base and overridden by the grain
+        selection dictionary and the merge dictionary.  Default is unset.
+
+        .. versionadded:: Lithium
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
-        # this one will render {D: {E: I, G: H}, J: K, L: M}
-        salt '*' grains.filter_by '{A: {B: Z}, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C' '{D: {E: X}, L: M}'
-        # The same with default selected as 'A' rather than 'C':
-        # {B: Z, D: {E: I}, J: K, L: M}
+        # this one will render {D: {E: I, G: H}, J: K}
+        salt '*' grains.filter_by '{A: B, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C'
+        # next one renders {A: {B: G}, D: J}
+        salt '*' grains.filter_by '{default: {A: {B: C}, D: E}, F: {A: {B: G}}, H: {D: I}}' 'xxx' '{D: J}' 'F' 'default'
+        # next same as above when default='H' instead of 'F' renders {A: {B: C}, D: J}
     '''
+
     ret = lookup_dict.get(
-            __grains__.get(
-                grain, default),
+            salt.utils.traverse_dict_and_list(__grains__, grain, None),
             lookup_dict.get(
                 default, None)
             )
 
-    if base:
-        if not isinstance(base, collections.Mapping):
-            raise SaltException('filter_by base argument must be a dictionary.')
-
+    if base and base in lookup_dict:
+        base_values = lookup_dict[base]
         if ret is None:
-            ret = copy.deepcopy(base)
-        else:
-            ret = salt.utils.dictupdate.update(copy.deepcopy(base), ret)
+            ret = base_values
+
+        elif isinstance(base_values, collections.Mapping):
+            if not isinstance(ret, collections.Mapping):
+                raise SaltException('filter_by default and look-up values must both be dictionaries.')
+            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
     if merge:
         if not isinstance(merge, collections.Mapping):

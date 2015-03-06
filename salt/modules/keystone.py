@@ -49,7 +49,12 @@ Module for handling openstack keystone calls.
         salt '*' keystone.tenant_list profile=openstack1
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 HAS_KEYSTONE = False
 try:
     from keystoneclient.v2_0 import client
@@ -57,6 +62,7 @@ try:
     HAS_KEYSTONE = True
 except ImportError:
     pass
+# pylint: enable=import-error
 
 
 def __virtual__():
@@ -295,7 +301,8 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
             'http://internal/url' 'http://adminurl/url' region
     '''
     kstone = auth(profile, **connection_args)
-    keystone_service = service_get(name=service, **connection_args)
+    keystone_service = service_get(name=service, profile=profile,
+                                   **connection_args)
     if not keystone_service or 'Error' in keystone_service:
         return {'Error': 'Could not find the specified service'}
     kstone.endpoints.create(region=region,
@@ -303,7 +310,7 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
                             publicurl=publicurl,
                             adminurl=adminurl,
                             internalurl=internalurl)
-    return endpoint_get(service, **connection_args)
+    return endpoint_get(service, profile, **connection_args)
 
 
 def endpoint_delete(service, profile=None, **connection_args):
@@ -783,9 +790,9 @@ def user_update(user_id=None, name=None, email=None, enabled=None,
         enabled = user.enabled
     kstone.users.update(user=user_id, name=name, email=email, enabled=enabled)
     if tenant:
-        for t in kstone.tenants.list():
-            if t.name == tenant:
-                tenant_id = t.id
+        for tnt in kstone.tenants.list():
+            if tnt.name == tenant:
+                tenant_id = tnt.id
                 break
         kstone.users.update_tenant(user_id, tenant_id)
     ret = 'Info updated for user ID {0}'.format(user_id)
@@ -877,8 +884,8 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         user_id = user_get(name=user, profile=profile,
                            **connection_args)[user]['id']
     else:
-        user = user_get(user_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+        user = next(six.iterkeys(user_get(user_id, profile=profile,
+                                          **connection_args)))['name']
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
 
@@ -886,8 +893,8 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         tenant_id = tenant_get(name=tenant, profile=profile,
                                **connection_args)[tenant]['id']
     else:
-        tenant = tenant_get(tenant_id, profile=profile,
-                            **connection_args).keys()[0]['name']
+        tenant = next(six.iterkeys(tenant_get(tenant_id, profile=profile,
+                                              **connection_args)))['name']
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
 
@@ -895,8 +902,8 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         role_id = role_get(name=role, profile=profile,
                            **connection_args)[role]['id']
     else:
-        role = role_get(role_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+        role = next(six.iterkeys(role_get(role_id, profile=profile,
+                                          **connection_args)))['name']
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
 
@@ -926,8 +933,8 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         user_id = user_get(name=user, profile=profile,
                            **connection_args)[user]['id']
     else:
-        user = user_get(user_id, profile=profile,
-                        **connection_args).keys()[0]['name']
+        user = next(six.iterkeys(user_get(user_id, profile=profile,
+                                          **connection_args)))['name']
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
 
@@ -935,8 +942,8 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         tenant_id = tenant_get(name=tenant, profile=profile,
                                **connection_args)[tenant]['id']
     else:
-        tenant = tenant_get(tenant_id, profile=profile,
-                            **connection_args).keys()[0]['name']
+        tenant = next(six.iterkeys(tenant_get(tenant_id, profile=profile,
+                                              **connection_args)))['name']
     if not tenant_id:
         return {'Error': 'Unable to resolve tenant id'}
 
@@ -944,7 +951,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         role_id = role_get(name=role, profile=profile,
                            **connection_args)[role]['id']
     else:
-        role = role_get(role_id).keys()[0]['name']
+        role = next(six.iterkeys(role_get(role_id)))['name']
     if not role_id:
         return {'Error': 'Unable to resolve role id'}
 
@@ -1010,12 +1017,12 @@ def _item_list(profile=None, **connection_args):
         #        }
     return ret
 
-    #The following is a list of functions that need to be incorporated in the
-    #keystone module. This list should be updated as functions are added.
+    # The following is a list of functions that need to be incorporated in the
+    # keystone module. This list should be updated as functions are added.
     #
-    #endpoint-create     Create a new endpoint associated with a service
-    #endpoint-delete     Delete a service endpoint
-    #discover            Discover Keystone servers and show authentication
-    #                    protocols and
-    #bootstrap           Grants a new role to a new user on a new tenant, after
-    #                    creating each.
+    # endpoint-create     Create a new endpoint associated with a service
+    # endpoint-delete     Delete a service endpoint
+    # discover            Discover Keystone servers and show authentication
+    #                     protocols and
+    # bootstrap           Grants a new role to a new user on a new tenant, after
+    #                     creating each.

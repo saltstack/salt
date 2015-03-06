@@ -5,10 +5,11 @@ of the current salt process.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
-from salt._compat import string_types
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -55,18 +56,18 @@ def setenv(name,
         current salt subprocess.
         Default: False
 
-    CLI Example:
+    Example:
 
     .. code-block:: yaml
 
         a_string_env:
-           environ.set:
+           environ.setenv:
              - name: foo
              - value: bar
              - update_minion: True
 
         a_dict_env:
-           environ.set:
+           environ.setenv:
              - name: does_not_matter
              - value:
                  foo: bar
@@ -78,7 +79,7 @@ def setenv(name,
            'result': True,
            'comment': ''}
     environ = {}
-    if isinstance(value, string_types):
+    if isinstance(value, six.string_types):
         environ[name] = value
     elif isinstance(value, dict):
         environ = value
@@ -89,7 +90,7 @@ def setenv(name,
 
     if clear_all is True:
         # Any keys not in 'environ' dict supplied by user will be unset
-        to_unset = [key for key in os.environ.keys() if key not in environ]
+        to_unset = [key for key in os.environ if key not in environ]
         for key in to_unset:
             if false_unsets is not True:
                 # This key value will change to ''
@@ -100,7 +101,7 @@ def setenv(name,
 
     current_environ = dict(os.environ)
     already_set = []
-    for key, val in environ.items():
+    for key, val in six.iteritems(environ):
         if val is False:
             # We unset this key from the environment if
             # false_unsets is True. Otherwise we want to set
@@ -126,22 +127,24 @@ def setenv(name,
             ret['changes'].update({key: val})
 
     if __opts__['test']:
-        ret['result'] = None
         if ret['changes']:
             ret['comment'] = 'Environ values will be changed'
         else:
             ret['comment'] = 'Environ values are already set with the correct values'
         return ret
 
-    environ_ret = __salt__['environ.setenv'](environ,
-                                             false_unsets,
-                                             clear_all,
-                                             update_minion)
-    if not environ_ret:
-        ret['result'] = False
-        ret['comment'] = 'Failed to set environ variables'
-        return ret
-    ret['result'] = True
-    ret['changes'] = environ_ret
-    ret['comment'] = 'Environ values were set'
+    if ret['changes']:
+        environ_ret = __salt__['environ.setenv'](environ,
+                                                 false_unsets,
+                                                 clear_all,
+                                                 update_minion)
+        if not environ_ret:
+            ret['result'] = False
+            ret['comment'] = 'Failed to set environ variables'
+            return ret
+        ret['result'] = True
+        ret['changes'] = environ_ret
+        ret['comment'] = 'Environ values were set'
+    else:
+        ret['comment'] = 'Environ values were already set with the correct values'
     return ret

@@ -33,13 +33,15 @@ the default location::
 
     salt '*' test.ping --return mongo_return --return_config alternative
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 
 # import Salt libs
-import salt.utils
+import salt.utils.jid
 import salt.returners
+import salt.ext.six as six
 
 # Import third party libs
 try:
@@ -67,7 +69,7 @@ def _remove_dots(src):
     Remove dots from the given data structure
     '''
     output = {}
-    for key, val in src.iteritems():
+    for key, val in six.iteritems(src):
         if isinstance(val, dict):
             val = _remove_dots(val)
         output[key.replace('.', '-')] = val
@@ -124,11 +126,19 @@ def returner(ret):
     else:
         back = ret['return']
 
+    if isinstance(ret, dict):
+        full_ret = _remove_dots(ret)
+    else:
+        full_ret = ret
+
     log.debug(back)
-    sdata = {ret['jid']: back, 'fun': ret['fun']}
+    sdata = {'minion': ret['id'], 'jid': ret['jid'], 'return': back, 'fun': ret['fun'], 'full_ret': full_ret}
     if 'out' in ret:
         sdata['out'] = ret['out']
-    col.insert(sdata)
+        # save returns in the saltReturns collection in the json format:
+    # { 'minion': <minion_name>, 'jid': <job_id>, 'return': <return info with dots removed>,
+    #   'fun': <function>, 'full_ret': <unformatted return with dots removed>}
+    mdb.saltReturns.insert(sdata)
 
 
 def get_jid(jid):
@@ -137,10 +147,12 @@ def get_jid(jid):
     '''
     conn, mdb = _get_conn(ret=None)
     ret = {}
-    for collection in mdb.collection_names():
-        rdata = mdb[collection].find_one({jid: {'$exists': 'true'}})
-        if rdata:
-            ret[collection] = rdata
+    rdata = mdb.saltReturns.find({'jid': jid})
+    if rdata:
+        for data in rdata:
+            minion = data['minion']
+            # return data in the format {<minion>: { <unformatted full return data>}}
+            ret[minion] = data['full_ret']
     return ret
 
 
@@ -150,15 +162,14 @@ def get_fun(fun):
     '''
     conn, mdb = _get_conn(ret=None)
     ret = {}
-    for collection in mdb.collection_names():
-        rdata = mdb[collection].find_one({'fun': fun})
-        if rdata:
-            ret[collection] = rdata
+    rdata = mdb.saltReturns.find_one({'fun': fun})
+    if rdata:
+        ret = rdata
     return ret
 
 
-def prep_jid(nocache):  # pylint: disable=unused-argument
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
-    Pre-process the jid and return the jid to use
+    Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

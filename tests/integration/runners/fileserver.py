@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-
 '''
 Tests for the fileserver runner
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -28,10 +29,10 @@ class ManageTest(integration.ShellCase):
         fileserver.envs
         '''
         ret = self.run_run_plus(fun='fileserver.envs')
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['fun'], dict)
 
         ret = self.run_run_plus(fun='fileserver.envs', args=['backend="{0}"'.format(['root'])])
-        self.assertIsInstance(ret['fun'], list)
+        self.assertIsInstance(ret['fun'], dict)
 
     def test_file_list(self):
         '''

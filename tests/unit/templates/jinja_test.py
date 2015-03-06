@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
+import copy
 import tempfile
 import json
 import datetime
 import pprint
 
 # Import Salt Testing libs
-from tests.integration import ModuleCase
-from salttesting import skipIf, TestCase
+from salttesting.unit import skipIf, TestCase
+from salttesting.case import ModuleCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -57,12 +59,26 @@ class MockFileClient(object):
 
 
 class TestSaltCacheLoader(TestCase):
+    def __init__(self, *args, **kws):
+        TestCase.__init__(self, *args, **kws)
+        self.opts = {
+            'cachedir': TEMPLATES_DIR,
+            'file_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
+            'pillar_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            }
+        }
+
     def test_searchpath(self):
         '''
         The searchpath is based on the cachedir option and the saltenv parameter
         '''
         tmp = tempfile.gettempdir()
-        loader = SaltCacheLoader({'cachedir': tmp}, saltenv='test')
+        opts = copy.deepcopy(self.opts)
+        opts.update({'cachedir': tmp})
+        loader = SaltCacheLoader(opts, saltenv='test')
         assert loader.searchpath == [os.path.join(tmp, 'files', 'test')]
 
     def test_mockclient(self):
@@ -70,7 +86,7 @@ class TestSaltCacheLoader(TestCase):
         A MockFileClient is used that records all file requests normally sent
         to the master.
         '''
-        loader = SaltCacheLoader({'cachedir': TEMPLATES_DIR}, 'test')
+        loader = SaltCacheLoader(self.opts, 'test')
         fc = MockFileClient(loader)
         res = loader.get_source(None, 'hello_simple')
         assert len(res) == 3
@@ -86,7 +102,7 @@ class TestSaltCacheLoader(TestCase):
         '''
         Setup a simple jinja test environment
         '''
-        loader = SaltCacheLoader({'cachedir': TEMPLATES_DIR}, 'test')
+        loader = SaltCacheLoader(self.opts, 'test')
         fc = MockFileClient(loader)
         jinja = Environment(loader=loader)
         return fc, jinja
@@ -129,10 +145,16 @@ class TestGetTemplate(TestCase):
         self.local_opts = {
             'cachedir': TEMPLATES_DIR,
             'file_client': 'local',
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
             'file_roots': {
-                'other': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
+            },
+            'pillar_roots': {
+                'test': [os.path.join(TEMPLATES_DIR, 'files', 'test')]
             },
             'fileserver_backend': ['roots'],
+            'hash_type': 'md5',
             'extension_modules': os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 'extmods'),
@@ -147,7 +169,7 @@ class TestGetTemplate(TestCase):
         with salt.utils.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
                     fp_.read(),
-                    dict(opts=self.local_opts, saltenv='other'))
+                    dict(opts=self.local_opts, saltenv='test'))
         self.assertEqual(out, 'world\n')
 
     def test_fallback_noloader(self):
@@ -158,7 +180,7 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts=self.local_opts, saltenv='other'))
+                dict(opts=self.local_opts, saltenv='test'))
         self.assertEqual(out, 'Hey world !a b !\n')
 
     def test_saltenv(self):
@@ -175,7 +197,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Salt', saltenv='test'))
         self.assertEqual(out, 'Hey world !Hi Salt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
@@ -203,7 +227,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='other'))
+            dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_macro_additional_log_for_undefined(self):
@@ -228,7 +252,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='other'))
+            dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_macro_additional_log_syntaxerror(self):
@@ -253,7 +277,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             salt.utils.fopen(filename).read(),
-            dict(opts=self.local_opts, saltenv='other'))
+            dict(opts=self.local_opts, saltenv='test'))
         SaltCacheLoader.file_client = _fc
 
     def test_non_ascii_encoding(self):
@@ -264,7 +288,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'hello_import')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Sàlt', saltenv='test'))
         self.assertEqual(out, u'Hey world !Hi Sàlt !\n')
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
@@ -275,7 +301,9 @@ class TestGetTemplate(TestCase):
         filename = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
         out = render_jinja_tmpl(
                 salt.utils.fopen(filename).read(),
-                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote'},
+                dict(opts={'cachedir': TEMPLATES_DIR, 'file_client': 'remote',
+                           'file_roots': self.local_opts['file_roots'],
+                           'pillar_roots': self.local_opts['pillar_roots']},
                      a='Hi', b='Sàlt', saltenv='test'))
         self.assertEqual(u'Assunção\n', out)
         self.assertEqual(fc.requests[0]['path'], 'salt://macro')
@@ -284,7 +312,7 @@ class TestGetTemplate(TestCase):
     @skipIf(HAS_TIMELIB is False, 'The `timelib` library is not installed.')
     def test_strftime(self):
         response = render_jinja_tmpl('{{ "2002/12/25"|strftime }}',
-                dict(opts=self.local_opts, saltenv='other'))
+                dict(opts=self.local_opts, saltenv='test'))
         self.assertEqual(response, '2002-12-25')
 
         objects = (
@@ -296,20 +324,20 @@ class TestGetTemplate(TestCase):
 
         for object in objects:
             response = render_jinja_tmpl('{{ object|strftime }}',
-                    dict(object=object, opts=self.local_opts, saltenv='other'))
+                    dict(object=object, opts=self.local_opts, saltenv='test'))
             self.assertEqual(response, '2002-12-25')
 
             response = render_jinja_tmpl('{{ object|strftime("%b %d, %Y") }}',
-                    dict(object=object, opts=self.local_opts, saltenv='other'))
+                    dict(object=object, opts=self.local_opts, saltenv='test'))
             self.assertEqual(response, 'Dec 25, 2002')
 
             response = render_jinja_tmpl('{{ object|strftime("%y") }}',
-                    dict(object=object, opts=self.local_opts, saltenv='other'))
+                    dict(object=object, opts=self.local_opts, saltenv='test'))
             self.assertEqual(response, '02')
 
     def test_non_ascii(self):
         fn = os.path.join(TEMPLATES_DIR, 'files', 'test', 'non_ascii')
-        out = JINJA(fn, opts=self.local_opts, saltenv='other')
+        out = JINJA(fn, opts=self.local_opts, saltenv='test')
         with salt.utils.fopen(out['data']) as fp:
             result = fp.read().decode('utf-8')
             self.assertEqual(u'Assunção\n', result)
@@ -352,7 +380,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_unicode_syntax_error(self):
@@ -363,7 +391,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_utf8_syntax_error(self):
@@ -374,7 +402,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_undefined_variable(self):
@@ -385,7 +413,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_undefined_variable_utf8(self):
@@ -396,7 +424,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
     def test_render_with_undefined_variable_unicode(self):
@@ -407,7 +435,7 @@ class TestGetTemplate(TestCase):
             expected,
             render_jinja_tmpl,
             template,
-            dict(opts=self.local_opts, saltenv='other')
+            dict(opts=self.local_opts, saltenv='test')
         )
 
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Configuration of email aliases
-==============================
 
 The mail aliases file can be managed to contain definitions for specific email
 aliases:

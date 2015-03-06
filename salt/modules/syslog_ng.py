@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Module for getting information about syslog-ng
-===============================================
 
 :maintainer:    Tibor Benke <btibi@sch.bme.hu>
 :maturity:      new
@@ -26,15 +25,21 @@ configuration file.
 
 '''
 
-from __future__ import generators, with_statement
-
+# Import Python libs
+from __future__ import absolute_import, generators, with_statement
 import time
 import logging
 import salt
 import os
 import os.path
+
+# Import Salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
 __SYSLOG_NG_BINARY_PATH = None
@@ -125,7 +130,7 @@ class Buildable(object):
         Builds the body of a syslog-ng configuration object.
         '''
         _increase_indent()
-        body_array = map(lambda x: x.build(), self.iterable)
+        body_array = [x.build() for x in self.iterable]
 
         nl = "\n" if self.append_extra_newline else ''
 
@@ -423,22 +428,22 @@ def _get_type_id_options(name, configuration):
     '''
     # it's in a form of source.name
     if '.' in name:
-        type, sep, id = name.partition('.')
+        type_, sep, id_ = name.partition('.')
         options = configuration
     else:
-        type = configuration.keys()[0]
-        id = name
-        options = configuration[type]
+        type_ = next(six.iterkeys(configuration))
+        id_ = name
+        options = configuration[type_]
 
-    return type, id, options
+    return type_, id_, options
 
 
-def _expand_one_key_dictionary(d):
+def _expand_one_key_dictionary(_dict):
     '''
     Returns the only one key and it's value from a dictionary.
     '''
-    key = d.keys()[0]
-    value = d[key]
+    key = next(six.iterkeys(_dict))
+    value = _dict[key]
     return key, value
 
 
@@ -446,16 +451,16 @@ def _parse_typed_parameter_typed_value(values):
     '''
     Creates Arguments in a TypedParametervalue.
     '''
-    type, value = _expand_one_key_dictionary(values)
+    type_, value = _expand_one_key_dictionary(values)
 
-    _current_parameter_value.type = type
+    _current_parameter_value.type = type_
     if _is_simple_type(value):
-        a = Argument(value)
-        _current_parameter_value.add_argument(a)
+        arg = Argument(value)
+        _current_parameter_value.add_argument(arg)
     elif isinstance(value, list):
-        for i in value:
-            a = Argument(i)
-            _current_parameter_value.add_argument(a)
+        for idx in value:
+            arg = Argument(idx)
+            _current_parameter_value.add_argument(arg)
 
 
 def _parse_typed_parameter(param):
@@ -463,8 +468,8 @@ def _parse_typed_parameter(param):
     Parses a TypedParameter and fills it with values.
     '''
     global _current_parameter_value
-    type, value = _expand_one_key_dictionary(param)
-    _current_parameter.type = type
+    type_, value = _expand_one_key_dictionary(param)
+    _current_parameter.type = type_
 
     if _is_simple_type(value) and value != '':
         _current_parameter_value = SimpleParameterValue(value)
@@ -506,8 +511,8 @@ def _create_and_add_option(option):
     global _current_option
 
     _current_option = Option()
-    type, params = _expand_one_key_dictionary(option)
-    _current_option.type = type
+    type_, params = _expand_one_key_dictionary(option)
+    _current_option.type = type_
     _create_and_add_parameters(params)
     _current_statement.add_child(_current_option)
 
@@ -524,32 +529,32 @@ def _is_reference(arg):
     '''
     Return True, if arg is a reference to a previously defined statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and isinstance(arg.values()[0], str)
+    return isinstance(arg, dict) and len(arg) == 1 and isinstance(next(six.itervalues(arg)), six.string_types)
 
 
 def _is_junction(arg):
     '''
     Return True, if arg is a junction statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and arg.keys()[0] == 'junction'
+    return isinstance(arg, dict) and len(arg) == 1 and next(six.iterkeys(arg)) == 'junction'
 
 
 def _add_reference(reference, statement):
     '''
     Adds a reference to statement.
     '''
-    type, value = _expand_one_key_dictionary(reference)
-    o = Option(type)
-    p = SimpleParameter(value)
-    o.add_parameter(p)
-    statement.add_child(o)
+    type_, value = _expand_one_key_dictionary(reference)
+    opt = Option(type_)
+    param = SimpleParameter(value)
+    opt.add_parameter(param)
+    statement.add_child(opt)
 
 
 def _is_inline_definition(arg):
     '''
     Returns True, if arg is an inline definition of a statement.
     '''
-    return isinstance(arg, dict) and len(arg) == 1 and isinstance(arg.values()[0], list)
+    return isinstance(arg, dict) and len(arg) == 1 and isinstance(next(six.itervalues(arg)), list)
 
 
 def _add_inline_definition(item, statement):
@@ -559,8 +564,8 @@ def _add_inline_definition(item, statement):
     global _current_statement
     backup = _current_statement
 
-    type, options = _expand_one_key_dictionary(item)
-    _current_statement = UnnamedStatement(type=type)
+    type_, options = _expand_one_key_dictionary(item)
+    _current_statement = UnnamedStatement(type=type_)
     _parse_statement(options)
     statement.add_child(_current_statement)
 
@@ -571,16 +576,16 @@ def _add_junction(item):
     '''
     Adds a junction to the _current_statement.
     '''
-    type, channels = _expand_one_key_dictionary(item)
+    type_, channels = _expand_one_key_dictionary(item)
     junction = UnnamedStatement(type='junction')
-    for ch in channels:
-        type, value = _expand_one_key_dictionary(ch)
+    for item in channels:
+        type_, value = _expand_one_key_dictionary(item)
         channel = UnnamedStatement(type='channel')
-        for j in value:
-            if _is_reference(j):
-                _add_reference(j, channel)
-            elif _is_inline_definition(j):
-                _add_inline_definition(j, channel)
+        for val in value:
+            if _is_reference(val):
+                _add_reference(val, channel)
+            elif _is_inline_definition(val):
+                _add_inline_definition(val, channel)
         junction.add_child(channel)
     _current_statement.add_child(junction)
 
@@ -604,19 +609,19 @@ def _build_config_tree(name, configuration):
 
     The root object is _current_statement.
     '''
-    type, id, options = _get_type_id_options(name, configuration)
+    type_, id_, options = _get_type_id_options(name, configuration)
     global _INDENT, _current_statement
     _INDENT = ''
-    if type == 'config':
+    if type_ == 'config':
         _current_statement = GivenStatement(options)
-    elif type == 'log':
+    elif type_ == 'log':
         _current_statement = UnnamedStatement(type='log')
         _parse_log_statement(options)
     else:
-        if _is_statement_unnamed(type):
-            _current_statement = UnnamedStatement(type=type)
+        if _is_statement_unnamed(type_):
+            _current_statement = UnnamedStatement(type=type_)
         else:
-            _current_statement = NamedStatement(type=type, id=id)
+            _current_statement = NamedStatement(type=type_, id=id_)
         _parse_statement(options)
 
 
@@ -738,11 +743,11 @@ def _determine_config_version(syslog_ng_sbin_dir):
     ret = version(syslog_ng_sbin_dir)
     full_version = ret['stdout']
     dot_count = 0
-    for i, c in enumerate(full_version):
-        if c == '.':
+    for idx, part in enumerate(full_version):
+        if part == '.':
             dot_count = dot_count + 1
         if dot_count == 2:
-            return full_version[0:i]
+            return full_version[0:idx]
     # return first 3 characters
     return full_version[:3]
 
@@ -779,7 +784,7 @@ def _add_to_path_envvar(directory):
     Adds directory to the PATH environment variable and returns the original
     one.
     '''
-    orig_path = os.environ["PATH"]
+    orig_path = os.environ.get('PATH', '')
     if directory:
         if not os.path.isdir(directory):
             log.error("The given parameter is not a directory")
@@ -881,8 +886,8 @@ def version(syslog_ng_sbin_dir=None):
     # syslog-ng 3.6.0alpha0
     version_line_index = 0
     version_column_index = 1
-    v = lines[version_line_index].split()[version_column_index]
-    return _format_return_data(0, stdout=v)
+    line = lines[version_line_index].split()[version_column_index]
+    return _format_return_data(0, stdout=line)
 
 
 def modules(syslog_ng_sbin_dir=None):
@@ -906,7 +911,7 @@ def modules(syslog_ng_sbin_dir=None):
         return _format_return_data(ret["retcode"], ret.get("stdout", None), ret.get("stderr", None))
 
     lines = ret["stdout"].split("\n")
-    for i, line in enumerate(lines):
+    for line in lines:
         if line.startswith("Available-Modules"):
             label, installed_modules = line.split()
             return _format_return_data(ret["retcode"], stdout=installed_modules)
@@ -1134,19 +1139,16 @@ def _write_config(config, newlines=2):
     Writes the given parameter config into the config file.
     '''
     text = config
-    if isinstance(config, dict) and len(config.keys()) == 1:
-        key = config.keys()[0]
+    if isinstance(config, dict) and len(list(list(config.keys()))) == 1:
+        key = next(six.iterkeys(config))
         text = config[key]
 
     try:
-        open_flags = 'a'
+        with salt.utils.fopen(__SYSLOG_NG_CONFIG_FILE, 'a') as fha:
+            fha.write(text)
 
-        with open(__SYSLOG_NG_CONFIG_FILE, open_flags) as f:
-            f.write(text)
-
-            for i in range(0, newlines):
-                f.write(os.linesep)
-
+            for _ in range(0, newlines):
+                fha.write(os.linesep)
         return True
     except Exception as err:
         log.error(str(err))

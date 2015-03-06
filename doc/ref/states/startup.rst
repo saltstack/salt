@@ -7,7 +7,7 @@ started. This alleviates the need for the master to initiate a state run on a
 new minion and can make provisioning much easier.
 
 As of Salt 0.10.3 the minion config reads options that allow for states to be
-executed at startup. The options are `startup_states`, `sls_list` and
+executed at startup. The options are `startup_states`, `sls_list`, and
 `top_file`.
 
 The `startup_states` option can be passed one of a number of arguments to
@@ -22,7 +22,7 @@ sls
 top
   Read in the ``top_file`` option and execute states based on that top file
   on the Salt Master
-  
+
 Examples:
 ---------
 

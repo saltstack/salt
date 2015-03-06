@@ -8,6 +8,7 @@ See http://code.google.com/p/psutil.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import datetime
 
@@ -15,6 +16,8 @@ import datetime
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import psutil
 
@@ -22,6 +25,7 @@ try:
     PSUTIL2 = psutil.version_info >= (2, 0)
 except ImportError:
     HAS_PSUTIL = False
+# pylint: enable=import-error
 
 
 def __virtual__():
@@ -64,7 +68,12 @@ def _get_proc_name(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.name() if PSUTIL2 else proc.name
+    ret = []
+    try:
+        ret = proc.name() if PSUTIL2 else proc.name
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        pass
+    return ret
 
 
 def _get_proc_status(proc):
@@ -119,7 +128,7 @@ def top(num_processes=5, interval=3):
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
-    for process, start in start_usage.items():
+    for process, start in six.iteritems(start_usage):
         try:
             user, system = process.get_cpu_times()
         except psutil.NoSuchProcess:
@@ -143,9 +152,9 @@ def top(num_processes=5, interval=3):
                 'cpu': {},
                 'mem': {},
         }
-        for key, value in process.get_cpu_times()._asdict().items():
+        for key, value in six.iteritems(process.get_cpu_times()._asdict()):
             info['cpu'][key] = value
-        for key, value in process.get_memory_info()._asdict().items():
+        for key, value in six.iteritems(process.get_memory_info()._asdict()):
             info['mem'][key] = value
         result.append(info)
 
@@ -594,7 +603,7 @@ def get_users():
         # get_users is only present in psutil > v0.5.0
         # try utmp
         try:
-            import utmp
+            import utmp  # pylint: disable=import-error
 
             result = []
             while True:
@@ -609,18 +618,3 @@ def get_users():
                                    'started': started, 'host': rec[5]})
         except ImportError:
             return False
-
-# This is a possible last ditch method
-# result = []
-#        w = __salt__['cmd.run'](
-#            'who', env='{"LC_ALL": "en_US.UTF-8"}').splitlines()
-#        for u in w:
-#            u = u.split()
-#            started = __salt__['cmd.run'](
-#                'date --d "{0} {1}" +%s'.format(u[2], u[3])).strip()
-#            rec = {'name': u[0], 'terminal': u[1],
-#                   'started': started, 'host': None}
-#            if len(u) > 4:
-#                rec['host'] = u[4][1:-1]
-#            result.append(rec)
-#        return result

@@ -7,13 +7,16 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
-:depends:   - CherryPy Python module
+:depends:   - CherryPy Python module (strongly recommend 3.2.x versions due to
+              an as yet unknown SSL error).
+            - salt-api package
 :optdepends:    - ws4py Python module for websockets support.
 :configuration: All authentication is done through Salt's :ref:`external auth
     <acl-eauth>` system which requires additional configuration not described
     here.
 
-    Example production-ready configuration; add to the Salt master config file:
+    Example production-ready configuration; add to the Salt master config file
+    and restart the ``salt-master`` and ``salt-api`` daemons:
 
     .. code-block:: yaml
 
@@ -26,12 +29,13 @@ A REST API for Salt
     authentication credentials will be sent over the wire.
 
     A self-signed certificate can be generated using the
-    :py:func:`~salt.modules.tls.create_self_signed_cert` function in Salt (note
-    the dependencies for this module).
+    :py:func:`~salt.modules.tls.create_self_signed_cert` execution function.
+    Running this function requires pyOpenSSL and the ``salt-call`` script is
+    available in the ``salt-minion`` package.
 
     .. code-block:: bash
 
-        salt-call tls.create_self_signed_cert
+        salt-call --local tls.create_self_signed_cert
 
     All available configuration options are detailed below. These settings
     configure the CherryPy HTTP server and do not apply when using an external
@@ -102,8 +106,51 @@ Tokens are generated via the :py:class:`Login` URL.
 The token may be sent in one of two ways:
 
 * Include a custom header named :mailheader:`X-Auth-Token`.
+
+  For example, using curl:
+
+  .. code-block:: bash
+
+      curl -sSk https://localhost:8000/login \
+            -H 'Accept: application/x-yaml' \
+            -d username=saltdev \
+            -d password=saltdev \
+            -d eauth=auto
+
+  Copy the ``token`` value from the output and include it in subsequent
+  requests:
+
+  .. code-block:: bash
+
+  curl -sSk https://localhost:8000 \
+            -H 'Accept: application/x-yaml' \
+            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\
+            -d client=local \
+            -d tgt='*' \
+            -d fun=test.ping
+
 * Sent via a cookie. This option is a convenience for HTTP clients that
   automatically handle cookie support (such as browsers).
+
+  For example, using curl:
+
+  .. code-block:: bash
+
+      # Write the cookie file:
+      curl -sSk https://localhost:8000/login \
+            -c ~/cookies.txt \
+            -H 'Accept: application/x-yaml' \
+            -d username=saltdev \
+            -d password=saltdev \
+            -d eauth=auto
+
+      # Read the cookie file:
+      curl -sSk https://localhost:8000 \
+            -b ~/cookies.txt \
+            -H 'Accept: application/x-yaml' \
+            -d client=local \
+            -d tgt='*' \
+            -d fun=test.ping
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
 
@@ -125,20 +172,15 @@ requests to the URLs detailed below.
 
 Data sent in :http:method:`post` and :http:method:`put` requests  must be in
 the format of a list of lowstate dictionaries. This allows multiple commands to
-be executed in a single HTTP request.
+be executed in a single HTTP request. The order of commands in the request
+corresponds to the return for each command in the response.
 
-.. glossary::
+Lowstate, broadly, is a dictionary of values that are mapped to a function
+call. This pattern is used pervasively throughout Salt. The functions called
+from netapi modules are described in :ref:`Client Interfaces <netapi-clients>`.
 
-    lowstate
-        A dictionary containing various keys that instruct Salt which command
-        to run, where that command lives, any parameters for that command, any
-        authentication credentials, what returner to use, etc.
-
-        Salt uses the lowstate data format internally in many places to pass
-        command data between functions. Salt also uses lowstate for the
-        :ref:`LocalClient() <python-api>` Python API interface.
-
-The following example (in JSON format) causes Salt to execute two commands::
+The following example (in JSON format) causes Salt to execute two commands, a
+command sent to minions as well as a runner function on the master::
 
     [{
         "client": "local",
@@ -189,6 +231,7 @@ The following example (in JSON format) causes Salt to execute two commands::
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
 # Import Python libs
+from __future__ import absolute_import
 import collections
 import itertools
 import functools
@@ -200,9 +243,13 @@ import time
 from multiprocessing import Process, Pipe
 
 # Import third-party libs
+# pylint: disable=import-error
 import cherrypy
 from cherrypy.lib import cpstats
 import yaml
+import salt.ext.six as six
+# pylint: enable=import-error
+
 
 # Import Salt libs
 import salt
@@ -270,7 +317,7 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     '''
     # Redirect to the login page if the session hasn't been authed
-    if not cherrypy.session.has_key('token'):  # pylint: disable=W8601
+    if 'token' not in cherrypy.session:  # pylint: disable=W8601
         raise cherrypy.HTTPError(401)
 
     # Session is authenticated; inform caches
@@ -345,7 +392,8 @@ def hypermedia_handler(*args, **kwargs):
     try:
         cherrypy.response.processors = dict(ct_out_map)
         ret = cherrypy.serving.request._hypermedia_inner_handler(*args, **kwargs)
-    except salt.exceptions.EauthAuthenticationError:
+    except (salt.exceptions.EauthAuthenticationError,
+            salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
     except cherrypy.CherryPyException:
         raise
@@ -678,13 +726,12 @@ class LowDataAdapter(object):
 
         .. code-block:: bash
 
-            curl -si https://localhost:8000 \\
+            curl -sSik https://localhost:8000 \\
                     -H "Accept: application/x-yaml" \\
-                    -H "X-Auth-Token: d40d1e1e" \\
+                    -H "X-Auth-Token: d40d1e1e<...snip...>" \\
                     -d client=local \\
                     -d tgt='*' \\
                     -d fun='test.ping' \\
-                    -d arg
 
         .. code-block:: http
 
@@ -695,7 +742,7 @@ class LowDataAdapter(object):
             Content-Length: 36
             Content-Type: application/x-www-form-urlencoded
 
-            fun=test.ping&arg&client=local&tgt=*
+            fun=test.ping&client=local&tgt=*
 
         **Example response:**
 
@@ -712,6 +759,51 @@ class LowDataAdapter(object):
                 ms-2: true
                 ms-3: true
                 ms-4: true
+
+        **Other examples**:
+
+        .. code-block:: bash
+
+            # Sending multiple positional args with urlencoded:
+            curl -sSik https://localhost:8000 \\
+                    -d client=local \\
+                    -d tgt='*' \\
+                    -d fun='cmd.run' \\
+                    -d arg='du -sh .' \\
+                    -d arg='/path/to/dir'
+
+            # Sending posiitonal args and Keyword args with JSON:
+            echo '[
+                {
+                    "client": "local",
+                    "tgt": "*",
+                    "fun": "cmd.run",
+                    "arg": [
+                        "du -sh .",
+                        "/path/to/dir"
+                    ],
+                    "kwarg": {
+                        "shell": "/bin/sh",
+                        "template": "jinja"
+                    }
+                }
+            ]' | curl -sSik https://localhost:8000 \\
+                    -H 'Content-type: application/json' \\
+                    -d@-
+
+            # Calling runner functions:
+            curl -sSik https://localhost:8000 \\
+                    -d client=runner \\
+                    -d fun='jobs.lookup_jid' \\
+                    -d jid='20150129182456704682' \\
+                    -d outputter=highstate
+
+            # Calling wheel functions:
+            curl -sSik https://localhost:8000 \\
+                    -d client=wheel \\
+                    -d fun='key.gen_accept' \\
+                    -d id_=dave \\
+                    -d keysize=4096
         '''
         return {
             'return': list(self.exec_lowstate(
@@ -824,9 +916,9 @@ class Minions(LowDataAdapter):
 
             return:
             - jid: '20130603122505459265'
-                minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
+              minions: [ms-4, ms-3, ms-2, ms-1, ms-0]
             _links:
-                jobs:
+              jobs:
                 - href: /jobs/20130603122505459265
         '''
         job_data = list(self.exec_lowstate(client='local_async',
@@ -958,10 +1050,20 @@ class Jobs(LowDataAdapter):
 
 
 class Keys(LowDataAdapter):
+    '''
+    Convenience URLs for working with minion keys
+
+    .. versionadded:: 2014.7.0
+
+    These URLs wrap the functionality provided by the :py:mod:`key wheel
+    module <salt.wheel.key>` functions.
+    '''
+
     def GET(self, mid=None):
         '''
-        A convenience URL for showing the list of minion keys or detail on a
-        specific key
+        Show the list of minion keys or detail on a specific key
+
+        .. versionadded:: 2014.7.0
 
         .. http:get:: /keys/(mid)
 
@@ -1047,13 +1149,15 @@ class Keys(LowDataAdapter):
         r'''
         Easily generate keys for a minion and auto-accept the new key
 
+        .. versionadded:: 2014.7.0
+
         Example partial kickstart script to bootstrap a new minion:
 
         .. code-block:: text
 
             %post
             mkdir -p /etc/salt/pki/minion
-            curl -sS http://localhost:8000/keys \
+            curl -sSk https://localhost:8000/keys \
                     -d mid=jerry \
                     -d username=kickstart \
                     -d password=kickstart \
@@ -1078,12 +1182,12 @@ class Keys(LowDataAdapter):
 
         .. code-block:: bash
 
-            curl -sS http://localhost:8000/keys \
+            curl -sSk https://localhost:8000/keys \
                     -d mid=jerry \
                     -d username=kickstart \
                     -d password=kickstart \
                     -d eauth=pam \
-                | tar xf -
+                    -o jerry-salt-keys.tar
 
         .. code-block:: http
 
@@ -1381,6 +1485,49 @@ class Run(LowDataAdapter):
                 ms-2: true
                 ms-3: true
                 ms-4: true
+
+        The /run enpoint can also be used to issue commands using the salt-ssh subsystem.
+
+        When using salt-ssh, eauth credentials should not be supplied. Instad, authentication
+        should be handled by the SSH layer itself. The use of the salt-ssh client does not
+        require a salt master to be running. Instead, only a roster file must be present
+        in the salt configuration directory.
+
+        All SSH client requests are synchronous.
+
+        ** Example SSH client request:**
+
+        .. code-block:: bash
+
+            curl -sS localhost:8000/run \\
+                -H 'Accept: application/x-yaml' \\
+                -d client='ssh' \\
+                -d tgt='*' \\
+                -d fun='test.ping'
+
+        .. code-block:: http
+
+            POST /run HTTP/1.1
+            Host: localhost:8000
+            Accept: application/x-yaml
+            Content-Length: 75
+            Content-Type: application/x-www-form-urlencoded
+
+            client=ssh&tgt=*&fun=test.ping
+
+        **Example SSH response:**
+
+        .. code-block:: http
+
+                return:
+                - silver:
+                  fun: test.ping
+                  fun_args: []
+                  id: silver
+                  jid: '20141203103525666185'
+                  retcode: 0
+                  return: true
+                  success: true
         '''
         return {
             'return': list(self.exec_lowstate()),
@@ -1414,9 +1561,35 @@ class Events(object):
 
     def __init__(self):
         self.opts = cherrypy.config['saltopts']
-        self.auth = salt.auth.LoadAuth(self.opts)
+        self.resolver = salt.auth.Resolver(self.opts)
 
-    def GET(self, token=None):
+    def _is_valid_token(self, auth_token):
+        '''
+        Check if this is a valid salt-api token or valid Salt token
+
+        salt-api tokens are regular session tokens that tie back to a real Salt
+        token. Salt tokens are tokens generated by Salt's eauth system.
+
+        :return bool: True if valid, False if not valid.
+        '''
+        if auth_token is None:
+            return False
+
+        # First check if the given token is in our session table; if so it's a
+        # salt-api token and we need to get the Salt token from there.
+        orig_sesion, _ = cherrypy.session.cache.get(auth_token, ({}, None))
+        # If it's not in the session table, assume it's a regular Salt token.
+        salt_token = orig_sesion.get('token', auth_token)
+
+        # The eauth system does not currently support perms for the event
+        # stream, so we're just checking if the token exists not if the token
+        # allows access.
+        if salt_token and self.resolver.get_token(salt_token):
+            return True
+
+        return False
+
+    def GET(self, token=None, salt_token=None):
         r'''
         An HTTP stream of the Salt master event bus
 
@@ -1428,6 +1601,15 @@ class Events(object):
             :status 200: |200|
             :status 401: |401|
             :status 406: |406|
+            :query token: **optional** parameter containing the token
+                ordinarily supplied via the X-Auth-Token header in order to
+                allow cross-domain requests in browsers that do not include
+                CORS support in the EventSource API. E.g.,
+                ``curl -NsS localhost:8000/events?token=308650d``
+            :query salt_token: **optional** parameter containing a raw Salt
+                *eauth token* (not to be confused with the token returned from
+                the /login URL). E.g.,
+                ``curl -NsS localhost:8000/events?salt_token=30742765``
 
         **Example request:**
 
@@ -1442,6 +1624,11 @@ class Events(object):
 
         **Example response:**
 
+        Note, the ``tag`` field is not part of the spec. SSE compliant clients
+        should ignore unknown fields. This addition allows non-compliant
+        clients to only watch for certain tags without having to deserialze the
+        JSON object each time.
+
         .. code-block:: http
 
             HTTP/1.1 200 OK
@@ -1450,76 +1637,68 @@ class Events(object):
             Content-Type: text/event-stream;charset=utf-8
 
             retry: 400
-            data: {'tag': '', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
 
-            data: {'tag': '20130802115730568475', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
+            tag: salt/job/20130802115730568475/new
+            data: {'tag': 'salt/job/20130802115730568475/new', 'data': {'minions': ['ms-4', 'ms-3', 'ms-2', 'ms-1', 'ms-0']}}
 
-    The event stream can be easily consumed via JavaScript:
+            tag: salt/job/20130802115730568475/ret/jerry
+            data: {'tag': 'salt/job/20130802115730568475/ret/jerry', 'data': {'jid': '20130802115730568475', 'return': True, 'retcode': 0, 'success': True, 'cmd': '_return', 'fun': 'test.ping', 'id': 'ms-1'}}
 
-    .. code-block:: javascript
+        The event stream can be easily consumed via JavaScript:
 
-        # Note, you must be authenticated!
-        var source = new EventSource('/events');
-        source.onopen = function() { console.debug('opening') };
-        source.onerror = function(e) { console.debug('error!', e) };
-        source.onmessage = function(e) { console.debug(e.data) };
+        .. code-block:: javascript
 
-    Or using CORS:
+            var source = new EventSource('/events');
+            source.onopen = function() { console.debug('opening') };
+            source.onerror = function(e) { console.debug('error!', e) };
+            source.onmessage = function(e) {
+                console.debug('Tag: ', e.data.tag)
+                console.debug('Data: ', e.data.data)
+            };
 
-    .. code-block:: javascript
+        Or using CORS:
 
-        var source = new EventSource('/events', {withCredentials: true});
+        .. code-block:: javascript
 
-    Some browser clients lack CORS support for the ``EventSource()`` API. Such
-    clients may instead pass the :mailheader:`X-Auth-Token` value as an URL
-    parameter:
+            var source = new EventSource('/events?token=ecd589e4e01912cf3c4035afad73426dbb8dba75', {withCredentials: true});
 
-    .. code-block:: bash
+        It is also possible to consume the stream via the shell.
 
-        curl -NsS localhost:8000/events/6d1b722e
+        Records are separated by blank lines; the ``data:`` and ``tag:``
+        prefixes will need to be removed manually before attempting to
+        unserialize the JSON.
 
-    It is also possible to consume the stream via the shell.
+        curl's ``-N`` flag turns off input buffering which is required to
+        process the stream incrementally.
 
-    Records are separated by blank lines; the ``data:`` and ``tag:``
-    prefixes will need to be removed manually before attempting to
-    unserialize the JSON.
+        Here is a basic example of printing each event as it comes in:
 
-    curl's ``-N`` flag turns off input buffering which is required to
-    process the stream incrementally.
+        .. code-block:: bash
 
-    Here is a basic example of printing each event as it comes in:
+            curl -NsS localhost:8000/events |\
+                    while IFS= read -r line ; do
+                        echo $line
+                    done
 
-    .. code-block:: bash
+        Here is an example of using awk to filter events based on tag:
 
-        curl -NsS localhost:8000/events |\
-                while IFS= read -r line ; do
-                    echo $line
-                done
+        .. code-block:: bash
 
-    Here is an example of using awk to filter events based on tag:
-
-    .. code-block:: bash
-
-        curl -NsS localhost:8000/events |\
-                awk '
-                    BEGIN { RS=""; FS="\\n" }
-                    $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
-                '
-        tag: salt/job/20140112010149808995/new
-        data: {"tag": "salt/job/20140112010149808995/new", "data": {"tgt_type": "glob", "jid": "20140112010149808995", "tgt": "jerry", "_stamp": "2014-01-12_01:01:49.809617", "user": "shouse", "arg": [], "fun": "test.ping", "minions": ["jerry"]}}
-        tag: 20140112010149808995
-        data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
+            curl -NsS localhost:8000/events |\
+                    awk '
+                        BEGIN { RS=""; FS="\\n" }
+                        $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
+                    '
+            tag: salt/job/20140112010149808995/new
+            data: {"tag": "salt/job/20140112010149808995/new", "data": {"tgt_type": "glob", "jid": "20140112010149808995", "tgt": "jerry", "_stamp": "2014-01-12_01:01:49.809617", "user": "shouse", "arg": [], "fun": "test.ping", "minions": ["jerry"]}}
+            tag: 20140112010149808995
+            data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
         '''
-        # Pulling the session token from an URL param is a workaround for
-        # browsers not supporting CORS in the EventSource API.
-        if token:
-            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
-            salt_token = orig_sesion.get('token')
-        else:
-            salt_token = cherrypy.session.get('token')
+        cookies = cherrypy.request.cookie
+        auth_token = token or salt_token or (
+            cookies['session_id'].value if 'session_id' in cookies else None)
 
-        # Manually verify the token
-        if not salt_token or not self.auth.get_tok(salt_token):
+        if not self._is_valid_token(auth_token):
             raise cherrypy.HTTPError(401)
 
         # Release the session lock before starting the long-running response
@@ -1543,7 +1722,7 @@ class Events(object):
             yield u'retry: {0}\n'.format(400)
 
             while True:
-                data = stream.next()
+                data = next(stream)
                 yield u'tag: {0}\n'.format(data.get('tag', ''))
                 yield u'data: {0}\n\n'.format(json.dumps(data))
 
@@ -1605,12 +1784,12 @@ class WebsocketEndpoint(object):
 
         **Example request:**
 
-            curl -NsS \\
+            curl -NsSk \\
                 -H 'X-Auth-Token: ffedf49d' \\
                 -H 'Host: localhost:8000' \\
                 -H 'Connection: Upgrade' \\
                 -H 'Upgrade: websocket' \\
-                -H 'Origin: http://localhost:8000' \\
+                -H 'Origin: https://localhost:8000' \\
                 -H 'Sec-WebSocket-Version: 13' \\
                 -H 'Sec-WebSocket-Key: '"$(echo -n $RANDOM | base64)" \\
                 localhost:8000/ws
@@ -1621,7 +1800,7 @@ class WebsocketEndpoint(object):
             Connection: Upgrade
             Upgrade: websocket
             Host: localhost:8000
-            Origin: http://localhost:8000
+            Origin: https://localhost:8000
             Sec-WebSocket-Version: 13
             Sec-WebSocket-Key: s65VsgHigh7v/Jcf4nXHnA==
             X-Auth-Token: ffedf49d
@@ -1714,7 +1893,7 @@ class WebsocketEndpoint(object):
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
-                data = stream.next()
+                data = next(stream)
                 if data:
                     try:  # work around try to decode catch unicode errors
                         if 'format_events' in kwargs:
@@ -1774,7 +1953,10 @@ class Webhook(object):
         language: python
         script: python -m unittest tests
         after_success:
-            - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
+            - |
+                curl -sSk https://saltapi-url.example.com:8000/hook/travis/build/success \
+                        -d branch="${TRAVIS_BRANCH}" \
+                        -d commit="${TRAVIS_COMMIT}"
 
     .. seealso:: :ref:`events`, :ref:`reactor`
     '''
@@ -1841,7 +2023,7 @@ class Webhook(object):
 
         As a practical example, an internal continuous-integration build
         server could send an HTTP POST request to the URL
-        ``http://localhost:8000/hook/mycompany/build/success`` which contains
+        ``https://localhost:8000/hook/mycompany/build/success`` which contains
         the result of a build and the SHA of the version that was built as
         JSON. That would then produce the following event in Salt that could be
         used to kick off a deployment via Salt's Reactor::
@@ -1976,7 +2158,7 @@ class API(object):
 
         CherryPy uses class attributes to resolve URLs.
         '''
-        for url, cls in self.url_map.items():
+        for url, cls in six.iteritems(self.url_map):
             setattr(self, url, cls())
 
     def _update_url_map(self):

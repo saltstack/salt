@@ -41,7 +41,7 @@ correctly::
 
     DROP TABLE IF EXISTS jids;
     CREATE TABLE jids (
-      jid   bigint PRIMARY KEY,
+      jid   varchar(20) PRIMARY KEY,
       load  text NOT NULL
     );
 
@@ -74,6 +74,7 @@ Required python modules: psycopg2
 
     salt '*' test.ping --return postgres --return_config alternative
 '''
+from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
@@ -81,7 +82,7 @@ Required python modules: psycopg2
 import json
 
 # Import Salt libs
-import salt.utils
+import salt.utils.jid
 import salt.returners
 
 # Import third party libs
@@ -272,8 +273,8 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache):  # pylint: disable=unused-argument
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
-    Do any pre-processing necessary and return the jid to use
+    Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

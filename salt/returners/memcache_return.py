@@ -26,11 +26,12 @@ python2-memcache uses 'localhost' and '11211' as syntax on connection.
 
     salt '*' test.ping --return memcache --return_config alternative
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
 import logging
-import salt.utils
+import salt.utils.jid
 
 import salt.returners
 
@@ -93,11 +94,11 @@ def _get_serv(ret):
     #    an integer weight value.
 
 
-def prep_jid(nocache):  # pylint: disable=unused-argument
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
-    Pre-process the jid and return the jid to use
+    Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
 
 
 def returner(ret):
@@ -106,9 +107,17 @@ def returner(ret):
     '''
     serv = _get_serv(ret)
     serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
-    serv.prepend('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
-    serv.append('minions', ret['id'])
-    serv.append('jids', ret['jid'])
+
+    # The following operations are neither efficient nor atomic.
+    # If there is a way to make them so, this should be updated.
+    if ret['id'] not in get_minions():
+        r = serv.append('minions', ret['id'] + ',')
+        if not r:
+            serv.add('minions', ret['id'] + ',')
+    if ret['jid'] not in get_jids():
+        r = serv.append('jids', ret['jid'] + ',')
+        if not r:
+            serv.add('jids', ret['jid'] + ',')
 
 
 def save_load(jid, load):
@@ -137,7 +146,7 @@ def get_jid(jid):
     '''
     serv = _get_serv(ret=None)
     ret = {}
-    for minion in serv.smembers('minions'):
+    for minion in get_minions():
         data = serv.get('{0}:{1}'.format(minion, jid))
         if data:
             ret[minion] = json.loads(data)
@@ -167,7 +176,10 @@ def get_jids():
     Return a list of all job ids
     '''
     serv = _get_serv(ret=None)
-    return serv.get_multi('jids')
+    try:
+        return serv.get('jids').strip(',').split(',')
+    except AttributeError:
+        return []
 
 
 def get_minions():
@@ -175,4 +187,7 @@ def get_minions():
     Return a list of minions
     '''
     serv = _get_serv(ret=None)
-    return serv.get_multi('minions')
+    try:
+        return serv.get('minions').strip(',').split(',')
+    except AttributeError:
+        return []

@@ -4,7 +4,12 @@ Functions to perform introspection on a minion, and return data in a format
 usable by Salt States
 '''
 
+# Import python libs
+from __future__ import absolute_import
 import os
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def running_service_owners(
@@ -56,7 +61,7 @@ def running_service_owners(
         for service in execs:
             if path == execs[service]:
                 pkg = __salt__['pkg.owner'](path)
-                ret[service] = pkg.values()[0]
+                ret[service] = next(six.itervalues(pkg))
 
     return ret
 
@@ -94,7 +99,7 @@ def enabled_service_owners():
             continue
         start_cmd = data['ExecStart']['path']
         pkg = __salt__['pkg.owner'](start_cmd)
-        ret[service] = pkg.values()[0]
+        ret[service] = next(six.itervalues(pkg))
 
     return ret
 
@@ -131,7 +136,7 @@ def service_highstate(requires=True):
         if requires:
             exists = False
             for item in ret[service]['service']:
-                if isinstance(item, dict) and item.keys()[0] == 'require':
+                if isinstance(item, dict) and next(six.iterkeys(item)) == 'require':
                     exists = True
             if not exists:
                 ret[service]['service'].append(

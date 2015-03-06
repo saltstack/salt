@@ -106,6 +106,7 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 
     salt '*' test.ping --return odbc --return_config alternative
 '''
+from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
 # pylint: disable=W1321,E1321
 
@@ -113,7 +114,7 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers::
 import json
 
 # Import Salt libs
-import salt.utils
+import salt.utils.jid
 import salt.returners
 
 # FIXME We'll need to handle this differently for Windows.
@@ -300,8 +301,8 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache):  # pylint: disable=unused-argument
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
-    Do any jid pre-processing and return the jid to use
+    Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

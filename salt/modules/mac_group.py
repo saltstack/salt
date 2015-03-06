@@ -4,11 +4,13 @@ Manage groups on Mac OS 10.7+
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import grp
 except ImportError:
     pass
 
+# Import Salt Libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _dscl, _flush_dscl_cache
@@ -70,7 +72,8 @@ def _list_gids():
     Return a list of gids in use
     '''
     cmd = __salt__['cmd.run']('dscacheutil -q group | grep gid:',
-                              output_loglevel='quiet')
+                              output_loglevel='quiet',
+                              python_shell=True)
     data_list = cmd.split()
     for item in data_list:
         if item == 'gid:':

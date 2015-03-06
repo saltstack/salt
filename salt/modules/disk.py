@@ -2,6 +2,7 @@
 '''
 Module for gathering disk information
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -10,8 +11,10 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -70,13 +73,21 @@ def usage(args=None):
     if flags:
         cmd += ' -{0}'.format(flags)
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    oldline = None
     for line in out:
         if not line:
             continue
         if line.startswith('Filesystem'):
             continue
+        if oldline:
+            line = oldline + " " + line
         comps = line.split()
+        if len(comps) == 1:
+            oldline = line
+            continue
+        else:
+            oldline = None
         while not comps[1].isdigit():
             comps[0] = '{0} {1}'.format(comps[0], comps[1])
             comps.pop(1)
@@ -117,11 +128,11 @@ def inodeusage(args=None):
         salt '*' disk.inodeusage
     '''
     flags = _clean_flags(args, 'disk.inodeusage')
-    cmd = 'df -i'
+    cmd = 'df -iP'
     if flags:
         cmd += ' -{0}'.format(flags)
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in out:
         if line.startswith('Filesystem'):
             continue
@@ -170,7 +181,7 @@ def percent(args=None):
     else:
         cmd = 'df'
     ret = {}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in out:
         if not line:
             continue
@@ -194,9 +205,11 @@ def percent(args=None):
         return ret
 
 
+@decorators.which('blkid')
 def blkid(device=None):
     '''
-    Return block device attributes: UUID, LABEL, etc.
+    Return block device attributes: UUID, LABEL, etc.  This function only works
+    on systems where blkid is available.
 
     CLI Example:
 
@@ -210,7 +223,9 @@ def blkid(device=None):
         args = " " + device
 
     ret = {}
-    for line in __salt__['cmd.run_stdout']('blkid' + args).split('\n'):
+    for line in __salt__['cmd.run_stdout']('blkid' + args, python_shell=False).split('\n'):
+        if not line:
+            continue
         comps = line.split()
         device = comps[0][:-1]
         info = {}

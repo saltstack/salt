@@ -726,7 +726,7 @@ directed to look on the minion by setting this parameter to ``local``.
 .. conf_minion:: use_master_when_local
 
 ``use_master_when_local``
----------------
+-------------------------
 
 Default: ``False``
 
@@ -773,7 +773,7 @@ the fileserver's environments. This parameter operates identically to the
 Default: ``md5``
 
 The hash_type is the hash to use when discovering the hash of a file on the
-local fileserver. The default is md5, but sha1, sha224, sha256, sha384 and
+local fileserver. The default is md5, but sha1, sha224, sha256, sha384, and
 sha512 are also supported.
 
 .. code-block:: yaml
@@ -953,7 +953,8 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`.
+:conf_log:`log_level_logfile`. When it is not set explicitly
+it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml
 

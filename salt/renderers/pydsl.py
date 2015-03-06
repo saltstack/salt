@@ -279,7 +279,7 @@ Once an :ref:`ID-declaration` is called at render time it is detached from the
 sls module as if it was never defined.
 
 .. note::
-    If `implicit ordering` is enabled (ie, via ``__pydsl__.set(ordered=True)``) then
+    If `implicit ordering` is enabled (i.e., via ``__pydsl__.set(ordered=True)``) then
     the *first* invocation of a :ref:`ID-declaration` object must be done before a
     new :ref:`function-declaration` is created.
 
@@ -335,8 +335,10 @@ For example:
         my_mod = sys.modules['salt.loaded.ext.module.my_mod']
 
 '''
+from __future__ import absolute_import
 
 import imp
+from salt.ext.six import exec_
 from salt.utils import pydsl
 from salt.utils.pydsl import PyDslError
 from salt.exceptions import SaltRenderError
@@ -371,7 +373,7 @@ def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, *
         **kws)
 
     dsl_sls.get_render_stack().append(dsl_sls)
-    exec template.read() in mod.__dict__
+    exec_(template.read(), mod.__dict__)
     highstate = dsl_sls.to_highstate(mod)
     dsl_sls.get_render_stack().pop()
     return highstate

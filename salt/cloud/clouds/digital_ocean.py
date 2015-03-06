@@ -20,6 +20,7 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -82,7 +83,7 @@ def avail_locations(call=None):
     ret = {}
     for region in items['regions']:
         ret[region['name']] = {}
-        for item in region.keys():
+        for item in region:
             ret[region['name']][item] = str(region[item])
 
     return ret
@@ -101,9 +102,9 @@ def avail_images(call=None):
     items = query(method='images')
     ret = {}
     for image in items['images']:
-        ret[image['name']] = {}
-        for item in image.keys():
-            ret[image['name']][item] = str(image[item])
+        ret[image['id']] = {}
+        for item in image:
+            ret[image['id']][item] = str(image[item])
 
     return ret
 
@@ -122,7 +123,7 @@ def avail_sizes(call=None):
     ret = {}
     for size in items['sizes']:
         ret[size['name']] = {}
-        for item in size.keys():
+        for item in size:
             ret[size['name']][item] = str(size[item])
 
     return ret
@@ -165,7 +166,7 @@ def list_nodes_full(call=None):
     ret = {}
     for node in items['droplets']:
         ret[node['name']] = {}
-        for item in node.keys():
+        for item in node:
             value = node[item]
             if value is not None:
                 value = str(value)
@@ -293,7 +294,7 @@ def create(vm_):
     if private_networking is not None:
         if not isinstance(private_networking, bool):
             raise SaltCloudConfigError("'private_networking' should be a boolean value.")
-        kwargs['private_networking'] = private_networking
+        kwargs['private_networking'] = str(private_networking).lower()
 
     backups_enabled = config.get_cloud_config_value(
         'backups_enabled', vm_, __opts__, search_global=False, default=None,
@@ -301,7 +302,7 @@ def create(vm_):
     if backups_enabled is not None:
         if not isinstance(backups_enabled, bool):
             raise SaltCloudConfigError("'backups_enabled' should be a boolean value.")
-        kwargs['backups_enabled'] = backups_enabled
+        kwargs['backups_enabled'] = str(backups_enabled).lower()
 
     salt.utils.cloud.fire_event(
         'event',
@@ -598,7 +599,7 @@ def list_keypairs(call=None):
     ret = {}
     for keypair in items['ssh_keys']:
         ret[keypair['name']] = {}
-        for item in keypair.keys():
+        for item in keypair:
             ret[keypair['name']][item] = str(keypair[item])
 
     return ret

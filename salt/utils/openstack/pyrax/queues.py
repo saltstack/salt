@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 # Import Python libs
 import logging
 log = logging.getLogger(__name__)

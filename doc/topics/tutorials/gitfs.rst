@@ -59,7 +59,11 @@ be used to install it:
 If pygit2_ is not packaged for the platform on which the Master is running, the
 pygit2_ website has installation instructions here__. Keep in mind however that
 following these instructions will install libgit2 and pygit2_ without system
-packages.
+packages. Also, while this is not explicitly mentioned in the pygit2_
+installation instructions, libssh2 development headers must be installed before
+building libgit2 in order to enable access to SSH-protected git repositories.
+Luckily, these are available in most distros' repositories, usually as either
+``libssh2-devel`` or ``libssh2-dev``, depending on platform.
 
 .. __: http://www.pygit2.org/install.html
 
@@ -103,9 +107,7 @@ install GitPython`` (or ``easy_install GitPython``) as root.
 Dulwich
 -------
 
-Dulwich does not, at this time, have a limitation on the supported version,
-however support for Dulwich is new and it is possible that incompatibilities
-with old versions will be found.
+Dulwich 0.9.4 or newer is required to use Dulwich as backend for gitfs.
 
 Dulwich is available in EPEL, and can be easily installed on the master using
 yum:
@@ -120,6 +122,30 @@ For APT-based distros such as Ubuntu and Debian:
 
     # apt-get install python-dulwich
 
+.. important::
+
+    If switching to Dulwich from GitPython/pygit2, or switching from
+    GitPython/pygit2 to Dulwich, it is necessary to clear the gitfs cache to
+    avoid unpredictable behavior. This is probably a good idea whenever
+    switching to a new :conf_master:`gitfs_provider`, but it is less important
+    when switching between GitPython and pygit2.
+
+    Beginning in version 2015.2.0, the gitfs cache can be easily cleared using
+    the :mod:`fileserver.clear_cache <salt.runners.fileserver.clear_cache>`
+    runner.
+
+    .. code-block:: bash
+
+        salt-run fileserver.clear_cache backend=git
+
+    If the Master is running an earlier version, then the cache can be cleared
+    by removing the ``gitfs`` and ``file_lists/gitfs`` directories (both paths
+    relative to the master cache directory, usually
+    ``/var/cache/salt/master``).
+
+    .. code-block:: bash
+
+        rm -rf /var/cache/salt/master{,/file_lists}/gitfs
 
 Simple Configuration
 ====================
@@ -155,8 +181,16 @@ master:
    Information on how to authenticate to SSH remotes can be found :ref:`here
    <gitfs-authentication>`.
 
+   .. note::
+
+       Dulwich does not recognize ``ssh://`` URLs, ``git+ssh://`` must be used
+       instead. Salt version 2015.2.0 and later will automatically add the
+       ``git+`` to the beginning of these URLs before fetching, but earlier
+       Salt versions will fail to fetch unless the URL is specified using
+       ``git+ssh://``.
+
 3. Restart the master to load the new configuration.
-   
+
 
 .. note::
 
@@ -390,10 +424,10 @@ be searched first for the requested file; then, if it is not found on the
 master, each configured git remote will be searched.
 
 
-Branches, Environments and Top Files
+Branches, Environments, and Top Files
 ====================================
 
-When using the gitfs backend, branches and tags will be mapped to environments
+When using the gitfs backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
 
 There is one exception to this rule: the ``master`` branch is implicitly mapped
@@ -617,7 +651,7 @@ server via SSH:
 .. code-block:: bash
 
     $ su
-    Password: 
+    Password:
     # ssh github.com
     The authenticity of host 'github.com (192.30.252.128)' can't be established.
     RSA key fingerprint is 16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48.

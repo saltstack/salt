@@ -12,6 +12,7 @@ A state module to manage Portage configuration on Gentoo
             - use:
                 - openssl
 '''
+from __future__ import absolute_import
 
 
 def __virtual__():
@@ -68,17 +69,20 @@ def flags(name,
           unmask=False,
           mask=False):
     '''
-    Enforce the given flags on the given package or DEPEND atom.
-    Please be warned that, in most cases, you need to rebuild the affected packages in
-    order to apply the changes.
+    Enforce the given flags on the given package or ``DEPEND`` atom.
+
+    .. warning::
+
+        In most cases, the affected package(s) need to be rebuilt in
+        order to apply the changes.
 
     name
-        The name of the package or his DEPEND atom
+        The name of the package or its DEPEND atom
     use
-        A list of use flags
+        A list of ``USE`` flags
     accept_keywords
-        A list of keywords to accept. "~ARCH" means current host arch, and will
-        be translated in a line without keywords
+        A list of keywords to accept. ``~ARCH`` means current host arch, and will
+        be translated into a line without keywords
     env
         A list of environment files
     license

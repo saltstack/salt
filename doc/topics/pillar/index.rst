@@ -98,21 +98,19 @@ files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['apache'] }}
 
 .. code-block:: yaml
 
     git:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['git'] }}
 
 Finally, the above states can utilize the values provided to them via Pillar.
 All pillar values targeted to a minion are available via the 'pillar'
 dictionary. As seen in the above example, Jinja substitution can then be
-utilized to access the keys and values in the Pillar dictionary. 
+utilized to access the keys and values in the Pillar dictionary.
 
 Note that you cannot just list key/value-information in ``top.sls``. Instead,
 target a minion to a pillar file and then list the keys and values in the
@@ -377,3 +375,17 @@ to ``False``:
 .. code-block:: yaml
 
     pillar_opts: False
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module, set the following pillar
+variable:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
+

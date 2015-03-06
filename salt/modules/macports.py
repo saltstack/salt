@@ -31,6 +31,7 @@ In other words `salt mac-machine pkg.refresh_db` is more like
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import re
@@ -40,6 +41,9 @@ import salt.utils
 from salt.exceptions import (
     CommandExecutionError
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -98,8 +102,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs
     '''
     versions_as_list = salt.utils.is_true(versions_as_list)
-    # 'removed' not yet implemented or not applicable
-    if salt.utils.is_true(kwargs.get('removed')):
+    # 'removed', 'purge_desired' not yet implemented or not applicable
+    if any([salt.utils.is_true(kwargs.get(x))
+            for x in ('removed', 'purge_desired')]):
         return {}
 
     if 'pkg.list_pkgs' in __context__:
@@ -111,8 +116,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    cmd = 'port installed'
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
+    cmd = ['port', 'installed']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in out.splitlines():
         try:
             name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
@@ -171,11 +176,11 @@ def latest_version(*names, **kwargs):
 
     ret = {}
 
-    for k, v in available.items():
-        if k not in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
-            ret[k] = v
+    for key, val in six.iteritems(available):
+        if key not in installed or salt.utils.compare_versions(ver1=installed[key], oper='<', ver2=val):
+            ret[key] = val
         else:
-            ret[k] = ''
+            ret[key] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -221,11 +226,12 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = 'port uninstall {0}'.format(' '.join(targets))
-    __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['port', 'uninstall']
+    cmd.extend(targets)
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['saltutil.compare_dicts'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def install(name=None, refresh=False, pkgs=None, **kwargs):
@@ -313,15 +319,14 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         return {}
 
     formulas_array = []
-    for pname, pparams in pkg_params.items():
+    for pname, pparams in six.iteritems(pkg_params):
         formulas_array.append(pname + (pparams or ''))
 
-    formulas = ' '.join(formulas_array)
-
     old = list_pkgs()
-    cmd = 'port install {0}'.format(formulas)
+    cmd = ['port', 'install']
+    cmd.extend(formulas_array)
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -396,14 +401,13 @@ def upgrade(refresh=True):  # pylint: disable=W0613
 
         salt '*' pkg.upgrade
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
+    if refresh:
+        refresh_db()
 
     old = list_pkgs()
+    cmd = ['port', 'upgrade', 'outdated']
 
-    __salt__['cmd.run_all']('port upgrade outdated', output_loglevel='trace')
+    __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)

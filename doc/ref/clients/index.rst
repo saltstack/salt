@@ -20,11 +20,10 @@ client is detailed below.
     See the :py:func:`state.event <salt.runners.state.event>` runner to utilize
     Salt's event bus from shell scripts.
 
-    See the `salt-api`_ project to access Salt externally via a REST interface.
-    It uses Salt's Python interface documented below and is also useful as a
-    reference implementation.
+    Salt's `netapi module`_ provides access to Salt externally via a REST interface.
+    Review the `netapi module`_ documentation for more information.
 
-.. _`salt-api`: https://github.com/saltstack/salt-api
+.. _`netapi module`: http://docs.saltstack.com/en/latest/topics/netapi/index.html
 
 Salt's ``opts`` dictionary
 ==========================

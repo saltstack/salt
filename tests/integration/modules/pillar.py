@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
-from distutils.version import LooseVersion
+from __future__ import absolute_import
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -112,6 +113,20 @@ class PillarModuleTest(integration.ModuleCase):
         repo = git.Repo(rp_location)
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
+
+    def test_ext_pillar_env_mapping(self):
+        import os
+        from salt.pillar import git_pillar
+        import git
+
+        repo_url = 'https://github.com/saltstack/pillar1.git'
+        pillar = self.run_function('pillar.data')
+
+        for branch, env in [('dev', 'testing')]:
+            repo = git_pillar.GitPillar(branch, repo_url, self.master_opts)
+
+            self.assertIn(repo.working_dir,
+                    pillar['test_ext_pillar_opts']['pillar_roots'][env])
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -4,12 +4,16 @@ Set up the correct search system
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.minion
 import salt.loader
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def iter_ret(opts, ret):
@@ -54,14 +58,14 @@ def _iter_dir(dir_, saltenv):
             with salt.utils.fopen(path) as fp_:
                 if salt.utils.istextfile(fp_):
                     ret.append(
-                        {'path': unicode(path),
-                         'saltenv': unicode(saltenv),
-                         'content': unicode(fp_.read())}
+                        {'path': six.text_type(path),
+                         'saltenv': six.text_type(saltenv),
+                         'content': six.text_type(fp_.read())}
                         )
                 else:
                     ret.append(
-                        {'path': unicode(path),
-                         'saltenv': unicode(saltenv),
+                        {'path': six.text_type(path),
+                         'saltenv': six.text_type(saltenv),
                          'content': u'bin'}
                         )
     yield ret
@@ -74,7 +78,7 @@ def iter_roots(roots):
      'saltenv': <saltenv>,
      'cont': <contents>}
     '''
-    for saltenv, dirs in roots.items():
+    for saltenv, dirs in six.iteritems(roots):
         for dir_ in dirs:
             if not os.path.isdir(dir_):
                 continue

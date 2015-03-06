@@ -2,6 +2,7 @@
 '''
 The networking module for RHEL/Fedora based distros
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -17,6 +18,7 @@ import jinja2.exceptions
 import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -149,13 +151,6 @@ def _parse_ethtool_opts(opts, iface):
             config.update({'duplex': opts['duplex']})
         else:
             _raise_error_iface(iface, 'duplex', valid)
-
-    if 'mtu' in opts:
-        try:
-            int(opts['mtu'])
-            config.update({'mtu': opts['mtu']})
-        except Exception:
-            _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'speed' in opts:
         valid = ['10', '100', '1000', '10000']
@@ -563,6 +558,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['dns'] = opts['dns']
         result['peerdns'] = 'yes'
 
+    if 'mtu' in opts:
+        try:
+            result['mtu'] = int(opts['mtu'])
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
+
     if iface_type not in ['bridge']:
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
@@ -629,6 +630,13 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if opt in opts:
             result[opt] = opts[opt]
 
+    if 'mtu' in opts:
+        try:
+            int(opts['mtu'])
+            result['mtu'] = opts['mtu']
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
+
     if 'ipv6_autoconf' in opts:
         result['ipv6_autoconf'] = opts['ipv6_autoconf']
 
@@ -669,6 +677,29 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     else:
         result['userctl'] = 'no'
 
+    # This vlan is in opts, and should be only used in range interface
+    # will affect jinja template for interface generating
+    if 'vlan' in opts:
+        if opts['vlan'] in _CONFIG_TRUE:
+            result['vlan'] = 'yes'
+        elif opts['vlan'] in _CONFIG_FALSE:
+            result['vlan'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['vlan'], valid)
+
+    if 'arpcheck' in opts:
+        if opts['arpcheck'] in _CONFIG_FALSE:
+            result['arpcheck'] = 'no'
+
+    if 'ipaddr_start' in opts:
+        result['ipaddr_start'] = opts['ipaddr_start']
+
+    if 'ipaddr_end' in opts:
+        result['ipaddr_end'] = opts['ipaddr_end']
+
+    if 'clonenum_start' in opts:
+        result['clonenum_start'] = opts['clonenum_start']
+
     return result
 
 
@@ -678,7 +709,7 @@ def _parse_routes(iface, opts):
     the route settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
     result = {}
     if 'routes' not in opts:
         _raise_error_routes(iface, 'routes', 'List of routes')
@@ -695,8 +726,8 @@ def _parse_network_settings(opts, current):
     the global network settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
-    current = dict((k.lower(), v) for (k, v) in current.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
+    current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
@@ -840,12 +871,14 @@ def build_bond(iface, **settings):
     path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
         __salt__['cmd.run'](
-            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            python_shell=False
         )
         __salt__['cmd.run'](
-            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            python_shell=False
         )
-        __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
+        __salt__['file.append']('/etc/modprobe.conf', path)
     __salt__['kmod.load']('bonding')
 
     if settings['test']:

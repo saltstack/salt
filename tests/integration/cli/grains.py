@@ -12,6 +12,8 @@
     localhost:
         localhost
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Libs
 import integration
@@ -32,9 +34,8 @@ class SSHGrainsTest(integration.SSHCase):
         '''
         Test salt-ssh grains id work for localhost.
         '''
-        ret = '{\n    "localhost": "localhost"\n}\n'
-        cmd = self.run_ssh("grains.get id")
-        self.assertEqual(cmd, ret)
+        cmd = self.run_function("grains.get", ["id"])
+        self.assertEqual(cmd, "localhost")
 
 
 if __name__ == '__main__':

@@ -4,21 +4,18 @@ This module contains the function calls to execute command line scripts
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
-import traceback
-import logging
-import multiprocessing
-import threading
 import time
+import logging
+import threading
+import traceback
 from random import randint
 
 # Import salt libs
-import salt
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
-import salt.cli
-
+import salt.defaults.exitcodes  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +42,8 @@ def salt_master():
     '''
     Start the salt master.
     '''
-    master = salt.Master()
+    import salt.cli.daemons
+    master = salt.cli.daemons.Master()
     master.start()
 
 
@@ -53,6 +51,7 @@ def minion_process(queue):
     '''
     Start a minion process
     '''
+    import salt.cli.daemons
     # salt_minion spawns this function in a new process
 
     def suicide_when_without_parent(parent_pid):
@@ -76,10 +75,10 @@ def minion_process(queue):
     restart = False
     minion = None
     try:
-        minion = salt.Minion()
+        minion = salt.cli.daemons.Minion()
         minion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
-        log.error(exc)
+        log.error('Minion failed to start: ', exc_info=True)
         restart = True
     except SystemExit as exc:
         restart = False
@@ -102,23 +101,16 @@ def salt_minion():
     '''
     Start the salt minion.
     '''
+    import salt.cli.daemons
+    import multiprocessing
     if '' in sys.path:
         sys.path.remove('')
 
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')
-        minion = salt.Minion()
+        minion = salt.cli.daemons.Minion()
         minion.start()
         return
-
-    if '-d' in sys.argv or '--daemon' in sys.argv:
-        # disable daemonize on sub processes
-        if '-d' in sys.argv:
-            sys.argv.remove('-d')
-        if '--daemon' in sys.argv:
-            sys.argv.remove('--daemon')
-        # daemonize current process
-        salt.utils.daemonize()
 
     # keep one minion subprocess running
     while True:
@@ -126,7 +118,7 @@ def salt_minion():
             queue = multiprocessing.Queue()
         except Exception:
             # This breaks in containers
-            minion = salt.Minion()
+            minion = salt.cli.daemons.Minion()
             minion.start()
             return
         process = multiprocessing.Process(target=minion_process, args=(queue,))
@@ -159,9 +151,10 @@ def salt_syndic():
     '''
     Start the salt syndic.
     '''
+    import salt.cli.daemons
     pid = os.getpid()
     try:
-        syndic = salt.Syndic()
+        syndic = salt.cli.daemons.Syndic()
         syndic.start()
     except KeyboardInterrupt:
         os.kill(pid, 15)
@@ -171,11 +164,12 @@ def salt_key():
     '''
     Manage the authentication keys with salt-key.
     '''
+    import salt.cli.key
     client = None
     try:
-        client = salt.cli.SaltKey()
+        client = salt.cli.key.SaltKey()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -192,11 +186,12 @@ def salt_cp():
     Publish commands to the salt system from the command line on the
     master.
     '''
+    import salt.cli.cp
     client = None
     try:
-        client = salt.cli.SaltCP()
+        client = salt.cli.cp.SaltCPCli()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -213,13 +208,14 @@ def salt_call():
     Directly call a salt command in the modules, does not require a running
     salt minion to run.
     '''
+    import salt.cli.call
     if '' in sys.path:
         sys.path.remove('')
     client = None
     try:
-        client = salt.cli.SaltCall()
+        client = salt.cli.call.SaltCall()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -235,13 +231,14 @@ def salt_run():
     '''
     Execute a salt convenience routine.
     '''
+    import salt.cli.run
     if '' in sys.path:
         sys.path.remove('')
     client = None
     try:
-        client = salt.cli.SaltRun()
+        client = salt.cli.run.SaltRun()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -257,13 +254,14 @@ def salt_ssh():
     '''
     Execute the salt-ssh system
     '''
+    import salt.cli.ssh
     if '' in sys.path:
         sys.path.remove('')
     client = None
     try:
-        client = salt.cli.SaltSSH()
+        client = salt.cli.ssh.SaltSSH()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -292,7 +290,8 @@ def salt_cloud():
     try:
         import salt.cloud.cli
         has_saltcloud = True
-    except ImportError:
+    except ImportError as e:
+        log.error("Error importing salt cloud {0}".format(e))
         # No salt cloud on Windows
         has_saltcloud = False
     if '' in sys.path:
@@ -300,13 +299,13 @@ def salt_cloud():
 
     if not has_saltcloud:
         print('salt-cloud is not available in this system')
-        sys.exit(os.EX_UNAVAILABLE)
+        sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
     client = None
     try:
         client = salt.cloud.cli.SaltCloud()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash
@@ -322,7 +321,8 @@ def salt_api():
     '''
     The main function for salt-api
     '''
-    sapi = salt.cli.SaltAPI()
+    import salt.cli.api
+    sapi = salt.cli.api.SaltAPI()  # pylint: disable=E1120
     sapi.run()
 
 
@@ -331,13 +331,14 @@ def salt_main():
     Publish commands to the salt system from the command line on the
     master.
     '''
+    import salt.cli.salt
     if '' in sys.path:
         sys.path.remove('')
     client = None
     try:
-        client = salt.cli.SaltCMD()
+        client = salt.cli.salt.SaltCMD()
         client.run()
-    except KeyboardInterrupt, err:
+    except KeyboardInterrupt as err:
         trace = traceback.format_exc()
         try:
             hardcrash = client.options.hard_crash

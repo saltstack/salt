@@ -62,6 +62,7 @@ There are a few things to keep in mind:
     salt '*' test.ping --return smtp --return_config alternative
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -71,7 +72,7 @@ import smtplib
 from email.utils import formatdate
 
 # Import Salt libs
-import salt.utils
+import salt.utils.jid
 import salt.returners
 
 try:
@@ -133,7 +134,7 @@ def returner(ret):
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
     for field in fields:
-        if field in ret.keys():
+        if field in ret:
             subject += ' {0}'.format(ret[field])
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
@@ -183,8 +184,8 @@ def returner(ret):
     server.quit()
 
 
-def prep_jid(nocache):  # pylint: disable=unused-argument
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
     '''
-    Do any necessary pre-processing and return the jid to use
+    Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

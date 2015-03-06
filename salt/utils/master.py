@@ -8,12 +8,14 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
-from threading import Thread, Event
 import multiprocessing
-import zmq
 import signal
+import tempfile
+from threading import Thread, Event
+
 # Import salt libs
 import salt.log
 import salt.client
@@ -23,6 +25,14 @@ import salt.utils.minions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
+
+# Import third party libs
+import salt.ext.six as six
+try:
+    import zmq
+    HAS_ZMQ = True
+except ImportError:
+    HAS_ZMQ = False
 
 log = logging.getLogger(__name__)
 
@@ -189,19 +199,19 @@ class MasterPillarUtil(object):
         cret = {}
         lret = {}
         if self.use_cached_grains:
-            cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_grains.iteritems() if mcache])
+            cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion grains for: {0}'.format(missed_minions))
             if self.grains_fallback:
                 lret = self._get_live_minion_grains(missed_minions)
-            ret = dict(dict([(minion_id, {}) for minion_id in minion_ids]).items() + lret.items() + cret.items())
+            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         else:
             lret = self._get_live_minion_grains(minion_ids)
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion grains for: {0}'.format(missed_minions))
             if self.grains_fallback:
-                cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_grains.iteritems() if mcache])
-            ret = dict(dict([(minion_id, {}) for minion_id in minion_ids]).items() + lret.items() + cret.items())
+                cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
+            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         return ret
 
     def _get_minion_pillar(self, *minion_ids, **kwargs):
@@ -214,19 +224,19 @@ class MasterPillarUtil(object):
         cret = {}
         lret = {}
         if self.use_cached_pillar:
-            cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_pillar.iteritems() if mcache])
+            cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion pillars for: {0}'.format(missed_minions))
             if self.pillar_fallback:
                 lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in missed_minions])
-            ret = dict(dict([(minion_id, {}) for minion_id in minion_ids]).items() + lret.items() + cret.items())
+            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         else:
             lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in minion_ids])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion pillars for: {0}'.format(missed_minions))
             if self.pillar_fallback:
-                cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_pillar.iteritems() if mcache])
-            ret = dict(dict([(minion_id, {}) for minion_id in minion_ids]).items() + lret.items() + cret.items())
+                cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
+            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         return ret
 
     def _tgt_to_list(self):
@@ -368,11 +378,17 @@ class MasterPillarUtil(object):
                     # Not saving pillar or grains, so just delete the cache file
                     os.remove(os.path.join(data_file))
                 elif clear_pillar and minion_grains:
-                    with salt.utils.fopen(data_file, 'w+b') as fp_:
+                    tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+                    os.close(tmpfh)
+                    with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                         fp_.write(self.serial.dumps({'grains': minion_grains}))
+                    os.rename(tmpfname, data_file)
                 elif clear_grains and minion_pillar:
-                    with salt.utils.fopen(data_file, 'w+b') as fp_:
+                    tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+                    os.close(tmpfh)
+                    with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                         fp_.write(self.serial.dumps({'pillar': minion_pillar}))
+                    os.rename(tmpfname, data_file)
                 if clear_mine:
                     # Delete the whole mine file
                     os.remove(os.path.join(mine_file))
@@ -382,8 +398,11 @@ class MasterPillarUtil(object):
                         mine_data = self.serial.loads(fp_.read())
                     if isinstance(mine_data, dict):
                         if mine_data.pop(clear_mine_func, False):
-                            with salt.utils.fopen(mine_file, 'w+b') as fp_:
+                            tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
+                            os.close(tmpfh)
+                            with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
+                            os.rename(tmpfname, mine_file)
         except (OSError, IOError):
             return True
         return True
@@ -491,11 +510,11 @@ class ConnectedCache(multiprocessing.Process):
         '''
         log.debug('ConCache securing sockets')
         if os.path.exists(self.cache_sock):
-            os.chmod(self.cache_sock, 0600)
+            os.chmod(self.cache_sock, 0o600)
         if os.path.exists(self.update_sock):
-            os.chmod(self.update_sock, 0600)
+            os.chmod(self.update_sock, 0o600)
         if os.path.exists(self.upd_t_sock):
-            os.chmod(self.upd_t_sock, 0600)
+            os.chmod(self.upd_t_sock, 0o600)
 
     def stop(self):
         '''
@@ -555,7 +574,7 @@ class ConnectedCache(multiprocessing.Process):
             except KeyboardInterrupt:
                 self.stop()
             except zmq.ZMQError as zmq_err:
-                log.error('ConCache ZeroMQ-Error occured')
+                log.error('ConCache ZeroMQ-Error occurred')
                 log.exception(zmq_err)
                 self.stop()
 

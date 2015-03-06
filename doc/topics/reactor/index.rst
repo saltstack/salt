@@ -38,6 +38,9 @@ Mapping Events to Reactor SLS Files
 Reactor SLS files and event tags are associated in the master config file.
 By default this is /etc/salt/master, or /etc/salt/master.d/reactor.conf.
 
+.. versionadded:: 2014.7.0
+    Added Reactor support for ``salt://`` file paths.
+
 In the master config section 'reactor:' is a list of event tags to be matched
 and each event tag has a list of reactor SLS files to be run.
 
@@ -96,13 +99,13 @@ execution.
 Fire an event
 =============
 
-To fire an event from a minion call ``event.fire_master``
+To fire an event from a minion call ``event.send``
 
 .. code-block:: bash
 
-    salt-call event.fire_master '{"overstate": "refresh"}' 'foo'
+    salt-call event.send 'foo' '{overstate: refresh}'
 
-After this is called, any reactor sls files matching event tag ``foo`` will 
+After this is called, any reactor sls files matching event tag ``foo`` will
 execute with ``{{ data['data']['overstate'] }}`` equal to ``'refresh'``.
 
 See :py:mod:`salt.modules.event` for more information.
@@ -110,48 +113,47 @@ See :py:mod:`salt.modules.event` for more information.
 Knowing what event is being fired
 =================================
 
-Knowing exactly which event is being fired and what data is has for use in the
-sls files can be challenging. The easiest way to see exactly what's going on is
-to use the :strong:`eventlisten.py` script. This script is not part of packages
-but is part of the source.
+The best way to see exactly what events are fired and what data is available in
+each event is to use the :py:func:`state.event runner
+<salt.runners.state.event>`.
 
-If the master process is using the default socket, no additional options will be
-required. Otherwise, you will need to specify the socket location.
+.. seealso:: :ref:`Common Salt Events <event-master_events>`
 
 Example usage:
 
 .. code-block:: bash
 
-    wget https://raw.githubusercontent.com/saltstack/salt/develop/tests/eventlisten.py
-    python eventlisten.py
-
-    # OR
-    python eventlisten.py --sock-dir /path/to/var/run/salt
+    salt-run state.event pretty=True
 
 Example output:
 
 .. code-block:: text
 
-    Event fired at Fri Dec 20 10:43:00 2013
-    *************************
-    Tag: salt/auth
-    Data:
-    {'_stamp': '2013-12-20_10:47:54.584699',
-     'act': 'accept',
-     'id': 'fuzzer.domain.tld',
-     'pub': '-----BEGIN PUBLIC KEY-----\nMIICIDANBgk+TRIMMED+EMZ8CAQE=\n-----END PUBLIC KEY-----\n',
-     'result': True}
-
-    Event fired at Fri Dec 20 10:43:01 2013
-    *************************
-    Tag: salt/minion/fuzzer.domain.tld/start
-    Data:
-    {'_stamp': '2013-12-20_10:43:01.638387',
-     'cmd': '_minion_event',
-     'data': 'Minion fuzzer.domain.tld started at Fri Dec 20 10:43:01 2013',
-     'id': 'fuzzer.domain.tld',
-     'pretag': None,
-     'tag': 'salt/minion/fuzzer.domain.tld/start'}
+    salt/job/20150213001905721678/new       {
+        "_stamp": "2015-02-13T00:19:05.724583",
+        "arg": [],
+        "fun": "test.ping",
+        "jid": "20150213001905721678",
+        "minions": [
+            "jerry"
+        ],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root"
+    }
+    salt/job/20150213001910749506/ret/jerry {
+        "_stamp": "2015-02-13T00:19:11.136730",
+        "cmd": "_return",
+        "fun": "saltutil.find_job",
+        "fun_args": [
+            "20150213001905721678"
+        ],
+        "id": "jerry",
+        "jid": "20150213001910749506",
+        "retcode": 0,
+        "return": {},
+        "success": true
+    }
 
 Debugging the Reactor
 =====================
@@ -172,14 +174,28 @@ Understanding the Structure of Reactor Formulas
 ===============================================
 
 While the reactor system uses the same data structure as the state system, this
-data does not translate the same way to operations. In state files formula
-information is mapped to the state functions, but in the reactor system
-information is mapped to a number of available subsystems on the master. These
-systems are the :strong:`LocalClient` and the :strong:`Runners`. The
-:strong:`state declaration` field takes a reference to the function to call in
-each interface. So to trigger a salt-run call the :strong:`state declaration`
-field will start with :strong:`runner`, followed by the runner function to
-call. This means that a call to what would be on the command line
+data does not translate the same way to function calls.
+
+.. versionchanged:: 2014.7.0
+    The ``cmd`` prefix was renamed to ``local`` for consistency with other
+    parts of Salt. A backward-compatible alias was added for ``cmd``.
+
+In state files the minion generates the data structure locally and uses that to
+call local state functions. In the reactor system the master generates a data
+structure that is used to call methods on one of Salt's client interfaces
+described in :ref:`the Python API documentation <client-apis>`.
+
+* :py:class:`~salt.client.LocalClient` is used to call Execution modules
+  remotely on minions. (The :command:`salt` CLI program uses this also.)
+* :py:class:`~salt.runner.RunnerClient` calls Runner modules locally on the
+  master.
+* :py:class:`~salt.wheel.WheelClient` calls Wheel modules locally on the
+  master.
+
+The :strong:`state declaration` field takes a reference to the function to call
+in each interface. So to trigger a salt-run call the :strong:`state
+declaration` field will start with :strong:`runner`, followed by the runner
+function to call. This means that a call to what would be on the command line
 :strong:`salt-run manage.up` will be :strong:`runner.manage.up`. An example of
 this in a reactor formula would look like this:
 
@@ -201,7 +217,7 @@ used by the :strong:`salt` command. This interface more specifically maps to
 the :strong:`cmd_async` method inside of the :strong:`LocalClient` class. This
 means that the arguments passed are being passed to the :strong:`cmd_async`
 method, not the remote method. A field starts with :strong:`local` to use the
-:strong:`LocalClient` subsystem. The result is, to execute a remote command, 
+:strong:`LocalClient` subsystem. The result is, to execute a remote command,
 a reactor formula would look like this:
 
 .. code-block:: yaml
@@ -373,7 +389,7 @@ Ink servers in the master configuration.
         - ret: smtp_return
 
 The above will also return the highstate result data using the `smtp_return`
-returner. The returner needs to be configured on the minion for this to 
+returner. The returner needs to be configured on the minion for this to
 work. See :mod:`salt.returners.smtp_return <salt.returners.smtp_return>` documentation for
 that.
 

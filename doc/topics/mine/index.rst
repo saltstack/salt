@@ -48,9 +48,8 @@ calls of the same function with different arguments.
         mine_function: network.ip_addrs
         cidr: 192.168.0.0/16
       loopback_ip_addrs:
-        - mine_function: network.ip_addrs
-        - lo
-        - True
+        mine_function: network.ip_addrs
+        lo: True
 
 Mine Interval
 =============
@@ -62,6 +61,43 @@ be adjusted for the minion via the `mine_interval` option:
 .. code-block:: yaml
 
     mine_interval: 60
+
+Mine in Salt-SSH
+================
+
+As of the 2015.2 release of salt, salt-ssh supports ``mine.get``.
+
+Because the minions cannot provide their own ``mine_functions`` configuration,
+we retrieve the args for specified mine functions in one of three places,
+searched in the following order:
+
+1. Roster data
+2. Pillar
+3. Master config
+
+The ``mine_functions`` are formatted exactly the same as in normal salt, just
+stored in a different location. Here is an example of a flat roster containing
+``mine_functions``:
+
+.. code-block:: yaml
+
+    test:
+      host: 104.237.131.248
+      user: root
+      mine_functions:
+        cmd.run: ['echo "hello!"']
+        network.ip_addrs:
+          interface: eth0
+
+.. note::
+
+    Because of the differences in the architecture of salt-ssh, ``mine.get``
+    calls are somewhat inefficient. Salt must make a new salt-ssh call to each
+    of the minions in question to retrieve the requested data, much like a
+    publish call. However, unlike publish, it must run the requested function
+    as a wrapper function, so we can retrieve the function args from the pillar
+    of the minion in question. This results in a non-trivial delay in
+    retrieving the requested data.
 
 Example
 =======
@@ -97,8 +133,7 @@ to add them to the pool of load balanced servers.
 .. code-block:: yaml
 
     haproxy_config:
-      file:
-        - managed
+      file.managed:
         - name: /etc/haproxy/config
         - source: salt://haproxy_config
         - template: jinja

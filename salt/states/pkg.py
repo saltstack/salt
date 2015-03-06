@@ -33,7 +33,9 @@ This is necessary and can not be replaced by a require clause in the pkg.
       pkg.installed
 '''
 
+
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import re
@@ -43,12 +45,15 @@ import salt.utils
 from salt.output import nested
 from salt.utils import namespaced_function as _namespaced_function
 from salt.utils.odict import OrderedDict as _OrderedDict
-from salt._compat import string_types
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 from salt.modules.pkg_resource import _repack_pkgs
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+# pylint: disable=invalid-name
 _repack_pkgs = _namespaced_function(_repack_pkgs, globals())
 
 if salt.utils.is_windows():
@@ -64,13 +69,14 @@ if salt.utils.is_windows():
         _namespaced_function(_reverse_cmp_pkg_versions, globals())
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
-    # pylint: disable=W0611
+    # pylint: disable=import-error,unused-import
     try:
         import msgpack
     except ImportError:
         import msgpack_pure as msgpack
-    from distutils.version import LooseVersion  # pylint: disable=E0611,F0401
-    # pylint: enable=W0611
+    from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
+    # pylint: enable=import-error,unused-import
+# pylint: enable=invalid-name
 
 log = logging.getLogger(__name__)
 
@@ -147,7 +153,7 @@ def _find_remove_targets(name=None,
     # Check current versions against specified versions
     targets = []
     problems = []
-    for pkgname, pkgver in to_remove.iteritems():
+    for pkgname, pkgver in six.iteritems(to_remove):
         cver = cur_pkgs.get(pkgname, [])
         # Package not installed, no need to remove
         if not cver:
@@ -218,7 +224,7 @@ def _find_install_targets(name=None,
     # Get the ignore_types list if any from the pkg_verify argument
     if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
                                         for x in pkg_verify
-                                        if type(x) is _OrderedDict
+                                        if isinstance(x, _OrderedDict)
                                         and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
@@ -309,7 +315,7 @@ def _find_install_targets(name=None,
                     '{0}'.format(', '.join(sorted(problems['no_suggest'])))
                 )
             if problems.get('suggest'):
-                for pkgname, suggestions in problems['suggest'].iteritems():
+                for pkgname, suggestions in six.iteritems(problems['suggest']):
                     comments.append(
                         'Package {0!r} not found (possible matches: {1})'
                         .format(pkgname, ', '.join(suggestions))
@@ -326,7 +332,7 @@ def _find_install_targets(name=None,
         targets = {}
         to_reinstall = {}
         problems = []
-        for pkgname, pkgver in desired.iteritems():
+        for pkgname, pkgver in six.iteritems(desired):
             cver = cur_pkgs.get(pkgname, [])
             # Package not yet installed, so add to targets
             if not cver:
@@ -397,7 +403,7 @@ def _verify_install(desired, new_pkgs):
     '''
     ok = []
     failed = []
-    for pkgname, pkgver in desired.iteritems():
+    for pkgname, pkgver in six.iteritems(desired):
         cver = new_pkgs.get(pkgname)
         if not cver:
             failed.append(pkgname)
@@ -440,13 +446,13 @@ def _get_desired_pkg(name, desired):
 
 def _preflight_check(desired, fromrepo, **kwargs):
     '''
-    Perform platform-specifc checks on desired packages
+    Perform platform-specific checks on desired packages
     '''
     if 'pkg.check_db' not in __salt__:
         return {}
     ret = {'suggest': {}, 'no_suggest': []}
     pkginfo = __salt__['pkg.check_db'](
-        *desired.keys(), fromrepo=fromrepo, **kwargs
+        *list(desired.keys()), fromrepo=fromrepo, **kwargs
     )
     for pkgname in pkginfo:
         if pkginfo[pkgname]['found'] is False:
@@ -779,8 +785,25 @@ def installed(
           pkg.installed:
             - install_recommends: False
 
+    only_upgrade
+        Only upgrade the packages, if they are already installed. Default is False.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.installed:
+            - only_upgrade: True
 
     '''
+    if isinstance(pkgs, list) and len(pkgs) == 0:
+        return {'name': name,
+                'changes': {},
+                'result': True,
+                'comment': 'No packages to install provided'}
+
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
     refresh = bool(
@@ -795,8 +818,11 @@ def installed(
                 'result': False,
                 'comment': 'pkg.verify not implemented'}
 
-    if not isinstance(version, string_types) and version is not None:
+    if not isinstance(version, six.string_types) and version is not None:
         version = str(version)
+
+    if version is not None and version == 'latest':
+        version = __salt__['pkg.latest_version'](name)
 
     kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
@@ -870,12 +896,12 @@ def installed(
 
     # Remove any targets not returned by _find_install_targets
     if pkgs:
-        pkgs = [dict([(x, y)]) for x, y in targets.iteritems()]
-        pkgs.extend([dict([(x, y)]) for x, y in to_reinstall.iteritems()])
+        pkgs = [dict([(x, y)]) for x, y in six.iteritems(targets)]
+        pkgs.extend([dict([(x, y)]) for x, y in six.iteritems(to_reinstall)])
     elif sources:
         oldsources = sources
-        sources = [x for x in oldsources if x.keys()[0] in targets]
-        sources.extend([x for x in oldsources if x.keys()[0] in to_reinstall])
+        sources = [x for x in oldsources if next(iter(list(x.keys()))) in targets]
+        sources.extend([x for x in oldsources if next(iter(list(x.keys()))) in to_reinstall])
 
     comment = []
     if __opts__['test']:
@@ -886,11 +912,11 @@ def installed(
                 summary = ', '.join([_get_desired_pkg(x, targets)
                                      for x in targets])
             comment.append('The following packages are set to be '
-                           'installed/updated: {0}.'.format(summary))
+                           'installed/updated: {0}'.format(summary))
         if to_unpurge:
             comment.append(
                 'The following packages will have their selection status '
-                'changed from \'purge\' to \'install\': {0}.'
+                'changed from \'purge\' to \'install\': {0}'
                 .format(', '.join(to_unpurge))
             )
         if to_reinstall:
@@ -937,7 +963,7 @@ def installed(
 
         if isinstance(pkg_ret, dict):
             changes['installed'].update(pkg_ret)
-        elif isinstance(pkg_ret, string_types):
+        elif isinstance(pkg_ret, six.string_types):
             comment.append(pkg_ret)
 
         if 'pkg.hold' in __salt__:
@@ -979,7 +1005,7 @@ def installed(
 
     # Analyze pkg.install results for packages in targets
     if sources:
-        modified = [x for x in changes['installed'].keys() if x in targets]
+        modified = [x for x in changes['installed'] if x in targets]
         not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
         failed = [x for x in targets if x not in modified]
     else:
@@ -1006,7 +1032,7 @@ def installed(
                                  for x in modified])
         if len(summary) < 20:
             comment.append('The following packages were installed/updated: '
-                           '{0}.'.format(summary))
+                           '{0}'.format(summary))
         else:
             comment.append(
                 '{0} targeted package{1} {2} installed/updated.'.format(
@@ -1036,7 +1062,7 @@ def installed(
                                  for x in not_modified])
         if len(not_modified) <= 20:
             comment.append('The following packages were already installed: '
-                           '{0}.'.format(summary))
+                           '{0}'.format(summary))
         else:
             comment.append(
                 '{0} targeted package{1} {2} already installed.'.format(
@@ -1059,7 +1085,7 @@ def installed(
             summary = ', '.join([_get_desired_pkg(x, desired)
                                  for x in failed])
         comment.insert(0, 'The following packages failed to '
-                          'install/update: {0}.'.format(summary))
+                          'install/update: {0}'.format(summary))
         result = False
 
     if failed_hold:
@@ -1175,6 +1201,18 @@ def latest(
           pkg.latest:
             - install_recommends: False
 
+    only_upgrade
+        Only upgrade the packages, if they are already installed. Default is False.
+        Currently only works with APT based systems.
+
+        .. versionadded:: Lithium
+
+    .. code-block:: yaml
+
+        httpd:
+          pkg.latest:
+            - only_upgrade: True
+
     '''
     rtag = __gen_rtag()
     refresh = bool(
@@ -1188,7 +1226,7 @@ def latest(
                 'result': False,
                 'comment': 'The "sources" parameter is not supported.'}
     elif pkgs:
-        desired_pkgs = _repack_pkgs(pkgs).keys()
+        desired_pkgs = list(_repack_pkgs(pkgs).keys())
         if not desired_pkgs:
             # Badly-formatted SLS
             return {'name': name,
@@ -1219,9 +1257,9 @@ def latest(
         os.remove(rtag)
 
     # Repack the cur/avail data if only a single package is being checked
-    if isinstance(cur, string_types):
+    if isinstance(cur, six.string_types):
         cur = {desired_pkgs[0]: cur}
-    if isinstance(avail, string_types):
+    if isinstance(avail, six.string_types):
         avail = {desired_pkgs[0]: avail}
 
     targets = {}
@@ -1257,19 +1295,26 @@ def latest(
             up_to_date = [x for x in pkgs if x not in targets]
 
         if __opts__['test']:
-            to_be_upgraded = ', '.join(sorted(targets.keys()))
+            to_be_upgraded = ', '.join(sorted(targets))
             comment = 'The following packages are set to be ' \
                       'installed/upgraded: ' \
-                      '{0}.'.format(to_be_upgraded)
+                      '{0}'.format(to_be_upgraded)
             if up_to_date:
-                if len(up_to_date) <= 10:
+                up_to_date_nb = len(up_to_date)
+                if up_to_date_nb <= 10:
+                    up_to_date_sorted = sorted(up_to_date)
+                    up_to_date_details = ', '.join(
+                        '{0} ({1})'.format(name, cur[name])
+                        for name in up_to_date_sorted
+                    )
                     comment += (
                         ' The following packages are already '
-                        'up-to-date: {0}.'
-                    ).format(', '.join(sorted(up_to_date)))
+                        'up-to-date: {0}'
+                    ).format(up_to_date_details)
                 else:
                     comment += ' {0} packages are already up-to-date.'.format(
-                        len(up_to_date))
+                        up_to_date_nb
+                    )
 
             return {'name': name,
                     'changes': {},
@@ -1277,7 +1322,7 @@ def latest(
                     'comment': comment}
 
         # Build updated list of pkgs to exclude non-targeted ones
-        targeted_pkgs = targets.keys() if pkgs else None
+        targeted_pkgs = list(targets.keys()) if pkgs else None
 
         try:
             # No need to refresh, if a refresh was necessary it would have been
@@ -1304,17 +1349,17 @@ def latest(
             comments = []
             if failed:
                 msg = 'The following packages failed to update: ' \
-                      '{0}.'.format(', '.join(sorted(failed)))
+                      '{0}'.format(', '.join(sorted(failed)))
                 comments.append(msg)
             if successful:
                 msg = 'The following packages were successfully ' \
                       'installed/upgraded: ' \
-                      '{0}.'.format(', '.join(sorted(successful)))
+                      '{0}'.format(', '.join(sorted(successful)))
                 comments.append(msg)
             if up_to_date:
                 if len(up_to_date) <= 10:
                     msg = 'The following packages were already up-to-date: ' \
-                        '{0}.'.format(', '.join(sorted(up_to_date)))
+                        '{0}'.format(', '.join(sorted(up_to_date)))
                 else:
                     msg = '{0} packages were already up-to-date. '.format(
                         len(up_to_date))
@@ -1331,10 +1376,10 @@ def latest(
             elif len(targets) > 1:
                 comment = ('The following targeted packages failed to update. '
                            'See debug log for details: ({0}).'
-                           .format(', '.join(sorted(targets.keys()))))
+                           .format(', '.join(sorted(targets))))
             else:
                 comment = 'Package {0} failed to ' \
-                          'update.'.format(targets.keys()[0])
+                          'update.'.format(next(iter(list(targets.keys()))))
             if up_to_date:
                 if len(up_to_date) <= 10:
                     comment += ' The following packages were already ' \
@@ -1436,7 +1481,7 @@ def _uninstall(action='remove', name=None, version=None, pkgs=None, **kwargs):
     not_installed = sorted([x for x in pkg_params if x not in targets])
     if not_installed:
         comments.append('The following packages were not installed: '
-                        '{0}.'.format(', '.join(not_installed)))
+                        '{0}'.format(', '.join(not_installed)))
         comments.append('The following packages were {0}d: '
                         '{1}.'.format(action, ', '.join(targets)))
     else:
@@ -1537,8 +1582,8 @@ def uptodate(name, refresh=False):
     if isinstance(refresh, bool):
         try:
             packages = __salt__['pkg.list_upgrades'](refresh=refresh)
-        except Exception, e:
-            ret['comment'] = str(e)
+        except Exception as exc:
+            ret['comment'] = str(exc)
             return ret
     else:
         ret['comment'] = 'refresh must be a boolean.'

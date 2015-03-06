@@ -2,6 +2,7 @@
 '''
 Manage the shadow file
 '''
+from __future__ import absolute_import
 
 import salt.utils
 
@@ -51,7 +52,7 @@ def set_password(name, password):
 
         salt '*' shadow.set_password root mysecretpassword
     '''
-    cmd = 'net user {0} {1}'.format(name, password)
-    ret = __salt__['cmd.run_all'](cmd)
+    cmd = ['net', 'user', name, password]
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     return not ret['retcode']

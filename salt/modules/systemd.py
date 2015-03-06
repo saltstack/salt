@@ -3,9 +3,14 @@
 Provide the service module for systemd
 '''
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import re
+
+# Import 3rd-party libs
+import salt.ext.six as six
+import salt.utils.systemd
 
 log = logging.getLogger(__name__)
 
@@ -14,6 +19,7 @@ __func_alias__ = {
 }
 
 LOCAL_CONFIG_PATH = '/etc/systemd/system'
+LEGACY_INIT_SCRIPT_PATH = '/etc/init.d'
 VALID_UNIT_TYPES = ['service', 'socket', 'device', 'mount', 'automount',
                     'swap', 'target', 'path', 'timer']
 
@@ -25,26 +31,9 @@ def __virtual__():
     '''
     Only work on systems that have been booted with systemd
     '''
-    if __grains__['kernel'] == 'Linux' and _sd_booted():
+    if __grains__['kernel'] == 'Linux' and salt.utils.systemd.booted(__context__):
         return __virtualname__
     return False
-
-
-def _sd_booted():
-    '''
-    Return True if the system was booted with systemd, False otherwise.
-    '''
-    # We can cache this for as long as the minion runs.
-    if "systemd.sd_booted" not in __context__:
-        try:
-            # This check does the same as sd_booted() from libsystemd-daemon:
-            # http://www.freedesktop.org/software/systemd/man/sd_booted.html
-            if os.stat('/run/systemd/system'):
-                __context__['systemd.sd_booted'] = True
-        except OSError:
-            __context__['systemd.sd_booted'] = False
-
-    return __context__['systemd.sd_booted']
 
 
 def _canonical_unit_name(name):
@@ -82,7 +71,8 @@ def _get_all_units():
                       r')\s+loaded\s+(?P<active>[^\s]+)')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --all --full --no-legend --no-pager list-units | col -b'
+        'systemctl --all --full --no-legend --no-pager list-units | col -b',
+        python_shell=True
     )
 
     ret = {}
@@ -104,7 +94,8 @@ def _get_all_unit_files():
                       r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full --no-legend --no-pager list-unit-files | col -b'
+        'systemctl --full --no-legend --no-pager list-unit-files | col -b',
+        python_shell=True
     )
 
     ret = {}
@@ -113,6 +104,22 @@ def _get_all_unit_files():
         if match.group('type') != 'service':
             name += '.' + match.group('type')
         ret[name] = match.group('state')
+    return ret
+
+
+def _get_all_legacy_init_scripts():
+    '''
+    Get all old-fashioned init-style scripts. State is always inactive, because systemd would already show them
+    otherwise.
+    '''
+    ret = {}
+    if not os.path.isdir(LEGACY_INIT_SCRIPT_PATH):
+        return ret
+    for fn in os.listdir(LEGACY_INIT_SCRIPT_PATH):
+        if not os.path.isfile(os.path.join(LEGACY_INIT_SCRIPT_PATH, fn)) or fn.startswith('rc'):
+            continue
+        log.info('Legacy init script: "%s".', fn)
+        ret[fn] = 'inactive'
     return ret
 
 
@@ -162,7 +169,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     ret = []
-    for name, state in _get_all_unit_files().iteritems():
+    for name, state in six.iteritems(_get_all_unit_files()):
         if state == 'enabled':
             ret.append(name)
     return sorted(ret)
@@ -179,7 +186,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = []
-    for name, state in _get_all_unit_files().iteritems():
+    for name, state in six.iteritems(_get_all_unit_files() + _get_all_legacy_init_scripts()):
         if state == 'disabled':
             ret.append(name)
     return sorted(ret)
@@ -195,7 +202,8 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(set(_get_all_units().keys() + _get_all_unit_files().keys()))
+    return sorted(set(list(_get_all_units().keys()) + list(_get_all_unit_files().keys())
+                      + list(_get_all_legacy_init_scripts().keys())))
 
 
 def available(name):
@@ -355,8 +363,7 @@ def status(name, sig=None):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    cmd = 'systemctl is-active {0}'.format(_canonical_unit_name(name))
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](_systemctl_cmd('is-active', name))
 
 
 def enable(name, **kwargs):
@@ -406,7 +413,8 @@ def _templated_instance_enabled(name):
 
 def _enabled(name):
     is_enabled = \
-        not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name))
+        not __salt__['cmd.retcode'](_systemctl_cmd('is-enabled', name),
+                                    ignore_retcode=True)
     return is_enabled or _templated_instance_enabled(name)
 
 
@@ -445,8 +453,7 @@ def show(name):
         salt '*' service.show <service name>
     '''
     ret = {}
-    cmd = 'systemctl show {0}.service'.format(name)
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    for line in __salt__['cmd.run'](_systemctl_cmd('show', name)).splitlines():
         comps = line.split('=')
         name = comps[0]
         value = '='.join(comps[1:])

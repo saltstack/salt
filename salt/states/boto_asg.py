@@ -26,6 +26,8 @@ in the minion's config file::
 It's also possible to specify key, keyid and region via a profile, either
 as a passed in dict, or as a string to pull from pillars or minion config:
 
+.. code-block:: yaml
+
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -99,11 +101,105 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         - name: myasg
         # If instances exist, we must force the deletion of the asg.
         - force: True
+
+It's possible to specify cloudwatch alarms that will be setup along with the
+ASG. Note the alarm name will be the name attribute defined, plus the ASG
+resource name.
+
+.. code-block:: yaml
+
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
+        - alarms:
+            CPU:
+              name: 'ASG CPU **MANAGED BY SALT**'
+              attributes:
+                metric: CPUUtilization
+                namespace: AWS/EC2
+                statistic: Average
+                comparison: '>='
+                threshold: 65.0
+                period: 60
+                evaluation_periods: 30
+                unit: null
+                description: 'ASG CPU'
+                alarm_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+                insufficient_data_actions: []
+                ok_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+
+You can also use alarms from pillars, and override values from the pillar
+alarms by setting overrides on the resource. Note that 'boto_asg_alarms'
+will be used as a default value for all resources, if defined and can be
+used to ensure alarms are always set for an ASG resource.
+
+Setting the alarms in a pillar:
+
+.. code-block:: yaml
+
+    my_asg_alarm:
+      CPU:
+        name: 'ASG CPU **MANAGED BY SALT**'
+        attributes:
+          metric: CPUUtilization
+          namespace: AWS/EC2
+          statistic: Average
+          comparison: '>='
+          threshold: 65.0
+          period: 60
+          evaluation_periods: 30
+          unit: null
+          description: 'ASG CPU'
+          alarm_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+          insufficient_data_actions: []
+          ok_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+
+Overriding the alarm values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
+        - alarms_from_pillar: my_asg_alarm
+        # override CPU:attributes:threshold
+        - alarms:
+            CPU:
+              attributes:
+                threshold: 50.0
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import hashlib
 import logging
+
+# Import Salt libs
+import salt.utils.dictupdate as dictupdate
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -133,6 +229,8 @@ def present(
         termination_policies=None,
         suspended_processes=None,
         scaling_policies=None,
+        alarms=None,
+        alarms_from_pillar='boto_asg_alarms',
         region=None,
         key=None,
         keyid=None,
@@ -211,6 +309,16 @@ def present(
         List of scaling policies.  Each policy is a dict of key-values described by
         http://boto.readthedocs.org/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
 
+    alarms:
+        a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ASG.
+        All attributes should be specified except for dimension which will be
+        automatically set to this ASG.
+        See the boto_cloudwatch_alarm state for information about these attributes.
+
+    alarms_from_pillar:
+        name of pillar dict that contains alarm settings.   Alarms defined for this specific
+        state will override those from pillar.
+
     region
         The region to connect to.
 
@@ -237,9 +345,9 @@ def present(
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
     if launch_config:
-        launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
+        launch_config_name = launch_config_name + '-' + hashlib.md5(str(launch_config)).hexdigest()
         args = {
-            'name':  launch_config_name,
+            'name': launch_config_name,
             'region': region,
             'key': key,
             'keyid': keyid,
@@ -264,15 +372,15 @@ def present(
                 )
                 launch_config[sg_index]['security_groups'] = _group_ids
 
-        for d in launch_config:
-            args.update(d)
+        for cfg in launch_config:
+            args.update(cfg)
         if not __opts__['test']:
-            lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-            lc_ret = lc_ret.values()[0]
-            if lc_ret["result"] is True and lc_ret["changes"]:
-                if "launch_config" not in ret["changes"]:
-                    ret["changes"]["launch_config"] = {}
-                ret["changes"]["launch_config"] = lc_ret["changes"]
+            lc_ret = __salt__['state.single']('boto_lc.present', **args)
+            lc_ret = next(six.itervalues(lc_ret))
+            if lc_ret['result'] is True and lc_ret['changes']:
+                if 'launch_config' not in ret['changes']:
+                    ret['changes']['launch_config'] = {}
+                ret['changes']['launch_config'] = lc_ret['changes']
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
@@ -310,8 +418,8 @@ def present(
         # time, we should remove them from the dict.
         if scaling_policies:
             for policy in scaling_policies:
-                if "min_adjustment_step" not in policy:
-                    policy["min_adjustment_step"] = None
+                if 'min_adjustment_step' not in policy:
+                    policy['min_adjustment_step'] = None
         config = {
             'launch_config_name': launch_config_name,
             'availability_zones': availability_zones,
@@ -325,16 +433,16 @@ def present(
             'tags': tags,
             'termination_policies': termination_policies,
             'suspended_processes': suspended_processes,
-            "scaling_policies": scaling_policies,
+            'scaling_policies': scaling_policies,
         }
         if suspended_processes is None:
-            config["suspended_processes"] = []
+            config['suspended_processes'] = []
         # ensure that we delete scaling_policies if none are specified
         if scaling_policies is None:
-            config["scaling_policies"] = []
-        # note: do not loop using "key, value" - this can modify the value of
+            config['scaling_policies'] = []
+        # note: do not loop using 'key, value' - this can modify the value of
         # the aws access key
-        for asg_property, value in config.iteritems():
+        for asg_property, value in six.iteritems(config):
             # Only modify values being specified; introspection is difficult
             # otherwise since it's hard to track default values, which will
             # always be returned from AWS.
@@ -354,25 +462,25 @@ def present(
                 ret['result'] = None
                 return ret
             updated, msg = __salt__['boto_asg.update'](name, launch_config_name,
-                                                  availability_zones, min_size,
-                                                  max_size, desired_capacity,
-                                                  load_balancers,
-                                                  default_cooldown,
-                                                  health_check_type,
-                                                  health_check_period,
-                                                  placement_group,
-                                                  vpc_zone_identifier, tags,
-                                                  termination_policies,
-                                                  suspended_processes,
-                                                  scaling_policies, region,
-                                                  key, keyid, profile)
-            if asg["launch_config_name"] != launch_config_name:
+                                                       availability_zones, min_size,
+                                                       max_size, desired_capacity,
+                                                       load_balancers,
+                                                       default_cooldown,
+                                                       health_check_type,
+                                                       health_check_period,
+                                                       placement_group,
+                                                       vpc_zone_identifier, tags,
+                                                       termination_policies,
+                                                       suspended_processes,
+                                                       scaling_policies, region,
+                                                       key, keyid, profile)
+            if asg['launch_config_name'] != launch_config_name:
                 # delete the old launch_config_name
-                deleted = __salt__['boto_asg.delete_launch_configuration'](asg["launch_config_name"], region, key, keyid, profile)
+                deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'], region, key, keyid, profile)
                 if deleted:
-                    if "launch_config" not in ret["changes"]:
-                        ret["changes"]["launch_config"] = {}
-                    ret["changes"]["launch_config"]["deleted"] = asg["launch_config_name"]
+                    if 'launch_config' not in ret['changes']:
+                        ret['changes']['launch_config'] = {}
+                    ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
             if updated:
                 ret['changes']['old'] = asg
                 asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
@@ -384,11 +492,52 @@ def present(
                 ret['comment'] = msg
         else:
             ret['comment'] = 'Autoscale group present.'
+    # add in alarms
+    _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     return ret
 
 
+def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile):
+    '''helper method for present.  ensure that cloudwatch_alarms are set'''
+    # load data from alarms_from_pillar
+    tmp = __salt__['config.option'](alarms_from_pillar, {})
+    # merge with data from alarms
+    if alarms:
+        tmp = dictupdate.update(tmp, alarms)
+    # set alarms, using boto_cloudwatch_alarm.present
+    merged_return_value = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    for _, info in six.iteritems(tmp):
+        # add asg to name and description
+        info['name'] = name + ' ' + info['name']
+        info['attributes']['description'] = name + ' ' + info['attributes']['description']
+        # add dimension attribute
+        info['attributes']['dimensions'] = {'AutoScalingGroupName': [name]}
+        # set alarm
+        kwargs = {
+            'name': info['name'],
+            'attributes': info['attributes'],
+            'region': region,
+            'key': key,
+            'keyid': keyid,
+            'profile': profile,
+        }
+        ret = __salt__['state.single']('boto_cloudwatch_alarm.present', **kwargs)
+        results = next(six.itervalues(ret))
+        if not results['result']:
+            merged_return_value['result'] = False
+        if results.get('changes', {}) != {}:
+            merged_return_value['changes'][info['name']] = results['changes']
+        if 'comment' in results:
+            merged_return_value['comment'] += results['comment']
+    return merged_return_value
+
+
 def _recursive_compare(v1, v2):
-    "return v1 == v2.  compares list, dict, OrderedDict, recursively"
+    '''
+    return v1 == v2.  compares list, dict, OrderedDict, recursively
+    '''
     if isinstance(v1, list):
         if len(v1) != len(v2):
             return False
@@ -401,9 +550,9 @@ def _recursive_compare(v1, v2):
     elif isinstance(v1, dict):
         v1 = dict(v1)
         v2 = dict(v2)
-        if sorted(v1.keys()) != sorted(v2.keys()):
+        if sorted(v1) != sorted(v2):
             return False
-        for k in v1.keys():
+        for k in v1:
             if not _recursive_compare(v1[k], v2[k]):
                 return False
         return True

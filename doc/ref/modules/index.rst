@@ -84,7 +84,7 @@ minion.
 Grains Data
 -----------
 
-The values detected by the Salt Grains on the minion are available in a 
+The values detected by the Salt Grains on the minion are available in a
 :ref:`dict <python2:typesmapping>` named ``__grains__`` and can be accessed
 from within callable objects in the Python modules.
 
@@ -336,5 +336,3 @@ If a "fallback_function" is defined, it will replace the function instead of rem
         replaced with "_fallback"
         '''
         return True
-
-

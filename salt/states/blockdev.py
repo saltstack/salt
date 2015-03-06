@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Management of Block Devices
-===================================
 
 A state module to manage blockdevices
 
@@ -13,14 +12,15 @@ A state module to manage blockdevices
         - read-only: True
 
     master-data:
-      blockdev:
-        - tuned:
+      blockdev.tuned::
         - name : /dev/vg/master-data
         - read-only: True
         - read-ahead: 1024
 
 
+.. versionadded:: 2014.7.0
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -130,6 +130,7 @@ def formatted(name, fs_type='ext4', **kwargs):
             cmd += '-i size={0} '.format(kwargs['inode_size'])
     cmd += name
     __salt__['cmd.run'](cmd).splitlines()
+    __salt__['cmd.run']('sync').splitlines()
     blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
 
     if len(blk) == 1:

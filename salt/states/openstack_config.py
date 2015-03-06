@@ -8,6 +8,7 @@ Manage OpenStack configuration file settings.
 :platform: linux
 
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.exceptions

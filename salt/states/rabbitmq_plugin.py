@@ -10,9 +10,9 @@ Example:
 .. code-block:: yaml
 
     some_plugin:
-        rabbitmq_plugin:
-          - enabled
+        rabbitmq_plugin.enabled: []
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

@@ -25,8 +25,8 @@ use the venerable cron to run the ``salt-call`` command.
 
     00 00 * * * salt-call state.highstate
 
-The above cron entry will run a highstate every day at midnight. 
+The above cron entry will run a highstate every day at midnight.
 
-.. note:: 
+.. note::
     Be aware that you may need to ensure the PATH for cron includes any
     scripts or commands that need to be executed.

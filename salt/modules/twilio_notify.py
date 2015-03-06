@@ -16,6 +16,7 @@ Module for notifications via Twilio
             twilio.account_sid: AC32a3c83990934481addd5ce1659f04d2
             twilio.auth_token: mytoken
 '''
+from __future__ import absolute_import
 import logging
 
 HAS_LIBS = False
@@ -81,7 +82,7 @@ def send_sms(profile, body, to, from_):
     ret['message']['status'] = message.status
     ret['message']['num_segments'] = message.num_segments
     ret['message']['body'] = message.body
-    ret['message']['date_sent'] = message.date_sent
-    ret['message']['date_created'] = message.date_created
+    ret['message']['date_sent'] = str(message.date_sent)
+    ret['message']['date_created'] = str(message.date_created)
     log.info(ret)
     return ret

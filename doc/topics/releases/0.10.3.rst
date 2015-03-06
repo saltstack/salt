@@ -151,7 +151,7 @@ enough, if not, explain your usage on a ticket. With this change, also
 `salt.modules.file.contains_glob()` and `salt.utils.find` now do the searching
 and/or matching using the buffered chunks approach explained above.
 
-Two new keyword arguments were also added, `makedirs` and `source`.
+Two new keyword arguments were also added, `makedirs`, and `source`.
 The first, `makedirs` will create the necessary directories in order to append
 to the specified file, of course, it only applies if we're trying to append to
 a non-existing file on a non-existing directory:

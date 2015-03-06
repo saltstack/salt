@@ -154,7 +154,7 @@ fired when a cloud instance is destroyed.
 Note that each tag contains a wildcard (``*``) in it. For each of these tags,
 this will normally refer to a ``minion_id``. This is not required of event tags,
 but is very common.
- 
+
 Reactor SLS Files
 =================
 
@@ -172,7 +172,7 @@ example:
 
 .. code-block:: yaml
 
-    # /srv/reactor/cloud-alert.sls 
+    # /srv/reactor/cloud-alert.sls
     new_instance_alert:
       cmd.pagerduty.create_event:
         - tgt: alertserver
@@ -236,10 +236,10 @@ And the following ``sls`` file will start a highstate run on the target minion:
 
 .. code-block:: yaml
 
-    # /srv/reactor/startup_highstate.sls 
+    # /srv/reactor/startup_highstate.sls
     reactor_highstate:
       cmd.state.highstate:
-        - tgt: {{ data['id'] }}
+        - tgt: {{ data['name'] }}
 
 Because this event will not be fired until Salt Cloud has cleaned up after
 itself, the highstate run will not step on Salt Cloud's toes. And because every

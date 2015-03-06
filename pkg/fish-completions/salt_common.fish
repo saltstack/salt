@@ -18,14 +18,16 @@
 # Generated from the help of salt programs on commit ad89a752f807d5ea00d3a9b3257d283ef6b69c10
 #
 # ISSUES:
-# TODO: #1 add: salt-api salt-cloud salt-ssh salt-syndic
+# TODO: #1 add: salt-api salt-cloud salt-ssh
 # TODO: #2 write tests (use https://github.com/terlar/fish-tank)
 # TODO: #3 add completion for builtin states
 # TODO: #4 use caching (see https://github.com/saltstack/salt/issues/15321)
 # TODO: #5 add help to the positional arguments (like '(Minion)', '(Grain)')
+# using __fish_salt_list function everythere)
 # TODO: #6 add minion selection by grains (call "salt '*' grains.ls", use #4)
 #  BUG: #7 salt-call autocompletion and salt packages not works; it hangs. Ask
 #       fish devs?
+# TODO: #8 sort with `sort` or leave as is?
 
 # common general options (from --help)
 set -l salt_programs \
@@ -103,7 +105,6 @@ for program in $salt_programs_return
 	complete -c $program     -x      -l return               -d "Set an alternative return method. By default salt will send the return data from the command back to the master, but the return data can be redirected into any number of systems, databases or applications."
 end
 
-
 # convinience functions
 function __fish_salt_log
 	echo $argv >&2
@@ -129,9 +130,16 @@ function __fish_salt_clean
 	end
 end
 
+set -g __fish_salt_max_line_count_in_yaml_block 1024
+
 function __fish_salt_lines_between
-	set max 1024
+	set max $__fish_salt_max_line_count_in_yaml_block
 	grep -A$max $argv[1] | grep -B$max $argv[2]
+end
+
+function __fish_salt_extract_first_yaml_block
+	set max $__fish_salt_max_line_count_in_yaml_block
+	sed '1d' | sed '$a\  stop' | grep -m 1 -B$max '^  \w' | sed '$d'
 end
 
 function __fish_salt_add_help
@@ -150,35 +158,40 @@ set -g __fish_salt_default_program 'salt'
 # salt --out raw server test.ping
 # Consider rewriting using __fish_complete_subcommand
 function __fish_salt_program
-	set result (commandline -pco)
-	if test -n "$result"
-		if [ $result[1] = 'salt-call' ]; and contains -- '--local' $result
-			set options '--local'
+	if status --is-interactive
+		set result (commandline -pco)
+		if test -n "$result"
+			if [ $result[1] = 'salt-call' ]; and contains -- '--local' $result
+				set options '--local'
+			end
+			set result $result[1] $options
 		end
-		set result $result[1] $options
-	else
-		set result $__fish_salt_default_program
 	end
+	set result $__fish_salt_default_program
 	echo $result
 end
 
 function __fish_salt_save_first_commandline_token_not_matching_args_to
-	set -l cli (commandline -pco) 
-	for i in $cli
-		if echo "$i" | grep -Ev (__fish_salt_join '|' $argv)
-			set -g $argv[1] $i
-			return 0
+	if status --is-interactive
+		set -l cli (commandline -pco) 
+		for i in $cli
+			if echo "$i" | grep -Ev (__fish_salt_join '|' $argv)
+				set -g $argv[1] $i
+				return 0
+			end
 		end
 	end
 	return 1
 end
 
 function __fish_salt_commandline_tokens_not_matching_args
-	set tokens (commandline -pco)
-	set result 1
-	for token in $tokens
-		if echo "$token" | grep -Ev (__fish_salt_join '|' $argv)
-			set result 0
+	if status --is-interactive
+		set tokens (commandline -pco)
+		set result 1
+		for token in $tokens
+			if echo "$token" | grep -Ev (__fish_salt_join '|' $argv)
+				set result 0
+			end
 		end
 	end
 	return $result
@@ -331,8 +344,9 @@ _                             sys.doc                         : module
 #_                             pkg.remove                      : package
 
 function __fish_salt_argspec_function
-	set function_line '^\s*'$argv[1]
-	__fish_salt_lines_between $function_line':' $function_line
+	set function_line '^\s*'$argv[1]:
+	set max $__fish_salt_max_line_count_in_yaml_block
+	grep -A$max $function_line | __fish_salt_extract_first_yaml_block
 end
 
 function __fish_salt_argspec_args

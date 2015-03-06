@@ -4,6 +4,7 @@ Manage the password database on BSD systems
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import pwd
 except ImportError:
@@ -59,7 +60,7 @@ def info(name):
     if cmd:
         cmd += '| cut -f6,7 -d:'
         try:
-            change, expire = __salt__['cmd.run_all'](cmd)['stdout'].split(':')
+            change, expire = __salt__['cmd.run_all'](cmd, python_shell=True)['stdout'].split(':')
         except ValueError:
             pass
         else:

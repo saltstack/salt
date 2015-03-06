@@ -8,6 +8,7 @@ This is a base library used by a number of AWS services.
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import sys
@@ -17,17 +18,21 @@ import datetime
 import hashlib
 import hmac
 import logging
-import urllib
-import urlparse
-import requests
 
 # Import Salt libs
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 
+# Import 3rd-party libs
+import requests
+# pylint: disable=import-error,redefined-builtin,no-name-in-module
+from salt.ext.six.moves import map, range, zip
+from salt.ext.six.moves.urllib.parse import urlencode, urlparse
+# pylint: enable=import-error,redefined-builtin,no-name-in-module
+
 LOG = logging.getLogger(__name__)
 DEFAULT_LOCATION = 'us-east-1'
-DEFAULT_AWS_API_VERSION = '2013-10-15'
+DEFAULT_AWS_API_VERSION = '2014-10-01'
 AWS_RETRY_CODES = [
     'RequestLimitExceeded',
     'InsufficientInstanceCapacity',
@@ -36,6 +41,54 @@ AWS_RETRY_CODES = [
     'InsufficientAddressCapacity',
     'InsufficientReservedInstanceCapacity',
 ]
+
+IROLE_CODE = 'use-instance-role-credentials'
+__AccessKeyId__ = ''
+__SecretAccessKey__ = ''
+__Token__ = ''
+__Expiration__ = ''
+
+
+def creds(provider):
+    '''
+    Return the credentials for AWS signing.  This could be just the id and key
+    specified in the provider configuration, or if the id or key is set to the
+    literal string 'use-instance-role-credentials' creds will pull the instance
+    role credentials from the meta data, cache them, and provide them instead.
+    '''
+    # Declare globals
+    global __AccessKeyId__, __SecretAccessKey__, __Token__, __Expiration__
+
+    # if id or key is 'use-instance-role-credentials', pull them from meta-data
+    ## if needed
+    if provider['id'] == IROLE_CODE or provider['key'] == IROLE_CODE:
+        # Check to see if we have cache credentials that are still good
+        if __Expiration__ != '':
+            timenow = datetime.datetime.utcnow()
+            timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
+            if timestamp < __Expiration__:
+                # Current timestamp less than expiration fo cached credentials
+                return __AccessKeyId__, __SecretAccessKey__, __Token__
+        # We don't have any cached credentials, or they are expired, get them
+        # TODO: Wrap this with a try and handle exceptions gracefully
+        result = requests.get(
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+        )
+        result.raise_for_status()
+        role = result.text
+        # TODO: Wrap this with a try and handle exceptions gracefully
+        result = requests.get(
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role)
+        )
+        result.raise_for_status()
+        data = result.json()
+        __AccessKeyId__ = data['AccessKeyId']
+        __SecretAccessKey__ = data['SecretAccessKey']
+        __Token__ = data['Token']
+        __Expiration__ = data['Expiration']
+        return __AccessKeyId__, __SecretAccessKey__, __Token__
+    else:
+        return provider['id'], provider['key'], ''
 
 
 def sig2(method, endpoint, params, provider, aws_api_version):
@@ -48,15 +101,18 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
+    # Retrieve access credentials from meta-data, or use provided
+    access_key_id, secret_access_key, token = creds(provider)
+
     params_with_headers = params.copy()
-    params_with_headers['AWSAccessKeyId'] = provider.get('id', None)
+    params_with_headers['AWSAccessKeyId'] = access_key_id
     params_with_headers['SignatureVersion'] = '2'
     params_with_headers['SignatureMethod'] = 'HmacSHA256'
     params_with_headers['Timestamp'] = '{0}'.format(timestamp)
     params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
-    values = map(params_with_headers.get, keys)
-    querystring = urllib.urlencode(list(zip(keys, values)))
+    values = list(list(map(params_with_headers.get, keys)))
+    querystring = urlencode(list(zip(keys, values)))
 
     canonical = '{0}\n{1}\n/\n{2}'.format(
         method.encode('utf-8'),
@@ -64,13 +120,18 @@ def sig2(method, endpoint, params, provider, aws_api_version):
         querystring.encode('utf-8'),
     )
 
-    hashed = hmac.new(provider['key'], canonical, hashlib.sha256)
+    hashed = hmac.new(secret_access_key, canonical, hashlib.sha256)
     sig = binascii.b2a_base64(hashed.digest())
     params_with_headers['Signature'] = sig.strip()
+
+    # Add in security token if we have one
+    if token != '':
+        params_with_headers['SecurityToken'] = token
+
     return params_with_headers
 
 
-def sig4(method, endpoint, params, provider, aws_api_version, location,
+def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
          product='ec2', uri='/', requesturl=None):
     '''
     Sign a query against AWS services using Signature Version 4 Signing
@@ -83,11 +144,14 @@ def sig4(method, endpoint, params, provider, aws_api_version, location,
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
+    # Retrieve access credentials from meta-data, or use provided
+    access_key_id, secret_access_key, token = creds(prov_dict)
+
     params_with_headers = params.copy()
     params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
-    values = map(params_with_headers.get, keys)
-    querystring = urllib.urlencode(list(zip(keys, values)))
+    values = list(map(params_with_headers.get, keys))
+    querystring = urlencode(list(zip(keys, values)))
 
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
@@ -133,7 +197,7 @@ def sig4(method, endpoint, params, provider, aws_api_version, location,
 
     # Create the signing key using the function defined above.
     signing_key = _sig_key(
-        provider.get('key', None),
+        secret_access_key,
         datestamp,
         location,
         product
@@ -150,7 +214,7 @@ def sig4(method, endpoint, params, provider, aws_api_version, location,
             '{0} Credential={1}/{2}, SignedHeaders={3}, Signature={4}'
         ).format(
             algorithm,
-            provider.get('id', None),
+            access_key_id,
             credential_scope,
             signed_headers,
             signature,
@@ -160,6 +224,10 @@ def sig4(method, endpoint, params, provider, aws_api_version, location,
         'x-amz-date': amzdate,
         'Authorization': authorization_header
     }
+
+    # Add in security token if we have one
+    if token != '':
+        headers['X-Amz-Security-Token'] = token
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
     return headers, requesturl
@@ -215,40 +283,42 @@ def query(params=None, setname=None, requesturl=None, location=None,
         - importexport (Import/Export)
         - monitoring (CloudWatch)
         - rds (Relational Database Service)
-        - sdb (SimpleDB)
+        - simpledb (SimpleDB)
         - sns (Simple Notification Service)
         - sqs (Simple Queue Service)
     '''
-
     if params is None:
         params = {}
 
     if opts is None:
         opts = {}
 
-    if provider is None:
-        function = opts.get('function', ())
-        providers = opts.get('providers', {})
-        prov_dict = providers.get(function[1], None)
-        if prov_dict is not None:
-            driver = prov_dict.keys()[0]
-            provider = prov_dict[driver]
+    function = opts.get('function', (None, product))
+    providers = opts.get('providers', {})
 
-    service_url = provider.get('service_url', 'amazonaws.com')
+    if provider is None:
+        prov_dict = providers.get(function[1], {}).get(product, {})
+        if prov_dict:
+            driver = list(list(prov_dict.keys()))[0]
+            provider = providers.get(driver, product)
+    else:
+        prov_dict = providers.get(provider, {}).get(product, {})
+
+    service_url = prov_dict.get('service_url', 'amazonaws.com')
 
     if not location:
         location = get_location(opts, provider)
 
     if endpoint is None:
         if not requesturl:
-            endpoint = provider.get(
+            endpoint = prov_dict.get(
                 'endpoint',
                 '{0}.{1}.{2}'.format(product, location, service_url)
             )
 
             requesturl = 'https://{0}/'.format(endpoint)
         else:
-            endpoint = urlparse.urlparse(requesturl).netloc
+            endpoint = urlparse(requesturl).netloc
             if endpoint == '':
                 endpoint_err = ('Could not find a valid endpoint in the '
                                 'requesturl: {0}. Looking for something '
@@ -263,8 +333,8 @@ def query(params=None, setname=None, requesturl=None, location=None,
     LOG.debug('Using AWS endpoint: {0}'.format(endpoint))
     method = 'GET'
 
-    aws_api_version = provider.get(
-        'aws_api_version', provider.get(
+    aws_api_version = prov_dict.get(
+        'aws_api_version', prov_dict.get(
             '{0}_api_version'.format(product),
             DEFAULT_AWS_API_VERSION
         )
@@ -272,12 +342,12 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
     if sigver == '4':
         headers, requesturl = sig4(
-            method, endpoint, params, provider, aws_api_version, location, product, requesturl=requesturl
+            method, endpoint, params, prov_dict, aws_api_version, location, product, requesturl=requesturl
         )
         params_with_headers = {}
     else:
         params_with_headers = sig2(
-            method, endpoint, params, provider, aws_api_version
+            method, endpoint, params, prov_dict, aws_api_version
         )
         headers = {}
 

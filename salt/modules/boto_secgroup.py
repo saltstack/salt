@@ -33,24 +33,28 @@ Connection module for Amazon Security Groups
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import re
-from distutils.version import LooseVersion as _LooseVersion
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=import-error
     import boto
     import boto.ec2
+    # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -111,13 +115,13 @@ def _split_rules(rules):
             _rule = {'ip_protocol': ip_protocol,
                      'to_port': to_port,
                      'from_port': from_port}
-            for key, val in grant.iteritems():
+            for key, val in six.iteritems(grant):
                 _rule[key] = val
             split.append(_rule)
     return split
 
 
-def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):
+def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):  # pylint: disable=W0613
     '''
     Get a group object given a name, name and vpc_id or group_id. Return a
     boto.ec2.securitygroup.SecurityGroup object if the group is found, else
@@ -248,7 +252,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
                                    'group_id': 'source_group_group_id',
                                    'cidr_ip': 'cidr_ip'}
                         _grant = odict.OrderedDict()
-                        for g_attr, g_attr_map in g_attrs.iteritems():
+                        for g_attr, g_attr_map in six.iteritems(g_attrs):
                             g_val = getattr(grant, g_attr)
                             if not g_val:
                                 continue

@@ -32,7 +32,7 @@ be used here.
 .. code-block:: yaml
 
     minion:
-        master: saltmaster.example.com
+      master: saltmaster.example.com
 
 
 In particular, this is the location to specify the location of the salt master
@@ -81,7 +81,7 @@ after migration example.
         keyname: test
         securitygroup: quick-start
         private_key: /root/test.pem
-        provider: aws
+        provider: ec2
 
 
 Notice that it's no longer required to name a cloud provider's configuration
@@ -110,7 +110,7 @@ So, using the example configuration above, after migration in
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      provider: aws
+      provider: ec2
 
 
 
@@ -128,7 +128,7 @@ configuration key in the defined profiles.
 .. code-block:: yaml
 
     rhel_aws:
-      provider: aws
+      provider: ec2
       image: ami-e565ba8c
       size: t1.micro
 
@@ -193,7 +193,7 @@ Notice that because of the multiple entries, one has to be explicit about the
 provider alias and name, from the above example, ``production-config:aws``.
 
 This new syntax also changes the interaction with the ``salt-cloud`` binary.
-``--list-location``, ``--list-images`` and ``--list-sizes`` which needs a cloud
+``--list-location``, ``--list-images``, and ``--list-sizes`` which needs a cloud
 provider as an argument. Since 0.8.7 the argument used should be the configured
 cloud provider alias. If the provider alias only has a single entry, use
 ``<provider-alias>``.  If it has multiple entries,
@@ -316,7 +316,7 @@ A number of configuration options are required for Amazon AWS:
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      provider: aws
+      provider: ec2
 
     my-aws-default:
       id: HJGRYCILJLKJYG
@@ -324,12 +324,12 @@ A number of configuration options are required for Amazon AWS:
       keyname: test
       securitygroup: default
       private_key: /root/test.pem
-      provider: aws
+      provider: ec2
 
 
 **NOTE**: With the new providers configuration syntax you would have
 ``provider: my-aws-quick-start`` or ``provider: my-aws-default`` instead of
-``provider: aws`` on a profile configuration.
+``provider: ec2`` on a profile configuration.
 
 
 Linode
@@ -362,7 +362,7 @@ be set:
 ``provider: my-linode-config`` instead of ``provider: linode`` on a profile
 configuration.
 
-The password needs to be 8 characters and contain lowercase, uppercase and
+The password needs to be 8 characters and contain lowercase, uppercase, and
 numbers.
 
 
@@ -390,7 +390,8 @@ send the provisioning commands up to the freshly created virtual machine.
     my-joyent-config:
         user: fred
         password: saltybacon
-        private_key: /root/joyent.pem
+        private_key: /root/mykey.pem
+        keyname: mykey
         provider: joyent
 
 
@@ -521,7 +522,7 @@ my-openstack-rackspace-config`` instead of ``provider: openstack`` on a profile
 configuration.
 
 
-You will certainly need to configure the ``user``, ``tenant`` and either
+You will certainly need to configure the ``user``, ``tenant``, and either
 ``password`` or ``apikey``.
 
 
@@ -586,7 +587,7 @@ profile configuration.
 Parallels
 ---------
 
-Using Salt with Parallels requires a user, password and URL. These can be
+Using Salt with Parallels requires a user, password, and URL. These can be
 obtained from your cloud provider.
 
 * Using the old format:
@@ -616,7 +617,7 @@ profile configuration.
 Proxmox
 ---------
 
-Using Salt with Proxmox requires a user, password and URL. These can be
+Using Salt with Proxmox requires a user, password, and URL. These can be
 obtained from your cloud provider. Both PAM and PVE users can be used.
 
 * Using the new configuration format:
@@ -628,7 +629,7 @@ obtained from your cloud provider. Both PAM and PVE users can be used.
       user: saltcloud@pve
       password: xyzzy
       url: your.proxmox.host
-  
+
 lxc
 ---
 
@@ -798,7 +799,7 @@ configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
         private_key: /root/test.pem
         location: ap-southeast-1
         availability_zone: ap-southeast-1b
-        provider: aws
+        provider: ec2
 
       - user: myuser@mycorp.com
         password: mypass
@@ -850,4 +851,3 @@ data:
             }
         ]
     }
-

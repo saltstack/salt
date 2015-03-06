@@ -15,17 +15,22 @@ Full list of builtin pillar modules
     cmd_yamlex
     cobbler
     django_orm
+    ec2_pillar
     etcd_pillar
+    file_encode
+    file_tree
     foreman
     git_pillar
     hiera
     libvirt
     mongo
     mysql
+    pepa
     pillar_ldap
     puppet
     reclass_adapter
     redismod
     s3
     svn_pillar
+    varstack_pillar
     virtkey

@@ -10,11 +10,6 @@ wrapper. The base supported wrapper type is
 `cgroups <https://en.wikipedia.org/wiki/Cgroups>`_, and the
 `Linux Kernel <https://en.wikipedia.org/wiki/Linux_kernel>`_.
 
-.. warning::
-
-    This state module is beta. The API is subject to change. No promise
-    as to performance or functionality is yet present.
-
 .. note::
 
     This state module requires
@@ -110,12 +105,24 @@ Available Functions
 
 
 '''
+
+from __future__ import absolute_import
 import functools
+import inspect
 import logging
 
 # Import salt libs
-from salt._compat import string_types
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext.six import string_types
 import salt.utils
+import salt.ext.six as six
+
+# Import third party libs
+try:
+    import docker
+    HAS_DOCKER = True
+except ImportError:
+    HAS_DOCKER = False
 
 # Enable proper logging
 log = logging.getLogger(__name__)
@@ -128,6 +135,9 @@ def __virtual__():
     '''
     Only load if the docker libs are available.
     '''
+    if not HAS_DOCKER:
+        return False
+
     if 'docker.version' in __salt__:
         return __virtualname__
     return False
@@ -181,6 +191,151 @@ def _invalid(exec_status=None, name='', comment='', changes=None):
                        result=False)
 
 
+def _host_config_changed(container, **kwargs):
+    """
+    Check for changes in running config vs. requested config
+    """
+    config_defaults = {
+        'Privileged': False,
+        'PublishAllPorts': False,
+        'DnsSearch': None,
+        'NetworkMode': '',
+        'RestartPolicy': {'MaximumRetryCount': 0, 'Name': ''},
+        'CapAdd': None,
+        'CapDrop': None,
+        'Devices': None,
+        'Dns': None,
+        'VolumesFrom': None,
+        'Binds': None,
+        'PortBindings': None,
+        'ExtraHosts': None,
+        'Links': None,
+        'LxcConf': None
+    }
+    current_config = container['HostConfig']
+    new_config = docker.utils.create_host_config(**kwargs)
+    # links go from "container:alias" to "/container:/name/alias"
+    if 'Links' in new_config:
+        patched_links = []
+        for link in new_config['Links']:
+            name, alias = link.split(':')
+            patched = '/{0}:{1}/{2}'.format(name, container['Name'], alias)
+            patched_links.append(patched)
+        new_config['Links'] = patched_links
+
+    changed = {}
+    # Compare keys and see what changed
+    for key, default in config_defaults.items():
+        new_val = new_config.get(key, default)
+        current_val = current_config.get(key, default)
+        if current_val != new_val:
+            changed[key] = {
+                'new': new_val,
+                'old': current_val,
+            }
+    return changed
+
+
+def _parse_args(**kwargs):
+    """
+    Split the incoming arguments into two dictionaries
+    matching what the docker library accepts
+    for `create_container` and `start`
+    """
+    # get all kwarg names except 'self'
+    start_kwarg_keys = inspect.getargspec(docker.Client.start)[0][1:]
+    create_container_kwarg_keys = inspect.getargspec(
+        docker.Client.create_container)[0][1:]
+    create_container_kwargs = {}
+    start_kwargs = {}
+    for key, value in kwargs.items():
+        if key in start_kwarg_keys:
+            start_kwargs[key] = value
+        if key in create_container_kwarg_keys:
+            create_container_kwargs[key] = value
+    # Tweaks to make CLI-style args work with Salt's modules
+    # which match the Python module except for `port_bindings`
+    if 'volumes' in kwargs:
+        volumes, binds = _parse_volumes_kwarg(kwargs['volumes'])
+        create_container_kwargs['volumes'] = volumes
+        start_kwargs['binds'] = binds
+    if 'ports' in kwargs:
+        ports, port_bindings = _parse_ports_kwarg(kwargs['ports'])
+        create_container_kwargs['ports'] = ports
+        start_kwargs['port_bindings'] = port_bindings
+    return create_container_kwargs, start_kwargs
+
+
+def _parse_volumes_kwarg(cli_style_volumes):
+    """
+    The Python API for mounting volumes is tedious.
+    https://github.com/docker/docker-py/blob/master/docs/volumes.md
+    This makes it work like the CLI
+    """
+    binds = {}
+    volumes = []
+    for volume in cli_style_volumes:
+        split = volume.split(':')
+        if len(split) == 1:
+            volume.append(split[0])
+            continue
+
+        host_path = split[0]
+        mountpoint = split[1]
+        if len(split) == 3:
+            read_only = split[2] == 'ro'
+        else:
+            read_only = False
+        volumes.append(mountpoint)
+        binds[host_path] = {'bind': mountpoint, 'ro': read_only}
+    return volumes, binds
+
+
+def _parse_ports_kwarg(cli_style_ports):
+    """
+    The Python API for port binding is tedious.
+    https://github.com/docker/docker-py/blob/master/docs/port-bindings.md
+    https://github.com/saltstack/salt/blob/2014.7/salt/modules/dockerio.py#L881-L891
+    This makes it work like the CLI which uses one of the following formats:
+
+    * ip:hostPort:containerPort
+    * ip::containerPort
+    * hostPort:containerPort
+    * containerPort
+    """
+    ports = []
+    port_bindings = {}
+    for port_defn in cli_style_ports:
+        split = port_defn.split(':')
+        container_port = split[-1]
+        if len(split) > 3:
+            raise SaltInvocationError('Port mapping has too many ":" in it.')
+
+        host_ip = len(split) == 3 and split[0] or ''
+        port_bindings[container_port] = {
+            'HostPort': split[-2],
+            'HostIp': host_ip,
+        }
+
+        # check for tcp/udp declaration
+        if '/' in container_port:
+            ports.append(tuple(container_port.split('/')))
+        else:
+            ports.append(container_port)
+    return ports, port_bindings
+
+
+def _run_and_check_salt_mod(mod, *args, **kwargs):
+    """
+    Execute a salt module and raise an exception if it failed
+    """
+    status = __salt__[mod](*args, **kwargs)
+    if not status['status']:
+        err = 'Call to {0} failed.\n{1}'.format(mod, status)
+        raise CommandExecutionError(err)
+    return status
+
+
 def mod_watch(name, sfun=None, *args, **kw):
     if sfun == 'built':
         # Needs to refresh the image
@@ -218,7 +373,12 @@ def mod_watch(name, sfun=None, *args, **kw):
                         ' implemented for {0}'.format(sfun))}
 
 
-def pulled(name, tag=None, force=False, *args, **kwargs):
+def pulled(name,
+           tag='latest',
+           force=False,
+           insecure_registry=False,
+           *args,
+           **kwargs):
     '''
     Pull an image from a docker registry. (`docker pull`)
 
@@ -242,24 +402,25 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
 
     force
         Pull even if the image is already pulled
+
+    insecure_registry
+        Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
+
     inspect_image = __salt__['docker.inspect_image']
-    image_infos = inspect_image(name)
+    image_infos = inspect_image('{0}:{1}'.format(name, tag))
     if image_infos['status'] and not force:
         return _valid(
             name=name,
-            comment='Image already pulled: {0}'.format(name))
+            comment='Image already pulled: {0}:{1}'.format(name, tag))
 
     if __opts__['test'] and force:
-        comment = 'Image {0} will be pulled'.format(name)
-        return {'name': name,
-                'changes': {},
-                'result': None,
-                'comment': comment}
+        comment = 'Image {0}:{1} will be pulled'.format(name, tag)
+        return _ret_status(name=name, comment=comment)
 
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     pull = __salt__['docker.pull']
-    returned = pull(name, tag=tag)
+    returned = pull(name, tag=tag, insecure_registry=insecure_registry)
     if previous_id != returned['id']:
         changes = {name: {'old': previous_id,
                           'new': returned['id']}}
@@ -268,7 +429,7 @@ def pulled(name, tag=None, force=False, *args, **kwargs):
     return _ret_status(returned, name, changes=changes)
 
 
-def pushed(name, tag=None):
+def pushed(name, tag='latest', insecure_registry=False):
     '''
     Push an image from a docker registry. (`docker push`)
 
@@ -290,17 +451,16 @@ def pushed(name, tag=None):
     tag
         Tag of the image [Optional]
 
+    insecure_registry
+        Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
 
     if __opts__['test']:
-        comment = 'Image {0} will be pushed'.format(name)
-        return {'name': name,
-                'changes': {},
-                'result': None,
-                'comment': comment}
+        comment = 'Image {0}:{1} will be pushed'.format(name, tag)
+        return _ret_status(name=name, comment=comment)
 
     push = __salt__['docker.push']
-    returned = push(name, tag=tag)
+    returned = push(name, tag=tag, insecure_registry=insecure_registry)
     log.debug("Returned: "+str(returned))
     if returned['status']:
         changes = {name: {'Rev': returned['id']}}
@@ -448,6 +608,8 @@ def installed(name,
               dns=None,
               volumes=None,
               volumes_from=None,
+              cpu_shares=None,
+              cpuset=None,
               *args, **kwargs):
     '''
     Ensure that a container with the given name exists;
@@ -499,12 +661,12 @@ def installed(name,
         volumes = []
     if isinstance(environment, dict):
         for k in environment:
-            denvironment[unicode(k)] = unicode(environment[k])
+            denvironment[six.text_type(k)] = six.text_type(environment[k])
     if isinstance(environment, list):
         for p in environment:
             if isinstance(p, dict):
                 for k in p:
-                    denvironment[unicode(k)] = unicode(p[k])
+                    denvironment[six.text_type(k)] = six.text_type(p[k])
     for p in ports:
         if not isinstance(p, dict):
             dports[str(p)] = {}
@@ -532,14 +694,16 @@ def installed(name,
         dns=dns,
         volumes=dvolumes,
         volumes_from=volumes_from,
-        name=name)
+        name=name,
+        cpu_shares=cpu_shares,
+        cpuset=cpuset)
     out = create(*a, **kw)
     # if container has been created, even if not started, we mark
     # it as installed
     changes = 'Container created'
     try:
         cid = out['out']['info']['id']
-    except Exception, e:
+    except Exception as e:
         log.debug(str(e))
     else:
         changes = 'Container {0} created'.format(cid)
@@ -574,25 +738,27 @@ def absent(name):
                 return _invalid(comment=("Container {0!r} could not be stopped"
                                          .format(cid)))
             else:
-                changes[cid]['new'] = 'stopped'
+                __salt__['docker.remove_container'](cid)
+                is_gone = __salt__['docker.exists'](cid)
+                if is_gone:
+                    return _valid(comment=('Container {0!r}'
+                                           ' was stopped and destroyed, '.format(cid)),
+                                           changes={name: True})
+                else:
+                    return _valid(comment=('Container {0!r}'
+                                           ' was stopped but could not be destroyed,'.format(cid)),
+                                           changes={name: True})
         else:
-            changes[cid]['old'] = 'stopped'
-
-        # Remove the stopped container
-        removal = __salt__['docker.remove_container'](cid)
-
-        if removal['status'] is True:
-            changes[cid]['new'] = 'removed'
-            return _valid(comment=("Container {0!r} has been destroyed"
-                                   .format(cid)),
-                          changes=changes)
-        else:
-            if 'new' not in changes[cid]:
-                changes = None
-            return _invalid(comment=("Container {0!r} could not be destroyed"
-                                     .format(cid)),
-                            changes=changes)
-
+            __salt__['docker.remove_container'](cid)
+            is_gone = __salt__['docker.exists'](cid)
+            if is_gone:
+                return _valid(comment=('Container {0!r}'
+                                       ' is stopped and was destroyed, '.format(cid)),
+                                       changes={name: True})
+            else:
+                return _valid(comment=('Container {0!r}'
+                                       ' is stopped but could not be destroyed,'.format(cid)),
+                                       changes={name: True})
     else:
         return _valid(comment="Container {0!r} not found".format(name))
 
@@ -749,6 +915,8 @@ def running(name,
             publish_all_ports=False,
             links=None,
             restart_policy=None,
+            cpu_shares=None,
+            cpuset=None,
             *args, **kwargs):
     '''
     Ensure that a container is running. If the container does not exist, it
@@ -863,6 +1031,19 @@ def running(name,
         Useful for data-only containers that must be linked to another one.
         e.g. nginx <- static-files
 
+    cpu_shares
+        CPU shares (relative weight)
+
+        .. code-block:: yaml
+
+            - cpu_shares: 2
+    cpuset
+        CPUs in which to allow execution ('0-3' or '0,1')
+
+        .. code-block:: yaml
+
+            - cpuset: '0-3'
+
     For other parameters, see salt.modules.dockerio execution module
     and the docker-py python bindings for docker documentation
     <https://github.com/dotcloud/docker-py#api>`_ for
@@ -899,19 +1080,19 @@ def running(name,
         volumes_from = []
     if isinstance(environment, dict):
         for key in environment:
-            denvironment[unicode(key)] = unicode(environment[key])
+            denvironment[six.text_type(key)] = six.text_type(environment[key])
     if isinstance(environment, list):
         for var in environment:
             if isinstance(var, dict):
                 for key in var:
-                    denvironment[unicode(key)] = unicode(var[key])
+                    denvironment[six.text_type(key)] = six.text_type(var[key])
     if isinstance(volumes, dict):
         bindvolumes = volumes
     if isinstance(volumes, list):
         for vol in volumes:
             if isinstance(vol, dict):
                 # get source as the dict key
-                source = vol.keys()[0]
+                source = list(vol.keys())[0]
                 # then find target
                 if isinstance(vol[source], dict):
                     target = vol[source]['bind']
@@ -932,7 +1113,7 @@ def running(name,
     if isinstance(ports, list):
         for port in ports:
             if isinstance(port, dict):
-                container_port = port.keys()[0]
+                container_port = list(port.keys())[0]
                 #find target
                 if isinstance(port[container_port], dict):
                     host_port = port[container_port]['HostPort']
@@ -960,14 +1141,16 @@ def running(name,
                         environment=denvironment,
                         dns=dns,
                         volumes=contvolumes,
-                        name=name)
+                        name=name,
+                        cpu_shares=cpu_shares,
+                        cpuset=cpuset)
         out = create(*args, **kwargs)
         # if container has been created, even if not started, we mark
         # it as installed
         try:
             cid = out['out']['info']['id']
             log.debug(str(cid))
-        except Exception, e:
+        except Exception as e:
             changes.append('Container created')
             log.debug(str(e))
         else:
@@ -1000,3 +1183,104 @@ def running(name,
         else:
             changes.append('Container {0!r} started.\n'.format(name))
     return _valid(comment=','.join(changes), changes={name: True})
+
+
+def latest_running(name, image, **kwargs):
+    """
+    Ensures the latest version of the container is running in the correct
+    configuration. New images will be pulled from the repo and running
+    containers will be restarted if necessary (new image or changed config.
+    """
+    create_container_kwargs, start_kwargs = _parse_args(**kwargs)
+    create_container_kwargs.update({
+        'name': name,
+        'image': image,
+    })
+    if ':' in image:
+        image_no_tag, tag = image.split(':')
+    else:
+        image_no_tag = image
+        tag = None
+    inspect_status = __salt__['docker.inspect_container'](name)
+    if not inspect_status['status']:
+        log.info('Container %s does not exist', name)
+        container = {}
+        is_running = False
+        current_image = None
+    else:
+        container = inspect_status['out']
+        current_image = container['Image']
+        is_running = container['State']['Running']
+    new_image = None
+    log.debug('Pulling latest image for %s (tag: %s)', image_no_tag, tag)
+    pull_status = _run_and_check_salt_mod('docker.pull', image_no_tag, tag)
+    new_image = pull_status['id']
+
+    # Container exists and new image is available
+    # Build a new one and start it
+    if new_image != current_image and container:
+        log.debug('new image: %s', new_image)
+        log.debug('current image: %s', current_image)
+        comment = ("The running container was out-of-date. "
+                  "It was replaced and restarted.")
+        log.info(comment)
+        if is_running:
+            _run_and_check_salt_mod('docker.stop', container['Id'])
+        _run_and_check_salt_mod('docker.remove_container', container['Id'])
+        _run_and_check_salt_mod('docker.remove_image', container['Image'])
+        cc_status = _run_and_check_salt_mod('docker.create_container',
+                                            **create_container_kwargs)
+        new_container = cc_status['out']['info']
+        ret = _valid(name=name,
+                     comment=comment,
+                     changes={'image': {'old': current_image,
+                                        'new': new_image},
+                              'container': {'old': container['Id'],
+                                            'new': new_container['Id']}})
+
+    # A container for this image does not exist
+    # Build a new one
+    elif not container:
+        comment = "The container did not exist. A new one was created."
+        log.info(comment)
+        cc_status = _run_and_check_salt_mod('docker.create_container',
+                                            **create_container_kwargs)
+        new_container = cc_status['out']['info']
+        ret = _valid(name=name,
+                     comment=comment,
+                     changes={'container': {'old': 'absent',
+                                            'new': new_container['Id']}})
+
+    # The container exists and its image is current, but it's not running
+    # Start it
+    elif not is_running:
+        comment = "The container was current, but stopped."
+        log.info(comment)
+        new_container = container
+        ret = _valid(name=name,
+                     comment=comment,
+                     changes={'state': {'old': 'stopped', 'new': 'starting'}})
+
+    # Container is running and current, but the config changed
+    # Restart with new config
+    else:
+        changes = _host_config_changed(container, **start_kwargs)
+        if changes:
+            comment = ("The container was current, but its configuration "
+                       "changed. It was restarted.")
+            log.info(comment)
+            _run_and_check_salt_mod('docker.stop', container['Id'])
+            new_container = container
+            ret = _valid(name=name,
+                     comment=comment,
+                     changes={'configuration': changes})
+
+        # If you get here, everything's in good shape already.
+        else:
+            comment = 'The container is current and in the correct state.'
+            log.info(comment)
+            return _valid(name=name, comment=comment)
+    # There's a new container that needs to be started
+    start_kwargs['container'] = new_container['Id']
+    _run_and_check_salt_mod('docker.start', **start_kwargs)
+    return ret

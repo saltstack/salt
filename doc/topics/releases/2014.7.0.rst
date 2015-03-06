@@ -6,6 +6,30 @@ This release is the largest Salt release ever, with more features and commits
 then any previous release of Salt. Everything from the new RAET transport to
 major updates in Salt Cloud and the merging of Salt API into the main project.
 
+.. important::
+
+    The Fedora/RHEL/CentOS **salt-master** package has been modified for this
+    release. The following components of Salt have been broken out and placed
+    into their own packages:
+
+    * salt-syndic
+    * salt-cloud
+    * salt-ssh
+
+    When the **salt-master** package is upgraded, these components will be
+    removed, and they will need to be manually installed.
+
+.. important::
+
+    Compound/pillar matching have been temporarily disabled for the ``mine``
+    and ``publish`` modules for this release due to the possibility of
+    inferring pillar data using pillar glob matching. A proper fix is now in
+    the 2014.7 branch and scheduled for the  2014.7.1 release, and compound
+    matching and non-globbing pillar matching will be re-enabled at that point.
+
+    Compound and pillar matching for normal salt commands are unaffected.
+
+
 New Transport!
 ==============
 
@@ -29,12 +53,12 @@ Simply stated, users running Salt with RAET should expect some hiccups as we
 hammer out the update. This is a BETA release of Salt RAET.
 
 For information about how to use Salt with RAET please see the
-:doc:`tutorial </topics/transports/raet/programming_intro>`.
+:doc:`tutorial </topics/transports/raet/index>`.
 
 Salt SSH Enhancements
 =====================
 
-Salt SSH has just entered a new league, which substantial updates and
+Salt SSH has just entered a new league, with substantial updates and
 improvements to make salt-ssh more reliable and easier then ever! From new
 features like the ansible roster and fileserver backends to the new pypi
 salt-ssh installer to lowered deps and a swath of bugfixes, salt-ssh is
@@ -58,7 +82,7 @@ which may be seen can be safely ignored.
 Fileserver Backends
 -------------------
 
-Salt-ssh can now use the salt fileserver backend system, this allows for
+Salt-ssh can now use the salt fileserver backend system. This allows for
 the gitfs, hgfs, s3, and many more ways to centrally store states to be easily
 used with salt-ssh. This also allows for a distributed team to easily use
 a centralized source.
@@ -78,8 +102,8 @@ to use salt-ssh with teams.
 No More sshpass
 ---------------
 
-Thanks to the enhancements in the salt vt system salt-ssh no longer requires
-sshpass to send passwords to ssh, this also makes the manipulation of ssh
+Thanks to the enhancements in the salt vt system, salt-ssh no longer requires
+sshpass to send passwords to ssh. This also makes the manipulation of ssh
 calls substantially more flexible, allowing for intercepting ssh calls in
 a much more fluid way.
 
@@ -109,11 +133,11 @@ More Thin Directory Options
 ---------------------------
 
 Salt ssh functions by copying a subset of the salt code, or `salt thin` down
-to the target system. In the past this was always transfered to /tmp/.salt
+to the target system. In the past this was always transferred to /tmp/.salt
 and cached there for subsequent commands.
 
 Now, salt thin can be sent to a random directory and removed when the call
-is complete with the `-W` option. The new `-w` option still uses a static
+is complete with the `-W` option. The new `-W` option still uses a static
 location but will clean up that location when finished.
 
 The default `salt thin` location is now user defined, allowing multiple users
@@ -125,9 +149,9 @@ State System Enhancements
 New Imperative State Keyword "Listen"
 -------------------------------------
 
-The new ``listen`` keyword allows for completely imperative states by calling
-the ``mod_watch()`` routine after all states have run instead of re-ordering
-the states.
+The new ``listen`` and ``listen_in`` keywords allow for completely imperative
+states by calling the ``mod_watch()`` routine after all states have run instead
+of re-ordering the states.
 
 Mod Aggregate Runtime Manipulator
 ---------------------------------
@@ -137,7 +161,7 @@ state data during execution. This allows for state definitions to be aggregated
 dynamically at runtime.
 
 The best example is found in the :mod:`pkg <salt.states.pkg>` state. If
-``mod_aggregate`` is turned on, then when the first pkg state is reached the
+``mod_aggregate`` is turned on, then when the first pkg state is reached, the
 state system will scan all of the other running states for pkg states and take
 all other packages set for install and install them all at once in the first
 pkg state.
@@ -152,7 +176,15 @@ For more documentation on ``mod_aggregate``, see :doc:`the documentation
 New Requisites: onchanges and onfail
 ------------------------------------
 
-New requisites!
+The new ``onchanges`` and ``onchanges_in`` requisites make a state apply only if
+there are changes in the required state. This is useful to execute post hooks
+after changes occur on a system.
+
+The other new requisites, ``onfail``, and ``onfail_in``, allow for a state to run
+in reaction to the failure of another state.
+
+For more information about these new requisites, see the
+:doc:`requisites documentation </ref/states/requisites>`.
 
 
 Global onlyif and unless
@@ -200,7 +232,7 @@ Fileserver Backends in salt-call
 
 Fileserver backends like gitfs can now be used without a salt master! Just add
 the fileserver backend configuration to the minion config and execute
-salt-call. This has been a much-requested feature and we are heppy to finally
+salt-call. This has been a much-requested feature and we are happy to finally
 bring it to our users.
 
 Amazon Execution Modules
@@ -268,10 +300,73 @@ Chef Execution Module
 
 Managing Chef with Salt just got even easier!
 
+salt-api Project Merge
+----------------------
+
+The ``salt-api`` project has been merged into Salt core and is now available as
+part of the regular ``salt-master`` package install. No API changes were made,
+the :command:`salt-api` script and init scripts remain intact.
+
+``salt-api`` has always provided Yet Another Pluggable Interface to Salt (TM)
+in the form of "netapi" modules. These are modules that bind to a port and
+start a service. Like many of Salt's other module types, netapi modules often
+have library and configuration dependencies. See the documentation for each
+module for instructions.
+
+.. seealso:: :ref:`The full list of netapi modules. <all-netapi-modules>`
+
+Synchronous and Asynchronous Execution of Runner and Wheel Modules
+******************************************************************
+
+:py:class:`salt.runner.RunnerClient` and :py:class:`salt.wheel.WheelClient`
+have both gained complimentary ``cmd_sync`` and ``cmd_async`` methods allowing
+for synchronous and asynchronous execution of any Runner or Wheel module
+function, all protected using Salt's :ref:`external authentication <acl-eauth>`
+system. ``salt-api`` benefits from this addition as well.
+
+``rest_cherrypy`` Additions
+***************************
+
+The :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi module
+provides the main REST API for Salt.
+
+Web Hooks
+~~~~~~~~~
+
+This release of course includes the Web Hook additions from the most recent
+``salt-api`` release, which allows external services to signal actions within a
+Salt infrastructure. External services such as Amazon SNS, Travis-CI, or
+GitHub, as well as internal services that cannot or should not run a Salt
+minion daemon can be used as first-class components in Salt's rich
+orchestration capabilities.
+
+The raw HTTP request body is now available in the event data. This is sometimes
+required information for checking an HMAC signature in order to verify a HTTP
+request. As an example, Amazon or GitHub requests are signed this way.
+
+Generating and Accepting Minion Keys
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :py:func:`/key <salt.netapi.rest_cherrypy.app.Keys.POST>` convenience URL
+generates a public and private key for a minion, automatically pre-accepts the
+public key on the Salt Master, and returns both keys as a tarball for download.
+
+This allows for easily bootstrapping the key on a new minion with a single HTTP
+call, such as with a Kickstart script, all using regular shell tools.
+
+.. code-block:: bash
+
+    curl -sS http://salt-api.example.com:8000/keys \
+            -d mid=jerry \
+            -d username=kickstart \
+            -d password=kickstart \
+            -d eauth=pam \
+            -o jerry-salt-keys.tar
+
 Fileserver Backend Enhancements
 -------------------------------
 
-All of the fileserver backends have been overhauled to be faster, lighter and
+All of the fileserver backends have been overhauled to be faster, lighter, and
 more reliable. The VCS backends (:mod:`gitfs <salt.fileserver.gitfs>`,
 :mod:`hgfs <salt.fileserver.hgfs>`, and :mod:`svnfs <salt.fileserver.svnfs>`)
 have also received a **lot** of new features.
@@ -313,7 +408,7 @@ Environment Whitelisting/Blacklisting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, gitfs will expose all branches and tags as Salt fileserver
-environments. Two new config parameters, :conf_master:`gitfs_env_whitelist` and
+environments. Two new config parameters, :conf_master:`gitfs_env_whitelist`, and
 :conf_master:`gitfs_env_blacklist`, allow more control over which branches and
 tags are exposed. More detailed information on how these two options work can
 be found in the :ref:`Gitfs Walkthrough <gitfs-whitelist-blacklist>`.
@@ -400,7 +495,7 @@ Minion Whitelisting/Blacklisting
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, minionfs will expose the pushed files from all minions. Two new
-config parameters, :conf_master:`minionfs_whitelist` and
+config parameters, :conf_master:`minionfs_whitelist`, and
 :conf_master:`minionfs_blacklist`, allow minionfs to be restricted to serve
 files from only the desired minions.
 
@@ -453,12 +548,18 @@ New Salt-Cloud Providers
 - :mod:`LXC Containers <salt.cloud.clouds.lxc>`
 - :mod:`Proxmox (OpenVZ containers & KVM) <salt.cloud.clouds.proxmox>`
 
+Salt Call Change
+================
+
+When used with a returner, salt-call now contacts a master if ``--local`` 
+is not specicified.
+
 
 Deprecations
 ============
 
-:mod:`salt.modules.virturalenv_mod`
------------------------------------
+:mod:`salt.modules.virtualenv_mod`
+----------------------------------
 
 - Removed deprecated ``memoize`` function from ``salt/utils/__init__.py`` (deprecated)
 - Removed deprecated ``no_site_packages`` argument from ``create`` function (deprecated)

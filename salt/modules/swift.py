@@ -37,6 +37,7 @@ Inspired by the S3 and Nova modules
 
         salt '*' swift.get mycontainer myfile /tmp/file profile=openstack1
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

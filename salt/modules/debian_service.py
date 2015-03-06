@@ -2,13 +2,20 @@
 '''
 Service support for Debian systems (uses update-rc.d and /sbin/service)
 '''
+from __future__ import absolute_import
 
 # Import python libs
+import logging
 import glob
 import re
 
+# Import 3rd-party libs
+# pylint: disable=import-error
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+# pylint: enable=import-error
+
 # Import salt libs
-from .systemd import _sd_booted
+import salt.utils.systemd
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -17,7 +24,6 @@ __func_alias__ = {
 # Define the module's virtual name
 __virtualname__ = 'service'
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -28,7 +34,7 @@ def __virtual__():
     '''
     Only work on Debian and when systemd isn't running
     '''
-    if __grains__['os'] in ('Debian', 'Raspbian') and not _sd_booted():
+    if __grains__['os'] in ('Debian', 'Raspbian') and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     return False
 
@@ -244,16 +250,16 @@ def enable(name, **kwargs):
     '''
     osmajor = _osrel()[0]
     if osmajor < '6':
-        cmd = 'update-rc.d -f {0} defaults 99'.format(name)
+        cmd = 'update-rc.d -f {0} defaults 99'.format(_cmd_quote(name))
     else:
-        cmd = 'update-rc.d {0} enable'.format(name)
+        cmd = 'update-rc.d {0} enable'.format(_cmd_quote(name))
     try:
         if int(osmajor) >= 6:
-            cmd = 'insserv {0} && '.format(name) + cmd
+            cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     except ValueError:
         if osmajor == 'testing/unstable' or osmajor == 'unstable':
-            cmd = 'insserv {0} && '.format(name) + cmd
-    return not __salt__['cmd.retcode'](cmd)
+            cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
+    return not __salt__['cmd.retcode'](cmd, python_shell=True)
 
 
 def disable(name, **kwargs):

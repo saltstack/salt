@@ -5,9 +5,10 @@ expected to return
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
-import glob
 import re
+import glob
 import logging
 
 # Import salt libs
@@ -15,7 +16,10 @@ import salt.payload
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
+from salt._compat import string_types
 
+# Import 3rd-party libs
+import salt.ext.six as six
 HAS_RANGE = False
 try:
     import seco.range  # pylint: disable=import-error
@@ -100,7 +104,7 @@ class CkMinions(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(opts)
-        if self.opts['transport'] == 'zeromq':
+        if self.opts.get('transport', 'zeromq') == 'zeromq':
             self.acc = 'minions'
         else:
             self.acc = 'accepted'
@@ -131,7 +135,7 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
-        if isinstance(expr, str):
+        if isinstance(expr, string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
         for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
@@ -156,7 +160,8 @@ class CkMinions(object):
                              delimiter,
                              greedy,
                              search_type,
-                             regex_match=False):
+                             regex_match=False,
+                             exact_match=False):
         '''
         Helper function to search for minions in master caches
         '''
@@ -183,15 +188,13 @@ class CkMinions(object):
                     if not greedy and id_ in minions:
                         minions.remove(id_)
                     continue
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        search_results = self.serial.load(fp_).get(search_type)
-                except (IOError, OSError):
-                    continue
+                search_results = self.serial.load(
+                    salt.utils.fopen(datap, 'rb')
+                ).get(search_type)
                 if not salt.utils.subdict_match(search_results,
                                                 expr,
-                                                delimiter,
-                                                regex_match=regex_match):
+                                                regex_match=regex_match,
+                                                exact_match=exact_match) and id_ in minions:
                     minions.remove(id_)
         return list(minions)
 
@@ -205,42 +208,27 @@ class CkMinions(object):
         '''
         Return the minions found by looking via grains with PCRE
         '''
-        cache_enabled = self.opts.get('minion_data_cache', False)
-
-        if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-            )
-        elif cache_enabled:
-            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
-        else:
-            return list()
-
-        if cache_enabled:
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not greedy and id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    if not greedy and id_ in minions:
-                        minions.remove(id_)
-                    continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-                if not salt.utils.subdict_match(grains, expr,
-                                                delimiter=':', regex_match=True) and id_ in minions:
-                    minions.remove(id_)
-        return list(minions)
+        return self._check_cache_minions(expr,
+                                         delimiter,
+                                         greedy,
+                                         'grains',
+                                         regex_match=True)
 
     def _check_pillar_minions(self, expr, delimiter, greedy):
         '''
         Return the minions found by looking via pillar
         '''
         return self._check_cache_minions(expr, delimiter, greedy, 'pillar')
+
+    def _check_pillar_exact_minions(self, expr, delimiter, greedy):
+        '''
+        Return the minions found by looking via pillar
+        '''
+        return self._check_cache_minions(expr,
+                                         greedy,
+                                         delimiter,
+                                         'pillar',
+                                         exact_match=True)
 
     def _check_ipcidr_minions(self, expr, greedy):
         '''
@@ -303,7 +291,7 @@ class CkMinions(object):
         '''
         if not HAS_RANGE:
             raise CommandExecutionError(
-                'Range matcher unavailble (unable to import seco.range, '
+                'Range matcher unavailable (unable to import seco.range, '
                 'module most likely not installed)'
             )
         cache_enabled = self.opts.get('minion_data_cache', False)
@@ -347,7 +335,22 @@ class CkMinions(object):
                         pass
         return list(minions)
 
-    def _check_compound_minions(self, expr, delimiter, greedy):  # pylint: disable=unused-argument
+    def _check_compound_pillar_exact_minions(self, expr, delimiter, greedy):
+        '''
+        Return the minions found by looking via compound matcher
+
+        Disable pillar glob matching
+        '''
+        return self._check_compound_minions(expr,
+                                            delimiter,
+                                            greedy,
+                                            pillar_exact=True)
+
+    def _check_compound_minions(self,
+                                expr,
+                                delimiter,
+                                greedy,
+                                pillar_exact=False):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via compound matcher
         '''
@@ -362,6 +365,8 @@ class CkMinions(object):
                    'S': self._check_ipcidr_minions,
                    'E': self._check_pcre_minions,
                    'R': self._all_minions}
+            if pillar_exact:
+                ref['I'] = self._check_pillar_exact_minions
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
@@ -376,26 +381,24 @@ class CkMinions(object):
                     matcher_args = ['@'.join(comps[1:])]
                     if comps[0] in ('G', 'P', 'I'):
                         matcher_args.append(delimiter)
+                    matcher_args.append(True)
 
                     if not matcher:
                         # If an unknown matcher is called at any time, fail out
                         return []
                     if unmatched and unmatched[-1] == '-':
-                        results.append(str(set(matcher('@'.join(comps[1:]), True))))
+                        results.append(str(set(matcher(*matcher_args))))
                         results.append(')')
                         unmatched.pop()
                     else:
-                        results.append(str(set(matcher('@'.join(comps[1:]), True))))
+                        results.append(str(set(matcher(*matcher_args))))
                 elif match in opers:
                     # We didn't match a target, so append a boolean operator or
                     # subexpression
                     if results:
                         if match == 'not':
-                            if results[-1] == '&':
-                                pass
-                            elif results[-1] == '|':
-                                pass
-                            else:
+                            result_suffix = results[-1]
+                            if not (result_suffix == '&' or result_suffix == '|'):
                                 results.append('&')
                             results.append('(')
                             results.append(str(set(minions)))
@@ -503,7 +506,12 @@ class CkMinions(object):
         '''
         try:
             check_func = getattr(self, '_check_{0}_minions'.format(expr_form), None)
-            if expr_form in ('grain', 'grain_pcre', 'pillar', 'compound'):
+            if expr_form in ('grain',
+                             'grain_pcre',
+                             'pillar',
+                             'pillar_exact',
+                             'compound',
+                             'compound_pillar_exact'):
                 minions = check_func(expr, delimiter, greedy)
             else:
                 minions = check_func(expr, greedy)
@@ -588,19 +596,38 @@ class CkMinions(object):
                 fun,
                 form)
 
-    def auth_check(self, auth_list, funs, tgt, tgt_type='glob', groups=None):
+    def auth_check(self,
+                   auth_list,
+                   funs,
+                   tgt,
+                   tgt_type='glob',
+                   groups=None,
+                   publish_validate=False):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
+        if publish_validate:
+            v_tgt_type = tgt_type
+            if tgt_type.lower() == 'pillar':
+                v_tgt_type = 'pillar_exact'
+            elif tgt_type.lower() == 'compound':
+                v_tgt_type = 'compound_pillar_exact'
+            v_minions = set(self.check_minions(tgt, v_tgt_type))
+            minions = set(self.check_minions(tgt, tgt_type))
+            mismatch = bool(minions.difference(v_minions))
+            # If the non-exact match gets more minions than the exact match
+            # then pillar globbing is being used, and we have a problem
+            if mismatch:
+                return False
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
         try:
             for fun in funs:
                 for ind in auth_list:
-                    if isinstance(ind, str):
+                    if isinstance(ind, string_types):
                         # Allowed for all minions
                         if self.match_check(ind, fun):
                             return True
@@ -608,14 +635,14 @@ class CkMinions(object):
                         if len(ind) != 1:
                             # Invalid argument
                             continue
-                        valid = ind.keys()[0]
+                        valid = next(six.iterkeys(ind))
                         # Check if minions are allowed
                         if self.validate_tgt(
                                 valid,
                                 tgt,
                                 tgt_type):
                             # Minions are allowed, verify function in allowed list
-                            if isinstance(ind[valid], str):
+                            if isinstance(ind[valid], string_types):
                                 if self.match_check(ind[valid], fun):
                                     return True
                             elif isinstance(ind[valid], list):
@@ -626,23 +653,18 @@ class CkMinions(object):
             return False
         return False
 
-    def gather_groups(self, auth_provider, user_groups, auth_list):
+    def fill_auth_list_from_groups(self, auth_provider, user_groups, auth_list):
         '''
-        Returns the list of groups, if any, for a given authentication provider type
-
-        Groups are defined as any dict in which a key has a trailing '%'
+        Returns a list of authorisation matchers that a user is eligible for.
+        This list is a combination of the provided personal matchers plus the
+        matchers of any group the user is in.
         '''
-        group_perm_keys = filter(lambda(item): item.endswith('%'), auth_provider)
-        groups = {}
-        if group_perm_keys:
-            for group_perm in group_perm_keys:
-                for matcher in auth_provider[group_perm]:
-                    if group_perm[:-1] in user_groups:
-                        groups[group_perm] = matcher
-        else:
-            return None
-        for item in groups.values():
-            auth_list.append(item)
+        group_names = [item for item in auth_provider if item.endswith('%')]
+        if group_names:
+            for group_name in group_names:
+                if group_name.rstrip("%") in user_groups:
+                    for matcher in auth_provider[group_name]:
+                        auth_list.append(matcher)
         return auth_list
 
     def wheel_check(self, auth_list, fun):
@@ -655,7 +677,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@wheel':
@@ -665,9 +687,9 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -686,7 +708,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@runners':
@@ -696,9 +718,9 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -720,7 +742,7 @@ class CkMinions(object):
         else:
             mod = fun
         for ind in auth_list:
-            if isinstance(ind, str):
+            if isinstance(ind, string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@{0}'.format(form):
@@ -730,9 +752,9 @@ class CkMinions(object):
             elif isinstance(ind, dict):
                 if len(ind) != 1:
                     continue
-                valid = ind.keys()[0]
+                valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], str):
+                    if isinstance(ind[valid], string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):

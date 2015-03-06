@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 '''For running command line executables with a timeout'''
+from __future__ import absolute_import
 
 import subprocess
 import threading

@@ -89,7 +89,11 @@ accept them
 
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
+
+Note: For rackconnect v3, rackconnectv3 needs to be specified with the
+rackconnect v3 cloud network as it's variable
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # The import section is mostly libcloud boilerplate
@@ -102,6 +106,7 @@ import pprint
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+import salt.ext.six as six
 try:
     from salt.utils.openstack import nova
     HAS_NOVA = True
@@ -225,7 +230,7 @@ def get_image(conn, vm_):
         'ascii', 'salt-cloud-force-ascii'
     )
 
-    for img in image_list.keys():
+    for img in image_list:
         if vm_image in (image_list[img]['id'], img):
             return image_list[img]['id']
 
@@ -461,7 +466,7 @@ def request_instance(vm_=None, call=None):
         group_list = []
 
         for vmg in vm_groups:
-            if vmg in [name for name, details in avail_groups.iteritems()]:
+            if vmg in [name for name, details in six.iteritems(avail_groups)]:
                 group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(
@@ -499,6 +504,10 @@ def request_instance(vm_=None, call=None):
     if userdata_file is not None:
         with salt.utils.fopen(userdata_file, 'r') as fp:
             kwargs['userdata'] = fp.read()
+
+    kwargs['config_drive'] = config.get_cloud_config_value(
+        'config_drive', vm_, __opts__, search_global=False
+    )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -538,14 +547,6 @@ def create(vm_):
             'The defined ssh_key_file {0!r} does not exist'.format(
                 key_filename
             )
-        )
-
-    if deploy is True and key_filename is None and \
-            salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_key_file\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
         )
 
     vm_['key_filename'] = key_filename
@@ -612,13 +613,26 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
+        rackconnectv3 = config.get_cloud_config_value(
+            'rackconnectv3', vm_, __opts__, default='False',
+            search_global=False
+        )
+
+        if rackconnectv3:
+            networkname = rackconnectv3
+            for network in node['addresses'].get(networkname, []):
+                if network['version'] is 4:
+                    node['extra']['access_ip'] = network['addr']
+                    break
+            vm_['rackconnect'] = True
+
         if rackconnect(vm_) is True:
             extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
             access_ip = extra.get('access_ip', '')
 
-            if rc_status != 'DEPLOYED':
+            if rc_status != 'DEPLOYED' and not rackconnectv3:
                 log.debug('Waiting for Rackconnect automation to complete')
                 return
 
@@ -665,7 +679,7 @@ def create(vm_):
                         result.append(private_ip)
 
         if rackconnect(vm_) is True:
-            if ssh_interface(vm_) != 'private_ips':
+            if ssh_interface(vm_) != 'private_ips' or rackconnectv3:
                 data.public_ips = access_ip
                 return data
 
@@ -783,7 +797,7 @@ def list_nodes(call=None, **kwargs):
 
     if not server_list:
         return {}
-    for server in server_list.keys():
+    for server in server_list:
         server_tmp = conn.server_show(server_list[server]['id'])[server]
         ret[server] = {
             'id': server_tmp['id'],
@@ -815,7 +829,7 @@ def list_nodes_full(call=None, **kwargs):
 
     if not server_list:
         return {}
-    for server in server_list.keys():
+    for server in server_list:
         try:
             ret[server] = conn.server_show_libcloud(
                 server_list[server]['id']

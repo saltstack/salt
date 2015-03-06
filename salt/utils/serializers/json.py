@@ -15,7 +15,7 @@ try:
 except ImportError:
     import json
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.utils.serializers import DeserializationError, SerializationError
 
 __all__ = ['deserialize', 'serialize', 'available']

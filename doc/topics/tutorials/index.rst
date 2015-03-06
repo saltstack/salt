@@ -69,5 +69,3 @@ Using Salt at scale
     :maxdepth: 2
 
     intro_scale
-    the_master
-    the_minion

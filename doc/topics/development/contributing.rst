@@ -18,79 +18,136 @@ Sending pull requests on GitHub is the preferred method for receiving
 contributions. The workflow advice below mirrors `GitHub's own guide <GitHub
 Fork a Repo Guide_>`_ and is well worth reading.
 
-#.  Fork the `saltstack/salt`_ repository on GitHub.
+#.  `Fork saltstack/salt`_ on GitHub.
 #.  Make a local clone of your fork.
+
+    .. code-block:: bash
+
+         git clone git@github.com:my-account/salt.git
+         cd salt
+
+#.  Add `saltstack/salt`_ as a git remote.
+
+    .. code-block:: bash
+
+         git remote add upstream https://github.com/saltstack/salt.git
+
 #.  Create a new branch in your clone.
 
     A branch should have one purpose. For example, "Fix bug X," or "Add feature
-    Y." Multiple pull requests should be opened for unrelated changes.
+    Y".  Multiple unrelated fixes and/or features should be isolated into
+    separate branches.
 
-    Choose a name for your branch that describes its purpose.
-
-    .. code-block:: bash
-
-        git checkout -b fixed-broken-thing
-
-#.  Make edits and changes locally.
-#.  Commit changes to this new branch.
-
-    Edit the necessary files in your Salt clone and remember to add them to
-    your commit. Write a descriptive commit message.
+    If you're working on a fix, create your branch from the oldest release
+    branch having the bug.  See :ref:`Which Salt Branch`.
 
     .. code-block:: bash
 
+        git fetch upstream
+        git checkout 2014.7
+        git rebase upstream/2014.7
+        git checkout -b fix-broken-thing
+
+    If you're working on a feature, create your branch from the develop branch.
+
+    .. code-block:: bash
+
+        git fetch upstream
+        git checkout develop
+        git rebase upstream/develop
+        git checkout -b add-cool-feature
+
+#.  Edit and commit changes to your branch.
+
+    .. code-block:: bash
+
+        vim path/to/file1 path/to/file2
+        git diff
         git add path/to/file1
         git add path/to/file2
-        git commit -m "Fixed X in file1 and file2"
+        git commit
 
-    If you get stuck `there are many introductory Git resources on
-    help.github.com <Git resources_>`_.
+    Write a short, descriptive commit title and a longer commit message if
+    necessary.
 
-#.  Push your locally-committed changes to your GitHub fork.
+    If your change fixes a bug or implements a feature already filed in the
+    `issue tracker<GitHub issue tracker>`_, be sure to reference the issue
+    number in the commit message body.
 
     .. code-block:: bash
 
-        git push --set-upstream origin fixed-broken-thing
+    fix broken things in file1 and file2
 
-#.  Go to your fork on the GitHub website & find your branch.
+    fixes #31337
 
-    GitHub automatically displays a button with the text "Compare & pull
-    request" for recently pushed branches.
+    # Please enter the commit message for your changes. Lines starting
+    # with '#' will be ignored, and an empty message aborts the commit.
+    # On branch cmd_tests
+    # Changes to be committed:
+    #       modified:   path/to/file1
+    #       modified:   path/to/file2
 
-    Otherwise click on the "Branches" tab at the top of your fork. A button
-    with the text "New pull request" will be beside each branch.
+
+    If you get stuck `there are many introductory Git resources on
+    help.github.com <Git resources>`_.
+
+#.  Push your locally-committed changes to your GitHub fork,
+
+    .. code-block:: bash
+
+        git push --set-upstream origin fix-broken-thing
+
+    or,
+
+    .. code-block:: bash
+
+        git push --set-upstream origin add-cool-feature
+
+#.  Find the branch on your GitHub salt fork.
+
+    https://github.com/my-account/salt/branches/fix-broken-thing
 
 #.  Open a new pull request.
 
-    #.  Click one of the pull request buttons from the previous step. GitHub
-        will present a form and show a comparison of the changes in your pull
-        request.
-    #.  Write a descriptive comment, include links to any project issues
-        related to the pull request.
-    #.  Click "Create pull request".
+    Click on ``Pull Request`` on the right near the top of the page,
 
-#.  The Salt repo managers will be notified of your pull request.
-   
-    If a reviewer asks for changes:
+    https://github.com/my-account/salt/pull/new/fix-broken-thing
 
-    #.  Make the changes in your local clone on the same local branch.
-    #.  Push the branch to GitHub using the same command as before.
-    #.  The new commits will be reflected in the pull request automatically.
+    #.  If your branch is a fix for a release branch, choose that as the base
+        branch (e.g. ``2014.7`` or ``2015.2``),
+
+        https://github.com/my-account/salt/compare/saltstack:2014.7...fix-broken-thing
+
+        If your branch is a feature, choose ``develop`` as the base branch,
+
+        https://github.com/my-account/salt/compare/saltstack:develop...add-cool-feature
+
+    #.  Review that the proposed changes are what you expect.
+    #.  Write a descriptive comment.  Include links to related issues (e.g.
+        'Fixes #31337.') in the comment field.
+    #.  Click 'Create pull request'.
+
+#.  Salt project members will review your pull request and automated tests will
+    run on it.
+
+    If you recognize any test failures as being related to your proposed
+    changes or if a reviewer asks for modifications:
+
+    #.  Make the new changes in your local clone on the same local branch.
+    #.  Push the branch to GitHub again using the same command as before.
+    #.  The new commits will be added to the pull request automatically.
     #.  Feel free to add a comment to the discussion.
 
 .. note:: Jenkins
 
-    Whenever you make a pull request against the main Salt repository your
-    changes will be tested on a variety of operating systems and
-    configurations. On average these tests take 30 minutes to run and once
-    they are complete a PASS/FAIL message will be added to your pull
-    request. This message contains a link to http://jenkins.saltstack.com
-    where you can review the test results. This message will also generate an
-    email which will be sent to the email address associated with your GitHub
-    account informing you of these results. It should be noted that a test
-    failure does not necessarily mean there is an issue in the associated pull
-    request as the entire development branch is tested.
+    Pull request against `saltstack/salt`_ are automatically tested on a
+    variety of operating systems and configurations. On average these tests
+    take 30 minutes.  Depending on your GitHub notification settings you may
+    also receive an email message about the test results.
 
+    Test progress and results can be found at http://jenkins.saltstack.com/.
+
+.. _Which Salt Branch:
 Which Salt branch?
 ==================
 
@@ -187,7 +244,7 @@ the name of the main `saltstack/salt`_ repository.
 
     If Git complains that a fast-forward merge is not possible, you have local
     commits.
-    
+
     * Run ``git pull --rebase origin develop`` to rebase your changes on top of
       the upstream changes.
     * Or, run ``git branch <branch-name>`` to create a new branch with your
@@ -287,6 +344,8 @@ And ``upstream`` is the name of the remote pointing to the main Salt repo.
 
 .. _`saltstack/salt`: https://github.com/saltstack/salt
 .. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
+.. _`GitHub issue tracker`: https://github.com/saltstack/salt/issues
+.. _`Fork saltstack/salt`: https://github.com/saltstack/salt/fork
 .. _`Git resources`: https://help.github.com/articles/what-are-other-good-resources-for-learning-git-and-github
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html

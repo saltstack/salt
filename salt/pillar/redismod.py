@@ -30,6 +30,7 @@ Configuring the Redis ext_pillar
           - redis: {function: key_value}
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
@@ -50,7 +51,7 @@ def ext_pillar(minion_id, pillar, function, **kwargs):
     '''
     Grabs external pillar data based on configured function
     '''
-    if function.startswith('_') or function not in globals().keys():
+    if function.startswith('_') or function not in globals():
         return {}
     # Call specified function to pull redis data
     return globals()[function](minion_id, pillar, **kwargs)
