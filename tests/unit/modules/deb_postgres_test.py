@@ -2,15 +2,16 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import re
 import os
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-ensure_in_syspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../../'))
-ensure_in_syspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../'))
+ensure_in_syspath(
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../../'))
+ensure_in_syspath(
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../'))
 
 # Import salt libs
 from salt.modules import deb_postgres
@@ -19,18 +20,22 @@ deb_postgres.__grains__ = None  # in order to stub it w/patch below
 deb_postgres.__salt__ = None  # in order to stub it w/patch below
 
 
-LSCLUSTER = '''8.4 main 5432 online postgres /srv/8.4/main /var/log/postgresql/postgresql-8.4-main.log
-9.1 main 5433 online postgres /srv/9.1/main /var/log/postgresql/postgresql-9.1-main.log
+LSCLUSTER = '''\
+8.4 main 5432 online postgres /srv/8.4/main \
+        /var/log/postgresql/postgresql-8.4-main.log
+9.1 main 5433 online postgres /srv/9.1/main \
+        /var/log/postgresql/postgresql-9.1-main.log
 '''
 if NO_MOCK is False:
     SALT_STUB = {
         'config.option': Mock(),
-        'cmd.run_all': Mock(return_value={'stdout':LSCLUSTER}),
+        'cmd.run_all': Mock(return_value={'stdout': LSCLUSTER}),
         'file.chown': Mock(),
         'file.remove': Mock(),
     }
 else:
     SALT_STUB = {}
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(deb_postgres,
@@ -57,12 +62,13 @@ class PostgresClusterTestCase(TestCase):
 
     # XXX version should be a string but from cmdline you get a float
     # def test_cluster_create_with_float(self):
-    #     self.assertRaises(AssertionError, deb_postgres.cluster_create, 
-    #                       (9.3,'main',), 
+    #     self.assertRaises(AssertionError, deb_postgres.cluster_create,
+    #                       (9.3,'main',),
     #                       dict(port='5432',
     #                            locale='fr_FR',
     #                            encoding='UTF-8',
     #                            datadir='/opt/postgresql'))
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(deb_postgres,
@@ -73,17 +79,20 @@ class PostgresLsClusterTestCase(TestCase):
     def test_parse_pg_lsclusters(self):
         stdout = LSCLUSTER
         self.maxDiff = None
-        self.assertDictEqual({('8.4', 'main'):{'port':5432,
-                                           'status': 'online',
-                                           'user': 'postgres',
-                                           'datadir':'/srv/8.4/main',
-                                           'log':'/var/log/postgresql/postgresql-8.4-main.log'},
-                          ('9.1', 'main'):{'port':5433,
-                                           'status': 'online',
-                                           'user': 'postgres',
-                                           'datadir':'/srv/9.1/main',
-                                           'log':'/var/log/postgresql/postgresql-9.1-main.log'},},
-                         deb_postgres._parse_pg_lscluster(stdout))
+        self.assertDictEqual(
+            {('8.4', 'main'): {
+                'port': 5432,
+                'status': 'online',
+                'user': 'postgres',
+                'datadir': '/srv/8.4/main',
+                'log': '/var/log/postgresql/postgresql-8.4-main.log'},
+             ('9.1', 'main'): {
+                 'port': 5433,
+                 'status': 'online',
+                 'user': 'postgres',
+                 'datadir': '/srv/9.1/main',
+                 'log': '/var/log/postgresql/postgresql-9.1-main.log'}},
+            deb_postgres._parse_pg_lscluster(stdout))
 
     def test_cluster_list(self):
         return_list = deb_postgres.cluster_list()
@@ -105,18 +114,18 @@ class PostgresLsClusterTestCase(TestCase):
                 __salt__=SALT_STUB)
 @patch('salt.utils.which', Mock(return_value='/usr/bin/pg_dropcluster'))
 class PostgresDeleteClusterTestCase(TestCase):
-    
+
     def test_cluster_delete(self):
-        return_list = deb_postgres.cluster_remove('9.3', 'main')
+        deb_postgres.cluster_remove('9.3', 'main')
         cmd = SALT_STUB['cmd.run_all']
         self.assertEqual('/usr/bin/pg_dropcluster 9.3 main',
                          cmd.call_args[0][0])
-        return_list = deb_postgres.cluster_remove('9.3', 'main', stop=True)
+        deb_postgres.cluster_remove('9.3', 'main', stop=True)
         cmd = SALT_STUB['cmd.run_all']
         self.assertEqual('/usr/bin/pg_dropcluster --stop 9.3 main',
                          cmd.call_args[0][0])
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(PostgresClusterTestCase, PostgresLsClusterTestCase, 
+    run_tests(PostgresClusterTestCase, PostgresLsClusterTestCase,
               PostgresDeleteClusterTestCase, needs_daemon=False)
