@@ -44,29 +44,27 @@ def frame_msg(msg):
     return '{0} {1}'.format(len(msg), msg)
 
 
-def unframe_msg(frame):
-    '''
-    Return a tuple of (remaining_bits, msg)
-    '''
-    msg_len, msg = frame.split(' ', 1)
-
-    return (int(msg_len) - len(msg), msg)
-
-
 def socket_frame_recv(s, recv_size=4096):
     '''
     Retrieve a frame from socket
     '''
-    ret_frame = s.recv(recv_size)
-    # TODO: exception? This is an ugly API
-    if ret_frame == '':
-        raise socket.error('Empty response!')
-    remain, ret_msg = unframe_msg(ret_frame)
-    while remain > 0:
+    recv_buf = ''
+    while ' ' not in recv_buf:
         data = s.recv(recv_size)
-        ret_msg += data
-        remain -= len(data)
-    return ret_msg
+        if data == '':
+            raise socket.error('Empty response!')
+        else:
+            recv_buf += data
+    # once we have a space, we know how long the rest is
+    msg_len, msg = recv_buf.split(' ', 1)
+    msg_len = int(msg_len)
+    while len(msg) != msg_len:
+        data = s.recv(recv_size)
+        if data == '':
+           raise socket.error('msg stopped, we are missing some data!')
+        else:
+            msg += data
+    return msg
 
 
 class TCPReqChannel(salt.transport.client.ReqChannel):
@@ -76,7 +74,6 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
     TODO:
         - add timeouts
     '''
-    recv_size = 16384
     def __init__(self, opts, **kwargs):
         self.opts = dict(opts)
 
@@ -158,8 +155,6 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
 
 
 class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
-    recv_size = 16384
-
     def __init__(self,
                  opts,
                  **kwargs):
