@@ -16,10 +16,12 @@ def start_engines(opts, proc_mgr):
     Fire up the configured engines!
     '''
     if opts['__role'] == 'master':
-        funcs = salt.loader.runner(opts)
+        runners = salt.loader.runner(opts)
     else:
-        funcs = salt.loader.minion_mods(opts)
-    engines = salt.loader.engines(opts, funcs)
+        runners = []
+    funcs = salt.loader.minion_mods(opts)
+    engines = salt.loader.engines(opts, funcs, runners)
+
     engines_opt = opts.get('engines', [])
     if isinstance(engines_opt, dict):
         engines_opt = [{k: v} for k, v in engines_opt.items()]
@@ -37,7 +39,8 @@ def start_engines(opts, proc_mgr):
                         opts,
                         fun,
                         engine_opts,
-                        funcs
+                        funcs,
+                        runners
                         )
                     )
 
@@ -46,7 +49,7 @@ class Engine(multiprocessing.Process):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, fun, config, funcs):
+    def __init__(self, opts, fun, config, funcs, runners):
         '''
         Set up the process executor
         '''
@@ -55,11 +58,14 @@ class Engine(multiprocessing.Process):
         self.config = config
         self.fun = fun
         self.funcs = funcs
+        self.runners = runners
 
     def run(self):
         '''
         Run the master service!
         '''
-        self.engine = salt.loader.engines(self.opts, self.funcs)
+        self.engine = salt.loader.engines(self.opts,
+                                          self.funcs,
+                                          self.runners)
         kwargs = self.config or {}
         self.engine[self.fun](**kwargs)
