@@ -730,7 +730,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = {}  # mapping of name -> error
         self.loaded_modules = set()  # list of all modules that we have loaded
-        self.loaded_files = []  # TODO: just remove them from file_mapping?
+        self.loaded_files = set()  # TODO: just remove them from file_mapping?
 
         self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
@@ -833,7 +833,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Clear the dict
         '''
         super(LazyLoader, self).clear()  # clear the lazy loader
-        self.loaded_files = []
+        self.loaded_files = set()
         self.missing_modules = {}
         self.loaded_modules = set()
         # if we have been loaded before, lets clear the file mapping since
@@ -920,7 +920,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name]
-        self.loaded_files.append(name)
+        self.loaded_files.add(name)
         try:
             sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
