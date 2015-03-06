@@ -429,9 +429,9 @@ def _virtual(osdata):
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
-            _cmds = ('dmidecode', 'dmesg')
+            _cmds = ('dmidecode', 'dmesg', 'systemd-detect-virt', 'virt-what')
         else:
-            _cmds = ('dmidecode', 'lspci', 'dmesg')
+            _cmds = ('dmidecode', 'lspci', 'dmesg','systemd-detect-virt', 'virt-what')
 
     failed_commands = set()
     for command in _cmds:
@@ -471,7 +471,35 @@ def _virtual(osdata):
                 grains['virtual'] = 'VirtualBox'
             # Break out of the loop so the next log message is not issued
             break
-
+        elif command == 'systemd-detect-virt':
+            if output in ('qemu', 'kvm', 'vmware', 'microsoft', 'oracle', 'xen', 'bochs', 'chroot', 'uml', 'systemd-nspawn'):
+                grains['virtual'] = output
+                break
+            elif 'vmware' in output:
+                grains['virtual'] = 'VMWare'
+                break
+            elif 'microsoft' in output:
+                grains['virtual'] = 'VirtualPC'
+                break
+            elif 'lxc' in output:
+                grains['virtual'] = 'LXC'
+                break
+            elif 'systemd-nspawn' in output:
+                grains['virtual'] = 'LXC'
+                break
+        elif command == 'virt-what':
+            if output in ('kvm','qemu','uml','xen'):
+                grains['virtual'] = output
+                break
+            elif 'vmware' in output:
+                grains['virtual'] = 'VMWare'
+                break
+            elif 'parallels' in output:
+                grains['virtual'] = 'Parallels'
+                break
+            elif 'hyperv' in output:
+                grains['virtual'] = 'HyperV'
+                break
         elif command == 'dmidecode' or command == 'dmesg':
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
@@ -497,6 +525,8 @@ def _virtual(osdata):
             # Manufacturer: Parallels Software International Inc.
             elif 'Parallels Software' in output:
                 grains['virtual'] = 'Parallels'
+            elif 'Manufacturer: Google' in output:
+                grains['virtual'] = 'kvm'
             # Break out of the loop, lspci parsing is not necessary
             break
         elif command == 'lspci':
