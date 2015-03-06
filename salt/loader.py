@@ -729,6 +729,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = {}  # mapping of name -> error
+        self.loaded_modules = set()  # list of all modules that we have loaded
         self.loaded_files = []  # TODO: just remove them from file_mapping?
 
         self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
@@ -748,12 +749,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         This can range from "not available' to "__virtual__" returned False
         '''
         mod_name = function_name.split('.')[0]
-        if self.missing_modules[mod_name] is not None:
-            return '{0!r}\' __virtual__ returned False: {1}'.format(mod_name, self.missing_modules[mod_name])
-        elif self.missing_modules[mod_name] is None:
-            return '{0!r}\' __virtual__ returned False'.format(mod_name)
-        else:
+        if mod_name in self.loaded_modules:
             return '{0!r} is not available.'.format(function_name)
+        else:
+            if self.missing_modules.get(mod_name) is not None:
+                return '{0!r}\' __virtual__ returned False: {1}'.format(mod_name, self.missing_modules[mod_name])
+            elif self.missing_modules.get(mod_name) is None:
+                return '{0!r}\' __virtual__ returned False'.format(mod_name)
+            else:
+                return '{0!r} is not available.'.format(function_name)
 
     def refresh_file_mapping(self):
         '''
@@ -831,6 +835,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         super(LazyLoader, self).clear()  # clear the lazy loader
         self.loaded_files = []
         self.missing_modules = {}
+        self.loaded_modules = set()
         # if we have been loaded before, lets clear the file mapping since
         # we obviously want a re-do
         if hasattr(self, 'opts'):
@@ -1056,6 +1061,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # enforce depends
         Depends.enforce_dependencies(self._dict, self.tag)
+        self.loaded_modules.add(module_name)
         return True
 
     def _load(self, key):
