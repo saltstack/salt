@@ -65,6 +65,8 @@ def disable(profile='allprofiles'):
 
 def enable(profile='allprofiles'):
     '''
+    .. versionadded:: 2015.2.0
+
     Disable all the firewall profiles
 
     CLI Example:
@@ -80,6 +82,8 @@ def enable(profile='allprofiles'):
 
 def get_rule(name="all"):
     '''
+    .. versionadded:: 2015.2.0
+
     Get firewall rule(s) info
 
     CLI Example:
@@ -100,6 +104,8 @@ def get_rule(name="all"):
 
 def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
     '''
+    .. versionadded:: 2015.2.0
+
     Add a new firewall rule
 
     CLI Example:
