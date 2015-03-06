@@ -404,7 +404,13 @@ def enabled(name, **kwargs):
     name
         The name of the init or rc script used to manage the service
     '''
-    return _enable(name, None, **kwargs)
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    ret.update(_enable(name, None, **kwargs))
+    return ret
 
 
 def disabled(name, **kwargs):
@@ -417,7 +423,13 @@ def disabled(name, **kwargs):
     name
         The name of the init or rc script used to manage the service
     '''
-    return _disable(name, None, **kwargs)
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    ret.update(_disable(name, None, **kwargs))
+    return ret
 
 
 def mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False):
