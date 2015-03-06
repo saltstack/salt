@@ -30,13 +30,7 @@ class LoaderOverridesTest(integration.ModuleCase):
         self.assertNotIn('brain.left_hemisphere', funcs)
 
         # There should be a new function for the test module, recho
-        self.assertIn('test.recho', funcs)
-
-        text = 'foo bar baz quo qux'
-        self.assertEqual(
-            self.run_function('test.echo', arg=[text])[::-1],
-            self.run_function('test.recho', arg=[text]),
-        )
+        self.assertNotIn('test.recho', funcs)
 
 
 if __name__ == '__main__':

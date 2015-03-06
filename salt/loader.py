@@ -1072,7 +1072,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if not isinstance(key, six.string_types) or '.' not in key:
             raise KeyError
         mod_name, _ = key.split('.', 1)
-        if mod_name in self.missing_modules:
+        if mod_name in self.missing_modules or mod_name in self.loaded_modules:
             return True
         # if the modulename isn't in the whitelist, don't bother
         if self.whitelist and mod_name not in self.whitelist:
@@ -1113,7 +1113,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load all of them
         '''
         for name in self.file_mapping:
-            if name in self.loaded_files or name in self.missing_modules:
+            if name in self.loaded_files or \
+               name in self.missing_modules or \
+               name in self.loaded_modules:
                 continue
             self._load_module(name)
 

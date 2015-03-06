@@ -58,6 +58,11 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         # since the loader does the calling magically
         self.assertFalse('test.missing_func' in self.loader._dict)
 
+        # make sure we only loaded "test" functions
+        # after looking for a nonexistant one
+        for key, val in six.iteritems(self.loader._dict):
+            self.assertEqual(key.split('.', 1)[0], 'test')
+
     def test_badkey(self):
         with self.assertRaises(KeyError):
             self.loader[None]  # pylint: disable=W0104
