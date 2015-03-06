@@ -431,7 +431,7 @@ def _virtual(osdata):
         if not os.path.exists('/proc/bus/pci'):
             _cmds = ('dmidecode', 'dmesg', 'systemd-detect-virt', 'virt-what')
         else:
-            _cmds = ('dmidecode', 'lspci', 'dmesg','systemd-detect-virt', 'virt-what')
+            _cmds = ('dmidecode', 'lspci', 'dmesg', 'systemd-detect-virt', 'virt-what')
 
     failed_commands = set()
     for command in _cmds:
@@ -488,7 +488,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'LXC'
                 break
         elif command == 'virt-what':
-            if output in ('kvm','qemu','uml','xen'):
+            if output in ('kvm', 'qemu', 'uml', 'xen'):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
