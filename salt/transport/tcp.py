@@ -83,7 +83,6 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
         self.crypt = kwargs.get('crypt', 'aes')
 
         if self.crypt != 'clear':
-            # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.SAuth(self.opts)
 
         parse = urlparse.urlparse(self.opts['master_uri'])
@@ -301,7 +300,6 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 class TCPPubServerChannel(salt.transport.server.PubServerChannel):
     # TODO: opts!
     backlog = 5
-    size = 16384
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
@@ -374,9 +372,12 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
                     raise exc
 
         except KeyboardInterrupt:
-            if pub_sock.closed is False:
-                pub_sock.setsockopt(zmq.LINGER, 1)
-                pub_sock.close()
+            # TODO: try/except?
+            for client, address in clients:
+                client.shutdown(socket.SHUT_RDWR)
+                client.close()
+            pub_sock.shutdown(socket.SHUT_RDWR)
+            pub_sock.close()
             if pull_sock.closed is False:
                 pull_sock.setsockopt(zmq.LINGER, 1)
                 pull_sock.close()
