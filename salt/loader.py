@@ -146,13 +146,14 @@ def raw_mod(opts, _, functions, mod='modules'):
                       pack={'__salt__': functions})
 
 
-def engines(opts):
+def engines(opts, functions):
     '''
     Return the master services plugins
     '''
     return LazyLoader(_module_dirs(opts, 'engines', 'engines'),
                       opts,
-                      tag='engines')
+                      tag='engines',
+                      pack={'__salt__': functions})
 
 
 def proxy(opts, functions, whitelist=None):
