@@ -472,7 +472,7 @@ def _virtual(osdata):
             # Break out of the loop so the next log message is not issued
             break
         elif command == 'systemd-detect-virt':
-            if output in ('qemu', 'kvm', 'vmware', 'microsoft', 'oracle', 'xen', 'bochs', 'chroot', 'uml', 'systemd-nspawn'):
+            if output in ('qemu', 'kvm', 'oracle', 'xen', 'bochs', 'chroot', 'uml', 'systemd-nspawn'):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
