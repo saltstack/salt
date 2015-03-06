@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Linode Cloud Module using Apache Libcloud OR linode-python bindings
-============================================-======================
+===================================================================
 
 The Linode cloud module is used to control access to the Linode VPS system
 
