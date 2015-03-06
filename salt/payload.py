@@ -120,7 +120,7 @@ class Serial(object):
         try:
             return msgpack.dumps(msg)
         except OverflowError:
-            # msgpack can't handle the very log Python longs for jids
+            # msgpack can't handle the very long Python longs for jids
             # Convert any very long longs to strings
             # We borrow the technique used by TypeError below
             def verylong_encoder(obj):
