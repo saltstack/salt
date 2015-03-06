@@ -2189,11 +2189,12 @@ def access(path, mode):
         raise SaltInvocationError('Invalid mode specified.')
 
 
-def readlink(path):
+def readlink(path, canonicalize=False):
     '''
     .. versionadded:: 2014.1.0
 
     Return the path that a symlink points to
+    If canonicalize is set to True, then it return the final target
 
     CLI Example:
 
@@ -2209,7 +2210,10 @@ def readlink(path):
     if not os.path.islink(path):
         raise SaltInvocationError('A valid link was not specified.')
 
-    return os.readlink(path)
+    if canonicalize:
+        return os.path.realpath(path)
+    else:
+        return os.readlink(path)
 
 
 def readdir(path):
