@@ -80,6 +80,15 @@ class Depends(object):
             # check if dependency is loaded
             for module, func, fallback_function in dependent_set:
                 # check if you have the dependency
+                if dependency is True:
+                    log.trace(
+                        'Dependency for {0}.{1} exists, not unloading'.format(
+                            module.__name__.split('.')[-1],
+                            func.__name__,
+                        )
+                    )
+                    continue
+
                 if dependency in dir(module):
                     log.trace(
                         'Dependency ({0}) already loaded inside {1}, '
