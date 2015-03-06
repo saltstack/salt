@@ -332,4 +332,3 @@ def absent(name,
         ret['changes'][name] = 'Removed'
 
     return ret
-    
