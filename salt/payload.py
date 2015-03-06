@@ -133,12 +133,11 @@ class Serial(object):
                     for idx, entry in enumerate(obj):
                         obj[idx] = verylong_encoder(entry)
                     return obj
-                if isinstance(obj, long) and long > pow(2,64):
+                if isinstance(obj, long) and long > pow(2, 64):
                     return str(obj)
                 else:
                     return obj
             return msgpack.dumps(verylong_encoder(msg))
-            
         except TypeError:
             if msgpack.version >= (0, 2, 0):
                 # Should support OrderedDict serialization, so, let's
