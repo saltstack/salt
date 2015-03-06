@@ -502,7 +502,7 @@ def unmounted(name,
     name
         The path to the location where the device is to be unmounted from
 
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     device
         The device to be unmounted.

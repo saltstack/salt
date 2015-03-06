@@ -169,10 +169,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     network_profile
         Network profile to use for the container
 
-        .. versionadded:: Lithium
+        .. versionadded:: 2015.2.0
 
     nic
-        .. deprecated:: Lithium
+        .. deprecated:: 2015.2.0
             Use ``network_profile`` instead
 
     nic_opts
