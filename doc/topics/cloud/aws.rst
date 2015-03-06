@@ -172,6 +172,16 @@ These retries and timeouts relate to validating the Administrator password
 once AWS provides the credentials via the AWS API.
 
 
+Windows Deploy Timeouts
+=======================
+For Windows instances, it may take longer than normal for the instance to be
+ready.  In these circumstances, the provider configuration can be configured
+with a ``win_deploy_auth_retries`` and/or a ``win_deploy_auth_retry_delay``
+setting, which default to 10 retries and a one second delay between retries.
+These retries and timeouts relate to validating the Administrator password
+once AWS provides the credentials via the AWS API.
+
+
 Key Pairs
 =========
 In order to create an instance with Salt installed and configured, a key pair
@@ -942,6 +952,11 @@ the network interfaces of your virtual machines, for example:-
           SubnetId: subnet-XXXXXXXX
           SecurityGroupId:
             - sg-XXXXXXXX
+          
+          # Uncomment this line if you would like to set an explicit private
+          # IP address for the ec2 instance
+          #
+          # PrivateIpAddress: 192.168.1.66
 
           # Uncomment this to associate an existing Elastic IP Address with
           # this network interface:

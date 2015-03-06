@@ -19,6 +19,7 @@ try:
     import salt.master
     import salt.crypt
     import salt.daemons.masterapi
+    import salt.payload
     HAS_ZMQ = True
 except ImportError:
     HAS_ZMQ = False
@@ -156,6 +157,8 @@ class SaltZmqPublisher(ioflo.base.deeding.Deed):
         '''
         Set up tracking value(s)
         '''
+        if not HAS_ZMQ:
+            return
         self.created = False
         self.serial = salt.payload.Serial(self.opts.value)
 

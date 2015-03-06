@@ -2162,6 +2162,9 @@ def destroy(name, stop=False):
         )
     return _change_state('lxc-destroy', name, None)
 
+# Compatibility between LXC and nspawn
+remove = destroy
+
 
 def exists(name):
     '''
@@ -2593,7 +2596,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     return True
 
 
-def _need_install(name):
+def _needs_install(name):
     ret = 0
     has_minion = retcode(name, "command -v salt-minion")
     # we assume that installing is when no minion is running
@@ -2601,11 +2604,11 @@ def _need_install(name):
     # installs where the bootstrap can do much more than installing
     # the bare salt binaries.
     if has_minion:
-        processes = run_stdout(name, "ps aux")
+        processes = run_stdout(name, 'ps aux')
         if 'salt-minion' not in processes:
             ret = 1
         else:
-            retcode(name, "salt-call --local service.stop salt-minion")
+            retcode(name, 'salt-call --local service.stop salt-minion')
     else:
         ret = 1
     return ret
@@ -2615,7 +2618,8 @@ def bootstrap(name,
               config=None,
               approve_key=True,
               install=True,
-              pub_key=None, priv_key=None,
+              pub_key=None,
+              priv_key=None,
               bootstrap_url=None,
               force_install=False,
               unconditional_install=False,
@@ -2705,7 +2709,7 @@ def bootstrap(name,
     if not orig_state:
         return orig_state
     if not force_install:
-        needs_install = _need_install(name)
+        needs_install = _needs_install(name)
     else:
         needs_install = True
     seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
@@ -2716,7 +2720,7 @@ def bootstrap(name,
         ret = False
         cfg_files = __salt__['seed.mkconfig'](
             config, tmp=tmp, id_=name, approve_key=approve_key,
-            priv_key=priv_key, pub_key=pub_key)
+            pub_key=pub_key, priv_key=priv_key)
         if needs_install or force_install or unconditional_install:
             if install:
                 rstr = __salt__['test.rand_str']()

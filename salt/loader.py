@@ -146,6 +146,18 @@ def raw_mod(opts, _, functions, mod='modules'):
                       pack={'__salt__': functions})
 
 
+def engines(opts, functions, runners):
+    '''
+    Return the master services plugins
+    '''
+    pack = {'__salt__': functions,
+            '__runners__': runners}
+    return LazyLoader(_module_dirs(opts, 'engines', 'engines'),
+                      opts,
+                      tag='engines',
+                      pack=pack)
+
+
 def proxy(opts, functions, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
@@ -279,7 +291,7 @@ def states(opts, functions, whitelist=None):
                       whitelist=whitelist)
 
 
-def beacons(opts, context=None):
+def beacons(opts, functions, context=None):
     '''
     Load the beacon modules
     '''
@@ -288,7 +300,8 @@ def beacons(opts, context=None):
     return LazyLoader(_module_dirs(opts, 'beacons', 'beacons'),
                       opts,
                       tag='beacons',
-                      pack={'__context__': context})
+                      pack={'__context__': context,
+                            '__salt__': functions})
 
 
 def search(opts, returners, whitelist=None):

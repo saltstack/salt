@@ -45,6 +45,7 @@ Full list of builtin execution modules
     bridge
     bsd_shadow
     btrfs
+    cabal
     cassandra
     chef
     chocolatey
@@ -52,6 +53,7 @@ Full list of builtin execution modules
     cmdmod
     composer
     config
+    container_resource
     cp
     cpan
     cron
@@ -92,7 +94,6 @@ Full list of builtin execution modules
     freebsdpkg
     freebsdports
     freebsdservice
-    fsutils
     gem
     genesis
     gentoo_service
@@ -120,11 +121,13 @@ Full list of builtin execution modules
     influx
     ini_manage
     introspect
+    ipmi
     ipset
     iptables
     jboss7
     jboss7_cli
     junos
+    kerberos
     key
     keyboard
     keystone
@@ -158,6 +161,7 @@ Full list of builtin execution modules
     mssql
     munin
     mysql
+    nacl
     nagios
     netbsd_sysctl
     netbsdservice
@@ -169,6 +173,7 @@ Full list of builtin execution modules
     nginx
     nova
     npm
+    nspawn
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -249,6 +254,7 @@ Full list of builtin execution modules
     ssh
     state
     status
+    sudo
     supervisord
     svn
     swift
@@ -259,6 +265,7 @@ Full list of builtin execution modules
     system
     systemd
     test
+    test_virtual
     timezone
     tls
     tomcat
@@ -272,6 +279,7 @@ Full list of builtin execution modules
     virt
     virtualenv_mod
     win_autoruns
+    win_dacl
     win_disk
     win_dns_client
     win_file
