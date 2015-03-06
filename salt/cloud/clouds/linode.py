@@ -150,7 +150,6 @@ if not HAS_LIBCLOUD:
         def __repr__(self):
             return '<NodeAuthSSHKey>'
 
-
     class NodeAuthPassword(object):
         '''
         A password to be used for authentication to a node.
@@ -533,6 +532,8 @@ if HAS_LINODEPY:
 # End of linode-python specific functions.  The following are
 # usable by both Apache Libcloud and Linode-python, or just Linode-python.
 # Linode-python functions almost all take a LinodeID.
+
+
 
 def get_password(vm_):
     '''
