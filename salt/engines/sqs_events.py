@@ -101,26 +101,28 @@ def _get_sqs_conn(profile):
     return conn
 
 
-def start(queue, profile=None):
+def start(queue, profile=None, tag='salt/engine/sqs'):
     '''
     Listen to events and write them to a log file
     '''
     if __opts__.get('__role') == 'master':
-        event_bus = salt.utils.event.get_master_event(
+        fire_master = salt.utils.event.get_master_event(
             __opts__,
-            __opts__['sock_dir'])
+            __opts__['sock_dir']).fire_event
     else:
-        event_bus = salt.utils.event.get_event(
-            'minion',
-            transport=__opts__['transport'],
-            opts=__opts__,
-            sock_dir=__opts__['sock_dir'])
+        fire_master = None
+
+    def fire(tag, msg):
+        if fire_master:
+            fire_master(msg, tag)
+        else:
+            __salt__['event.send'](tag, msg)
+
     sqs = _get_sqs_conn(profile)
     q = sqs.get_queue(queue)
 
     while True:
         msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
-            event_bus.fire_event({'message': msg.get_body()},
-                                 'salt/engine/sqs')
+            fire(tag, {'message': msg.get_body()})
             msg.delete()
