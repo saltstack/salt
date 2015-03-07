@@ -336,7 +336,7 @@ class PubServer(tornado.tcpserver.TCPServer):
 
     @tornado.gen.coroutine
     def publish_payload(self, package):
-        log.trace('TCP PubServer starting to publis payload')
+        log.trace('TCP PubServer starting to publish payload')
         package = package[0]  # ZMQ ism :/
         payload = frame_msg(salt.payload.unpackage(package)['payload'])
         to_remove = []
