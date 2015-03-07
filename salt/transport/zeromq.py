@@ -27,6 +27,15 @@ import salt.transport.server
 import salt.transport.mixins.auth
 
 import zmq
+import zmq.eventloop.ioloop
+import zmq.eventloop.zmqstream
+
+# tornado imports
+import tornado
+import tornado.tcpserver
+import tornado.gen
+import tornado.concurrent
+import tornado.tcpclient
 
 log = logging.getLogger(__name__)
 
@@ -296,11 +305,14 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
         process_manager.add_process(self.zmq_device)
 
-    def post_fork(self):
+    def post_fork(self, payload_handler, io_loop):
         '''
         After forking we need to create all of the local sockets to listen to the
         router
         '''
+        self.payload_handler = payload_handler
+        self.io_loop = io_loop
+
         self.context = zmq.Context(1)
         self._socket = self.context.socket(zmq.REP)
         self.w_uri = 'ipc://{0}'.format(
@@ -311,34 +323,50 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
 
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self)
 
-    def recv(self, timeout=0):
+        self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=self.io_loop)
+        self.stream.on_recv_stream(self.handle_message)
+
+    @tornado.gen.coroutine
+    def handle_message(self, stream, payload):
         '''
-        Get a req job, with an optional timeout (0==forever)
+        Handle incoming messages from underylying tcp streams
         '''
-        if timeout == 0 or self._socket.poll(timeout):
-            package = self._socket.recv()
-            payload = self.serial.loads(package)
+        payload = self.serial.loads(payload[0])
+        try:
             payload = self._decode_payload(payload)
-            # if timeout was 0 and we got a None, we intercepted the job,
-            # so just queue up another recv()
-            if payload is None and timeout == 0:
-                return self.recv(timeout=timeout)
-            return payload
+        except Exception as e:
+            stream.send(self.serial.dumps('bad load'))
+            raise tornado.gen.Return()
+
+        # intercept the "_auth" commands, since the main daemon shouldn't know
+        # anything about our key auth
+        if payload['enc'] == 'clear' and payload['load']['cmd'] == '_auth':
+            stream.send(self.serial.dumps(self._auth(payload['load'])))
+            raise tornado.gen.Return()
+
+
+        # TODO: handle exceptions
+        try:
+            ret, req_opts = self.payload_handler(payload)  # TODO: check if a future
+        except Exception as e:
+            log.error('Some exception handling a payload from minion', exc_info=True)
+            stream.send('bad low')
+            raise tornado.gen.Return()
+
+        req_fun = req_opts.get('fun', 'send')
+        if req_fun == 'send_clear':
+            ret['enc'] = 'clear'
+            stream.send(self.serial.dumps(ret))
+        elif req_fun == 'send':
+            stream.send(self.serial.dumps(self.crypticle.dumps(ret)))
+        elif req_fun == 'send_private':
+            stream.send(self.serial.dumps(self._encrypt_private(ret,
+                                                                req_opts['key'],
+                                                                req_opts['tgt'],
+                                                                )))
         else:
-            return None
-
-    def _send(self, payload):
-        '''
-        Helper function to serialize and send payload
-        '''
-        self._socket.send(self.serial.dumps(payload))
-
-    @property
-    def socket(self):
-        '''
-        Return a socket (or fd) which can be used for poll mechanisms
-        '''
-        self._socket
+            log.error('Unknown req_fun {0}'.format(req_fun))
+            stream.send('err')
 
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
