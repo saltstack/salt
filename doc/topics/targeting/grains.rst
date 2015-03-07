@@ -139,9 +139,9 @@ can be used to simplify the :term:`top file`.
     {% set node_type = salt['grains.get']('node_type', '') %}
 
     {% if node_type %}
-      'node_type:{{ self }}':
+      'node_type:{{ node_type }}':
         - match: grain
-        - {{ self }}
+        - {{ node_type }}
     {% endif %}
 
 Using Jinja templating, only one match entry needs to be defined.
@@ -182,8 +182,8 @@ approach would be code something similar to the following:
         # initialize a grains dictionary
         grains = {}
         # Some code for logic that sets grains like
-        grains['yourcustomgrain']=True
-        grains['anothergrain']='somevalue'
+        grains['yourcustomgrain'] = True
+        grains['anothergrain'] = 'somevalue'
         return grains
 
 Before adding a grain to Salt, consider what the grain is and remember that
