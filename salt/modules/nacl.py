@@ -3,24 +3,27 @@
 :requires: libnacl
 https://github.com/saltstack/libnacl
 
-This module helps include encrypted passwords in pillars and grains.
+This module helps include encrypted passwords in pillars, grains and salt state files.
 This is often usefull if you wish to store your pillars in source control or
 share your pillar data with others that you trust. I dont advise making your pillars public
 regardless if they are encrypted or not.
 
+When generating keys and encrypting passwords use --local when using salt-call for extra
+security. Also consider using just the salt runner nacl when encrypting pillar passwords.
+
 The nacl lib uses 32byte keys, these keys are base64 encoded to make your life more simple.
 To generate your `key` or `keyfile` you can use:
 
-    salt-call nacl.keygen keyfile=/root/.nacl
+    salt-call --local nacl.keygen keyfile=/root/.nacl
 
 Now with your key, you can encrypt some data
 
-    salt-call nacl.enc mypass keyfile=/root/.nacl
+    salt-call --local nacl.enc mypass keyfile=/root/.nacl
     DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=
 
 To decrypt the data
 
-    salt-call nacl.dec data='DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=' keyfile=/root/.nacl
+    salt-call --local nacl.dec data='DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=' keyfile=/root/.nacl
     mypass
 
 The following optional configurations can be defined in the
@@ -126,9 +129,9 @@ def keygen(keyfile=None):
 
     .. code-block:: bash
 
-        salt-call nacl.keygen
-        salt-call nacl.keygen keyfile=/root/.nacl
-        salt-call --out=newline_values_only nacl.keygen > /root/.nacl
+        salt-call --local nacl.keygen
+        salt-call --local nacl.keygen keyfile=/root/.nacl
+        salt-call --local --out=newline_values_only nacl.keygen > /root/.nacl
     '''
     b = libnacl.secret.SecretBox()
     key = b.sk
@@ -150,9 +153,9 @@ def enc(data, **kwargs):
 
     .. code-block:: bash
 
-        salt-call nacl.enc datatoenc
-        salt-call nacl.enc datatoenc keyfile=/root/.nacl
-        salt-call nacl.enc datatoenc key='cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
+        salt-call --local nacl.enc datatoenc
+        salt-call --local nacl.enc datatoenc keyfile=/root/.nacl
+        salt-call --local nacl.enc datatoenc key='cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
     '''
     key = _get_key(**kwargs)
     sk = base64.b64decode(key)
@@ -168,9 +171,9 @@ def dec(data, **kwargs):
 
     .. code-block:: bash
 
-        salt-call nacl.dec pEXHQM6cuaF7A=
-        salt-call nacl.dec data='pEXHQM6cuaF7A=' keyfile=/root/.nacl
-        salt-call nacl.dec data='pEXHQM6cuaF7A=' key='cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
+        salt-call --local nacl.dec pEXHQM6cuaF7A=
+        salt-call --local nacl.dec data='pEXHQM6cuaF7A=' keyfile=/root/.nacl
+        salt-call --local nacl.dec data='pEXHQM6cuaF7A=' key='cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
     '''
     key = _get_key(**kwargs)
     sk = base64.b64decode(key)
