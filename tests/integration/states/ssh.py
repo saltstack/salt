@@ -146,7 +146,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
 
         # test again
         ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
-        self.assertSaltNoneReturn(ret)
+        self.assertSaltTrueReturn(ret)
 
 
 class SSHAuthStateTests(integration.ModuleCase,
