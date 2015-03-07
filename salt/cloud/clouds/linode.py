@@ -218,7 +218,7 @@ if HAS_LIBCLOUD:
         Return the node location to use
         '''
         locations = conn.list_locations()
-# Default to Dallas if not otherwise set
+        # Default to Dallas if not otherwise set
         loc = config.get_cloud_config_value('location', vm_, __opts__, default=2)
         for location in locations:
             if str(loc) in (str(location.id), str(location.name)):
@@ -532,7 +532,6 @@ if HAS_LINODEPY:
 # End of linode-python specific functions.  The following are
 # usable by both Apache Libcloud and Linode-python, or just Linode-python.
 # Linode-python functions almost all take a LinodeID.
-
 
 
 def get_password(vm_):
