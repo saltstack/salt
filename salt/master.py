@@ -28,6 +28,9 @@ import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
+import zmq.eventloop.ioloop
+import tornado.gen
+
 # Import salt libs
 import salt.crypt
 import salt.utils
@@ -651,51 +654,10 @@ class MWorker(multiprocessing.Process):
         '''
         Bind to the local port
         '''
-        self.req_channel.post_fork()  # TODO: cleaner? Maybe lazily?
-        try:
-            while True:
-                try:
-                    payload = self.req_channel.recv(None)  # blocking get
-                    # TODO: maybe change into a wrapper class?
-                    # req_opts defines our response function
-                    try:
-                        ret, req_opts = self._handle_payload(payload)
-                    except KeyError:
-                        ret, req_opts = 'error', {}
-                        log.debug('Exception when handling payload', exc_info=True)
-
-                    # req_fun: default to send
-                    req_fun = req_opts.get('fun', 'send')
-                    if req_fun == 'send_clear':
-                        self.req_channel.send_clear(ret)
-                    elif req_fun == 'send':
-                        self.req_channel.send(ret)
-                    elif req_fun == 'send_private':
-                        self.req_channel.send_private(ret, req_opts['key'], req_opts['tgt'])
-                    else:
-                        log.error('Unknown req_fun {0}'.format(req_fun))
-                # don't catch keyboard interrupts, just re-raise them
-                except KeyboardInterrupt:
-                    raise
-                # catch all other exceptions, so we don't go defunct
-                except Exception as exc:
-                    # since we are in an exceptional state, lets attempt to tell
-                    # the minion we have a problem, otherwise the minion will get
-                    # no response and be forced to wait for their max timeout
-                    try:
-                        socket.send('Unexpected Error in Mworker')
-                    except:  # pylint: disable=W0702
-                        pass
-                    # Properly handle EINTR from SIGUSR1
-                    if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
-                        continue
-                    log.critical('Unexpected Error in MWorker',
-                                 exc_info=True)
-
-        # Changes here create a zeromq condition, check with thatch45 before
-        # making any zeromq changes
-        except KeyboardInterrupt:
-            del self.req_channel
+        # using ZMQIOLoop since we *might* need zmq in there
+        io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        self.req_channel.post_fork(self._handle_payload, io_loop=io_loop)  # TODO: cleaner? Maybe lazily?
+        io_loop.start()
 
     def _handle_payload(self, payload):
         '''

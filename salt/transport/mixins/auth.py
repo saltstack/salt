@@ -127,23 +127,11 @@ class AESReqServerMixin(object):
         # we need to decrypt it
         if payload['enc'] == 'aes':
             try:
-                try:
-                    payload['load'] = self.crypticle.loads(payload['load'])
-                except salt.crypt.AuthenticationError:
-                    if not self._update_aes():
-                        raise
-                    payload['load'] = self.crypticle.loads(payload['load'])
-            except Exception:
-                # send something back to the client so the client so they know
-                # their load was malformed
-                self.send('bad load')
-                raise
-
-        # intercept the "_auth" commands, since the main daemon shouldn't know
-        # anything about our key auth
-        if payload['enc'] == 'clear' and payload['load']['cmd'] == '_auth':
-            self.send_clear(self._auth(payload['load']))
-            return None
+                payload['load'] = self.crypticle.loads(payload['load'])
+            except salt.crypt.AuthenticationError:
+                if not self._update_aes():
+                    raise
+                payload['load'] = self.crypticle.loads(payload['load'])
         return payload
 
     def _auth(self, load):

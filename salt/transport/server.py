@@ -48,46 +48,13 @@ class ReqServerChannel(object):
         '''
         pass
 
-    def post_fork(self):
+    def post_fork(self, payload_handler, io_loop):
         '''
-        Do anything you need post-fork. This should be something like recv
+        Do anything you need post-fork. This should handle all incoming payloads
+        and call payload_handler. You will also be passed io_loop, for all of your
+        async needs
         '''
         pass
-
-    def recv(self, timeout=0):
-        '''
-        Get a req job, with an optional timeout
-            0: nonblocking
-            None: forever
-        '''
-        raise NotImplementedError()
-
-    @property
-    def socket(self):
-        '''
-        Return a socket (or fd) which can be used for poll mechanisms
-        '''
-        raise NotImplementedError()
-
-    def send_clear(self, payload):
-        '''
-        Send a response to a recv()'d payload
-        '''
-        raise NotImplementedError()
-
-    def send(self, payload):
-        '''
-        Send a response to a recv()'d payload
-        '''
-        raise NotImplementedError()
-
-
-    def send_private(self, payload, dictkey, target):
-        '''
-        Send a response to a recv()'d payload encrypted privately for target
-        '''
-        raise NotImplementedError()
-
 
 class PubServerChannel(object):
     '''
