@@ -169,6 +169,8 @@ class ZeroMQCaller(object):
             ret['fun_args'] = self.opts['arg']
 
         for returner in returners:
+            if not returner:  # if we got an empty returner somehow, skip
+                continue
             try:
                 ret['success'] = True
                 self.minion.returners['{0}.returner'.format(returner)](ret)
