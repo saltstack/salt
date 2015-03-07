@@ -26,7 +26,7 @@ def update(dest, upd):
                 klass = OrderedDict
             else:
                 klass = dict
-            dest_subkey = dest.get(key, klass)
+            dest_subkey = dest.get(key, klass())
         except AttributeError:
             dest_subkey = None
         if isinstance(dest_subkey, collections.Mapping) \
