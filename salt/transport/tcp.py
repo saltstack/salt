@@ -49,9 +49,13 @@ log = logging.getLogger(__name__)
 import msgpack
 
 # TODO: put in some lib?
-def frame_msg(msg):
-    header = msgpack.dumps({'msgLen': len(msg)})
-    return '{0} {1}{2}'.format(len(header), header, msg)
+def frame_msg(msg, header=None):
+    if header is None:
+        header = {}
+
+    header['msgLen'] = len(msg)
+    header_packed = msgpack.dumps(header)
+    return '{0} {1}{2}'.format(len(header_packed), header_packed, msg)
 
 
 def socket_frame_recv(s, recv_size=4096):
