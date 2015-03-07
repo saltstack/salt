@@ -3,7 +3,8 @@ TCP transport classes
 
 
 
-Wire protocol: "len(msg) msg"
+Wire protocol: "len(header) header msg"
+header is a msgpack'd dict which includes (at least) msgLen
 
 '''
 
@@ -35,19 +36,29 @@ import salt.transport.mixins.auth
 
 # for IPC (for now)
 import zmq
+import zmq.eventloop.ioloop
+import zmq.eventloop.zmqstream
+
+# tornado imports
+import tornado
+import tornado.tcpserver
+import tornado.gen
 
 log = logging.getLogger(__name__)
 
+import msgpack
 
 # TODO: put in some lib?
 def frame_msg(msg):
-    return '{0} {1}'.format(len(msg), msg)
+    header = msgpack.dumps({'msgLen': len(msg)})
+    return '{0} {1}{2}'.format(len(header), header, msg)
 
 
 def socket_frame_recv(s, recv_size=4096):
     '''
     Retrieve a frame from socket
     '''
+    # get the header size
     recv_buf = ''
     while ' ' not in recv_buf:
         data = s.recv(recv_size)
@@ -56,15 +67,26 @@ def socket_frame_recv(s, recv_size=4096):
         else:
             recv_buf += data
     # once we have a space, we know how long the rest is
-    msg_len, msg = recv_buf.split(' ', 1)
-    msg_len = int(msg_len)
-    while len(msg) != msg_len:
+    header_len, buf = recv_buf.split(' ', 1)
+    header_len = int(header_len)
+    while len(buf) < header_len:
         data = s.recv(recv_size)
         if data == '':
            raise socket.error('msg stopped, we are missing some data!')
         else:
-            msg += data
-    return msg
+            buf += data
+
+    header = msgpack.loads(buf[:header_len])
+    msg_len = int(header['msgLen'])
+    buf = buf[header_len:]
+    while len(buf) < msg_len:
+        data = s.recv(recv_size)
+        if data == '':
+           raise socket.error('msg stopped, we are missing some data!')
+        else:
+            buf += data
+
+    return buf
 
 
 class TCPReqChannel(salt.transport.client.ReqChannel):
@@ -296,10 +318,39 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         finally:
             self.client = None
 
+class PubServer(tornado.tcpserver.TCPServer):
+    '''
+    TCP publisher
+    '''
+    def __init__(self, *args, **kwargs):
+        super(PubServer, self).__init__(*args, **kwargs)
+        self.clients = []
+
+    def handle_stream(self, stream, address):
+        log.trace('Subscriber at {0} connected'.format(address))
+        self.clients.append((stream, address))
+
+    @tornado.gen.coroutine
+    def publish_payload(self, package):
+        log.trace('TCP PubServer starting to publis payload')
+        package = package[0]  # ZMQ ism :/
+        payload = frame_msg(salt.payload.unpackage(package)['payload'])
+        to_remove = []
+        for item in self.clients:
+            client, address = item
+            try:
+                yield client.write(payload)  # TODO: don't wait
+            except tornado.iostream.StreamClosedError:
+                to_remove.append(item)
+        for item in to_remove:
+            client, address = item
+            log.debug('Subscriber at {0} has disconnected from publisher'.format(address))
+            client.close()
+            self.clients.remove(item)
+        log.trace('TCP PubServer finished publishing payload')
+
 
 class TCPPubServerChannel(salt.transport.server.PubServerChannel):
-    # TODO: opts!
-    backlog = 5
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
@@ -310,10 +361,6 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
 
-        pub_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        pub_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        pub_sock.bind((self.opts['interface'], int(self.opts['publish_port'])))
-        pub_sock.listen(self.backlog)
         # Set up the context
         context = zmq.Context(1)
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
@@ -335,54 +382,18 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         finally:
             os.umask(old_umask)
 
-        poller = zmq.Poller()
-        poller.register(pub_sock, zmq.POLLIN)
-        poller.register(pull_sock, zmq.POLLIN)
-        clients = []
+        # load up the IOLoop
+        io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        # add the publisher
+        pub_server = PubServer()
+        pub_server.listen(int(self.opts['publish_port']), address=self.opts['interface'])
 
-        try:
-            while True:
-                try:
-                    socks = dict(poller.poll())
-                    # is it a new client?
-                    if pub_sock.fileno() in socks and socks[pub_sock.fileno()] == zmq.POLLIN:
-                        client, address = pub_sock.accept()
-                        clients.append((client, address))
-                    # TODO: non-blocking sends
-                    # is it a publish job?
-                    elif pull_sock in socks and socks[pull_sock] == zmq.POLLIN:
-                        package = pull_sock.recv()
-                        payload = frame_msg(salt.payload.unpackage(package)['payload'])
-                        to_remove = []
-                        for item in clients:
-                            client, address = item
-                            try:
-                                client.send(payload)
-                            except socket.error as e:
-                                to_remove.append(item)
-                        for item in to_remove:
-                            client, address = item
-                            log.debug('Client at {0} has disconnected from publisher'.format(address))
-                            client.close()
-                            clients.remove(item)
+        # add our IPC
+        stream = zmq.eventloop.zmqstream.ZMQStream(pull_sock, io_loop=io_loop)
+        stream.on_recv(pub_server.publish_payload)
 
-                except zmq.ZMQError as exc:
-                    if exc.errno == errno.EINTR:
-                        continue
-                    raise exc
-
-        except KeyboardInterrupt:
-            # TODO: try/except?
-            for client, address in clients:
-                client.shutdown(socket.SHUT_RDWR)
-                client.close()
-            pub_sock.shutdown(socket.SHUT_RDWR)
-            pub_sock.close()
-            if pull_sock.closed is False:
-                pull_sock.setsockopt(zmq.LINGER, 1)
-                pull_sock.close()
-            if context.closed is False:
-                context.term()
+        # run forever
+        io_loop.start()
 
     def pre_fork(self, process_manager):
         '''
