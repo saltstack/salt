@@ -4304,6 +4304,69 @@ def pardir():
     return os.path.pardir
 
 
+def normpath(path):
+    '''
+    Returns Normalize path, eliminating double slashes, etc.
+
+    .. versionadded:: 2015.2
+
+    This can be useful at the CLI but is frequently useful when scripting.
+
+    .. code-block:: yaml
+
+        {%- from salt['file.normpath'](tpldir + '/../vars.jinja') import parent_vars %}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.normpath 'a/b/c/..'
+    '''
+    return os.path.normpath(path)
+
+
+def basename(path):
+    '''
+    Returns the final component of a pathname
+
+    .. versionadded:: 2015.2
+
+    This can be useful at the CLI but is frequently useful when scripting.
+
+    .. code-block:: yaml
+
+        {%- set filename = salt['file.basename'](source_file) %}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.basename 'test/test.config'
+    '''
+    return os.path.basename(path)
+
+
+def dirname(path):
+    '''
+    Returns the directory component of a pathname
+
+    .. versionadded:: 2015.2
+
+    This can be useful at the CLI but is frequently useful when scripting.
+
+    .. code-block:: yaml
+
+        {%- from salt['file.dirname'](tpldir) + '/vars.jinja' import parent_vars %}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.dirname 'test/path/filename.config'
+    '''
+    return os.path.dirname(path)
+
+
 def join(*args):
     '''
     Return a normalized file system path for the underlying OS

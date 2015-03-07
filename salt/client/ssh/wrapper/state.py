@@ -515,7 +515,7 @@ def show_top():
 
 def single(fun, name, test=None, **kwargs):
     '''
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     Execute a single state function with the named kwargs, returns False if
     insufficient data is sent to the command
