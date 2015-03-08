@@ -444,8 +444,8 @@ be used:
 
 ``top.sls`` files from different branches will be merged into one at runtime.
 Since this can lead to overly complex configurations, the recommended setup is
-to have the ``top.sls`` file only in the master branch and use
-environment-specific branches for state definitions.
+to have a separate repository, containing only the ``top.sls`` file with just
+one single ``master`` branch.
 
 To map a branch other than ``master`` as the ``base`` environment, use the
 :conf_master:`gitfs_base` parameter.
