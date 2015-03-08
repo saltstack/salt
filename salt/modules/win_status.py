@@ -121,7 +121,7 @@ def master(master=None, connected=True):
 
         Parses output of shell 'netstat' to get connections
 
-        PS C:\> netstat -n -p TCP
+        PS C:> netstat -n -p TCP
 
         Active Connections
 
