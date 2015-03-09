@@ -26,6 +26,8 @@ import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
 
+from stat import S_IMODE
+
 # Import third party libs
 try:
     import zmq
@@ -182,27 +184,20 @@ def get_proc_dir(cachedir, **kwargs):
     if not os.path.isdir(fn_):
         # proc_dir is not present, create it with mode settings
         os.makedirs(fn_, **mode)
-        d_stat = os.stat(fn_)
-    else:
-        d_stat = os.stat(fn_)
+
+    d_stat = os.stat(fn_)
 
     # if mode is not an empty dict then we have an explicit
     # dir mode. So lets check if mode needs to be changed.
     if mode:
-        if d_stat.st_mode | mode['mode'] != d_stat.st_mode:
-            os.chmod(fn_, d_stat.st_mode | mode['mode'])
+        mode_part = S_IMODE(d_stat.st_mode)
+        if mode_part != mode['mode']:
+            os.chmod(fn_, (d_stat.st_mode ^ mode_part) | mode['mode'])
 
     if hasattr(os, 'chown'):
         # only on unix/unix like systems
-        uid = kwargs.pop('uid', None)
-        gid = kwargs.pop('gid', None)
-
-        if uid is None:
-            # -1 means no change to current uid
-            uid = -1
-        if gid is None:
-            # -1 means no change to current gid
-            gid = -1
+        uid = kwargs.pop('uid', -1)
+        gid = kwargs.pop('gid', -1)
 
         # if uid and gid are both -1 then go ahead with
         # no changes at all
