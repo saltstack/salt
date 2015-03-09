@@ -136,12 +136,12 @@ can be used to simplify the :term:`top file`.
 
 .. code-block:: yaml
 
-    {% set node_type = salt['grains.get']('node_type', '') %}
+    {% set the_node_type = salt['grains.get']('node_type', '') %}
 
-    {% if node_type %}
-      'node_type:{{ node_type }}':
+    {% if the_node_type %}
+      'node_type:{{ the_node_type }}':
         - match: grain
-        - {{ node_type }}
+        - {{ the_node_type }}
     {% endif %}
 
 Using Jinja templating, only one match entry needs to be defined.
