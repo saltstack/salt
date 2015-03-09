@@ -1281,6 +1281,8 @@ class AESFuncs(object):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
+            if 'master_id' in load:
+                ret['master_id'] = load['master_id']
             if 'out' in load:
                 ret['out'] = load['out']
             self._return(ret)
@@ -2441,7 +2443,8 @@ class ClearFuncs(object):
         # if you specified a master id, lets put that in the load
         if 'master_id' in self.opts:
             load['master_id'] = self.opts['master_id']
-        elif 'master_id' in extra:
+        # if someone passed us one, use that
+        if 'master_id' in extra:
             load['master_id'] = extra['master_id']
         # Only add the delimiter to the pub data if it is non-default
         if delimiter != DEFAULT_TARGET_DELIM:

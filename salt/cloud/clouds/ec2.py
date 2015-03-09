@@ -3872,7 +3872,6 @@ def get_console_output(
 
     ret = {}
     data = aws.query(params,
-                     return_url=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,
