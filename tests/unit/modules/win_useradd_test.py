@@ -157,9 +157,7 @@ class com_error(Exception):
     """
     Mock of com_error
     """
-    def __init__(self, message):
-        self.msg = message
-
+    pass
 
 class pywintypes(object):
     '''
