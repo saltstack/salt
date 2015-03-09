@@ -217,16 +217,7 @@ class Terminal(object):
             'Child Forked! PID: {0}  STDOUT_FD: {1}  STDERR_FD: '
             '{2}'.format(self.pid, self.child_fd, self.child_fde)
         )
-        try:
-            log.debug('Terminal Command: {0}'.format(' '.join(self.args)))
-        except UnicodeEncodeError:
-            sargs = []
-            for arg in self.args:
-                if isinstance(arg, unicode):
-                    arg = arg.encode('utf-8')
-                sargs.append(arg)
-            log.debug('Terminal Command: {0}'.format(' '.join(sargs)))
-
+        log.debug('Terminal Command: {0}'.format(' '.join(self.args)))
         # <---- Spawn our terminal -------------------------------------------
 
         # ----- Setup Logging ----------------------------------------------->

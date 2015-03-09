@@ -399,19 +399,13 @@ def _run(cmd,
         if timeout:
             to = ' (timeout: {0}s)'.format(timeout)
         if _check_loglevel(output_loglevel) is not None:
-            try:
-                log.debug('Running {0} in VT{1}'.format(cmd, to))
-            except UnicodeEncodeError:
-                log.debug('Running {0} in VT{1}'.format(cmd.encode('utf-8'), to))
+            log.debug('Running {0} in VT{1}'.format(cmd, to))
         stdout, stderr = '', ''
         now = time.time()
         if timeout:
             will_timeout = now + timeout
         else:
             will_timeout = -1
-        # let init proc to be sure to catch any cases in finally block
-        # even if VT fails initialisation
-        proc = None
         try:
             proc = vt.Terminal(cmd,
                                shell=True,
@@ -468,8 +462,7 @@ def _run(cmd,
                     ret['retcode'] = proc.exitstatus
                 ret['pid'] = proc.pid
         finally:
-            if proc is not None:
-                proc.close(terminate=True, kill=True)
+            proc.close(terminate=True, kill=True)
     try:
         if ignore_retcode:
             __context__['retcode'] = 0
