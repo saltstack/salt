@@ -876,4 +876,6 @@ def _get_dir_list(load):
                             ret.add(os.path.join(repo['mountpoint'], relpath))
                     split = split[0].rsplit('/', 1)
         repo['repo'].close()
+    if repo['mountpoint']:
+        ret.add(repo['mountpoint'])
     return sorted(ret)

@@ -30,6 +30,12 @@ from salt.ext.six import string_types
 from salt.ext.six.moves.urllib.error import URLError
 # pylint: enable=import-error,no-name-in-module
 
+# Fix a nasty bug with Win32 Python not supporting all of the standard signals
+try:
+    salt_SIGKILL = signal.SIGKILL
+except NameError:
+    salt_SIGKILL = signal.SIGTERM
+
 # Import salt libs
 import salt
 import salt.payload
@@ -594,7 +600,9 @@ def kill_job(jid):
 
         salt '*' saltutil.kill_job <job id>
     '''
-    return signal_job(jid, signal.SIGKILL)
+    # Some OS's (Win32) don't have SIGKILL, so use salt_SIGKILL which is set to
+    # an appropriate value for the operating system this is running on.
+    return signal_job(jid, salt_SIGKILL)
 
 
 def regen_keys():
