@@ -279,8 +279,8 @@ class IptablesTestCase(TestCase):
         with patch.object(iptables, '_has_option', mock_not),\
                 patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)),\
                 patch.dict(iptables.__salt__, {'cmd.run': MagicMock(return_value='')}):
-                    self.assertFalse(iptables.check(table='filter', chain=mock_chain,
-                                                    rule=mock_rule, family='ipv4'))
+            self.assertFalse(iptables.check(table='filter', chain=mock_chain,
+                                            rule=mock_rule, family='ipv4'))
 
         with patch.object(iptables, '_has_option', mock_has),\
                 patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
