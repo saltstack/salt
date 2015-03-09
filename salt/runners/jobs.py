@@ -111,6 +111,15 @@ def lookup_jid(jid,
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
     except TypeError:
         return 'Requested returner could not be loaded. No JIDs could be retrieved.'
+
+    if outputter is None:
+        try:
+            # Check if the return data has an 'out' key. We'll use that as the
+            # outputter in the absence of one being passed on the CLI.
+            outputter = data[next(iter(data))].get('out')
+        except (StopIteration, AttributeError):
+            outputter = None
+
     for minion in data:
         if display_progress:
             __jid_event__.fire_event({'message': minion}, 'progress')
