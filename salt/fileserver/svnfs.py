@@ -732,6 +732,8 @@ def _file_lists(load, form):
                                 env_root
                             )
                     ret['files'].add(os.path.join(repo['mountpoint'], rel_fn))
+        if repo['mountpoint']:
+            ret['dirs'].add(repo['mountpoint'])
         # Convert all compiled sets to lists
         for key in ret:
             ret[key] = sorted(ret[key])
