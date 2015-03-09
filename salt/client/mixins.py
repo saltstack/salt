@@ -65,9 +65,9 @@ class ClientFuncsDict(collections.MutableMapping):
                    }
             pub_data = {}
             # pull out pub_data if you have it
-            for k, v in kwargs.items():
-                if k.startswith('__pub_'):
-                    pub_data[k] = kwargs.pop(k)
+            for kwargs_key, kwargs_value in kwargs.items():
+                if kwargs_key.startswith('__pub_'):
+                    pub_data[kwargs_key] = kwargs.pop(kwargs_key)
 
             async_pub = self.client._gen_async_pub(pub_data.get('__pub_jid'))
 
@@ -246,6 +246,17 @@ class SyncClientMixin(object):
                 'jid': jid,
                 'user': low.get('__user__', 'UNKNOWN'),
                 }
+
+        # Append kwargs to the data map. This is particularly important 
+        # so as to include 'outputter' in the map.
+        # TODO: should this be done here or just before 'ret' event is fired?
+        if 'kwargs' in low:
+            kwargs = low['kwargs']
+            for kwargs_key, kwargs_value in kwargs.items():
+                # Do not overwrite fun, jid, or user.
+                if kwargs_key not in ['fun','jid','user']:
+                    data[kwargs_key] = kwargs.pop(kwargs_key)
+
         event = salt.utils.event.get_event(
                 'master',
                 self.opts['sock_dir'],
@@ -429,13 +440,29 @@ class AsyncClientMixin(object):
         if suffix in ('new', ):
             return
 
+        # --out/output and outputer= are synonyms.
+        # --out/output wins if both are defined
+        # Default to the outputter in the event
+        outputter = event.get('outputter', None)
+        # --out and --output are gracked internally with 'output'
+        # self.opts.get('out') will resolve to None
+        opts_outputter = self.opts.get('output', None)
+
+        # Override with opts_outputter?
+        if opts_outputter is not None:
+            # Emit a warning if both are defined and the outputter is changing
+            if outputter is not None and outputter != opts_outputter:
+                warning = "Both outputter=%s and --out/output=%s are defined. %s will be used." % (outputter, opts_outputter, opts_outputter)
+                log.warn(warning)
+            outputter = opts_outputter
+
         # TODO: clean up this event print out. We probably want something
         # more general, since this will get *really* messy as
         # people use more events that don't quite fit into this mold
         if suffix == 'ret':  # for "ret" just print out return
-            salt.output.display_output(event['return'], self.opts.get('out'), self.opts)
-        elif isinstance(event, dict) and 'outputter' in event and event['outputter'] is not None:
-            print(self.outputters[event['outputter']](event['data']))
+            salt.output.display_output(event['return'], outputter, self.opts)
+        elif isinstance(event, dict) and outputter is not None:
+            print(self.outputters[outputter](event['data']))
         # otherwise fall back on basic printing
         else:
             print('{tag}: {event}'.format(tag=suffix,
