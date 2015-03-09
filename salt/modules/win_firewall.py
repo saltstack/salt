@@ -65,15 +65,15 @@ def disable(profile='allprofiles'):
 
 def enable(profile='allprofiles'):
     '''
-    .. versionadded:: 2015.2.0
+    Enable firewall profile :param profile: (default: allprofiles)
 
-    Disable all the firewall profiles
+    .. versionadded:: 2015.2.0
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' firewall.disable
+        salt '*' firewall.enable
     '''
     return __salt__['cmd.run'](
             'netsh advfirewall set {0} state on'.format(profile)
