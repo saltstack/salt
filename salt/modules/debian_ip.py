@@ -577,11 +577,10 @@ def _parse_interfaces(interface_files=None):
 
                     attr, valuestr = line.rstrip().split(None, 1)
                     if _attrmaps_contain_attr(attr):
-                        _attr = DEBIAN_ATTR_TO_SALT_ATTR_MAP.get(attr, attr)
-                        if '-' in _attr:
-                            attrname = _attr.replace('-', '_')
+                        if '-' in attr:
+                            attrname = attr.replace('-', '_')
                         else:
-                            attrname = _attr
+                            attrname = attr
                         (valid, value, errmsg) = _validate_interface_option(
                             attr, valuestr, addrfam)
                         iface_dict[attrname] = value
@@ -1187,12 +1186,14 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type == 'bridge':
         bridging = _parse_bridge_opts(opts, iface)
         if bridging:
+            opts.pop('mode', None)
             iface_data['inet']['bridging'] = bridging
             iface_data['inet']['bridging_keys'] = sorted(bridging)
 
     elif iface_type == 'bond':
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
+            opts.pop('mode', None)
             iface_data['inet']['bonding'] = bonding
             iface_data['inet']['bonding']['slaves'] = opts['slaves']
             iface_data['inet']['bonding_keys'] = sorted(bonding)
@@ -1408,9 +1409,9 @@ def _write_file_ifaces(iface, data):
     for adapter in adapters:
         if 'type' in adapters[adapter] and adapters[adapter]['type'] == 'slave':
             # Override values so the interfaces file is correct
-            adapters[adapter]['enabled'] = False
             adapters[adapter]['data']['inet']['addrfam'] = 'inet'
             adapters[adapter]['data']['inet']['proto'] = 'manual'
+            adapters[adapter]['data']['inet']['master'] = adapters[adapter]['master']
 
         tmp = template.render({'name': adapter, 'data': adapters[adapter]})
         ifcfg = tmp + ifcfg
