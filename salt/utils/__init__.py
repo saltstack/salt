@@ -38,6 +38,7 @@ from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
+from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
@@ -1080,8 +1081,9 @@ def fpopen(*args, **kwargs):
                 os.chown(path, uid, gid)
 
         if mode is not None:
-            if d_stat.st_mode | mode != d_stat.st_mode:
-                os.chmod(path, d_stat.st_mode | mode)
+            mode_part = S_IMODE(d_stat.st_mode)
+            if mode_part != mode:
+                os.chmod(path, (d_stat.st_mode ^ mode_part) | mode)
 
         yield fhandle
 
