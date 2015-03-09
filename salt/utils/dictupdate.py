@@ -10,6 +10,7 @@ import collections
 import copy
 import logging
 import salt.ext.six as six
+from salt.utils.odict import OrderedDict
 from salt.utils.serializers.yamlex \
     import merge_recursive as _yamlex_merge_recursive
 
@@ -19,7 +20,11 @@ log = logging.getLogger(__name__)
 def update(dest, upd):
     for key, val in six.iteritems(upd):
         try:
-            dest_subkey = dest.get(key, {})
+            if isinstance(val, OrderedDict):
+                klass = OrderedDict
+            else:
+                klass = dict
+            dest_subkey = dest.get(key, klass())
         except AttributeError:
             dest_subkey = None
         if isinstance(dest_subkey, collections.Mapping) \
