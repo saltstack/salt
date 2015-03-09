@@ -5,7 +5,8 @@
 # Simple script to parse the output of 'git log' and generate some statistics.
 # May leverage GitHub API in the future
 #
-from __future__ import absolute_path
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import getopt
 import re
@@ -14,7 +15,17 @@ import datetime
 
 class Usage(Exception):
     def __init__(self, msg):
-        self.msg = msg
+        self.msg  = 'committer_parser.py [-c | --contributor-detail] - |' \
+                    ' <logfilename>\n'
+        self.msg += '   : Parse commit log from git and print number of ' \
+                    'commits and unique committers\n'
+        self.msg += '   : by month.  Accepts a filename or reads from stdin.\n'
+        self.msg += '   : -c | --contributor-detail generates output by ' \
+                    'contributor, by month, in a tab-separated table\n'
+        if msg:
+            self.msg += '\n'
+            self.msg += msg
+
 
 def parse_date(datestr):
     d = email.utils.parsedate(datestr)
@@ -83,13 +94,13 @@ def parse_gitlog(filename=None):
 def counts_by_contributor(commits_by_contributor, results):
 
     output = ''
-    dates = sorted(results.iterkeys())
+    dates = sorted(results.keys())
     for d in dates:
         output += '\t{0}'.format(d)
 
     output += '\n'
 
-    for email in sorted(commits_by_contributor.iterkeys()):
+    for email in sorted(commits_by_contributor.keys()):
         output += '\'{0}'.format(email)
         for d in dates:
             if d in commits_by_contributor[email]:
@@ -105,7 +116,7 @@ def count_results(results, commits):
 
     result_str = ''
     print('Date\tContributors\tCommits')
-    for k in sorted(results.iterkeys()):
+    for k in sorted(results.keys()):
         result_str += '{0}\t{1}\t{2}'.format(k, len(results[k]), commits[k])
         result_str += '\n'
 
@@ -118,27 +129,26 @@ def main(argv=None):
     try:
         try:
             opts, args = getopt.getopt(argv[1:], 'hc', ['help','contributor-detail'])
-        except getopt.error, msg:
+            if len(args) < 1:
+                raise Usage('committer_parser.py needs a filename or \'-\' to read from stdin')
+        except getopt.error as msg:
              raise Usage(msg)
-    except Usage, err:
-        print >>sys.stderr, err.msg
-        print >>sys.stderr, 'for help use --help'
+    except Usage as err:
+        print(err.msg, file=sys.stderr)
         return 2
+
 
     if len(opts) > 0:
         if '-h' in opts[0] or '--help' in opts[0]:
-            print('committerparser.py [- | logfilename]')
-            print('   : Parse commit log from git and print number of commits and unique committers')
-            print('   : by month.  Accepts a filename or reads from stdin.')
             return 0
 
     data, counts, commits_by_contributor = parse_gitlog(filename=args[0])
 
     if len(opts) > 0:
         if '-c' or '--contributor-detail':
-            print counts_by_contributor(commits_by_contributor, data)
+            print(counts_by_contributor(commits_by_contributor, data))
     else:
-        print count_results(data, counts)
+        print(count_results(data, counts))
 
 if __name__ == "__main__":
     sys.exit(main())
