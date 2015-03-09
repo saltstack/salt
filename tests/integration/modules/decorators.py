@@ -28,6 +28,21 @@ class DecoratorTest(integration.ModuleCase):
                     )
                 )
 
+    def test_bool_depends(self):
+        # test True
+        self.assertTrue(
+                self.run_function(
+                    'runtests_decorators.booldependsTrue'
+                    )
+                )
+
+        # test False
+        self.assertIn(
+                'is not available',
+                self.run_function('runtests_decorators.booldependsFalse'
+                    )
+                )
+
     def not_test_depends_will_fallback(self):
         ret = self.run_function('runtests_decorators.depends_will_fallback')
         self.assertTrue(ret['ret'])

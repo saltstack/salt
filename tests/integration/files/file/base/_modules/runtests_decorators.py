@@ -16,6 +16,18 @@ def working_function():
     '''
     return True
 
+@salt.utils.decorators.depends(True)
+def booldependsTrue():
+    '''
+    CLI Example:
+
+    .. code-block:: bash
+    '''
+    return True
+
+@salt.utils.decorators.depends(False)
+def booldependsFalse():
+    return True
 
 @salt.utils.decorators.depends('time')
 def depends():
