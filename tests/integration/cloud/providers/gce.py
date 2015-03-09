@@ -15,7 +15,6 @@ import integration
 from salt.config import cloud_providers_config
 
 # Import Salt Testing Libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
@@ -96,7 +95,6 @@ class GCETest(integration.ShellCase):
         # create the instance
         instance = self.run_cloud('-p gce-test {0}'.format(INSTANCE_NAME))
         ret_str = '{0}:'.format(INSTANCE_NAME)
-        print(ret_str)
 
         # check if instance returned with salt installed
         try:
