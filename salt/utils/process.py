@@ -266,7 +266,6 @@ class ProcessManager(object):
 
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
-        notify_systemd()
 
         while True:
             try:
