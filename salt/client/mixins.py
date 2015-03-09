@@ -254,7 +254,7 @@ class SyncClientMixin(object):
             kwargs = low['kwargs']
             for kwargs_key, kwargs_value in kwargs.items():
                 # Do not overwrite fun, jid, or user.
-                if kwargs_key not in ['fun','jid','user']:
+                if kwargs_key not in ['fun', 'jid', 'user']:
                     data[kwargs_key] = kwargs.pop(kwargs_key)
 
         event = salt.utils.event.get_event(
