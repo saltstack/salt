@@ -331,6 +331,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         Handle incoming messages from underylying tcp streams
         '''
+        print ('got ZMQ message')
         payload = self.serial.loads(payload[0])
         try:
             payload = self._decode_payload(payload)
@@ -367,6 +368,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         else:
             log.error('Unknown req_fun {0}'.format(req_fun))
             stream.send('err')
+        raise tornado.gen.Return()
 
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):

@@ -70,25 +70,6 @@ class AESReqServerMixin(object):
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
-    def send_clear(self, payload):
-        '''
-        Send a response to a recv()'d payload
-        '''
-        payload['enc'] = 'clear'  # make sure we set enc
-        self._send(payload)
-
-    def send(self, payload):
-        '''
-        Send a response to a recv()'d payload
-        '''
-        self._send(self.crypticle.dumps(payload))
-
-    def send_private(self, payload, dictkey, target):
-        '''
-        Send a response to a recv()'d payload encrypted privately for target
-        '''
-        self._send(self._encrypt_private(payload, dictkey, target))
-
     def _encrypt_private(self, ret, dictkey, target):
         '''
         The server equivalent of ReqChannel.crypted_transfer_decode_dictentry

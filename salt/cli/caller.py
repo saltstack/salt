@@ -67,7 +67,7 @@ class Caller(object):
             ttype = opts['pillar']['master']['transport']
 
         # switch on available ttypes
-        if ttype == 'zeromq':
+        if ttype in ('zeromq', 'tcp'):
             return ZeroMQCaller(opts, **kwargs)
         elif ttype == 'raet':
             return RAETCaller(opts, **kwargs)

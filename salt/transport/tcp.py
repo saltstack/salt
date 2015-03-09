@@ -246,6 +246,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket.setblocking(0)
         self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
 
     def post_fork(self, payload_handler, io_loop):
@@ -257,7 +258,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         '''
         self.payload_handler = payload_handler
         self.io_loop = io_loop
-        self.req_server = SaltMessageServer(self.handle_message, io_loop=io_loop)
+        self.req_server = SaltMessageServer(self.handle_message, io_loop=self.io_loop)
         self.req_server.add_socket(self.socket)
         self.socket.listen(self.backlog)
 
@@ -304,6 +305,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         else:
             log.error('Unknown req_fun {0}'.format(req_fun))
             stream.close()
+        raise tornado.gen.Return()
 
 
 class SaltMessageServer(tornado.tcpserver.TCPServer):
@@ -332,7 +334,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
                 header = msgpack.loads(header_raw)
                 body_raw = yield stream.read_bytes(int(header['msgLen']))
                 body = msgpack.loads(body_raw)
-                self.message_handler(stream, header, body)
+                self.io_loop.spawn_callback(self.message_handler, stream, header, body)
 
         except tornado.iostream.StreamClosedError:
             print ('req client disconnected {0}'.format(address))
@@ -445,6 +447,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         self.clients = []
 
     def handle_stream(self, stream, address):
+        print ('Subscriber at {0} connected'.format(address))
         log.trace('Subscriber at {0} connected'.format(address))
         self.clients.append((stream, address))
 
@@ -481,16 +484,12 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
         # Set up the context
         context = zmq.Context(1)
-        pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
         pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            os.path.join(self.opts['sock_dir'], 'publish_pull_tcp.ipc')
         )
         salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
-
-        # Start the minion command publisher
-        log.info('Starting the Salt Publisher on {0}'.format(pub_uri))
 
         # Securely create socket
         log.info('Starting the Salt Puller on {0}'.format(pull_uri))
@@ -537,7 +536,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
         pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            os.path.join(self.opts['sock_dir'], 'publish_pull_tcp.ipc')
             )
         pub_sock.connect(pull_uri)
         int_payload = {'payload': self.serial.dumps(payload)}

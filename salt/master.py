@@ -445,8 +445,15 @@ class Master(SMaster):
         log.info('Creating master process manager')
         process_manager = salt.utils.process.ProcessManager()
         log.info('Creating master maintenance process')
-        publish_channel = salt.transport.server.PubServerChannel.factory(self.opts)
-        publish_channel.pre_fork(process_manager)
+        pub_channels = []
+        for transport, opts_overrides in self.opts['transport_opts'].iteritems():
+            opts = dict(self.opts)
+            opts.update(opts_overrides)
+            opts['transport'] = transport
+            chan = salt.transport.server.PubServerChannel.factory(opts)
+            chan.pre_fork(process_manager)
+            pub_channels.append(chan)
+
         log.info('Creating master event publisher process')
         process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
         salt.engines.start_engines(self.opts, process_manager)
@@ -559,15 +566,21 @@ class ReqServer(object):
                 pass
         self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-        req_channel = salt.transport.server.ReqServerChannel.factory(self.opts)
-        req_channel.pre_fork(self.process_manager)
+        req_channels = []
+        for transport, opts_overrides in self.opts['transport_opts'].iteritems():
+            opts = dict(self.opts)
+            opts.update(opts_overrides)
+            opts['transport'] = transport
+            chan = salt.transport.server.ReqServerChannel.factory(opts)
+            chan.pre_fork(self.process_manager)
+            req_channels.append(chan)
 
         for ind in range(int(self.opts['worker_threads'])):
             self.process_manager.add_process(MWorker,
                                              args=(self.opts,
                                                    self.master_key,
                                                    self.key,
-                                                   req_channel,
+                                                   req_channels,
                                                    ),
                                              )
         self.process_manager.run()
@@ -607,7 +620,7 @@ class MWorker(multiprocessing.Process):
                  opts,
                  mkey,
                  key,
-                 req_channel):
+                 req_channels):
         '''
         Create a salt master worker process
 
@@ -620,7 +633,7 @@ class MWorker(multiprocessing.Process):
         '''
         multiprocessing.Process.__init__(self)
         self.opts = opts
-        self.req_channel = req_channel
+        self.req_channels = req_channels
 
         self.mkey = mkey
         self.key = key
@@ -655,9 +668,10 @@ class MWorker(multiprocessing.Process):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
-        io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-        self.req_channel.post_fork(self._handle_payload, io_loop=io_loop)  # TODO: cleaner? Maybe lazily?
-        io_loop.start()
+        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        for req_channel in self.req_channels:
+            req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
+        self.io_loop.start()
 
     def _handle_payload(self, payload):
         '''
@@ -2067,8 +2081,13 @@ class ClearFuncs(object):
             )
         log.debug('Published command details {0}'.format(load))
 
-        publish_channel = salt.transport.server.PubServerChannel.factory(self.opts)
-        publish_channel.publish(load)
+        for transport, opts_overrides in self.opts['transport_opts'].iteritems():
+            print ('publish something for', transport)
+            opts = dict(self.opts)
+            opts.update(opts_overrides)
+            opts['transport'] = transport
+            chan = salt.transport.server.PubServerChannel.factory(opts)
+            chan.publish(load)
         return {
             'enc': 'clear',
             'load': {
