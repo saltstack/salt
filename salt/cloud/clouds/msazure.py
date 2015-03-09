@@ -582,7 +582,7 @@ def create(vm_):
         return False
     try:
         result = conn.create_virtual_machine_deployment(**vm_kwargs)
-        log.debug('Request ID for machine: {0}'.format(request.request_id))
+        log.debug('Request ID for machine: {0}'.format(result.request_id))
         _wait_for_async(conn, result.request_id)
     except WindowsAzureConflictError:
         log.debug('Conflict error. The deployment may already exist, trying add_role')
@@ -1129,7 +1129,7 @@ def get_operation_status(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
-    if not 'id' in kwargs:
+    if 'id' not in kwargs:
         raise SaltCloudSystemExit('A request ID must be specified as "id"')
 
     data = conn.get_operation_status(kwargs['id'])
