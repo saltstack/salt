@@ -432,6 +432,9 @@ def create(vm_):
     ssh_connect_timeout = config.get_cloud_config_value(
         'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
     )
+    ssh_port = config.get_cloud_config_value(
+        'ssh_port', vm_, __opts__, 22
+    )
     if salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
             if salt.utils.cloud.wait_for_passwd(
@@ -460,6 +463,7 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': ip_address,
+            'port': ssh_port,
             'salt_host': salt_ip_address,
             'username': username,
             'key_filename': key_filename,

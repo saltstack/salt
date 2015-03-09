@@ -1917,6 +1917,9 @@ def wait_for_instance(
     ssh_connect_timeout = config.get_cloud_config_value(
         'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
     )
+    ssh_port = config.get_cloud_config_value(
+        'ssh_port', vm_, __opts__, 22
+    )
 
     if config.get_cloud_config_value('win_installer', vm_, __opts__):
         username = config.get_cloud_config_value(
@@ -1966,6 +1969,7 @@ def wait_for_instance(
                 'Failed to authenticate against remote windows host'
             )
     elif salt.utils.cloud.wait_for_port(ip_address,
+                                        port=ssh_port,
                                         timeout=ssh_connect_timeout,
                                         gateway=ssh_gateway_config
                                         ):
@@ -2006,6 +2010,7 @@ def wait_for_instance(
         for user in vm_['usernames']:
             if salt.utils.cloud.wait_for_passwd(
                 host=ip_address,
+                port=ssh_port,
                 username=user,
                 ssh_timeout=config.get_cloud_config_value(
                     'wait_for_passwd_timeout', vm_, __opts__, default=1 * 60
