@@ -80,6 +80,13 @@ master event buses. Each dict is a single event. The dict can contain any
 arbitrary keys but the 'tag' key will be extracted and added to the tag of
 the fired event.
 
+The return data structure would look something like this:
+
+.. code-block:: python
+
+    [{'changes': ['/foo/bar'], 'tag': 'foo'},
+     {'changes': ['/foo/baz'], 'tag': 'bar'}]
+
 Calling Execution Modules
 -------------------------
 
