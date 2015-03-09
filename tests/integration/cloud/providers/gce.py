@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
+    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
     :codeauthor: :email:`Tomas Sirny <tsirny@gmail.com>`
 '''
 
