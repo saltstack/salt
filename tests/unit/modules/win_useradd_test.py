@@ -159,6 +159,7 @@ class com_error(Exception):
     """
     pass
 
+
 class pywintypes(object):
     '''
     Mock pywintypes class
