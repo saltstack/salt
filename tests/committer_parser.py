@@ -1,4 +1,11 @@
 #!/usr/bin/python
+#
+# committer_parser.py
+#
+# Simple script to parse the output of 'git log' and generate some statistics.
+# May leverage GitHub API in the future
+#
+from __future__ import absolute_path
 import sys
 import getopt
 import re
@@ -18,6 +25,7 @@ def parse_gitlog(filename=None):
 
     results = {}
     commits = {}
+    commits_by_contributor = {}
 
     if not filename or filename == '-':
         fh = sys.stdin
@@ -54,16 +62,44 @@ def parse_gitlog(filename=None):
             if key not in commits:
                 commits[key] = 0
 
-            if email not in results[key]:
-                results[key].append(email)
+            if email not in commits_by_contributor:
+                commits_by_contributor[email] = {}
 
-            commits[key] += commitcount
-            commitcount = 0
+            if key not in commits_by_contributor[email]:
+                commits_by_contributor[email][key] = 1
+            else:
+                commits_by_contributor[email][key] += 1
+
+                if email not in results[key]:
+                    results[key].append(email)
+
+                commits[key] += commitcount
+                commitcount = 0
 
     fh.close()
 
-    return (results, commits)
+    return (results, commits, commits_by_contributor)
 
+def counts_by_contributor(commits_by_contributor, results):
+
+    output = ''
+    dates = sorted(results.iterkeys())
+    for d in dates:
+        output += '\t{0}'.format(d)
+
+    output += '\n'
+
+    for email in sorted(commits_by_contributor.iterkeys()):
+        output += '\'{0}'.format(email)
+        for d in dates:
+            if d in commits_by_contributor[email]:
+                output += '\t{0}'.format(commits_by_contributor[email][d])
+            else:
+                output += '\t'
+
+        output += '\n'
+
+    return output
 
 def count_results(results, commits):
 
@@ -81,12 +117,12 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "h", ["help"])
+            opts, args = getopt.getopt(argv[1:], 'hc', ['help','contributor-detail'])
         except getopt.error, msg:
              raise Usage(msg)
     except Usage, err:
         print >>sys.stderr, err.msg
-        print >>sys.stderr, "for help use --help"
+        print >>sys.stderr, 'for help use --help'
         return 2
 
     if len(opts) > 0:
@@ -96,9 +132,13 @@ def main(argv=None):
             print('   : by month.  Accepts a filename or reads from stdin.')
             return 0
 
-    data, counts = parse_gitlog(filename=args[0])
+    data, counts, commits_by_contributor = parse_gitlog(filename=args[0])
 
-    print count_results(data, counts)
+    if len(opts) > 0:
+        if '-c' or '--contributor-detail':
+            print counts_by_contributor(commits_by_contributor, data)
+    else:
+        print count_results(data, counts)
 
 if __name__ == "__main__":
     sys.exit(main())
