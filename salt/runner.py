@@ -134,6 +134,8 @@ class Runner(RunnerClient):
         else:
             try:
                 low = {'fun': self.opts['fun']}
+                if not low['fun']:
+                    raise salt.exceptions.SaltClientError('\nMust specify a runner to run!\nex: salt-run manage.up\n')
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
                     salt.utils.args.parse_input(self.opts['arg']),

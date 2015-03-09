@@ -1386,8 +1386,7 @@ class LocalClient(object):
         if not os.path.exists(os.path.join(self.opts['sock_dir'],
                                            'publish_pull.ipc')):
             log.error(
-                'Unable to connect to the publisher! '
-                'You do not have permissions to access '
+                'Unable to connect to the salt master publisher at '
                 '{0}'.format(self.opts['sock_dir'])
             )
             return {'jid': '0', 'minions': []}
