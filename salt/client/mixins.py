@@ -452,7 +452,7 @@ class AsyncClientMixin(object):
         if opts_outputter is not None:
             # Emit a warning if both are defined and the outputter is changing
             if outputter is not None and outputter != opts_outputter:
-                warning = "Both outputter=%s and --out/output=%s are defined. %s will be used." % (outputter, opts_outputter, opts_outputter)
+                warning = "Both outputter={0} and --out/output={1} are defined. {1} will be used.".format(outputter, opts_outputter)
                 log.warn(warning)
             outputter = opts_outputter
 
