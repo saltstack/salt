@@ -148,7 +148,7 @@ class BaseCaller(object):
             ret['jid']
         )
         if fun not in self.minion.functions:
-            sys.stderr.write('Function {0} is not available.'.format(fun))
+            sys.stderr.write(self.minion.functions.missing_fun_string(fun))
             mod_name = fun.split('.')[0]
             if mod_name in self.minion.function_errors:
                 sys.stderr.write(' Possible reasons: {0}\n'.format(self.minion.function_errors[mod_name]))

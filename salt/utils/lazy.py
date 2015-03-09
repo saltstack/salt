@@ -19,6 +19,14 @@ class LazyDict(collections.MutableMapping):
     def __init__(self):
         self.clear()
 
+    def __nonzero__(self):
+        # we are zero if dict is empty and loaded is true
+        return bool(self._dict or not self.loaded)
+
+    def __bool__(self):
+        # we are zero if dict is empty and loaded is true
+        return self.__nonzero__()
+
     def clear(self):
         '''
         Clear the dict

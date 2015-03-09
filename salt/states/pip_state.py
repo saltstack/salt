@@ -802,7 +802,7 @@ def uptodate(name,
              cwd=None,
              use_vt=False):
     '''
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     Verify that the system is completely up to date.
 
