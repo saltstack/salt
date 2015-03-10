@@ -137,6 +137,13 @@ def lookup_jid(jid,
             outputter = data[next(iter(data))].get('out')
         except (StopIteration, AttributeError):
             outputter = None
+    else:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the jobs.lookup_jid runner '
+            'has been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
 
     if outputter:
         return {'outputter': outputter, 'data': ret}
@@ -162,6 +169,12 @@ def list_job(jid, ext_source=None, outputter=None):
     ret.update(_format_jid_instance(jid, job))
     ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
     if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the jobs.list_job runner '
+            'has been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
         return {'outputter': outputter, 'data': ret}
     else:
         return ret
@@ -263,6 +276,12 @@ def print_job(jid, ext_source=None, outputter=None):
         return ret
     ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
     if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the jobs.print_job runner '
+            'has been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
         return {'outputter': outputter, 'data': ret}
     else:
         return ret
