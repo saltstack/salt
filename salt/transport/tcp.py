@@ -51,6 +51,13 @@ log = logging.getLogger(__name__)
 import msgpack
 
 # TODO: put in some lib?
+def sync_future(io_loop, future):
+    def stop_loop(future):
+        io_loop.stop()
+    io_loop.add_future(future, stop_loop)
+    io_loop.start()
+    return future.result()
+
 def frame_msg(msg, header=None):
     if header is None:
         header = {}
@@ -137,8 +144,8 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
         '''
         Do a blocking send/recv combo
         '''
-        self.socket.send(frame_msg(msg))
-        return socket_frame_recv(self.socket)
+        future = self.message_client.send(msg)
+        return sync_future(self.io_loop, future)
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         # send msg
@@ -354,7 +361,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
             self.clients.remove(item)
 
 
-# TODO: test and use, cleanup send/recv queue stuff
+# TODO: cleanup send/recv queue stuff
 class SaltMessageClient(object):
     '''
     Low-level message sending client
@@ -373,12 +380,24 @@ class SaltMessageClient(object):
         self.future_map = {}  # mapping of request_id -> Future
         self._stream = None
 
+        # start up the send/recv sides
+        self.io_loop.add_callback(self._connect)
+
+
+    @tornado.gen.coroutine
+    def _connect(self):
+        if not self._stream:
+            self._stream = yield self._tcp_client.connect(self.host, self.port)
+
+        self.io_loop.add_callback(self._stream_send)
+        self.io_loop.add_callback(self._stream_return)
+
     @tornado.gen.coroutine
     def _stream_return(self):
         while True:
             try:
                 header_len = yield self._stream.read_until(' ')
-                header_raw = yield stream.read_bytes(int(header_len.strip()))
+                header_raw = yield self._stream.read_bytes(int(header_len.strip()))
                 header = msgpack.loads(header_raw)
                 body = yield self._stream.read_bytes(int(header['msgLen']))
                 message_id = header['mid']
@@ -399,13 +418,10 @@ class SaltMessageClient(object):
 
     @tornado.gen.coroutine
     def _stream_send(self):
-        if not self._stream:
-            self._stream = yield self._tcp_client.connect(self.host, self.port)
         while True:
             try:
                 item = self.send_queue.pop(0)
                 yield self._stream.write(item)
-                self.io_loop.add_callback(self._stream_return)
                 raise tornado.gen.Return()
             except IndexError:
                 yield tornado.gen.sleep(1)  # TODO: remove...
@@ -433,8 +449,6 @@ class SaltMessageClient(object):
         self.future_map[message_id] = future
 
         self.send_queue.append(frame_msg(msg, header=header))
-        self.io_loop.add_callback(self._stream_send)
-
         return future
 
 
