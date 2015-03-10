@@ -61,6 +61,12 @@ def active(outputter=None, display_progress=False):
                 ret[jid]['Returned'].append(minion)
 
     if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the jobs.active runner '
+            'has been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
         return {'outputter': outputter, 'data': ret}
     else:
         return ret
@@ -84,11 +90,6 @@ def lookup_jid(jid,
         When set to `True`, adds the minions that did not return from the command.
         Default: `False`.
 
-    outputter
-        The outputter to use. Default: `None`.
-
-        .. versionadded:: 2015.2.0
-
     display_progress
         Displays progress events when set to `True`. Default: `False`.
 
@@ -111,6 +112,7 @@ def lookup_jid(jid,
         data = mminion.returners['{0}.get_jid'.format(returner)](jid)
     except TypeError:
         return 'Requested returner could not be loaded. No JIDs could be retrieved.'
+
     for minion in data:
         if display_progress:
             __jid_event__.fire_event({'message': minion}, 'progress')
@@ -124,6 +126,18 @@ def lookup_jid(jid,
         for minion_id in exp:
             if minion_id not in data:
                 ret[minion_id] = 'Minion did not return'
+
+    # Once we remove the outputter argument in a couple releases, we still
+    # need to check to see if the 'out' key is present and use it to specify
+    # the correct outputter, so we get highstate output for highstate runs.
+    if outputter is None:
+        try:
+            # Check if the return data has an 'out' key. We'll use that as the
+            # outputter in the absence of one being passed on the CLI.
+            outputter = data[next(iter(data))].get('out')
+        except (StopIteration, AttributeError):
+            outputter = None
+
     if outputter:
         return {'outputter': outputter, 'data': ret}
     else:
