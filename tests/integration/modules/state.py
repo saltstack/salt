@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import shutil
+import textwrap
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -22,7 +23,7 @@ import salt.ext.six as six
 class StateModuleTest(integration.ModuleCase,
                       integration.SaltReturnAssertsMixIn):
     '''
-    Validate the test module
+    Validate the state module
     '''
 
     maxDiff = None
@@ -144,17 +145,17 @@ class StateModuleTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='testappend.step-2')
         self.assertSaltTrueReturn(ret)
 
-        self.assertMultiLineEqual('''\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
+        self.assertMultiLineEqual(textwrap.dedent('''\
+            # set variable identifying the chroot you work in (used in the prompt below)
+            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+                debian_chroot=$(cat /etc/debian_chroot)
+            fi
 
-# enable bash completion in interactive shells
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
-fi
-''', salt.utils.fopen(testfile, 'r').read())
+            # enable bash completion in interactive shells
+            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+                . /etc/bash_completion
+            fi
+            '''), salt.utils.fopen(testfile, 'r').read())
 
         # Re-append switching order
         ret = self.run_function('state.sls', mods='testappend.step-2')
@@ -163,17 +164,17 @@ fi
         ret = self.run_function('state.sls', mods='testappend.step-1')
         self.assertSaltTrueReturn(ret)
 
-        self.assertMultiLineEqual('''\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
+        self.assertMultiLineEqual(textwrap.dedent('''\
+            # set variable identifying the chroot you work in (used in the prompt below)
+            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+                debian_chroot=$(cat /etc/debian_chroot)
+            fi
 
-# enable bash completion in interactive shells
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
-fi
-''', salt.utils.fopen(testfile, 'r').read())
+            # enable bash completion in interactive shells
+            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+                . /etc/bash_completion
+            fi
+            '''), salt.utils.fopen(testfile, 'r').read())
 
     def test_issue_1876_syntax_error(self):
         '''
@@ -198,16 +199,16 @@ fi
         )
 
     def test_issue_1879_too_simple_contains_check(self):
-        contents = '''\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-# enable bash completion in interactive shells
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
-fi
-'''
+        contents = textwrap.dedent('''\
+            # set variable identifying the chroot you work in (used in the prompt below)
+            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+                debian_chroot=$(cat /etc/debian_chroot)
+            fi
+            # enable bash completion in interactive shells
+            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+                . /etc/bash_completion
+            fi
+            ''')
         testfile = os.path.join(integration.TMP, 'issue-1879')
         # Delete if exiting
         if os.path.isfile(testfile):
@@ -386,15 +387,15 @@ fi
                 shutil.rmtree(venv_dir)
 
     def test_template_invalid_items(self):
-        TEMPLATE = '''\
-{0}:
-  - issue-2068-template-str
+        TEMPLATE = textwrap.dedent('''\
+            {0}:
+              - issue-2068-template-str
 
-/tmp/test-template-invalid-items:
-  file:
-    - managed
-    - source: salt://testfile
-'''
+            /tmp/test-template-invalid-items:
+              file:
+                - managed
+                - source: salt://testfile
+            ''')
         for item in ('include', 'exclude', 'extends'):
             ret = self.run_function(
                 'state.template_str', [TEMPLATE.format(item)]

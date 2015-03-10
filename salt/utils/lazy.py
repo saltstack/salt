@@ -4,8 +4,28 @@
 from __future__ import absolute_import
 import logging
 import collections
+import salt.exceptions
 
 log = logging.getLogger(__name__)
+
+
+def verify_fun(lazy_obj, fun):
+    '''
+    Check that the function passed really exists
+    '''
+    if not fun:
+        raise salt.exceptions.SaltInvocationError(
+            'Must specify a function to run!\n'
+            'ex: salt-run manage.up'
+        )
+    if fun not in lazy_obj:
+        try:
+            lazy_obj[fun]
+        except KeyError:
+            # Runner function not found in the LazyLoader object
+            raise salt.exceptions.CommandExecutionError(
+                '\'{0}\' is not available'.format(fun)
+            )
 
 
 class LazyDict(collections.MutableMapping):
