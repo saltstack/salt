@@ -211,7 +211,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if retcodes.count(0) < len(retcodes):
                         sys.exit(11)
 
-            except (SaltInvocationError, EauthAuthenticationError) as exc:
+            except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)

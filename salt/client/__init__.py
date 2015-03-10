@@ -277,8 +277,7 @@ class LocalClient(object):
                 **kwargs)
         except SaltClientError:
             # Re-raise error with specific message
-            print('The salt master could not be contacted. Is master running?')
-            sys.exit(1)
+            raise SaltClientError('The salt master could not be contacted. Is master running?')
 
         return self._check_pub_data(pub_data)
 
