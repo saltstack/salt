@@ -133,7 +133,9 @@ class Serial(object):
                     for idx, entry in enumerate(obj):
                         obj[idx] = verylong_encoder(entry)
                     return obj
-                if isinstance(obj, long) and long > pow(2, 64):
+                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
+                    return str(obj)
+                elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
                     return str(obj)
                 else:
                     return obj
