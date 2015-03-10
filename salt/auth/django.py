@@ -2,42 +2,49 @@
 '''
 Provide authentication using Django Web Framework
 
-Django authentication depends on the presence of the django
-framework in the PYTHONPATH, the django project's settings.py file being in
-the PYTHONPATH and accessible via the DJANGO_SETTINGS_MODULE environment
-variable.  This can be hard to debug.
+:depends:   - Django Web Framework
 
-django auth can be defined like any other eauth module:
+Django authentication depends on the presence of the django framework in the
+``PYTHONPATH``, the Django project's ``settings.py`` file being in the
+``PYTHONPATH`` and accessible via the ``DJANGO_SETTINGS_MODULE`` environment
+variable.
 
-external_auth:
-  django:
-    fred:
-      - .*
-      - '@runner'
+Django auth can be defined like any other eauth module:
 
-This will authenticate Fred via django and allow him to run any
-execution module and all runners.
+.. code-block:: yaml
 
-The details of the django auth can also be located inside the django database.  The
-relevant entry in the models.py file would look like this:
+    external_auth:
+      django:
+        fred:
+          - .*
+          - '@runner'
 
-class SaltExternalAuthModel(models.Model):
+This will authenticate Fred via Django and allow him to run any execution
+module and all runners.
 
-  user_fk = models.ForeignKey(auth.User)
-  minion_matcher = models.CharField()
-  minion_fn = models.CharField()
+The authorization details can optionally be located inside the Django database.
+The relevant entry in the ``models.py`` file would look like this:
 
-Then, in the master's config file the external_auth clause should look like
+.. code-block:: python
 
-external_auth:
-  django:
-    ^model: <fully-qualified reference to model class>
+    class SaltExternalAuthModel(models.Model):
+        user_fk = models.ForeignKey(auth.User)
+        minion_matcher = models.CharField()
+        minion_fn = models.CharField()
+
+The :conf_master:`external_auth` clause in the master config would then look
+like this:
+
+.. code-block:: yaml
+
+    external_auth:
+      django:
+        ^model: <fully-qualified reference to model class>
 
 When a user attempts to authenticate via Django, Salt will import the package
-indicated via the keyword '^model'.  That model must have the fields
-indicated above, though the model DOES NOT have to be named 'SaltExternalAuthModel'.
-
-:depends:   - Django Web Framework
+indicated via the keyword ``^model``.  That model must have the fields
+indicated above, though the model DOES NOT have to be named
+'SaltExternalAuthModel'.
 '''
 
 # Import python libs
@@ -117,30 +124,38 @@ def retrieve_auth_entries(u=None):
 
     :param django_auth_class: Reference to the django model class for auth
     :param u: Username to filter for
-    :return: Dictionary that can be slotted into the __opts__ structure for eauth that designates the
-             user and his or her ACL
+    :return: Dictionary that can be slotted into the ``__opts__`` structure for
+        eauth that designates the user associated ACL
 
+    Database records such as:
+
+    ===========  ====================     =========
     username     minion_or_fn_matcher     minion_fn
+    ===========  ====================     =========
     fred                                  test.ping
     fred         server1                  network.interfaces
     fred         server1                  raid.list
     fred         server2                  .*
     guru         .*
     smartadmin   server1                  .*
+    ===========  ====================     =========
 
-    Should result in
-    fred:
-      - test.ping
-      - server1:
-          - network.interfaces
-          - raid.list
-      - server2:
+    Should result in an eauth config such as:
+
+    .. code-block:: yaml
+
+        fred:
+          - test.ping
+          - server1:
+              - network.interfaces
+              - raid.list
+          - server2:
+              - .*
+        guru:
           - .*
-    guru:
-      - .*
-    smartadmin:
-      - server1:
-        - .*
+        smartadmin:
+          - server1:
+            - .*
 
     '''
     global django_auth_class
