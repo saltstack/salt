@@ -39,6 +39,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.minions
 import salt.utils.verify
+import salt.utils.jid
 import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
@@ -852,7 +853,7 @@ class LocalClient(object):
                 yield {}
                 # stop the iteration, since the jid is invalid
                 raise StopIteration()
-        except salt.exceptions.SaltMasterError as exc:
+        except Exception as exc:
             log.warning('Returner unavailable: {exc}'.format(exc=exc))
         # Wait for the hosts to check in
         syndic_wait = 0
