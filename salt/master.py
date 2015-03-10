@@ -1172,6 +1172,12 @@ class AESFuncs(object):
 
         # otherwise, write to the master cache
         fstr = '{0}.returner'.format(self.opts['master_job_cache'])
+        if 'fun' not in load and load.get('return', {}):
+            ret_ = load.get('return', {})
+            if 'fun' in ret_:
+                load.update({'fun': ret_['fun']})
+            if 'user' in ret_:
+                load.update({'user': ret_['user']})
         self.mminion.returners[fstr](load)
 
     def _syndic_return(self, load):
