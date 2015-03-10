@@ -1,10 +1,18 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 #
 # committer_parser.py
 #
 # Simple script to parse the output of 'git log' and generate some statistics.
 # May leverage GitHub API in the future
 #
+'''
+To use this commit parser script pipe git log into the stdin:
+
+    git log | committer_parser.py -c -
+'''
+
+# Import python libs
 from __future__ import absolute_import
 from __future__ import print_function
 import sys
@@ -13,9 +21,10 @@ import re
 import email.utils
 import datetime
 
+
 class Usage(Exception):
     def __init__(self, msg):
-        self.msg  = 'committer_parser.py [-c | --contributor-detail] - |' \
+        self.msg = 'committer_parser.py [-c | --contributor-detail] - |' \
                     ' <logfilename>\n'
         self.msg += '   : Parse commit log from git and print number of ' \
                     'commits and unique committers\n'
@@ -29,11 +38,13 @@ class Usage(Exception):
 
 def parse_date(datestr):
     d = email.utils.parsedate(datestr)
+    return datetime.datetime(d[0], d[1], d[2], d[3], d[4], d[5], d[6])
 
-    return datetime.datetime(d[0],d[1],d[2],d[3],d[4],d[5],d[6])
 
 def parse_gitlog(filename=None):
-
+    '''
+    Parse out the gitlog cli data
+    '''
     results = {}
     commits = {}
     commits_by_contributor = {}
@@ -52,14 +63,14 @@ def parse_gitlog(filename=None):
             continue
 
         if line.startswith('Author:'):
-            author = re.match('Author:\s+(.*)\s+<(.*)>', line)
+            author = re.match(r'Author:\s+(.*)\s+<(.*)>', line)
             if author:
                 email = author.group(2)
             continue
 
         if line.startswith('Date:'):
 
-            isodate = re.match('Date:\s+(.*)', line)
+            isodate = re.match(r'Date:\s+(.*)', line)
             d = parse_date(isodate.group(1))
             continue
 
@@ -86,13 +97,11 @@ def parse_gitlog(filename=None):
 
                 commits[key] += commitcount
                 commitcount = 0
-
     fh.close()
-
     return (results, commits, commits_by_contributor)
 
-def counts_by_contributor(commits_by_contributor, results):
 
+def counts_by_contributor(commits_by_contributor, results):
     output = ''
     dates = sorted(results.keys())
     for d in dates:
@@ -107,19 +116,16 @@ def counts_by_contributor(commits_by_contributor, results):
                 output += '\t{0}'.format(commits_by_contributor[email][d])
             else:
                 output += '\t'
-
         output += '\n'
-
     return output
 
-def count_results(results, commits):
 
+def count_results(results, commits):
     result_str = ''
     print('Date\tContributors\tCommits')
     for k in sorted(results.keys()):
         result_str += '{0}\t{1}\t{2}'.format(k, len(results[k]), commits[k])
         result_str += '\n'
-
     return result_str
 
 
@@ -128,7 +134,7 @@ def main(argv=None):
         argv = sys.argv
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], 'hc', ['help','contributor-detail'])
+            opts, args = getopt.getopt(argv[1:], 'hc', ['help', 'contributor-detail'])
             if len(args) < 1:
                 raise Usage('committer_parser.py needs a filename or \'-\' to read from stdin')
         except getopt.error as msg:
@@ -136,7 +142,6 @@ def main(argv=None):
     except Usage as err:
         print(err.msg, file=sys.stderr)
         return 2
-
 
     if len(opts) > 0:
         if '-h' in opts[0] or '--help' in opts[0]:
