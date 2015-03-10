@@ -1014,9 +1014,13 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-            log.warning('jid does not exist')
-            return ret
+        try:
+            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
+                log.warning('jid does not exist')
+                return ret
+        except Exception as exc:
+            raise SaltClientError('Master job cache returner [{0}] failed to verify jid. '
+                                  'Exception details: {1}'.format(self.opts['master_job_cache'], exc))
 
         # Wait for the hosts to check in
         while True:
@@ -1101,7 +1105,13 @@ class LocalClient(object):
         '''
         ret = {}
 
-        data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        try:
+            data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        except Exception:
+            raise SaltClientError('Could not examine master job cache. '
+                                  'Error occured in {0} returner. '
+                                  'Exception details: {1}'.format(self.opts['master_job_cache'],
+                                                                  exc))
         for minion in data:
             m_data = {}
             if u'return' in data[minion]:
