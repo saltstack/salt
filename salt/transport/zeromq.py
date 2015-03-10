@@ -331,7 +331,6 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         Handle incoming messages from underylying tcp streams
         '''
-        print ('got ZMQ message')
         payload = self.serial.loads(payload[0])
         try:
             payload = self._decode_payload(payload)

@@ -2096,10 +2096,11 @@ class ClearFuncs(object):
             )
         log.debug('Published command details {0}'.format(load))
 
+        # TODO: put in a static method oif PubServerChannel?
         for transport, opts in iter_transport_opts(self.opts):
-            print ('publish something for', transport)
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
+
         return {
             'enc': 'clear',
             'load': {

@@ -331,7 +331,6 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         '''
         Handle incoming streams and add messages to the incoming queue
         '''
-        print ('req client connected {0}'.format(address))
         log.trace('Req client {0} connected'.format(address))
         self.clients.append((stream, address))
         try:
@@ -344,10 +343,10 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
                 self.io_loop.spawn_callback(self.message_handler, stream, header, body)
 
         except tornado.iostream.StreamClosedError:
-            print ('req client disconnected {0}'.format(address))
+            log.trace('req client disconnected {0}'.format(address))
             self.clients.remove((stream, address))
         except Exception as e:
-            print ('other master-side exception??', e, e.__module__, e.extra)
+            log.trace('other master-side exception??', e, e.__module__, e.extra)
             self.clients.remove((stream, address))
             stream.close()
 
@@ -461,7 +460,6 @@ class PubServer(tornado.tcpserver.TCPServer):
         self.clients = []
 
     def handle_stream(self, stream, address):
-        print ('Subscriber at {0} connected'.format(address))
         log.trace('Subscriber at {0} connected'.format(address))
         self.clients.append((stream, address))
 
