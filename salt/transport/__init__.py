@@ -229,12 +229,12 @@ class ZeroMQChannel(Channel):
         # When using threading, like on Windows, don't cache.
         # The following block prevents thread leaks.
         if not self.opts.get('multiprocessing'):
-            return salt.payload.SREQ(self.master_uri)
+            return salt.payload.SREQ(self.master_uri, opts=self.opts)
 
         key = self.sreq_key
 
         if not self.opts['cache_sreqs']:
-            return salt.payload.SREQ(self.master_uri)
+            return salt.payload.SREQ(self.master_uri, opts=self.opts)
         else:
             if key not in ZeroMQChannel.sreq_cache:
                 master_type = self.opts.get('master_type', None)
@@ -247,7 +247,7 @@ class ZeroMQChannel(Channel):
                             log.debug('Removed obsolete sreq-object from '
                                       'sreq_cache for master {0}'.format(check_key[0]))
 
-                ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
+                ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri, opts=self.opts)
 
             return ZeroMQChannel.sreq_cache[key]
 
