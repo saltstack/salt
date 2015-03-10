@@ -2,7 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import re
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -45,13 +44,13 @@ class RequestResponseMock(Mock):
 class RequestPutResponseMock(Mock):
     ok = True
     def json(self):
-        return {'_id':4321 }
+        return {'_id':4321}
 
 REQUEST_MOCK = RequestMock()
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(uptime,
-                requests = REQUEST_MOCK,
+                requests=REQUEST_MOCK,
                 __salt__=SALT_STUB)
 class UptimeTestCase(TestCase):
 
@@ -66,15 +65,15 @@ class UptimeTestCase(TestCase):
         self.assertRaises(CommandExecutionError, uptime.create,
                           'http://example.org')
         self.assertEqual(4321, uptime.create('http://example.com'))
-        self.assertEqual(('http://localhost:5000/api/checks',), REQUEST_MOCK.args)
+        self.assertEqual(('http://localhost:5000/api/checks',),
+                         REQUEST_MOCK.args)
 
     def test_checks_delete(self):
         self.assertRaises(CommandExecutionError, uptime.delete,
                           'http://example.com')
         self.assertTrue(uptime.delete('http://example.org') is True)
-        self.assertEqual(('http://localhost:5000/api/checks/1234',), REQUEST_MOCK.args)
-        
-
+        self.assertEqual(('http://localhost:5000/api/checks/1234',),
+                         REQUEST_MOCK.args)
 
 if __name__ == '__main__':
     from integration import run_tests
