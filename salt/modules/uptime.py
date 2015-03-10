@@ -42,6 +42,7 @@ def create(name, **params):
     log.debug('[uptime] PUT request successfull')
     return req.json()['_id']
 
+
 def delete(name):
     '''
     Delete a check on a given URL
@@ -67,6 +68,7 @@ def delete(name):
         )
     log.debug('[uptime] DELETE request successfull')
     return True
+
 
 def _get_application_url():
     '''
@@ -96,6 +98,7 @@ def checks_list():
     log.debug('[uptime] get checks')
     jcontent = requests.get('{0}/api/checks'.format(application_url)).json()
     return [x['url'] for x in jcontent]
+
 
 def check_exists(name):
     '''

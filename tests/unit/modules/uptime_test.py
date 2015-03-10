@@ -26,23 +26,30 @@ else:
     SALT_STUB = {}
 
 class RequestMock(Mock):
+    ''' Request Mock'''
+    
     def get(self, *args, **kwargs):
         return RequestResponseMock()
+
     def put(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
         return RequestPutResponseMock()
+
     def delete(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
         return RequestResponseMock()
 
 class RequestResponseMock(Mock):
+
     def json(self):
         return [{'url':'http://example.org', '_id': 1234},]
 
 class RequestPutResponseMock(Mock):
+
     ok = True
+
     def json(self):
         return {'_id':4321}
 
@@ -53,6 +60,7 @@ REQUEST_MOCK = RequestMock()
                 requests=REQUEST_MOCK,
                 __salt__=SALT_STUB)
 class UptimeTestCase(TestCase):
+    ''' UptimeTestCase'''
 
     def test_checks_list(self):
         ret = uptime.checks_list()
