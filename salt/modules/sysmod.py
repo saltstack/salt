@@ -51,9 +51,11 @@ def doc(*args):
         salt '*' sys.doc sys.doc
         salt '*' sys.doc network.traceroute user.info
 
-    .. versionadded:: Lithium
-
     Modules can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.doc 'sys.*'
         salt '*' sys.doc 'sys.list_*'
@@ -88,8 +90,6 @@ def doc(*args):
 
 def state_doc(*args):
     '''
-    .. versionadded:: 2014.7.0
-
     Return the docstrings for all states. Optionally, specify a state or a
     function to narrow the selection.
 
@@ -97,6 +97,8 @@ def state_doc(*args):
     reading.
 
     Multiple states/functions can be specified.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -107,9 +109,11 @@ def state_doc(*args):
         salt '*' sys.state_doc service.running
         salt '*' sys.state_doc service.running ipables.append
 
-    .. versionadded:: Lithium
-
     State names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.state_doc 'service.*' 'iptables.*'
 
@@ -156,8 +160,6 @@ def state_doc(*args):
 
 def runner_doc(*args):
     '''
-    .. versionadded:: 2014.7.0
-
     Return the docstrings for all runners. Optionally, specify a runner or a
     function to narrow the selection.
 
@@ -165,6 +167,8 @@ def runner_doc(*args):
     reading.
 
     Multiple runners/functions can be specified.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -175,9 +179,11 @@ def runner_doc(*args):
         salt '*' sys.runner_doc cache.grains
         salt '*' sys.runner_doc cache.grains mine.get
 
-    .. versionadded:: Lithium
-
     Runner names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.runner_doc 'cache.clear_*'
 
@@ -212,8 +218,6 @@ def runner_doc(*args):
 
 def returner_doc(*args):
     '''
-    .. versionadded:: 2014.7.0
-
     Return the docstrings for all returners. Optionally, specify a returner or a
     function to narrow the selection.
 
@@ -221,6 +225,8 @@ def returner_doc(*args):
     reading.
 
     Multiple returners/functions can be specified.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -231,9 +237,11 @@ def returner_doc(*args):
         salt '*' sys.returner_doc sqlite3.get_fun
         salt '*' sys.returner_doc sqlite3.get_fun etcd.get_fun
 
-    .. versionadded:: Lithium
-
     Returner names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.returner_doc 'sqlite3.get_*'
 
@@ -270,8 +278,6 @@ def returner_doc(*args):
 
 def renderer_doc(*args):
     '''
-    .. versionadded:: Lithium
-
     Return the docstrings for all renderers. Optionally, specify a renderer or a
     function to narrow the selection.
 
@@ -279,6 +285,8 @@ def renderer_doc(*args):
     reading.
 
     Multiple renderers can be specified.
+
+    .. versionadded:: 2015.2.0
 
     CLI Example:
 
@@ -288,9 +296,9 @@ def renderer_doc(*args):
         salt '*' sys.renderer_doc cheetah
         salt '*' sys.renderer_doc jinja json
 
-    .. versionadded:: Lithium
-
     Renderer names can be specified as globs.
+
+    .. code-block:: bash
 
         salt '*' sys.renderer_doc 'c*' 'j*'
 
@@ -326,9 +334,11 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_functions sys
         salt '*' sys.list_functions sys user
 
-    .. versionadded:: Lithium
-
     Function names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.list_functions 'sys.list_*'
 
@@ -364,15 +374,17 @@ def list_modules(*args):
     '''
     List the modules loaded on the minion
 
+    .. versionadded:: 2015.2.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' sys.list_modules
 
-    .. versionadded:: Lithium
-
     Module names can be specified as globs.
+
+    .. code-block:: bash
 
         salt '*' sys.list_modules 's*'
 
@@ -423,9 +435,11 @@ def argspec(module=''):
         salt '*' sys.argspec sys
         salt '*' sys.argspec
 
-    .. versionadded:: Lithium
-
     Module names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.argspec 'pkg.*'
 
@@ -435,10 +449,10 @@ def argspec(module=''):
 
 def state_argspec(module=''):
     '''
-    .. versionadded:: Lithium
-
     Return the argument specification of functions in Salt state
     modules.
+
+    .. versionadded:: 2015.2.0
 
     CLI Example:
 
@@ -448,9 +462,9 @@ def state_argspec(module=''):
         salt '*' sys.state_argspec file
         salt '*' sys.state_argspec
 
-    .. versionadded:: Lithium
-
     State names can be specified as globs.
+
+    .. code-block:: bash
 
         salt '*' sys.state_argspec 'pkg.*'
 
@@ -461,10 +475,10 @@ def state_argspec(module=''):
 
 def returner_argspec(module=''):
     '''
-    .. versionadded:: Lithium
-
     Return the argument specification of functions in Salt returner
     modules.
+
+    .. versionadded:: 2015.2.0
 
     CLI Example:
 
@@ -474,9 +488,9 @@ def returner_argspec(module=''):
         salt '*' sys.returner_argspec xmpp smtp
         salt '*' sys.returner_argspec
 
-    .. versionadded:: Lithium
-
     Returner names can be specified as globs.
+
+    .. code-block:: bash
 
         salt '*' sys.returner_argspec 'sqlite3.*'
 
@@ -487,10 +501,10 @@ def returner_argspec(module=''):
 
 def runner_argspec(module=''):
     '''
-    .. versionadded:: Lithium
-
     Return the argument specification of functions in Salt runner
     modules.
+
+    .. versionadded:: 2015.2.0
 
     CLI Example:
 
@@ -500,9 +514,9 @@ def runner_argspec(module=''):
         salt '*' sys.runner_argspec http
         salt '*' sys.runner_argspec
 
-    .. versionadded:: Lithium
-
     Runner names can be specified as globs.
+
+    .. code-block:: bash
 
         salt '*' sys.runner_argspec 'winrepo.*'
     '''
@@ -512,10 +526,10 @@ def runner_argspec(module=''):
 
 def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: 2014.7.0
-
     List the functions for all state modules. Optionally, specify a state
     module or modules from which to list.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -525,9 +539,11 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_state_functions file
         salt '*' sys.list_state_functions pkg user
 
-    .. versionadded:: Lithium
-
     State function names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.list_state_functions 'file.*'
         salt '*' sys.list_state_functions 'file.s*'
@@ -563,9 +579,9 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
 def list_state_modules(*args):
     '''
-    .. versionadded:: 2014.7.0
-
     List the modules loaded on the minion
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -573,9 +589,11 @@ def list_state_modules(*args):
 
         salt '*' sys.list_state_modules
 
-    .. versionadded:: Lithium
-
     State module names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.list_state_modules 'mysql_*'
 
@@ -603,9 +621,9 @@ def list_state_modules(*args):
 
 def list_runners(*args):
     '''
-    .. versionadded:: 2014.7.0
-
     List the runners loaded on the minion
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -613,9 +631,11 @@ def list_runners(*args):
 
         salt '*' sys.list_runners
 
-    .. versionadded:: Lithium
-
     Runner names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.list_runners 'm*'
 
@@ -641,10 +661,10 @@ def list_runners(*args):
 
 def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: 2014.7.0
-
     List the functions for all runner modules. Optionally, specify a runner
     module or modules from which to list.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -654,9 +674,11 @@ def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_runner_functions state
         salt '*' sys.list_runner_functions state virt
 
-    .. versionadded:: Lithium
-
     Runner function names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.list_runner_functions 'state.*' 'virt.*'
 
@@ -691,9 +713,9 @@ def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
 def list_returners(*args):
     '''
-    .. versionadded:: 2014.7.0
-
     List the runners loaded on the minion
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -701,9 +723,11 @@ def list_returners(*args):
 
         salt '*' sys.list_returners
 
-    .. versionadded:: Lithium
-
     Returner names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.list_returners 's*'
 
@@ -730,10 +754,10 @@ def list_returners(*args):
 
 def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
-    .. versionadded:: 2014.7.0
-
     List the functions for all returner modules. Optionally, specify a returner
     module or modules from which to list.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -743,9 +767,11 @@ def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_returner_functions mysql
         salt '*' sys.list_returner_functions mysql etcd
 
-    .. versionadded:: Lithium
-
     Returner names can be specified as globs.
+
+    .. versionadded:: 2015.2.0
+
+    .. code-block:: bash
 
         salt '*' sys.list_returner_functions 'sqlite3.get_*'
 
@@ -781,9 +807,9 @@ def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
 def list_renderers(*args):
     '''
-    .. versionadded:: Lithium
-
     List the renderers loaded on the minion
+
+    .. versionadded:: 2015.2.0
 
     CLI Example:
 
@@ -791,9 +817,9 @@ def list_renderers(*args):
 
         salt '*' sys.list_renderers
 
-    .. versionadded:: Lithium
-
     Render names can be specified as globs.
+
+    .. code-block:: bash
 
         salt '*' sys.list_renderers 'yaml*'
 

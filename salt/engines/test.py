@@ -2,12 +2,14 @@
 '''
 A simple test engine, not intended for real use but as an example
 '''
-# Import salt libs
-import salt.utils.event
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import logging
+
+# Import salt libs
+import salt.utils.event
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +18,7 @@ def start():
     '''
     Listen to events and write them to a log file
     '''
-    if __opts__.get('id').endswith('_master'):
+    if __opts__['__role'] == 'master':
         event_bus = salt.utils.event.get_master_event(
                 __opts__,
                 __opts__['sock_dir'])

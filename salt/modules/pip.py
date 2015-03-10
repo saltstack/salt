@@ -866,7 +866,7 @@ def upgrade_available(pkg,
                       user=None,
                       cwd=None):
     '''
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     Check whether or not an upgrade is available for a given package
 
@@ -884,7 +884,7 @@ def upgrade(bin_env=None,
             cwd=None,
             use_vt=False):
     '''
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     Upgrades outdated pip packages
 

@@ -26,6 +26,8 @@ import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
 
+from stat import S_IMODE
+
 # Import third party libs
 try:
     import zmq
@@ -182,27 +184,20 @@ def get_proc_dir(cachedir, **kwargs):
     if not os.path.isdir(fn_):
         # proc_dir is not present, create it with mode settings
         os.makedirs(fn_, **mode)
-        d_stat = os.stat(fn_)
-    else:
-        d_stat = os.stat(fn_)
+
+    d_stat = os.stat(fn_)
 
     # if mode is not an empty dict then we have an explicit
     # dir mode. So lets check if mode needs to be changed.
     if mode:
-        if d_stat.st_mode | mode['mode'] != d_stat.st_mode:
-            os.chmod(fn_, d_stat.st_mode | mode['mode'])
+        mode_part = S_IMODE(d_stat.st_mode)
+        if mode_part != mode['mode']:
+            os.chmod(fn_, (d_stat.st_mode ^ mode_part) | mode['mode'])
 
     if hasattr(os, 'chown'):
         # only on unix/unix like systems
-        uid = kwargs.pop('uid', None)
-        gid = kwargs.pop('gid', None)
-
-        if uid is None:
-            # -1 means no change to current uid
-            uid = -1
-        if gid is None:
-            # -1 means no change to current gid
-            gid = -1
+        uid = kwargs.pop('uid', -1)
+        gid = kwargs.pop('gid', -1)
 
         # if uid and gid are both -1 then go ahead with
         # no changes at all
@@ -949,7 +944,7 @@ class Minion(MinionBase):
 
         return functions, returners, errors
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -969,9 +964,11 @@ class Minion(MinionBase):
             return
         channel = salt.transport.Channel.factory(self.opts)
         try:
-            result = channel.send(load)
+            result = channel.send(load, timeout=timeout)
+            return True
         except Exception:
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
+            return False
 
     def _handle_payload(self, payload):
         '''
@@ -1205,7 +1202,7 @@ class Minion(MinionBase):
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
                 ret['out'] = 'nested'
         else:
-            ret['return'] = '{0!r} is not available.'.format(function_name)
+            ret['return'] = minion_instance.functions.missing_fun_string(function_name)
             mod_name = function_name.split('.')[0]
             if mod_name in minion_instance.function_errors:
                 ret['return'] += ' Possible reasons: {0!r}'.format(minion_instance.function_errors[mod_name])
@@ -1298,7 +1295,7 @@ class Minion(MinionBase):
                         )
                     )
 
-    def _return_pub(self, ret, ret_cmd='_return'):
+    def _return_pub(self, ret, ret_cmd='_return', timeout=60):
         '''
         Return the data from the executed command to the master server
         '''
@@ -1320,6 +1317,8 @@ class Minion(MinionBase):
                     'jid': jid,
                     'fun': fun,
                     'load': ret.get('__load__')}
+            if '__master_id__' in ret:
+                load['master_id'] = ret['__master_id__']
             load['return'] = {}
             for key, value in six.iteritems(ret):
                 if key.startswith('__'):
@@ -1357,7 +1356,7 @@ class Minion(MinionBase):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         try:
-            ret_val = channel.send(load)
+            ret_val = channel.send(load, timeout=timeout)
         except SaltReqTimeoutError:
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
@@ -2030,7 +2029,9 @@ class Syndic(Minion):
         Override this method if you wish to handle the decoded data
         differently.
         '''
-        self.syndic_cmd(data)
+        # Only forward the command if it didn't originate from ourselves
+        if data.get('master_id', 0) != self.opts.get('master_id', 1):
+            self.syndic_cmd(data)
 
     def syndic_cmd(self, data):
         '''
@@ -2282,6 +2283,10 @@ class MultiSyndic(MinionBase):
     Make a MultiSyndic minion, this minion will handle relaying jobs and returns from
     all minions connected to it to the list of masters it is connected to.
 
+    Modes (controlled by `syndic_mode`:
+        sync: This mode will synchronize all events and publishes from higher level masters
+        cluster: This mode will only sync job publishes and returns
+
     Note: jobs will be returned best-effort to the requesting master. This also means
     (since we are using zmq) that if a job was fired and the master disconnects
     between the publish and return, that the return will end up in a zmq buffer
@@ -2289,26 +2294,71 @@ class MultiSyndic(MinionBase):
 
     In addition, since these classes all seem to use a mix of blocking and non-blocking
     calls (with varying timeouts along the way) this daemon does not handle failure well,
-    it will (under most circumstances) stall the daemon for ~60s attempting to re-auth
-    with the down master
+    it will (under most circumstances) stall the daemon for ~15s trying to forward events
+    to the down master
     '''
     # time to connect to upstream master
     SYNDIC_CONNECT_TIMEOUT = 5
+    SYNDIC_EVENT_TIMEOUT = 5
 
     def __init__(self, opts):
         opts['loop_interval'] = 1
         super(MultiSyndic, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
+        # sync (old behavior), cluster (only returns and publishes)
+        self.syndic_mode = self.opts.get('syndic_mode', 'sync')
+
+        self._has_master = threading.Event()
 
         # create all of the syndics you need
         self.master_syndics = {}
         for master in set(self.opts['master']):
-            s_opts = copy.copy(self.opts)
-            s_opts['master'] = master
-            self.master_syndics[master] = {'opts': s_opts,
-                                           'auth_wait': s_opts['acceptance_wait_time'],
-                                           'dead_until': 0}
-            self._connect_to_master(master)
+            self._init_master_conn(master)
+
+        log.info('Syndic waiting on any master to connect...')
+        # threading events are un-interruptible in python 2 :/
+        while not self._has_master.is_set():
+            self._has_master.wait(1)
+
+    def _init_master_conn(self, master):
+        '''
+        Start a thread to connect to the master `master`
+        '''
+        # if we are re-creating one, lets make sure its not still in use
+        if master in self.master_syndics:
+            if 'sign_in_thread' in self.master_syndics[master]:
+                self.master_syndics[master]['sign_in_thread'].join(0)
+                if self.master_syndics[master]['sign_in_thread'].is_alive():
+                    return
+        # otherwise we make one!
+        s_opts = copy.copy(self.opts)
+        s_opts['master'] = master
+        t = threading.Thread(target=self._connect_to_master_thread, args=(master,))
+        t.daemon = True
+        self.master_syndics[master] = {'opts': s_opts,
+                                       'auth_wait': s_opts['acceptance_wait_time'],
+                                       'dead_until': 0,
+                                       'sign_in_thread': t,
+                                       }
+        t.start()
+
+    def _connect_to_master_thread(self, master):
+        '''
+        Thread target to connect to a master
+        '''
+        connected = False
+        master_dict = self.master_syndics[master]
+        while connected is False:
+            # if we marked it as dead, wait a while
+            if master_dict['dead_until'] > time.time():
+                time.sleep(master_dict['dead_until'] - time.time())
+            if master_dict['dead_until'] > time.time():
+                time.sleep(master_dict['dead_until'] - time.time())
+            connected = self._connect_to_master(master)
+            if not connected:
+                time.sleep(1)
+
+        self._has_master.set()
 
     # TODO: do we need all of this?
     def _connect_to_master(self, master):
@@ -2317,36 +2367,38 @@ class MultiSyndic(MinionBase):
 
         return boolean of whether you connected or not
         '''
+        log.debug('Syndic attempting to connect to {0}'.format(master))
         if master not in self.master_syndics:
             log.error('Unable to connect to {0}, not in the list of masters'.format(master))
             return False
 
         minion = self.master_syndics[master]
-        # if we need to be dead for a while, stay that way
-        if minion['dead_until'] > time.time():
-            return False
 
-        if time.time() - minion['auth_wait'] > minion.get('last', 0):
-            try:
-                t_minion = Syndic(minion['opts'],
-                                  timeout=self.SYNDIC_CONNECT_TIMEOUT,
-                                  safe=False,
-                                  )
+        try:
+            t_minion = Syndic(minion['opts'],
+                              timeout=self.SYNDIC_CONNECT_TIMEOUT,
+                              safe=False,
+                              )
 
-                self.master_syndics[master]['syndic'] = t_minion
-                self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
-                self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
-                self.master_syndics[master]['dead_until'] = 0
+            self.master_syndics[master]['syndic'] = t_minion
+            self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
+            self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
+            self.master_syndics[master]['dead_until'] = 0
 
-                return True
-            except SaltClientError:
-                log.error('Error while bring up minion for multi-syndic. Is master {0} responding?'.format(master))
-                # re-use auth-wait as backoff for syndic
-                minion['dead_until'] = time.time() + minion['auth_wait']
-                if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                    minion['auth_wait'] += self.opts['acceptance_wait_time']
+            log.info('Syndic successfully connected to {0}'.format(master))
+            return True
+        except SaltClientError:
+            log.error('Error while bring up minion for multi-syndic. Is master {0} responding?'.format(master))
+            # re-use auth-wait as backoff for syndic
+            minion['dead_until'] = time.time() + minion['auth_wait']
+            if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
+                minion['auth_wait'] += self.opts['acceptance_wait_time']
         return False
 
+    # TODO: Move to an async framework of some type-- channel (the event thing underneath)
+    # doesn't handle failures well, and will retry 3 times at 60s timeouts-- which all block
+    # the main thread's execution. For now we just cause failures to kick off threads to look
+    # for the master to come back up
     def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
@@ -2357,18 +2409,19 @@ class MultiSyndic(MinionBase):
             if 'syndic' not in syndic_dict:
                 continue
             if syndic_dict['dead_until'] > time.time():
-                log.error('Unable to call {0} on {1}, that syndic is dead for now'.format(func, master_id))
+                log.error('Unable to call {0} on {1}, that syndic is dead for now'.format(func, master))
                 continue
             try:
-                getattr(syndic_dict['syndic'], func)(*args, **kwargs)
-                return
-            except SaltClientError:
-                log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
-                # re-use auth-wait as backoff for syndic
-                syndic_dict['dead_until'] = time.time() + syndic_dict['auth_wait']
-                if syndic_dict['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                    syndic_dict['auth_wait'] += self.opts['acceptance_wait_time']
-                continue
+                ret = getattr(syndic_dict['syndic'], func)(*args, **kwargs)
+                if ret is not False:
+                    log.debug('{0} called on {1}'.format(func, master))
+                    return
+            except (SaltClientError, SaltReqTimeoutError):
+                pass
+            log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
+            # If the connection is dead, lets have another thread wait for it to come back
+            self._init_master_conn(master)
+            continue
         log.critical('Unable to call {0} on any masters!'.format(func))
 
     def iter_master_options(self, master_id=None):
@@ -2431,9 +2484,9 @@ class MultiSyndic(MinionBase):
                 for master_id, syndic_dict in six.iteritems(self.master_syndics):
                     # if not connected, lets try
                     if 'generator' not in syndic_dict:
+                        log.info('Syndic still not connected to {0}'.format(master_id))
                         # if we couldn't connect, lets try later
-                        if not self._connect_to_master(master_id):
-                            continue
+                        continue
                     next(syndic_dict['generator'])
 
                 # events
@@ -2468,6 +2521,7 @@ class MultiSyndic(MinionBase):
                 raise
 
             log.trace('Got event {0}'.format(event['tag']))
+
             if self.event_forward_timeout is None:
                 self.event_forward_timeout = (
                         time.time() + self.opts['syndic_event_forward_timeout']
@@ -2479,6 +2533,10 @@ class MultiSyndic(MinionBase):
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
+                if self.syndic_mode == 'cluster' and event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
+                    log.debug('Return recieved with matching master_id, not forwarding')
+                    continue
+
                 jdict = self.jids.setdefault(event['tag'], {})
                 if not jdict:
                     jdict['__fun__'] = event['data'].get('fun')
@@ -2493,19 +2551,29 @@ class MultiSyndic(MinionBase):
                     jdict['__master_id__'] = event['data']['master_id']
                 jdict[event['data']['id']] = event['data']['return']
             else:
-                # Add generic event aggregation here
-                if 'retcode' not in event['data']:
-                    self.raw_events.append(event)
+                # TODO: config to forward these? If so we'll have to keep track of who
+                # has seen them
+                # if we are the top level masters-- don't forward all the minion events
+                if self.syndic_mode == 'sync':
+                    # Add generic event aggregation here
+                    if 'retcode' not in event['data']:
+                        self.raw_events.append(event)
 
     def _forward_events(self):
         log.trace('Forwarding events')
         if self.raw_events:
             self._call_syndic('_fire_master',
                               kwargs={'events': self.raw_events,
-                                      'pretag': tagify(self.opts['id'], base='syndic')},
+                                      'pretag': tagify(self.opts['id'], base='syndic'),
+                                      'timeout': self.SYNDIC_EVENT_TIMEOUT,
+                                      },
                               )
-        for jid, jid_ret in six.iteritems(self.jids):
-            self._call_syndic('_return_pub', args=(jid_ret, '_syndic_return'), master_id=jid_ret.get('__master_id__'))
+        for jid, jid_ret in self.jids.items():
+            self._call_syndic('_return_pub',
+                              args=(jid_ret, '_syndic_return'),
+                              kwargs={'timeout': self.SYNDIC_EVENT_TIMEOUT},
+                              master_id=jid_ret.get('__master_id__'),
+                              )
 
         self._reset_event_aggregation()
 

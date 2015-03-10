@@ -282,6 +282,7 @@ def create_replica(name, source, db_instance_class=None, port=None,
     replica_exists = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
     if not replica_exists:
         created = __salt__['boto_rds.create_read_replica'](name, source,
+                                                           db_instance_class, port,
                                                            availability_zone,
                                                            auto_minor_version_upgrade,
                                                            option_group_name,
@@ -289,9 +290,8 @@ def create_replica(name, source, db_instance_class=None, port=None,
                                                            tags, region, key,
                                                            keyid, profile)
         if created:
-            config = __salt__['boto_rds.describe'](name, tags=None, region=None,
-                                                  key=None, keyid=None,
-                                                  profile=None)
+            config = __salt__['boto_rds.describe'](name, tags, region,
+                                                   key, keyid, profile)
             ret['result'] = True
             ret['comment'] = 'RDS replica {0} created.'.format(name)
             ret['changes']['old'] = None

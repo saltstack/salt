@@ -207,7 +207,7 @@ all interfaces are ignored unless specified.
     .. note::
         Apply changes to hostname immediately.
 
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
 .. note::
 

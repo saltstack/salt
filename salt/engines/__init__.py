@@ -4,6 +4,7 @@ Initialize the engines system. This plugin system allows for
 complex services to be encapsulated within the salt plugin environment
 '''
 # Import python libs
+from __future__ import absolute_import
 import multiprocessing
 
 # Import salt libs

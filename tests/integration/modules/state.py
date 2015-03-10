@@ -81,7 +81,8 @@ class StateModuleTest(integration.ModuleCase,
         self._remove_request_cache_file()
 
         ret = self.run_function('state.request', mods='modules.state.requested')
-        self.assertSaltTrueReturn(ret)
+        result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+        self.assertEqual(result, None)
 
     def test_check_request(self):
         '''
@@ -92,7 +93,7 @@ class StateModuleTest(integration.ModuleCase,
         self.run_function('state.request', mods='modules.state.requested')
         ret = self.run_function('state.check_request')
         result = ret['default']['test_run']['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
-        self.assertTrue(result)
+        self.assertEqual(result, None)
 
     def test_clear_request(self):
         '''

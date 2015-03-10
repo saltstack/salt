@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
+    :codeauthor: :email:`Tomas Sirny <tsirny@gmail.com>`
 '''
 
 # Import Python Libs
@@ -9,23 +10,25 @@ import os
 import random
 import string
 
+# Import Salt Libs
+import integration
+from salt.config import cloud_providers_config
+
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
 
-# Import Salt Libs
-import integration
-from salt.config import cloud_providers_config
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+# Import Third-Party Libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def __random_name(size=6):
     '''
-    Generates a random cloud instance name
+    Generates a radom cloud instance name
     '''
-    return 'CLOUD-TEST-' + ''.join(
-        random.choice(string.ascii_uppercase + string.digits)
+    return 'cloud-test-' + ''.join(
+        random.choice(string.ascii_lowercase + string.digits)
         for x in range(size)
     )
 
@@ -33,9 +36,9 @@ def __random_name(size=6):
 INSTANCE_NAME = __random_name()
 
 
-class JoyentTest(integration.ShellCase):
+class GCETest(integration.ShellCase):
     '''
-    Integration tests for the Joyent cloud provider in Salt-Cloud
+    Integration tests for the GCE cloud provider in Salt-Cloud
     '''
 
     @expensiveTest
@@ -43,12 +46,13 @@ class JoyentTest(integration.ShellCase):
         '''
         Sets up the test requirements
         '''
-        super(JoyentTest, self).setUp()
+        super(GCETest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'joyent-config:'
-        provider = 'joyent'
+        profile_str = 'gce-config:'
+        provider = 'gce'
         providers = self.run_cloud('--list-providers')
+
         if profile_str not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
@@ -56,36 +60,43 @@ class JoyentTest(integration.ShellCase):
                 .format(provider)
             )
 
-        # check if user, password, private_key, and keyname are present
+        # check if project, service_account_email_address, service_account_private_key
+        # and provider are present
         path = os.path.join(integration.FILES,
                             'conf',
                             'cloud.providers.d',
                             provider + '.conf')
         config = cloud_providers_config(path)
 
-        user = config['joyent-config'][provider]['user']
-        password = config['joyent-config'][provider]['password']
-        private_key = config['joyent-config'][provider]['private_key']
-        keyname = config['joyent-config'][provider]['keyname']
+        project = config['gce-config']['gce']['project']
+        service_account_email_address = config['gce-config']['gce']['service_account_email_address']
+        service_account_private_key = config['gce-config']['gce']['service_account_private_key']
 
-        if user == '' or password == '' or private_key == '' or keyname == '':
+        conf_items = [project, service_account_email_address, service_account_private_key]
+        missing_conf_item = []
+
+        for item in conf_items:
+            if item == '':
+                missing_conf_item.append(item)
+
+        if missing_conf_item:
             self.skipTest(
-                'A user name, password, private_key file path, and a key name '
-                'must be provided to run these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                'An project, service_account_email_address, service_account_private_key must '
+                'be provided to run these tests. One or more of these elements is '
+                'missing. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
                 .format(provider)
             )
 
     def test_instance(self):
         '''
-        Test creating and deleting instance on Joyent
+        Tests creating and deleting an instance on GCE
         '''
 
         # create the instance
-        instance = self.run_cloud('-p joyent-test {0}'.format(INSTANCE_NAME))
-        ret_str = '        {0}'.format(INSTANCE_NAME)
+        instance = self.run_cloud('-p gce-test {0}'.format(INSTANCE_NAME))
+        ret_str = '{0}:'.format(INSTANCE_NAME)
 
-        # check if instance with salt installed returned
+        # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
@@ -94,9 +105,13 @@ class JoyentTest(integration.ShellCase):
 
         # delete the instance
         delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-        ret_str = '            True'
+        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+        delete_str = ''.join(delete)
+
+        # check if deletion was performed appropriately
         try:
-            self.assertIn(ret_str, delete)
+            self.assertIn(INSTANCE_NAME, delete_str)
+            self.assertIn('True', delete_str)
         except AssertionError:
             raise
 
@@ -114,4 +129,4 @@ class JoyentTest(integration.ShellCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(JoyentTest)
+    run_tests(GCETest)

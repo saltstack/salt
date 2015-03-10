@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Beacon to monitor disk usage
+Beacon to monitor disk usage.
+
+.. versionadded:: 2015.2.0
 '''
 
 # Import Python libs
