@@ -41,8 +41,7 @@ def envs(backend=None, sources=False, outputter='nested'):
 
     if outputter:
         return {'outputter': outputter, 'data': output}
-    else:
-        return output
+    return output
 
 
 def file_list(saltenv='base', backend=None, outputter='nested'):
@@ -77,7 +76,7 @@ def file_list(saltenv='base', backend=None, outputter='nested'):
     output = fileserver.file_list(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
+        return {'outputter': outputter, 'data': output}
     return output
 
 
@@ -114,8 +113,7 @@ def symlink_list(saltenv='base', backend=None, outputter='nested'):
 
     if outputter:
         return {'outputter': outputter, 'data': output}
-    else:
-        return output
+    return output
 
 
 def dir_list(saltenv='base', backend=None, outputter='nested'):
@@ -150,7 +148,7 @@ def dir_list(saltenv='base', backend=None, outputter='nested'):
     output = fileserver.dir_list(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
+        return {'outputter': outputter, 'data': output}
     return output
 
 
@@ -191,7 +189,7 @@ def empty_dir_list(saltenv='base', backend=None, outputter='nested'):
     output = fileserver.file_list_emptydirs(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
+        return {'outputter': outputter, 'data': output}
     return output
 
 
@@ -226,7 +224,7 @@ def update(backend=None):
     return True
 
 
-def clear_cache(backend=None):
+def clear_cache(backend=None, outputter='nested'):
     '''
     .. versionadded:: 2015.2.0
 
@@ -261,7 +259,9 @@ def clear_cache(backend=None):
         ret['errors'] = errors
     if not ret:
         ret = 'No cache was cleared'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+    if outputter:
+        return {'outputter': outputter, 'data': output}
+    return output
 
 
 def clear_lock(backend=None, remote=None):
