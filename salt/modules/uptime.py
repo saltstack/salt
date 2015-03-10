@@ -2,8 +2,10 @@
 '''
 Wrapper around uptime API
 =========================
-
 '''
+
+# Import Python Libs
+from __future__ import absolute_import
 import requests
 import logging
 
