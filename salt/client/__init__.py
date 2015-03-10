@@ -278,6 +278,9 @@ class LocalClient(object):
         except SaltClientError:
             # Re-raise error with specific message
             raise SaltClientError('The salt master could not be contacted. Is master running?')
+        except Exception as general_exception:
+            # Convert to generic client error and pass along mesasge
+            raise SaltClientError(general_exception)
 
         return self._check_pub_data(pub_data)
 
@@ -1439,11 +1442,11 @@ class LocalClient(object):
         try:
             payload = channel.send(payload_kwargs, timeout=timeout)
         except SaltReqTimeoutError:
-            log.error(
-                'Salt request timed out. If this error persists, '
+            raise SaltReqTimeoutError(
+                'Salt request timed out. The master is not responding. '
+                'If this error persists after verifying the master is up, '
                 'worker_threads may need to be increased.'
             )
-            return {}
 
         if not payload:
             # The master key could have changed out from under us! Regen
