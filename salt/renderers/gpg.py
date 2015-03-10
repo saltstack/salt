@@ -121,7 +121,9 @@ def decrypt_object(o, gpg):
             o[k] = decrypt_object(v, gpg)
         return o
     elif isinstance(o, list):
-        return [decrypt_object(e, gpg) for e in o]
+        for number, value in enumerate(o):
+            o[number] = decrypt_object(value, gpg)
+        return o
     else:
         return o
 
