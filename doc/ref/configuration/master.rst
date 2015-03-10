@@ -26,7 +26,7 @@ Primary Master Configuration
 ``interface``
 -------------
 
-Default: ``0.0.0.0`` (all interfaces)
+Default: ``::`` (all interfaces)
 
 The local interface to bind to.
 
@@ -39,7 +39,7 @@ The local interface to bind to.
 ``ipv6``
 --------
 
-Default: ``False``
+Default: ``True``
 
 Whether the master should listen for IPv6 connections. If this is set to True,
 the interface option must be adjusted too (for example: "interface: '::'")

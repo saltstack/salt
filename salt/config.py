@@ -288,7 +288,7 @@ VALID_OPTS = {
 
 # default configurations
 DEFAULT_MINION_OPTS = {
-    'interface': '0.0.0.0',
+    'interface': '::',
     'master': 'salt',
     'master_type': 'str',
     'master_port': '4506',
@@ -366,7 +366,7 @@ DEFAULT_MINION_OPTS = {
     'multiprocessing': True,
     'mine_interval': 60,
     'ipc_mode': 'ipc',
-    'ipv6': False,
+    'ipv6': True,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
     'tcp_pull_port': 4511,
@@ -443,7 +443,7 @@ DEFAULT_MINION_OPTS = {
 }
 
 DEFAULT_MASTER_OPTS = {
-    'interface': '0.0.0.0',
+    'interface': '::',
     'publish_port': '4505',
     'pub_hwm': 1000,
     'rep_hwm': 50000,
@@ -541,7 +541,7 @@ DEFAULT_MASTER_OPTS = {
     'master_job_cache': 'local_cache',
     'minion_data_cache': True,
     'enforce_mine_cache': False,
-    'ipv6': False,
+    'ipv6': True,
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'master'),
     'log_level': None,
     'log_level_logfile': None,
