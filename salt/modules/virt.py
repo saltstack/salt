@@ -799,7 +799,7 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key,value in v_node.attributes.items():
+                    for key, value in v_node.attributes.items():
                         temp[key] = value
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
