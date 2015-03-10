@@ -267,7 +267,6 @@ class IptablesTestCase(TestCase):
         mock_has = MagicMock(return_value=True)
         mock_not = MagicMock(return_value=False)
 
-        # pylint: disable=E0001
         with patch.object(iptables, '_has_option', mock_not):
             with patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)):
                 with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
@@ -296,7 +295,6 @@ class IptablesTestCase(TestCase):
                     self.assertTrue(iptables.check(table='filter',
                                                    chain='0x4d2',
                                                    rule=mock_rule, family='ipv4'))
-        # pylint: enable=E0001
 
     # 'check_chain' function tests: 1
 
