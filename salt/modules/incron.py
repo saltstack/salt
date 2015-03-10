@@ -67,26 +67,26 @@ def _get_incron_cmdstr(path):
 
 def write_incron_file(user, path):
     '''
-    Writes the contents of a file to a user's crontab
+    Writes the contents of a file to a user's incrontab
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' incron.write_cron_file root /tmp/new_cron
+        salt '*' incron.write_incron_file root /tmp/new_incron
     '''
     return __salt__['cmd.retcode'](_get_incron_cmdstr(path), runas=user, python_shell=False) == 0
 
 
-def write_cron_file_verbose(user, path):
+def write_incron_file_verbose(user, path):
     '''
-    Writes the contents of a file to a user's crontab and return error message on error
+    Writes the contents of a file to a user's incrontab and return error message on error
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' incron.write_incron_file_verbose root /tmp/new_cron
+        salt '*' incron.write_incron_file_verbose root /tmp/new_incron
     '''
     return __salt__['cmd.run_all'](_get_incron_cmdstr(path), runas=user, python_shell=False)
 
@@ -147,7 +147,7 @@ def raw_system_incron():
 
     .. code-block:: bash
 
-        salt '*' incron.raw_system_cron
+        salt '*' incron.raw_system_incron
     '''
     log.debug("read_file {0}" . format(_read_file(_INCRON_SYSTEM_TAB, 'salt')))
     return ''.join(_read_file(_INCRON_SYSTEM_TAB, 'salt'))
@@ -161,7 +161,7 @@ def raw_incron(user):
 
     .. code-block:: bash
 
-        salt '*' incron.raw_cron root
+        salt '*' incron.raw_incron root
     '''
     if __grains__['os_family'] == 'Solaris':
         cmd = 'incrontab -l {0}'.format(user)
@@ -216,7 +216,7 @@ ls = list_tab  # pylint: disable=C0103
 
 def set_job(user, path, mask, cmd):
     '''
-    Sets a cron job up for a specified user.
+    Sets an incron job up for a specified user.
 
     CLI Example:
 
@@ -238,7 +238,7 @@ def set_job(user, path, mask, cmd):
     lst = list_tab(user)
 
     updated_crons = []
-    # Look for existing crons that have cmd, path and at least one of the MASKS
+    # Look for existing incrons that have cmd, path and at least one of the MASKS
     # remove and replace with the one we're passed
     for item, cron in enumerate(lst['crons']):
         if path == cron['path']:
@@ -277,7 +277,7 @@ def rm_job(user,
            mask,
            cmd):
     '''
-    Remove a cron job for a specified user. If any of the day/time params are
+    Remove a incron job for a specified user. If any of the day/time params are
     specified, the job will only be removed if the specified params match.
 
     CLI Example:
