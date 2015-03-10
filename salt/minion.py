@@ -91,6 +91,11 @@ from salt.exceptions import (
 )
 
 
+# TODO: cleanup
+import zmq.eventloop.ioloop
+import tornado.gen
+import tornado.ioloop
+
 log = logging.getLogger(__name__)
 
 # To set up a minion:
@@ -1531,10 +1536,11 @@ class Minion(MinionBase):
 
         log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
 
-        self.event_publisher = salt.utils.event.PollingEventPublisher(self.opts)
+        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
 
-        self.poller.register(self.event_publisher.socket, zmq.POLLIN)
-        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
+        # TODO: remove poller
+        #self.poller.register(self.event_publisher.socket, zmq.POLLIN)
+        #self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
@@ -1572,43 +1578,38 @@ class Minion(MinionBase):
                     exc)
             )
 
+        periodic_callbacks = {}
+
+        # schedule the stuff that runs every interval
         ping_interval = self.opts.get('ping_interval', 0) * 60
-        ping_at = None
+        if ping_interval > 0:
+            def ping_master():
+                self._fire_master('ping', 'minion_ping')
+            periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
-        while self._running is True:
-            loop_interval = self.process_schedule(self, loop_interval)
-            self._fallback_cleanups()
+        periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
+        def handle_beacons():
+            # Process Beacons
             try:
-                socks = self._do_poll(loop_interval)
-                if ping_interval > 0:
-                    if socks or not ping_at:
-                        ping_at = time.time() + ping_interval
-                    if ping_at < time.time():
-                        log.debug('Ping master')
-                        self._fire_master('ping', 'minion_ping')
-                        ping_at = time.time() + ping_interval
-
-                self._process_beacons()
-                # TODO: rename?? Maybe do_pub_recv and take a list of them?
-                # for some reason, native FDs sometimes return event 5, whatever that is...
-                if socks.get(self.pub_channel.poll_key):
-                    self._do_socket_recv()
-
-                # Check the event system
-                if socks.get(self.event_publisher.socket) == zmq.POLLIN:
-                    package = self.event_publisher.handle_publish()
-                    try:
-                        if package is not None:
-                            self.handle_event(package)
-                    except Exception:
-                        log.debug('Exception while handling events', exc_info=True)
-            except SaltClientError:
-                raise
+                beacons = self.process_beacons(self.functions)
             except Exception:
-                log.critical(
-                    'An exception occurred while polling the minion',
-                    exc_info=True
-                )
+                log.critical('The beacon errored: ', exec_info=True)
+            if beacons:
+                self._fire_master(events=beacons)
+        periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
+
+        # start all the other callbacks
+        for name, periodic_cb in periodic_callbacks.iteritems():
+            periodic_cb.start()
+
+        # TODO: remove...
+        self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, io_loop=self.io_loop)
+
+        # sub
+        self.pub_channel.on_recv(self._handle_payload)
+        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
+
+        self.io_loop.start()
 
     def tune_in_no_block(self):
         '''
@@ -1636,15 +1637,7 @@ class Minion(MinionBase):
                 )
             yield True
 
-    def _do_poll(self, loop_interval):
-        log.trace('Check main poller timeout {0}'.format(loop_interval))
-        return dict(self.poller.poll(
-            loop_interval * 1000)
-        )
-
-    def _do_socket_recv(self):
-        payload = self.pub_channel.recv()
-
+    def _handle_payload(self, payload):
         if payload is not None and self._target_load(payload['load']):
             self._handle_decoded_payload(payload['load'])
 

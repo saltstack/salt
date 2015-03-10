@@ -197,13 +197,16 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
                  **kwargs):
         self.opts = opts
 
-        self.auth = salt.crypt.SAuth(self.opts)
+        self.auth = salt.crypt.SAuth(self.opts)  # TODO: make optionally non-blocking?
         self.serial = salt.payload.Serial(self.opts)
 
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # connect
-        self._socket.connect(self.master_pub)
-        self._socket.send('connect')
+        if 'io_loop' in kwargs:
+            self.io_loop = kwargs['io_loop']
+        else:
+            self.io_loop = tornado.ioloop.IOLoop()
+        self.message_client = SaltMessageClient(self.opts['master_ip'],
+                                                int(self.auth.creds['publish_port']),
+                                                io_loop=self.io_loop)
 
     @property
     def socket(self):
@@ -213,13 +216,14 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
     def poll_key(self):
         return self._socket.fileno()
 
-    @property
-    def master_pub(self):
+    def on_recv(self, callback):
         '''
-        Return the master publish port
+        Register an on_recv callback
         '''
-        return (self.opts['master_ip'],
-                int(self.auth.creds['publish_port']))
+        self.message_client.send('connect')
+        def wrap_callback(body):
+            callback(self._decode_payload(self.serial.loads(body)))
+        return self.message_client.on_recv(wrap_callback)
 
     def recv(self, timeout=0):
         '''
@@ -376,11 +380,13 @@ class SaltMessageClient(object):
 
         self.send_queue = []  # queue of messages to be sent
 
-        self.future_map = {}  # mapping of request_id -> Future
+        self.send_future_map = {}  # mapping of request_id -> Future
         self._stream = None
 
         # start up the send/recv sides
         self.io_loop.add_callback(self._connect)
+
+        self._on_recv = None
 
 
     @tornado.gen.coroutine
@@ -399,21 +405,23 @@ class SaltMessageClient(object):
                 header_raw = yield self._stream.read_bytes(int(header_len.strip()))
                 header = msgpack.loads(header_raw)
                 body = yield self._stream.read_bytes(int(header['msgLen']))
-                message_id = header['mid']
+                message_id = header.get('mid')
 
-                if message_id in self.future_map:
-                    self.future_map[message_id].set_result(body)
-                    del self.future_map[message_id]
+                if message_id in self.send_future_map:
+                    self.send_future_map[message_id].set_result(body)
+                    del self.send_future_map[message_id]
                 else:
-                    log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
+                    if self._on_recv is not None:
+                        self.io_loop.spawn_callback(self._on_recv, header, body)
+                    else:
+                        log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
             # TODO: if we know what message_id it is, we can save the stream
             except Exception as e:
                 log.error('Exception parsing response', exc_info=True)
-                raise
-                for future in self.future_map.itervalues():
+                for future in self.send_future_map.itervalues():
                     future.set_exception(e)
-                self.future_map = {}
-            raise tornado.gen.Return()
+                self.send_future_map = {}
+                raise
 
     @tornado.gen.coroutine
     def _stream_send(self):
@@ -431,6 +439,14 @@ class SaltMessageClient(object):
         self._mid += 1
         return ret
 
+    def on_recv(self, callback):
+        '''
+        Register a callback for recieved messages (that we didn't initiate)
+        '''
+        def wrap_recv(header, body):
+            callback(body)
+        self._on_recv = wrap_recv
+
     def send(self, msg, callback=None):
         '''
         Send given message, and return a future
@@ -445,7 +461,7 @@ class SaltMessageClient(object):
                 self.io_loop.add_callback(callback, response)
             future.add_done_callback(handle_future)
         # Add this future to the mapping
-        self.future_map[message_id] = future
+        self.send_future_map[message_id] = future
 
         self.send_queue.append(frame_msg(msg, header=header))
         return future
