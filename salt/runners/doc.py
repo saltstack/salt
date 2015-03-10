@@ -70,9 +70,8 @@ def execution():
             for v in six.itervalues(ret):
                 docs.update(v)
     except SaltClientError as exc:
-        print(exc)
+        print exc
         return []
-
 
     i = itertools.chain.from_iterable([i.items() for i in six.itervalues(docs)])
     ret = dict(list(i))
@@ -94,7 +93,7 @@ def __list_functions(user=None):
                 'sys.list_functions',
                 timeout=__opts__['timeout'])
     except SaltClientError as client_error:
-        print(client_error)
+        print client_error
         return funcs
 
     for ret in gener:

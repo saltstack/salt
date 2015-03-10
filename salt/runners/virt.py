@@ -305,7 +305,7 @@ def start(name):
                 [name],
                 timeout=600)
     except SaltClientError as client_error:
-        return 'Virtual machine {0} not started: '. format(name, client_error)
+        return 'Virtual machine {0} not started: {1}'. format(name, client_error)
     for comp in cmd_ret:
         ret.update(comp)
     __jid_event__.fire_event({'message': 'Started VM {0}'.format(name)}, 'progress')
