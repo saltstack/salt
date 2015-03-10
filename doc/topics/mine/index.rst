@@ -34,8 +34,10 @@ an empty list must be added:
 Mine Functions Aliases
 ----------------------
 
-Function aliases can be used to provide usage intentions or to allow multiple
-calls of the same function with different arguments.
+Function aliases can be used to provide friendly names, usage intentions or to allow 
+multiple calls of the same function with different arguments.  There is a different
+syntax for passing positional and key-value arguments.  Mixing positional and
+key-value arguments is not supported.
 
 .. versionadded:: 2014.7
 
@@ -47,9 +49,10 @@ calls of the same function with different arguments.
       internal_ip_addrs:
         mine_function: network.ip_addrs
         cidr: 192.168.0.0/16
-      loopback_ip_addrs:
-        mine_function: network.ip_addrs
-        lo: True
+      ip_list:
+        - mine_function: grains.get
+        - ip_interfaces
+        
 
 Mine Interval
 =============
