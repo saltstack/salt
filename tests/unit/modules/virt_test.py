@@ -500,6 +500,43 @@ class VirtTestCase(TestCase):
                 re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
                 interface_attrs['mac'], re.I))
 
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_get_graphics(self):
+        virt.get_xml = MagicMock(return_value='''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <graphics type='vnc' port='5900' autoport='yes' listen='0.0.0.0'>
+                  <listen type='address' address='0.0.0.0'/>
+                </graphics>
+              </devices>
+            </domain>
+        ''')
+        graphics = virt.get_graphics('test-vm')
+        self.assertEqual('vnc', graphics['type'])
+        self.assertEqual('5900', graphics['port'])
+        self.assertEqual('0.0.0.0', graphics['listen'])
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_get_nics(self):
+        virt.get_xml = MagicMock(return_value='''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <interface type='bridge'>
+                  <mac address='ac:de:48:b6:8b:59'/>
+                  <source bridge='br0'/>
+                  <model type='virtio'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+                </interface>
+              </devices>
+            </domain>
+        ''')
+        nics = virt.get_nics('test-vm')
+        nic = nics[nics.keys()[0]]
+        self.assertEqual('bridge', nic['type'])
+        self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
+
 
 if __name__ == '__main__':
     from integration import run_tests
