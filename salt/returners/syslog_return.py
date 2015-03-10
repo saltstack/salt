@@ -13,11 +13,11 @@ To use the syslog returner, append '--return syslog' to the salt command. ex:
 
 .. note::
 
-    Syslog server implementations may have limits on the maximum record size received 
+    Syslog server implementations may have limits on the maximum record size received
     by the client. This may lead to job return data being truncated in the syslog server's
     logs. For example, for rsyslog on RHEL-based systems, the default maximum record size
-    is approximately 2KB (which return data can easily exceed). This is configurable in 
-    rsyslog.conf via the $MaxMessageSize config parameter. Please consult your syslog 
+    is approximately 2KB (which return data can easily exceed). This is configurable in
+    rsyslog.conf via the $MaxMessageSize config parameter. Please consult your syslog
     implmentation's documentation to determine how to adjust this limit.
 
 '''
