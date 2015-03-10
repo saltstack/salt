@@ -20,6 +20,7 @@ import salt.transport
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
+from salt.utils.lazy import verify_fun
 
 log = logging.getLogger(__name__)
 
@@ -101,17 +102,6 @@ class SyncClientMixin(object):
         is passed in as kwargs, will re-use the JID passed in
         '''
         return ClientFuncsDict(self)
-
-    def _verify_fun(self, fun):
-        '''
-        Check that the function passed really exists
-        '''
-        if not fun:
-            err = 'Must specify a function to run'
-            raise salt.exceptions.CommandExecutionError(err)
-        if fun not in self.functions:
-            err = 'Function {0!r} is unavailable'.format(fun)
-            raise salt.exceptions.CommandExecutionError(err)
 
     def master_call(self, **kwargs):
         '''
@@ -274,7 +264,7 @@ class SyncClientMixin(object):
         func_globals['__jid_event__'].fire_event(data, 'new')
 
         try:
-            self._verify_fun(fun)
+            verify_fun(self.functions, fun)
 
             # Inject some useful globals to *all* the funciton's global
             # namespace only once per module-- not per func
