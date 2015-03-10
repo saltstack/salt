@@ -24,6 +24,7 @@ import salt.utils.minions
 import salt.wheel
 import salt.version
 import salt.ext.six as six
+from salt.exceptions import SaltClientError
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -38,13 +39,17 @@ def status(output=True):
 
         salt-run manage.status
     '''
+    ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
-    minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
+    try:
+        minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
+    except SaltClientError as client_error:
+        print(client_error)
+        return ret
 
     key = salt.key.Key(__opts__)
     keys = key.list_keys()
 
-    ret = {}
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     return ret
@@ -76,7 +81,11 @@ def key_regen():
         salt-run manage.key_regen
     '''
     client = salt.client.get_local_client(__opts__['conf_file'])
-    client.cmd('*', 'saltutil.regen_keys')
+    try:
+        client.cmd('*', 'saltutil.regen_keys')
+    except SaltClientError as client_error:
+        print(client_error)
+        return False
 
     for root, _, files in os.walk(__opts__['pki_dir']):
         for fn_ in files:
@@ -264,8 +273,13 @@ def versions():
 
         salt-run manage.versions
     '''
+    ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
-    minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
+    try:
+        minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
+    except SaltClientError as client_error:
+        print(client_error)
+        return ret
 
     labels = {
         -1: 'Minion requires update',
@@ -289,7 +303,6 @@ def versions():
     # Add version of Master to output
     version_status[2] = master_version.string
 
-    ret = {}
     for key in version_status:
         if key == 2:
             ret[labels[key]] = version_status[2]
