@@ -47,7 +47,7 @@ def store_job(opts, load, event=None, mminion=None):
 
     # otherwise, write to the master cache
     fstr = '{0}.returner'.format(opts['master_job_cache'])
-    if load.get('return', {}):
+    if 'fun' not in load and load.get('return', {}):
         ret_ = load.get('return', {})
         if 'fun' in ret_:
             load.update({'fun': ret_['fun']})
