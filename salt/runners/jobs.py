@@ -61,6 +61,12 @@ def active(outputter=None, display_progress=False):
                 ret[jid]['Returned'].append(minion)
 
     if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the jobs.active runner '
+            'has been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
         return {'outputter': outputter, 'data': ret}
     else:
         return ret
