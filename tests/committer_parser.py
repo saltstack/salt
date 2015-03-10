@@ -23,7 +23,7 @@ import datetime
 
 
 class Usage(Exception):
-    def __init__(self, msg):
+    def __init__(self, msg):  # pylint: disable=W0231
         self.msg = 'committer_parser.py [-c | --contributor-detail] - |' \
                     ' <logfilename>\n'
         self.msg += '   : Parse commit log from git and print number of ' \
