@@ -533,6 +533,24 @@ class Halite(multiprocessing.Process):
         halite.start(self.hopts)
 
 
+# TODO: move to utils??
+def iter_transport_opts(opts):
+    '''
+    Yield transport, opts for all master configured transports
+    '''
+    transports = set()
+
+    for transport, opts_overrides in opts.get('transport_opts', {}).iteritems():
+        t_opts = dict(opts)
+        t_opts.update(opts_overrides)
+        t_opts['transport'] = transport
+        transports.add(transport)
+        yield transport, t_opts
+
+    if opts['transport'] not in transports:
+        yield opts['transport'], opts
+
+
 class ReqServer(object):
     '''
     Starts up the master request server, minions send results to this
@@ -567,10 +585,7 @@ class ReqServer(object):
         self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
         req_channels = []
-        for transport, opts_overrides in self.opts['transport_opts'].iteritems():
-            opts = dict(self.opts)
-            opts.update(opts_overrides)
-            opts['transport'] = transport
+        for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
@@ -2081,11 +2096,8 @@ class ClearFuncs(object):
             )
         log.debug('Published command details {0}'.format(load))
 
-        for transport, opts_overrides in self.opts['transport_opts'].iteritems():
+        for transport, opts in iter_transport_opts(self.opts):
             print ('publish something for', transport)
-            opts = dict(self.opts)
-            opts.update(opts_overrides)
-            opts['transport'] = transport
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.publish(load)
         return {
