@@ -267,36 +267,34 @@ class IptablesTestCase(TestCase):
         mock_has = MagicMock(return_value=True)
         mock_not = MagicMock(return_value=False)
 
-        # pylint: disable=E0001
-        with patch.object(iptables, '_has_option', mock_not),\
-                patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)),\
-                patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
-            self.assertTrue(iptables.check(table='filter', chain=mock_chain,
-                                           rule=mock_rule, family='ipv4'))
+        with patch.object(iptables, '_has_option', mock_not):
+            with patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)):
+                with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
+                    self.assertTrue(iptables.check(table='filter', chain=mock_chain,
+                                                   rule=mock_rule, family='ipv4'))
 
         mock_cmd = MagicMock(return_value='')
 
-        with patch.object(iptables, '_has_option', mock_not),\
-                patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)),\
-                patch.dict(iptables.__salt__, {'cmd.run': MagicMock(return_value='')}):
-            self.assertFalse(iptables.check(table='filter', chain=mock_chain,
-                                            rule=mock_rule, family='ipv4'))
+        with patch.object(iptables, '_has_option', mock_not):
+            with patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)):
+                with patch.dict(iptables.__salt__, {'cmd.run': MagicMock(return_value='')}):
+                    self.assertFalse(iptables.check(table='filter', chain=mock_chain,
+                                                    rule=mock_rule, family='ipv4'))
 
-        with patch.object(iptables, '_has_option', mock_has),\
-                patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
-            self.assertTrue(iptables.check(table='filter', chain='INPUT',
-                                           rule=mock_rule, family='ipv4'))
+        with patch.object(iptables, '_has_option', mock_has):
+            with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
+                self.assertTrue(iptables.check(table='filter', chain='INPUT',
+                                               rule=mock_rule, family='ipv4'))
 
         mock_cmd = MagicMock(return_value='-A 0x4d2')
         mock_uuid = MagicMock(return_value=1234)
 
-        with patch.object(iptables, '_has_option', mock_has),\
-                patch.object(uuid, 'getnode', mock_uuid),\
-                patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
-            self.assertTrue(iptables.check(table='filter',
-                                           chain='0x4d2',
-                                           rule=mock_rule, family='ipv4'))
-        # pylint: enable=E0001
+        with patch.object(iptables, '_has_option', mock_has):
+            with patch.object(uuid, 'getnode', mock_uuid):
+                with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
+                    self.assertTrue(iptables.check(table='filter',
+                                                   chain='0x4d2',
+                                                   rule=mock_rule, family='ipv4'))
 
     # 'check_chain' function tests: 1
 
