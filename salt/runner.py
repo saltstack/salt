@@ -16,6 +16,7 @@ import salt.utils.args
 import salt.utils.event
 from salt.client import mixins
 from salt.output import display_output
+from salt.utils.lazy import verify_fun
 
 log = logging.getLogger(__name__)
 
@@ -132,10 +133,9 @@ class Runner(RunnerClient):
         if self.opts.get('doc', False):
             self.print_docs()
         else:
+            low = {'fun': self.opts['fun']}
             try:
-                low = {'fun': self.opts['fun']}
-                if not low['fun']:
-                    raise salt.exceptions.SaltClientError('\nMust specify a runner to run!\nex: salt-run manage.up\n')
+                verify_fun(self.functions, low['fun'])
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
                     salt.utils.args.parse_input(self.opts['arg']),
@@ -158,16 +158,15 @@ class Runner(RunnerClient):
                 # otherwise run it in the main process
                 async_pub = self._gen_async_pub()
                 ret = self._proc_function(self.opts['fun'],
-                                           low,
-                                           user,
-                                           async_pub['tag'],
-                                           async_pub['jid'],
-                                           False,  # Don't daemonize
-                                           )
+                                          low,
+                                          user,
+                                          async_pub['tag'],
+                                          async_pub['jid'],
+                                          False)  # Don't daemonize
             except salt.exceptions.SaltException as exc:
-                ret = str(exc)
+                ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
-                    print(ret)
+                    salt.output.display_output(ret, 'nested', self.opts)
                 return ret
             log.debug('Runner return: {0}'.format(ret))
             return ret
