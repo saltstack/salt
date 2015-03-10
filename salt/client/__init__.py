@@ -1062,7 +1062,13 @@ class LocalClient(object):
         # create the iterator-- since we want to get anyone in the middle
         event_iter = self.get_event_iter_returns(jid, minions, timeout=timeout)
 
-        data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        try:
+            data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        except Exception as exc:
+            raise SaltClientError('Returner {0} could not fetch jid data. '
+                                  'Exception details: {1}'.format(
+                                      self.opts['master_job_cache'],
+                                      exc))
         for minion in data:
             m_data = {}
             if u'return' in data[minion]:
@@ -1157,9 +1163,15 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-            log.warning('jid does not exist')
-            return ret
+        try:
+            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
+                log.warning('jid does not exist')
+                return ret
+        except Exception as exc:
+            raise SaltClientError('Load could not be retreived from '
+                                  'returner {0}. Exception details: {1}'.format(
+                                      self.opts['master_job_cache'],
+                                      exc))
         # Wait for the hosts to check in
         while True:
             # Process events until timeout is reached or all minions have returned
