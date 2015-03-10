@@ -27,11 +27,21 @@ try:
 except ImportError:
     pass
 
-try:
-    import systemd.daemon
-    HAS_PYTHON_SYSTEMD = True
-except ImportError:
-    HAS_PYTHON_SYSTEMD = False
+
+def notify_systemd():
+    '''
+    Notify systemd that this process has started
+    '''
+    try:
+        import systemd.daemon
+    except ImportError:
+        return False
+    if systemd.daemon.booted():
+        try:
+            return systemd.daemon.notify('READY=1')
+        except SystemError:
+            # Daemon was not started by systemd
+            pass
 
 
 def set_pidfile(pidfile, user):
@@ -256,13 +266,6 @@ class ProcessManager(object):
 
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
-
-        try:
-            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
-                systemd.daemon.notify('READY=1')
-        except SystemError:
-            # Daemon wasn't started by systemd
-            pass
 
         while True:
             try:

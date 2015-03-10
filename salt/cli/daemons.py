@@ -130,6 +130,7 @@ class Master(parsers.MasterOptionParser):
             self.master = salt.daemons.flo.IofloMaster(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
+        salt.utils.process.notify_systemd()
 
     def start(self):
         '''
