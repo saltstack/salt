@@ -5,6 +5,7 @@ A collection of mixins useful for the various *Client interfaces
 from __future__ import print_function
 from __future__ import absolute_import
 import collections
+import copy
 import logging
 import traceback
 import multiprocessing
@@ -247,15 +248,15 @@ class SyncClientMixin(object):
                 'user': low.get('__user__', 'UNKNOWN'),
                 }
 
-        # Append kwargs to the data map. This is particularly important 
+        # Append kwargs to the data map. This is particularly important
         # so as to include 'outputter' in the map.
         # TODO: should this be done here or just before 'ret' event is fired?
         if 'kwargs' in low:
-            kwargs = low['kwargs']
+            kwargs = copy.deepcopy(low['kwargs'])
             for kwargs_key, kwargs_value in kwargs.items():
                 # Do not overwrite fun, jid, or user.
-                if kwargs_key not in ['fun', 'jid', 'user']:
-                    data[kwargs_key] = kwargs.pop(kwargs_key)
+                if kwargs_key not in ('fun', 'jid', 'user'):
+                    data[kwargs_key] = kwargs[kwargs_key]
 
         event = salt.utils.event.get_event(
                 'master',
@@ -264,16 +265,20 @@ class SyncClientMixin(object):
                 opts=self.opts,
                 listen=False)
 
-        namespaced_event = salt.utils.event.NamespacedEvent(event,
-                                                            tag,
-                                                            print_func=self.print_async_event if hasattr(self, 'print_async_event') else None)
+        namespaced_event = salt.utils.event.NamespacedEvent(
+            event,
+            tag,
+            print_func=self.print_async_event
+                       if hasattr(self, 'print_async_event')
+                       else None
+        )
         # TODO: document these, and test that they exist
         # TODO: Other things to inject??
         func_globals = {'__jid__': jid,
                         '__user__': data['user'],
                         '__tag__': tag,
-                        # weak ref to avoid the Exception in interpreter teardown
-                        # of event
+                        # weak ref to avoid the Exception in interpreter
+                        # teardown of event
                         '__jid_event__': weakref.proxy(namespaced_event),
                         }
 
@@ -282,8 +287,8 @@ class SyncClientMixin(object):
         try:
             self._verify_fun(fun)
 
-            # Inject some useful globals to *all* the funciton's global namespace
-            # only once per module-- not per func
+            # Inject some useful globals to *all* the funciton's global
+            # namespace only once per module-- not per func
             completed_funcs = []
             for mod_name in self.functions:
                 mod, _ = mod_name.split('.', 1)
@@ -293,23 +298,31 @@ class SyncClientMixin(object):
                 for global_key, value in func_globals.iteritems():
                     self.functions[mod_name].__globals__[global_key] = value
 
-            # There are some descrepencies of what a "low" structure is
-            # in the publisher world it is a dict including stuff such as jid,
-            # fun, arg (a list of args, with kwargs packed in). Historically
-            # this particular one has had no "arg" and just has had all the
-            # kwargs packed into the top level object. The plan is to move away
-            # from that since the caller knows what is an arg vs a kwarg, but
-            # while we make the transition we will load "kwargs" using format_call
-            # if there are no kwargs in the low object passed in
+            # There are some descrepencies of what a "low" structure is in the
+            # publisher world it is a dict including stuff such as jid, fun,
+            # arg (a list of args, with kwargs packed in). Historically this
+            # particular one has had no "arg" and just has had all the kwargs
+            # packed into the top level object. The plan is to move away from
+            # that since the caller knows what is an arg vs a kwarg, but while
+            # we make the transition we will load "kwargs" using format_call if
+            # there are no kwargs in the low object passed in
             f_call = None
             if 'args' not in low:
-                f_call = salt.utils.format_call(self.functions[fun], low, expected_extra_kws=CLIENT_INTERNAL_KEYWORDS)
+                f_call = salt.utils.format_call(
+                    self.functions[fun],
+                    low,
+                    expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
+                )
                 args = f_call.get('args', ())
             else:
                 args = low['args']
             if 'kwargs' not in low:
                 if f_call is None:
-                    f_call = salt.utils.format_call(self.functions[fun], low, expected_extra_kws=CLIENT_INTERNAL_KEYWORDS)
+                    f_call = salt.utils.format_call(
+                        self.functions[fun],
+                        low,
+                        expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
+                    )
                 kwargs = f_call.get('kwargs', {})
 
                 # throw a warning for the badly formed low data if we found
@@ -440,7 +453,7 @@ class AsyncClientMixin(object):
         if suffix in ('new', ):
             return
 
-        # --out/output and outputer= are synonyms.
+        # --out/output and outtputer= are synonyms.
         # --out/output wins if both are defined
         # Default to the outputter in the event
         outputter = event.get('outputter', None)
