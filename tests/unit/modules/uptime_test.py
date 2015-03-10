@@ -27,7 +27,7 @@ else:
 
 class RequestMock(Mock):
     ''' Request Mock'''
-    
+
     def get(self, *args, **kwargs):
         return RequestResponseMock()
 
@@ -44,7 +44,8 @@ class RequestMock(Mock):
 class RequestResponseMock(Mock):
 
     def json(self):
-        return [{'url':'http://example.org', '_id': 1234},]
+        return [{'url':'http://example.org',
+                 '_id': 1234}, ]
 
 class RequestPutResponseMock(Mock):
 
