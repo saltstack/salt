@@ -138,7 +138,7 @@ def main(argv=None):
             if len(args) < 1:
                 raise Usage('committer_parser.py needs a filename or \'-\' to read from stdin')
         except getopt.error as msg:
-             raise Usage(msg)
+            raise Usage(msg)
     except Usage as err:
         print(err.msg, file=sys.stderr)
         return 2
