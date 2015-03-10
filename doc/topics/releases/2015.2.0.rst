@@ -36,6 +36,8 @@ Misc Fixes/Additions
   the :py:mod:`cmd module <salt.cmd.cmdmod>`. (:issue:`21122`)
 - Fixed bug where TCP keepalive was not being sent on the defined interval on
   the return port (4506) from minion to master. (:issue: `21465`)
+- LocalClient may now optionally raise SaltClientError exceptions. If using
+  this class directly, checking for and handling this exception is recommended.
 
 Deprecations
 ============
