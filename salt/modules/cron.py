@@ -144,17 +144,11 @@ def _render_tab(lst):
     return ret
 
 
-def _get_cron_cmdstr(user, path):
+def _get_cron_cmdstr(path):
     '''
-    Returns a platform-specific format string, to be used to build a crontab
-    command.
+    Returns a format string, to be used to build a crontab command.
     '''
-    if __grains__.get('os_family') == 'Solaris':
-        return 'su - {0} -c "crontab {1}"'.format(user, path)
-    elif __grains__.get('os_family') == 'AIX':
-        return 'su {0} -c "crontab {1}"'.format(user, path)
-    else:
-        return 'crontab -u {0} {1}'.format(user, path)
+    return 'crontab {0}'.format(path)
 
 
 def write_cron_file(user, path):
@@ -167,8 +161,8 @@ def write_cron_file(user, path):
 
         salt '*' cron.write_cron_file root /tmp/new_cron
     '''
-    return __salt__['cmd.retcode'](_get_cron_cmdstr(user, path),
-                                   python_shell=False) == 0
+    return __salt__['cmd.retcode'](_get_cron_cmdstr(path),
+                                   python_shell=False, runas=user) == 0
 
 
 def write_cron_file_verbose(user, path):
@@ -181,8 +175,8 @@ def write_cron_file_verbose(user, path):
 
         salt '*' cron.write_cron_file_verbose root /tmp/new_cron
     '''
-    return __salt__['cmd.run_all'](_get_cron_cmdstr(user, path),
-                                   python_shell=False)
+    return __salt__['cmd.run_all'](_get_cron_cmdstr(path),
+                                   python_shell=False, runas=user)
 
 
 def _write_cron_lines(user, lines):
@@ -195,8 +189,8 @@ def _write_cron_lines(user, lines):
     if __grains__.get('os_family') in ('Solaris', 'AIX') and user != "root":
         __salt__['cmd.run']('chown {0} {1}'.format(user, path),
                             python_shell=False)
-    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(user, path),
-                                  python_shell=False)
+    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path),
+                                  python_shell=False, runas=user)
     os.remove(path)
     return ret
 
