@@ -38,7 +38,7 @@ def _valid_composer(composer):
 
 def did_composer_install(dir):
     '''
-    Test to see if the composer.lock file exists in this directory
+    Test to see if the vendor directory exists in this directory
 
     dir
         Directory location of the composer.json file
@@ -49,7 +49,7 @@ def did_composer_install(dir):
 
         salt '*' composer.did_composer_install /var/www/application
     '''
-    lockFile = "{0}/composer.lock".format(dir)
+    lockFile = "{0}/vendor".format(dir)
     if os.path.exists(lockFile):
         return True
     return False
@@ -67,7 +67,8 @@ def _run_composer(action,
             optimize=None,
             no_dev=None,
             quiet=False,
-            composer_home='/root'):
+            composer_home='/root',
+            extra_flags=None):
     '''
     Run PHP's composer with a specific action.
 
@@ -117,6 +118,9 @@ def _run_composer(action,
 
     composer_home
         $COMPOSER_HOME environment variable
+
+    extra_flags
+        None, or a string containing extra flags to pass to composer.
     '''
     if composer is not None:
         if php is None:
@@ -138,14 +142,11 @@ def _run_composer(action,
         raise SaltInvocationError('{0!r} is required for {1!r}'
                                   .format('action', 'composer._run_composer'))
 
-    # If we're running an update, and if composer.lock does not exist, then
-    # we really need to run install instead.
-    if action == 'update':
-        if not did_composer_install(dir):
-            action = 'install'
-
     # Base Settings
     cmd = '{0} {1} {2}'.format(composer, action, '--no-interaction --no-ansi')
+
+    if extra_flags is not None:
+        cmd = '{0} {1}'.format(cmd, extra_flags)
 
     # If php is set, prepend it
     if php is not None:
@@ -345,6 +346,7 @@ def update(dir,
             no_dev=True optimize=True
     '''
     result = _run_composer('update',
+                           extra_flags='--no-progress',
                            dir=dir,
                            composer=composer,
                            php=php,
@@ -397,6 +399,7 @@ def selfupdate(composer=None,
         salt '*' composer.selfupdate
     '''
     result = _run_composer('selfupdate',
+                           extra_flags='--no-progress',
                            composer=composer,
                            php=php,
                            runas=runas,
