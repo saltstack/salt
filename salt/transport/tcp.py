@@ -124,7 +124,11 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
         host, port = parse.netloc.rsplit(':', 1)
         self.master_addr = (host, int(port))
 
-        self.io_loop = tornado.ioloop.IOLoop()
+        if 'io_loop' in kwargs:
+            self.io_loop = kwargs['io_loop']
+        else:
+            self.io_loop = tornado.ioloop.IOLoop()
+
         self.message_client = SaltMessageClient(host, int(port), io_loop=self.io_loop)
 
     def _package_load(self, load):

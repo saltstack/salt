@@ -576,13 +576,18 @@ class Minion(MinionBase):
     and loads all of the functions into the minion
     '''
 
-    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
         self._running = None
         self.win_proc = []
         self.loaded_base_name = loaded_base_name
+
+        if io_loop is None:
+            self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        else:
+            self.io_loop = io_loop
 
         # Warn if ZMQ < 3.2
         if HAS_ZMQ:
@@ -764,7 +769,7 @@ class Minion(MinionBase):
                     self.opts['master_list'] = local_masters
 
                 try:
-                    self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
+                    self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe, io_loop=self.io_loop)
                     conn = True
                     break
                 except SaltClientError:
@@ -786,7 +791,7 @@ class Minion(MinionBase):
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
-            self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
+            self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe, io_loop=self.io_loop)
             # TODO: remove? What is this used for...
             # TODO: re-enable
             #self.tok = self.pub_channel.auth.gen_token('salt')
@@ -1462,10 +1467,7 @@ class Minion(MinionBase):
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
                         del self.pub_channel
-                        del self.poller
-                        self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe)
-                        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
-                        self.poller.register(self.epull_sock, zmq.POLLIN)
+                        self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe, io_loop=self.io_loop)
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
 
@@ -1536,12 +1538,7 @@ class Minion(MinionBase):
 
         log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
 
-        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-
-        # TODO: remove poller
-        #self.poller.register(self.event_publisher.socket, zmq.POLLIN)
-        #self.poller.register(self.pub_channel.socket, zmq.POLLIN)
-
+        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
 
@@ -1602,12 +1599,8 @@ class Minion(MinionBase):
         for name, periodic_cb in periodic_callbacks.iteritems():
             periodic_cb.start()
 
-        # TODO: remove...
-        self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, io_loop=self.io_loop)
-
-        # sub
+        # add handler to subscriber
         self.pub_channel.on_recv(self._handle_payload)
-        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
 
         self.io_loop.start()
 
