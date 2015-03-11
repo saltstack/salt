@@ -40,6 +40,7 @@ import copy
 import logging
 import pprint
 import time
+import inspect
 
 # Import salt libs
 import salt.config as config
@@ -1081,38 +1082,6 @@ def list_storage_services(conn=None, call=None):
     return ret
 
 
-def list_disks(conn=None, call=None):
-    '''
-    Destroy a VM
-    '''
-    if call != 'function':
-        raise SaltCloudSystemExit(
-            ('The list_disks function must be called '
-             'with -f or --function.')
-        )
-
-    if not conn:
-        conn = get_conn()
-
-    ret = {}
-    disks = conn.list_disks()
-    for disk in disks.disks:
-        ret[disk.name] = {
-            'affinity_group': disk.affinity_group,
-            'attached_to': disk.attached_to,
-            'has_operating_system': disk.has_operating_system,
-            'is_corrupted': disk.is_corrupted,
-            'label': disk.label,
-            'location': disk.location,
-            'logical_disk_size_in_gb': disk.logical_disk_size_in_gb,
-            'media_link': disk.media_link,
-            'name': disk.name,
-            'os': disk.os,
-            'source_image_name': disk.source_image_name,
-        }
-    return ret
-
-
 def get_operation_status(kwargs=None, conn=None, call=None):
     '''
     Get Operation Status, based on a request ID
@@ -1126,11 +1095,11 @@ def get_operation_status(kwargs=None, conn=None, call=None):
             'The show_instance function must be called with -f or --function.'
         )
 
-    if not conn:
-        conn = get_conn()
-
     if 'id' not in kwargs:
         raise SaltCloudSystemExit('A request ID must be specified as "id"')
+
+    if not conn:
+        conn = get_conn()
 
     data = conn.get_operation_status(kwargs['id'])
     ret = {
@@ -1144,4 +1113,97 @@ def get_operation_status(kwargs=None, conn=None, call=None):
             'message': data.error.message,
         }
 
+    return ret
+
+
+def list_disks(kwargs=None, conn=None, call=None):
+    '''
+    List disks associated with the account
+
+    CLI Example::
+
+        salt-cloud -f list_disks my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_disks function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_disks()
+    ret = {}
+    for image in data.disks:
+        ret[image.name] = object_to_dict(image)
+    return ret
+
+
+def get_disk(kwargs=None, conn=None, call=None):
+    '''
+    Return information about a disk
+
+    CLI Example::
+
+        salt-cloud -f list_disks my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_disk function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    data = conn.get_disk(kwargs['name'])
+    return object_to_dict(data)
+
+
+# For consistency with other providers
+show_disk = get_disk
+
+
+def delete_disk(kwargs=None, conn=None, call=None):
+    '''
+    Delete a specific disk associated with the account
+
+    CLI Examples::
+
+        salt-cloud -f delete_disk my-azure name=my_disk
+        salt-cloud -f delete_disk my-azure name=my_disk delete_vhd=True
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_disk function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_disk(kwargs['name'], kwargs.get('delete_vhd', False))
+        return {'Success': 'The disk was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        pprint.pprint(dir(exc))
+        return {'Error': exc.message}
+
+
+def object_to_dict(obj):
+    '''
+    Convert an object to a dictionary
+    '''
+    ret = {}
+    for item in dir(obj):
+        if item.startswith('__'):
+            continue
+        if inspect.isclass(obj.__dict__[item]):
+            ret[item] = object_to_dict(obj.__dict__[item])
+        else:
+            ret[item] = obj.__dict__[item]
     return ret
