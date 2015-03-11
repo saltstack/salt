@@ -1388,9 +1388,9 @@ def exec_code(lang, code, cwd=None):
     with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
     cmd = [lang, codefile]
-    ret = run(cmd, cwd=cwd, python_shell=False)
+    stdout = run(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
-    return ret
+    return stdout
 
 
 def tty(device, echo=None):
