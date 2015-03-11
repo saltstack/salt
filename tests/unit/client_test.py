@@ -12,7 +12,7 @@ ensure_in_syspath('../')
 # Import Salt libs
 import integration
 from salt import client
-from salt.exceptions import EauthAuthenticationError, SaltInvocationError
+from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -60,9 +60,7 @@ class LocalClientTestCase(TestCase,
     def test_pub(self):
         # Make sure we cleanly return if the publisher isn't running
         with patch('os.path.exists', return_value=False):
-            ret = self.client.pub('*', 'test.ping')
-            expected_ret = {'jid': '0', 'minions': []}
-            self.assertDictEqual(ret, expected_ret)
+            self.assertRaises(SaltClientError, lambda: self.client.pub('*', 'test.ping'))
 
         # Check nodegroups behavior
         with patch('os.path.exists', return_value=True):
