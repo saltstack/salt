@@ -344,6 +344,7 @@ def disabled(name):
             return True
     return False
 
+
 def create(name,
            binpath,
            DisplayName=None,
@@ -363,7 +364,7 @@ def create(name,
     name: Specifies the service name returned by the getkeyname operation
     binpath: Specifies the path to the service binary file, backslashes must be escaped
         - eg: C:\\path\\to\\binary.exe
-    
+
     Optional parameters:
     DisplayName: the name to be displayed in the service manager
     type: Specifies the service type, default is own
@@ -398,7 +399,7 @@ def create(name,
 
         salt '*' service.create <service name> <path to exe> display_name='<display name>'
     '''
-        
+
     cmd = [
            'sc',
            'create',
@@ -408,18 +409,19 @@ def create(name,
            'start=', start,
            'error=', error,
            ]
-    if DisplayName != None:
+    if DisplayName is not None:
         cmd.extend(['DisplayName=', DisplayName])
-    if group != None:
+    if group is not None:
         cmd.extend(['group=', group])
-    if depend != None:
+    if depend is not None:
         cmd.extend(['depend=', depend])
-    if obj != None:
+    if obj is not None:
         cmd.extend(['obj=', obj])
-    if password != None:
+    if password is not None:
         cmd.extend(['password=', password])
-    
+
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
+
 
 def delete(name):
     '''
@@ -433,3 +435,4 @@ def delete(name):
     '''
     cmd = ['sc', 'delete', name]
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
+
