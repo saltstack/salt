@@ -12,6 +12,7 @@ import salt.client
 import salt.runner
 import salt.wheel
 import salt.ext.six as six
+from salt.exceptions import SaltClientError
 
 
 def __virtual__():
@@ -64,9 +65,13 @@ def execution():
     client = salt.client.get_local_client(__opts__['conf_file'])
 
     docs = {}
-    for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
-        for v in six.itervalues(ret):
-            docs.update(v)
+    try:
+        for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
+            for v in six.itervalues(ret):
+                docs.update(v)
+    except SaltClientError as exc:
+        print exc
+        return []
 
     i = itertools.chain.from_iterable([i.items() for i in six.itervalues(docs)])
     ret = dict(list(i))
@@ -82,10 +87,15 @@ def __list_functions(user=None):
     '''
     client = salt.client.get_local_client(__opts__['conf_file'])
     funcs = {}
-    gener = client.cmd_iter(
-            '*',
-            'sys.list_functions',
-            timeout=__opts__['timeout'])
+    try:
+        gener = client.cmd_iter(
+                '*',
+                'sys.list_functions',
+                timeout=__opts__['timeout'])
+    except SaltClientError as client_error:
+        print client_error
+        return funcs
+
     for ret in gener:
         funcs.update(ret)
     if not user:
