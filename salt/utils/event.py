@@ -170,7 +170,7 @@ class SaltEvent(object):
         self.pending_events = []
         # since ZMQ connect()  has no guarantees about the socket actually being
         # connected this is a hack to attempt to do so.
-        self.fire_event({}, '_event_client_startup', 0)
+        self.fire_event({}, tagify('event/new_client'), 0)
         self.get_event(wait=1)
 
     def __load_uri(self, sock_dir, node):
