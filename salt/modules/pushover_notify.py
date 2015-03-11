@@ -25,7 +25,6 @@ import requests
 from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)

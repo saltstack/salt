@@ -119,7 +119,6 @@ def _get_options(ret=None):
                      'expire': 'expire',
                      'retry': 'retry',
                      'sound': 'sound',
-                     'api_version': 'api_version'
                      }
 
     _options = salt.returners.get_returner_options(__virtualname__,
