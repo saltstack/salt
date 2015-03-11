@@ -1885,7 +1885,7 @@ strategy between different sources. It accepts 3 values:
 
 * aggregate:
 
-  instructs aggregation of elements between sources that use the #!yamlex rendered.
+  instructs aggregation of elements between sources that use the #!yamlex renderer.
 
   For example, these two documents:
 

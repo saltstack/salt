@@ -2804,7 +2804,7 @@ class BaseHighState(object):
                     if state:
                         self.merge_included_states(highstate, state, errors)
                     for i, error in enumerate(errors[:]):
-                        if 'is not available on the salt master' in error:
+                        if 'is not available' in error:
                             # match SLS foobar in environment
                             this_sls = 'SLS {0} in saltenv'.format(
                                 sls_match)
