@@ -5,7 +5,7 @@ Send a message to Slack
 
 This state is useful for sending messages to Slack during state runs.
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 
 .. code-block:: yaml
 
