@@ -487,6 +487,7 @@ def install(name=None,
             fromrepo=None,
             pkgs=None,
             sources=None,
+            downloadonly=None,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to run 'zypper refresh'
@@ -633,6 +634,9 @@ def install(name=None,
     while downgrades:
         cmd = ['zypper', '--non-interactive', 'install', '--name',
                '--auto-agree-with-licenses', '--force']
+        if downloadonly:
+            cmd.append('--download-only')
+
         if fromrepo:
             cmd.extend(fromrepoopt)
         cmd.extend(downgrades[:500])
