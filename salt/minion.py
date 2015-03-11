@@ -1576,7 +1576,6 @@ class Minion(MinionBase):
             )
 
         periodic_callbacks = {}
-
         # schedule the stuff that runs every interval
         ping_interval = self.opts.get('ping_interval', 0) * 60
         if ping_interval > 0:
@@ -1594,6 +1593,11 @@ class Minion(MinionBase):
             if beacons:
                 self._fire_master(events=beacons)
         periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
+
+        # TODO: actually listen to the return and change period
+        def handle_schedule():
+            self.process_schedule(self, loop_interval)
+        periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
 
         # start all the other callbacks
         for name, periodic_cb in periodic_callbacks.iteritems():
