@@ -61,10 +61,10 @@ def installed(name,
               optimize=None,
               no_dev=None,
               quiet=False,
-              composer_home='/root'):
+              composer_home='/root',
+              always_check=True):
     '''
-    Verify that composer has installed the latest packages give a
-    ``composer.json`` and ``composer.lock`` file in a directory.
+    Verify that the correct versions of composer dependencies are present.
 
     dir
         Directory location of the composer.json file.
@@ -106,12 +106,19 @@ def installed(name,
 
     composer_home
         $COMPOSER_HOME environment variable
+
+    always_check
+        If True, _always_ run `composer install` in the directory.  This is the
+        default behavior.  If False, only run `composer install` if there is no
+        vendor directory present.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
+    did_install = __salt__['composer.did_composer_install'](name)
+
     # Check if composer.lock exists, if so we already ran `composer install`
     # and we don't need to do it again
-    if __salt__['composer.did_composer_install'](name):
+    if always_check is False and did_install:
         ret['result'] = True
         ret['comment'] = 'Composer already installed this directory'
         return ret
@@ -119,9 +126,15 @@ def installed(name,
     # The state of the system does need to be changed. Check if we're running
     # in ``test=true`` mode.
     if __opts__['test'] is True:
+
+        if did_install is True:
+            install_status = ""
+        else:
+            install_status = "not "
+
         ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
         ret['changes'] = {
-            'old': 'composer install has not yet been run in {0}'.format(name),
+            'old': 'composer install has {0}been run in {1}'.format(install_status, name),
             'new': 'composer install will be run in {0}'.format(name)
         }
         ret['result'] = None
