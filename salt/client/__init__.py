@@ -22,6 +22,7 @@ The data structure needs to be:
 from __future__ import print_function
 from __future__ import absolute_import
 import os
+import sys
 import time
 import logging
 import errno
@@ -42,7 +43,8 @@ import salt.utils.verify
 import salt.utils.jid
 import salt.syspaths as syspaths
 from salt.exceptions import (
-    EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError, SaltClientError
+    EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError,
+    SaltClientError
 )
 import salt.ext.six as six
 
@@ -263,15 +265,20 @@ class LocalClient(object):
         # Subscribe to all events and subscribe as early as possible
         self.event.subscribe(jid)
 
-        pub_data = self.pub(
-            tgt,
-            fun,
-            arg,
-            expr_form,
-            ret,
-            jid=jid,
-            timeout=self._get_timeout(timeout),
-            **kwargs)
+        try:
+            pub_data = self.pub(
+                tgt,
+                fun,
+                arg,
+                expr_form,
+                ret,
+                jid=jid,
+                timeout=self._get_timeout(timeout),
+                **kwargs)
+        except SaltClientError:
+            # Re-raise error with specific message
+            print('The salt master could not be contacted. Is master running?')
+            sys.exit(1)
 
         return self._check_pub_data(pub_data)
 
@@ -1412,7 +1419,7 @@ class LocalClient(object):
                 'Unable to connect to the salt master publisher at '
                 '{0}'.format(self.opts['sock_dir'])
             )
-            return {'jid': '0', 'minions': []}
+            raise SaltClientError
 
         payload_kwargs = self._prep_pub(
                 tgt,

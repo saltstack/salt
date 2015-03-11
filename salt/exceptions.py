@@ -144,6 +144,11 @@ class SaltClientTimeout(SaltException):
         super(SaltClientTimeout, self).__init__(msg, *args, **kwargs)
         self.jid = jid
 
+class SaltClientError(SaltException):
+    '''
+    Thrown when the salt client encounters an unrecoverable error
+    '''
+
 
 class SaltReqTimeoutError(SaltException):
     '''
