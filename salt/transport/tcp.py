@@ -212,14 +212,6 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
                                                 int(self.auth.creds['publish_port']),
                                                 io_loop=self.io_loop)
 
-    @property
-    def socket(self):
-        return self._socket
-
-    @property
-    def poll_key(self):
-        return self._socket.fileno()
-
     def on_recv(self, callback):
         '''
         Register an on_recv callback
@@ -398,8 +390,8 @@ class SaltMessageClient(object):
         if not self._stream:
             self._stream = yield self._tcp_client.connect(self.host, self.port)
 
-        self.io_loop.add_callback(self._stream_send)
-        self.io_loop.add_callback(self._stream_return)
+        self.io_loop.spawn_callback(self._stream_send)
+        self.io_loop.spawn_callback(self._stream_return)
 
     @tornado.gen.coroutine
     def _stream_return(self):

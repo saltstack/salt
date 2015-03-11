@@ -155,6 +155,11 @@ class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transp
         self.opts = opts
         self.ttype = 'zeromq'
 
+        if 'io_loop' in kwargs:
+            self.io_loop = kwargs['io_loop']
+        else:
+            self.io_loop = tornado.ioloop.IOLoop()
+
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
 
         self.auth = salt.crypt.SAuth(self.opts)
@@ -245,6 +250,16 @@ class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transp
                              'message from master').format(len(messages_len)))
         return self._decode_payload(payload)
 
+    def on_recv(self, callback):
+        '''
+        Register a callback for recieved messages (that we didn't initiate)
+        '''
+        self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=self.io_loop)
+        def wrap_callback(messages):
+            payload = self._decode_messages(messages)
+            callback(payload)
+        self.stream.on_recv(wrap_callback)
+
     def recv(self, timeout=0):
         '''
         Get a pub job, with an optional timeout
@@ -256,15 +271,6 @@ class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transp
             return self._decode_messages(messages)
         else:
             return None
-
-    @property
-    def socket(self):
-        return self._socket
-
-    @property
-    def poll_key(self):
-        return self.socket
-
 
 class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel):
     def zmq_device(self):

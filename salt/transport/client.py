@@ -84,23 +84,15 @@ class PubChannel(object):
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
+    def on_recv(self, callback):
+        '''
+        When jobs are recieved pass them (decoded) to callback
+        '''
+        raise NotImplementedError()
+
     def recv(self, timeout=0):
         '''
         Get a pub job, with an optional timeout (0==forever)
-        '''
-        raise NotImplementedError()
-
-    @property
-    def socket(self):
-        '''
-        Return a socket (or fd) which can be used for poll mechanisms
-        '''
-        raise NotImplementedError()
-
-    @property
-    def poll_key(self):
-        '''
-        Return the representation that the poller will return
         '''
         raise NotImplementedError()
 
