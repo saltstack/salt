@@ -512,6 +512,9 @@ def install(name=None,
     fromrepo
         Specify a package repository to install from.
 
+    downloadonly
+        Only download the packages, do not install.
+
     version
         Can be either a version number, or the combination of a comparison
         operator (<, >, <=, >=, =) and a version number (ex. '>1.2.3-4').
