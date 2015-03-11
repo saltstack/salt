@@ -1313,7 +1313,8 @@ def replace(path,
 
                     # Keep track of show_changes here, in case the file isn't
                     # modified
-                    if show_changes:
+                    if show_changes or append_if_not_found or \
+                       prepend_if_not_found:
                         orig_file.append(line)
                         new_file.append(result)
 
