@@ -20,9 +20,9 @@ import logging
 import yaml
 import jinja2
 import jinja2.exceptions
+from xml.dom import minidom
 try:
     import libvirt
-    from xml.dom import minidom
     HAS_ALL_IMPORTS = True
 except ImportError:
     HAS_ALL_IMPORTS = False
