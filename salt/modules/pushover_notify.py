@@ -1,136 +1,35 @@
 # -*- coding: utf-8 -*-
 '''
-Return salt data via pushover (http://www.pushover.net)
+Module for sending messages to Pushover (https://www.pushover.net)
 
 .. versionadded:: Boron
 
-The following fields can be set in the minion conf file::
+:configuration: This module can be used by either passing an api key and version
+    directly or by specifying both in a configuration profile in the salt
+    master/minion config.
 
-    pushover.user (required)
-    pushover.token (required)
-    pushover.title (optional)
-    pushover.device (optional)
-    pushover.priority (optional)
-    pushover.expire (optional)
-    pushover.retry (optional)
-    pushover.profile (optional)
+    For example:
 
-Alternative configuration values can be used by prefacing the configuration.
-Any values not found in the alternative configuration will be pulled from
-the default location::
+    .. code-block:: yaml
 
-    alternative.pushover.user
-    alternative.pushover.token
-    alternative.pushover.title
-    alternative.pushover.device
-    alternative.pushover.priority
-    alternative.pushover.expire
-    alternative.pushover.retry
-
-PushOver settings may also be configured as::
-
-    pushover:
-        user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        title: Salt Returner
-        device: phone
-        priority: -1
-        expire: 3600
-        retry: 5
-
-    alternative.pushover:
-        user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        title: Salt Returner
-        device: phone
-        priority: 1
-        expire: 4800
-        retry: 2
-
-    pushover_profile:
-        token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-    pushover:
-        user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        profile: pushover_profile
-
-    alternative.pushover:
-        user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        profile: pushover_profile
-
-  To use the PushOver returner, append '--return pushover' to the salt command. ex:
-
-  .. code-block:: bash
-
-    salt '*' test.ping --return pushover
-
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
-
-    salt '*' test.ping --return pushover --return_config alternative
+        pushover:
+          token: abAHuZyCLtdH8P4zhmFZmgUHUsv1ei8
 '''
-from __future__ import absolute_import
 
 # Import Python libs
-import pprint
+from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
 import requests
 from requests.exceptions import ConnectionError
-# pylint: disable=import-error
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
-# pylint: enable=import-error
-
-# Import Salt Libs
-import salt.returners
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
-
 __virtualname__ = 'pushover'
-
-
-def _get_options(ret=None):
-    '''
-    Get the pushover options from salt.
-    '''
-
-    defaults = {'priority': '0'}
-
-    attrs = {'pushover_profile': 'profile',
-             'user': 'user',
-             'device': 'device',
-             'token': 'token',
-             'priority': 'priority',
-             'title': 'title',
-             'api_version': 'api_version',
-             'expire': 'expire',
-             'retry': 'retry',
-             'sound': 'sound',
-             }
-
-    profile_attr = 'pushover_profile'
-
-    profile_attrs = {'user': 'user',
-                     'device': 'device',
-                     'token': 'token',
-                     'priority': 'priority',
-                     'title': 'title',
-                     'api_version': 'api_version',
-                     'expire': 'expire',
-                     'retry': 'retry',
-                     'sound': 'sound',
-                     'api_version': 'api_version'
-                     }
-
-    _options = salt.returners.get_returner_options(__virtualname__,
-                                                   ret,
-                                                   attrs,
-                                                   profile_attr=profile_attr,
-                                                   profile_attrs=profile_attrs,
-                                                   __salt__=__salt__,
-                                                   __opts__=__opts__,
-                                                   defaults=defaults)
-    return _options
 
 
 def __virtual__():
@@ -291,16 +190,16 @@ def _validate_user(user,
     return False
 
 
-def _post_message(user,
-                  device,
-                  message,
-                  title,
-                  priority,
-                  expire,
-                  retry,
-                  sound,
-                  api_version=1,
-                  token=None):
+def post_message(user=None,
+                 device=None,
+                 message=None,
+                 title=None,
+                 priority=None,
+                 expire=None,
+                 retry=None,
+                 sound=None,
+                 api_version=1,
+                 token=None):
     '''
     Send a message to a Pushover user or group.
     :param user:        The user or group to send to, must be key of user or group not email address.
@@ -312,6 +211,15 @@ def _post_message(user,
     :param token:       The PushOver token, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
     '''
+
+    if not token:
+        log.error('token is a required argument.')
+
+    if not user:
+        log.error('user is a required argument.')
+
+    if not message:
+        log.error('message is a required argument.')
 
     if not _validate_user(user, device, token):
         return
@@ -333,58 +241,7 @@ def _post_message(user,
                     method='POST',
                     data=parameters)
 
-    return result
-
-
-def returner(ret):
-    '''
-    Send an PushOver message with the data
-    '''
-
-    _options = _get_options(ret)
-
-    user = _options.get('user')
-    device = _options.get('device')
-    token = _options.get('token')
-    title = _options.get('title')
-    priority = _options.get('priority')
-    expire = _options.get('expire')
-    retry = _options.get('retry')
-    sound = _options.get('sound')
-
-    if not user:
-        log.error('pushover.user not defined in salt config.')
-        return
-
-    if not token:
-        log.error('pushover.token not defined in salt config.')
-        return
-
-    if priority and priority == 2:
-        if not expire and not retry:
-            log.error('Priority 2 requires pushover.expire and pushover.retry options.')
-            return
-
-    message = ('id: {0}\r\n'
-               'function: {1}\r\n'
-               'function args: {2}\r\n'
-               'jid: {3}\r\n'
-               'return: {4}\r\n').format(
-                    ret.get('id'),
-                    ret.get('fun'),
-                    ret.get('fun_args'),
-                    ret.get('jid'),
-                    pprint.pformat(ret.get('return')))
-
-    result = _post_message(user=user,
-                           device=device,
-                           message=message,
-                           title=title,
-                           priority=priority,
-                           expire=expire,
-                           retry=retry,
-                           sound=sound,
-                           token=token)
-    if not result['res']:
-        log.info('Error: {0}'.format(result['message']))
-    return
+    if result['res']:
+        return True
+    else:
+        return result
