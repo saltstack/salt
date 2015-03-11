@@ -20,9 +20,9 @@ import logging
 import yaml
 import jinja2
 import jinja2.exceptions
+from xml.dom import minidom
 try:
     import libvirt
-    from xml.dom import minidom
     HAS_ALL_IMPORTS = True
 except ImportError:
     HAS_ALL_IMPORTS = False
@@ -799,8 +799,8 @@ def get_nics(vm_):
                 # driver, source, and match can all have optional attributes
                 if re.match('(driver|source|address)', v_node.tagName):
                     temp = {}
-                    for key in v_node.attributes:
-                        temp[key] = v_node.getAttribute(key)
+                    for key, value in v_node.attributes.items():
+                        temp[key] = value
                     nic[str(v_node.tagName)] = temp
                 # virtualport needs to be handled separately, to pick up the
                 # type attribute of the virtualport itself
@@ -857,8 +857,8 @@ def get_graphics(vm_):
     for node in doc.getElementsByTagName('domain'):
         g_nodes = node.getElementsByTagName('graphics')
         for g_node in g_nodes:
-            for key in g_node.attributes:
-                out[key] = g_node.getAttribute(key)
+            for key, value in g_node.attributes.items():
+                out[key] = value
     return out
 
 
