@@ -384,6 +384,71 @@ def managedcloud(vm_):
     )
 
 
+def networks(vm_, kwargs=None):
+    conn = get_conn()
+    if kwargs is None:
+        kwargs = {}
+    networks = config.get_cloud_config_value(
+        'networks', vm_, __opts__, search_global=False
+    )
+
+    floating = []
+
+    if HAS014:
+        if networks is not None:
+            for net in networks:
+                if 'fixed' in net:
+                    kwargs['networks'] = [
+                        OpenStackNetwork(n, None, None, None)
+                        for n in net['fixed']
+                    ]
+                elif 'floating' in net:
+                    pool = OpenStack_1_1_FloatingIpPool(
+                        net['floating'], conn.connection
+                    )
+                    for idx in pool.list_floating_ips():
+                        if idx.node_id is None:
+                            floating.append(idx)
+                    if not floating:
+                        # Note(pabelanger): We have no available floating IPs.
+                        # For now, we raise an exception and exit.
+                        # A future enhancement might be to allow salt-cloud
+                        # to dynamically allocate new address but that might
+                        raise SaltCloudSystemExit(
+                            'Floating pool {0!r} does not have any more '
+                            'please create some more or use a different '
+                            'pool.'.format(net['floating'])
+                        )
+        # otherwise, attempt to obtain list without specifying pool
+        # this is the same as 'nova floating-ip-list'
+        elif ssh_interface(vm_) != 'private_ips':
+            try:
+                # This try/except is here because it appears some
+                # *cough* Rackspace *cough*
+                # OpenStack providers return a 404 Not Found for the
+                # floating ip pool URL if there are no pools setup
+                pool = OpenStack_1_1_FloatingIpPool(
+                    '', conn.connection
+                )
+                for idx in pool.list_floating_ips():
+                    if idx.node_id is None:
+                        floating.append(idx)
+                if not floating:
+                    # Note(pabelanger): We have no available floating IPs.
+                    # For now, we raise an exception and exit.
+                    # A future enhancement might be to allow salt-cloud to
+                    # dynamically allocate new address but that might be
+                    # tricky to manage.
+                    raise SaltCloudSystemExit(
+                        'There are no more floating IP addresses '
+                        'available, please create some more'
+                    )
+            except Exception as e:
+                if not str(e).startswith('404'):
+                    raise
+    vm_['floating'] = floating
+
+
 def request_instance(vm_=None, call=None):
     '''
     Put together all of the information necessary to request an instance on Openstack
@@ -618,9 +683,11 @@ def create(vm_):
                     __opts__
                 )
             )
+        data = conn.ex_get_node_details(vm_['instance_id'])
         if vm_['key_filename'] is None and 'change_password' in __opts__ and __opts__['change_password'] is True:
             vm_['password'] = sup.secure_password()
-            conn.root_password(vm_['instance_id'], vm_['password'])
+            conn.ex_set_password(data, vm_['password'])
+        networks(vm_)
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
