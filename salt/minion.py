@@ -1604,6 +1604,7 @@ class Minion(MinionBase):
 
         self.io_loop.start()
 
+    # TODO: remove?
     def tune_in_no_block(self):
         '''
         Executes the tune_in sequence but omits extra logging and the
@@ -1760,6 +1761,7 @@ class Syndic(Minion):
             tagify([self.opts['id'], 'start'], 'syndic'),
         )
 
+    # TODO: clean up docs
     def tune_in_no_block(self):
         '''
         Executes the tune_in sequence but omits extra logging and the
@@ -1770,21 +1772,9 @@ class Syndic(Minion):
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
 
-        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
 
-        loop_interval = int(self.opts['loop_interval'])
-
-        self._fire_master_syndic_start()
-
-        while True:
-            try:
-                self._process_cmd_socket()
-            except Exception:
-                log.critical(
-                    'An exception occurred while polling the minion',
-                    exc_info=True
-                )
-            yield True
+        # add handler to subscriber
+        self.pub_channel.on_recv(self._process_cmd_socket)
 
     # Syndic Tune In
     def tune_in(self):
@@ -1798,9 +1788,19 @@ class Syndic(Minion):
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
         self.local.opts['interface'] = self._syndic_interface
+
+        # add handler to subscriber
+        self.pub_channel.on_recv(self._process_cmd_socket)
+
         # register the event sub to the poller
-        self.poller.register(self.local.event.sub)
-        self.poller.register(self.pub_channel.socket, zmq.POLLIN)
+        self._reset_event_aggregation()
+        self.local_event_stream = zmq.eventloop.zmqstream.ZMQStream(self.local.event.sub, io_loop=self.io_loop)
+        self.local_event_stream.on_recv(self._process_event)
+
+        # forward events every syndic_event_forward_timeout
+        forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
+                                                         self.opts['syndic_event_forward_timeout'] * 1000,
+                                                         io_loop=self.io_loop)
 
         # Send an event to the master that the minion is live
         self._fire_master_syndic_start()
@@ -1808,44 +1808,9 @@ class Syndic(Minion):
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
-        loop_interval = int(self.opts['loop_interval'])
-        self._reset_event_aggregation()
-        while True:
-            try:
-                # Do all the maths in seconds
-                timeout = loop_interval
-                if self.event_forward_timeout is not None:
-                    timeout = min(timeout,
-                                  self.event_forward_timeout - time.time())
-                if timeout >= 0:
-                    log.trace('Polling timeout: %f', timeout)
-                    socks = dict(self.poller.poll(timeout * 1000))
-                else:
-                    # This shouldn't really happen.
-                    # But there's no harm being defensive
-                    log.warning('Negative timeout in syndic main loop')
-                    socks = {}
-                if socks.get(self.pub_channel.socket) == zmq.POLLIN:
-                    self._process_cmd_socket()
-                if socks.get(self.local.event.sub) == zmq.POLLIN:
-                    self._process_event_socket()
-                if self.event_forward_timeout is not None and \
-                        self.event_forward_timeout < time.time():
-                    self._forward_events()
-            # We don't handle ZMQErrors like the other minions
-            # I've put explicit handling around the receive calls
-            # in the process_*_socket methods. If we see any other
-            # errors they may need some kind of handling so log them
-            # for now.
-            except Exception:
-                log.critical(
-                    'An exception occurred while polling the syndic',
-                    exc_info=True
-                )
+        self.io_loop.start()
 
-    def _process_cmd_socket(self):
-        payload = self.pub_channel.recv_noblock()
-
+    def _process_cmd_socket(self, payload):
         if payload is not None:
             log.trace('Handling payload')
             self._handle_decoded_payload(payload['load'])
@@ -1853,59 +1818,50 @@ class Syndic(Minion):
     def _reset_event_aggregation(self):
         self.jids = {}
         self.raw_events = []
-        self.event_forward_timeout = None
 
-    def _process_event_socket(self):
-        tout = time.time() + self.opts['syndic_max_event_process_time']
-        while tout > time.time():
-            try:
-                event = self.local.event.get_event_noblock()
-            except zmq.ZMQError as e:
-                # EAGAIN indicates no more events at the moment
-                # EINTR some kind of signal maybe someone trying
-                # to get us to quit so escape our timeout
-                if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
-                    break
-                raise
-
-            log.trace('Got event {0}'.format(event['tag']))
-            if self.event_forward_timeout is None:
-                self.event_forward_timeout = (
-                        time.time() + self.opts['syndic_event_forward_timeout']
+    def _process_event(self, raw):
+        # TODO: cleanup: Move down into event class
+        raw = raw[0]
+        mtag, data = self.local.event.unpack(raw, self.local.event.serial)
+        event = {'data': data, 'tag': mtag}
+        log.trace('Got event {0}'.format(event['tag']))
+        if self.event_forward_timeout is None:
+            self.event_forward_timeout = (
+                    time.time() + self.opts['syndic_event_forward_timeout']
+                    )
+        tag_parts = event['tag'].split('/')
+        if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
+            salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
+            'return' in event['data']:
+            if 'jid' not in event['data']:
+                # Not a job return
+                continue
+            jdict = self.jids.setdefault(event['tag'], {})
+            if not jdict:
+                jdict['__fun__'] = event['data'].get('fun')
+                jdict['__jid__'] = event['data']['jid']
+                jdict['__load__'] = {}
+                fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
+                # Only need to forward each load once. Don't hit the disk
+                # for every minion return!
+                if event['data']['jid'] not in self.jid_forward_cache:
+                    jdict['__load__'].update(
+                        self.mminion.returners[fstr](event['data']['jid'])
                         )
-            tag_parts = event['tag'].split('/')
-            if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
-                salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
-                'return' in event['data']:
-                if 'jid' not in event['data']:
-                    # Not a job return
-                    continue
-                jdict = self.jids.setdefault(event['tag'], {})
-                if not jdict:
-                    jdict['__fun__'] = event['data'].get('fun')
-                    jdict['__jid__'] = event['data']['jid']
-                    jdict['__load__'] = {}
-                    fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
-                    # Only need to forward each load once. Don't hit the disk
-                    # for every minion return!
-                    if event['data']['jid'] not in self.jid_forward_cache:
-                        jdict['__load__'].update(
-                            self.mminion.returners[fstr](event['data']['jid'])
-                            )
-                        self.jid_forward_cache.add(event['data']['jid'])
-                        if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
-                            # Pop the oldest jid from the cache
-                            tmp = sorted(list(self.jid_forward_cache))
-                            tmp.pop(0)
-                            self.jid_forward_cache = set(tmp)
-                if 'master_id' in event['data']:
-                    # __'s to make sure it doesn't print out on the master cli
-                    jdict['__master_id__'] = event['data']['master_id']
-                jdict[event['data']['id']] = event['data']['return']
-            else:
-                # Add generic event aggregation here
-                if 'retcode' not in event['data']:
-                    self.raw_events.append(event)
+                    self.jid_forward_cache.add(event['data']['jid'])
+                    if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
+                        # Pop the oldest jid from the cache
+                        tmp = sorted(list(self.jid_forward_cache))
+                        tmp.pop(0)
+                        self.jid_forward_cache = set(tmp)
+            if 'master_id' in event['data']:
+                # __'s to make sure it doesn't print out on the master cli
+                jdict['__master_id__'] = event['data']['master_id']
+            jdict[event['data']['id']] = event['data']['return']
+        else:
+            # Add generic event aggregation here
+            if 'retcode' not in event['data']:
+                self.raw_events.append(event)
 
     def _forward_events(self):
         log.trace('Forwarding events')
@@ -1923,12 +1879,12 @@ class Syndic(Minion):
         '''
         # We borrowed the local clients poller so give it back before
         # it's destroyed. Reset the local poller reference.
-        self.poller = None
         super(Syndic, self).destroy()
         if hasattr(self, 'local'):
             del self.local
 
-
+# TODO: consolidate syndic classes together?
+# need a way of knowing if the syndic connection is busted
 class MultiSyndic(MinionBase):
     '''
     Make a MultiSyndic minion, this minion will handle relaying jobs and returns from
@@ -1952,7 +1908,7 @@ class MultiSyndic(MinionBase):
     SYNDIC_CONNECT_TIMEOUT = 5
     SYNDIC_EVENT_TIMEOUT = 5
 
-    def __init__(self, opts):
+    def __init__(self, opts, io_loop=None):
         opts['loop_interval'] = 1
         super(MultiSyndic, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
@@ -1961,6 +1917,11 @@ class MultiSyndic(MinionBase):
 
         self._has_master = threading.Event()
         self.jid_forward_cache = set()
+
+        if io_loop is None:
+            self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        else:
+            self.io_loop = io_loop
 
         # create all of the syndics you need
         self.master_syndics = {}
@@ -2026,11 +1987,13 @@ class MultiSyndic(MinionBase):
 
         minion = self.master_syndics[master]
 
-        try:
-            t_minion = Syndic(minion['opts'],
-                              timeout=self.SYNDIC_CONNECT_TIMEOUT,
-                              safe=False,
-                              )
+        if time.time() - minion['auth_wait'] > minion.get('last', 0):
+            try:
+                t_minion = Syndic(minion['opts'],
+                                  timeout=self.SYNDIC_CONNECT_TIMEOUT,
+                                  safe=False,
+                                  io_loop=self.io_loop
+                                  )
 
             self.master_syndics[master]['syndic'] = t_minion
             self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
@@ -2096,7 +2059,6 @@ class MultiSyndic(MinionBase):
     def _reset_event_aggregation(self):
         self.jids = {}
         self.raw_events = []
-        self.event_forward_timeout = None
 
     # Syndic Tune In
     def tune_in(self):
@@ -2109,116 +2071,74 @@ class MultiSyndic(MinionBase):
 
         log.debug('MultiSyndic {0!r} trying to tune in'.format(self.opts['id']))
 
-        # Share the poller with the event object
-        self.poller = self.local.event.poller
+        #self.pub_channel.on_recv(self._process_cmd_socket)
+        # register the event sub to the poller
+        self._reset_event_aggregation()
+        self.local_event_stream = zmq.eventloop.zmqstream.ZMQStream(self.local.event.sub, io_loop=self.io_loop)
+        self.local_event_stream.on_recv(self._process_event)
+
+        # forward events every syndic_event_forward_timeout
+        forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
+                                                         self.opts['syndic_event_forward_timeout'] * 1000,
+                                                         io_loop=self.io_loop)
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
-        loop_interval = int(self.opts['loop_interval'])
-        self._reset_event_aggregation()
-        while True:
-            try:
-                # Do all the maths in seconds
-                timeout = loop_interval
-                if self.event_forward_timeout is not None:
-                    timeout = min(timeout,
-                                  self.event_forward_timeout - time.time())
-                if timeout >= 0:
-                    log.trace('Polling timeout: %f', timeout)
-                    socks = dict(self.poller.poll(timeout * 1000))
-                else:
-                    # This shouldn't really happen.
-                    # But there's no harm being defensive
-                    log.warning('Negative timeout in syndic main loop')
-                    socks = {}
-                # check all of your master_syndics, have them do their thing
-                for master_id, syndic_dict in six.iteritems(self.master_syndics):
-                    # if not connected, lets try
-                    if 'generator' not in syndic_dict:
-                        log.info('Syndic still not connected to {0}'.format(master_id))
-                        # if we couldn't connect, lets try later
-                        continue
-                    next(syndic_dict['generator'])
+        self.io_loop.start()
 
-                # events
-                if socks.get(self.local.event.sub) == zmq.POLLIN:
-                    self._process_event_socket()
+    def _process_event(self, raw):
+        # TODO: cleanup: Move down into event class
+        raw = raw[0]
+        mtag, data = self.local.event.unpack(raw, self.local.event.serial)
+        event = {'data': data, 'tag': mtag}
+        log.trace('Got event {0}'.format(event['tag']))
 
-                if self.event_forward_timeout is not None \
-                        and self.event_forward_timeout < time.time():
-                    self._forward_events()
-            # We don't handle ZMQErrors like the other minions
-            # I've put explicit handling around the receive calls
-            # in the process_*_socket methods. If we see any other
-            # errors they may need some kind of handling so log them
-            # for now.
-            except Exception:
-                log.critical(
-                    'An exception occurred while polling the syndic',
-                    exc_info=True
-                )
+        if self.event_forward_timeout is None:
+            self.event_forward_timeout = (
+                    time.time() + self.opts['syndic_event_forward_timeout']
+                    )
+        tag_parts = event['tag'].split('/')
+        if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
+            salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
+            'return' in event['data']:
+            if 'jid' not in event['data']:
+                # Not a job return
+                continue
+            if self.syndic_mode == 'cluster' and event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
+                log.debug('Return recieved with matching master_id, not forwarding')
+                continue
 
-    def _process_event_socket(self):
-        tout = time.time() + self.opts['syndic_max_event_process_time']
-        while tout > time.time():
-            try:
-                event = self.local.event.get_event_noblock()
-            except zmq.ZMQError as e:
-                # EAGAIN indicates no more events at the moment
-                # EINTR some kind of signal maybe someone trying
-                # to get us to quit so escape our timeout
-                if e.errno == errno.EAGAIN or e.errno == errno.EINTR:
-                    break
-                raise
-
-            log.trace('Got event {0}'.format(event['tag']))
-
-            if self.event_forward_timeout is None:
-                self.event_forward_timeout = (
-                        time.time() + self.opts['syndic_event_forward_timeout']
+            jdict = self.jids.setdefault(event['tag'], {})
+            if not jdict:
+                jdict['__fun__'] = event['data'].get('fun')
+                jdict['__jid__'] = event['data']['jid']
+                jdict['__load__'] = {}
+                fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
+                # Only need to forward each load once. Don't hit the disk
+                # for every minion return!
+                if event['data']['jid'] not in self.jid_forward_cache:
+                    jdict['__load__'].update(
+                        self.mminion.returners[fstr](event['data']['jid'])
                         )
-            tag_parts = event['tag'].split('/')
-            if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
-                salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
-                'return' in event['data']:
-                if 'jid' not in event['data']:
-                    # Not a job return
-                    continue
-                if self.syndic_mode == 'cluster' and event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
-                    log.debug('Return recieved with matching master_id, not forwarding')
-                    continue
-
-                jdict = self.jids.setdefault(event['tag'], {})
-                if not jdict:
-                    jdict['__fun__'] = event['data'].get('fun')
-                    jdict['__jid__'] = event['data']['jid']
-                    jdict['__load__'] = {}
-                    fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
-                    # Only need to forward each load once. Don't hit the disk
-                    # for every minion return!
-                    if event['data']['jid'] not in self.jid_forward_cache:
-                        jdict['__load__'].update(
-                            self.mminion.returners[fstr](event['data']['jid'])
-                            )
-                        self.jid_forward_cache.add(event['data']['jid'])
-                        if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
-                            # Pop the oldest jid from the cache
-                            tmp = sorted(list(self.jid_forward_cache))
-                            tmp.pop(0)
-                            self.jid_forward_cache = set(tmp)
-                if 'master_id' in event['data']:
-                    # __'s to make sure it doesn't print out on the master cli
-                    jdict['__master_id__'] = event['data']['master_id']
-                jdict[event['data']['id']] = event['data']['return']
-            else:
-                # TODO: config to forward these? If so we'll have to keep track of who
-                # has seen them
-                # if we are the top level masters-- don't forward all the minion events
-                if self.syndic_mode == 'sync':
-                    # Add generic event aggregation here
-                    if 'retcode' not in event['data']:
-                        self.raw_events.append(event)
+                    self.jid_forward_cache.add(event['data']['jid'])
+                    if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
+                        # Pop the oldest jid from the cache
+                        tmp = sorted(list(self.jid_forward_cache))
+                        tmp.pop(0)
+                        self.jid_forward_cache = set(tmp)
+            if 'master_id' in event['data']:
+                # __'s to make sure it doesn't print out on the master cli
+                jdict['__master_id__'] = event['data']['master_id']
+            jdict[event['data']['id']] = event['data']['return']
+        else:
+            # TODO: config to forward these? If so we'll have to keep track of who
+            # has seen them
+            # if we are the top level masters-- don't forward all the minion events
+            if self.syndic_mode == 'sync':
+                # Add generic event aggregation here
+                if 'retcode' not in event['data']:
+                    self.raw_events.append(event)
 
     def _forward_events(self):
         log.trace('Forwarding events')
