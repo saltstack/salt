@@ -13,9 +13,8 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -25,9 +24,8 @@ import logging
 import logging.handlers
 import traceback
 
-from salt.textformat import TextFormat
-from salt.ext.six import PY3
-from salt.ext.six import string_types, text_type, with_metaclass
+# Import 3rd-party libs
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Let's define these custom logging levels before importing the salt.log.mixins
@@ -37,6 +35,7 @@ GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
 # Import salt libs
+from salt.textformat import TextFormat
 from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
@@ -84,7 +83,7 @@ LOG_COLORS = {
 
 # Make a list of log level names sorted by log level
 SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(LOG_LEVELS.items(), key=lambda x: x[1])
+    l[0] for l in sorted(six.iteritems(LOG_LEVELS), key=lambda x: x[1])
 ]
 
 # Store an instance of the current logging logger class
@@ -187,7 +186,7 @@ def get_log_record_factory():
 set_log_record_factory(SaltLogRecord)
 
 
-class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):  # pylint: disable=W0232
+class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
     def __new__(cls, *args):  # pylint: disable=W0613, E1002
         '''
         We override `__new__` in our logging logger class in order to provide
@@ -261,7 +260,7 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
                 'Please only use one of \'exc_info\' and \'exc_info_on_loglevel\', not both'
             )
         if exc_info_on_loglevel is not None:
-            if isinstance(exc_info_on_loglevel, string_types):
+            if isinstance(exc_info_on_loglevel, six.string_types):
                 exc_info_on_loglevel = LOG_LEVELS.get(exc_info_on_loglevel, logging.ERROR)
             elif not isinstance(exc_info_on_loglevel, int):
                 raise RuntimeError(
@@ -288,7 +287,7 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
             extra = None
 
         # Let's try to make every logging message unicode
-        if isinstance(msg, string_types) and not isinstance(msg, text_type):
+        if isinstance(msg, six.string_types) and not isinstance(msg, six.text_type):
             try:
                 _msg = msg.decode('utf-8', 'replace')
             except UnicodeDecodeError:
@@ -296,7 +295,7 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
         else:
             _msg = msg
 
-        if PY3:
+        if six.PY3:
             logrecord = _log_record_factory(name, level, fn, lno, _msg, args,
                                           exc_info, func, sinfo)
         else:
@@ -644,7 +643,7 @@ def setup_extended_logging(opts):
     # log records with them
     additional_handlers = []
 
-    for name, get_handlers_func in providers.items():
+    for name, get_handlers_func in six.iteritems(providers):
         logging.getLogger(__name__).info(
             'Processing `log_handlers.{0}`'.format(name)
         )

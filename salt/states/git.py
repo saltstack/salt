@@ -17,6 +17,7 @@ authentication, it is also possible to pass private keys to use explicitly.
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import logging
 import os
 import os.path
@@ -201,7 +202,7 @@ def latest(name,
             branch = __salt__['git.current_branch'](target, user=user)
             # We're only interested in the remote branch if a branch
             # (instead of a hash, for example) was provided for rev.
-            if branch != 'HEAD' and branch == rev:
+            if (branch != 'HEAD' and branch == rev) or rev is None:
                 remote_rev = __salt__['git.ls_remote'](target,
                                                        repository=name,
                                                        branch=branch,
@@ -212,7 +213,7 @@ def latest(name,
 
             # only do something, if the specified rev differs from the
             # current_rev and remote_rev
-            if current_rev in [rev, remote_rev]:
+            if current_rev in [rev, remote_rev] or remote_rev.startswith(current_rev):
                 new_rev = current_rev
             else:
 
@@ -578,6 +579,8 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     * unless succeeded (unless == 0)
     else return True
     '''
+    cmd_kwargs = copy.deepcopy(cmd_kwargs)
+    cmd_kwargs['python_shell'] = True
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
             return {'comment': 'onlyif execution failed',

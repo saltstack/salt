@@ -3,6 +3,9 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import pytohn libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -43,7 +46,7 @@ class LoadAuthTestCase(TestCase):
                 'test_password': '',
                 'show_timeout': False,
                 'eauth': 'pam'
-            })
+            }, expected_extra_kws=auth.AUTH_INTERNAL_KEYWORDS)
             ret = self.lauth.load_name(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
 
@@ -58,7 +61,7 @@ class LoadAuthTestCase(TestCase):
                 'test_password': '',
                 'show_timeout': False,
                 'eauth': 'pam'
-                })
+                }, expected_extra_kws=auth.AUTH_INTERNAL_KEYWORDS)
             self.lauth.get_groups(valid_eauth_load)
             format_call_mock.assert_has_calls(expected_ret)
 

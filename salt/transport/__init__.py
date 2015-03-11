@@ -2,23 +2,24 @@
 '''
 Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
 '''
-from __future__ import absolute_import
+
+# Import Python libs
+from __future__ import absolute_import, print_function
 import time
 import os
 import threading
+import logging
+from collections import defaultdict
 
 # Import Salt Libs
 import salt.payload
 import salt.auth
 import salt.crypt
 import salt.utils
-import logging
-from collections import defaultdict
-
 from salt.utils import kinds
 
-log = logging.getLogger(__name__)
-
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from raet import raeting, nacling
     from raet.lane.stacking import LaneStack
@@ -26,6 +27,8 @@ try:
 except (ImportError, OSError):
     # Don't die on missing transport libs since only one transport is required
     pass
+
+log = logging.getLogger(__name__)
 
 # Module globals for default LaneStack. Because RaetChannels are created on demand
 # they do not have access to the master estate that motivated their creation
@@ -61,8 +64,10 @@ class Channel(object):
             return ZeroMQChannel(opts, **kwargs)
         elif ttype == 'raet':
             return RAETChannel(opts, **kwargs)
+        elif ttype == 'local':
+            return LocalChannel(opts, **kwargs)
         else:
-            raise Exception('Channels are only defined for ZeroMQ and raet')
+            raise Exception('Channels are only defined for ZeroMQ (\'zeromq\') and RAET(\'raet\'), but you specified {0}'.format(ttype))
             # return NewKindOfChannel(opts, **kwargs)
 
     def send(self, load, tries=3, timeout=60):
@@ -97,6 +102,7 @@ class RAETChannel(Channel):
         The difference between the two is how the destination route
         is assigned.
     '''
+
     def __init__(self, opts, usage=None, **kwargs):
         self.opts = opts
         self.ttype = 'raet'
@@ -129,7 +135,7 @@ class RAETChannel(Channel):
         '''
         role = self.opts.get('id')
         if not role:
-            emsg = ("Missing role required to setup RAETChannel.")
+            emsg = ("Missing role(\'id\') required to setup RAETChannel.")
             log.error(emsg + "\n")
             raise ValueError(emsg)
 
@@ -154,7 +160,7 @@ class RAETChannel(Channel):
                           lanename=lanename,
                           sockdirpath=self.opts['sock_dir'])
 
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack.value
         stack.addRemote(RemoteYard(stack=stack,
                                    name=ryn,
                                    lanename=lanename,
@@ -229,25 +235,25 @@ class ZeroMQChannel(Channel):
         # When using threading, like on Windows, don't cache.
         # The following block prevents thread leaks.
         if not self.opts.get('multiprocessing'):
-            return salt.payload.SREQ(self.master_uri)
+            return salt.payload.SREQ(self.master_uri, opts=self.opts)
 
         key = self.sreq_key
 
         if not self.opts['cache_sreqs']:
-            return salt.payload.SREQ(self.master_uri)
+            return salt.payload.SREQ(self.master_uri, opts=self.opts)
         else:
             if key not in ZeroMQChannel.sreq_cache:
                 master_type = self.opts.get('master_type', None)
                 if master_type == 'failover':
                     # remove all cached sreqs to the old master to prevent
                     # zeromq from reconnecting to old masters automagically
-                    for check_key in self.sreq_cache.keys():
+                    for check_key in six.iterkeys(self.sreq_cache):
                         if self.opts['master_uri'] != check_key[0]:
                             del self.sreq_cache[check_key]
                             log.debug('Removed obsolete sreq-object from '
                                       'sreq_cache for master {0}'.format(check_key[0]))
 
-                ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
+                ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri, opts=self.opts)
 
             return ZeroMQChannel.sreq_cache[key]
 
@@ -258,15 +264,14 @@ class ZeroMQChannel(Channel):
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
-        if self.crypt != 'clear':
-            if 'auth' in kwargs:
-                self.auth = kwargs['auth']
-            else:
-                self.auth = salt.crypt.SAuth(opts)
         if 'master_uri' in kwargs:
             self.master_uri = kwargs['master_uri']
         else:
             self.master_uri = opts['master_uri']
+
+        if self.crypt != 'clear':
+            # we don't need to worry about auth as a kwarg, since its a singleton
+            self.auth = salt.crypt.SAuth(self.opts)
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), tries, timeout)
@@ -298,7 +303,7 @@ class ZeroMQChannel(Channel):
         try:
             return _do_transfer()
         except salt.crypt.AuthenticationError:
-            self.auth = salt.crypt.SAuth(self.opts)
+            self.auth.authenticate()
             return _do_transfer()
 
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
@@ -309,3 +314,38 @@ class ZeroMQChannel(Channel):
             return self._uncrypted_transfer(load, tries, timeout)
         else:  # for just about everything else
             return self._crypted_transfer(load, tries, timeout)
+
+
+class LocalChannel(Channel):
+    '''
+    Local channel for testing purposes
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = opts
+        self.kwargs = kwargs
+        self.tries = 0
+
+    def send(self, load, tries=3, timeout=60):
+
+        if self.tries == 0:
+            log.debug('LocalChannel load: {0}').format(load)
+            #data = json.loads(load)
+            #{'path': 'apt-cacher-ng/map.jinja', 'saltenv': 'base', 'cmd': '_serve_file', 'loc': 0}
+            #f = open(data['path'])
+            with salt.utils.fopen(load['path']) as fh_:
+                ret = {
+                    'data': ''.join(fh_.readlines()),
+                    'dest': load['path'],
+                }
+                print('returning {0}'.format(ret))
+        else:
+            # end of buffer
+            ret = {
+                'data': None,
+                'dest': None,
+            }
+        self.tries = self.tries + 1
+        return ret
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        super(LocalChannel, self).crypted_transfer_decode_dictentry()

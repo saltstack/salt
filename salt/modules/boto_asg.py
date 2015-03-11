@@ -33,18 +33,18 @@ Connection module for Amazon Autoscale Groups
 
 :depends: boto
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import
 import logging
 import json
-import yaml
 import email.mime.multipart
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+import yaml
+import salt.ext.six as six
 try:
     import boto
     import boto.ec2
@@ -56,7 +56,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
+# Import Salt libs
 import salt.utils.odict as odict
 
 
@@ -175,13 +175,13 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if isinstance(availability_zones, string_types):
+    if isinstance(availability_zones, six.string_types):
         availability_zones = json.loads(availability_zones)
-    if isinstance(load_balancers, string_types):
+    if isinstance(load_balancers, six.string_types):
         load_balancers = json.loads(load_balancers)
-    if isinstance(vpc_zone_identifier, string_types):
+    if isinstance(vpc_zone_identifier, six.string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
-    if isinstance(tags, string_types):
+    if isinstance(tags, six.string_types):
         tags = json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
@@ -201,9 +201,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
             _tags.append(_tag)
-    if isinstance(termination_policies, string_types):
+    if isinstance(termination_policies, six.string_types):
         termination_policies = json.loads(termination_policies)
-    if isinstance(suspended_processes, string_types):
+    if isinstance(suspended_processes, six.string_types):
         suspended_processes = json.loads(suspended_processes)
     try:
         _asg = autoscale.AutoScalingGroup(
@@ -249,13 +249,13 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False, "failed to connect to AWS"
-    if isinstance(availability_zones, string_types):
+    if isinstance(availability_zones, six.string_types):
         availability_zones = json.loads(availability_zones)
-    if isinstance(load_balancers, string_types):
+    if isinstance(load_balancers, six.string_types):
         load_balancers = json.loads(load_balancers)
-    if isinstance(vpc_zone_identifier, string_types):
+    if isinstance(vpc_zone_identifier, six.string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
-    if isinstance(tags, string_types):
+    if isinstance(tags, six.string_types):
         tags = json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
@@ -275,9 +275,9 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
             _tags.append(_tag)
-    if isinstance(termination_policies, string_types):
+    if isinstance(termination_policies, six.string_types):
         termination_policies = json.loads(termination_policies)
-    if isinstance(suspended_processes, string_types):
+    if isinstance(suspended_processes, six.string_types):
         suspended_processes = json.loads(suspended_processes)
     try:
         _asg = autoscale.AutoScalingGroup(
@@ -366,7 +366,7 @@ def get_cloud_init_mime(cloud_init):
 
         salt myminion boto.get_cloud_init_mime <cloud init>
     '''
-    if isinstance(cloud_init, string_types):
+    if isinstance(cloud_init, six.string_types):
         cloud_init = json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if 'scripts' in cloud_init:
@@ -375,10 +375,18 @@ def get_cloud_init_mime(cloud_init):
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(yaml.dump(dict(cloud_config)),
+        _cloud_config = email.mime.text.MIMEText(_safe_dump(cloud_config),
                                                  'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
+
+
+def _safe_dump(data):
+    def ordered_dict_presenter(dumper, data):
+        return dumper.represent_dict(six.iteritems(data))
+    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
+                         Dumper=yaml.dumper.SafeDumper)
+    return yaml.safe_dump(data, default_flow_style=False)
 
 
 def launch_configuration_exists(name, region=None, key=None, keyid=None,
@@ -428,9 +436,9 @@ def create_launch_configuration(name, image_id, key_name=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if isinstance(security_groups, string_types):
+    if isinstance(security_groups, six.string_types):
         security_groups = json.loads(security_groups)
-    if isinstance(block_device_mappings, string_types):
+    if isinstance(block_device_mappings, six.string_types):
         block_device_mappings = json.loads(block_device_mappings)
     _bdms = []
     if block_device_mappings:
@@ -513,7 +521,7 @@ def _get_conn(region, key, keyid, profile):
     Get a boto connection to autoscale.
     '''
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -547,7 +555,7 @@ def _get_ec2_conn(region, key, keyid, profile):
     Get a boto connection to ec2.   Needed for get_instances
     '''
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile

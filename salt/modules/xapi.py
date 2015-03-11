@@ -525,8 +525,9 @@ def vcpu_pin(vm_, vcpu, cpus):
         # That code is accurate for all others XenAPI implementations, but
         # for that particular one, fallback to xm / xl instead.
         except Exception:
-            return __salt__['cmd.run']('{0} vcpu-pin {1} {2} {3}'.format(
-                                            _get_xtool(), vm_, vcpu, cpus))
+            return __salt__['cmd.run'](
+                    '{0} vcpu-pin {1} {2} {3}'.format(_get_xtool(), vm_, vcpu, cpus),
+                    python_shell=False)
 
 
 def freemem():
@@ -648,7 +649,7 @@ def create(config_):
 
         salt '*' virt.create <path to Xen cfg file>
     '''
-    return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_))
+    return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_), python_shell=False)
 
 
 def start(config_):

@@ -66,6 +66,17 @@ def wrap_tmpl_func(render_str):
                 context['tplpath'] = tmplpath
                 if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
                     slspath = os.path.dirname(slspath)
+                template = tmplpath.replace('\\', '/')
+                i = template.rfind(slspath.replace('.', '/'))
+                if i != -1:
+                    template = template[i:]
+                tpldir = os.path.dirname(template).replace('\\', '/')
+                tpldata = {
+                    'tplfile': template,
+                    'tpldir': tpldir,
+                    'tpldot': tpldir.replace('/', '.'),
+                }
+                context.update(tpldata)
             context['slsdotpath'] = slspath.replace('/', '.')
             context['slscolonpath'] = slspath.replace('/', ':')
             context['sls_path'] = slspath.replace('/', '_')
@@ -104,6 +115,7 @@ def wrap_tmpl_func(render_str):
                 output = os.linesep.join(output.splitlines())
 
         except SaltRenderError as exc:
+            log.error("Rendering exception occurred :{0}".format(exc))
             #return dict(result=False, data=str(exc))
             raise
         except Exception:
@@ -272,26 +284,21 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context
 
-    unicode_context = {}
+    decoded_context = {}
     for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
-            unicode_context[key] = value
+            decoded_context[key] = value
             continue
 
-        # Let's try UTF-8 and fail if this still fails, that's why this is not
-        # wrapped in a try/except
-        if isinstance(value, six.text_type):
-            unicode_context[key] = value
-        else:
-            unicode_context[key] = six.text_type(value, 'utf-8')
+        decoded_context[key] = salt.utils.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
-        template.globals.update(unicode_context)
-        output = template.render(**unicode_context)
+        template.globals.update(decoded_context)
+        output = template.render(**decoded_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
@@ -299,7 +306,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                               tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        out = _get_jinja_error(trace, context=unicode_context)[1]
+        out = _get_jinja_error(trace, context=decoded_context)[1]
         tmplstr = ''
         # Don't include the line number, since it is misreported
         # https://github.com/mitsuhiko/jinja2/issues/276
@@ -309,7 +316,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             buf=tmplstr)
     except (SaltInvocationError, CommandExecutionError) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         raise SaltRenderError(
@@ -320,11 +327,18 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     except Exception as exc:
         tracestr = traceback.format_exc()
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
+        log.debug("Jinja Error")
+        log.debug("Exception: {0}".format(exc))
+        log.debug("Out: {0}".format(out))
+        log.debug("Line: {0}".format(line))
+        log.debug("TmplStr: {0}".format(tmplstr))
+        log.debug("TraceStr: {0}".format(tracestr))
+
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
                               tmplstr,

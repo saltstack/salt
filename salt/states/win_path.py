@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Python Libs
 import re
+import os
 
 
 def __virtual__():
@@ -39,6 +40,11 @@ def absent(name):
            'result': True,
            'changes': {},
            'comment': ''}
+
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if name in localPath:
+        localPath.remove(name)
+        os.environ["PATH"] = os.pathsep.join(localPath)
 
     if __salt__['win_path.exists'](name):
         ret['changes']['removed'] = name
@@ -82,6 +88,11 @@ def exists(name, index=None):
     # determine what to do
     sysPath = __salt__['win_path.get_path']()
     path = _normalize_dir(name)
+
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path not in localPath:
+        localPath.append(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
 
     try:
         currIndex = sysPath.index(path)

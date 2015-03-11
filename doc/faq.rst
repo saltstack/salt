@@ -14,6 +14,17 @@ and proprietary projects.
 .. _`'Halite' web interface`: https://github.com/saltstack/halite
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
 
+I think I found a bug! What should I do?
+-----------------------------------------
+
+The salt-users mailing list as well as the salt IRC channel can both be helpful
+resources to confirm if others are seeing the issue and to assist with
+immediate debugging.
+
+To report a bug to the Salt project, please follow the instructions in :doc:
+`reporting a bug <topics/development/reporting_bugs>`.
+
+
 What ports should I open on my firewall?
 ----------------------------------------
 
@@ -235,7 +246,7 @@ distro the minion is running, in case they differ from the example below.
         - name: atd
         - enable: True
 
-An alternatvie to using the :program:`atd` daemon is to fork and disown the
+An alternative to using the :program:`atd` daemon is to fork and disown the
 process.
 
 .. code-block:: yaml
@@ -243,7 +254,10 @@ process.
     restart_minion:
       cmd.run:
         - name: |
-            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion'
+            exec 0>&- # close stdin
+            exec 1>&- # close stdout
+            exec 2>&- # close stderr
+            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion' &
         - python_shell: True
         - order: last
 

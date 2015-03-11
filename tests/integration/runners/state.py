@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-
 '''
 Tests for the salt-run command
 '''
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs

@@ -20,15 +20,25 @@ Example:
 
 '''
 
+# Import python libs
+from __future__ import absolute_import
 import re
 import logging
+
+# Import Salt libs
 from salt.utils import dictdiffer
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'reload_': 'reload'
+}
 
-def status(jboss_config, timeout=5):
+
+def status(jboss_config):
     '''
     Get status of running jboss instance.
 
@@ -71,7 +81,7 @@ def stop_server(jboss_config):
         raise Exception('''Cannot handle error, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**shutdown_result))
 
 
-def reload(jboss_config):
+def reload_(jboss_config):
     '''
     Reload running jboss instance
 
@@ -135,7 +145,7 @@ def create_datasource(jboss_config, name, datasource_properties):
 def __get_properties_assignment_string(datasource_properties, ds_resource_description):
     assignment_strings = []
     ds_attributes = ds_resource_description['attributes']
-    for key, val in datasource_properties.iteritems():
+    for key, val in six.iteritems(datasource_properties):
         assignment_strings.append(__get_single_assignment_string(key, val, ds_attributes))
 
     return ','.join(assignment_strings)
@@ -146,8 +156,8 @@ def __get_single_assignment_string(key, val, ds_attributes):
 
 
 def __format_value(key, value, ds_attributes):
-    type = ds_attributes[key]['type']
-    if type == 'BOOLEAN':
+    type_ = ds_attributes[key]['type']
+    if type_ == 'BOOLEAN':
         if value in ('true', 'false'):
             return value
         elif isinstance(value, bool):
@@ -158,12 +168,12 @@ def __format_value(key, value, ds_attributes):
         else:
             raise Exception("Don't know how to convert {0} to BOOLEAN type".format(value))
 
-    elif type == 'INT':
+    elif type_ == 'INT':
         return str(value)
-    elif type == 'STRING':
+    elif type_ == 'STRING':
         return '"{0}"'.format(value)
     else:
-        raise Exception("Don't know how to format value {0} of type {1}".format(value, type))
+        raise Exception("Don't know how to format value {0} of type {1}".format(value, type_))
 
 
 def update_datasource(jboss_config, name, new_properties):

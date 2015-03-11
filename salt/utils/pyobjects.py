@@ -12,7 +12,7 @@ import logging
 from salt.utils.odict import OrderedDict
 import salt.ext.six as six
 
-REQUISITES = ('listen', 'require', 'watch', 'use', 'listen_in', 'require_in', 'watch_in', 'use_in')
+REQUISITES = ('listen', 'onchanges', 'onfail', 'require', 'watch', 'use', 'listen_in', 'onchanges_in', 'onfail_in', 'require_in', 'watch_in', 'use_in')
 
 log = logging.getLogger(__name__)
 

@@ -17,8 +17,20 @@ import salt
 import salt.version
 import salt.loader
 import salt.ext.six as six
+from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'true_': 'true',
+    'false_': 'false'
+}
+
+
+@depends('non_existantmodulename')
+def missing_func():
+    return 'foo'
 
 
 def echo(text):
@@ -238,8 +250,8 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to the passed number, and the
-    timeit took to compute in seconds. Used for performance tests
+    Return a Fibonacci sequence up to but not including the passed number,
+    and the time it took to compute in seconds. Used for performance tests.
 
     CLI Example:
 
@@ -362,8 +374,7 @@ def not_loaded():
     '''
     prov = providers()
     ret = set()
-    loader = salt.loader._create_loader(__opts__, 'modules', 'module')
-    for mod_dir in loader.module_dirs:
+    for mod_dir in salt.loader._module_dirs(__opts__, 'modules', 'module'):
         if not os.path.isabs(mod_dir):
             continue
         if not os.path.isdir(mod_dir):
@@ -451,6 +462,30 @@ def tty(*args, **kwargs):  # pylint: disable=W0613
     return 'ERROR: This function has been moved to cmd.tty'
 
 
+def try_(module, return_try_exception=False, **kwargs):
+    '''
+    Try to run a module command. On an exception return None.
+    If `return_try_exception` is set True return the exception.
+    This can be helpfull in templates where running a module might fail as expected.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        <pre>
+        {% for i in range(0,230) %}
+            {{ salt['test.try'](module='ipmi.get_users', bmc_host='172.2.2.'+i)|yaml(False) }}
+        {% endfor %}
+        </pre>
+    '''
+    try:
+        return __salt__[module](**kwargs)
+    except Exception as e:
+        if return_try_exception:
+            return e
+    return None
+
+
 def assertion(assertion):
     '''
     Assert the given argument
@@ -462,3 +497,29 @@ def assertion(assertion):
         salt '*' test.assert False
     '''
     assert assertion
+
+
+def true_():
+    '''
+    Always return True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.true
+    '''
+    return True
+
+
+def false_():
+    '''
+    Always return False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.false
+    '''
+    return False

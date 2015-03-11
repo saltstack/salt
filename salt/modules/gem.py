@@ -6,6 +6,12 @@ from __future__ import absolute_import
 
 # Import python libs
 import re
+import logging
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 __func_alias__ = {
     'list_': 'list'
@@ -29,13 +35,15 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
 
     ret = __salt__['cmd.run_all'](
         cmdline,
-        runas=runas
+        runas=runas,
+        python_shell=False
         )
 
     if ret['retcode'] == 0:
         return ret['stdout']
     else:
-        return False
+        logger.error(ret['stderr'])
+        raise CommandExecutionError(ret['stderr'])
 
 
 def install(gems,           # pylint: disable=C0103
@@ -203,9 +211,7 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
                   ruby,
                   gem_bin=gem_bin,
                   runas=runas)
-    lines = []
-    if isinstance(stdout, str):
-        lines = stdout.splitlines()
+    lines = stdout.splitlines()
     for line in lines:
         match = re.match(r'^([^ ]+) \((.+)\)', line)
         if match:
@@ -213,6 +219,44 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
             versions = match.group(2).split(', ')
             gems[gem] = versions
     return gems
+
+
+def list_upgrades(ruby=None,
+                  runas=None,
+                  gem_bin=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Check if an upgrade is available for installed gems
+
+    gem_bin : None
+        Full path to ``gem`` binary to use.
+    ruby : None
+        If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
+    runas : None
+        The user to run gem as.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' gem.list_upgrades
+    '''
+    result = _gem('outdated',
+                  ruby,
+                  gem_bin=gem_bin,
+                  runas=runas)
+    outdated = {}
+    for line in result.splitlines():
+        match = re.search(r'(\S+) \(\S+ < (\S+)\)', line)
+        if match:
+            name, version = match.groups()
+        else:
+            logger.error('Can\'t parse line {0!r}'.format(line))
+            continue
+        outdated[name] = version
+    return outdated
 
 
 def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):

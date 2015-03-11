@@ -2,20 +2,22 @@
 '''
 Manage Dell DRAC
 '''
-from __future__ import absolute_import
 
+# Import python libs
+from __future__ import absolute_import
+import logging
+
+# Import Salt libs
 import salt.utils
 
-import logging
-from salt.ext.six.moves import range
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
-
-    '''
     if salt.utils.which('racadm'):
         return True
 
@@ -66,9 +68,6 @@ def system_info():
 
         salt dell drac.getsysinfo
     '''
-    drac = {}
-    section = ''
-
     cmd = __salt__['cmd.run_all']('racadm getsysinfo')
 
     if cmd['retcode'] != 0:
@@ -132,11 +131,10 @@ def syslog(server, enable=True):
         salt dell drac.syslog [SYSLOG IP] [ENABLE/DISABLE]
         salt dell drac.syslog 0.0.0.0 False
     '''
-    if enable:
-        if __execute_cmd('config -g cfgRemoteHosts -o \
+    if enable and __execute_cmd('config -g cfgRemoteHosts -o \
                 cfgRhostsSyslogEnable 1'):
-            return __execute_cmd('config -g cfgRemoteHosts -o \
-                    cfgRhostsSyslogServer1 {0}'.format(server))
+        return __execute_cmd('config -g cfgRemoteHosts -o \
+                cfgRhostsSyslogServer1 {0}'.format(server))
 
     return __execute_cmd('config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0')
 
@@ -174,9 +172,9 @@ def list_users():
     users = {}
     _username = ''
 
-    for i in range(1, 12):
+    for idx in range(1, 12):
         cmd = __salt__['cmd.run_all']('racadm getconfig -g \
-                cfgUserAdmin -i {0}'.format(i))
+                cfgUserAdmin -i {0}'.format(idx))
 
         if cmd['retcode'] != 0:
             log.warn('racadm return an exit \
@@ -186,17 +184,17 @@ def list_users():
             if 'cfgUserAdminIndex' in user or user.startswith('#'):
                 continue
 
-            (k, v) = user.split('=')
+            (key, val) = user.split('=')
 
-            if k.startswith('cfgUserAdminUserName'):
-                _username = v.strip()
+            if key.startswith('cfgUserAdminUserName'):
+                _username = val.strip()
 
-                if v:
-                    users[_username] = {'index': i}
+                if val:
+                    users[_username] = {'index': idx}
                 else:
                     break
             else:
-                users[_username].update({k: v})
+                users[_username].update({key: val})
 
     return users
 
@@ -283,8 +281,8 @@ def create_user(username, password, permissions, users=None):
         log.warn('\'{0}\' already exists'.format(username))
         return False
 
-    for i in users.keys():
-        _uids.add(users[i]['index'])
+    for idx in six.iterkeys(users):
+        _uids.add(users[idx]['index'])
 
     uid = sorted(list(set(range(2, 12)) - _uids), reverse=True).pop()
 

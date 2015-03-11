@@ -6,7 +6,6 @@ A flexible renderer that takes a templating engine and a data format
 :maturity: new
 :platform: all
 '''
-from __future__ import absolute_import
 # See http://docs.saltstack.org/en/latest/ref/renderers/all/salt.renderers.stateconf.html
 # for a guide to using this module.
 #
@@ -28,18 +27,20 @@ from __future__ import absolute_import
 #
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import re
 import getopt
 import copy
 from os import path as ospath
-from cStringIO import StringIO
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltRenderError
+
+# Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six import string_types
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 __all__ = ['render']
 
@@ -165,7 +166,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
                 raise SaltRenderError('\n'.join(errors))
             raise SaltRenderError('sls preprocessing/rendering failed!')
         return data
-    #----------------------
+    # ----------------------
     renderers = kws['renderers']
     opts, args = getopt.getopt(argline.split(), 'Gosp')
     argline = ' '.join(args) if args else 'yaml . jinja'
@@ -204,7 +205,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
         except IndexError:
             raise INVALID_USAGE_ERROR
 
-        if isinstance(input, string_types):
+        if isinstance(input, six.string_types):
             with salt.utils.fopen(input, 'r') as ifile:
                 sls_templ = ifile.read()
         else:  # assume file-like
@@ -222,7 +223,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             tmplctx = STATE_CONF.copy()
             if tmplctx:
                 prefix = sls + '::'
-                for k in tmplctx.keys():  # iterate over a copy of keys
+                for k in six.iterkeys(tmplctx):  # iterate over a copy of keys
                     if k.startswith(prefix):
                         tmplctx[k[len(prefix):]] = tmplctx[k]
                         del tmplctx[k]
@@ -258,8 +259,8 @@ def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
       state_id_decl:
         state.func: []
     '''
-    for sid, states in data.items():
-        if isinstance(states, string_types):
+    for sid, states in six.iteritems(data):
+        if isinstance(states, six.string_types):
             data[sid] = {states: []}
 
 
@@ -312,7 +313,7 @@ def nvlist(thelist, names=None):
     for nvitem in thelist:
         if isinstance(nvitem, dict):
             # then nvitem is a name-value item(a dict) of the list.
-            name, value = next(nvitem.iteritems())
+            name, value = next(six.iteritems(nvitem))
             if names is None or name in names:
                 yield nvitem, name, value
 
@@ -454,7 +455,7 @@ def add_implicit_requires(data):
         # state if there's a state before this one.
         if prev_state[0] is not None:
             try:
-                nvlist(args, ['require']).next()[2].insert(0, dict([prev_state]))
+                next(nvlist(args, ['require']))[2].insert(0, dict([prev_state]))
             except StopIteration:  # i.e., there's no require
                 args.append(dict(require=[dict([prev_state])]))
 
@@ -483,7 +484,7 @@ def add_start_state(data, sls):
             break
     else:
         raise SaltRenderError('Can\'t determine the first state in the sls file!')
-    reqin = {state_name(next(data[sid].iterkeys())): sid}
+    reqin = {state_name(next(six.iterkeys(data[sid]))): sid}
     data[start_sid] = {STATE_FUNC: [{'require_in': [reqin]}]}
 
 
@@ -553,7 +554,7 @@ def extract_state_confs(data, is_extend=False):
         for sdk in state_dict[key]:
             if not isinstance(sdk, dict):
                 continue
-            key, val = next(sdk.iteritems())
+            key, val = next(six.iteritems(sdk))
             conf[key] = val
 
         if not is_extend and state_id in STATE_CONF_EXT:

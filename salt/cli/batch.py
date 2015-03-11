@@ -4,8 +4,7 @@ Execute batch runs
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import math
 import time
 import copy
@@ -15,7 +14,12 @@ import salt.client
 import salt.output
 import salt.utils.minions
 from salt.utils import print_cli
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
 from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 
 class Batch(object):
@@ -151,7 +155,7 @@ class Batch(object):
                                 parts[minion] = {}
                                 parts[minion]['ret'] = {}
 
-            for minion, data in parts.items():
+            for minion, data in six.iteritems(parts):
                 active.remove(minion)
                 if self.opts.get('raw'):
                     yield data

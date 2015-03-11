@@ -169,8 +169,12 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
     return res
 
 
-def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
-            pub_key=None, priv_key=None):
+def mkconfig(config=None,
+             tmp=None,
+             id_=None,
+             approve_key=True,
+             pub_key=None,
+             priv_key=None):
     '''
     Generate keys and config and put them in a tmp directory.
 

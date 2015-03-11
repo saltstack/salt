@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import stat
+import errno
 import socket
 import logging
 
@@ -162,8 +163,11 @@ def verify_files(files, user):
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
-            if not os.path.isdir(dirname):
+            try:
                 os.makedirs(dirname)
+            except OSError as err:
+                if err.errno != errno.EEXIST:
+                    raise
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
@@ -199,7 +203,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(salt.defulats.exitcodes.EX_NOUSER)
+        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
     for dir_ in dirs:
         if not dir_:
             continue

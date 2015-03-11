@@ -57,16 +57,18 @@ Example output:
     ------------
     Total:     0
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import pprint
+import textwrap
 
 # Import salt libs
 import salt.utils
 import salt.output
+
+# Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six import string_types
 
 
 def output(data):
@@ -112,7 +114,7 @@ def _format_host(host, data):
         if not __opts__.get('state_verbose', False):
             data = _strip_clean(data)
         # Verify that the needed data is present
-        for tname, info in data.items():
+        for tname, info in six.iteritems(data):
             if isinstance(info, dict) and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
@@ -164,13 +166,13 @@ def _format_host(host, data):
                 exclude = clikwargs.get(
                     'exclude', __opts__.get('state_output_exclude', [])
                 )
-                if isinstance(exclude, string_types):
+                if isinstance(exclude, six.string_types):
                     exclude = str(exclude).split(',')
 
                 terse = clikwargs.get(
                     'terse', __opts__.get('state_output_terse', [])
                 )
-                if isinstance(terse, string_types):
+                if isinstance(terse, six.string_types):
                     terse = str(terse).split(',')
 
                 if str(ret['result']) in terse:
@@ -254,9 +256,24 @@ def _format_host(host, data):
             hstrs.append((u'{0}{1}{2[ENDC]}'
                           .format(tcolor, changes, colors)))
 
+            if 'warnings' in ret:
+                rcounts.setdefault('warnings', 0)
+                rcounts['warnings'] += 1
+                wrapper = textwrap.TextWrapper(
+                    width=80,
+                    initial_indent=u' ' * 14,
+                    subsequent_indent=u' ' * 14
+                )
+                hstrs.append(
+                    u'   {colors[LIGHT_RED]} Warnings: {0}{colors[ENDC]}'.format(
+                        wrapper.fill('\n'.join(ret['warnings'])).lstrip(),
+                        colors=colors
+                    )
+                )
+
         # Append result counts to end of output
         colorfmt = u'{0}{1}{2[ENDC]}'
-        rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run'}
+        rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run', 'warnings': u'Warnings'}
         count_max_len = max([len(str(x)) for x in six.itervalues(rcounts)] or [0])
         label_max_len = max([len(x) for x in six.itervalues(rlabel)] or [0])
         line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
@@ -319,8 +336,18 @@ def _format_host(host, data):
             )
         )
 
+        num_warnings = rcounts.get('warnings', 0)
+        if num_warnings:
+            hstrs.append(
+                colorfmt.format(
+                    colors['LIGHT_RED'],
+                    _counts(rlabel['warnings'], num_warnings),
+                    colors
+                )
+            )
+
         totals = u'{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
-                                               sum(six.itervalues(rcounts)),
+                                               sum(six.itervalues(rcounts)) - rcounts.get('warnings', 0),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
 

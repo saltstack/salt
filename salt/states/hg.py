@@ -44,6 +44,7 @@ def latest(name,
            target=None,
            clean=False,
            user=None,
+           identity=None,
            force=False,
            opts=False):
     '''
@@ -56,7 +57,7 @@ def latest(name,
         The remote branch, tag, or revision hash to clone/pull
 
     target
-        Name of the target directory where repository is about to be cloned
+        Target destination directory path on minion to clone into
 
     clean
         Force a clean update with -C (Default: False)
@@ -64,7 +65,12 @@ def latest(name,
     user
         Name of the user performing repository management operations
 
-        .. versionadded: 0.17.0
+        .. versionadded:: 0.17.0
+
+    identity
+        Private SSH key on the minion server for authentication (ssh://)
+
+        .. versionadded:: 2015.2.0
 
     force
         Force hg to clone into pre-existing directories (deletes contents)
@@ -82,7 +88,7 @@ def latest(name,
             os.path.isdir('{0}/.hg'.format(target)))
 
     if is_repository:
-        ret = _update_repo(ret, name, target, clean, user, rev, opts)
+        ret = _update_repo(ret, name, target, clean, user, identity, rev, opts)
     else:
         if os.path.isdir(target):
             fail = _handle_existing(ret, target, force)
@@ -97,11 +103,11 @@ def latest(name,
                     ret,
                     'Repository {0} is about to be cloned to {1}'.format(
                         name, target))
-        _clone_repo(ret, target, name, user, rev, opts)
+        _clone_repo(ret, target, name, user, identity, rev, opts)
     return ret
 
 
-def _update_repo(ret, name, target, clean, user, rev, opts):
+def _update_repo(ret, name, target, clean, user, identity, rev, opts):
     '''
     Update the repo to a given revision. Using clean passes -C to the hg up
     '''
@@ -124,7 +130,7 @@ def _update_repo(ret, name, target, clean, user, rev, opts):
                 ret,
                 test_result)
 
-    pull_out = __salt__['hg.pull'](target, user=user, opts=opts, repository=name)
+    pull_out = __salt__['hg.pull'](target, user=user, identity=identity, opts=opts, repository=name)
 
     if rev:
         __salt__['hg.update'](target, rev, force=clean, user=user)
@@ -165,8 +171,8 @@ def _handle_existing(ret, target, force):
         return _fail(ret, 'Directory exists, and is not empty')
 
 
-def _clone_repo(ret, target, name, user, rev, opts):
-    result = __salt__['hg.clone'](target, name, user=user, opts=opts)
+def _clone_repo(ret, target, name, user, identity, rev, opts):
+    result = __salt__['hg.clone'](target, name, user=user, identity=identity, opts=opts)
 
     if not os.path.isdir(target):
         return _fail(ret, result)

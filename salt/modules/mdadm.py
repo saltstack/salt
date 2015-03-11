@@ -228,11 +228,15 @@ def create(name,
     For more info, read the ``mdadm(8)`` manpage
     '''
     opts = []
+    raid_devices = len(devices)
+
     for key in kwargs:
         if not key.startswith('__'):
             opts.append('--{0}'.format(key))
             if kwargs[key] is not True:
                 opts.append(str(kwargs[key]))
+        if key == 'spare-devices':
+            raid_devices -= int(kwargs[key])
 
     cmd = ['mdadm',
            '-C', name,
@@ -240,7 +244,7 @@ def create(name,
            '-v'] + opts + [
            '-l', str(level),
            '-e', metadata,
-           '-n', str(len(devices))] + devices
+           '-n', str(raid_devices)] + devices
 
     cmd_str = ' '.join(cmd)
 
@@ -337,7 +341,7 @@ def assemble(name,
                 opts.append(kwargs[key])
 
     # Devices may have been written with a blob:
-    if type(devices) is str:
+    if isinstance(devices, str):
         devices = devices.split(',')
 
     cmd = ['mdadm', '-A', name, '-v', opts] + devices

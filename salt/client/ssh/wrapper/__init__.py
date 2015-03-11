@@ -5,15 +5,19 @@ how executions are run in the salt-ssh system, this allows for state routines
 to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import json
+import copy
 
 # Import salt libs
 import salt.loader
 import salt.utils
 import salt.client.ssh
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class FunctionWrapper(object):
@@ -29,8 +33,10 @@ class FunctionWrapper(object):
             wfuncs=None,
             mods=None,
             fsclient=None,
+            cmd_prefix=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
+        self.cmd_prefix = cmd_prefix
         self.wfuncs = wfuncs if isinstance(wfuncs, dict) else {}
         self.opts = opts
         self.mods = mods if isinstance(mods, dict) else {}
@@ -39,10 +45,45 @@ class FunctionWrapper(object):
         self.fsclient = fsclient
         self.kwargs.update(kwargs)
 
+    def __contains__(self, key):
+        '''
+        We need to implement a __contains__ method, othwerwise when someone
+        does a contains comparison python assumes this is a sequence, and does
+        __getitem__ keys 0 and up until IndexError
+        '''
+        try:
+            self[key]  # pylint: disable=W0104
+            return True
+        except KeyError:
+            return False
+
     def __getitem__(self, cmd):
         '''
         Return the function call to simulate the salt local lookup system
         '''
+        if '.' not in cmd and not self.cmd_prefix:
+            # Form of salt.cmd.run in Jinja -- it's expecting a subdictionary
+            # containing only 'cmd' module calls, in that case. Create a new
+            # FunctionWrapper which contains the prefix 'cmd' (again, for the
+            # salt.cmd.run example)
+            kwargs = copy.deepcopy(self.kwargs)
+            id_ = kwargs.pop('id_')
+            host = kwargs.pop('host')
+            return FunctionWrapper(self.opts,
+                                   id_,
+                                   host,
+                                   wfuncs=self.wfuncs,
+                                   mods=self.mods,
+                                   fsclient=self.fsclient,
+                                   cmd_prefix=cmd,
+                                   **kwargs)
+
+        if self.cmd_prefix:
+            # We're in an inner FunctionWrapper as created by the code block
+            # above. Reconstruct the original cmd in the form 'cmd.run' and
+            # then evaluate as normal
+            cmd = '{0}.{1}'.format(self.cmd_prefix, cmd)
+
         if cmd in self.wfuncs:
             return self.wfuncs[cmd]
 
@@ -52,7 +93,7 @@ class FunctionWrapper(object):
             '''
             argv = [cmd]
             argv.extend([str(arg) for arg in args])
-            argv.extend(['{0}={1}'.format(key, val) for key, val in kwargs.items()])
+            argv.extend(['{0}={1}'.format(key, val) for key, val in six.iteritems(kwargs)])
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,

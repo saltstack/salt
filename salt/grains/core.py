@@ -9,9 +9,9 @@ will always be executed first, so that any grains loaded here in the core
 module can be overwritten just by returning dict keys with the same value
 as those returned here
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import socket
 import sys
@@ -23,7 +23,6 @@ import locale
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
-import salt.ext.six as six
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
                      'slamd64', 'ovs', 'system', 'mint', 'oracle')
 
@@ -31,11 +30,13 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
-from salt.ext.six import string_types
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
@@ -49,7 +50,7 @@ if salt.utils.is_windows():
     # attempt to import the python wmi module
     # the Windows minion uses WMI for some of its grains
     try:
-        import wmi
+        import wmi  # pylint: disable=import-error
         import salt.utils.winapi
         HAS_WMI = True
     except ImportError:
@@ -295,9 +296,9 @@ def _bsd_cpudata(osdata):
         cmds['cpu_model'] = '{0} -n machdep.cpu.brand_string'.format(sysctl)
         cmds['cpu_flags'] = '{0} -n machdep.cpu.features'.format(sysctl)
 
-    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in cmds.items()])
+    grains = dict([(k, __salt__['cmd.run'](v)) for k, v in six.iteritems(cmds)])
 
-    if 'cpu_flags' in grains and isinstance(grains['cpu_flags'], string_types):
+    if 'cpu_flags' in grains and isinstance(grains['cpu_flags'], six.string_types):
         grains['cpu_flags'] = grains['cpu_flags'].split(' ')
 
     if osdata['kernel'] == 'NetBSD':
@@ -448,9 +449,6 @@ def _windows_virtual(osdata):
     # Manufacturer: Parallels Software International Inc.
     elif 'Parallels Software' in osdata.get('manufacturer'):
         grains['virtual'] = 'Parallels'
-
-    if HAS_WMI:
-        pass
     return grains
 
 
@@ -470,17 +468,28 @@ def _virtual(osdata):
     # detection.
     skip_cmds = ('AIX',)
 
+    # list of commands to be executed to determine the 'virtual' grain
+    _cmds = set()
+
+    # test first for virt-what, which covers most of the desired functionality
+    # on most platforms
+    if not salt.utils.is_windows() and osdata['kernel'] not in skip_cmds:
+        if salt.utils.which('virt-what'):
+            _cmds = (['virt-what'])
+        else:
+            log.info('Please install "virt-what" to improve results of the "virtual" grain.')
     # Check if enable_lspci is True or False
-    if __opts__.get('enable_lspci', True) is False:
-        _cmds = ('dmidecode', 'dmesg')
+    elif __opts__.get('enable_lspci', True) is False:
+        _cmds = (['dmidecode', 'dmesg'])
     elif osdata['kernel'] in skip_cmds:
         _cmds = ()
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
-            _cmds = ('dmidecode', 'dmesg')
+            _cmds = ('dmidecode', 'dmesg', 'systemd-detect-virt', 'virt-what')
         else:
-            _cmds = ('dmidecode', 'lspci', 'dmesg')
+            _cmds = ('dmidecode', 'lspci', 'dmesg',
+                     'systemd-detect-virt', 'virt-what')
 
     failed_commands = set()
     for command in _cmds:
@@ -520,7 +529,35 @@ def _virtual(osdata):
                 grains['virtual'] = 'VirtualBox'
             # Break out of the loop so the next log message is not issued
             break
-
+        elif command == 'systemd-detect-virt':
+            if output in ('qemu', 'kvm', 'oracle', 'xen', 'bochs', 'chroot', 'uml', 'systemd-nspawn'):
+                grains['virtual'] = output
+                break
+            elif 'vmware' in output:
+                grains['virtual'] = 'VMWare'
+                break
+            elif 'microsoft' in output:
+                grains['virtual'] = 'VirtualPC'
+                break
+            elif 'lxc' in output:
+                grains['virtual'] = 'LXC'
+                break
+            elif 'systemd-nspawn' in output:
+                grains['virtual'] = 'LXC'
+                break
+        elif command == 'virt-what':
+            if output in ('kvm', 'qemu', 'uml', 'xen'):
+                grains['virtual'] = output
+                break
+            elif 'vmware' in output:
+                grains['virtual'] = 'VMWare'
+                break
+            elif 'parallels' in output:
+                grains['virtual'] = 'Parallels'
+                break
+            elif 'hyperv' in output:
+                grains['virtual'] = 'HyperV'
+                break
         elif command == 'dmidecode' or command == 'dmesg':
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
@@ -553,6 +590,8 @@ def _virtual(osdata):
             # Manufacturer: Parallels Software International Inc.
             elif 'Parallels Software' in output:
                 grains['virtual'] = 'Parallels'
+            elif 'Manufacturer: Google' in output:
+                grains['virtual'] = 'kvm'
             # Break out of the loop, lspci parsing is not necessary
             break
         elif command == 'lspci':
@@ -570,6 +609,13 @@ def _virtual(osdata):
             elif 'virtio' in model:
                 grains['virtual'] = 'kvm'
             # Break out of the loop so the next log message is not issued
+            break
+        elif command == 'virt-what':
+            # if 'virt-what' returns nothing, it's either an undetected platform
+            # so we default just as virt-what to 'physical', otherwise use the
+            # platform detected/returned by virt-what
+            if output:
+                grains['virtual'] = output.lower()
             break
     else:
         if osdata['kernel'] in skip_cmds:
@@ -662,7 +708,9 @@ def _virtual(osdata):
             product = __salt__['cmd.run'](
                 '{0} smbios.system.product'.format(kenv)
             )
-            maker = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv))
+            maker = __salt__['cmd.run'](
+                '{0} smbios.system.maker'.format(kenv)
+            )
             if product.startswith('VMware'):
                 grains['virtual'] = 'VMware'
             if maker.startswith('Xen'):
@@ -672,6 +720,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'VirtualPC'
             if maker.startswith('OpenStack'):
                 grains['virtual'] = 'OpenStack'
+            if maker.startswith('Bochs'):
+                grains['virtual'] = 'kvm'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
             jail = __salt__['cmd.run'](
@@ -855,7 +905,8 @@ _OS_NAME_MAP = {
     'oracleserv': 'OEL',
     'cloudserve': 'CloudLinux',
     'pidora': 'Fedora',
-    'scientific': 'ScientificLinux'
+    'scientific': 'ScientificLinux',
+    'synology': 'Synology'
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -976,9 +1027,39 @@ def os_data():
             grains['systemd']['version'] = systemd_info[0].split()[1]
             grains['systemd']['features'] = systemd_info[1]
 
+        # Add init grain
+        grains['init'] = 'unknown'
+        try:
+            os.stat('/run/systemd/system')
+            grains['init'] = 'systemd'
+        except OSError:
+            with salt.utils.fopen('/proc/1/cmdline') as fhr:
+                init_cmdline = fhr.read().replace('\x00', ' ').split()
+                init_bin = salt.utils.which(init_cmdline[0])
+                supported_inits = ('upstart', 'sysvinit', 'systemd')
+                edge_len = max(len(x) for x in supported_inits) - 1
+                buf_size = __opts__['file_buffer_size']
+                try:
+                    with open(init_bin, 'rb') as fp_:
+                        buf = True
+                        edge = ''
+                        while buf:
+                            buf = edge + fp_.read(buf_size).lower()
+                            for item in supported_inits:
+                                if item in buf:
+                                    grains['init'] = item
+                                    buf = ''
+                                    break
+                            edge = buf[-edge_len:]
+                except (IOError, OSError) as exc:
+                    log.error(
+                        'Unable to read from init_bin ({0}): {1}'
+                        .format(init_bin, exc)
+                    )
+
         # Add lsb grains on any distro with lsb-release
         try:
-            import lsb_release
+            import lsb_release  # pylint: disable=import-error
             release = lsb_release.get_distro_information()
             for key, value in six.iteritems(release):
                 key = key.lower()
@@ -1071,6 +1152,29 @@ def os_data():
                             grains['lsb_distrib_release'] = release.group()
                         if codename is not None:
                             grains['lsb_distrib_codename'] = codename.group()
+            elif os.path.isfile('/etc.defaults/VERSION') \
+                    and os.path.isfile('/etc.defaults/synoinfo.conf'):
+                grains['osfullname'] = 'Synology'
+                with salt.utils.fopen('/etc.defaults/VERSION', 'r') as fp_:
+                    synoinfo = {}
+                    for line in fp_:
+                        try:
+                            key, val = line.rstrip('\n').split('=')
+                        except ValueError:
+                            continue
+                        if key in ('majorversion', 'minorversion',
+                                   'buildnumber'):
+                            synoinfo[key] = val.strip('"')
+                    if len(synoinfo) != 3:
+                        log.warning(
+                            'Unable to determine Synology version info. '
+                            'Please report this, as it is likely a bug.'
+                        )
+                    else:
+                        grains['osrelease'] = (
+                            '{majorversion}.{minorversion}-{buildnumber}'
+                            .format(**synoinfo)
+                        )
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
@@ -1082,9 +1186,12 @@ def os_data():
         # It's worth noting that Ubuntu has patched their Python distribution
         # so that platform.linux_distribution() does the /etc/lsb-release
         # parsing, but we do it anyway here for the sake for full portability.
-        grains['osfullname'] = grains.get('lsb_distrib_id', osname).strip()
-        grains['osrelease'] = grains.get('lsb_distrib_release',
-                                         osrelease).strip()
+        if 'osfullname' not in grains:
+            grains['osfullname'] = \
+                grains.get('lsb_distrib_id', osname).strip()
+        if 'osrelease' not in grains:
+            grains['osrelease'] = \
+                grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename',
                                           oscodename).strip()
         distroname = _REPLACE_LINUX_RE.sub('', grains['osfullname']).strip()
@@ -1185,6 +1292,12 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'].partition('.')[0])
+    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+            os=grains['os'],
+            ver=grains['osrelease'])
 
     if grains.get('osrelease', ''):
         osrelease_info = grains['osrelease'].split('.')
@@ -1219,6 +1332,7 @@ def locale_info():
         # might do, per #2205
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
+    grains['locale_info']['detectedencoding'] = __salt_system_encoding__
     return grains
 
 
@@ -1481,7 +1595,7 @@ def zmqversion():
     #   zmqversion
     try:
         import zmq
-        return {'zmqversion': zmq.zmq_version()}
+        return {'zmqversion': zmq.zmq_version()}  # pylint: disable=no-member
     except ImportError:
         return {}
 
@@ -1615,7 +1729,7 @@ def _hw_data(osdata):
                 'productname': 'smbios.system.product',
                 'biosreleasedate': 'smbios.bios.reldate',
             }
-            for key, val in fbsd_hwdata.items():
+            for key, val in six.iteritems(fbsd_hwdata):
                 grains[key] = __salt__['cmd.run']('{0} {1}'.format(kenv, val))
     elif osdata['kernel'] == 'OpenBSD':
         sysctl = salt.utils.which('sysctl')
@@ -1623,7 +1737,7 @@ def _hw_data(osdata):
                   'manufacturer': 'hw.vendor',
                   'productname': 'hw.product',
                   'serialnumber': 'hw.serialno'}
-        for key, oid in hwdata.items():
+        for key, oid in six.iteritems(hwdata):
             value = __salt__['cmd.run']('{0} -n {1}'.format(sysctl, oid))
             if not value.endswith(' value is not available'):
                 grains[key] = value
@@ -1636,7 +1750,7 @@ def _hw_data(osdata):
             'productname': 'machdep.dmi.system-product',
             'biosreleasedate': 'machdep.dmi.bios-date',
         }
-        for key, oid in nbsd_hwdata.items():
+        for key, oid in six.iteritems(nbsd_hwdata):
             result = __salt__['cmd.run_all']('{0} -n {1}'.format(sysctl, oid))
             if result['retcode'] == 0:
                 grains[key] = result['stdout']

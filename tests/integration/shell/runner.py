@@ -5,6 +5,7 @@ Tests for the salt-run command
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import shutil
@@ -80,7 +81,7 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             with_retcode=True
         )
         try:
-            self.assertIn('doc.runner:', ret[0])
+            self.assertIn("'doc.runner:'", ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         except AssertionError:
             if os.path.exists('/dev/log') and ret[2] != 2:

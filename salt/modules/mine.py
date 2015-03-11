@@ -2,17 +2,32 @@
 '''
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
+import time
 
 # Import salt libs
 import salt.crypt
 import salt.payload
 import salt.utils.network
 import salt.utils.event
+from salt.exceptions import SaltClientError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
+MINE_INTERNAL_KEYWORDS = frozenset([
+    '__pub_user',
+    '__pub_arg',
+    '__pub_fun',
+    '__pub_jid',
+    '__pub_tgt',
+    '__pub_tgt_type',
+    '__pub_ret'
+])
 
 __proxyenabled__ = ['*']
 
@@ -24,7 +39,11 @@ def _auth():
     Return the auth object
     '''
     if 'auth' not in __context__:
-        __context__['auth'] = salt.crypt.SAuth(__opts__)
+        try:
+            __context__['auth'] = salt.crypt.SAuth(__opts__)
+        except SaltClientError:
+            log.error('Could not authenticate with master.'
+                      'Mine data will not be transmitted.')
     return __context__['auth']
 
 
@@ -37,16 +56,23 @@ def _mine_function_available(func):
 
 
 def _mine_send(load, opts):
-    if opts.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-
     eventer = salt.utils.event.MinionEvent(opts)
-    return eventer.fire_event(load, '_minion_mine')
+    event_ret = eventer.fire_event(load, '_minion_mine')
+    # We need to pause here to allow for the decoupled nature of
+    # events time to allow the mine to propagate
+    time.sleep(0.5)
+    return event_ret
 
 
 def _mine_get(load, opts):
     if opts.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
+        try:
+            load['tok'] = _auth().gen_token('salt')
+        except AttributeError:
+            log.error('Mine could not authenticate with master. '
+                      'Mine could not be retreived.'
+                      )
+            return False
     channel = salt.transport.Channel.factory(opts)
     ret = channel.send(load)
     return ret
@@ -139,7 +165,9 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[mine_func], func_data)
+    f_call = salt.utils.format_call(__salt__[mine_func],
+                                    func_data,
+                                    expected_extra_kws=MINE_INTERNAL_KEYWORDS)
     for arg in args:
         if arg not in f_call['args']:
             f_call['args'].append(arg)
@@ -294,12 +322,12 @@ def get_docker(interfaces=None, cidrs=None):
     proxy_lists = {}
 
     # Process docker info
-    for host, containers in docker_hosts.items():
+    for containers in six.itervalues(docker_hosts):
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for iface, info in containers['host']['interfaces'].items():
+            for info in six.itervalues(containers['host']['interfaces']):
                 if 'inet' in info:
                     for ip_ in info['inet']:
                         host_ips.append(ip_['address'])

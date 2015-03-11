@@ -1,8 +1,10 @@
 # coding: utf-8
 
 # Import Python libs
+from __future__ import absolute_import
 import json
 import yaml
+import os
 
 # Import Salt Testing Libs
 from salttesting.unit import skipIf
@@ -33,6 +35,7 @@ except ImportError:
     class AsyncHTTPTestCase(object):
         pass
 
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
 
@@ -69,6 +72,14 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
     def token(self):
         ''' Mint and return a valid token for auth_creds '''
         return self.auth.mk_token(self.auth_creds_dict)
+
+    def setUp(self):
+        super(SaltnadoTestCase, self).setUp()
+        os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
+
+    def tearDown(self):
+        super(SaltnadoTestCase, self).tearDown()
+        os.environ.pop('ASYNC_TEST_TIMEOUT', None)
 
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
@@ -249,7 +260,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         Test logins with bad/missing passwords
         '''
         bad_creds = []
-        for key, val in self.auth_creds_dict.iteritems():
+        for key, val in six.iteritems(self.auth_creds_dict):
             if key == 'password':
                 continue
             bad_creds.append((key, val))
@@ -265,7 +276,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         Test logins with bad/missing passwords
         '''
         bad_creds = []
-        for key, val in self.auth_creds_dict.iteritems():
+        for key, val in six.iteritems(self.auth_creds_dict):
             if key == 'username':
                 val = val + 'foo'
             bad_creds.append((key, val))

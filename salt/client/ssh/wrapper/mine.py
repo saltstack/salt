@@ -3,10 +3,11 @@
 '''
 Wrapper function for mine operations for salt-ssh
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 
 # Import salt libs

@@ -5,6 +5,7 @@ Tests for the file state
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import glob
 import grp
 import os
@@ -13,6 +14,9 @@ import shutil
 import stat
 import tempfile
 import filecmp
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -27,6 +31,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -234,7 +241,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             show_diff=False
         )
 
-        changes = ret.values()[0]['changes']
+        changes = next(six.itervalues(ret))['changes']
         self.assertEqual('<show_diff=False>', changes['diff'])
 
     def test_directory(self):
@@ -342,7 +349,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                              clean=True,
                              exclude_pat='E@^straydir(|/keepfile)$')
 
-        comment = ret.values()[0]['comment']
+        comment = next(six.itervalues(ret))['comment']
         try:
             self.assertSaltNoneReturn(ret)
             self.assertTrue(os.path.exists(strayfile))
@@ -810,7 +817,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         The tested file contains a line already matching the replacement (no change needed)
         The tested file's content shouldn't change at all
         The tested file's mtime shouldn't change at all
-        No backup file should be created, although backup=False isn't explicitely defined
+        No backup file should be created, although backup=False isn't explicitly defined
         '''
         test_name = 'test_replace_issue_18841_omit_backup'
         path_in = os.path.join(
@@ -1278,7 +1285,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         try:
             ret = self.run_function('state.sls', mods='issue-8343')
-            for name, step in ret.items():
+            for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
             with salt.utils.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split('\n')
@@ -1345,7 +1352,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         try:
             ret = self.run_function('state.sls', mods='issue-11003')
-            for name, step in ret.items():
+            for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
             with salt.utils.fopen(testcase_filedest) as fp_:
                 contents = fp_.read().split('\n')
@@ -1489,7 +1496,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 }
             }
             result = {}
-            for name, step in ret.items():
+            for name, step in six.iteritems(ret):
                 self.assertSaltTrueReturn({name: step})
                 result.update({
                  name: {

@@ -52,7 +52,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     tag=tag,
                     data=data))
             except Exception:
-                log.error('Failed to render "{0}"'.format(fn_))
+                log.error('Failed to render "{0}": '.format(fn_), exc_info=True)
         return react
 
     def list_reactors(self, tag):
@@ -130,6 +130,9 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         self.wrap = ReactWrap(self.opts)
 
         for data in self.event.iter_events(full=True):
+            # skip all events fired by ourselves
+            if data['data'].get('user') == self.wrap.event_user:
+                continue
             reactors = self.list_reactors(data['tag'])
             if not reactors:
                 continue
@@ -147,6 +150,7 @@ class ReactWrap(object):
     '''
     # class-wide cache of clients
     client_cache = None
+    event_user = 'Reactor'
 
     def __init__(self, opts):
         self.opts = opts
@@ -166,7 +170,13 @@ class ReactWrap(object):
         l_fun = getattr(self, low['state'])
         try:
             f_call = salt.utils.format_call(l_fun, low)
-            l_fun(*f_call.get('args', ()), **f_call.get('kwargs', {}))
+            kwargs = f_call.get('kwargs', {})
+
+            # TODO: pick one...
+            kwargs['__user__'] = self.event_user
+            kwargs['user'] = self.event_user
+
+            l_fun(*f_call.get('args', ()), **kwargs)
         except Exception:
             log.error(
                     'Failed to execute {0}: {1}\n'.format(low['state'], l_fun),
@@ -183,6 +193,8 @@ class ReactWrap(object):
             self.client_cache['local'].cmd_async(*args, **kwargs)
         except SystemExit:
             log.warning('Attempt to exit reactor. Ignored.')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))
 
     cmd = local
 
@@ -196,6 +208,8 @@ class ReactWrap(object):
             self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
         except SystemExit:
             log.warning('Attempt to exit in reactor by runner. Ignored')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))
 
     def wheel(self, fun, **kwargs):
         '''
@@ -207,3 +221,5 @@ class ReactWrap(object):
             self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
         except SystemExit:
             log.warning('Attempt to in reactor by whell. Ignored.')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))

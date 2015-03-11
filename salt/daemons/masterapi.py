@@ -44,6 +44,9 @@ from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
@@ -230,8 +233,10 @@ def fileserver_update(fileserver):
     '''
     try:
         if not fileserver.servers:
-            log.error('No fileservers loaded, the master will not be'
-                      'able to serve files to minions')
+            log.error(
+                'No fileservers loaded, the master will not be able to '
+                'serve files to minions'
+            )
             raise SaltMasterError('No fileserver backends available')
         fileserver.update()
     except Exception as exc:
@@ -680,7 +685,8 @@ class RemoteFuncs(object):
                 load['id'],
                 load.get('saltenv', load.get('env')),
                 load.get('ext'),
-                self.mminion.functions)
+                self.mminion.functions,
+                pillar=load.get('pillar_override', {}))
         pillar_dirs = {}
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         if self.opts.get('minion_data_cache', False):
@@ -757,7 +763,7 @@ class RemoteFuncs(object):
             self.mminion.returners[fstr](load['jid'], load['load'])
 
         # Format individual return loads
-        for key, item in load['return'].items():
+        for key, item in six.iteritems(load['return']):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
@@ -945,7 +951,7 @@ class RemoteFuncs(object):
                 ret[minion['id']] = minion['return']
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
-        for key, val in self.local.get_cache_returns(ret['__jid__']).items():
+        for key, val in six.iteritems(self.local.get_cache_returns(ret['__jid__'])):
             if key not in ret:
                 ret[key] = val
         if load.get('form', '') != 'full':
@@ -1543,8 +1549,6 @@ class LocalFuncs(object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-        # Set up the payload
-        payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
         # break compatibility with minion/master versions and even tiny
         # additions can have serious implications on the performance of the
@@ -1567,6 +1571,13 @@ class LocalFuncs(object):
             pub_load['tgt_type'] = load['tgt_type']
         if 'to' in load:
             pub_load['to'] = load['to']
+
+        if 'kwargs' in load:
+            if 'ret_config' in load['kwargs']:
+                pub_load['ret_config'] = load['kwargs'].get('ret_config')
+
+            if 'metadata' in load['kwargs']:
+                pub_load['metadata'] = load['kwargs'].get('metadata')
 
         if 'user' in load:
             log.info(

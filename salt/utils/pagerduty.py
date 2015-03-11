@@ -19,14 +19,14 @@ Library for interacting with PagerDuty API
 from __future__ import absolute_import
 
 import json
-import requests
 import logging
+import salt.utils.http
 from salt.version import __version__
 
 log = logging.getLogger(__name__)
 
 
-def query(method='GET', profile=None, url=None, path='api/v1',
+def query(method='GET', profile_dict=None, url=None, path='api/v1',
           action=None, api_key=None, service=None, params=None,
           data=None, subdomain=None, client_url=None, description=None,
           opts=None, verify_ssl=True):
@@ -38,8 +38,8 @@ def query(method='GET', profile=None, url=None, path='api/v1',
     if opts is None:
         opts = {}
 
-    if profile is not None:
-        creds = opts.get(profile)
+    if isinstance(profile_dict, dict):
+        creds = profile_dict
     else:
         creds = {}
 
@@ -71,7 +71,11 @@ def query(method='GET', profile=None, url=None, path='api/v1',
         data = {}
 
     data['client'] = user_agent
-    data['service_key'] = creds['pagerduty.service']
+
+    # pagerduty.service is not documented.  While it makes sense to have in
+    # some cases, don't force it when it is not defined.
+    if 'pagerduty.service' in creds and creds['pagerduty.service'] is not None:
+        data['service_key'] = creds['pagerduty.service']
     data['client_url'] = client_url
     if 'event_type' not in data:
         data['event_type'] = 'trigger'
@@ -90,25 +94,27 @@ def query(method='GET', profile=None, url=None, path='api/v1',
     else:
         headers['Content-type'] = 'application/json'
 
-    result = requests.request(
-        method,
+    result = salt.utils.http.query(
         url,
-        headers=headers,
+        method,
         params=params,
+        header_dict=headers,
         data=json.dumps(data),
-        verify=verify_ssl
+        decode=False,
+        text=True,
+        opts=opts,
     )
 
-    return result.text
+    return result['text']
 
 
-def list_items(action, key, profile=None, api_key=None, opts=None):
+def list_items(action, key, profile_dict=None, api_key=None, opts=None):
     '''
     List items belonging to an API call. Used for list_services() and
     list_incidents()
     '''
     items = json.loads(query(
-        profile=profile,
+        profile_dict=profile_dict,
         api_key=api_key,
         action=action,
         opts=opts

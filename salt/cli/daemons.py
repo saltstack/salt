@@ -3,9 +3,8 @@
 Make me some salt!
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import warnings
@@ -131,6 +130,7 @@ class Master(parsers.MasterOptionParser):
             self.master = salt.daemons.flo.IofloMaster(self.config)
         self.daemonize_if_required()
         self.set_pidfile()
+        salt.utils.process.notify_systemd()
 
     def start(self):
         '''
@@ -144,12 +144,14 @@ class Master(parsers.MasterOptionParser):
         '''
         self.prepare()
         if check_user(self.config['user']):
+            logger.info('The salt master is starting up')
             self.master.start()
 
     def shutdown(self):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
+        logger.info('The salt master is shut down')
 
 
 class Minion(parsers.MinionOptionParser):
@@ -208,7 +210,7 @@ class Minion(parsers.MinionOptionParser):
                                                                 'udp://',
                                                                 'file://')):
                     # Logfile is not using Syslog, verify
-                    current_umask = os.umask(0o077)
+                    current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
@@ -257,6 +259,7 @@ class Minion(parsers.MinionOptionParser):
         try:
             self.prepare()
             if check_user(self.config['user']):
+                logger.info('The salt minion is starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             logger.warn('Stopping the Salt Minion')
@@ -299,6 +302,7 @@ class Minion(parsers.MinionOptionParser):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
+        logger.info('The salt minion is shut down')
 
 
 class ProxyMinion(parsers.MinionOptionParser):
@@ -393,6 +397,7 @@ class ProxyMinion(parsers.MinionOptionParser):
         self.prepare(proxydetails)
         try:
             self.minion.tune_in()
+            logger.info('The proxy minion is starting up')
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             logger.warn('Stopping the Salt Proxy Minion')
             if isinstance(exc, KeyboardInterrupt):
@@ -408,6 +413,7 @@ class ProxyMinion(parsers.MinionOptionParser):
         '''
         if 'proxy' in self.minion.opts:
             self.minion.opts['proxyobject'].shutdown(self.minion.opts)
+        logger.info('The proxy minion is shut down')
 
 
 class Syndic(parsers.SyndicOptionParser):
@@ -476,6 +482,7 @@ class Syndic(parsers.SyndicOptionParser):
         '''
         self.prepare()
         if check_user(self.config['user']):
+            logger.info('The salt syndic is starting up')
             try:
                 self.syndic.tune_in()
             except KeyboardInterrupt:
@@ -486,3 +493,4 @@ class Syndic(parsers.SyndicOptionParser):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
+        logger.info('The salt syndic is shut down')

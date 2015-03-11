@@ -23,8 +23,14 @@ Ensure a Linux ACL does not exist
         - perms: rwx
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 __virtualname__ = 'acl'
 
@@ -39,7 +45,7 @@ def __virtual__():
     return False
 
 
-def present(name, acl_type, acl_name, perms, recurse=False):
+def present(name, acl_type, acl_name='', perms='', recurse=False):
     '''
     Ensure a Linux ACL is present
     '''
@@ -53,8 +59,8 @@ def present(name, acl_type, acl_name, perms, recurse=False):
 
     if _current_perms[name].get(acl_type, None):
         try:
-            user = [i for i in _current_perms[name][acl_type] if i.keys()[0] == acl_name].pop()
-        except IndexError:
+            user = [i for i in _current_perms[name][acl_type] if next(six.iterkeys(i)) == acl_name].pop()
+        except (AttributeError, IndexError):
             user = None
 
         if user:
@@ -89,7 +95,7 @@ def present(name, acl_type, acl_name, perms, recurse=False):
     return ret
 
 
-def absent(name, acl_type, acl_name, perms, recurse=False):
+def absent(name, acl_type, acl_name='', perms='', recurse=False):
     '''
     Ensure a Linux ACL does not exist
     '''
@@ -102,7 +108,7 @@ def absent(name, acl_type, acl_name, perms, recurse=False):
 
     if _current_perms[name].get(acl_type, None):
         try:
-            user = [i for i in _current_perms[name][acl_type] if i.keys()[0] == acl_name].pop()
+            user = [i for i in _current_perms[name][acl_type] if next(six.iterkeys(i)) == acl_name].pop()
         except IndexError:
             user = None
 

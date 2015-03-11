@@ -5,15 +5,18 @@ Module for managing the Salt schedule on a minion
 .. versionadded:: 2014.7.0
 
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import
 import difflib
 import os
 import yaml
 
+# Import salt libs
 import salt.utils
 import salt.utils.odict
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 __proxyenabled__ = ['*']
@@ -43,8 +46,11 @@ SCHEDULE_CONF = [
         'hours',
         'days',
         'enabled',
-        'cron'
-        ]
+        'return_job',
+        'metadata',
+        'cron',
+        'until',
+]
 
 
 def list_(show_all=False, return_yaml=True):
@@ -64,7 +70,7 @@ def list_(show_all=False, return_yaml=True):
     if 'schedule' in __pillar__:
         schedule.update(__pillar__['schedule'])
 
-    for job in schedule.keys():  # iterate over a copy since we will mutate it
+    for job in list(schedule.keys()):  # iterate over a copy since we will mutate it
         if job == 'enabled':
             continue
 
@@ -77,7 +83,6 @@ def list_(show_all=False, return_yaml=True):
         for item in schedule[job]:
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
-                continue
             if schedule[job][item] == 'true':
                 schedule[job][item] = True
             if schedule[job][item] == 'false':
@@ -223,6 +228,12 @@ def build_schedule_item(name, **kwargs):
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 
+    if 'return_job' in kwargs:
+        schedule[name]['return_job'] = kwargs['return_job']
+
+    if 'metadata' in kwargs:
+        schedule[name]['metadata'] = kwargs['metadata']
+
     if 'job_args' in kwargs:
         schedule[name]['args'] = kwargs['job_args']
 
@@ -251,7 +262,7 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
-    for item in ['range', 'when', 'cron', 'returner', 'return_config']:
+    for item in ['range', 'when', 'cron', 'returner', 'return_config', 'until']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 
@@ -656,15 +667,19 @@ def reload_():
         with salt.utils.fopen(sfn, 'rb') as fp_:
             try:
                 schedule = yaml.safe_load(fp_.read())
-            except Exception as e:
-                ret['comment'].append('Unable to read existing schedule file: {0}'.format(e))
+            except yaml.YAMLError as exc:
+                ret['comment'].append('Unable to read existing schedule file: {0}'.format(exc))
 
-        if 'schedule' in schedule and schedule['schedule']:
-            out = __salt__['event.fire']({'func': 'reload', 'schedule': schedule}, 'manage_schedule')
-            if out:
-                ret['comment'].append('Reloaded schedule on minion from schedule.conf.')
+        if schedule:
+            if 'schedule' in schedule and schedule['schedule']:
+                out = __salt__['event.fire']({'func': 'reload', 'schedule': schedule}, 'manage_schedule')
+                if out:
+                    ret['comment'].append('Reloaded schedule on minion from schedule.conf.')
+                else:
+                    ret['comment'].append('Failed to reload schedule on minion from schedule.conf.')
+                    ret['result'] = False
             else:
-                ret['comment'].append('Failed to reload schedule on minion from schedule.conf.')
+                ret['comment'].append('Failed to reload schedule on minion.  Saved file is empty or invalid.')
                 ret['result'] = False
         else:
             ret['comment'].append('Failed to reload schedule on minion.  Saved file is empty or invalid.')

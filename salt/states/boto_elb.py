@@ -222,7 +222,8 @@ def present(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        wait_for_sync=True):
     '''
     Ensure the IAM role exists.
 
@@ -284,6 +285,9 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    wait_for_sync
+        Wait for an INSYNC change status from Route53.
     '''
 
     # load data from attributes_from_pillar and merge with attributes
@@ -317,7 +321,8 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _cnames_present(name, cnames, region, key, keyid, profile)
+    _ret = _cnames_present(name, cnames, region, key, keyid, profile,
+                           wait_for_sync)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -331,6 +336,65 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
+    return ret
+
+
+def register_instances(name, instances, region=None, key=None, keyid=None,
+                       profile=None):
+    '''
+    Add instance/s to load balancer
+
+    .. versionsadded:: Beryllium
+
+    .. code-block:: yaml
+
+    add-instances:
+      boto_elb.register_instances:
+        - name: myloadbalancer
+        - instances:
+          - instance-id1
+          - instance-id2
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret['name'] = name
+    lb = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
+    if lb:
+        health = __salt__['boto_elb.get_instance_health'](name,
+                                                          region,
+                                                          key,
+                                                          keyid,
+                                                          profile)
+        nodes = []
+        new = []
+        for value in health:
+            nodes.append(value['instance_id'])
+        for value in instances:
+            if value not in nodes:
+                new.append(value)
+        if len(new) == 0:
+            ret['comment'] = 'Instance/s {0} already exist.' \
+                              ''.format(str(instances).strip('[]'))
+            ret['result'] = True
+        else:
+            state = __salt__['boto_elb.register_instances'](name,
+                                                            instances,
+                                                            region,
+                                                            key,
+                                                            keyid,
+                                                            profile)
+            if state:
+                ret['comment'] = 'Load Balancer {0} has been changed' \
+                                 ''.format(name)
+                ret['changes']['old'] = '\n'.join(nodes)
+                new = set().union(nodes, instances)
+                ret['changes']['new'] = '\n'.join(list(new))
+                ret['result'] = True
+            else:
+                ret['comment'] = 'Load balancer {0} failed to add instances' \
+                                 ''.format(name)
+                ret['result'] = False
+    else:
+        ret['comment'] = 'Could not find lb {0}'.format(name)
     return ret
 
 
@@ -747,7 +811,8 @@ def _cnames_present(
         region,
         key,
         keyid,
-        profile):
+        profile,
+        wait_for_sync):
     ret = {'result': True, 'comment': '', 'changes': {}}
     if not cnames:
         cnames = []
@@ -852,7 +917,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
         tmp = dictupdate.update(tmp, alarms)
     # set alarms, using boto_cloudwatch_alarm.present
     merged_return_value = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    for _, info in tmp.items():
+    for _, info in six.iteritems(tmp):
         # add elb to name and description
         info["name"] = name + " " + info["name"]
         info["attributes"]["description"] = name + " " + info["attributes"]["description"]
@@ -868,7 +933,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
             "profile": profile,
         }
         ret = __salt__["state.single"]('boto_cloudwatch_alarm.present', **kwargs)
-        results = ret.values()[0]
+        results = next(six.itervalues(ret))
         if not results["result"]:
             merged_return_value["result"] = False
         if results.get("changes", {}) != {}:

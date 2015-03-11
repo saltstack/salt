@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
+
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import sys
 
+# Import Salt libs
 from salt.utils import parsers, print_cli
-from salt.utils.verify import verify_files
 from salt.exceptions import (
         SaltClientError,
         SaltInvocationError,
         EauthAuthenticationError
         )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):
@@ -26,16 +29,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         import salt.auth
         import salt.client
         self.parse_args()
-
-        if self.config['verify_env']:
-            if not self.config['log_file'].startswith(('tcp://',
-                                                       'udp://',
-                                                       'file://')):
-                # Logfile is not using Syslog, verify
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user']
-                )
 
         # Setup file logging!
         self.setup_logfile_logger()
@@ -284,7 +277,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         ret = {}
         out = ''
         retcode = 0
-        for key, data in full_ret.items():
+        for key, data in six.iteritems(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
@@ -293,7 +286,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         return ret, out, retcode
 
     def _format_error(self, minion_error):
-        for minion, error_doc in minion_error.items():
+        for minion, error_doc in six.iteritems(minion_error):
             error = 'Minion [{0}] encountered exception \'{1}\''.format(minion, error_doc['message'])
         return error
 
@@ -308,11 +301,13 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         if isinstance(ret, str):
             self.exit(2, '{0}\n'.format(ret))
         for host in ret:
+            if ret[host] == 'Minion did not return. [Not connected]':
+                continue
             for fun in ret[host]:
                 if fun not in docs:
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
-            salt.output.display_output(fun + ':', 'text', self.config)
+            salt.output.display_output(fun + ':', 'nested', self.config)
             print_cli(docs[fun])
             print_cli('')

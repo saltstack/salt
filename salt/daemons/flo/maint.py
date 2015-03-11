@@ -17,31 +17,35 @@ import salt.utils.minions
 import salt.daemons.masterapi
 
 
-class SaltRaetMaintFork(ioflo.base.deeding.Deed):
+@ioflo.base.deeding.deedify(
+        'SaltRaetMaintFork',
+        ioinits={'opts': '.salt.opts', 'proc_mgr': '.salt.usr.proc_mgr'})
+def maint_fork(self):
     '''
     For off the maintinence process from the master router process
     FloScript:
 
     do salt raet maint fork at enter
-
     '''
-    Ioinits = {'opts': '.salt.opts'}
+    self.proc_mgr.value.add_process(Maintenance, args=(self.opts.value,))
 
-    def _fork_maint(self):
-        '''
-        Run the multiprocessing in here to fork the maintinace process
-        '''
-        proc = multiprocessing.Process(target=self._maint)
-        proc.start()
 
-    def _maint(self):
+class Maintenance(multiprocessing.Process):
+    '''
+    Start the maintinance process within ioflo
+    '''
+    def __init__(self, opts):
+        super(Maintenance, self).__init__()
+        self.opts = opts
+
+    def run(self):
         '''
         Spin up a worker, do this in s multiprocess
         '''
         behaviors = ['salt.daemons.flo']
-        preloads = [('.salt.opts', dict(value=self.opts.value))]
+        preloads = [('.salt.opts', dict(value=self.opts))]
 
-        console_logdir = self.opts.value.get('ioflo_console_logdir', '')
+        console_logdir = self.opts.get('ioflo_console_logdir', '')
         if console_logdir:
             consolepath = os.path.join(console_logdir, 'maintenance.log')
         else:  # empty means log to std out
@@ -49,10 +53,10 @@ class SaltRaetMaintFork(ioflo.base.deeding.Deed):
 
         ioflo.app.run.start(
                 name='maintenance',
-                period=float(self.opts.value['loop_interval']),
+                period=float(self.opts['loop_interval']),
                 stamp=0.0,
-                real=self.opts.value['ioflo_realtime'],
-                filepath=self.opts.value['maintenance_floscript'],
+                real=self.opts['ioflo_realtime'],
+                filepath=self.opts['maintenance_floscript'],
                 behaviors=behaviors,
                 username="",
                 password="",
@@ -60,15 +64,9 @@ class SaltRaetMaintFork(ioflo.base.deeding.Deed):
                 houses=None,
                 metas=None,
                 preloads=preloads,
-                verbose=int(self.opts.value['ioflo_verbose']),
+                verbose=int(self.opts['ioflo_verbose']),
                 consolepath=consolepath,
                 )
-
-    def action(self):
-        '''
-        make go!
-        '''
-        self._fork_maint()
 
 
 class SaltRaetMaintSetup(ioflo.base.deeding.Deed):

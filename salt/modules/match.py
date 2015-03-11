@@ -61,6 +61,15 @@ def ipcidr(tgt):
     .. code-block:: bash
 
         salt '*' match.ipcidr '192.168.44.0/24'
+
+    delimiter
+    Pillar Example:
+
+    .. code-block:: yaml
+       '172.16.0.0/12':
+         - match: ipcidr
+         - nodeclass: internal
+
     '''
     matcher = salt.minion.Matcher({'grains': __grains__}, __salt__)
     try:

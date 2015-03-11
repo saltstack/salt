@@ -1,6 +1,18 @@
-===============================================
-Salt 2014.12.0 Release Notes - Codename Lithium
-===============================================
+==============================================
+Salt 2015.2.0 Release Notes - Codename Lithium
+==============================================
+
+Beacons
+=======
+
+The beacon system allows the minion to hook into system processes and
+continually translate external events into the salt event bus. The
+primary example of this is the :py:mod:`~salt.beacons.inotify` beacon. This
+beacon uses inotify to watch configured files or directories on the minion for
+changes, creation, deletion etc.
+
+This allows for the changes to be sent up to the master where the
+reactor can respond to changes.
 
 Salt SSH
 ========
@@ -11,3 +23,42 @@ Salt SSH
 - Added support for ``publish.publish``, ``publish.full_data``, and
   ``publish.runner`` in ``salt-ssh``
 - Added support for ``mine.get`` in ``salt-ssh``
+
+Misc Fixes/Additions
+====================
+
+- Add ``only_upgrade`` argument to apt-based ``pkg.install`` to only install a
+  package version if the package is already installed. (Great for security
+  updates!)
+- Joyent now requires a ``keyname`` to be specified in the provider
+  configuration. This change was necessitated upstream by the 7.0+ API.
+- Add ``args`` argument to ``cmd.script_retcode`` to match ``cmd.script`` in
+  the :py:mod:`cmd module <salt.cmd.cmdmod>`. (:issue:`21122`)
+- Fixed bug where TCP keepalive was not being sent on the defined interval on
+  the return port (4506) from minion to master. (:issue: `21465`)
+
+Deprecations
+============
+- Removed ``parameter`` keyword argument from ``eselect.exec_action`` execution
+  module.
+
+- Removed ``runas`` parameter from the following ``pip``` execution module
+  functions: ``install``, ``uninstall``, ``freeze``, ``list_``, ``list_upgrades``,
+  ``upgrade_available``, ``upgrade``. Please migrate to ``user``.
+
+- Removed ``runas`` parameter from the following ``pip`` state module
+  functions: ``installed``, ``removed``, ``uptodate`` . Please migrate to ``user``.
+
+- Removed ``quiet`` option from all functions in ``cmdmod`` execution module.
+  Please use ``output_loglevel=quiet`` instead.
+
+- Removed ``parameter`` argument from ``eselect.set_`` state. Please migrate to
+  ``module_parameter`` or ``action_parameter``.
+
+- The ``salt_events`` table schema has changed to include an additional field
+  called ``master_id`` to distinguish between events flowing into a database
+  from multiple masters. If ``event_return`` is enabled in the master config,
+  the database schema must first be updated to add the ``master_id`` field.
+  This alteration can be accomplished as follows:
+
+    ``ALTER TABLE salt_events ADD master_id VARCHAR(255) NOT NULL;``

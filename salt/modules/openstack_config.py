@@ -77,7 +77,8 @@ def set_(filename, section, parameter, value):
     result = __salt__['cmd.run_all'](
             'openstack-config --set {0} {1} {2} {3}'.format(
                 filename, section, parameter, value
-                )
+                ),
+            python_shell=False,
             )
 
     if result['retcode'] == 0:
@@ -115,7 +116,8 @@ def get(filename, section, parameter):
     result = __salt__['cmd.run_all'](
             'openstack-config --get {0} {1} {2}'.format(
                 filename, section, parameter
-                )
+                ),
+            python_shell=False,
             )
 
     if result['retcode'] == 0:
@@ -152,7 +154,8 @@ def delete(filename, section, parameter):
     result = __salt__['cmd.run_all'](
             'openstack-config --del {0} {1} {2}'.format(
                 filename, section, parameter
-                )
+                ),
+            python_shell=False,
             )
 
     if result['retcode'] == 0:

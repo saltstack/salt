@@ -17,6 +17,10 @@ def _check_hg():
     utils.check_or_die(hg_binary)
 
 
+def _ssh_flag(identity_path):
+    return '--ssh "ssh -i {0}"'.format(identity_path)
+
+
 def revision(cwd, rev='tip', short=False, user=None):
     '''
     Returns the long hash of a given identifier (hash, branch, tag, HEAD, etc)
@@ -82,8 +86,6 @@ def describe(cwd, rev='tip', user=None):
     '''
     _check_hg()
 
-    cmd = "hg log -r {0} --template"\
-            " '{{latesttag}}-{{latesttagdistance}}-{{node|short}}'".format(rev)
     cmd = [
             'hg',
             'log',
@@ -135,12 +137,6 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     '''
     _check_hg()
 
-    cmd = 'hg archive {output}{rev}{fmt}{prefix}'.format(
-        rev=' --rev {0}'.format(rev),
-        output=output,
-        fmt=' --type {0}'.format(fmt) if fmt else '',
-        prefix=' --prefix "{0}"'.format(prefix) if prefix else '')
-
     cmd = [
             'hg',
             'archive',
@@ -157,7 +153,7 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
-def pull(cwd, opts=None, user=None, repository=None):
+def pull(cwd, opts=None, user=None, identity=None, repository=None):
     '''
     Perform a pull on the given repository
 
@@ -173,6 +169,11 @@ def pull(cwd, opts=None, user=None, repository=None):
     user : None
         Run hg as a user other than what the minion runs as
 
+    identity : None
+        Private SSH key on the minion server for authentication (ssh://)
+
+        .. versionadded:: 2015.2.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -182,12 +183,14 @@ def pull(cwd, opts=None, user=None, repository=None):
     _check_hg()
 
     cmd = ['hg', 'pull']
+    if identity:
+        cmd.append(_ssh_flag(identity))
     if opts:
         for opt in opts.split():
             cmd.append(opt)
     if repository is not None:
         cmd.append(repository)
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
+    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False, use_vt=not utils.is_windows())
 
 
 def update(cwd, rev, force=False, user=None):
@@ -220,7 +223,7 @@ def update(cwd, rev, force=False, user=None):
     return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
-def clone(cwd, repository, opts=None, user=None):
+def clone(cwd, repository, opts=None, user=None, identity=None):
     '''
     Clone a new repository
 
@@ -236,6 +239,11 @@ def clone(cwd, repository, opts=None, user=None):
     user : None
         Run hg as a user other than what the minion runs as
 
+    identity : None
+        Private SSH key on the minion server for authentication (ssh://)
+
+        .. versionadded:: 2015.2.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -247,4 +255,6 @@ def clone(cwd, repository, opts=None, user=None):
     if opts:
         for opt in opts.split():
             cmd.append('{0}'.format(opt))
-    return __salt__['cmd.run'](cmd, runas=user, python_shell=False)
+    if identity:
+        cmd.append(_ssh_flag(identity))
+    return __salt__['cmd.run'](cmd, runas=user, python_shell=False, use_vt=not utils.is_windows())

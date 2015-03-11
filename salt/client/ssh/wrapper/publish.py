@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 
 Salt-ssh wrapper functions for the publish module.
 
@@ -10,6 +10,7 @@ salt-ssh calls and return the data from them.
 No access control is needed because calls cannot originate from the minions.
 '''
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 

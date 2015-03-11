@@ -53,15 +53,16 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import hashlib
-import errno
-import logging
 import time
+import errno
+import hashlib
+import logging
 import datetime
 import multiprocessing
 from collections import MutableMapping
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -76,6 +77,7 @@ import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.process
 import salt.utils.zeromq
+
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
@@ -130,18 +132,8 @@ def get_master_event(opts, sock_dir, listen=True):
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen)
-
-
-def get_runner_event(opts, jid, listen=True):
-    '''
-    Return an event object suitable for the named transport
-    '''
-    if opts['transport'] == 'zeromq':
-        return RunnerEvent(opts, jid)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RunnerEvent(opts, jid, listen=listen)
+            opts=opts, sock_dir=sock_dir, listen=listen
+        )
 
 
 def tagify(suffix='', prefix='', base=SALT):
@@ -485,7 +477,7 @@ class SaltEvent(object):
         if not self.cpush:
             self.connect_pull(timeout=timeout)
 
-        data['_stamp'] = datetime.datetime.now().isoformat()
+        data['_stamp'] = datetime.datetime.utcnow().isoformat()
 
         tagend = TAGEND
         serialized_data = salt.utils.dicttrim.trim_dict(
@@ -502,6 +494,21 @@ class SaltEvent(object):
             raise
         return True
 
+    def fire_master(self, data, tag, timeout=1000):
+        ''''
+        Send a single event to the master, with the payload "data" and the
+        event identifier "tag".
+
+        Default timeout is 1000ms
+        '''
+        msg = {
+            'tag': tag,
+            'data': data,
+            'events': None,
+            'pretag': None
+        }
+        return self.fire_event(msg, "fire_master", timeout)
+
     def destroy(self, linger=5000):
         if self.cpub is True and self.sub.closed is False:
             # Wait at most 2.5 secs to send any remaining messages in the
@@ -516,7 +523,7 @@ class SaltEvent(object):
         # that poller gets garbage collected. The Poller itself, its
         # registered sockets and the Context
         if isinstance(self.poller.sockets, dict):
-            for socket in self.poller.sockets.keys():
+            for socket in six.iterkeys(self.poller.sockets):
                 if socket.closed is False:
                     socket.setsockopt(zmq.LINGER, linger)
                     socket.close()
@@ -546,7 +553,7 @@ class SaltEvent(object):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in SUB_EVENT:
                 try:
-                    for tag, data in load.get('return', {}).items():
+                    for tag, data in six.iteritems(load.get('return', {})):
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
                         if data.get('result') is False:
@@ -573,7 +580,12 @@ class SaltEvent(object):
                     pass
 
     def __del__(self):
-        self.destroy()
+        # skip exceptions in destroy-- since destroy() doesn't cover interpreter
+        # shutdown-- where globals start going missing
+        try:
+            self.destroy()
+        except:  # pylint: disable=W0702
+            pass
 
 
 class MasterEvent(SaltEvent):
@@ -595,23 +607,19 @@ class LocalClientEvent(MasterEvent):
     '''
 
 
-class RunnerEvent(MasterEvent):
+class NamespacedEvent(object):
     '''
-    Warning! Use the get_runner_event function or the code will not be
-    RAET compatible
-    This is used to send progress and return events from runners.
-    It extends MasterEvent to include information about how to
-    display events to the user as a runner progresses.
+    A wrapper for sending events within a specific base namespace
     '''
-    def __init__(self, opts, jid):
-        super(RunnerEvent, self).__init__(opts['sock_dir'])
-        self.jid = jid
+    def __init__(self, event, base, print_func=None):
+        self.event = event
+        self.base = base
+        self.print_func = print_func
 
-    def fire_progress(self, data, outputter='pprint'):
-        progress_event = {'data': data,
-                          'outputter': outputter}
-        self.fire_event(
-            progress_event, tagify([self.jid, 'progress'], 'runner'))
+    def fire_event(self, data, tag):
+        if self.print_func is not None:
+            self.print_func(tag, data)
+        self.event.fire_event(data, tagify(tag, base=self.base))
 
 
 class MinionEvent(SaltEvent):

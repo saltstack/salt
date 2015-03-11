@@ -15,9 +15,12 @@ import socket
 # Import salt libs
 import salt.utils
 import salt.utils.network
-from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
-from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
 log = logging.getLogger(__name__)
@@ -75,7 +78,7 @@ def ping(host, timeout=False, return_boolean=False):
 
         salt '*' network.ping archlinux.org
 
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     Return a True or False instead of ping output.
 
@@ -281,12 +284,12 @@ def _netstat_bsd():
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
-        conn_ppid = dict((x, y) for x, y in ppid.items() if x in ptr)
+        conn_ppid = dict((x, y) for x, y in six.iteritems(ppid) if x in ptr)
         try:
             # Master pid for this connection will be the pid whose ppid isn't
             # in the subset dict we created above
             master_pid = next(iter(
-                x for x, y in conn_ppid.items() if y not in ptr
+                x for x, y in six.iteritems(conn_ppid) if y not in ptr
             ))
         except StopIteration:
             continue
@@ -301,7 +304,7 @@ def _netstat_route_linux():
     '''
     ret = []
     cmd = 'netstat -A inet -rn | tail -n+3'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -312,7 +315,7 @@ def _netstat_route_linux():
             'flags': comps[3],
             'interface': comps[7]})
     cmd = 'netstat -A inet6 -rn | tail -n+3'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         if len(comps) == 6:
@@ -342,7 +345,7 @@ def _netstat_route_freebsd():
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -353,7 +356,7 @@ def _netstat_route_freebsd():
             'flags': comps[3],
             'interface': comps[5]})
     cmd = 'netstat -f inet6 -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -372,7 +375,7 @@ def _netstat_route_netbsd():
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -383,7 +386,7 @@ def _netstat_route_netbsd():
             'flags': comps[3],
             'interface': comps[6]})
     cmd = 'netstat -f inet6 -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -402,7 +405,7 @@ def _netstat_route_openbsd():
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -413,7 +416,7 @@ def _netstat_route_openbsd():
             'flags': comps[2],
             'interface': comps[7]})
     cmd = 'netstat -f inet6 -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -534,8 +537,8 @@ def traceroute(host):
                         'hostname': traceline[1],
                         'ip': traceline[2],
                     }
-                    for x in range(0, len(delays)):
-                        result['ms{0}'.format(x + 1)] = delays[x]
+                    for idx in range(0, len(delays)):
+                        result['ms{0}'.format(idx + 1)] = delays[idx]
             except IndexError:
                 result = {}
 
@@ -790,7 +793,7 @@ def mod_hostname(hostname):
     # new hostname
     host_c = salt.utils.fopen('/etc/hosts', 'r').readlines()
 
-    with salt.utils.fopen('/etc/hosts', 'w') as fh:
+    with salt.utils.fopen('/etc/hosts', 'w') as fh_:
         for host in host_c:
             host = host.split()
 
@@ -799,25 +802,25 @@ def mod_hostname(hostname):
             except ValueError:
                 pass
 
-            fh.write('\t'.join(host) + '\n')
+            fh_.write('\t'.join(host) + '\n')
 
     # Modify the /etc/sysconfig/network configuration file to set the
     # new hostname
     if __grains__['os_family'] == 'RedHat':
         network_c = salt.utils.fopen('/etc/sysconfig/network', 'r').readlines()
 
-        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh:
-            for i in network_c:
-                if i.startswith('HOSTNAME'):
-                    fh.write('HOSTNAME={0}\n'.format(hostname))
+        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh_:
+            for net in network_c:
+                if net.startswith('HOSTNAME'):
+                    fh_.write('HOSTNAME={0}\n'.format(hostname))
                 else:
-                    fh.write(i)
+                    fh_.write(net)
     elif __grains__['os_family'] == 'Debian':
-        with salt.utils.fopen('/etc/hostname', 'w') as fh:
-            fh.write(hostname + '\n')
+        with salt.utils.fopen('/etc/hostname', 'w') as fh_:
+            fh_.write(hostname + '\n')
     elif __grains__['os_family'] == 'OpenBSD':
-        with salt.utils.fopen('/etc/myname', 'w') as fh:
-            fh.write(hostname + '\n')
+        with salt.utils.fopen('/etc/myname', 'w') as fh_:
+            fh_.write(hostname + '\n')
 
     return True
 
@@ -887,25 +890,25 @@ def connect(host, port=None, **kwargs):
          garbage,
          _address) = socket.getaddrinfo(address, port, __family, 0, __proto)[0]
 
-        s = socket.socket(family, socktype, _proto)
-        s.settimeout(timeout)
+        skt = socket.socket(family, socktype, _proto)
+        skt.settimeout(timeout)
 
         if proto == 'udp':
             # Generate a random string of a
             # decent size to test UDP connection
-            h = hashlib.md5()
-            h.update(datetime.datetime.now().strftime('%s'))
-            msg = h.hexdigest()
-            s.sendto(msg, _address)
-            recv, svr = s.recvfrom(255)
-            s.close()
+            md5h = hashlib.md5()
+            md5h.update(datetime.datetime.now().strftime('%s'))
+            msg = md5h.hexdigest()
+            skt.sendto(msg, _address)
+            recv, svr = skt.recvfrom(255)
+            skt.close()
         else:
-            s.connect(_address)
-            s.shutdown(2)
-    except Exception as e:
+            skt.connect(_address)
+            skt.shutdown(2)
+    except Exception as exc:
         ret['result'] = False
         try:
-            errno, errtxt = e
+            errno, errtxt = exc
         except ValueError:
             ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
         else:

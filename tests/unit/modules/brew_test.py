@@ -3,6 +3,9 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
 from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
@@ -61,20 +64,16 @@ class BrewTestCase(TestCase):
         mock_cmd = MagicMock(return_value='')
         with patch.dict(brew.__salt__, {'cmd.run_all': mock_failure,
                                         'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd}):
+                                        'cmd.run': mock_cmd,
+                                        'cmd.retcode': mock_failure}):
             self.assertFalse(brew._tap('homebrew/test'))
 
     @patch('salt.modules.brew._list_taps', MagicMock(return_value=TAPS_LIST))
     def test_tap(self):
         '''
-        Tests adding unofficial Github repos to the list of brew taps
+        Tests adding unofficial GitHub repos to the list of brew taps
         '''
-        mock_success = MagicMock(return_value={'retcode': 0})
-        mock_user = MagicMock(return_value='foo')
-        mock_cmd = MagicMock(return_value='')
-        with patch.dict(brew.__salt__, {'cmd.run_all': mock_success,
-                                        'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd}):
+        with patch.dict(brew.__salt__, {'cmd.retcode': MagicMock(return_value=0)}):
             self.assertTrue(brew._tap('homebrew/test'))
 
     # '_homebrew_bin' function tests: 1

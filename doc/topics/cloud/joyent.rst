@@ -27,7 +27,8 @@ send the provisioning commands up to the freshly created virtual machine.
         provider: joyent
         user: fred
         password: saltybacon
-        private_key: /root/joyent.pem
+        private_key: /root/mykey.pem
+        keyname: mykey
 
 
 Profiles
@@ -108,3 +109,38 @@ command:
                 public:
                     True
     ...SNIP...
+
+
+SmartDataCenter
+===============
+
+This driver can also be used with the Joyent SmartDataCenter project. More
+details can be found at:
+
+.. _`SmartDataCenter`: https://github.com/joyent/sdc
+
+Using SDC requires that an api_host_suffix is set. The default value for this is
+`.api.joyentcloud.com`. All characters, including the leading `.`, should be
+included:
+
+.. code-block:: yaml
+
+      api_host_suffix: .api.myhostname.com
+
+
+Miscellaneous Configuration
+===========================
+The following configuration items can be set in either ``provider`` or
+``profile`` confuration files.
+
+use_ssl
+~~~~~~~
+When set to ``True`` (the default), attach ``https://`` to any URL that does not
+already have ``http://`` or ``https://`` included at the beginning. The best
+practice is to leave the protocol out of the URL, and use this setting to manage
+it.
+
+verify_ssl
+~~~~~~~~~~
+When set to ``True`` (the default), the underlying web library will verify the
+SSL certificate. This should only be set to ``False`` for debugging.`

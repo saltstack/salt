@@ -4,9 +4,9 @@ Manage events
 
 This module is used to manage events via RAET
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import time
@@ -17,12 +17,15 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
-from salt import transport
 from salt.utils import kinds
+from salt import transport
 from salt import syspaths
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +101,7 @@ class RAETEvent(object):
                 name=name,
                 lanename=lanename,
                 sockdirpath=self.sock_dir)
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack.value
         stack.addRemote(RemoteYard(stack=stack,
                                    lanename=lanename,
                                    name=ryn,
@@ -222,7 +225,7 @@ class RAETEvent(object):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in salt.utils.event.SUB_EVENT:
                 try:
-                    for tag, data in load.get('return', {}).items():
+                    for tag, data in six.iteritems(load.get('return', {})):
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
                         if data.get('result') is False:
@@ -259,22 +262,6 @@ class MasterEvent(RAETEvent):
         super(MasterEvent, self).__init__('master', opts=opts, sock_dir=sock_dir, listen=listen)
 
 
-class RunnerEvent(MasterEvent):
-    '''
-    This is used to send progress and return events from runners.
-    It extends MasterEvent to include information about how to
-    display events to the user as a runner progresses.
-    '''
-    def __init__(self, opts, jid, listen=True):
-        super(RunnerEvent, self).__init__(opts=opts, sock_dir=opts['sock_dir'], listen=listen)
-        self.jid = jid
-
-    def fire_progress(self, data, outputter='pprint'):
-        progress_event = {'data': data,
-                          'outputter': outputter}
-        self.fire_event(progress_event, salt.utils.event.tagify([self.jid, 'progress'], 'runner'))
-
-
 class PresenceEvent(MasterEvent):
 
     def __init__(self, opts, sock_dir, listen=True, state=None):
@@ -292,6 +279,29 @@ class PresenceEvent(MasterEvent):
                 msg = {'route': route}
                 if self.state:
                     msg['data'] = {'state': self.state}
+                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+                self.stack.serviceAll()
+                self.connected = True
+            except Exception:
+                pass
+
+
+class StatsEvent(MasterEvent):
+
+    def __init__(self, opts, sock_dir, tag, estate=None, listen=True):
+        super(StatsEvent, self).__init__(opts=opts, sock_dir=sock_dir, listen=listen)
+        self.tag = tag
+        self.estate = estate
+
+    def connect_pub(self):
+        '''
+        Establish the publish connection
+        '''
+        if not self.connected and self.listen:
+            try:
+                route = {'dst': (self.estate, None, 'stats_req'),
+                         'src': (None, self.stack.local.name, None)}
+                msg = {'route': route, 'tag': self.tag}
                 self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
                 self.stack.serviceAll()
                 self.connected = True

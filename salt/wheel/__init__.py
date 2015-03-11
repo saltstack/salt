@@ -4,19 +4,15 @@ Modules used to control the master itself
 '''
 from __future__ import absolute_import
 #import python libs
-import collections
 import os
-import time
+import collections
 
 # Import salt libs
 from salt import syspaths
 import salt.config
 import salt.loader
-import salt.payload
-import salt.utils
 from salt.client import mixins
 from salt.utils.error import raise_error
-from salt.utils.event import tagify
 
 
 class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
@@ -35,35 +31,18 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     tag_prefix = 'wheel'
 
     def __init__(self, opts=None):
-        if not opts:
-            opts = salt.config.client_config(
-                    os.environ.get(
-                        'SALT_MASTER_CONFIG',
-                        os.path.join(syspaths.CONFIG_DIR, 'master')
-                        )
-                    )
-
         self.opts = opts
         self.functions = salt.loader.wheels(opts)
 
-    def cmd(self, fun, **kwargs):
+    # TODO: remove/deprecate
+    def call_func(self, fun, **kwargs):
         '''
-        Execute a wheel function
-
-        .. code-block:: python
-
-            >>> opts = salt.config.master_config('/etc/salt/master')
-            >>> wheel = salt.wheel.Wheel(opts)
-            >>> wheel.call_func('key.list_all')
-            {'local': ['master.pem', 'master.pub'],
-            'minions': ['jerry'],
-            'minions_pre': [],
-            'minions_rejected': []}
+        Backwards compatibility
         '''
         return self.low(fun, kwargs)
 
-    call_func = cmd  # alias for backward-compat
-
+    # TODO: Inconsistent with runner client-- the runner client's master_call gives
+    # an async return, unlike this
     def master_call(self, **kwargs):
         '''
         Execute a wheel function through the master network interface (eauth).
@@ -71,7 +50,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         load = kwargs
         load['cmd'] = 'wheel'
         master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
-                     ':' + str(self.opts['ret_port'])
+                                                      ':' + str(self.opts['ret_port'])
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
                                                  master_uri=master_uri)
@@ -90,23 +69,25 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         .. code-block:: python
 
-            >>> wheel.cmd_sync({
-                'fun': 'key.finger',
-                'match': 'jerry',
-                'eauth': 'auto',
-                'username': 'saltdev',
-                'password': 'saltdev',
-            })
-            {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+        >>> wheel.cmd_sync({
+        'fun': 'key.finger',
+        'match': 'jerry',
+        'eauth': 'auto',
+        'username': 'saltdev',
+        'password': 'saltdev',
+        })
+        {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
         '''
         return self.master_call(**low)
 
+    # TODO: Inconsistent with runner client-- that one uses the master_call function
+    # and runs within the master daemon. Need to pick one...
     def cmd_async(self, low):
         '''
-        Execute a wheel function asynchronously; eauth is respected
+        Execute a function asynchronously; eauth is respected
 
         This function requires that :conf_master:`external_auth` is configured
-        and the user is authorized to execute runner functions: (``@wheel``).
+        and the user is authorized
 
         .. code-block:: python
 
@@ -121,5 +102,6 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         fun = low.pop('fun')
         return self.async(fun, low)
+
 
 Wheel = WheelClient  # for backward-compat

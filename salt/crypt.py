@@ -4,10 +4,8 @@ The crypt module manages all of the cryptography functions for minions and
 masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 '''
-from __future__ import absolute_import
-from __future__ import print_function
-
 # Import python libs
+from __future__ import absolute_import, print_function
 import os
 import sys
 import time
@@ -16,7 +14,7 @@ import hashlib
 import logging
 import traceback
 import binascii
-from salt.ext.six.moves import zip
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
 try:
@@ -253,12 +251,39 @@ class MasterKeys(dict):
         return self.pub_signature
 
 
-class Auth(object):
+class SAuth(object):
     '''
-    The Auth class provides the sequence for setting up communication with
-    the master server from a minion.
+    Set up an object to maintain authentication with the salt master
     '''
+    # This class is only a singleton per minion/master pair
+    instances = {}
+
+    def __new__(cls, opts):
+        '''
+        Only create one instance of SAuth per __key()
+        '''
+        key = cls.__key(opts)
+        if key not in SAuth.instances:
+            log.debug('Initializing new SAuth for {0}'.format(key))
+            SAuth.instances[key] = object.__new__(cls)
+            SAuth.instances[key].__singleton_init__(opts)
+        else:
+            log.debug('Re-using SAuth for {0}'.format(key))
+        return SAuth.instances[key]
+
+    @classmethod
+    def __key(cls, opts):
+        return (opts['pki_dir'],     # where the keys are stored
+                opts['id'],          # minion ID
+                opts['master_uri'],  # master ID
+                )
+
+    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts):
+        pass
+
+    # an init for the singleton instance to call
+    def __singleton_init__(self, opts):
         '''
         Init an Auth instance
 
@@ -279,6 +304,41 @@ class Auth(object):
             self.mpub = 'minion_master.pub'
         if not os.path.isfile(self.pub_path):
             self.get_keys()
+
+        self.authenticate()
+
+    def authenticate(self):
+        '''
+        Authenticate with the master, this method breaks the functional
+        paradigm, it will update the master information from a fresh sign
+        in, signing in can occur as often as needed to keep up with the
+        revolving master AES key.
+
+        :rtype: Crypticle
+        :returns: A crypticle used for encryption operations
+        '''
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        if not acceptance_wait_time_max:
+            acceptance_wait_time_max = acceptance_wait_time
+
+        while True:
+            creds = self.sign_in()
+            if creds == 'retry':
+                if self.opts.get('caller'):
+                    print('Minion failed to authenticate with the master, '
+                          'has the minion key been accepted?')
+                    sys.exit(2)
+                if acceptance_wait_time:
+                    log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
+                    time.sleep(acceptance_wait_time)
+                if acceptance_wait_time < acceptance_wait_time_max:
+                    acceptance_wait_time += acceptance_wait_time
+                    log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
+                continue
+            break
+        self.creds = creds
+        self.crypticle = Crypticle(self.opts, creds['aes'])
 
     def get_keys(self):
         '''
@@ -436,7 +496,9 @@ class Auth(object):
                 log.info('Received signed and verified master pubkey '
                          'from master {0}'.format(self.opts['master']))
                 m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-                salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                uid = salt.utils.get_uid(self.opts.get('user', None))
+                with salt.utils.fpopen(m_pub_fn, 'w+', uid=uid) as wfh:
+                    wfh.write(payload['pub_key'])
                 return True
             else:
                 log.error('Received signed public-key from master {0} '
@@ -610,8 +672,11 @@ class Auth(object):
 
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
 
+        auth['master_uri'] = self.opts['master_uri']
+
         sreq = salt.payload.SREQ(
             self.opts['master_uri'],
+            opts=self.opts
         )
 
         try:
@@ -652,8 +717,11 @@ class Auth(object):
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
-                        'node, this salt minion will wait for {0} seconds '
-                        'before attempting to re-authenticate'.format(
+                        'node. If this is the first time connecting to this master '
+                        'then this key may need to be accepted using \'salt-key -a {0}\' on '
+                        'the salt master. This salt minion will wait for {1} seconds '
+                        'before attempting to re-authenticate.'.format(
+                            self.opts['id'],
                             self.opts['acceptance_wait_time']
                         )
                     )
@@ -777,45 +845,3 @@ class Crypticle(object):
         if not data.startswith(self.PICKLE_PAD):
             return {}
         return self.serial.loads(data[len(self.PICKLE_PAD):])
-
-
-class SAuth(Auth):
-    '''
-    Set up an object to maintain the standalone authentication session
-    with the salt master
-    '''
-    def __init__(self, opts):
-        super(SAuth, self).__init__(opts)
-        self.crypticle = self.__authenticate()
-
-    def __authenticate(self):
-        '''
-        Authenticate with the master, this method breaks the functional
-        paradigm, it will update the master information from a fresh sign
-        in, signing in can occur as often as needed to keep up with the
-        revolving master AES key.
-
-        :rtype: Crypticle
-        :returns: A crypticle used for encryption operations
-        '''
-        acceptance_wait_time = self.opts['acceptance_wait_time']
-        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
-        if not acceptance_wait_time_max:
-            acceptance_wait_time_max = acceptance_wait_time
-
-        while True:
-            creds = self.sign_in()
-            if creds == 'retry':
-                if self.opts.get('caller'):
-                    print('Minion failed to authenticate with the master, '
-                          'has the minion key been accepted?')
-                    sys.exit(2)
-                if acceptance_wait_time:
-                    log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
-                    time.sleep(acceptance_wait_time)
-                if acceptance_wait_time < acceptance_wait_time_max:
-                    acceptance_wait_time += acceptance_wait_time
-                    log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
-                continue
-            break
-        return Crypticle(self.opts, creds['aes'])

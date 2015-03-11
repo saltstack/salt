@@ -50,7 +50,8 @@ def mounted(name,
             config='/etc/fstab',
             persist=True,
             mount=True,
-            user=None):
+            user=None,
+            match_on='auto'):
     '''
     Verify that a device is mounted
 
@@ -59,7 +60,7 @@ def mounted(name,
 
     device
         The device name, typically the device node, such as ``/dev/sdb1``
-        or ``UUID=066e0200-2867-4ebe-b9e6-f30026ca2314``
+        or ``UUID=066e0200-2867-4ebe-b9e6-f30026ca2314`` or ``LABEL=DATA``
 
     fstype
         The filesystem type, this will be ``xfs``, ``ext2/3/4`` in the case of classic
@@ -90,6 +91,12 @@ def mounted(name,
     user
         The user to own the mount; this defaults to the user salt is
         running as on the minion
+
+    match_on
+        A name or list of fstab properties on which this state should be applied.
+        Default is ``auto``, a special value indicating to guess based on fstype.
+        In general, ``auto`` matches on name for recognized special devices and
+        device otherwise.
     '''
     ret = {'name': name,
            'changes': {},
@@ -165,15 +172,20 @@ def mounted(name,
 
     device_list = []
     if real_name in active:
+        if 'superopts' not in active[real_name]:
+            active[real_name]['superopts'] = []
         if mount:
             device_list.append(active[real_name]['device'])
             device_list.append(os.path.realpath(device_list[0]))
             alt_device = active[real_name]['alt_device'] if 'alt_device' in active[real_name] else None
             uuid_device = active[real_name]['device_uuid'] if 'device_uuid' in active[real_name] else None
+            label_device = active[real_name]['device_label'] if 'device_label' in active[real_name] else None
             if alt_device and alt_device not in device_list:
                 device_list.append(alt_device)
             if uuid_device and uuid_device not in device_list:
                 device_list.append(uuid_device)
+            if label_device and label_device not in device_list:
+                device_list.append(label_device)
             if opts:
                 mount_invisible_options = [
                     '_netdev',
@@ -183,12 +195,16 @@ def mounted(name,
                     'defaults',
                     'delay_connect',
                     'intr',
+                    'loop',
+                    'nointr',
                     'nobootwait',
                     'nofail',
                     'password',
                     'reconnect',
                     'retry',
                     'soft',
+                    'auto',
+                    'users',
                 ]
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
@@ -197,11 +213,33 @@ def mounted(name,
                     'password',
                     'retry',
                 ]
+                # Some filesystems have options which should not force a remount.
+                mount_ignore_fs_keys = {
+                        'ramfs': ['size']
+                        }
+
                 for opt in opts:
                     keyval_option = opt.split('=')[0]
                     if keyval_option in mount_invisible_keys:
                         opt = keyval_option
-                    if opt not in active[real_name]['opts'] and opt not in active[real_name]['superopts'] and opt not in mount_invisible_options:
+
+                    size_match = re.match(r'size=(?P<size_value>[0-9]+)(?P<size_unit>k|m|g)', opt)
+                    if size_match:
+                        converted_size = int(size_match.group('size_value'))
+                        if size_match.group('size_unit') == 'm':
+                            converted_size = int(size_match.group('size_value')) * 1024
+                        if size_match.group('size_unit') == 'g':
+                            converted_size = int(size_match.group('size_value')) * 1024 * 1024
+                        opt = "size={0}k".format(converted_size)
+                    # make cifs option user synonym for option username which is reported by /proc/mounts
+                    if fstype in ['cifs'] and opt.split('=')[0] == 'user':
+                        opt = "username={0}".format(opt.split('=')[1])
+
+                    if opt not in active[real_name]['opts'] \
+                    and ('superopts' in active[real_name]
+                         and opt not in active[real_name]['superopts']) \
+                    and opt not in mount_invisible_options \
+                    and opt not in mount_ignore_fs_keys.get(fstype, []):
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options ({0}) changed".format(opt)
@@ -305,7 +343,8 @@ def mounted(name,
                                                   dump,
                                                   pass_num,
                                                   config,
-                                                  test=True)
+                                                  test=True,
+                                                  match_on=match_on)
             if out != 'present':
                 ret['result'] = None
                 if out == 'new':
@@ -347,7 +386,8 @@ def mounted(name,
                                                   opts,
                                                   dump,
                                                   pass_num,
-                                                  config)
+                                                  config,
+                                                  match_on=match_on)
 
         if out == 'present':
             ret['comment'] += '. Entry already exists in the fstab.'
@@ -466,7 +506,7 @@ def unmounted(name,
     name
         The path to the location where the device is to be unmounted from
 
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     device
         The device to be unmounted.

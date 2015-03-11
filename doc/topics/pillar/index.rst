@@ -375,3 +375,38 @@ to ``False``:
 .. code-block:: yaml
 
     pillar_opts: False
+
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module, set the following pillar
+variable:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
+
+
+Master Provided Pillar Error
+============================
+
+By default if there is an error rendering a pillar, the detailed error is
+hidden and replaced with:
+
+.. code-block:: bash
+
+    Rendering SLS 'my.sls' failed. Please see master log for details.
+
+The error is protected because it's possible to contain templating data
+which would give that minion information it shouldn't know, like a password!
+
+To have the master provide the detailed error that could potentially carry
+protected data set ``pillar_safe_render_error`` to ``False``:
+
+.. code-block:: yaml
+
+    pillar_safe_render_error: True

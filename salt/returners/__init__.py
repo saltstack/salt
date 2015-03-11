@@ -122,12 +122,18 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
     """
     # c_cfg is a dictionary returned from config.option for
     # any options configured for this returner.
-    c_cfg = cfg('{0}'.format(virtualname), {})
+    if isinstance(cfg, dict):
+        c_cfg = cfg
+    else:
+        c_cfg = cfg('{0}'.format(virtualname), {})
 
     default_cfg_key = '{0}.{1}'.format(virtualname, attr_name)
     if not ret_config:
         # Using the default configuration key
-        return c_cfg.get(attr_name, cfg(default_cfg_key))
+        if isinstance(cfg, dict):
+            return c_cfg.get(attr_name, cfg.get(default_cfg_key))
+        else:
+            return c_cfg.get(attr_name, cfg(default_cfg_key))
 
     # Using ret_config to override the default configuration key
     ret_cfg = cfg('{0}.{1}'.format(ret_config, virtualname), {})

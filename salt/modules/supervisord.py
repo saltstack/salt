@@ -19,11 +19,10 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 
 def __virtual__():
-    HAS_SUPER = salt.utils.which('supervisorctl')
-    if HAS_SUPER:
-        return True
-    else:
-        return False
+    # We can't decide at load time whether supervisorctl is present. The
+    # function _get_supervisorctl_bin does a much more thorough job and can
+    # only be accurate at call time.
+    return True
 
 
 def _get_supervisorctl_bin(bin_env):

@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import re
@@ -107,8 +108,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_return(self):
-        self.run_call('-c {0} cmd.run "echo returnTOmaster"'.format(self.get_config_dir()))
-        jobs = [a for a in self.run_run('-c {0} jobs.list_jobs'.format(self.get_config_dir()))]
+        self.run_call('cmd.run "echo returnTOmaster"')
+        jobs = [a for a in self.run_run('jobs.list_jobs')]
 
         self.assertTrue(True in ['returnTOmaster' in j for j in jobs])
         # lookback jid
@@ -125,7 +126,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         assert idx > 0
         assert jid
         master_out = [
-            a for a in self.run_run('-c {0} jobs.lookup_jid {1}'.format(self.get_config_dir(), jid))
+            a for a in self.run_run('jobs.lookup_jid {0}'.format(jid))
         ]
         self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
 
@@ -337,7 +338,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(integration.TMP, 'issue-14979')
-        current_umask = os.umask(0077)
+        current_umask = os.umask(0o077)
         try:
             # Let's create an initial output file with some data
             self.run_script(
@@ -352,7 +353,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             stat1 = os.stat(output_file)
 
             # Let's change umask
-            os.umask(0777)
+            os.umask(0o777)
 
             self.run_script(
                 'salt-call',

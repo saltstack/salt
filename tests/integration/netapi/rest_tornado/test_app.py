@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
+from __future__ import absolute_import
 import json
 import time
+from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Libs
 from salt.netapi.rest_tornado import saltnado
@@ -14,6 +16,7 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../../')
 
+import salt.ext.six as six
 try:
     import tornado
     HAS_TORNADO = True
@@ -21,6 +24,7 @@ except ImportError:
     HAS_TORNADO = False
 
 try:
+    import zmq
     from zmq.eventloop.ioloop import ZMQIOLoop
     HAS_ZMQ_IOLOOP = True
 except ImportError:
@@ -29,6 +33,7 @@ except ImportError:
 
 @skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
+@skipIf(StrictVersion(zmq.__version__) < StrictVersion('14.0.1'), 'PyZMQ must be >= 14.0.1 to run these tests.')
 class TestSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         application = tornado.web.Application([('/', saltnado.SaltAPIHandler)], debug=True)
@@ -44,8 +49,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         Test the root path which returns the list of clients we support
         '''
         response = self.fetch('/',
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                 )
         self.assertEqual(response.code, 200)
         response_obj = json.loads(response.body)
@@ -71,8 +76,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json']},
                               follow_redirects=False,
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         self.assertEqual(response.code, 302)
         self.assertEqual(response.headers['Location'], '/login')
@@ -91,8 +96,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -110,8 +115,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
@@ -130,8 +135,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -151,8 +156,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -170,8 +175,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{}])
@@ -187,8 +192,6 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         # TODO: verify pub function? Maybe look at how we test the publisher
@@ -210,8 +213,6 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 2)
@@ -241,8 +242,6 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 3)  # make sure we got 3 responses
@@ -276,8 +275,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
+                              connect_timeout=30,
+                              request_timeout=30,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [['minion', 'sub_minion']])
@@ -302,15 +301,13 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               method='GET',
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               follow_redirects=False,
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
         # one per minion
         self.assertEqual(len(response_obj['return'][0]), 2)
         # check a single grain
-        for minion_id, grains in response_obj['return'][0].iteritems():
+        for minion_id, grains in six.iteritems(response_obj['return'][0]):
             self.assertEqual(minion_id, grains['id'])
 
     def test_get(self):
@@ -318,8 +315,6 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               method='GET',
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               follow_redirects=False,
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
@@ -336,8 +331,6 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         # TODO: verify pub function? Maybe look at how we test the publisher
@@ -356,8 +349,6 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         # TODO: verify pub function? Maybe look at how we test the publisher
@@ -380,8 +371,6 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         self.assertEqual(response.code, 400)
 
@@ -407,11 +396,10 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                                method='GET',
                                headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                                follow_redirects=False,
-                               request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
                                )
-        response = self.wait(timeout=10)
+        response = self.wait(timeout=30)
         response_obj = json.loads(response.body)['return'][0]
-        for jid, ret in response_obj.iteritems():
+        for jid, ret in six.iteritems(response_obj):
             self.assertIn('Function', ret)
             self.assertIn('Target', ret)
             self.assertIn('Target-type', ret)
@@ -420,15 +408,14 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
             self.assertIn('Arguments', ret)
 
         # test with a specific JID passed in
-        jid = response_obj.iterkeys().next()
+        jid = next(six.iterkeys(response_obj))
         self.http_client.fetch(self.get_url('/jobs/{0}'.format(jid)),
                                self.stop,
                                method='GET',
                                headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                                follow_redirects=False,
-                               request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
                                )
-        response = self.wait(timeout=10)
+        response = self.wait(timeout=30)
         response_obj = json.loads(response.body)['return'][0]
         self.assertIn('Function', response_obj)
         self.assertIn('Target', response_obj)
@@ -464,8 +451,6 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
                               body=json.dumps(low),
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
@@ -492,8 +477,6 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
         response = self.fetch('/events',
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               streaming_callback=self.on_event,
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
 
     def _stop(self):
@@ -553,8 +536,6 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
                               method='POST',
                               body='foo=bar',
                               headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
-                              connect_timeout=10,
-                              request_timeout=10,
                               )
         response_obj = json.loads(response.body)
         self.assertTrue(response_obj['success'])

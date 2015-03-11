@@ -20,6 +20,10 @@ add the following to the Salt master config file.
     rest_tornado:
         # can be any port
         port: 8000
+        # address to bind to (defaults to 0.0.0.0)
+        address: 0.0.0.0
+        # socket backlog
+        backlog: 128
         ssl_crt: /etc/pki/api/certs/server.crt
         # no need to specify ssl_key if cert and key
         # are in one single file
@@ -146,25 +150,25 @@ a return like::
 '''
 # pylint: disable=W0232
 
+# Import Python libs
+from __future__ import absolute_import
+import time
+import math
+import fnmatch
 import logging
 from copy import copy
+from collections import defaultdict
 
-import time
-
+# pylint: disable=import-error
+import yaml
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.gen
-
 from tornado.concurrent import Future
-
-from collections import defaultdict
-
-import math
-import yaml
-import fnmatch
-
 from zmq.eventloop import ioloop, zmqstream
+import salt.ext.six as six
+# pylint: enable=import-error
 
 # instantiate the zmq IOLoop (specialized poller)
 ioloop.install()
@@ -198,18 +202,22 @@ class SaltClientsMixIn(object):
     '''
     MixIn class to container all of the salt clients that the API needs
     '''
+    # TODO: load this proactively, instead of waiting for a request
+    __saltclients = None
+
     @property
     def saltclients(self):
-        if not hasattr(self, '__saltclients'):
+        if SaltClientsMixIn.__saltclients is None:
+            local_client = salt.client.get_local_client(mopts=self.application.opts)
             # TODO: refreshing clients using cachedict
-            self.__saltclients = {
-                'local': salt.client.get_local_client(mopts=self.application.opts).run_job,
+            SaltClientsMixIn.__saltclients = {
+                'local': local_client.run_job,
                 # not the actual client we'll use.. but its what we'll use to get args
-                'local_batch': salt.client.get_local_client(mopts=self.application.opts).cmd_batch,
-                'local_async': salt.client.get_local_client(mopts=self.application.opts).run_job,
+                'local_batch': local_client.cmd_batch,
+                'local_async': local_client.run_job,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).async,
                 }
-        return self.__saltclients
+        return SaltClientsMixIn.__saltclients
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -309,7 +317,7 @@ class EventListener(object):
         '''
         mtag, data = self.event.unpack(raw[0], self.event.serial)
         # see if we have any futures that need this info:
-        for tag_prefix, futures in self.tag_map.items():
+        for tag_prefix, futures in six.iteritems(self.tag_map):
             if mtag.startswith(tag_prefix):
                 for future in futures:
                     if future.done():
@@ -364,7 +372,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         '''
         if client not in self.saltclients:
             self.set_status(400)
-            self.write("We don't serve your kind here")
+            self.write("400 Invalid Client: Client not found in salt clients")
             self.finish()
 
     @property
@@ -444,7 +452,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):
         ignore the data passed in and just get the args from wherever they are
         '''
         data = {}
-        for key, val in self.request.arguments.iteritems():
+        for key, val in six.iteritems(self.request.arguments):
             if len(val) == 1:
                 data[key] = val[0]
             else:
@@ -531,7 +539,6 @@ class SaltAuthHandler(BaseSaltAPIHandler):
                'return': 'Please log in'}
 
         self.write(self.serialize(ret))
-        self.finish()
 
     # TODO: make async? Underlying library isn't... and we ARE making disk calls :(
     def post(self):
@@ -643,7 +650,6 @@ class SaltAuthHandler(BaseSaltAPIHandler):
             }]}
 
         self.write(self.serialize(ret))
-        self.finish()
 
 
 class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
@@ -684,10 +690,9 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
             {"clients": ["local", "local_batch", "local_async","runner"], "return": "Welcome"}
         '''
-        ret = {"clients": self.saltclients.keys(),
+        ret = {"clients": list(self.saltclients.keys()),
                "return": "Welcome"}
         self.write(self.serialize(ret))
-        self.finish()
 
     @tornado.web.asynchronous
     def post(self):
@@ -814,7 +819,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
         if not isinstance(ping_ret, dict):
             raise tornado.gen.Return(chunk_ret)
-        minions = ping_ret.keys()
+        minions = list(ping_ret.keys())
 
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
@@ -856,7 +861,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
     @tornado.gen.coroutine
     def _disbatch_local(self, chunk):
         '''
-        Disbatch local client commands
+        Dispatch local client commands
         '''
         chunk_ret = {}
 
@@ -1365,8 +1370,6 @@ class EventsSaltAPIHandler(SaltAPIHandler):
                 self.flush()
             except TimeoutException:
                 break
-
-        self.finish()
 
 
 class WebhookSaltAPIHandler(SaltAPIHandler):

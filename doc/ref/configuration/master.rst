@@ -444,8 +444,12 @@ performance of max_minions.
 
 Default: False
 
-When enabled the master regularly sends events of currently connected, lost,
-and newly connected minions on the eventbus.
+Causes the master to periodically look for actively connected minions.
+:ref:`Presence events <event-master_presence>` are fired on the event bus on a
+regular interval with a list of connected minions, as well as events with lists
+of newly connected or disconnected minions. This is a master-only operation
+that does not send executions to minions. Note, this does not detect minions
+that connect to a master via localhost.
 
 .. code-block:: yaml
 
@@ -2158,7 +2162,8 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`.
+:conf_log:`log_level_logfile`. When it is not set explicitly 
+it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml
 

@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import hashlib
 import time
@@ -25,6 +26,9 @@ ensure_in_syspath('../../')
 import integration
 from salt.utils.process import clean_proc
 from salt.utils import event
+
+# Import 3rd-+arty libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
@@ -277,7 +281,7 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
-            for i in xrange(500):
+            for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
@@ -288,12 +292,24 @@ class TestSaltEvent(TestCase):
             me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             # Must not exceed zmq HWM
-            for i in xrange(500):
+            for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
-            for i in xrange(500):
+            for i in range(500):
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
 
+    # Test the fire_master function. As it wraps the underlying fire_event,
+    # we don't need to perform extensive testing.
+    def test_send_master_event(self):
+        '''Tests that sending an event through fire_master generates expected event'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            me.subscribe()
+            data = {'data': 'foo1'}
+            me.fire_master(data, 'test_master')
+
+            evt = me.get_event(tag='fire_master')
+            self.assertGotEvent(evt, {'data': data, 'tag': 'test_master', 'events': None, 'pretag': None})
 
 if __name__ == '__main__':
     from integration import run_tests

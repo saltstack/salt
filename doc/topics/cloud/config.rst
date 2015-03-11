@@ -81,7 +81,7 @@ after migration example.
         keyname: test
         securitygroup: quick-start
         private_key: /root/test.pem
-        provider: aws
+        provider: ec2
 
 
 Notice that it's no longer required to name a cloud provider's configuration
@@ -110,7 +110,7 @@ So, using the example configuration above, after migration in
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      provider: aws
+      provider: ec2
 
 
 
@@ -128,7 +128,7 @@ configuration key in the defined profiles.
 .. code-block:: yaml
 
     rhel_aws:
-      provider: aws
+      provider: ec2
       image: ami-e565ba8c
       size: t1.micro
 
@@ -316,7 +316,7 @@ A number of configuration options are required for Amazon AWS:
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      provider: aws
+      provider: ec2
 
     my-aws-default:
       id: HJGRYCILJLKJYG
@@ -324,12 +324,12 @@ A number of configuration options are required for Amazon AWS:
       keyname: test
       securitygroup: default
       private_key: /root/test.pem
-      provider: aws
+      provider: ec2
 
 
 **NOTE**: With the new providers configuration syntax you would have
 ``provider: my-aws-quick-start`` or ``provider: my-aws-default`` instead of
-``provider: aws`` on a profile configuration.
+``provider: ec2`` on a profile configuration.
 
 
 Linode
@@ -390,7 +390,8 @@ send the provisioning commands up to the freshly created virtual machine.
     my-joyent-config:
         user: fred
         password: saltybacon
-        private_key: /root/joyent.pem
+        private_key: /root/mykey.pem
+        keyname: mykey
         provider: joyent
 
 
@@ -798,7 +799,7 @@ configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
         private_key: /root/test.pem
         location: ap-southeast-1
         availability_zone: ap-southeast-1b
-        provider: aws
+        provider: ec2
 
       - user: myuser@mycorp.com
         password: mypass

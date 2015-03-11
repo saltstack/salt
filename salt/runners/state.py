@@ -3,9 +3,7 @@
 Execute overstate functions
 '''
 # Import pytohn libs
-from __future__ import print_function
-from __future__ import absolute_import
-
+from __future__ import absolute_import, print_function
 import fnmatch
 import json
 import logging
@@ -16,6 +14,9 @@ import salt.overstate
 import salt.syspaths
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,19 +57,19 @@ def over(saltenv='base', os_fn=None):
     for stage in overstate.stages_iter():
         if isinstance(stage, dict):
             # This is highstate data
-            __progress__('Stage execution results:')
-            for key, val in stage.items():
+            __jid_event__.fire_event({'message': 'Stage execution results:'}, 'progress')
+            for key, val in six.iteritems(stage):
                 if '_|-' in key:
-                    __progress__({'error': {key: val}}, outputter='highstate')
+                    __jid_event__.fire_event({'data': {'error': {key: val}}, 'outputter': 'highstate'}, 'progress')
                 else:
-                    __progress__({key: val}, outputter='highstate')
+                    __jid_event__.fire_event({'data': {key: val}, 'outputter': 'highstate'}, 'progress')
         elif isinstance(stage, list):
             # This is a stage
             if stage_num == 0:
-                __progress__('Executing the following Over State:')
+                __jid_event__.fire_event({'message': 'Executing the following Over State:'}, 'progress')
             else:
-                __progress__('Executed Stage:')
-            __progress__(stage, outputter='overstatestage')
+                __jid_event__.fire_event({'message': 'Executed Stage:'}, 'progress')
+            __jid_event__.fire_event({'data': stage, 'outputter': 'overstatestage'}, 'progress')
             stage_num += 1
     return overstate.over_run
 
@@ -113,7 +114,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             exclude,
             pillar=pillar)
     ret = {minion.opts['id']: running}
-    __progress__(ret, outputter='highstate')
+    __jid_event__.fire_event({'data': ret, 'outputter': 'highstate'}, 'progress')
     return ret
 
 # Aliases for orchestrate runner
@@ -135,7 +136,7 @@ def show_stages(saltenv='base', os_fn=None):
         salt-run state.show_stages saltenv=dev /root/overstate.sls
     '''
     overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    __progress__(overstate.over, outputter='overstatestage')
+    __jid_event__.fire_event({'data': overstate.over, 'outputter': 'overstatestage'}, 'progress')
     return overstate.over
 
 

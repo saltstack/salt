@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
@@ -25,6 +28,21 @@ class DecoratorTest(integration.ModuleCase):
         self.assertIn(
                 'is not available',
                 self.run_function('runtests_decorators.missing_depends'
+                    )
+                )
+
+    def test_bool_depends(self):
+        # test True
+        self.assertTrue(
+                self.run_function(
+                    'runtests_decorators.booldependsTrue'
+                    )
+                )
+
+        # test False
+        self.assertIn(
+                'is not available',
+                self.run_function('runtests_decorators.booldependsFalse'
                     )
                 )
 

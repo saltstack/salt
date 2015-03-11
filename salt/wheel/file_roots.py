@@ -2,13 +2,16 @@
 '''
 Read in files from the file_root and save files to the file root
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def find(path, saltenv='base', env=None):
@@ -107,7 +110,7 @@ def read(path, saltenv='base', env=None):
     ret = []
     files = find(path, saltenv)
     for fn_ in files:
-        full = next(fn_.iterkeys())
+        full = next(six.iterkeys(fn_))
         form = fn_[full]
         if form == 'txt':
             with salt.utils.fopen(full, 'rb') as fp_:

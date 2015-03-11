@@ -24,6 +24,8 @@ lib64
 pip/
 share/
 tests/integration/tmp/
+tests/cachedir/
+tests/unit/templates/roots/
 
 # tox - ignore any tox-created virtualenv dirs
 .tox
@@ -68,3 +70,6 @@ tests/integration/files/conf/grains
 
 # ignore the local root
 /root/**
+
+# Ignore file cache created by jinja tests
+tests/unit/templates/roots

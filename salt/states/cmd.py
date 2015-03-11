@@ -176,18 +176,21 @@ To use it one must convert it to a list. Example:
 '''
 
 # Import python libs
+from __future__ import absolute_import
+
 # Windows platform has no 'grp' module
+import os
+import copy
+import json
+import shlex
+import logging
+
 HAS_GRP = False
 try:
     import grp
     HAS_GRP = True
 except ImportError:
     pass
-import os
-import copy
-import json
-import shlex
-import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
@@ -324,10 +327,11 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
                         'skip_watch': True,
                         'result': True}
         elif isinstance(unless, list):
+            cmd = []
             for entry in unless:
-                cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
+                cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
                 log.debug('Last command return code: {0}'.format(cmd))
-                if cmd == 0:
+                if all([c == 0 for c in cmd]):
                     return {'comment': 'unless execution succeeded',
                             'skip_watch': True,
                             'result': True}

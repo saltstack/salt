@@ -97,7 +97,7 @@ def latest_version(*names, **kwargs):
 
     stems = [x.split('--')[0] for x in names]
     cmd = 'pkg_info -q -I {0}'.format(' '.join(stems))
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False, output_loglevel='trace')
     for line in out.splitlines():
         try:
             pkgname, pkgver, flavor = __PKG_RE.match(line).groups()
@@ -178,7 +178,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
             stem, flavor = (pkg.split('--') + [''])[:2]
             pkg = '--'.join((stem, flavor))
         cmd = 'pkg_add -x {0}'.format(pkg)
-        __salt__['cmd.run'](cmd, output_loglevel='trace')
+        __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -220,7 +220,7 @@ def remove(name=None, pkgs=None, **kwargs):
         return {}
 
     cmd = 'pkg_delete -xD dependencies {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)

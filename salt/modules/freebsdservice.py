@@ -49,7 +49,7 @@ def _get_rcscript(name):
     Return full path to service rc script
     '''
     cmd = '{0} -r'.format(_cmd())
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.endswith('{0}{1}'.format(os.path.sep, name)):
             return line
     return None
@@ -65,7 +65,7 @@ def _get_rcvar(name):
 
     cmd = '{0} {1} rcvar'.format(_cmd(), name)
 
-    for line in __salt__['cmd.run_stdout'](cmd, python_path=False).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if '_enable="' not in line:
             continue
         rcvar, _ = line.split('=', 1)

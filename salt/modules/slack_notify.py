@@ -2,7 +2,7 @@
 '''
 Module for sending messages to Slack
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt
@@ -228,7 +228,7 @@ def post_message(channel,
     '''
     Send a message to a Slack channel.
     :param channel:     The channel name, either will work.
-    :param message:     The message to send to the HipChat room.
+    :param message:     The message to send to the Slack channel.
     :param from_name:   Specify who the message is from.
     :param api_key:     The Slack api key, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
@@ -237,7 +237,7 @@ def post_message(channel,
 
     .. code-block:: bash
 
-        salt '*' slack.send_message channel="Development Room" message="Build is done" from_name="Build Server"
+        salt '*' slack.post_message channel="Development Room" message="Build is done" from_name="Build Server"
 
     '''
 

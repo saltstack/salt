@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting import TestCase

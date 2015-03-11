@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import pprint
 
@@ -18,7 +19,8 @@ import salt.states.file as filestate
 
 filestate.__env__ = 'base'
 filestate.__salt__ = {'file.manage_file': False}
-filestate.__opts__ = {'test': False}
+filestate.__opts__ = {'test': False, 'cachedir': ''}
+filestate.__instance_id__ = ''
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

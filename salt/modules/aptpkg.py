@@ -54,7 +54,7 @@ try:
     HAS_SOFTWAREPROPERTIES = True
 except ImportError:
     HAS_SOFTWAREPROPERTIES = False
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -78,9 +78,11 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__.get('os_family', False) != 'Debian':
-        return False
-    return __virtualname__
+    if __grains__.get('os_family', False) == 'Kali':
+        return __virtualname__
+    elif __grains__.get('os_family', False) == 'Debian':
+        return __virtualname__
+    return False
 
 
 def __init__():
@@ -444,7 +446,12 @@ def install(name=None,
     install_recommends
         Whether to install the packages marked as recommended.  Default is True.
 
-        .. versionadded:: Lithium
+        .. versionadded:: 2015.2.0
+
+    only_upgrade
+        Only upgrade the packages, if they are already installed. Default is False.
+
+        .. versionadded:: 2015.2.0
 
     Returns a dict containing the new package names and versions::
 
@@ -466,7 +473,7 @@ def install(name=None,
             refreshdb = False
             for pkg in pkgs:
                 if isinstance(pkg, dict):
-                    _name = next(pkg.iterkeys())
+                    _name = next(six.iterkeys(pkg))
                     _latest_version = latest_version(_name, refresh=False, show_installed=True)
                     _version = pkg[_name]
                     # If the versions don't match, refresh is True, otherwise no need to refresh
@@ -530,6 +537,8 @@ def install(name=None,
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
         if 'install_recommends' in kwargs and not kwargs['install_recommends']:
             cmd.append('--no-install-recommends')
+        if 'only_upgrade' in kwargs and kwargs['only_upgrade']:
+            cmd.append('--only-upgrade')
         if skip_verify:
             cmd.append('--allow-unauthenticated')
         if fromrepo:
@@ -589,7 +598,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
 def autoremove(list_only=False):
     '''
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     Remove packages not required by another package using ``apt-get
     autoremove``.
@@ -1026,7 +1035,7 @@ def list_pkgs(versions_as_list=False,
     return ret
 
 
-def _get_upgradable():
+def _get_upgradable(dist_upgrade=True):
     '''
     Utility function to get upgradable packages
 
@@ -1034,8 +1043,12 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'apt-get --just-print dist-upgrade'
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['apt-get', '--just-print']
+    if dist_upgrade:
+        cmd.append('dist-upgrade')
+    else:
+        cmd.append('upgrade')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
 
     if call['retcode'] != 0:
         comment = ''
@@ -1068,9 +1081,17 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, dist_upgrade=True):
     '''
     List all available package upgrades.
+
+    refresh
+        Whether to refresh the package database before listing upgrades.
+        Default: True.
+
+    dist_upgrade
+        Whether to list the upgrades using dist-upgrade vs upgrade.  Default is
+        to use dist-upgrade.
 
     CLI Example:
 
@@ -1080,7 +1101,7 @@ def list_upgrades(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
-    return _get_upgradable()
+    return _get_upgradable(dist_upgrade)
 
 
 def upgrade_available(name):
@@ -1147,7 +1168,7 @@ def _consolidate_repo_sources(sources):
     for repo in repos:
         repo.uri = repo.uri.rstrip('/')
         key = str((getattr(repo, 'architectures', []),
-                   repo.disabled, repo.type, repo.uri))
+                   repo.disabled, repo.type, repo.uri, repo.dist))
         if key in consolidated:
             combined = consolidated[key]
             combined_comps = set(repo.comps).union(set(combined.comps))
@@ -1525,6 +1546,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if not keyid or not keyserver:
             error_str = 'both keyserver and keyid options required.'
             raise NameError(error_str)
+        if isinstance(keyid, int):  # yaml can make this an int, we need the hex version
+            keyid = hex(keyid)
         cmd = 'apt-key export {0}'.format(_cmd_quote(keyid))
         output = __salt__['cmd.run_stdout'](cmd, **kwargs)
         imported = output.startswith('-----BEGIN PGP')
@@ -1553,7 +1576,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'comps' in kwargs:
         kwargs['comps'] = kwargs['comps'].split(',')
-        full_comp_list.union(set(kwargs['comps']))
+        full_comp_list |= set(kwargs['comps'])
     else:
         kwargs['comps'] = list(full_comp_list)
 
@@ -1954,6 +1977,8 @@ def owner(*paths):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename
     '''
@@ -1968,5 +1993,5 @@ def owner(*paths):
         if 'no path found' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return next(ret.itervalues())
+        return next(six.itervalues(ret))
     return ret

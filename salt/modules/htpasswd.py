@@ -73,7 +73,7 @@ def useradd(pwfile, user, password, opts=''):
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpassword
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpass opts=ns
     '''
-    return useradd_all(pwfile, user, password, opts=opts)['out'].splitlines()
+    return useradd_all(pwfile, user, password, opts=opts)
 
 
 def userdel(pwfile, user):
