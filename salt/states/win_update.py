@@ -46,7 +46,7 @@ Example:
 .. code-block:: yaml
 
     gryffindor:
-        win_update.install:
+        win_update.installed:
             - includes:
                 - driver: True
                 - software: False
