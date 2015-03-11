@@ -595,7 +595,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
 
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
-        self.version = __version__  # pylint: disable=undefined-variable
+        self.salt_version = __version__  # pylint: disable=undefined-variable
         self.description = 'Portable, distributed, remote execution and configuration management system'
         self.author = 'Thomas S Hatch'
         self.author_email = 'thatch45@gmail.com'
@@ -627,6 +627,8 @@ class SaltDistribution(distutils.dist.Distribution):
             attrvalue = getattr(self, attrname, None)
             if attrvalue == 0:
                 continue
+            if attrname == 'salt_version':
+                attrname = 'version'
             if hasattr(self.metadata, 'set_{0}'.format(attrname)):
                 getattr(self.metadata, 'set_{0}'.format(attrname))(attrvalue)
             elif hasattr(self.metadata, attrname):
