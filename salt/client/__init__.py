@@ -44,7 +44,7 @@ import salt.utils.jid
 import salt.syspaths as syspaths
 from salt.exceptions import (
     EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError,
-    SaltClientError
+    SaltClientError, PublishError
 )
 import salt.ext.six as six
 
@@ -210,7 +210,7 @@ class LocalClient(object):
         if not pub_data:
             # Failed to autnenticate, this could be a bunch of things
             raise EauthAuthenticationError(
-                'Failed to authenticate!  This is most likely because this '
+                'Failed to authenticate! This is most likely because this '
                 'user is not permitted to execute commands, but there is a '
                 'small possibility that a disk error occurred (check '
                 'disk/inode usage).'
@@ -277,7 +277,9 @@ class LocalClient(object):
                 **kwargs)
         except SaltClientError:
             # Re-raise error with specific message
-            raise SaltClientError('The salt master could not be contacted. Is master running?')
+            raise SaltClientError(
+                'The salt master could not be contacted. Is master running?'
+            )
         except Exception as general_exception:
             # Convert to generic client error and pass along mesasge
             raise SaltClientError(general_exception)
@@ -1457,8 +1459,13 @@ class LocalClient(object):
             self.key = key
             payload_kwargs['key'] = self.key
             payload = channel.send(payload_kwargs)
-            if not payload:
-                return payload
+
+        error = payload.pop('error', None)
+        if error is not None:
+            raise PublishError(error)
+
+        if not payload:
+            return payload
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
         del channel
