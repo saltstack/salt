@@ -129,7 +129,7 @@ def installed(name,
 
         if did_install is True:
             install_status = ""
-        else
+        else:
             install_status = "not "
 
         ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
