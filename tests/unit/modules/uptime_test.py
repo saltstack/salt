@@ -25,6 +25,7 @@ if NO_MOCK is False:
 else:
     SALT_STUB = {}
 
+
 class RequestMock(Mock):
     ''' Request Mock'''
 
@@ -41,20 +42,23 @@ class RequestMock(Mock):
         self.kwargs = kwargs
         return RequestResponseMock()
 
+
 class RequestResponseMock(Mock):
 
     def json(self):
-        return [{'url':'http://example.org',
+        return [{'url': 'http://example.org',
                  '_id': 1234}, ]
+
 
 class RequestPutResponseMock(Mock):
 
     ok = True
 
     def json(self):
-        return {'_id':4321}
+        return {'_id': 4321}
 
 REQUEST_MOCK = RequestMock()
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch.multiple(uptime,
@@ -65,7 +69,7 @@ class UptimeTestCase(TestCase):
 
     def test_checks_list(self):
         ret = uptime.checks_list()
-        self.assertListEqual(ret, ['http://example.org',])
+        self.assertListEqual(ret, ['http://example.org'])
 
     def test_checks_exists(self):
         self.assertTrue(uptime.check_exists('http://example.org') is True)

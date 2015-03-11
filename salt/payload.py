@@ -119,6 +119,27 @@ class Serial(object):
         '''
         try:
             return msgpack.dumps(msg)
+        except OverflowError:
+            # msgpack can't handle the very long Python longs for jids
+            # Convert any very long longs to strings
+            # We borrow the technique used by TypeError below
+            def verylong_encoder(obj):
+                if isinstance(obj, dict):
+                    for key, value in six.iteritems(obj.copy()):
+                        obj[key] = verylong_encoder(value)
+                    return dict(obj)
+                elif isinstance(obj, (list, tuple)):
+                    obj = list(obj)
+                    for idx, entry in enumerate(obj):
+                        obj[idx] = verylong_encoder(entry)
+                    return obj
+                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
+                    return str(obj)
+                elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
+                    return str(obj)
+                else:
+                    return obj
+            return msgpack.dumps(verylong_encoder(msg))
         except TypeError:
             if msgpack.version >= (0, 2, 0):
                 # Should support OrderedDict serialization, so, let's

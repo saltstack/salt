@@ -412,7 +412,7 @@ def absent(name,
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
-            key_and_comment = name.split()
+            key_and_comment = name.split(None, 1)
             name = key_and_comment[0]
             if len(key_and_comment) == 2:
                 comment = key_and_comment[1]

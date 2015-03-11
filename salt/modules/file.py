@@ -1061,6 +1061,60 @@ def _get_flags(flags):
     return flags
 
 
+def _mkstemp_copy(path,
+                  preserve_inode=True):
+    '''
+    Create a temp file and move/copy the contents of ``path`` to the temp file.
+    Return the path to the temp file.
+
+    path
+        The full path to the file whose contents will be moved/copied to a temp file.
+        Whether it's moved or copied depends on the value of ``preserve_inode``.
+    preserve_inode
+        Preserve the inode of the file, so that any hard links continue to share the
+        inode with the original filename. This works by *copying* the file, reading
+        from the copy, and writing to the file at the original inode. If ``False``, the
+        file will be *moved* rather than copied, and a new file will be written to a
+        new inode, but using the original filename. Hard links will then share an inode
+        with the backup, instead (if using ``backup`` to create a backup copy).
+        Default is ``True``.
+    '''
+    temp_file = None
+    # Create the temp file
+    try:
+        temp_file = salt.utils.mkstemp()
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to create temp file. "
+            "Exception: {0}".format(exc)
+            )
+    # use `copy` to preserve the inode of the
+    # original file, and thus preserve hardlinks
+    # to the inode. otherwise, use `move` to
+    # preserve prior behavior, which results in
+    # writing the file to a new inode.
+    if preserve_inode:
+        try:
+            shutil.copy2(path, temp_file)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to copy file '{0}' to the "
+                "temp file '{1}'. "
+                "Exception: {2}".format(path, temp_file, exc)
+                )
+    else:
+        try:
+            shutil.move(path, temp_file)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to move file '{0}' to the "
+                "temp file '{1}'. "
+                "Exception: {2}".format(path, temp_file, exc)
+                )
+
+    return temp_file
+
+
 def replace(path,
             pattern,
             repl,
@@ -1075,6 +1129,7 @@ def replace(path,
             search_only=False,
             show_changes=True,
             ignore_if_missing=False,
+            preserve_inode=True,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1148,6 +1203,16 @@ def replace(path,
         file doesn't exist. When this parameter is ``False``, ``file.replace`` will
         throw an error if the file doesn't exist.
         Default is ``False`` (to maintain compatibility with prior behaviour).
+    preserve_inode
+        .. versionadded:: Beryllium
+
+        Preserve the inode of the file, so that any hard links continue to share the
+        inode with the original filename. This works by *copying* the file, reading
+        from the copy, and writing to the file at the original inode. If ``False``, the
+        file will be *moved* rather than copied, and a new file will be written to a
+        new inode, but using the original filename. Hard links will then share an inode
+        with the backup, instead (if using ``backup`` to create a backup copy).
+        Default is ``True``.
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1210,73 +1275,94 @@ def replace(path,
     repl = str(repl)
 
     found = False
+    temp_file = None
+    content = str(not_found_content) if not_found_content and \
+                                       (prepend_if_not_found or
+                                        append_if_not_found) \
+                                     else repl
 
-    # First check the whole file, whether the replacement has already been made
+    # First check the whole file, determine whether to make the replacement
+    # Searching first avoids modifying the time stamp if there are no changes
     try:
-        # open the file read-only and inplace=False, otherwise the result
-        # will be an empty file after iterating over it just for searching
-        fi_file = fileinput.input(path,
-                        inplace=False,
-                        backup=False,
-                        bufsize=bufsize,
-                        mode='r')
+        # Use a read-only handle to open the file
+        with salt.utils.fopen(path,
+                              mode='rb',
+                              buffering=bufsize) as r_file:
+            for line in r_file:
+                if search_only:
+                    # Just search; bail as early as a match is found
+                    if re.search(cpattern, line):
+                        return True  # `with` block handles file closure
+                else:
+                    result, nrepl = re.subn(cpattern, repl, line, count)
 
-        for line in fi_file:
+                    # found anything? (even if no change)
+                    if nrepl > 0:
+                        found = True
 
-            line = line.strip()
+                    if prepend_if_not_found or append_if_not_found:
+                        # Search for content, so we don't continue pre/appending
+                        # the content if it's been pre/appended in a previous run.
+                        if re.search(content, line):
+                            # Content was found, so set found.
+                            found = True
 
-            if (prepend_if_not_found or append_if_not_found) and not_found_content:
-                if line == not_found_content:
-                    if search_only:
-                        return True
-                    found = True
-                    break
+                    # Identity check each potential change until one change is made
+                    if has_changes is False and result != line:
+                        has_changes = True
 
-            else:
-                if line == repl:
-                    if search_only:
-                        return True
-                    found = True
-                    break
+                    # Keep track of show_changes here, in case the file isn't
+                    # modified
+                    if show_changes:
+                        orig_file.append(line)
+                        new_file.append(result)
 
-    finally:
-        fi_file.close()
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to open file '{0}'. "
+            "Exception: {1}".format(path, exc)
+            )
 
-    try:
-        fi_file = fileinput.input(path,
-                        inplace=not (dry_run or search_only),
-                        backup=False if (dry_run or search_only or found) else backup,
-                        bufsize=bufsize,
-                        mode='r' if (dry_run or search_only or found) else 'rb')
+    # Just search. We've searched the whole file now; if we didn't return True
+    # already, then the pattern isn't present, so return False.
+    if search_only:
+        return False
 
-        if symlink and (backup and not (dry_run or search_only or found)):
-            symlink_backup = given_path + backup
-            # Always clobber any existing symlink backup
-            # to match the behavior of the 'backup' option
-            if os.path.exists(symlink_backup):
-                os.remove(symlink_backup)
-            os.symlink(target_path + backup, given_path + backup)
+    if has_changes and not dry_run:
+        # Write the replacement text in this block.
+        try:
+            # Create a copy to read from and to use as a backup later
+            temp_file = _mkstemp_copy(path=path,
+                                      preserve_inode=preserve_inode)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError("Exception: {0}".format(exc))
 
-        if not found:
-            for line in fi_file:
-                result, nrepl = re.subn(cpattern, repl, line, count)
-
-                # found anything? (even if no change)
-                if nrepl > 0:
-                    found = True
-
-                # Identity check each potential change until one change is made
-                if has_changes is False and result != line:
-                    has_changes = True
-
-                if show_changes:
-                    orig_file.append(line)
-                    new_file.append(result)
-
-                if not dry_run:
-                    print(result, end='', file=sys.stdout)
-    finally:
-        fi_file.close()
+        try:
+            # Open the file in write mode
+            with salt.utils.fopen(path,
+                        mode='wb',
+                        buffering=bufsize) as w_file:
+                try:
+                    # Open the temp file in read mode
+                    with salt.utils.fopen(temp_file,
+                                          mode='rb',
+                                          buffering=bufsize) as r_file:
+                        for line in r_file:
+                            result, nrepl = re.subn(cpattern, repl,
+                                                    line, count)
+                            try:
+                                w_file.write(result)
+                            except (OSError, IOError) as exc:
+                                raise CommandExecutionError(
+                                    "Unable to write file '{0}'. Contents may "
+                                    "be truncated. Temporary file contains copy "
+                                    "at '{1}'. "
+                                    "Exception: {2}".format(path, temp_file, exc)
+                                    )
+                except (OSError, IOError) as exc:
+                    raise CommandExecutionError("Exception: {0}".format(exc))
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError("Exception: {0}".format(exc))
 
     if not found and (append_if_not_found or prepend_if_not_found):
         if None == not_found_content:
@@ -1292,7 +1378,12 @@ def replace(path,
             new_file.append(not_found_content + '\n')
         has_changes = True
         if not dry_run:
-            # backup already done in filter part
+            try:
+                # Create a copy to read from and for later use as a backup
+                temp_file = _mkstemp_copy(path=path,
+                                          preserve_inode=preserve_inode)
+            except (OSError, IOError) as exc:
+                raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
             try:
                 fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
@@ -1300,6 +1391,44 @@ def replace(path,
                     fh_.write(line)
             finally:
                 fh_.close()
+
+    if backup and has_changes and not dry_run:
+        # keep the backup only if it was requested
+        # and only if there were any changes
+        backup_name = '{0}{1}'.format(path, backup)
+        try:
+            shutil.move(temp_file, backup_name)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to move the temp file '{0}' to the "
+                "backup file '{1}'. "
+                "Exception: {2}".format(path, temp_file, exc)
+                )
+        if symlink:
+            symlink_backup = '{0}{1}'.format(given_path, backup)
+            target_backup = '{0}{1}'.format(target_path, backup)
+            # Always clobber any existing symlink backup
+            # to match the behaviour of the 'backup' option
+            try:
+                os.symlink(target_backup, symlink_backup)
+            except OSError:
+                os.remove(symlink_backup)
+                os.symlink(target_backup, symlink_backup)
+            except:
+                raise CommandExecutionError(
+                    "Unable create backup symlink '{0}'. "
+                    "Target was '{1}'. "
+                    "Exception: {2}".format(symlink_backup, target_backup,
+                                            exc)
+                    )
+    elif temp_file:
+        try:
+            os.remove(temp_file)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to delete temp file '{0}'. "
+                "Exception: {1}".format(temp_file, exc)
+                )
 
     if not dry_run and not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
@@ -4304,6 +4433,69 @@ def pardir():
         salt '*' file.pardir
     '''
     return os.path.pardir
+
+
+def normpath(path):
+    '''
+    Returns Normalize path, eliminating double slashes, etc.
+
+    .. versionadded:: 2015.2
+
+    This can be useful at the CLI but is frequently useful when scripting.
+
+    .. code-block:: yaml
+
+        {%- from salt['file.normpath'](tpldir + '/../vars.jinja') import parent_vars %}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.normpath 'a/b/c/..'
+    '''
+    return os.path.normpath(path)
+
+
+def basename(path):
+    '''
+    Returns the final component of a pathname
+
+    .. versionadded:: 2015.2
+
+    This can be useful at the CLI but is frequently useful when scripting.
+
+    .. code-block:: yaml
+
+        {%- set filename = salt['file.basename'](source_file) %}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.basename 'test/test.config'
+    '''
+    return os.path.basename(path)
+
+
+def dirname(path):
+    '''
+    Returns the directory component of a pathname
+
+    .. versionadded:: 2015.2
+
+    This can be useful at the CLI but is frequently useful when scripting.
+
+    .. code-block:: yaml
+
+        {%- from salt['file.dirname'](tpldir) + '/vars.jinja' import parent_vars %}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.dirname 'test/path/filename.config'
+    '''
+    return os.path.dirname(path)
 
 
 def join(*args):

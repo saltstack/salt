@@ -4,6 +4,8 @@ An engine that continuously reads messages from SQS and fires them as events.
 
 Note that long polling is utilized to avoid excessive CPU usage.
 
+.. versionsadded:: Beryllium
+
 :configuration:
     This engine can be run on the master or on a minion.
 
@@ -41,11 +43,14 @@ Note that long polling is utilized to avoid excessive CPU usage.
 
 :depends: boto
 '''
-# Import salt libs
-import salt.utils.event
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+import time
+
+# Import salt libs
+import salt.utils.event
 
 # Import third party libs
 try:
@@ -101,26 +106,35 @@ def _get_sqs_conn(profile):
     return conn
 
 
-def start(queue, profile=None):
+def start(queue, profile=None, tag='salt/engine/sqs'):
     '''
     Listen to events and write them to a log file
     '''
     if __opts__.get('__role') == 'master':
-        event_bus = salt.utils.event.get_master_event(
+        fire_master = salt.utils.event.get_master_event(
             __opts__,
-            __opts__['sock_dir'])
+            __opts__['sock_dir']).fire_event
     else:
-        event_bus = salt.utils.event.get_event(
-            'minion',
-            transport=__opts__['transport'],
-            opts=__opts__,
-            sock_dir=__opts__['sock_dir'])
+        fire_master = None
+
+    def fire(tag, msg):
+        if fire_master:
+            fire_master(msg, tag)
+        else:
+            __salt__['event.send'](tag, msg)
+
     sqs = _get_sqs_conn(profile)
     q = sqs.get_queue(queue)
 
     while True:
+        if not q:
+            log.warning('failure connecting to queue: {0}, '
+                        'waiting 10 seconds.'.format(queue))
+            time.sleep(10)
+            q = sqs.get_queue(queue)
+            if not q:
+                continue
         msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
-            event_bus.fire_event({'message': msg.get_body()},
-                                 'salt/engine/sqs')
+            fire(tag, {'message': msg.get_body()})
             msg.delete()

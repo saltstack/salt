@@ -68,7 +68,7 @@ Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
 
 Running Salt without root access in userland:
-    - :doc:`Salt Usermode <topics/tutorials/rooted.rst>`
+    - :doc:`Salt Usermode <topics/tutorials/rooted>`
 
 A list of all tutorials can be found here:
     :doc:`All Salt tutorials <topics/tutorials/index>`

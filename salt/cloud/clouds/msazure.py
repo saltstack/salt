@@ -582,6 +582,7 @@ def create(vm_):
         return False
     try:
         result = conn.create_virtual_machine_deployment(**vm_kwargs)
+        log.debug('Request ID for machine: {0}'.format(result.request_id))
         _wait_for_async(conn, result.request_id)
     except WindowsAzureConflictError:
         log.debug('Conflict error. The deployment may already exist, trying add_role')
@@ -1109,4 +1110,38 @@ def list_disks(conn=None, call=None):
             'os': disk.os,
             'source_image_name': disk.source_image_name,
         }
+    return ret
+
+
+def get_operation_status(kwargs=None, conn=None, call=None):
+    '''
+    Get Operation Status, based on a request ID
+
+    CLI Example::
+
+        salt-cloud -f get_operation_status my-azure id=0123456789abcdef0123456789abcdef
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_instance function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'id' not in kwargs:
+        raise SaltCloudSystemExit('A request ID must be specified as "id"')
+
+    data = conn.get_operation_status(kwargs['id'])
+    ret = {
+        'http_status_code': data.http_status_code,
+        'id': kwargs['id'],
+        'status': data.status
+    }
+    if hasattr(data.error, 'code'):
+        ret['error'] = {
+            'code': data.error.code,
+            'message': data.error.message,
+        }
+
     return ret

@@ -1,8 +1,7 @@
 #compdef salt salt-call salt-cp
 
-local state line curcontext="$curcontext"
+local state line curcontext="$curcontext" salt_dir cachefn
 
-local salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
 _modules(){
     local _funcs cachefn
 
@@ -28,7 +27,7 @@ _minions(){
     fi
 
     if _cache_invalid salt/minions || ! _retrieve_cache salt/minions; then
-      _peons=( ${${(f)"$(salt-key -l acc)"}[2,-1]} )
+      _peons=( ${${(f)"$(salt-key -l acc 2>/dev/null)"}[2,-1]} )
       _store_cache salt/minions _peons
     fi
 
@@ -110,7 +109,7 @@ _salt_comp(){
     case "$service" in
         salt)
             _arguments -C \
-                ':minions:_minions' \
+                "${words[(r)(-G|--grain)]+!}:minions:_minions" \
                 ':modules:_modules' \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
@@ -128,7 +127,7 @@ _salt_comp(){
             ;;
         salt-cp)
             _arguments -C \
-                ':minions:_minions' \
+                "${words[(r)(-G|--grain)]+!}:minions:_minions" \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
                 "$_logging_options[@]" \
@@ -137,5 +136,15 @@ _salt_comp(){
             ;;
     esac
 }
+
+zstyle -s ":completion:$curcontext:" cache-policy cachefn
+if [[ -z $cachefn ]]; then
+    zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+fi
+
+if _cache_invalid salt/salt_dir || ! _retrieve_cache salt/salt_dir; then
+    salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
+    _store_cache salt/salt_dir salt_dir
+fi
 
 _salt_comp "$@"

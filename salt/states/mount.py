@@ -172,6 +172,8 @@ def mounted(name,
 
     device_list = []
     if real_name in active:
+        if 'superopts' not in active[real_name]:
+            active[real_name]['superopts'] = []
         if mount:
             device_list.append(active[real_name]['device'])
             device_list.append(os.path.realpath(device_list[0]))
@@ -504,7 +506,7 @@ def unmounted(name,
     name
         The path to the location where the device is to be unmounted from
 
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.2.0
 
     device
         The device to be unmounted.

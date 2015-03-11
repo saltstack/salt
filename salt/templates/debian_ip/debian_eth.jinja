@@ -30,6 +30,7 @@
 {%endif%}{% if interface.provider %}    provider {{interface.provider}}
 {%endif%}{% if interface.unit %}    unit {{interface.unit}}
 {%endif%}{% if interface.options %}    options {{interface.options}}
+{%endif%}{% if interface.master %}    bond_master {{interface.master}}
 {%endif%}{% if interface.dns_nameservers %}    dns-nameservers {%for item in interface.dns_nameservers %}{{item}} {%endfor%}
 {%endif%}{% if interface.dns_search %}    dns-search {% for item in interface.dns_search %}{{item}} {%endfor%}
 {%endif%}{% if interface.ethtool %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}

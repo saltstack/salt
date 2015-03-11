@@ -107,7 +107,10 @@ def start():
 
     http_server = tornado.httpserver.HTTPServer(application, **kwargs)
     try:
-        http_server.bind(mod_opts['port'])
+        http_server.bind(mod_opts['port'],
+                         address=mod_opts.get('address'),
+                         backlog=mod_opts.get('backlog', 128),
+                         )
         http_server.start(mod_opts['num_processes'])
     except:
         print('Rest_tornado unable to bind to port {0}'.format(mod_opts['port']))
