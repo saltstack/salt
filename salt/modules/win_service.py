@@ -435,4 +435,3 @@ def delete(name):
     '''
     cmd = ['sc', 'delete', name]
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
-
