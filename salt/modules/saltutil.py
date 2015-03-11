@@ -21,7 +21,7 @@ from urllib2 import URLError
 # Fix a nasty bug with Win32 Python not supporting all of the standard signals
 try:
     salt_SIGKILL = signal.SIGKILL
-except NameError:
+except AttributeError:
     salt_SIGKILL = signal.SIGTERM
 
 # Import salt libs
