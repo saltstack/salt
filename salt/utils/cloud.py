@@ -345,6 +345,8 @@ def bootstrap(vm_, opts):
         'conf_file': opts['conf_file'],
         'minion_pem': vm_['priv_key'],
         'minion_pub': vm_['pub_key'],
+        'master_sign_pub_file': salt.config.get_cloud_config_value(
+            'master_sign_pub_file', vm_, opts, default=None),
         'keep_tmp': opts['keep_tmp'],
         'sudo': salt.config.get_cloud_config_value(
             'sudo', vm_, opts, default=(ssh_username != 'root')
@@ -804,6 +806,7 @@ def deploy_windows(host,
                    master=None,
                    tmp_dir='C:\\salttmp',
                    opts=None,
+                   master_sign_pub_file=None,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -841,6 +844,15 @@ def deploy_windows(host,
 
         if minion_pem:
             salt.utils.smb.put_str(minion_pem, 'salt\\conf\\pki\\minion\\minion.pem', conn=smb_conn)
+
+        if master_sign_pub_file:
+            # Read master-sign.pub file
+            log.debug("Copying master_sign.pub file from {0} to minion".format(master_sign_pub_file))
+            try:
+                with salt.utils.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
+                    smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
+            except Exception as e:
+                log.debug("Exception copying master_sign.pub file {0} to minion".format(master_sign_pub_file))
 
         # Copy over win_installer
         # win_installer refers to a file such as:
@@ -951,6 +963,7 @@ def deploy_script(host,
                   opts=None,
                   tmp_dir='/tmp/.saltcloud',
                   file_map=None,
+                  master_sign_pub_file=None,
                   **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
@@ -1072,6 +1085,9 @@ def deploy_script(host,
                         'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
                 sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
+
+            if master_sign_pub_file:
+                sftp_file('{0}/master_sign.pub'.format(tmp_dir), kwargs=ssh_kwargs, local_file=master_sign_pub_file)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -1296,6 +1312,10 @@ def deploy_script(host,
                     root_cmd('rm -f {0}/minion'.format(tmp_dir),
                              tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/minion'.format(tmp_dir))
+                if master_sign_pub_file:
+                    root_cmd('rm -f {0}/master_sign.pub'.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
+                    log.debug('Removed {0}/master_sign.pub'.format(tmp_dir))
 
                 # Remove master configuration
                 if master_pub:
