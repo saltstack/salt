@@ -42,9 +42,10 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.minions
 import salt.utils.verify
+import salt.utils.jid
 import salt.syspaths as syspaths
 from salt.exceptions import (
-    EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError
+    EauthAuthenticationError, SaltInvocationError, SaltReqTimeoutError, SaltClientError
 )
 
 # Import third party libs
@@ -857,7 +858,7 @@ class LocalClient(object):
                 yield {}
                 # stop the iteration, since the jid is invalid
                 raise StopIteration()
-        except salt.exceptions.SaltMasterError as exc:
+        except Exception as exc:
             log.warning('Returner unavailable: {exc}'.format(exc=exc))
         # Wait for the hosts to check in
         syndic_wait = 0
@@ -1018,9 +1019,13 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-            log.warning('jid does not exist')
-            return ret
+        try:
+            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
+                log.warning('jid does not exist')
+                return ret
+        except Exception as exc:
+            raise SaltClientError('Master job cache returner [{0}] failed to verify jid. '
+                                  'Exception details: {1}'.format(self.opts['master_job_cache'], exc))
 
         # Wait for the hosts to check in
         while True:
@@ -1062,7 +1067,13 @@ class LocalClient(object):
         # create the iterator-- since we want to get anyone in the middle
         event_iter = self.get_event_iter_returns(jid, minions, timeout=timeout)
 
-        data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        try:
+            data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        except Exception as exc:
+            raise SaltClientError('Returner {0} could not fetch jid data. '
+                                  'Exception details: {1}'.format(
+                                      self.opts['master_job_cache'],
+                                      exc))
         for minion in data:
             m_data = {}
             if u'return' in data[minion]:
@@ -1105,7 +1116,13 @@ class LocalClient(object):
         '''
         ret = {}
 
-        data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        try:
+            data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
+        except Exception as exc:
+            raise SaltClientError('Could not examine master job cache. '
+                                  'Error occured in {0} returner. '
+                                  'Exception details: {1}'.format(self.opts['master_job_cache'],
+                                                                  exc))
         for minion in data:
             m_data = {}
             if u'return' in data[minion]:
@@ -1151,9 +1168,15 @@ class LocalClient(object):
         found = set()
         ret = {}
         # Check to see if the jid is real, if not return the empty dict
-        if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
-            log.warning('jid does not exist')
-            return ret
+        try:
+            if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
+                log.warning('jid does not exist')
+                return ret
+        except Exception as exc:
+            raise SaltClientError('Load could not be retreived from '
+                                  'returner {0}. Exception details: {1}'.format(
+                                      self.opts['master_job_cache'],
+                                      exc))
         # Wait for the hosts to check in
         while True:
             # Process events until timeout is reached or all minions have returned
