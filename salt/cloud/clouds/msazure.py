@@ -192,8 +192,7 @@ def avail_images(conn=None, call=None):
 
 def avail_sizes(call=None):
     '''
-    Because sizes are built into images with Azure, there will be no sizes to
-    return here
+    Return a list of sizes from Azure
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -201,48 +200,12 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    return {
-        'ExtraSmall': {
-            'name': 'ExtraSmall',
-            'description': 'Extra Small (Shared core, 768MB RAM)',
-        },
-        'Small': {
-            'name': 'Small',
-            'description': 'Small (1 core, 1.75GB RAM)',
-        },
-        'Medium': {
-            'name': 'Medium',
-            'description': 'Medium (2 cores, 3.5GB RAM)',
-        },
-        'Large': {
-            'name': 'Large',
-            'description': 'Large (4 cores, 7GB RAM)',
-        },
-        'ExtraLarge': {
-            'name': 'ExtraLarge',
-            'description': 'Extra Large (8 cores, 14GB RAM)',
-        },
-        'A5': {
-            'name': 'A5',
-            'description': '2 cores, 14GB RAM',
-        },
-        'A6': {
-            'name': 'A6',
-            'description': '4 cores, 28GB RAM',
-        },
-        'A7': {
-            'name': 'A7',
-            'description': '8 cores, 56GB RAM',
-        },
-        'A8': {
-            'name': 'A8',
-            'description': '8 cores, 56GB RAM, 40 Gbit/s InfiniBand',
-        },
-        'A9': {
-            'name': 'A9',
-            'description': '16 cores, 112GB RAM, 40 Gbit/s InfiniBand',
-        },
-    }
+    conn = get_conn()
+    data = conn.list_role_sizes()
+    ret = {}
+    for item in data.role_sizes:
+        ret[item.name] = object_to_dict(item)
+    return ret
 
 
 def list_nodes(conn=None, call=None):
