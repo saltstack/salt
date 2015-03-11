@@ -33,6 +33,12 @@ Example:
 
 '''
 
+def __virtual__():
+    '''
+    Only load if the uptime module is present
+    '''
+    return 'uptime.checks_list' in __salt__
+
 
 def monitored(name, **params):
     '''
