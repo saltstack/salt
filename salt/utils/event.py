@@ -754,7 +754,6 @@ class AsyncEventPublisher(object):
         Get something from epull, publish it out epub, and return the package (or None)
         '''
         package = package[0]
-        print ('pub event on minion')
         try:
             self.epub_sock.send(package)
             self.io_loop.spawn_callback(self.publish_handler, package)
