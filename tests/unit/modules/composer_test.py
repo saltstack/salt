@@ -71,16 +71,6 @@ class ComposerTestCase(TestCase):
             with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
                 self.assertEqual(composer.install('dir'), rval)
 
-        # Test success with existing vendor directory and always_check=False returns object
-        mock = MagicMock(return_value=True)
-        with patch.object(composer, '_valid_composer', mock):
-            mock = MagicMock(return_value=True)
-            with patch.object(composer, 'did_composer_install', mock):
-                rval = {'retcode': 0, 'stderr': 'A', 'stdout': 'B'}
-                mock = MagicMock(return_value=rval)
-                with patch.dict(composer.__salt__, {'cmd.run_all': mock}):
-                    self.assertEqual(composer.install('dir', always_check=False), rval)
-
     def test_update(self):
         '''
         Test for Update composer dependencies for a directory.
