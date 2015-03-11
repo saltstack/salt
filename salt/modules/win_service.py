@@ -418,7 +418,7 @@ def create(name,
         cmd.extend(['obj=', obj])
     if password != None:
         cmd.extend(['password=', password])
-    print " ".join(cmd)
+    
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 def delete(name):
