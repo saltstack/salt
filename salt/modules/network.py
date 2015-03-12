@@ -721,6 +721,8 @@ def calculate_subnet(ip_addr, netmask):
     .. code-block:: bash
 
         salt '*' network.calculate_subnet 172.17.0.5 255.255.255.240
+
+    .. versionadded:: Beryllium
     '''
     return salt.utils.network.calculate_subnet(ip_addr, netmask)
 
