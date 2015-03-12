@@ -2117,7 +2117,7 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
 
-        client_acl = salt.acl.ClientAcl(self.opts['client_acl_blacklist'])
+        client_acl = salt.acl.ClientACL(self.opts['client_acl_blacklist'])
 
         if client_acl.user_is_blacklisted(clear_load['user']) or \
                 client_acl.cmd_is_blacklisted(clear_load['fun']):
