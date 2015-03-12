@@ -443,3 +443,13 @@ class AuthUser(object):
         user is not running with sudo
         '''
         return self.user.startswith('sudo_')
+
+    def is_running_user(self):
+        '''
+        Determines if the user is the same user as the one running
+        this process
+
+        Returns True if the user is the same user as the one running
+        this process and False if not.
+        '''
+        return self.user == salt.utils.get_user() 

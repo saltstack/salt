@@ -2280,7 +2280,7 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-            elif clear_load['user'] == salt.utils.get_user():
+            elif auth_user.is_running_user():
                 if clear_load.pop('key') != self.key.get(clear_load['user']):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
