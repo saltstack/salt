@@ -2323,7 +2323,9 @@ class ClearFuncs(object):
                     'Authentication failure of type "other" occurred.'
                 )
                 return ''
-        int_payload = self._prep_pub(clear_load)
+
+        # FIXME Very hacky
+        int_payload, clear_load['jid'], minions = self._prep_pub(clear_load, extra)
 
         # Send 0MQ to the publisher
         context = zmq.Context(1)
@@ -2342,7 +2344,7 @@ class ClearFuncs(object):
             }
         }
 
-    def _prep_pub(self, clear_load):
+    def _prep_pub(self, clear_load, extra):
         '''
         Take a given load and perform the necessary steps
         to prepare a publication.
@@ -2494,7 +2496,7 @@ class ClearFuncs(object):
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
-        return int_payload
+        return (int_payload, clear_load['jid'], minions)
 
         
 
