@@ -52,7 +52,9 @@ def tune(device, **kwargs):
             switch = kwarg_map[key]
             if key != 'read-write':
                 args.append(switch.replace('set', 'get'))
-            if kwargs[key] == 'True':
+            else:
+                args.append('getro')
+            if kwargs[key] == 'True' or kwargs[key] is True:
                 opts += '--{0} '.format(key)
             else:
                 opts += '--{0} {1} '.format(switch, kwargs[key])
