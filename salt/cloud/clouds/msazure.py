@@ -170,23 +170,10 @@ def avail_images(conn=None, call=None):
         conn = get_conn()
 
     ret = {}
-    images = conn.list_os_images()
-    for image in images:
-        ret[image.name] = {
-            'category': image.category,
-            'description': image.description.encode('ascii', 'replace'),
-            'eula': image.eula,
-            'label': image.label,
-            'logical_size_in_gb': image.logical_size_in_gb,
-            'name': image.name,
-            'os': image.os,
-        }
-        if hasattr(image, 'affinity_group'):
-            ret[image.name]['affinity_group'] = image.affinity_group
-        if hasattr(image, 'location'):
-            ret[image.name]['location'] = image.location
-        if hasattr(image, 'media_link'):
-            ret[image.name]['media_link'] = image.media_link
+    for item in conn.list_os_images():
+        ret[item.name] = object_to_dict(item)
+    for item in conn.list_vm_images():
+        ret[item.name] = object_to_dict(item)
     return ret
 
 
@@ -398,37 +385,6 @@ def show_instance(name, call=None):
         return {}
     salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
-
-
-def show_service(kwargs=None, conn=None, call=None):
-    '''
-    Show the details from the provider concerning an instance
-    '''
-    if call != 'function':
-        raise SaltCloudSystemExit(
-            'The show_service function must be called with -f or --function.'
-        )
-
-    if not conn:
-        conn = get_conn()
-
-    services = conn.list_hosted_services()
-    for service in services:
-        if kwargs['service_name'] != service.service_name:
-            continue
-        props = service.hosted_service_properties
-        ret = {
-            'affinity_group': props.affinity_group,
-            'date_created': props.date_created,
-            'date_last_modified': props.date_last_modified,
-            'description': props.description,
-            'extended_properties': props.extended_properties,
-            'label': props.label,
-            'location': props.location,
-            'status': props.status,
-        }
-        return ret
-    return None
 
 
 def create(vm_):
@@ -1462,8 +1418,8 @@ def list_disks(kwargs=None, conn=None, call=None):
 
     data = conn.list_disks()
     ret = {}
-    for image in data.disks:
-        ret[image.name] = object_to_dict(image)
+    for item in data.disks:
+        ret[item.name] = object_to_dict(item)
     return ret
 
 
@@ -1525,6 +1481,40 @@ def delete_disk(kwargs=None, conn=None, call=None):
         return {'Error': exc.message}
 
 
+def update_disk(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Update a disk's properties
+
+    CLI Example::
+
+        salt-cloud -f update_disk my-azure name=my_disk label=my_disk
+        salt-cloud -f update_disk my-azure name=my_disk new_name=another_disk
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_disk function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    old_data = show_disk(kwargs={'name': kwargs['name']}, call='function')
+    data = conn.update_disk(
+        disk_name=kwargs['name'],
+        has_operating_system=kwargs.get('has_operating_system', old_data['has_operating_system']),
+        label=kwargs.get('label', old_data['label']),
+        media_link=kwargs.get('media_link', old_data['media_link']),
+        name=kwargs.get('new_name', old_data['name']),
+        os=kwargs.get('os', old_data['os']),
+    )
+    return show_disk(kwargs={'name': kwargs['name']}, call='function')
+
+
 def object_to_dict(obj):
     '''
     .. versionadded:: Beryllium
@@ -1535,6 +1525,8 @@ def object_to_dict(obj):
         ret = []
         for item in obj:
             ret.append(obj.__dict__[item])
+    elif isinstance(obj, unicode):
+        ret = obj.encode('ascii', 'replace'),
     elif isinstance(obj, six.string_types):
         ret = obj
     else:
@@ -1545,6 +1537,8 @@ def object_to_dict(obj):
             # This is ugly, but inspect.isclass() doesn't seem to work
             if 'class' in str(type(obj.__dict__[item])):
                 ret[item] = object_to_dict(obj.__dict__[item])
+            elif isinstance(obj.__dict__[item], unicode):
+                ret[item] = obj.__dict__[item].encode('ascii', 'replace'),
             else:
                 ret[item] = obj.__dict__[item]
     return ret
