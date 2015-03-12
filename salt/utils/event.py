@@ -281,7 +281,7 @@ class SaltEvent(object):
             # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
             #                        CentOS5, which still uses 2.1.9)
             pass
-        self.push.setsockopt(zmq.LINGER, 5000)
+        self.push.setsockopt(zmq.LINGER, timeout)
         self.push.connect(self.pulluri)
         self.cpush = True
 
