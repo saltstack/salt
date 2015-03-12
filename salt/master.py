@@ -2324,9 +2324,24 @@ class ClearFuncs(object):
                 )
                 return ''
 
-        # FIXME Very hacky
+        # FIXME Needs additional refactoring
         int_payload, clear_load['jid'], minions = self._prep_pub(clear_load, extra)
 
+        #Send it!
+        self._send_pub(int_payload)
+
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': clear_load['jid'],
+                'minions': minions
+            }
+        }
+
+    def _send_pub(self, load):
+        '''
+        Take a load and send it across the network to connected minions
+        '''
         # Send 0MQ to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
@@ -2336,13 +2351,8 @@ class ClearFuncs(object):
         pub_sock.connect(pull_uri)
 
         pub_sock.send(self.serial.dumps(int_payload))
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': clear_load['jid'],
-                'minions': minions
-            }
-        }
+        # TODO Check return from send()?
+
 
     def _prep_pub(self, clear_load, extra):
         '''
