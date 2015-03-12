@@ -229,12 +229,17 @@ def present(
         termination_policies=None,
         suspended_processes=None,
         scaling_policies=None,
+        scaling_policies_from_pillar="boto_asg_scaling_policies",
         alarms=None,
         alarms_from_pillar='boto_asg_alarms',
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None
+        notification_arn=None,
+        notification_arn_from_pillar="boto_asg_notification_arn",
+        notification_types=None,
+        notification_types_from_pillar="boto_asg_notification_types"):
     '''
     Ensure the autoscale group exists.
 
@@ -309,6 +314,10 @@ def present(
         List of scaling policies.  Each policy is a dict of key-values described by
         http://boto.readthedocs.org/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
 
+    scaling_policies_from_pillar:
+        name of pillar dict that contains scaling policy settings.   Scaling policies defined for
+        this specific state will override those from pillar.
+
     alarms:
         a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ASG.
         All attributes should be specified except for dimension which will be
@@ -331,6 +340,26 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    notification_arn
+        The aws arn that notifications will be sent to
+
+    notification_arn_from_pillar
+        name of the pillar dict that contains notifcation_arn settings.  A notification_arn
+        defined for this specific state will override the one from pillar.
+
+    notification_types
+        A list of event names that will trigger a notification.  The list of valid
+        notification types is:
+            "autoscaling:EC2_INSTANCE_LAUNCH",
+            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+            "autoscaling:EC2_INSTANCE_TERMINATE",
+            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR",
+            "autoscaling:TEST_NOTIFICATION"
+
+    notification_types_from_pillar
+        name of the pillar dict that contains notifcation_types settings.  Notification_types
+        defined for this specific state will override those from the pillar.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if vpc_zone_identifier:
@@ -392,6 +421,16 @@ def present(
             ret['comment'] = msg
             ret['result'] = None
             return ret
+        notification_arn, notification_types = _determine_notification_info(
+            notification_arn,
+            notification_arn_from_pillar,
+            notification_types,
+            notification_types_from_pillar
+        )
+        scaling_policies = _determine_scaling_policies(
+            scaling_policies,
+            scaling_policies_from_pillar
+        )
         created = __salt__['boto_asg.create'](name, launch_config_name,
                                               availability_zones, min_size,
                                               max_size, desired_capacity,
@@ -403,6 +442,7 @@ def present(
                                               termination_policies,
                                               suspended_processes,
                                               scaling_policies, region,
+                                              notification_arn, notification_types,
                                               key, keyid, profile)
         if created:
             ret['changes']['old'] = None
@@ -461,6 +501,17 @@ def present(
                 ret['comment'] = msg
                 ret['result'] = None
                 return ret
+            # add in alarms
+            notification_arn, notification_types = _determine_notification_info(
+                notification_arn,
+                notification_arn_from_pillar,
+                notification_types,
+                notification_types_from_pillar
+            )
+            scaling_policies = _determine_scaling_policies(
+                scaling_policies,
+                scaling_policies_from_pillar
+            )
             updated, msg = __salt__['boto_asg.update'](name, launch_config_name,
                                                        availability_zones, min_size,
                                                        max_size, desired_capacity,
@@ -473,6 +524,7 @@ def present(
                                                        termination_policies,
                                                        suspended_processes,
                                                        scaling_policies, region,
+                                                       notification_arn, notification_types,
                                                        key, keyid, profile)
             if asg['launch_config_name'] != launch_config_name:
                 # delete the old launch_config_name
@@ -497,6 +549,30 @@ def present(
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     return ret
+
+
+def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
+    '''helper method for present.  ensure that scaling_policies are set'''
+    pillar_scaling_policies = __salt__['config.option'](scaling_policies_from_pillar, {})
+    if not scaling_policies and len(pillar_scaling_policies) > 0:
+        scaling_policies = pillar_scaling_policies
+    return scaling_policies
+
+
+def _determine_notification_info(
+    notification_arn,
+    notification_arn_from_pillar,
+    notification_types,
+    notification_types_from_pillar):
+    '''helper method for present.  ensure that notification_configs are set'''
+    pillar_arn_list = __salt__['config.option'](notification_arn_from_pillar, {})
+    pillar_arn = None
+    if len(pillar_arn_list) > 0:
+        pillar_arn = pillar_arn_list[0]
+    pillar_notification_types = __salt__['config.option'](notification_types_from_pillar, {})
+    arn = notification_arn if notification_arn else pillar_arn
+    types = notification_types if notification_types else pillar_notification_types
+    return (arn, types)
 
 
 def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile):
