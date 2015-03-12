@@ -23,8 +23,8 @@ class VirtTest(integration.ModuleCase):
         '''
         profiles = self.run_function('virt.get_profiles', ['kvm'])
         nicp = profiles['nic']['default']
-        self.assertTrue(nicp['eth0'].get('model', '') == 'virtio')
-        self.assertTrue(nicp['eth0'].get('bridge', '') == 'br0')
+        self.assertTrue(nicp[0].get('model', '') == 'virtio')
+        self.assertTrue(nicp[0].get('source', '') == 'br0')
         diskp = profiles['disk']['default']
         self.assertTrue(diskp[0]['system'].get('model', '') == 'virtio')
         self.assertTrue(diskp[0]['system'].get('format', '') == 'qcow2')
@@ -36,8 +36,8 @@ class VirtTest(integration.ModuleCase):
         '''
         profiles = self.run_function('virt.get_profiles', ['esxi'])
         nicp = profiles['nic']['default']
-        self.assertTrue(nicp['eth0'].get('model', '') == 'e1000')
-        self.assertTrue(nicp['eth0'].get('bridge', '') == 'DEFAULT')
+        self.assertTrue(nicp[0].get('model', '') == 'e1000')
+        self.assertTrue(nicp[0].get('source', '') == 'DEFAULT')
         diskp = profiles['disk']['default']
         self.assertTrue(diskp[0]['system'].get('model', '') == 'scsi')
         self.assertTrue(diskp[0]['system'].get('format', '') == 'vmdk')
