@@ -1551,7 +1551,7 @@ class Minion(MinionBase):
         # On first startup execute a state run if configured to do so
         self._state_run()
 
-        loop_interval = int(self.opts['loop_interval'])
+        loop_interval = self.opts['loop_interval']
 
         try:
             if self.opts['grains_refresh_every']:  # If exists and is not zero. In minutes, not seconds!
