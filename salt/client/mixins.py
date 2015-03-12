@@ -443,10 +443,11 @@ class AsyncClientMixin(object):
         if suffix in ('new',):
             return
 
-        # Check if ouputter was passed in the return data. If this is the case,
-        # then the return data will be a dict two keys: 'data' and 'outputter'
         outputter = None
-        if isinstance(event, dict) and 'return' in event:
+        # if this is a ret, we have our own set of rules
+        if isinstance(event, dict) and suffix == 'ret':
+            # Check if ouputter was passed in the return data. If this is the case,
+            # then the return data will be a dict two keys: 'data' and 'outputter'
             if isinstance(event.get('return'), dict) \
                     and set(event['return']) == set(('data', 'outputter')):
                 event_data = event['return']['data']
