@@ -376,6 +376,7 @@ to ``False``:
 
     pillar_opts: False
 
+
 Minion Config in Pillar
 =======================
 
@@ -388,6 +389,7 @@ variable:
 .. code-block:: yaml
 
     mysql.pass: hardtoguesspassword
+
 
 Master Provided Pillar Error
 ============================

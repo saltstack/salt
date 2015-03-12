@@ -1190,6 +1190,8 @@ def latest_running(name, image, **kwargs):
     Ensures the latest version of the container is running in the correct
     configuration. New images will be pulled from the repo and running
     containers will be restarted if necessary (new image or changed config.
+
+    .. versionadded:: Beryllium
     """
     create_container_kwargs, start_kwargs = _parse_args(**kwargs)
     create_container_kwargs.update({

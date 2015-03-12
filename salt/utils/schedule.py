@@ -589,8 +589,8 @@ class Schedule(object):
             try:
                 os.unlink(proc_fn)
             except OSError as exc:
-                if exc.errno == errno.EEXIST:
-                    # EEXIST is OK because the file is gone and that's what
+                if exc.errno == errno.EEXIST or exc.errno == errno.ENOENT:
+                    # EEXIST and ENOENT are OK because the file is gone and that's what
                     # we wanted
                     pass
                 else:

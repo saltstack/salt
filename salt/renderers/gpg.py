@@ -142,7 +142,9 @@ def decrypt_object(obj, gpg):
             obj[key] = decrypt_object(val, gpg)
         return obj
     elif isinstance(obj, list):
-        return [decrypt_object(e, gpg) for e in obj]
+        for n, v in enumerate(obj):
+            obj[n] = decrypt_object(v, gpg)
+        return obj
     else:
         return obj
 

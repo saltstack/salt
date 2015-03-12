@@ -356,6 +356,15 @@ class Master(SMaster):
         should not start up.
         '''
         errors = []
+
+        home = os.path.expanduser('~' + self.opts['user'])
+        try:
+            os.chdir(home)
+        except OSError as err:
+            errors.append(
+                'Cannot change to home directory {0} ({1})'.format(home, err)
+            )
+
         fileserver = salt.fileserver.Fileserver(self.opts)
         if not fileserver.servers:
             errors.append(

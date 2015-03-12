@@ -52,5 +52,11 @@ def store_job(opts, load, event=None, mminion=None):
 
     # otherwise, write to the master cache
     fstr = '{0}.returner'.format(opts['master_job_cache'])
+    if 'fun' not in load and load.get('return', {}):
+        ret_ = load.get('return', {})
+        if 'fun' in ret_:
+            load.update({'fun': ret_['fun']})
+        if 'user' in ret_:
+            load.update({'user': ret_['user']})
     mminion.returners[fstr](load)
 # vim:set et sts=4 ts=4 tw=80:

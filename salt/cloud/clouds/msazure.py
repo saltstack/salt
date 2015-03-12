@@ -40,6 +40,7 @@ import copy
 import logging
 import pprint
 import time
+import inspect
 
 # Import salt libs
 import salt.config as config
@@ -191,8 +192,7 @@ def avail_images(conn=None, call=None):
 
 def avail_sizes(call=None):
     '''
-    Because sizes are built into images with Azure, there will be no sizes to
-    return here
+    Return a list of sizes from Azure
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -200,48 +200,12 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    return {
-        'ExtraSmall': {
-            'name': 'ExtraSmall',
-            'description': 'Extra Small (Shared core, 768MB RAM)',
-        },
-        'Small': {
-            'name': 'Small',
-            'description': 'Small (1 core, 1.75GB RAM)',
-        },
-        'Medium': {
-            'name': 'Medium',
-            'description': 'Medium (2 cores, 3.5GB RAM)',
-        },
-        'Large': {
-            'name': 'Large',
-            'description': 'Large (4 cores, 7GB RAM)',
-        },
-        'ExtraLarge': {
-            'name': 'ExtraLarge',
-            'description': 'Extra Large (8 cores, 14GB RAM)',
-        },
-        'A5': {
-            'name': 'A5',
-            'description': '2 cores, 14GB RAM',
-        },
-        'A6': {
-            'name': 'A6',
-            'description': '4 cores, 28GB RAM',
-        },
-        'A7': {
-            'name': 'A7',
-            'description': '8 cores, 56GB RAM',
-        },
-        'A8': {
-            'name': 'A8',
-            'description': '8 cores, 56GB RAM, 40 Gbit/s InfiniBand',
-        },
-        'A9': {
-            'name': 'A9',
-            'description': '16 cores, 112GB RAM, 40 Gbit/s InfiniBand',
-        },
-    }
+    conn = get_conn()
+    data = conn.list_role_sizes()
+    ret = {}
+    for item in data.role_sizes:
+        ret[item.name] = object_to_dict(item)
+    return ret
 
 
 def list_nodes(conn=None, call=None):
@@ -582,6 +546,7 @@ def create(vm_):
         return False
     try:
         result = conn.create_virtual_machine_deployment(**vm_kwargs)
+        log.debug('Request ID for machine: {0}'.format(result.request_id))
         _wait_for_async(conn, result.request_id)
     except WindowsAzureConflictError:
         log.debug('Conflict error. The deployment may already exist, trying add_role')
@@ -1080,33 +1045,128 @@ def list_storage_services(conn=None, call=None):
     return ret
 
 
-def list_disks(conn=None, call=None):
+def get_operation_status(kwargs=None, conn=None, call=None):
     '''
-    Destroy a VM
+    Get Operation Status, based on a request ID
+
+    CLI Example::
+
+        salt-cloud -f get_operation_status my-azure id=0123456789abcdef0123456789abcdef
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            ('The list_disks function must be called '
-             'with -f or --function.')
+            'The show_instance function must be called with -f or --function.'
+        )
+
+    if 'id' not in kwargs:
+        raise SaltCloudSystemExit('A request ID must be specified as "id"')
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.get_operation_status(kwargs['id'])
+    ret = {
+        'http_status_code': data.http_status_code,
+        'id': kwargs['id'],
+        'status': data.status
+    }
+    if hasattr(data.error, 'code'):
+        ret['error'] = {
+            'code': data.error.code,
+            'message': data.error.message,
+        }
+
+    return ret
+
+
+def list_disks(kwargs=None, conn=None, call=None):
+    '''
+    List disks associated with the account
+
+    CLI Example::
+
+        salt-cloud -f list_disks my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_disks function must be called with -f or --function.'
         )
 
     if not conn:
         conn = get_conn()
 
+    data = conn.list_disks()
     ret = {}
-    disks = conn.list_disks()
-    for disk in disks.disks:
-        ret[disk.name] = {
-            'affinity_group': disk.affinity_group,
-            'attached_to': disk.attached_to,
-            'has_operating_system': disk.has_operating_system,
-            'is_corrupted': disk.is_corrupted,
-            'label': disk.label,
-            'location': disk.location,
-            'logical_disk_size_in_gb': disk.logical_disk_size_in_gb,
-            'media_link': disk.media_link,
-            'name': disk.name,
-            'os': disk.os,
-            'source_image_name': disk.source_image_name,
-        }
+    for image in data.disks:
+        ret[image.name] = object_to_dict(image)
+    return ret
+
+
+def get_disk(kwargs=None, conn=None, call=None):
+    '''
+    Return information about a disk
+
+    CLI Example::
+
+        salt-cloud -f list_disks my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_disk function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    data = conn.get_disk(kwargs['name'])
+    return object_to_dict(data)
+
+
+# For consistency with other providers
+show_disk = get_disk
+
+
+def delete_disk(kwargs=None, conn=None, call=None):
+    '''
+    Delete a specific disk associated with the account
+
+    CLI Examples::
+
+        salt-cloud -f delete_disk my-azure name=my_disk
+        salt-cloud -f delete_disk my-azure name=my_disk delete_vhd=True
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_disk function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_disk(kwargs['name'], kwargs.get('delete_vhd', False))
+        return {'Success': 'The disk was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        pprint.pprint(dir(exc))
+        return {'Error': exc.message}
+
+
+def object_to_dict(obj):
+    '''
+    Convert an object to a dictionary
+    '''
+    ret = {}
+    for item in dir(obj):
+        if item.startswith('__'):
+            continue
+        if inspect.isclass(obj.__dict__[item]):
+            ret[item] = object_to_dict(obj.__dict__[item])
+        else:
+            ret[item] = obj.__dict__[item]
     return ret

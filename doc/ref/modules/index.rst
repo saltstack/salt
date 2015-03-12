@@ -336,3 +336,20 @@ If a "fallback_function" is defined, it will replace the function instead of rem
         replaced with "_fallback"
         '''
         return True
+
+In addition to global dependancies the depends decorator also supports raw booleans.
+
+.. code-block:: python
+
+    from salt.utils.decorators import depends
+
+    HAS_DEP = False
+    try:
+        import dependency_that_sometimes_exists
+        HAS_DEP = True
+    except ImportError:
+        pass
+
+    @depends(HAS_DEP)
+    def foo():
+        return True

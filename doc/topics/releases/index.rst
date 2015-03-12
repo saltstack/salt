@@ -8,10 +8,7 @@ information about the version numbering scheme.
 Latest Stable Release
 =====================
 
-.. releasestree::
-    :maxdepth: 1
-
-    {{ release }}
+|current_release_doc|
 
 Previous Releases
 =================

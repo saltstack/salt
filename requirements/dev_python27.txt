@@ -1,5 +1,5 @@
 -r base.txt
--e git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
+-e git+https://github.com/saltstack/salt-testing.git@develop#egg=SaltTesting
 
 mock
 boto>=2.32.1

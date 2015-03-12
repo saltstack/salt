@@ -4,6 +4,8 @@ An engine that continuously reads messages from SQS and fires them as events.
 
 Note that long polling is utilized to avoid excessive CPU usage.
 
+.. versionsadded:: Beryllium
+
 :configuration:
     This engine can be run on the master or on a minion.
 
@@ -41,11 +43,14 @@ Note that long polling is utilized to avoid excessive CPU usage.
 
 :depends: boto
 '''
-# Import salt libs
-import salt.utils.event
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+import time
+
+# Import salt libs
+import salt.utils.event
 
 # Import third party libs
 try:
@@ -122,6 +127,13 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
     q = sqs.get_queue(queue)
 
     while True:
+        if not q:
+            log.warning('failure connecting to queue: {0}, '
+                        'waiting 10 seconds.'.format(queue))
+            time.sleep(10)
+            q = sqs.get_queue(queue)
+            if not q:
+                continue
         msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
             fire(tag, {'message': msg.get_body()})
