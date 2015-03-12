@@ -128,7 +128,7 @@ class TestSerializers(TestCase):
         assert obj == final_obj
 
         # BLAAM! yml_src is not valid !
-        final_obj = yaml.deserialize(yml_src)
+        final_obj = OrderedDict(yaml.deserialize(yml_src))
         assert obj != final_obj
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')
