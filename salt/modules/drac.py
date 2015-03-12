@@ -172,7 +172,7 @@ def list_users():
     users = {}
     _username = ''
 
-    for idx in range(1, 16):
+    for idx in range(1, 17):
         cmd = __salt__['cmd.run_all']('racadm getconfig -g \
                 cfgUserAdmin -i {0}'.format(idx))
 
