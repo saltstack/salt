@@ -531,12 +531,12 @@ class SaltDistribution(distutils.dist.Distribution):
         self.ssh_packaging = PACKAGED_FOR_SALT_SSH
         self.salt_transport = None
 
-        self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
+        self.salt_name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable
-        self.description = 'Portable, distributed, remote execution and configuration management system'
-        self.author = 'Thomas S Hatch'
-        self.author_email = 'thatch45@gmail.com'
-        self.url = 'http://saltstack.org'
+        self.salt_description = 'Portable, distributed, remote execution and configuration management system'
+        self.salt_author = 'Thomas S Hatch'
+        self.salt_author_email = 'thatch45@gmail.com'
+        self.salt_url = 'http://saltstack.org'
         self.cmdclass.update({'test': TestCommand,
                               'clean': Clean,
                               'build': Build,
@@ -562,8 +562,8 @@ class SaltDistribution(distutils.dist.Distribution):
             attrvalue = getattr(self, attrname, None)
             if attrvalue == 0:
                 continue
-            if attrname == 'salt_version':
-                attrname = 'version'
+            if attrname.startswith('salt_'):
+                attrname = attrname.split('salt_')[1]
             if hasattr(self.metadata, 'set_{0}'.format(attrname)):
                 getattr(self.metadata, 'set_{0}'.format(attrname))(attrvalue)
             elif hasattr(self.metadata, attrname):
