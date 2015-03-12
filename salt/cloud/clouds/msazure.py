@@ -1525,7 +1525,7 @@ def object_to_dict(obj):
         ret = []
         for item in obj:
             ret.append(obj.__dict__[item])
-    elif isinstance(obj, unicode):
+    elif isinstance(obj, six.text_type):
         ret = obj.encode('ascii', 'replace'),
     elif isinstance(obj, six.string_types):
         ret = obj
@@ -1537,7 +1537,7 @@ def object_to_dict(obj):
             # This is ugly, but inspect.isclass() doesn't seem to work
             if 'class' in str(type(obj.__dict__[item])):
                 ret[item] = object_to_dict(obj.__dict__[item])
-            elif isinstance(obj.__dict__[item], unicode):
+            elif isinstance(obj.__dict__[item], six.text_type):
                 ret[item] = obj.__dict__[item].encode('ascii', 'replace'),
             else:
                 ret[item] = obj.__dict__[item]
