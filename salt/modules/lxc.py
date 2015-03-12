@@ -3294,54 +3294,6 @@ def run_all(name,
                 keep_env=keep_env)
 
 
-def _wrapper_cmd(func, *args, **kw):
-    '''
-    cmd_alike historical wrapper (compat)
-    '''
-    # no plan to remove, just warn
-    log.warn(
-        'lxc.cmd_{0} has been renamed to lxc.{0},'
-        ' please update your code !'.format(func)
-    )
-    if func not in ['run',
-                    'run_stderr',
-                    'run_stdout',
-                    'run_all',
-                    'retcode']:
-        # injection !?
-        raise ValueError('Wrapper is not supported')
-    kw = copy.deepcopy(kw)
-    for i in [a for a in six.iterkeys(kw)]:
-        if i.startswith('__'):
-            kw.pop(i, None)
-    return globals()[func](*args, **kw)
-
-
-def cmd_run_stdout(name, *args, **kw):
-    # Historical function, do not use it anymore -> use run_stdout
-    return _wrapper_cmd('run_stdout', name, *args, **kw)
-
-
-def cmd_run_stderr(name, *args, **kw):
-    # Historical function, do not use it anymore -> use run_stderr
-    return _wrapper_cmd('run_stderr', name, *args, **kw)
-
-
-def cmd_run_all(name, *args, **kw):
-    # Historical function, do not use it anymore -> use run_all
-    return _wrapper_cmd('run_all', name, *args, **kw)
-
-
-def cmd_run(name, *args, **kw):
-    # Historical function, do not use it anymore -> use run
-    return _wrapper_cmd('run', name, *args, **kw)
-
-
-def cmd_retcode(name, *args, **kw):
-    # Historical function, do not use it anymore -> use retcode
-    return _wrapper_cmd('retcode', name, *args, **kw)
-
-
 def _get_md5(name, path):
     '''
     Get the MD5 checksum of a file from a container

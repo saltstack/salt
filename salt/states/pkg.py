@@ -49,7 +49,6 @@ from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 from salt.modules.pkg_resource import _repack_pkgs
-import six
 
 # Import 3rd-party libs
 import salt.ext.six as six

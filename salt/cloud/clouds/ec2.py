@@ -120,20 +120,6 @@ from salt.exceptions import (
     SaltCloudExecutionFailure
 )
 
-<<<<<<< HEAD
-# Try to import PyCrypto, which may not be installed on a RAET-based system
-try:
-    import Crypto
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
-    HAS_PYCRYPTO = True
-except ImportError:
-    HAS_PYCRYPTO = False
-
-
-=======
->>>>>>> lxc_reconfigure2
 # Get logging started
 log = logging.getLogger(__name__)
 

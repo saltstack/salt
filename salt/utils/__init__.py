@@ -31,7 +31,6 @@ import types
 import warnings
 import string
 import locale
-from calendar import month_abbr as months
 
 # Import 3rd-party libs
 import salt.ext.six as six

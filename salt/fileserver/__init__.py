@@ -17,7 +17,6 @@ import salt.loader
 import salt.utils
 
 # Import 3rd-party libs
-from salt.ext.six import string_types
 import salt.ext.six as six
 
 
