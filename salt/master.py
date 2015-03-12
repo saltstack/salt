@@ -2323,6 +2323,33 @@ class ClearFuncs(object):
                     'Authentication failure of type "other" occurred.'
                 )
                 return ''
+        int_payload = self._prep_pub(clear_load)
+
+        # Send 0MQ to the publisher
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUSH)
+        pull_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            )
+        pub_sock.connect(pull_uri)
+
+        pub_sock.send(self.serial.dumps(int_payload))
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': clear_load['jid'],
+                'minions': minions
+            }
+        }
+
+    def _prep_pub(self, clear_load):
+        '''
+        Take a given load and perform the necessary steps
+        to prepare a publication.
+
+        TODO: This is really only bound by temporal cohesion
+        and thus should be refactored even further.
+        '''
         # Retrieve the minions list
         delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
         minions = self.ckminions.check_minions(
@@ -2353,7 +2380,6 @@ class ClearFuncs(object):
             log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
             return {}
             # TODO Error reporting over the master event bus
-
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {
@@ -2402,7 +2428,6 @@ class ClearFuncs(object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
@@ -2464,27 +2489,14 @@ class ClearFuncs(object):
             master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
             log.debug("Signing data packet")
             payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
-        # Send 0MQ to the publisher
-        context = zmq.Context(1)
-        pub_sock = context.socket(zmq.PUSH)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-            )
-        pub_sock.connect(pull_uri)
         int_payload = {'payload': self.serial.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
+        return int_payload
 
-        pub_sock.send(self.serial.dumps(int_payload))
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': clear_load['jid'],
-                'minions': minions
-            }
-        }
+        
 
 
 class FloMWorker(MWorker):
