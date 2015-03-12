@@ -446,7 +446,7 @@ class AsyncClientMixin(object):
         if suffix in ('new',):
             return
 
-        outputter = event.get('outputter', self.opts.get('output', None))
+        outputter = self.opts.get('output', event.get('outputter', None))
         # if this is a ret, we have our own set of rules
         if suffix == 'ret':
             # Check if ouputter was passed in the return data. If this is the case,
