@@ -2143,10 +2143,7 @@ class ClearFuncs(object):
                     )
                 )
                 return ''
-            if not token:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
-            if token['eauth'] not in self.opts['external_auth']:
+            if not token or token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
