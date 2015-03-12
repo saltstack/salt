@@ -73,7 +73,7 @@ def enable(profile='allprofiles'):
 
     .. code-block:: bash
 
-        salt '*' firewall.disable
+        salt '*' firewall.enable
     '''
     cmd = ['netsh', 'advfirewall', 'set', profile, 'state', 'on']
     return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'

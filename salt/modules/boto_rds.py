@@ -163,7 +163,7 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
         return False
 
 
-def create(name, allocated_storage, db_instance_class, engine,
+def create(name, allocated_storage, storage_type, db_instance_class, engine,
            master_username, master_user_password, db_name=None,
            db_security_groups=None, vpc_security_group_ids=None,
            availability_zone=None, db_subnet_group_name=None,
@@ -187,8 +187,14 @@ def create(name, allocated_storage, db_instance_class, engine,
     if __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile):
         return True
 
+    a_s = ['standard', 'gp2', 'io1']
     if not allocated_storage:
         raise SaltInvocationError('allocated_storage is required')
+    if not storage_type:
+        raise SaltInvocationError('storage_type is required')
+    if storage_type not in a_s:
+        raise SaltInvocationError('storage_type must be one of: '
+                                  '{0}'.format(", ".join(str(e) for e in a_s)))
     if not db_instance_class:
         raise SaltInvocationError('db_instance_class is required')
     if not engine:
@@ -200,7 +206,7 @@ def create(name, allocated_storage, db_instance_class, engine,
     if availability_zone and multi_az:
         raise SaltInvocationError('availability_zone and multi_az are mutually'
                                   ' exclusive arguments.')
-    if wait_status is not None:
+    if wait_status:
         wait_statuses = ['available', 'modifying', 'backing-up']
         if wait_status not in wait_statuses:
             raise SaltInvocationError('wait_status can be one of: '
@@ -218,9 +224,9 @@ def create(name, allocated_storage, db_instance_class, engine,
                                       preferred_backup_window, port, multi_az,
                                       engine_version,
                                       auto_minor_version_upgrade,
-                                      license_model, iops, option_group_name,
-                                      character_set_name, publicly_accessible,
-                                      tags)
+                                      license_model, storage_type, iops,
+                                      option_group_name, character_set_name,
+                                      publicly_accessible, tags)
         if not rds:
             msg = 'Failed to create RDS {0}'.format(name)
             log.error(msg)

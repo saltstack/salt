@@ -34,9 +34,11 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
 #.  Create a new branch in your clone.
 
-    A branch should have one purpose. For example, "Fix bug X," or "Add feature
-    Y".  Multiple unrelated fixes and/or features should be isolated into
-    separate branches.
+    .. note::
+
+        A branch should have one purpose. For example, "Fix bug X," or "Add
+        feature Y".  Multiple unrelated fixes and/or features should be
+        isolated into separate branches.
 
     If you're working on a fix, create your branch from the oldest release
     branch having the bug.  See :ref:`Which Salt Branch`.
@@ -44,18 +46,14 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. code-block:: bash
 
         git fetch upstream
-        git checkout 2014.7
-        git rebase upstream/2014.7
-        git checkout -b fix-broken-thing
+        git checkout -b fix-broken-thing upstream/2014.7
 
     If you're working on a feature, create your branch from the develop branch.
 
     .. code-block:: bash
 
         git fetch upstream
-        git checkout develop
-        git rebase upstream/develop
-        git checkout -b add-cool-feature
+        git checkout -b add-cool-feature upstream/develop
 
 #.  Edit and commit changes to your branch.
 
@@ -63,29 +61,30 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
         vim path/to/file1 path/to/file2
         git diff
-        git add path/to/file1
-        git add path/to/file2
+        git add path/to/file1 path/to/file2
         git commit
 
     Write a short, descriptive commit title and a longer commit message if
     necessary.
 
-    If your change fixes a bug or implements a feature already filed in the
-    `issue tracker<GitHub issue tracker>`_, be sure to reference the issue
-    number in the commit message body.
+    .. note::
+
+        If your change fixes a bug or implements a feature already filed in the
+        `issue tracker<GitHub issue tracker_>`_, be sure to reference the issue
+        number in the commit message body.
 
     .. code-block:: bash
 
-    fix broken things in file1 and file2
+        fix broken things in file1 and file2
 
-    fixes #31337
+        Fixes #31337.  The issue is now eradicated from file1 and file2.
 
-    # Please enter the commit message for your changes. Lines starting
-    # with '#' will be ignored, and an empty message aborts the commit.
-    # On branch cmd_tests
-    # Changes to be committed:
-    #       modified:   path/to/file1
-    #       modified:   path/to/file2
+        # Please enter the commit message for your changes. Lines starting
+        # with '#' will be ignored, and an empty message aborts the commit.
+        # On branch fix-broken-thing
+        # Changes to be committed:
+        #       modified:   path/to/file1
+        #       modified:   path/to/file2
 
 
     If you get stuck `there are many introductory Git resources on
@@ -93,14 +92,21 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
 #.  Push your locally-committed changes to your GitHub fork,
 
+    .. note::
+
+        You may want to rebase before pushing to work out any potential
+        conflicts.
+
     .. code-block:: bash
 
+        git rebase upstream/2014.7
         git push --set-upstream origin fix-broken-thing
 
     or,
 
     .. code-block:: bash
 
+        git rebase upstream/develop
         git push --set-upstream origin add-cool-feature
 
 #.  Find the branch on your GitHub salt fork.
@@ -125,7 +131,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     #.  Review that the proposed changes are what you expect.
     #.  Write a descriptive comment.  Include links to related issues (e.g.
         'Fixes #31337.') in the comment field.
-    #.  Click 'Create pull request'.
+    #.  Click ``Create pull request``.
 
 #.  Salt project members will review your pull request and automated tests will
     run on it.
@@ -134,8 +140,8 @@ Fork a Repo Guide_>`_ and is well worth reading.
     changes or if a reviewer asks for modifications:
 
     #.  Make the new changes in your local clone on the same local branch.
-    #.  Push the branch to GitHub again using the same command as before.
-    #.  The new commits will be added to the pull request automatically.
+    #.  Push the branch to GitHub again using the same commands as before.
+    #.  New and updated commits will be added to the pull request automatically.
     #.  Feel free to add a comment to the discussion.
 
 .. note:: Jenkins
@@ -147,7 +153,6 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     Test progress and results can be found at http://jenkins.saltstack.com/.
 
-.. _Which Salt Branch:
 Which Salt branch?
 ==================
 

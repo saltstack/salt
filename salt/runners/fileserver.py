@@ -5,10 +5,11 @@ Directly manage the Salt fileserver plugins
 from __future__ import absolute_import
 
 # Import Salt libs
+import salt.utils
 import salt.fileserver
 
 
-def envs(backend=None, sources=False, outputter='nested'):
+def envs(backend=None, sources=False, outputter=None):
     '''
     Return the available fileserver environments. If no backend is provided,
     then the environments for all configured backends will be returned.
@@ -32,7 +33,6 @@ def envs(backend=None, sources=False, outputter='nested'):
     .. code-block:: bash
 
         salt-run fileserver.envs
-        salt-run fileserver.envs outputter=nested
         salt-run fileserver.envs backend=roots,git
         salt-run fileserver.envs git
     '''
@@ -40,12 +40,18 @@ def envs(backend=None, sources=False, outputter='nested'):
     output = fileserver.envs(back=backend, sources=sources)
 
     if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the fileserver.envs runner has '
+            'been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
         return {'outputter': outputter, 'data': output}
     else:
         return output
 
 
-def file_list(saltenv='base', backend=None, outputter='nested'):
+def file_list(saltenv='base', backend=None, outputter=None):
     '''
     Return a list of files from the salt fileserver
 
@@ -77,11 +83,18 @@ def file_list(saltenv='base', backend=None, outputter='nested'):
     output = fileserver.file_list(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the fileserver.file_list runner '
+            'has been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
 
 
-def symlink_list(saltenv='base', backend=None, outputter='nested'):
+def symlink_list(saltenv='base', backend=None, outputter=None):
     '''
     Return a list of symlinked files and dirs
 
@@ -113,12 +126,18 @@ def symlink_list(saltenv='base', backend=None, outputter='nested'):
     output = fileserver.symlink_list(load=load)
 
     if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the fileserver.symlink_list '
+            'runner has been deprecated. Please specify an outputter using '
+            '--out. See the output of \'salt-run -h\' for more information.'
+        )
         return {'outputter': outputter, 'data': output}
     else:
         return output
 
 
-def dir_list(saltenv='base', backend=None, outputter='nested'):
+def dir_list(saltenv='base', backend=None, outputter=None):
     '''
     Return a list of directories in the given environment
 
@@ -150,11 +169,18 @@ def dir_list(saltenv='base', backend=None, outputter='nested'):
     output = fileserver.dir_list(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the fileserver.dir_list runner '
+            'has been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
 
 
-def empty_dir_list(saltenv='base', backend=None, outputter='nested'):
+def empty_dir_list(saltenv='base', backend=None, outputter=None):
     '''
     .. versionadded:: 2015.2.0
 
@@ -191,8 +217,15 @@ def empty_dir_list(saltenv='base', backend=None, outputter='nested'):
     output = fileserver.file_list_emptydirs(load=load)
 
     if outputter:
-        salt.output.display_output(output, outputter, opts=__opts__)
-    return output
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the fileserver.empty_dir_list '
+            'runner has been deprecated. Please specify an outputter using '
+            '--out. See the output of \'salt-run -h\' for more information.'
+        )
+        return {'outputter': outputter, 'data': output}
+    else:
+        return output
 
 
 def update(backend=None):

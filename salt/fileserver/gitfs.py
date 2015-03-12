@@ -1892,14 +1892,13 @@ def _dir_list_gitpython(repo, tgt_env):
             tree = tree / repo['root']
         except KeyError:
             return ret
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for blob in tree.traverse():
-        if not isinstance(blob, git.Tree):
-            continue
-        if repo['root']:
-            path = os.path.relpath(blob.path, repo['root'])
-        else:
-            path = blob.path
-        ret.add(os.path.join(repo['mountpoint'], path))
+        if isinstance(blob, git.Tree):
+            ret.add(add_mountpoint(relpath(blob.path)))
+    if repo['mountpoint']:
+        ret.add(repo['mountpoint'])
     return ret
 
 
@@ -1939,10 +1938,12 @@ def _dir_list_pygit2(repo, tgt_env):
     blobs = []
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for blob in blobs:
-        if repo['root']:
-            blob = os.path.relpath(blob, repo['root'])
-        ret.add(os.path.join(repo['mountpoint'], blob))
+        ret.add(add_mountpoint(relpath(blob)))
+    if repo['mountpoint']:
+        ret.add(repo['mountpoint'])
     return ret
 
 
@@ -1975,10 +1976,12 @@ def _dir_list_dulwich(repo, tgt_env):
     blobs = []
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
+    relpath = lambda path: os.path.relpath(path, repo['root'])
+    add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for blob in blobs:
-        if repo['root']:
-            blob = os.path.relpath(blob, repo['root'])
-        ret.add(os.path.join(repo['mountpoint'], blob))
+        ret.add(add_mountpoint(relpath(blob)))
+    if repo['mountpoint']:
+        ret.add(repo['mountpoint'])
     return ret
 
 

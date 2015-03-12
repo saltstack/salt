@@ -34,6 +34,8 @@ Misc Fixes/Additions
   configuration. This change was necessitated upstream by the 7.0+ API.
 - Add ``args`` argument to ``cmd.script_retcode`` to match ``cmd.script`` in
   the :py:mod:`cmd module <salt.cmd.cmdmod>`. (:issue:`21122`)
+- Fixed bug where TCP keepalive was not being sent on the defined interval on
+  the return port (4506) from minion to master. (:issue: `21465`)
 
 Deprecations
 ============
