@@ -952,6 +952,11 @@ the network interfaces of your virtual machines, for example:-
           SubnetId: subnet-XXXXXXXX
           SecurityGroupId:
             - sg-XXXXXXXX
+          
+          # Uncomment this line if you would like to set an explicit private
+          # IP address for the ec2 instance
+          #
+          # PrivateIpAddress: 192.168.1.66
 
           # Uncomment this to associate an existing Elastic IP Address with
           # this network interface:

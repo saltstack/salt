@@ -272,6 +272,33 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
         return False
 
 
+def apply_security_groups(name, security_groups, region=None, key=None,
+                          keyid=None, profile=None):
+    '''
+    Apply security groups to ELB.
+
+    CLI example::
+
+        salt myminion boto_elb.apply_security_groups myelb '["mysecgroup1"]'
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    if isinstance(security_groups, string_types):
+        security_groups = json.loads(security_groups)
+    try:
+        conn.apply_security_groups_to_lb(name, security_groups)
+        msg = 'Applied security_groups on ELB {0}'.format(name)
+        log.info(msg)
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to appply security_groups on ELB {0}: {1}'
+        msg = msg.format(name, e.message)
+        log.error(msg)
+        return False
+
+
 def enable_availability_zones(name, availability_zones, region=None, key=None,
                               keyid=None, profile=None):
     '''

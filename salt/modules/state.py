@@ -293,6 +293,7 @@ def request(mods=None,
         salt '*' state.request test
         salt '*' state.request test,pkgs
     '''
+    kwargs['test'] = True
     ret = apply_(mods, **kwargs)
     notify_path = os.path.join(__opts__['cachedir'], 'req_state.p')
     serial = salt.payload.Serial(__opts__)
@@ -400,6 +401,8 @@ def run_request(name='default', **kwargs):
     if 'mods' not in n_req or 'kwargs' not in n_req:
         return {}
     req[name]['kwargs'].update(kwargs)
+    if 'test' in n_req['kwargs']:
+        n_req['kwargs'].pop('test')
     if req:
         ret = apply_(n_req['mods'], **n_req['kwargs'])
         try:

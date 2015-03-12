@@ -3,7 +3,7 @@
 Manage a GPG keychains, add keys, create keys, retrieve keys
 from keyservers.  Sign, encrypt and sign & encrypt text and files.
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 
 .. note::
 

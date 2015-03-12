@@ -374,8 +374,7 @@ def not_loaded():
     '''
     prov = providers()
     ret = set()
-    loader = salt.loader._create_loader(__opts__, 'modules', 'module')
-    for mod_dir in loader.module_dirs:
+    for mod_dir in salt.loader._module_dirs(__opts__, 'modules', 'module'):
         if not os.path.isabs(mod_dir):
             continue
         if not os.path.isdir(mod_dir):
@@ -461,6 +460,30 @@ def tty(*args, **kwargs):  # pylint: disable=W0613
         salt '*' test.tty pts3 'This is a test'
     '''
     return 'ERROR: This function has been moved to cmd.tty'
+
+
+def try_(module, return_try_exception=False, **kwargs):
+    '''
+    Try to run a module command. On an exception return None.
+    If `return_try_exception` is set True return the exception.
+    This can be helpfull in templates where running a module might fail as expected.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        <pre>
+        {% for i in range(0,230) %}
+            {{ salt['test.try'](module='ipmi.get_users', bmc_host='172.2.2.'+i)|yaml(False) }}
+        {% endfor %}
+        </pre>
+    '''
+    try:
+        return __salt__[module](**kwargs)
+    except Exception as e:
+        if return_try_exception:
+            return e
+    return None
 
 
 def assertion(assertion):

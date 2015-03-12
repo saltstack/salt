@@ -546,17 +546,8 @@ class PsTestCase(TestCase):
     ## Still trying to figure this one out.
     # def test__render_tab(self):
     #     pass
-    def test__get_cron_cmdstr_solaris(self):
-        cron.__grains__ = __grains__
-        with patch.dict(cron.__grains__, {'os_family': 'Solaris'}):
-            self.assertEqual('su - root -c "crontab /tmp"',
-                             cron._get_cron_cmdstr(STUB_USER, STUB_PATH))
-
     def test__get_cron_cmdstr(self):
-        cron.__grains__ = __grains__
-        with patch.dict(cron.__grains__, {'os_family': None}):
-            self.assertEqual('crontab -u root /tmp',
-                             cron._get_cron_cmdstr(STUB_USER, STUB_PATH))
+        self.assertEqual('crontab /tmp', cron._get_cron_cmdstr(STUB_PATH))
 
     def test__date_time_match(self):
         '''

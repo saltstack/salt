@@ -146,13 +146,16 @@ def raw_mod(opts, _, functions, mod='modules'):
                       pack={'__salt__': functions})
 
 
-def engines(opts):
+def engines(opts, functions, runners):
     '''
     Return the master services plugins
     '''
+    pack = {'__salt__': functions,
+            '__runners__': runners}
     return LazyLoader(_module_dirs(opts, 'engines', 'engines'),
                       opts,
-                      tag='engines')
+                      tag='engines',
+                      pack=pack)
 
 
 def proxy(opts, functions, whitelist=None):
@@ -732,8 +735,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.initial_load = True
 
         # names of modules that we don't have (errors, __virtual__, etc.)
-        self.missing_modules = []
-        self.loaded_files = []  # TODO: just remove them from file_mapping?
+        self.missing_modules = {}  # mapping of name -> error
+        self.loaded_modules = set()  # list of all modules that we have loaded
+        self.loaded_files = set()  # TODO: just remove them from file_mapping?
 
         self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
@@ -744,6 +748,23 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module('{0}.int.{1}'.format(self.loaded_base_name, tag))
         _generate_module('{0}.ext'.format(self.loaded_base_name))
         _generate_module('{0}.ext.{1}'.format(self.loaded_base_name, tag))
+
+    def missing_fun_string(self, function_name):
+        '''
+        Return the error string for a missing function.
+
+        This can range from "not available' to "__virtual__" returned False
+        '''
+        mod_name = function_name.split('.')[0]
+        if mod_name in self.loaded_modules:
+            return '{0!r} is not available.'.format(function_name)
+        else:
+            if self.missing_modules.get(mod_name) is not None:
+                return '{0!r}\' __virtual__ returned False: {1}'.format(mod_name, self.missing_modules[mod_name])
+            elif self.missing_modules.get(mod_name) is None:
+                return '{0!r}\' __virtual__ returned False'.format(mod_name)
+            else:
+                return '{0!r} is not available.'.format(function_name)
 
     def refresh_file_mapping(self):
         '''
@@ -819,8 +840,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Clear the dict
         '''
         super(LazyLoader, self).clear()  # clear the lazy loader
-        self.loaded_files = []
-        self.missing_modules = []
+        self.loaded_files = set()
+        self.missing_modules = {}
+        self.loaded_modules = set()
         # if we have been loaded before, lets clear the file mapping since
         # we obviously want a re-do
         if hasattr(self, 'opts'):
@@ -905,7 +927,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def _load_module(self, name):
         mod = None
         fpath, suffix = self.file_mapping[name]
-        self.loaded_files.append(name)
+        self.loaded_files.add(name)
         try:
             sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
@@ -993,7 +1015,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_name,
             )
             if virtual_err is not None:
-                log.error('Error loading {0}.{1}: {2}'.format(self.tag,
+                log.debug('Error loading {0}.{1}: {2}'.format(self.tag,
                                                               module_name,
                                                               virtual_err,
                                                               ))
@@ -1001,9 +1023,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # if process_virtual returned a non-True value then we are
             # supposed to not process this module
             if virtual_ret is not True:
-                self.missing_modules.append(module_name)
-                self.missing_modules.append(name)
                 # If a module has information about why it could not be loaded, record it
+                self.missing_modules[module_name] = virtual_err
+                self.missing_modules[name] = virtual_err
                 return False
 
         # If this is a proxy minion then MOST modules cannot work. Therefore, require that
@@ -1013,8 +1035,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if not hasattr(mod, '__proxyenabled__') or \
                     self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
                     '*' in mod.__proxyenabled__:
-                self.missing_modules.append(module_name)
-                self.missing_modules.append(name)
+                err_string = 'not a proxy_minion enabled module'
+                self.missing_modules[module_name] = err_string
+                self.missing_modules[name] = err_string
                 return False
 
         if getattr(mod, '__load__', False) is not False:
@@ -1045,6 +1068,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # enforce depends
         Depends.enforce_dependencies(self._dict, self.tag)
+        self.loaded_modules.add(module_name)
         return True
 
     def _load(self, key):

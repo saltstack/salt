@@ -133,7 +133,7 @@ the scheduled job when the minion starts up.  Sometimes this is not the desired
 situation.  Using the 'run_on_start' parameter set to False will cause the
 scheduler to skip this first run and wait until the next scheduled run.
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 
 .. code-block:: yaml
 
@@ -201,7 +201,7 @@ master.  Because of this information for these jobs will not be listed in the
 ``return_job`` parameter will return the data back to the Salt master, making
 the job available in this list.
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 
     schedule:
       job1:
@@ -215,7 +215,7 @@ but can be used to search for specific jobs later if combined with the
 return_job parameter.  The metadata parameter must be specified as a
 dictionary, othewise it will be ignored.
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.2.0
 
     schedule:
       job1:
@@ -589,8 +589,8 @@ class Schedule(object):
             try:
                 os.unlink(proc_fn)
             except OSError as exc:
-                if exc.errno == errno.EEXIST:
-                    # EEXIST is OK because the file is gone and that's what
+                if exc.errno == errno.EEXIST or exc.errno == errno.ENOENT:
+                    # EEXIST and ENOENT are OK because the file is gone and that's what
                     # we wanted
                     pass
                 else:

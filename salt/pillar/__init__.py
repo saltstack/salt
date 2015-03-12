@@ -402,7 +402,10 @@ class Pillar(object):
                 sls, exc
             )
             log.critical(msg)
-            errors.append('Rendering SLS \'{0}\' failed. Please see master log for details.'.format(sls))
+            if self.opts.get('pillar_safe_render_error', True):
+                errors.append('Rendering SLS \'{0}\' failed. Please see master log for details.'.format(sls))
+            else:
+                errors.append(msg)
         mods.add(sls)
         nstate = None
         if state:

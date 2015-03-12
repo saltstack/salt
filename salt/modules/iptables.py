@@ -17,6 +17,9 @@ import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -427,6 +430,8 @@ def save(filename=None, family='ipv4'):
     if _conf() and not filename:
         filename = _conf(family)
 
+    log.debug('Saving rules to {0}'.format(filename))
+
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
         os.makedirs(parent_dir)
@@ -464,6 +469,9 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     ipt_cmd = _iptables_cmd(family)
 
     if _has_option('--check', family):
+        cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
+        out = __salt__['cmd.run'](cmd)
+    else:
         _chain_name = hex(uuid.getnode())
 
         # Create temporary table
@@ -482,9 +490,6 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
                     return True
 
         return False
-    else:
-        cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
-        out = __salt__['cmd.run'](cmd, output_loglevel='quiet')
 
     if not out:
         return True

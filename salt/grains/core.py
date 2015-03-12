@@ -468,17 +468,28 @@ def _virtual(osdata):
     # detection.
     skip_cmds = ('AIX',)
 
+    # list of commands to be executed to determine the 'virtual' grain
+    _cmds = set()
+
+    # test first for virt-what, which covers most of the desired functionality
+    # on most platforms
+    if not salt.utils.is_windows() and osdata['kernel'] not in skip_cmds:
+        if salt.utils.which('virt-what'):
+            _cmds = (['virt-what'])
+        else:
+            log.info('Please install "virt-what" to improve results of the "virtual" grain.')
     # Check if enable_lspci is True or False
-    if __opts__.get('enable_lspci', True) is False:
-        _cmds = ('dmidecode', 'dmesg')
+    elif __opts__.get('enable_lspci', True) is False:
+        _cmds = (['dmidecode', 'dmesg'])
     elif osdata['kernel'] in skip_cmds:
         _cmds = ()
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
-            _cmds = ('dmidecode', 'dmesg')
+            _cmds = ('dmidecode', 'dmesg', 'systemd-detect-virt', 'virt-what')
         else:
-            _cmds = ('dmidecode', 'lspci', 'dmesg')
+            _cmds = ('dmidecode', 'lspci', 'dmesg',
+                     'systemd-detect-virt', 'virt-what')
 
     failed_commands = set()
     for command in _cmds:
@@ -518,7 +529,35 @@ def _virtual(osdata):
                 grains['virtual'] = 'VirtualBox'
             # Break out of the loop so the next log message is not issued
             break
-
+        elif command == 'systemd-detect-virt':
+            if output in ('qemu', 'kvm', 'oracle', 'xen', 'bochs', 'chroot', 'uml', 'systemd-nspawn'):
+                grains['virtual'] = output
+                break
+            elif 'vmware' in output:
+                grains['virtual'] = 'VMWare'
+                break
+            elif 'microsoft' in output:
+                grains['virtual'] = 'VirtualPC'
+                break
+            elif 'lxc' in output:
+                grains['virtual'] = 'LXC'
+                break
+            elif 'systemd-nspawn' in output:
+                grains['virtual'] = 'LXC'
+                break
+        elif command == 'virt-what':
+            if output in ('kvm', 'qemu', 'uml', 'xen'):
+                grains['virtual'] = output
+                break
+            elif 'vmware' in output:
+                grains['virtual'] = 'VMWare'
+                break
+            elif 'parallels' in output:
+                grains['virtual'] = 'Parallels'
+                break
+            elif 'hyperv' in output:
+                grains['virtual'] = 'HyperV'
+                break
         elif command == 'dmidecode' or command == 'dmesg':
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
@@ -551,6 +590,8 @@ def _virtual(osdata):
             # Manufacturer: Parallels Software International Inc.
             elif 'Parallels Software' in output:
                 grains['virtual'] = 'Parallels'
+            elif 'Manufacturer: Google' in output:
+                grains['virtual'] = 'kvm'
             # Break out of the loop, lspci parsing is not necessary
             break
         elif command == 'lspci':
@@ -568,6 +609,13 @@ def _virtual(osdata):
             elif 'virtio' in model:
                 grains['virtual'] = 'kvm'
             # Break out of the loop so the next log message is not issued
+            break
+        elif command == 'virt-what':
+            # if 'virt-what' returns nothing, it's either an undetected platform
+            # so we default just as virt-what to 'physical', otherwise use the
+            # platform detected/returned by virt-what
+            if output:
+                grains['virtual'] = output.lower()
             break
     else:
         if osdata['kernel'] in skip_cmds:
@@ -660,7 +708,9 @@ def _virtual(osdata):
             product = __salt__['cmd.run'](
                 '{0} smbios.system.product'.format(kenv)
             )
-            maker = __salt__['cmd.run']('{0} smbios.system.maker'.format(kenv))
+            maker = __salt__['cmd.run'](
+                '{0} smbios.system.maker'.format(kenv)
+            )
             if product.startswith('VMware'):
                 grains['virtual'] = 'VMware'
             if maker.startswith('Xen'):
@@ -670,6 +720,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'VirtualPC'
             if maker.startswith('OpenStack'):
                 grains['virtual'] = 'OpenStack'
+            if maker.startswith('Bochs'):
+                grains['virtual'] = 'kvm'
         if sysctl:
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
             jail = __salt__['cmd.run'](

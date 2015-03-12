@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2015.02.28"
+__ScriptVersion="2015.03.15"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -3424,7 +3424,7 @@ install_arch_linux_stable() {
     pacman -S --noconfirm --needed bash || return 1
     pacman -Su --noconfirm || return 1
     # We can now resume regular salt update
-    pacman -Syu --noconfirm salt || return 1
+    pacman -Syu --noconfirm salt-zmq || return 1
     return 0
 }
 
@@ -4511,6 +4511,12 @@ config_salt() {
         if [ -f "$_TEMP_CONFIG_DIR/minion.pub" ]; then
             movefile "$_TEMP_CONFIG_DIR/minion.pub" "$_PKI_DIR/minion/" || return 1
             chmod 664 "$_PKI_DIR/minion/minion.pub" || return 1
+            CONFIGURED_ANYTHING=$BS_TRUE
+        fi
+        # For multi-master-pki, copy the master_sign public key if found
+        if [ -f "$_TEMP_CONFIG_DIR/master_sign.pub" ]; then
+            movefile "$_TEMP_CONFIG_DIR/master_sign.pub" "$_PKI_DIR/minion/" || return 1
+            chmod 664 "$_PKI_DIR/minion/master_sign.pub" || return 1
             CONFIGURED_ANYTHING=$BS_TRUE
         fi
     fi

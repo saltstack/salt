@@ -5,33 +5,30 @@ Manage DACLs on Windows
 :depends:   - winreg Python module
 '''
 
+# Import python libs
+from __future__ import absolute_import
+import os
+import logging
+
 # TODO: Figure out the exceptions that could be raised and properly catch
 #       them instead of a bare except that catches any exception at all
 #       may also need to add the ability to take ownership of an object to set
 #       permissions if the minion is running as a user and not LOCALSYSTEM
 
-from salt.ext.six import string_types
-
-# Import third party libs
-try:
-    import _winreg
-    import win32security
-    import ntsecuritycon
-    import os
-    HAS_WINDOWS_MODULES = True
-except ImportError:
-    try:
-        import winreg as _winreg
-        HAS_WINDOWS_MODULES = True
-    except ImportError:
-        HAS_WINDOWS_MODULES = False
-
-# Import python libs
-import logging
-
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
+from salt.ext.six import string_types
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+
+# Import third party libs
+try:
+    import salt.ext.six.moves.winreg  # pylint: disable=redefined-builtin,no-name-in-module,import-error
+    import win32security
+    import ntsecuritycon
+    HAS_WINDOWS_MODULES = True
+except ImportError:
+    HAS_WINDOWS_MODULES = False
 
 log = logging.getLogger(__name__)
 
@@ -61,10 +58,10 @@ class daclConstants(object):
         self.rights = {
             win32security.SE_REGISTRY_KEY: {
                 'READ': {
-                    'BITS': _winreg.KEY_READ,
+                    'BITS': salt.ext.six.moves.winreg.KEY_READ,
                     'TEXT': 'read'},
                 'FULLCONTROL': {
-                    'BITS': _winreg.KEY_ALL_ACCESS,
+                    'BITS': salt.ext.six.moves.winreg.KEY_ALL_ACCESS,
                     'TEXT': 'full control'}
             },
             win32security.SE_FILE_OBJECT: {
@@ -177,8 +174,8 @@ class daclConstants(object):
             }
         }
         self.reflection_mask = {
-            True: _winreg.KEY_ALL_ACCESS,
-            False: _winreg.KEY_ALL_ACCESS | _winreg.KEY_WOW64_64KEY,
+            True: salt.ext.six.moves.winreg.KEY_ALL_ACCESS,
+            False: salt.ext.six.moves.winreg.KEY_ALL_ACCESS | salt.ext.six.moves.winreg.KEY_WOW64_64KEY,
             }
         self.objectType = {
             'FILE': win32security.SE_FILE_OBJECT,

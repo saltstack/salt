@@ -41,6 +41,7 @@ config:
         boto_rds.present:
             - name: myrds
             - allocated_storage: 5
+            - storage_type: gp2
             - db_instance_class: db.t2.micro
             - engine: MySQL
             - master_username: myuser
@@ -58,7 +59,7 @@ def __virtual__():
     return 'boto_rds' if 'boto_rds.exists' in __salt__ else False
 
 
-def present(name, allocated_storage, db_instance_class, engine,
+def present(name, allocated_storage, storage_type, db_instance_class, engine,
             master_username, master_user_password, db_name=None,
             db_security_groups=None, vpc_security_group_ids=None,
             availability_zone=None, db_subnet_group_name=None,
@@ -78,6 +79,9 @@ def present(name, allocated_storage, db_instance_class, engine,
     allocated_storage
         The amount of storage (in gigabytes) to be initially allocated for the
         database instance.
+
+    storage_type
+        The storage type you want to use, available: standard, gp2 and io1
 
     db_instance_class
         The compute and memory capacity of the Amazon RDS DB instance.
@@ -180,7 +184,8 @@ def present(name, allocated_storage, db_instance_class, engine,
            'comment': '',
            'changes': {}
            }
-    _ret = _rds_present(name, allocated_storage, db_instance_class, engine,
+    _ret = _rds_present(name, allocated_storage, storage_type,
+                        db_instance_class, engine,
                         master_username, master_user_password, db_name,
                         db_security_groups, vpc_security_group_ids,
                         availability_zone, db_subnet_group_name,
@@ -199,8 +204,8 @@ def present(name, allocated_storage, db_instance_class, engine,
     return ret
 
 
-def _rds_present(name, allocated_storage, db_instance_class, engine,
-                 master_username, master_user_password, db_name=None,
+def _rds_present(name, allocated_storage, storage_type, db_instance_class,
+                 engine, master_username, master_user_password, db_name=None,
                  db_security_groups=None, vpc_security_group_ids=None,
                  availability_zone=None, db_subnet_group_name=None,
                  preferred_maintenance_window=None,
@@ -223,8 +228,8 @@ def _rds_present(name, allocated_storage, db_instance_class, engine,
             ret['result'] = None
             return ret
         created = __salt__['boto_rds.create'](name, allocated_storage,
-                                              db_instance_class, engine,
-                                              master_username,
+                                              storage_type, db_instance_class,
+                                              engine, master_username,
                                               master_user_password, db_name,
                                               db_security_groups,
                                               vpc_security_group_ids,
@@ -275,23 +280,24 @@ def create_replica(name, source, db_instance_class=None, port=None,
            'comment': '',
            'changes': {}
            }
-    source_exists = __salt__['boto_rds.exists'](source, region, key, keyid, profile)
+    source_exists = __salt__['boto_rds.exists'](source, tags, region, key,
+                                                keyid, profile)
     if not source_exists:
         ret['result'] = False
         ret['comment'] = 'RDS source {0} does not exist.'.format(source)
-    replica_exists = __salt__['boto_rds.exists'](name, region, key, keyid, profile)
+    replica_exists = __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile)
     if not replica_exists:
         created = __salt__['boto_rds.create_read_replica'](name, source,
+                                                           db_instance_class, port,
                                                            availability_zone,
                                                            auto_minor_version_upgrade,
                                                            option_group_name,
                                                            publicly_accessible,
                                                            tags, region, key,
-                                                           profile)
+                                                           keyid, profile)
         if created:
-            config = __salt__['boto_rds.describe'](name, tags=None, region=None,
-                                                  key=None, keyid=None,
-                                                  profile=None)
+            config = __salt__['boto_rds.describe'](name, tags, region,
+                                                   key, keyid, profile)
             ret['result'] = True
             ret['comment'] = 'RDS replica {0} created.'.format(name)
             ret['changes']['old'] = None
