@@ -359,7 +359,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
             client.close()
             self.clients.remove(item)
 
-
+# TODO: singleton? Something to not re-create the tcp connection so much
 # TODO: cleanup send/recv queue stuff
 class SaltMessageClient(object):
     '''
@@ -374,27 +374,46 @@ class SaltMessageClient(object):
 
         self._mid = 1
 
+        # TODO: max queue size
         self.send_queue = []  # queue of messages to be sent
-
         self.send_future_map = {}  # mapping of request_id -> Future
-        self._stream = None
 
-        # start up the send/recv sides
-        self.io_loop.add_callback(self._connect)
-
-        self._on_recv = None
-
-
-    @tornado.gen.coroutine
-    def _connect(self):
-        if not self._stream:
-            self._stream = yield self._tcp_client.connect(self.host, self.port)
-
+        self._connecting_future = self.connect()
         self.io_loop.spawn_callback(self._stream_send)
         self.io_loop.spawn_callback(self._stream_return)
 
+        self._on_recv = None
+
+    def connect(self, callback=None):
+        '''
+        Ask for this client to reconnect to the origin
+        '''
+        future = tornado.concurrent.Future()
+        if callback is not None:
+            def handle_future(future):
+                response = future.result()
+                self.io_loop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+
+        self.io_loop.add_callback(self._connect)
+        return future
+
+    # TODO: tcp backoff opts
+    @tornado.gen.coroutine
+    def _connect(self):
+        '''
+        Try to connect for the rest of time!
+        '''
+        while not self._connecting_future.done():
+            try:
+                self._stream = yield self._tcp_client.connect(self.host, self.port)
+                self._connecting_future.set_result(True)
+            except Exception as e:
+                yield tornado.gen.sleep(1)
+
     @tornado.gen.coroutine
     def _stream_return(self):
+        yield self._connecting_future
         while True:
             try:
                 header_len = yield self._stream.read_until(' ')
@@ -404,30 +423,49 @@ class SaltMessageClient(object):
                 message_id = header.get('mid')
 
                 if message_id in self.send_future_map:
-                    self.send_future_map[message_id].set_result(body)
-                    del self.send_future_map[message_id]
+                    self.send_future_map.pop(message_id).set_result(body)
                 else:
                     if self._on_recv is not None:
                         self.io_loop.spawn_callback(self._on_recv, header, body)
                     else:
                         log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
-            # TODO: if we know what message_id it is, we can save the stream
+            except tornado.iostream.StreamClosedError as e:
+                log.debug('tcp stream to {0}:{1} closed, unable to send'.format(self.host, self.port))
+                for future in self.send_future_map.itervalues():
+                    future.set_exception(e)
+                self.send_future_map = {}
+                # if the last connect finished, then we need to make a new one
+                if self._connecting_future.done():
+                    self._connecting_future = self.connect()
+                yield self._connecting_future
             except Exception as e:
                 log.error('Exception parsing response', exc_info=True)
                 for future in self.send_future_map.itervalues():
                     future.set_exception(e)
                 self.send_future_map = {}
-                raise
+                # if the last connect finished, then we need to make a new one
+                if self._connecting_future.done():
+                    self._connecting_future = self.connect()
 
     @tornado.gen.coroutine
     def _stream_send(self):
+        yield self._connecting_future
         while True:
             try:
-                item = self.send_queue.pop(0)
-                yield self._stream.write(item)
-                raise tornado.gen.Return()
+                message_id, item = self.send_queue.pop(0)
+            # TODO: not this way
             except IndexError:
-                yield tornado.gen.sleep(1)  # TODO: remove...
+                yield tornado.gen.sleep(1)
+                continue
+            try:
+                yield self._stream.write(item)
+            # if the connection is dead, lets fail this send, and make sure we
+            # attempt to reconnect
+            except tornado.iostream.StreamClosedError as e:
+                self.send_future_map.pop(message_id).set_exception(e)
+                # if the last connect finished, then we need to make a new one
+                if self._connecting_future.done():
+                    self._connecting_future = self.connect()
 
     # TODO: wrap? or use UUID?
     def _message_id(self):
@@ -435,6 +473,7 @@ class SaltMessageClient(object):
         self._mid += 1
         return ret
 
+    # TODO: return a message object which takes care of multiplexing?
     def on_recv(self, callback):
         '''
         Register a callback for recieved messages (that we didn't initiate)
@@ -459,7 +498,7 @@ class SaltMessageClient(object):
         # Add this future to the mapping
         self.send_future_map[message_id] = future
 
-        self.send_queue.append(frame_msg(msg, header=header))
+        self.send_queue.append((message_id, frame_msg(msg, header=header)))
         return future
 
 
@@ -478,7 +517,7 @@ class PubServer(tornado.tcpserver.TCPServer):
     @tornado.gen.coroutine
     def publish_payload(self, package):
         log.trace('TCP PubServer starting to publish payload')
-        package = package[0]  # ZMQ ism :/
+        package = package[0]  # ZMQ (The IPC calling us) ism :/
         payload = frame_msg(salt.payload.unpackage(package)['payload'])
         to_remove = []
         for item in self.clients:
