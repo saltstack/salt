@@ -1010,5 +1010,3 @@ def create(vm_):
     )
 
     return ret
-
-
