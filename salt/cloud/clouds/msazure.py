@@ -1081,6 +1081,245 @@ def get_operation_status(kwargs=None, conn=None, call=None):
     return ret
 
 
+def list_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List storage accounts associated with the account
+
+    CLI Example::
+
+        salt-cloud -f list_storage my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_storage_accounts()
+    pprint.pprint(dir(data))
+    ret = {}
+    for item in data.storage_services:
+        ret[item.service_name] = object_to_dict(item)
+    return ret
+
+
+def show_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List storage service properties
+
+    CLI Example::
+
+        salt-cloud -f show_storage my-azure name=my_storage
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    data = conn.get_storage_account_properties(
+        kwargs['name'],
+    )
+    return object_to_dict(data)
+
+
+# To reflect the Azure API
+get_storage = show_storage
+
+
+def show_storage_keys(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show storage account keys
+
+    CLI Example::
+
+        salt-cloud -f show_storage_keys my-azure name=my_storage
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage_keys function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    try:
+        data = conn.get_storage_account_keys(
+            kwargs['name'],
+        )
+    except WindowsAzureMissingResourceError as exc:
+        storage_data = show_storage(kwargs={'name': kwargs['name']}, call='function')
+        try:
+            if storage_data['storage_service_properties']['status'] == 'Creating':
+                return {'Error': 'The storage account keys have not yet been created'}
+            else:
+                return {'Error': exc.message}
+        except:
+            return {'Error': exc.message}
+    return object_to_dict(data)
+
+
+# To reflect the Azure API
+get_storage_keys = show_storage_keys
+
+
+def create_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Create a new storage account
+
+    CLI Example::
+
+        salt-cloud -f create_storage my-azure name=my_storage label=my_storage location='West US'
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'description' not in kwargs:
+        raise SaltCloudSystemExit('A description must be specified as "description"')
+
+    if 'label' not in kwargs:
+        raise SaltCloudSystemExit('A label must be specified as "label"')
+
+    if 'location' not in kwargs and 'affinity_group' not in kwargs:
+        raise SaltCloudSystemExit('Either a location or an affinity_group '
+                                  'must be specified (but not both)')
+
+    try:
+        data = conn.create_storage_account(
+            service_name=kwargs['name'],
+            label=kwargs['label'],
+            description=kwargs.get('description', None),
+            location=kwargs.get('location', None),
+            affinity_group=kwargs.get('affinity_group', None),
+            extended_properties=kwargs.get('extended_properties', None),
+            geo_replication_enabled=kwargs.get('geo_replication_enabled', None),
+            account_type=kwargs.get('account_type', 'Standard_GRS'),
+        )
+        return {'Success': 'The storage account was successfully created'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the storage account already exists.'}
+
+
+def update_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Update a storage account's properties
+
+    CLI Example::
+
+        salt-cloud -f create_storage my-azure name=my_storage label=my_storage location='West US'
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    data = conn.update_storage_account(
+        service_name=kwargs['name'],
+        label=kwargs.get('label', None),
+        description=kwargs.get('description', None),
+        extended_properties=kwargs.get('extended_properties', None),
+        geo_replication_enabled=kwargs.get('geo_replication_enabled', None),
+        account_type=kwargs.get('account_type', 'Standard_GRS'),
+    )
+    return show_storage(kwargs={'name': kwargs['name']}, call='function')
+
+
+def regenerate_storage_keys(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Create a new storage account
+
+    CLI Example::
+
+        salt-cloud -f regenerate_storage_keys my-azure name=my_storage key_type=primary
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'key_type' not in kwargs or kwargs['key_type'] not in ('primary', 'secondary'):
+        raise SaltCloudSystemExit('A key_type must be specified ("primary" or "secondary")')
+
+    try:
+        data = conn.regenerate_storage_account_keys(
+            service_name=kwargs['name'],
+            key_type=kwargs['key_type'],
+        )
+        return show_storage_keys(kwargs={'name': kwargs['name']}, call='function')
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the storage account already exists.'}
+
+
+def delete_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific storage account
+
+    CLI Examples::
+
+        salt-cloud -f delete_storage my-azure name=my_storage
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_storage function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_storage_account(kwargs['name'])
+        return {'Success': 'The storage account was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
+
+
 def list_services(kwargs=None, conn=None, call=None):
     '''
     .. versionadded:: Beryllium
@@ -1133,7 +1372,6 @@ def show_service(kwargs=None, conn=None, call=None):
         kwargs.get('details', False)
     )
     ret = object_to_dict(data)
-    ret['hosted_service_properties'] = object_to_dict(data.hosted_service_properties)
     return ret
 
 
@@ -1145,11 +1383,7 @@ def create_service(kwargs=None, conn=None, call=None):
 
     CLI Example::
 
-        salt-cloud -f show_service my-azure name=my_service
-
-     def create_hosted_service(self, service_name, label, description=None,
-                               location=None, affinity_group=None,
-                               extended_properties=None):
+        salt-cloud -f create_service my-azure name=my_service label=my_service location='West US'
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1191,7 +1425,6 @@ def delete_service(kwargs=None, conn=None, call=None):
 
     CLI Examples::
 
-        salt-cloud -f delete_service my-azure name=my_service
         salt-cloud -f delete_service my-azure name=my_service
     '''
     if call != 'function':
