@@ -459,7 +459,6 @@ class Master(SMaster):
         process_manager.add_process(Maintenance, args=(self.opts,))
         log.info('Creating master publisher process')
 
-
         if self.opts.get('reactor'):
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
@@ -485,6 +484,7 @@ class Master(SMaster):
             log.info('Creating master halite process')
             process_manager.add_process(Halite, args=(self.opts['halite'],))
 
+        # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
         if self.opts['con_cache']:
             log.info('Creating master concache process')
             process_manager.add_process(ConnectedCache, args=(self.opts,))
@@ -680,6 +680,7 @@ class MWorker(multiprocessing.Process):
         Bind to the local port
         '''
         # using ZMQIOLoop since we *might* need zmq in there
+        zmq.eventloop.ioloop.install()
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?

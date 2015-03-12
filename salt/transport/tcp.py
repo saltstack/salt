@@ -51,6 +51,12 @@ log = logging.getLogger(__name__)
 import msgpack
 
 # TODO: put in some lib?
+def noop_future_callback(_):
+    '''
+    This allows us to create a future which we won't do anything with
+    '''
+    pass
+
 def sync_future(io_loop, future):
     def stop_loop(future):
         io_loop.stop()
@@ -447,6 +453,8 @@ class SaltMessageClient(object):
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()
 
+    # TODO: remove "sleep"-- since we'll call back into this more than we need
+    # in the case where we don't have anything to send
     @tornado.gen.coroutine
     def _stream_send(self):
         yield self._connecting_future
@@ -523,7 +531,8 @@ class PubServer(tornado.tcpserver.TCPServer):
         for item in self.clients:
             client, address = item
             try:
-                yield client.write(payload)  # TODO: don't wait
+                f = client.write(payload)
+                self.io_loop.add_future(f, noop_future_callback)
             except tornado.iostream.StreamClosedError:
                 to_remove.append(item)
         for item in to_remove:
@@ -565,7 +574,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # load up the IOLoop
         io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         # add the publisher
-        pub_server = PubServer()
+        pub_server = PubServer(io_loop=io_loop)
         pub_server.listen(int(self.opts['publish_port']), address=self.opts['interface'])
 
         # add our IPC
