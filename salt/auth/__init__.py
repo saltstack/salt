@@ -421,6 +421,7 @@ class Resolver(object):
         tdata = self._send_token_request(load)
         return tdata
 
+
 class AuthUser(object):
     '''
     Represents a user requesting authentication to the salt master
