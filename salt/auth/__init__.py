@@ -452,4 +452,4 @@ class AuthUser(object):
         Returns True if the user is the same user as the one running
         this process and False if not.
         '''
-        return self.user == salt.utils.get_user() 
+        return self.user == salt.utils.get_user()

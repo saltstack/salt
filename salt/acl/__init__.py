@@ -9,7 +9,9 @@ found by reading the salt documention:
 '''
 
 # Import python libraries
+from __future__ import absolute_import
 import re
+
 
 class ClientACL(object):
     '''
@@ -18,7 +20,6 @@ class ClientACL(object):
     '''
     def __init__(self, blacklist):
         self.blacklist = blacklist
-
 
     def user_is_blacklisted(self, user):
         '''
@@ -29,7 +30,6 @@ class ClientACL(object):
             if re.match(blacklisted_user, user):
                 return True
         return False
-
 
     def cmd_is_blacklisted(self, cmd):
         for blacklisted_module in self.blacklist.get('modules', []):
@@ -43,4 +43,3 @@ class ClientACL(object):
                 if re.match(cmd, fun):
                     return True
         return False
-
