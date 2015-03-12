@@ -413,7 +413,7 @@ IPV4_ATTR_MAP = {
     'server':  __ipv4_quad,
     'hwaddr':  __mac,
     # tunnel
-    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP'], dtype=str),
+    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP', '802.3ad'], dtype=str),
     'endpoint':  __ipv4_quad,
     'dstaddr':  __ipv4_quad,
     'local':  __ipv4_quad,
