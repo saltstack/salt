@@ -40,7 +40,6 @@ import copy
 import logging
 import pprint
 import time
-import inspect
 
 # Import salt libs
 import salt.config as config
@@ -1287,7 +1286,7 @@ def object_to_dict(obj):
     if isinstance(obj, list):
         ret = []
         for item in obj:
-            ret.append(item)
+            ret.append(obj.__dict__[item])
     elif isinstance(obj, six.string_types):
         ret = obj
     else:
@@ -1295,7 +1294,8 @@ def object_to_dict(obj):
         for item in dir(obj):
             if item.startswith('__'):
                 continue
-            if inspect.isclass(obj.__dict__[item]):
+            # This is ugly, but inspect.isclass() doesn't seem to work
+            if 'class' in str(type(obj.__dict__[item])):
                 ret[item] = object_to_dict(obj.__dict__[item])
             else:
                 ret[item] = obj.__dict__[item]
