@@ -68,7 +68,7 @@ def get_servers():
     cmd = ['w32tm', '/query', '/configuration']
     lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
-        if 'NtpServer' in line:
+        if line.startswith('NtpServer:'):
             _, ntpsvrs = line.rstrip(' (Local)').split(':', 1)
             return sorted(ntpsvrs.split())
     return False
