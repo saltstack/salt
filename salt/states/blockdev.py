@@ -64,6 +64,11 @@ def tuned(name, **kwargs):
            'name': name,
            'result': True}
 
+    kwarg_map = {'read-ahead': 'getra',
+                 'filesystem-read-ahead': 'getfra',
+                 'read-only': 'getro',
+                 'read-write': 'getro'}
+
     if not __salt__['file.is_blkdev']:
         ret['comment'] = ('Changes to {0} cannot be applied. '
                           'Not a block device. ').format(name)
@@ -75,9 +80,20 @@ def tuned(name, **kwargs):
         current = __salt__['blockdev.dump'](name)
         changes = __salt__['blockdev.tune'](name, **kwargs)
         changeset = {}
-        for key in changes:
-            if current[key] != changes[key]:
-                changeset[key] = 'Changed from {0} to {1}'.format(current[key], changes[key])
+        for key in kwargs:
+            if key in kwarg_map:
+                switch = kwarg_map[key]
+                if current[switch] != changes[switch]:
+                    if isinstance(kwargs[key], bool):
+                        old = (current[switch] == '1')
+                        new = (changes[switch] == '1')
+                    else:
+                        old = current[switch]
+                        new = changes[switch]
+                    if key == 'read-write':
+                        old = not old
+                        new = not new
+                    changeset[key] = 'Changed from {0} to {1}'.format(old, new)
         if changes:
             if changeset:
                 ret['comment'] = ('Block device {0} '
