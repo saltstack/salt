@@ -446,10 +446,7 @@ class Master(SMaster):
         process_manager = salt.utils.process.ProcessManager()
         log.info('Creating master maintenance process')
         pub_channels = []
-        for transport, opts_overrides in self.opts['transport_opts'].iteritems():
-            opts = dict(self.opts)
-            opts.update(opts_overrides)
-            opts['transport'] = transport
+        for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.PubServerChannel.factory(opts)
             chan.pre_fork(process_manager)
             pub_channels.append(chan)
