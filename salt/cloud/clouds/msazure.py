@@ -46,6 +46,7 @@ import inspect
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+import salt.ext.six as six
 
 # Import 3rd-party libs
 import yaml
@@ -1079,6 +1080,129 @@ def get_operation_status(kwargs=None, conn=None, call=None):
     return ret
 
 
+def list_services(kwargs=None, conn=None, call=None):
+    '''
+    List hosted services associated with the account
+
+    CLI Example::
+
+        salt-cloud -f list_services my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_services function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_hosted_services()
+    ret = {}
+    for item in data.hosted_services:
+        ret[item.service_name] = object_to_dict(item)
+        ret[item.service_name]['name'] = item.service_name
+    return ret
+
+
+def show_service(kwargs=None, conn=None, call=None):
+    '''
+    List hosted service properties
+
+    CLI Example::
+
+        salt-cloud -f show_service my-azure name=my_service
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_service function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    data = conn.get_hosted_service_properties(
+        kwargs['name'],
+        kwargs.get('details', False)
+    )
+    ret = object_to_dict(data)
+    ret['hosted_service_properties'] = object_to_dict(data.hosted_service_properties)
+    return ret
+
+
+def create_service(kwargs=None, conn=None, call=None):
+    '''
+    Create a new hosted service
+
+    CLI Example::
+
+        salt-cloud -f show_service my-azure name=my_service
+
+     def create_hosted_service(self, service_name, label, description=None,
+                               location=None, affinity_group=None,
+                               extended_properties=None):
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_service function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'label' not in kwargs:
+        raise SaltCloudSystemExit('A label must be specified as "label"')
+
+    if 'location' not in kwargs and 'affinity_group' not in kwargs:
+        raise SaltCloudSystemExit('Either a location or an affinity_group '
+                                  'must be specified (but not both)')
+
+    try:
+        data = conn.create_hosted_service(
+            kwargs['name'],
+            kwargs['label'],
+            kwargs.get('description', None),
+            kwargs.get('location', None),
+            kwargs.get('affinity_group', None),
+            kwargs.get('extended_properties', None),
+        )
+        return {'Success': 'The service was successfully created'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the service already exists.'}
+
+
+def delete_service(kwargs=None, conn=None, call=None):
+    '''
+    Delete a specific service associated with the account
+
+    CLI Examples::
+
+        salt-cloud -f delete_service my-azure name=my_service
+        salt-cloud -f delete_service my-azure name=my_service
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_service function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_hosted_service(kwargs['name'])
+        return {'Success': 'The service was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
+
+
 def list_disks(kwargs=None, conn=None, call=None):
     '''
     List disks associated with the account
@@ -1153,7 +1277,6 @@ def delete_disk(kwargs=None, conn=None, call=None):
         data = conn.delete_disk(kwargs['name'], kwargs.get('delete_vhd', False))
         return {'Success': 'The disk was successfully deleted'}
     except WindowsAzureMissingResourceError as exc:
-        pprint.pprint(dir(exc))
         return {'Error': exc.message}
 
 
@@ -1161,12 +1284,19 @@ def object_to_dict(obj):
     '''
     Convert an object to a dictionary
     '''
-    ret = {}
-    for item in dir(obj):
-        if item.startswith('__'):
-            continue
-        if inspect.isclass(obj.__dict__[item]):
-            ret[item] = object_to_dict(obj.__dict__[item])
-        else:
-            ret[item] = obj.__dict__[item]
+    if isinstance(obj, list):
+        ret = []
+        for item in obj:
+            ret.append(item)
+    elif isinstance(obj, six.string_types):
+        ret = obj
+    else:
+        ret = {}
+        for item in dir(obj):
+            if item.startswith('__'):
+                continue
+            if inspect.isclass(obj.__dict__[item]):
+                ret[item] = object_to_dict(obj.__dict__[item])
+            else:
+                ret[item] = obj.__dict__[item]
     return ret
