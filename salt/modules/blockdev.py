@@ -54,7 +54,7 @@ def tune(device, **kwargs):
                 args.append(switch.replace('set', 'get'))
             else:
                 args.append('getro')
-            if kwargs[key] == 'True' or kwargs[key] == True:
+            if kwargs[key] == 'True' or kwargs[key] is True:
                 opts += '--{0} '.format(key)
             else:
                 opts += '--{0} {1} '.format(switch, kwargs[key])
