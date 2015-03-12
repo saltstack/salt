@@ -1165,12 +1165,9 @@ def show_storage_keys(kwargs=None, conn=None, call=None):
         )
     except WindowsAzureMissingResourceError as exc:
         storage_data = show_storage(kwargs={'name': kwargs['name']}, call='function')
-        try:
-            if storage_data['storage_service_properties']['status'] == 'Creating':
-                return {'Error': 'The storage account keys have not yet been created'}
-            else:
-                return {'Error': exc.message}
-        except:
+        if storage_data['storage_service_properties']['status'] == 'Creating':
+            return {'Error': 'The storage account keys have not yet been created'}
+        else:
             return {'Error': exc.message}
     return object_to_dict(data)
 
@@ -1234,7 +1231,7 @@ def update_storage(kwargs=None, conn=None, call=None):
 
     CLI Example::
 
-        salt-cloud -f create_storage my-azure name=my_storage label=my_storage location='West US'
+        salt-cloud -f update_storage my-azure name=my_storage label=my_storage
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
