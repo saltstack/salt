@@ -622,7 +622,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             else:
                 result[opt] = opts[opt]
     if iface_type == 'ib':
-       result['devtype'] = 'InfiniBand'
+        result['devtype'] = 'InfiniBand'
 
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
