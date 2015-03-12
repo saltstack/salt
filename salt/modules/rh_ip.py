@@ -70,7 +70,7 @@ _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
     'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
-    'ipip',
+    'ipip', 'ib',
 ]
 
 
@@ -621,6 +621,8 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 _raise_error_iface(iface, opts[opt], ['1.2.3.4'])
             else:
                 result[opt] = opts[opt]
+    if iface_type == 'ib':
+       result['devtype'] = 'InfiniBand'
 
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
@@ -921,7 +923,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))
