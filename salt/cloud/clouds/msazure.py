@@ -1047,6 +1047,8 @@ def list_storage_services(conn=None, call=None):
 
 def get_operation_status(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: 2015.2
+
     Get Operation Status, based on a request ID
 
     CLI Example::
@@ -1081,6 +1083,8 @@ def get_operation_status(kwargs=None, conn=None, call=None):
 
 def list_services(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     List hosted services associated with the account
 
     CLI Example::
@@ -1105,6 +1109,8 @@ def list_services(kwargs=None, conn=None, call=None):
 
 def show_service(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     List hosted service properties
 
     CLI Example::
@@ -1133,6 +1139,8 @@ def show_service(kwargs=None, conn=None, call=None):
 
 def create_service(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     Create a new hosted service
 
     CLI Example::
@@ -1177,6 +1185,8 @@ def create_service(kwargs=None, conn=None, call=None):
 
 def delete_service(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     Delete a specific service associated with the account
 
     CLI Examples::
@@ -1204,6 +1214,8 @@ def delete_service(kwargs=None, conn=None, call=None):
 
 def list_disks(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     List disks associated with the account
 
     CLI Example::
@@ -1227,11 +1239,13 @@ def list_disks(kwargs=None, conn=None, call=None):
 
 def get_disk(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     Return information about a disk
 
     CLI Example::
 
-        salt-cloud -f list_disks my-azure
+        salt-cloud -f get_disk my-azure name=my_disk
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1254,6 +1268,8 @@ show_disk = get_disk
 
 def delete_disk(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     Delete a specific disk associated with the account
 
     CLI Examples::
@@ -1281,6 +1297,8 @@ def delete_disk(kwargs=None, conn=None, call=None):
 
 def object_to_dict(obj):
     '''
+    .. versionadded:: Beryllium
+
     Convert an object to a dictionary
     '''
     if isinstance(obj, list):
