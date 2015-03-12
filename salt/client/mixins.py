@@ -424,6 +424,9 @@ class AsyncClientMixin(object):
         '''
         Print all of the events with the prefix 'tag'
         '''
+        if not isinstance(event, dict):
+            return
+
         # if we are "quiet", don't print
         if self.opts.get('quiet', False):
             return
@@ -432,9 +435,9 @@ class AsyncClientMixin(object):
         if suffix in ('new',):
             return
 
-        outputter = event.get('outputter', None)
+        outputter = event.get('outputter', self.opts.get('output', None))
         # if this is a ret, we have our own set of rules
-        if isinstance(event, dict) and suffix == 'ret':
+        if suffix == 'ret':
             # Check if ouputter was passed in the return data. If this is the case,
             # then the return data will be a dict two keys: 'data' and 'outputter'
             if isinstance(event.get('return'), dict) \
