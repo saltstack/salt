@@ -282,11 +282,12 @@ def _validate_user(user,
 
     if response['res']:
         if 'message' in response:
-            if 'status' in response['message']:
-                if response['message']['status'] == 1:
+            _message = response['message']
+            if 'status' in _message:
+                if _message['status'] == 1:
                     return True
                 else:
-                    log.info('Error: {0}'.format(''.join(response['message']['errors'])))
+                    log.info('Error: {0}'.format(''.join(_message['errors'])))
     return False
 
 
