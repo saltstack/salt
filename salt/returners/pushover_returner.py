@@ -249,16 +249,17 @@ def _validate_sound(sound,
 
     if response['res']:
         if 'message' in response:
-            if 'status' in response['message']:
-                if response['message']['status'] == 1:
-                    sounds = response['message']['sounds']
+            _message = response['message']
+            if 'status' in _message:
+                if _message['status'] == 1:
+                    sounds = _message['sounds']
                     if sound in sounds:
                         return True
                     else:
                         log.info('Warning: {0} not a valid sound.'.format(sound))
                         return False
                 else:
-                    log.info('Error: {0}'.format(''.join(response['message']['errors'])))
+                    log.info('Error: {0}'.format(''.join(_message['errors'])))
     return False
 
 
