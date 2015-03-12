@@ -2113,28 +2113,10 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
 
-        # check blacklist/whitelist
-        good = True
-        # Check if the user is blacklisted
-        for user_re in self.opts['client_acl_blacklist'].get('users', []):
-            if re.match(user_re, clear_load['user']):
-                good = False
-                break
+        client_acl = salt.acl.ClientAcl(self.opts['client_acl_blacklist'])
 
-        # check if the cmd is blacklisted
-        for module_re in self.opts['client_acl_blacklist'].get('modules', []):
-            # if this is a regular command, its a single function
-            if isinstance(clear_load['fun'], str):
-                funs_to_check = [clear_load['fun']]
-            # if this a compound function
-            else:
-                funs_to_check = clear_load['fun']
-            for fun in funs_to_check:
-                if re.match(module_re, fun):
-                    good = False
-                    break
-
-        if good is False:
+        if client_acl.user_is_blacklisted(clear_load['user']) or \
+                client_acl.cmd_is_blacklisted(clear_load['fun']):
             log.error(
                 '{user} does not have permissions to run {function}. Please '
                 'contact your local administrator if you believe this is in '
@@ -2144,8 +2126,6 @@ class ClearFuncs(object):
                 )
             )
             return ''
-        # to make sure we don't step on anyone else's toes
-        del good
 
         # Check for external auth calls
         if extra.get('token', False):
