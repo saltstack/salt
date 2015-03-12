@@ -424,6 +424,9 @@ class AsyncClientMixin(object):
         '''
         Print all of the events with the prefix 'tag'
         '''
+        if not isinstance(event, dict):
+            return
+
         # if we are "quiet", don't print
         if self.opts.get('quiet', False):
             return
@@ -432,14 +435,18 @@ class AsyncClientMixin(object):
         if suffix in ('new',):
             return
 
-        # Check if ouputter was passed in the return data. If this is the case,
-        # then the return data will be a dict two keys: 'data' and 'outputter'
-        if isinstance(event['return'], dict) \
-                and set(event['return']) == set(('data', 'outputter')):
-            event_data = event['return']['data']
-            outputter = event['return']['outputter']
+        outputter = self.opts.get('output', event.get('outputter', None))
+        # if this is a ret, we have our own set of rules
+        if suffix == 'ret':
+            # Check if ouputter was passed in the return data. If this is the case,
+            # then the return data will be a dict two keys: 'data' and 'outputter'
+            if isinstance(event.get('return'), dict) \
+                    and set(event['return']) == set(('data', 'outputter')):
+                event_data = event['return']['data']
+                outputter = event['return']['outputter']
+            else:
+                event_data = event['return']
         else:
-            event_data = event['return']
-            outputter = None
+            event_data = {'suffix': suffix, 'event': event}
 
         salt.output.display_output(event_data, outputter, self.opts)
