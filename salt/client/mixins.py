@@ -449,7 +449,7 @@ class AsyncClientMixin(object):
         # Check if ouputter was passed in the return data. If this is the case,
         # then the return data will be a dict two keys: 'data' and 'outputter'
         outputter = None
-        if 'return' in event:
+        if isinstance(event, dict) and 'return' in event:
             if isinstance(event.get('return'), dict) \
                     and set(event['return']) == set(('data', 'outputter')):
                 event_data = event['return']['data']
@@ -457,6 +457,6 @@ class AsyncClientMixin(object):
             else:
                 event_data = event['return']
         else:
-            event_data = event
+            event_data = {'suffix': suffix, 'event': event}
 
         salt.output.display_output(event_data, outputter, self.opts)
