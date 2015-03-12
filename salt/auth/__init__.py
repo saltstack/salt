@@ -427,4 +427,18 @@ class AuthUser(object):
     '''
 
     def __init__(self, user):
+        '''
+        Instantiate an AuthUser object.
 
+        Takes a user to reprsent, as a string.
+        '''
+        self.user = user
+
+    def is_sudo(self):
+        '''
+        Determines if the user is running with sudo
+
+        Returns True if the user is running with sudo and False if the
+        user is not running with sudo
+        '''
+        return self.user.startswith('sudo_')

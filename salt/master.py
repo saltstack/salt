@@ -1493,10 +1493,12 @@ class ClearFuncs(object):
     # _auth
     def __init__(self, opts, key, master_key, crypticle):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.key = key
         self.master_key = master_key
         self.crypticle = crypticle
+
+        # Create the serializer
+        self.serial = salt.payload.Serial(opts)
         # Create the event manager
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         # Make a client
@@ -1512,7 +1514,9 @@ class ClearFuncs(object):
             rend=False)
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
+        # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
+        # Make an auto_key
         self.auto_key = salt.daemons.masterapi.AutoKey(opts)
 
         # only create a con_cache-client if the con_cache is active
@@ -2246,7 +2250,8 @@ class ClearFuncs(object):
             clear_load['user'] = name
         # Verify that the caller has root on master
         elif 'user' in clear_load:
-            if clear_load['user'].startswith('sudo_'):
+            auth_user = salt.auth.AuthUser(clear_load['user'])
+            if auth_user.is_sudo():
                 # If someone sudos check to make sure there is no ACL's around their username
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
@@ -2269,14 +2274,8 @@ class ClearFuncs(object):
                                 'occurred.'
                             )
                             return ''
-            elif clear_load['user'] == self.opts.get('user', 'root'):
+            elif clear_load['user'] == self.opts.get('user', 'root') or clear_load['user'] == 'root':
                 if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
-                    log.warning(
-                        'Authentication failure of type "user" occurred.'
-                    )
-                    return ''
-            elif clear_load['user'] == 'root':
-                if clear_load.pop('key') != self.key.get(self.opts.get('user', 'root')):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
