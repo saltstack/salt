@@ -19,7 +19,7 @@ Bootstrap.
     .. code-block:: yaml
 
         uptime:
-          url: "http://uptime-url.example.org"
+          application_url: "http://uptime-url.example.org"
 
 Example:
 
@@ -32,6 +32,7 @@ Example:
          - polling: 600 # every hour
 
 '''
+
 
 def __virtual__():
     '''

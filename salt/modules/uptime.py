@@ -19,6 +19,7 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load this module if the requests python module is available
