@@ -72,11 +72,19 @@ def tuned(name, **kwargs):
         ret['result'] = None
         return ret
     else:
+        current = __salt__['blockdev.dump'](name)
         changes = __salt__['blockdev.tune'](name, **kwargs)
+        changeset = {}
+        for key in changes:
+           if current[key] != changes[key]:
+              changeset[key] = 'Changed from {0} to {1}'.format(current[key], changes[key])
         if changes:
-            ret['comment'] = ('Block device {0} '
+            if changeset:
+               ret['comment'] = ('Block device {0} '
                               'successfully modified ').format(name)
-            ret['changes'] = changes
+               ret['changes'] = changeset
+            else:
+               ret['comment'] = 'Block device {0} already in correct state'.format(name)
         else:
             ret['comment'] = 'Failed to modify block device {0}'.format(name)
             ret['result'] = False
