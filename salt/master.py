@@ -41,6 +41,7 @@ import salt.wheel
 import salt.minion
 import salt.search
 import salt.key
+import salt.acl
 import salt.engines
 import salt.fileserver
 import salt.daemons.masterapi
