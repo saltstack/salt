@@ -148,17 +148,17 @@ def _validate_sound(sound,
 
     if response['res']:
         if 'message' in response:
-            _message = response['message']
+            _message = response.get('message', '')
             if 'status' in _message:
-                if _message['status'] == 1:
-                    sounds = _message['sounds']
+                if _message.get('status', '') == 1:
+                    sounds = _message.get('sounds', '')
                     if sound in sounds:
                         return True
                     else:
                         log.info('Warning: {0} not a valid sound.'.format(sound))
                         return False
                 else:
-                    log.info('Error: {0}'.format(''.join(_message['errors'])))
+                    log.info('Error: {0}'.format(''.join(_message.get('errors'))))
     return False
 
 
@@ -182,12 +182,12 @@ def _validate_user(user,
 
     if response['res']:
         if 'message' in response:
-            _message = response['message']
+            _message = response.get('message', '')
             if 'status' in _message:
-                if _message['status'] == 1:
+                if _message.get('status', '') == 1:
                     return True
                 else:
-                    log.info('Error: {0}'.format(''.join(_message['errors'])))
+                    log.info('Error: {0}'.format(''.join(_message.get('errors'))))
     return False
 
 
