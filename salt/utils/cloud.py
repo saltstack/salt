@@ -555,7 +555,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(30)
-            sock.connect((test_ssh_host, test_ssh_port))
+            sock.connect((test_ssh_host, int(test_ssh_port)))
             # Stop any remaining reads/writes on the socket
             sock.shutdown(socket.SHUT_RDWR)
             # Close it!
