@@ -20,7 +20,7 @@ class ClientACL(object):
         self.blacklist = blacklist
 
 
-    def user_is_blacklisted(user):
+    def user_is_blacklisted(self, user):
         '''
         Takes a username as a string and returns a boolean. True indicates that
         the provided user has been blacklisted
@@ -31,7 +31,7 @@ class ClientACL(object):
         return False
 
 
-    def cmd_is_blacklisted(cmd):
+    def cmd_is_blacklisted(self, cmd):
         for blacklisted_module in self.blacklist.get('modules', []):
             # If this is a regular command, it is a single function
             if isinstance(cmd, str):
