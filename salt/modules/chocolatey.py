@@ -252,7 +252,7 @@ def list_(narrow=None,
     choc_path = _find_chocolatey()
     cmd = [choc_path, 'list']
     if narrow:
-        cmd.append(narrow)
+        cmd.extend([narrow])
     if salt.utils.is_true(all_versions):
         cmd.append('-AllVersions')
     if salt.utils.is_true(pre_versions):
@@ -411,9 +411,10 @@ def install_cygwin(name, install_args=None, override_args=False):
         i.e product key or feature list
 
     override_args
-        Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own. When this is set to False install_args will be appended to the end of the
-         default arguments
+        Set to true if you want to override the original install arguments (for
+        the native installer) in the package and use your own. When this is set
+        to False install_args will be appended to the end of the default
+        arguments
 
     CLI Example:
 
@@ -455,9 +456,10 @@ def install_gem(name, version=None, install_args=None, override_args=False):
         i.e product key or feature list
 
     override_args
-        Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own. When this is set to False install_args will be appended to the end of the
-         default arguments
+        Set to true if you want to override the original install arguments (for
+        the native installer) in the package and use your own. When this is set
+        to False install_args will be appended to the end of the default
+        arguments
 
 
     CLI Example:
@@ -554,9 +556,10 @@ def install_python(name, version=None, install_args=None, override_args=False):
         i.e product key or feature list
 
     override_args
-        Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own. When this is set to False install_args will be appended to the end of the
-         default arguments
+        Set to true if you want to override the original install arguments (for
+        the native installer) in the package and use your own. When this is set
+        to False install_args will be appended to the end of the default
+        arguments
 
     CLI Example:
 
@@ -624,9 +627,10 @@ def install_webpi(name, install_args=None, override_args=False):
         i.e product key or feature list
 
     override_args
-        Set to true if you want to override the original install arguments (for the native installer)
-         in the package and use your own. When this is set to False install_args will be appended to the end of the
-         default arguments
+        Set to true if you want to override the original install arguments (for
+        the native installer) in the package and use your own. When this is set
+        to False install_args will be appended to the end of the default
+        arguments
 
     CLI Example:
 
@@ -668,9 +672,10 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
         i.e product key or feature list
 
     override_args
-        Set to true if you want to override the original uninstall arguments (for the native uninstaller)
-         in the package and use your own. When this is set to False uninstall_args will be appended to the end of the
-         default arguments
+        Set to true if you want to override the original uninstall arguments
+        (for the native uninstaller) in the package and use your own. When this
+        is set to False uninstall_args will be appended to the end of the
+        default arguments
 
     CLI Example:
 

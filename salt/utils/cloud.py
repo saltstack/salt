@@ -869,7 +869,6 @@ def deploy_windows(host,
 
         creds = "-U '{0}%{1}' //{2}".format(
             username, password, host)
-
         salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
         salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
         #  minion_pub, minion_pem
