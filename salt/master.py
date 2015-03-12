@@ -2350,9 +2350,8 @@ class ClearFuncs(object):
             )
         pub_sock.connect(pull_uri)
 
-        pub_sock.send(self.serial.dumps(int_payload))
+        pub_sock.send(self.serial.dumps(load))
         # TODO Check return from send()?
-
 
     def _prep_pub(self, clear_load, extra):
         '''
@@ -2507,8 +2506,6 @@ class ClearFuncs(object):
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
         return (int_payload, clear_load['jid'], minions)
-
-        
 
 
 class FloMWorker(MWorker):
