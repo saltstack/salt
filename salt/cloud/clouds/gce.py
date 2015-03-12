@@ -2047,7 +2047,11 @@ def create(vm_=None, call=None):
             'ex_disk_type': config.get_cloud_config_value(
                 'ex_disk_type', vm_, __opts__, default='pd-standard'),
             'ex_disk_auto_delete': config.get_cloud_config_value(
-                'ex_disk_auto_delete', vm_, __opts__, default=True)
+                'ex_disk_auto_delete', vm_, __opts__, default=True),
+            'ex_disks_gce_struct': config.get_cloud_config_value(
+                'ex_disks_gce_struct', vm_, __opts__, default=None),
+            'ex_service_accounts': config.get_cloud_config_value(
+                'ex_service_accounts', vm_, __opts__, default=None)
         })
         if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
             raise SaltCloudSystemExit(
