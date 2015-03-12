@@ -99,7 +99,7 @@ def tuned(name, **kwargs):
                 ret['comment'] = ('Block device {0} '
                                   'successfully modified ').format(name)
                 ret['changes'] = changeset
-           else:
+            else:
                 ret['comment'] = 'Block device {0} already in correct state'.format(name)
         else:
             ret['comment'] = 'Failed to modify block device {0}'.format(name)
