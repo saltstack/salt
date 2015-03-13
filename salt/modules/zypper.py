@@ -616,6 +616,9 @@ def install(name=None,
     while targets:
         cmd = ['zypper', '--non-interactive', 'install', '--name',
                '--auto-agree-with-licenses']
+        if downloadonly:
+            cmd.append('--download-only')
+
         if fromrepo:
             cmd.extend(fromrepoopt)
         cmd.extend(targets[:500])
