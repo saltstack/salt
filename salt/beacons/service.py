@@ -4,7 +4,8 @@ Send events covering service status
 '''
 
 import logging
-log=logging.getLogger(__name__)
+
+log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 def beacon(config):
     '''
