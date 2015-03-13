@@ -9,18 +9,12 @@ header is a msgpack'd dict which includes (at least) msgLen
 '''
 
 import socket
-import select
-
-
 import os
-import errno
 import ctypes
-import multiprocessing
 import urlparse  # TODO: remove
 
 
 # Import Salt Libs
-import salt.auth
 import salt.crypt
 import salt.utils
 import salt.utils.verify
