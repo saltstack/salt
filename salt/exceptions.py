@@ -36,6 +36,10 @@ class SaltMasterError(SaltException):
     Problem reading the master root key
     '''
 
+class SaltNoMinionsFound(SaltException):
+    '''
+    An attempt to retrieve a list of minions failed
+    '''
 
 class SaltSyndicMasterError(SaltException):
     '''

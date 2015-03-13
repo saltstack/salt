@@ -2320,44 +2320,7 @@ class ClearFuncs(object):
                     'Authentication failure of type "other" occurred.'
                 )
                 return ''
-
         # FIXME Needs additional refactoring
-        int_payload, clear_load['jid'], minions = self._prep_pub(clear_load, extra)
-
-        #Send it!
-        self._send_pub(int_payload)
-
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': clear_load['jid'],
-                'minions': minions
-            }
-        }
-
-    def _send_pub(self, load):
-        '''
-        Take a load and send it across the network to connected minions
-        '''
-        # Send 0MQ to the publisher
-        context = zmq.Context(1)
-        pub_sock = context.socket(zmq.PUSH)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-            )
-        pub_sock.connect(pull_uri)
-
-        pub_sock.send(self.serial.dumps(load))
-        # TODO Check return from send()?
-
-    def _prep_pub(self, clear_load, extra):
-        '''
-        Take a given load and perform the necessary steps
-        to prepare a publication.
-
-        TODO: This is really only bound by temporal cohesion
-        and thus should be refactored even further.
-        '''
         # Retrieve the minions list
         delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
         minions = self.ckminions.check_minions(
@@ -2377,17 +2340,65 @@ class ClearFuncs(object):
                         'minions': minions
                     }
                 }
+        jid = self._prep_jid(clear_load, extra)
+        if jid is None:
+            return {}
+        int_payload = self._prep_pub(minions, jid, clear_load, extra)
+
+        #Send it!
+        self._send_pub(int_payload)
+
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': clear_load['jid'],
+                'minions': minions
+            }
+        }
+
+    def _prep_jid(self, clear_load, extra):
+        '''
+        Return a jid for this publication
+        '''
         # Retrieve the jid
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         try:
-            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
+            jid = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
                                                             # the jid in clear_load can be None, '', or something else.
                                                             # this is an attempt to clean up the value before passing to plugins
                                                             passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
         except TypeError:  # The returner is not present
             log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
-            return {}
-            # TODO Error reporting over the master event bus
+            return None
+        return jid
+
+    def _send_pub(self, load):
+        '''
+        Take a load and send it across the network to connected minions
+        '''
+        # Send 0MQ to the publisher
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUSH)
+        pull_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+            )
+        pub_sock.connect(pull_uri)
+
+        pub_sock.send(self.serial.dumps(load))
+        # TODO Check return from send()?
+
+    def _prep_pub(self, minions, jid, clear_load, extra):
+        '''
+        Take a given load and perform the necessary steps
+        to prepare a publication.
+
+        TODO: This is really only bound by temporal cohesion
+        and thus should be refactored even further.
+        '''
+        clear_load['jid'] = jid
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
+
+        # TODO Error reporting over the master event bus
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {
@@ -2502,7 +2513,7 @@ class ClearFuncs(object):
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
-        return (int_payload, clear_load['jid'], minions)
+        return int_payload
 
 
 class FloMWorker(MWorker):
