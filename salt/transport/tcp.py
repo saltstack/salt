@@ -34,6 +34,7 @@ import logging
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
+from salt.exceptions import SaltReqTimeoutError
 
 # for IPC (for now)
 import zmq
@@ -144,16 +145,16 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
             self._socket.connect(self.master_addr)
         return self._socket
 
-    def _send_recv(self, msg):
+    def _send_recv(self, msg, timeout=5):
         '''
         Do a blocking send/recv combo
         '''
         return self._io_loop.run_sync(functools.partial(
-            self.message_client.send, msg))
+            self.message_client.send, msg, timeout=timeout))
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         # send msg
-        ret = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)))
+        ret = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         # wait for response
         ret = self.serial.loads(ret)
         key = self.auth.get_keys()
@@ -169,7 +170,8 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
         minion state execution call
         '''
         def _do_transfer():
-            data = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)))
+            data = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)),
+                                   timeout=timeout)
             data = self.serial.loads(data)
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
@@ -202,6 +204,8 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
         self.opts = opts
 
         self.auth = salt.crypt.SAuth(self.opts)  # TODO: make optionally non-blocking?
+        if self.auth.creds is None:
+            self.auth.authenticate()
         self.serial = salt.payload.Serial(self.opts)
 
         self.io_loop = kwargs['io_loop'] or tornado.ioloop.IOLoop.current()
@@ -213,6 +217,9 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
         '''
         Register an on_recv callback
         '''
+        if callback is None:
+            return self.message_client.on_recv(callback)
+
         self.message_client.send('connect')
         def wrap_callback(body):
             callback(self._decode_payload(self.serial.loads(body)))
@@ -374,6 +381,7 @@ class SaltMessageClient(object):
         # TODO: max queue size
         self.send_queue = []  # queue of messages to be sent
         self.send_future_map = {}  # mapping of request_id -> Future
+        self.send_timeout_map = {}  # request_id -> timeout_callback
 
         self._connecting_future = self.connect()
         self.io_loop.spawn_callback(self._stream_send)
@@ -421,6 +429,7 @@ class SaltMessageClient(object):
 
                 if message_id in self.send_future_map:
                     self.send_future_map.pop(message_id).set_result(body)
+                    self.remove_message_timeout(message_id)
                 else:
                     if self._on_recv is not None:
                         self.io_loop.spawn_callback(self._on_recv, header, body)
@@ -477,11 +486,22 @@ class SaltMessageClient(object):
         '''
         Register a callback for recieved messages (that we didn't initiate)
         '''
-        def wrap_recv(header, body):
-            callback(body)
-        self._on_recv = wrap_recv
+        if callback is None:
+            self._on_recv = callback
+        else:
+            def wrap_recv(header, body):
+                callback(body)
+            self._on_recv = wrap_recv
 
-    def send(self, msg, callback=None):
+    def remove_message_timeout(self, message_id):
+        timeout = self.send_timeout_map.pop(message_id)
+        self.io_loop.remove_timeout(timeout)
+
+    def timeout_message(self, message_id):
+        del self.send_timeout_map[message_id]
+        self.send_future_map.pop(message_id).set_exception(SaltReqTimeoutError('Message timed out'))
+
+    def send(self, msg, timeout=None, callback=None):
         '''
         Send given message, and return a future
         '''
@@ -496,6 +516,10 @@ class SaltMessageClient(object):
             future.add_done_callback(handle_future)
         # Add this future to the mapping
         self.send_future_map[message_id] = future
+
+        if timeout is not None:
+            send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message_id)
+            self.send_timeout_map[message_id] = send_timeout
 
         self.send_queue.append((message_id, frame_msg(msg, header=header)))
         return future
