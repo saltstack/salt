@@ -796,18 +796,16 @@ def list_locks():
 
         salt '*' pkg.list_locks
     '''
-    if not os.path.exists(LOCKS):
-        return False
-
     locks = {}
-    with salt.utils.fopen(LOCKS) as fhr:
-        for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
-            lock = {}
-            for element in [el for el in meta if el]:
-                if ':' in element:
-                    lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
-            if lock.get('solvable_name'):
-                locks[lock.pop('solvable_name')] = lock
+    if os.path.exists(LOCKS):
+        with salt.utils.fopen(LOCKS) as fhr:
+            for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
+                lock = {}
+                for element in [el for el in meta if el]:
+                    if ':' in element:
+                        lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
+                if lock.get('solvable_name'):
+                    locks[lock.pop('solvable_name')] = lock
 
     return locks
 
