@@ -6,7 +6,7 @@ Linode is a public cloud provider with a focus on Linux instances.
 
 Dependencies
 ============
-* linode-python >= 1.1
+* linode-python >= 1.1.1
 
 OR
 
@@ -21,12 +21,11 @@ Driver selection is automatic.  If linode-python is present it will be used.
 If it is absent, salt-cloud will fall back to Libcloud.  If neither are present
 salt-cloud will abort.
 
-NOTE: linode-python 1.1 or later is recommended.  As of this publication it is
-not yet on PyPi.  Earlier versions of linode-python should work but can leak
-sensitive information into the debug logs.
+NOTE: linode-python 1.1.1 or later is recommended. Earlier versions of linode-python
+should work but leak sensitive information into the debug logs.
 
 Linode-python can be downloaded from
-https://github.com/tjfontaine/linode-python.
+https://github.com/tjfontaine/linode-python or installed via pip.
 
 Configuration
 =============
