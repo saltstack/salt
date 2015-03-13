@@ -235,7 +235,7 @@ def present(
         region=None,
         key=None,
         keyid=None,
-        profile=None
+        profile=None,
         notification_arn=None,
         notification_arn_from_pillar="boto_asg_notification_arn",
         notification_types=None,
