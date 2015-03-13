@@ -172,6 +172,7 @@ class SaltEvent(object):
         self.pending_events = []
         # since ZMQ connect()  has no guarantees about the socket actually being
         # connected this is a hack to attempt to do so.
+        self.fire_event({}, tagify('event/new_client'), 0)
         self.get_event(wait=1)
 
     def __load_uri(self, sock_dir, node):
@@ -242,6 +243,7 @@ class SaltEvent(object):
         self.sub.connect(self.puburi)
         self.poller.register(self.sub, zmq.POLLIN)
         self.sub.setsockopt(zmq.SUBSCRIBE, '')
+        self.sub.setsockopt(zmq.LINGER, 5000)
         self.cpub = True
 
     def connect_pull(self, timeout=1000):
@@ -259,6 +261,7 @@ class SaltEvent(object):
             # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
             #                        CentOS5, which still uses 2.1.9)
             pass
+        self.push.setsockopt(zmq.LINGER, timeout)
         self.push.connect(self.pulluri)
         self.cpush = True
 
@@ -427,10 +430,8 @@ class SaltEvent(object):
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() bellow will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
-            self.sub.setsockopt(zmq.LINGER, linger)
             self.sub.close()
         if self.cpush is True and self.push.closed is False:
-            self.push.setsockopt(zmq.LINGER, linger)
             self.push.close()
         # If sockets are not unregistered from a poller, nothing which touches
         # that poller gets garbage collected. The Poller itself, its
