@@ -154,7 +154,7 @@ class RAETChannel(Channel):
                           lanename=lanename,
                           sockdirpath=self.opts['sock_dir'])
 
-        stack.Pk = raeting.packKinds.pack
+        stack.Pk = raeting.PackKind.pack
         stack.addRemote(RemoteYard(stack=stack,
                                    name=ryn,
                                    lanename=lanename,
