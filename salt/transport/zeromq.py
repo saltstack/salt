@@ -301,6 +301,11 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
                     continue
                 raise exc
 
+    def close(self):
+        if hasattr(self, 'clients'):
+            self.clients.close()
+        self.stream.close()
+
     def pre_fork(self, process_manager):
         '''
         Pre-fork we need to create the zmq router device
@@ -341,12 +346,16 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             stream.send(self.serial.dumps('bad load'))
             raise tornado.gen.Return()
 
-        # intercept the "_auth" commands, since the main daemon shouldn't know
-        # anything about our key auth
-        if payload['enc'] == 'clear' and payload['load']['cmd'] == '_auth':
-            stream.send(self.serial.dumps(self._auth(payload['load'])))
+        # TODO helper functions to normalize payload?
+        if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
+            stream.send(self.serial.dumps('payload and load must be a dict'))
             raise tornado.gen.Return()
 
+        # intercept the "_auth" commands, since the main daemon shouldn't know
+        # anything about our key auth
+        if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
+            stream.send(self.serial.dumps(self._auth(payload['load'])))
+            raise tornado.gen.Return()
 
         # TODO: handle exceptions
         try:

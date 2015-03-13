@@ -323,7 +323,13 @@ class SAuth(object):
             self.authenticate()
         return self._creds
 
-    def authenticate(self, timeout=None, safe=None):
+    @property
+    def crypticle(self):
+        if not hasattr(self, '_crypticle'):
+            self.authenticate()
+        return self._crypticle
+
+    def authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -353,7 +359,7 @@ class SAuth(object):
                 continue
             break
         self._creds = creds
-        self.crypticle = Crypticle(self.opts, creds['aes'])
+        self._crypticle = Crypticle(self.opts, creds['aes'])
 
     def get_keys(self):
         '''

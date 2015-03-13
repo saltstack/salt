@@ -230,6 +230,9 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
     def socket(self):
         return self._socket
 
+    def close(self):
+        self.socket.close()
+
     def pre_fork(self, process_manager):
         '''
         Pre-fork we need to create the zmq router device
@@ -267,12 +270,16 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             stream.write(frame_msg(self.serial.dumps('bad load'), header=header))
             raise tornado.gen.Return()
 
-        # intercept the "_auth" commands, since the main daemon shouldn't know
-        # anything about our key auth
-        if payload['enc'] == 'clear' and payload['load']['cmd'] == '_auth':
-            yield stream.write(frame_msg(self.serial.dumps(self._auth(payload['load'])), header=header))
+        # TODO helper functions to normalize payload?
+        if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
+            yield stream.write(frame_msg(self.serial.dumps('payload and load must be a dict'), header=header))
             raise tornado.gen.Return()
 
+        # intercept the "_auth" commands, since the main daemon shouldn't know
+        # anything about our key auth
+        if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
+            yield stream.write(frame_msg(self.serial.dumps(self._auth(payload['load'])), header=header))
+            raise tornado.gen.Return()
 
         # TODO: handle exceptions
         try:
