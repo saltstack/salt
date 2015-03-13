@@ -449,7 +449,9 @@ class MultiMinion(MinionBase):
     def __init__(self, opts):
         super(MultiMinion, self).__init__(opts)
 
-    def minions(self):
+        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+
+    def _minions(self):
         '''
         Return a dict of minion generators bound to the tune_in method
 
@@ -470,20 +472,54 @@ class MultiMinion(MinionBase):
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
+            s_opts['auth_timeout'] = self.MINION_CONNECT_TIMEOUT
             ret[master] = {'opts': s_opts,
                            'last': time.time(),
                            'auth_wait': s_opts['acceptance_wait_time']}
             try:
-                minion = Minion(
-                        s_opts,
-                        self.MINION_CONNECT_TIMEOUT,
-                        False,
-                        'salt.loader.{0}'.format(master))
+                minion = Minion(s_opts,
+                                self.MINION_CONNECT_TIMEOUT,
+                                False,
+                                io_loop=self.io_loop,
+                                loaded_base_name='salt.loader.{0}'.format(master))
                 ret[master]['minion'] = minion
-                ret[master]['generator'] = minion.tune_in_no_block()
+                minion.tune_in(start=False)
             except SaltClientError as exc:
                 log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
         return ret
+
+    # TODO: make an async minion interface, then we can do this in the IOLoop
+    def _async_sign_in_masters(self):
+        '''
+        Background thread to try and sign in to masters we were unable to get
+        at the beginning
+        '''
+        remaining = True
+        while remaining:
+            remainging = False
+            for master, minion in self.minions.iteritems():
+                if 'minion' not in minion:
+                    if time.time() - minion['auth_wait'] > minion['last']:
+                        minion['last'] = time.time()
+                        if minion['auth_wait'] < self.max_wait:
+                            minion['auth_wait'] += self.auth_wait
+                        try:
+                            t_minion = Minion(minion['opts'], self.MINION_CONNECT_TIMEOUT, False, io_loop=self.io_loop)
+                            minion['minion'] = t_minion
+                            self.io_loop.spawn_callback(self._tune_in_master, master)
+                        except SaltClientError as exc:
+                            remaining = True
+                            log.error('Error while bringing up minion for multi-master. Is master at {0} responding?'.format(master))
+                    else:
+                        remaining = True
+            time.sleep(0.1)
+
+    def _tune_in_master(self, master):
+        self.minions[master]['minion'].tune_in(start=False)
+
+    def handle_event(self, package):
+        for master_name, minion_dict in self.minions.iteritems():
+            minion_dict['minion'].handle_event(package)
 
     # Multi Master Tune In
     def tune_in(self):
@@ -494,80 +530,20 @@ class MultiMinion(MinionBase):
         to yet, but once the initial connection is made it is up to ZMQ to do the
         reconnect (don't know of an API to get the state here in salt)
         '''
-        self.event_publisher = salt.utils.event.PollingEventPublisher(self.opts)
-        self.poller.register(self.self.event_publisher.socket, zmq.POLLIN)
-
         # Prepare the minion generators
-        minions = self.minions()
-        loop_interval = int(self.opts['loop_interval'])
-        auth_wait = self.opts['acceptance_wait_time']
-        max_wait = self.opts['acceptance_wait_time_max']
+        self.minions = self._minions()
+        self.auth_wait = self.opts['acceptance_wait_time']
+        self.max_wait = self.opts['acceptance_wait_time_max']
 
-        while True:
-            package = None
-            for minion in six.itervalues(minions):
-                if isinstance(minion, dict):
-                    if 'minion' in minion:
-                        minion = minion['minion']
-                    else:
-                        continue
-                if not hasattr(minion, 'schedule'):
-                    continue
-                loop_interval = self.process_schedule(minion, loop_interval)
-            socks = dict(self.poller.poll(1))
-            if socks.get(self.event_publisher.socket) == zmq.POLLIN:
-                try:
-                    package = self.event_publisher.handle_publish()
-                except Exception:
-                    pass
+        # create the event bus
+        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
 
-            masters = list(minions.keys())
-            shuffle(masters)
-            # Do stuff per minion that we have
-            for master in masters:
-                minion = minions[master]
-                # if we haven't connected yet, lets attempt some more.
-                # make sure to keep separate auth_wait times, since these
-                # are separate masters
-                if 'generator' not in minion:
-                    if time.time() - minion['auth_wait'] > minion['last']:
-                        minion['last'] = time.time()
-                        if minion['auth_wait'] < max_wait:
-                            minion['auth_wait'] += auth_wait
-                        try:
-                            t_minion = Minion(minion['opts'], self.MINION_CONNECT_TIMEOUT, False)
-                            minions[master]['minion'] = t_minion
-                            minions[master]['generator'] = t_minion.tune_in_no_block()
-                            minions[master]['auth_wait'] = self.opts['acceptance_wait_time']
-                        except SaltClientError:
-                            log.error('Error while bring up minion for multi-master. Is master {0} responding?'.format(master))
-                            continue
-                    else:
-                        continue
+        # create thread to sign-in to masters that weren't here
+        t = threading.Thread(target=self._async_sign_in_masters)
+        t.daemon = True
+        t.start()
 
-                # run scheduled jobs if you have them
-                loop_interval = self.process_schedule(minion['minion'], loop_interval)
-
-                # If a minion instance receives event, handle the event on all
-                # instances
-                if package:
-                    # If we need to expand this, we may want to consider a specific header
-                    # or another approach entirely.
-                    if package.startswith('_minion_mine'):
-                        for multi_minion in minions:
-                            try:
-                                minions[master]['minion'].handle_event(package)
-                            except Exception:
-                                pass
-                    else:
-                        try:
-                            minion['minion'].handle_event(package)
-                            package = None
-                        except Exception:
-                            pass
-
-                # have the Minion class run anything it has to run
-                next(minion['generator'])
+        self.io_loop.start()
 
 
 class Minion(MinionBase):
@@ -588,7 +564,8 @@ class Minion(MinionBase):
             self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         else:
             self.io_loop = io_loop
-        self.io_loop.install()
+        if not self.io_loop.initialized():
+            self.io_loop.install()
 
         # Warn if ZMQ < 3.2
         if HAS_ZMQ:
@@ -793,9 +770,7 @@ class Minion(MinionBase):
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
             self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe, io_loop=self.io_loop)
-            # TODO: remove? What is this used for...
-            # TODO: re-enable
-            #self.tok = self.pub_channel.auth.gen_token('salt')
+            self.tok = self.pub_channel.auth.gen_token('salt')
             self.connected = True
             return opts['master']
 
@@ -888,8 +863,7 @@ class Minion(MinionBase):
         load = {'id': self.opts['id'],
                 'cmd': '_minion_event',
                 'pretag': pretag,
-                }
-                #'tok': self.tok}
+                'tok': self.tok}
         if events:
             load['events'] = events
         elif data and tag:
@@ -1527,7 +1501,7 @@ class Minion(MinionBase):
                     pass
 
     # Main Minion Tune In
-    def tune_in(self):
+    def tune_in(self, start=True):
         '''
         Lock onto the publisher. This is the main event loop for the minion
         :rtype : None
@@ -1607,7 +1581,8 @@ class Minion(MinionBase):
         # add handler to subscriber
         self.pub_channel.on_recv(self._handle_payload)
 
-        self.io_loop.start()
+        if start:
+            self.io_loop.start()
 
     # TODO: remove?
     def tune_in_no_block(self):
@@ -1626,15 +1601,10 @@ class Minion(MinionBase):
         # On first startup execute a state run if configured to do so
         self._state_run()
 
-        while self._running is True:
-            try:
-                self._do_socket_recv()
-            except Exception:
-                log.critical(
-                    'An exception occurred while polling the minion',
-                    exc_info=True
-                )
-            yield True
+        self.pub_channel.on_recv(self._handle_payload)
+
+    def tune_out_no_block(self):
+        self.pub_channel.on_recv(None)
 
     def _handle_payload(self, payload):
         if payload is not None and self._target_load(payload['load']):
@@ -1781,8 +1751,11 @@ class Syndic(Minion):
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
 
+    def tune_out_no_block(self):
+        self.pub_channel.on_recv(None)
+
     # Syndic Tune In
-    def tune_in(self):
+    def tune_in(self, start=True):
         '''
         Lock onto the publisher. This is the main event loop for the syndic
         '''
@@ -1813,7 +1786,8 @@ class Syndic(Minion):
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
-        self.io_loop.start()
+        if start:
+            self.io_loop.start()
 
     def _process_cmd_socket(self, payload):
         if payload is not None:
@@ -2001,10 +1975,10 @@ class MultiSyndic(MinionBase):
                                   io_loop=self.io_loop
                                   )
 
-            self.master_syndics[master]['syndic'] = t_minion
-            self.master_syndics[master]['generator'] = t_minion.tune_in_no_block()
-            self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
-            self.master_syndics[master]['dead_until'] = 0
+                self.master_syndics[master]['syndic'] = t_minion
+                # no longer a generator, just registering a callback
+                self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
+                self.master_syndics[master]['dead_until'] = 0
 
             log.info('Syndic successfully connected to {0}'.format(master))
             return True
@@ -2016,10 +1990,18 @@ class MultiSyndic(MinionBase):
                 minion['auth_wait'] += self.opts['acceptance_wait_time']
         return False
 
-    # TODO: Move to an async framework of some type-- channel (the event thing
-    # underneath) doesn't handle failures well, and will retry 3 times at 60s
-    # timeouts-- which all block the main thread's execution. For now we just
-    # cause failures to kick off threads to look for the master to come back up
+    def _mark_master_dead(self, master):
+        '''
+        Mark a master as dead. This will start the sign-in routine
+        '''
+        # stop recieving pub stuff from this master
+        master_dict = self.master_syndics[master]
+        master_dict['syndic'].tune_out_no_block()
+        del master_dict['syndic']
+        master_dict['dead_until'] = time.time() + master_dict['auth_wait']
+        if master_dict['auth_wait'] < self.opts['acceptance_wait_time_max']:
+            master_dict['auth_wait'] += self.opts['acceptance_wait_time']
+
     def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
@@ -2077,6 +2059,8 @@ class MultiSyndic(MinionBase):
 
         log.debug('MultiSyndic {0!r} trying to tune in'.format(self.opts['id']))
 
+        #
+        self.pub_channel.on_recv(self._handle_payload)
         #self.pub_channel.on_recv(self._process_cmd_socket)
         # register the event sub to the poller
         self._reset_event_aggregation()

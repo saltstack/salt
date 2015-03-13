@@ -317,7 +317,11 @@ class SAuth(object):
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        self.authenticate()
+    @property
+    def creds(self):
+        if not hasattr(self, '_creds'):
+            self.authenticate()
+        return self._creds
 
     def authenticate(self, timeout=None, safe=None):
         '''
@@ -333,7 +337,6 @@ class SAuth(object):
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-
         while True:
             creds = self.sign_in(timeout, safe)
             if creds == 'retry':
@@ -349,7 +352,7 @@ class SAuth(object):
                     log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
                 continue
             break
-        self.creds = creds
+        self._creds = creds
         self.crypticle = Crypticle(self.opts, creds['aes'])
 
     def get_keys(self):
