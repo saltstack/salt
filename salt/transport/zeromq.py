@@ -361,7 +361,6 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
 
         req_fun = req_opts.get('fun', 'send')
         if req_fun == 'send_clear':
-            ret['enc'] = 'clear'
             stream.send(self.serial.dumps(ret))
         elif req_fun == 'send':
             stream.send(self.serial.dumps(self.crypticle.dumps(ret)))

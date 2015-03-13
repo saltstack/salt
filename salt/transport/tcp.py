@@ -306,7 +306,6 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
         req_fun = req_opts.get('fun', 'send')
         if req_fun == 'send_clear':
-            ret['enc'] = 'clear'
             stream.write(frame_msg(self.serial.dumps(ret), header=header))
         elif req_fun == 'send':
             stream.write(frame_msg(self.serial.dumps(self.crypticle.dumps(ret)), header=header))
