@@ -62,7 +62,7 @@ def list_upgrades(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
     ret = {}
-    call = __salt__['cmd.run_stdout'](
+    call = __salt__['cmd.run_all'](
         'zypper list-updates', output_loglevel='trace'
     )
     if call['retcode'] != 0:
