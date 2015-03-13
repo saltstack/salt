@@ -156,51 +156,23 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-
-    if len(names) == 0:
-        return ''
-
     ret = {}
+
+    if not names:
+        return ret
+
+    names = sorted(list(set(names)))
+    package_info = info(*names)
     for name in names:
-        ret[name] = ''
+        pkg_info = package_info.get(name)
+        if pkg_info is not None and pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
+            ret_data = {}
+            for k in ['version', 'vendor']:
+                ret_data[k] = pkg_info.get(k)
+            ret[name] = ret_data
 
-    # Refresh before looking for the latest version available
-    if refresh:
-        refresh_db()
-
-    restpackages = names
-    outputs = []
-    # Split call to zypper into batches of 500 packages
-    while restpackages:
-        cmd = 'zypper info -t package {0}'.format(' '.join(restpackages[:500]))
-        output = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
-        outputs.extend(re.split('Information for package \\S+:\n', output))
-        restpackages = restpackages[500:]
-    for package in outputs:
-        pkginfo = {}
-        for line in package.splitlines():
-            try:
-                key, val = line.split(':', 1)
-                key = key.lower()
-                val = val.strip()
-            except ValueError:
-                continue
-            else:
-                pkginfo[key] = val
-
-        # Ignore if the needed keys weren't found in this iteration
-        if not set(('name', 'version', 'status')) <= set(pkginfo):
-            continue
-
-        status = pkginfo['status'].lower()
-        if 'not installed' in status or 'out-of-date' in status:
-            ret[pkginfo['name']] = pkginfo['version']
-
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = latest_version
