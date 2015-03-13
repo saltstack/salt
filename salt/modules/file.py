@@ -2986,9 +2986,13 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
                         ret['changes']['mode'] = mode
     # user/group changes if needed, then check if it worked
     if user:
+        if isinstance(user, int):
+            user = uid_to_user(user)
         if user != perms['luser']:
             perms['cuser'] = user
     if group:
+        if isinstance(group, int):
+            group = gid_to_group(group)
         if group != perms['lgroup']:
             perms['cgroup'] = group
     if 'cuser' in perms or 'cgroup' in perms:
