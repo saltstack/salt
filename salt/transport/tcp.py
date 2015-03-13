@@ -225,22 +225,6 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
             callback(self._decode_payload(self.serial.loads(body)))
         return self.message_client.on_recv(wrap_callback)
 
-    def recv(self, timeout=0):
-        '''
-        Get a pub job, with an optional timeout
-            0: nonblocking
-            None: forever
-        '''
-        socks = select.select([self.socket], [], [], timeout)
-        if self.socket in socks[0]:
-            try:
-                data = socket_frame_recv(self.socket)
-            except socket.error as e:
-                raise salt.exceptions.SaltClientError(e)
-            return self._decode_payload(self.serial.loads(data))
-        else:
-            return None
-
 
 class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel):
     # TODO: opts!

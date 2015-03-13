@@ -90,10 +90,4 @@ class PubChannel(object):
         '''
         raise NotImplementedError()
 
-    def recv(self, timeout=0):
-        '''
-        Get a pub job, with an optional timeout (0==forever)
-        '''
-        raise NotImplementedError()
-
 # EOF

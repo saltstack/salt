@@ -268,17 +268,6 @@ class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transp
             callback(payload)
         return self.stream.on_recv(wrap_callback)
 
-    def recv(self, timeout=0):
-        '''
-        Get a pub job, with an optional timeout
-            0: nonblocking
-            None: forever
-        '''
-        if self._socket.poll(timeout):
-            messages = self._socket.recv_multipart()
-            return self._decode_messages(messages)
-        else:
-            return None
 
 class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel):
     def zmq_device(self):
