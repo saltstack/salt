@@ -176,7 +176,7 @@ def upgrade_available(name):
 
 def version(*names, **kwargs):
     '''
-    Returns a string representing the package version or an empty string if not
+    Returns a string representing the package version or an empty dict if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
