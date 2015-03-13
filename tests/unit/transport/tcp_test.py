@@ -54,7 +54,7 @@ class BaseTCPReqCase(TestCase):
         cls.server_channel.pre_fork(cls.process_manager)
 
         cls.io_loop = tornado.ioloop.IOLoop()
-        cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)  # TODO: cleaner? Maybe lazily?
+        cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
 
         cls.server_thread = threading.Thread(target=cls.io_loop.start)
         cls.server_thread.daemon = True
@@ -103,6 +103,83 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):
                 ret = self.channel.send(msg)
+
+
+class BaseTCPPubCase(TestCase):
+    '''
+    Test the req server/client pair
+    '''
+    @classmethod
+    def setUpClass(cls):
+        cls.master_opts = salt.config.master_config(get_config_file_path('master'))
+        cls.master_opts.update({
+            'transport': 'tcp',
+            'auto_accept': True,
+        })
+
+        cls.minion_opts = salt.config.minion_config(get_config_file_path('minion'))
+        cls.minion_opts.update(salt.config.client_config(get_config_file_path('minion')))
+        cls.minion_opts.update({
+            'transport': 'tcp',
+            'master_ip': '127.0.0.1',
+        })
+
+        cls.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
+
+        cls.server_channel = salt.transport.server.PubServerChannel.factory(cls.master_opts)
+        cls.server_channel.pre_fork(cls.process_manager)
+
+        # we also require req server for auth
+        cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_opts)
+        cls.req_server_channel.pre_fork(cls.process_manager)
+
+        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
+
+        cls.server_thread = threading.Thread(target=cls.io_loop.start)
+        cls.server_thread.daemon = True
+        cls.server_thread.start()
+
+    @classmethod
+    def _handle_payload(cls, payload):
+        '''
+        TODO: something besides echo
+        '''
+        return payload, {'fun': 'send_clear'}
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.process_manager.kill_children()
+        cls.io_loop.stop()
+        #cls.server_channel.close()
+
+
+class PubChannelTest(BaseTCPPubCase):
+    '''
+    Tests around the publish system
+    '''
+    def test_basic(self):
+        io_loop = tornado.ioloop.IOLoop()
+        self.pub = None
+        def handle_pub(ret):
+            self.pub = ret
+            io_loop.stop()
+        self.pub_channel = salt.transport.client.PubChannel.factory(self.minion_opts, io_loop=io_loop)
+        self.pub_channel.on_recv(handle_pub)
+        load = {
+                    'fun': 'f',
+                    'arg': 'a',
+                    'tgt': 't',
+                    'jid': 'j',
+                    'ret': 'r',
+                    'tgt_type': 'glob',
+                }
+        self.pub_channel.message_client._connecting_future.add_done_callback(lambda f: io_loop.stop())
+        # make sure the publish happens after we have given the ioloop a chance to connect up
+        io_loop.start()
+        self.server_channel.publish(load)
+        io_loop.start()
+        self.assertEqual(self.pub['load'], load)
 
 if __name__ == '__main__':
     from integration import run_tests
