@@ -531,9 +531,6 @@ class MultiMinion(MinionBase):
         self.auth_wait = self.opts['acceptance_wait_time']
         self.max_wait = self.opts['acceptance_wait_time_max']
 
-        # create the event bus
-        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
-
         # create thread to sign-in to masters that weren't here
         t = threading.Thread(target=self._async_sign_in_masters)
         t.daemon = True
