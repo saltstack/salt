@@ -356,12 +356,6 @@ class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
 
-    @property
-    def poller(self):
-        if not hasattr(self, '_poller'):
-            self._poller = zmq.Poller()
-        return self._poller
-
     @staticmethod
     def process_schedule(minion, loop_interval):
         try:
@@ -506,6 +500,8 @@ class MultiMinion(MinionBase):
                         try:
                             t_minion = Minion(minion['opts'], self.MINION_CONNECT_TIMEOUT, False, io_loop=self.io_loop)
                             minion['minion'] = t_minion
+                            # since minion sign_in registers the event handler
+                            # we have to do that from the main thread
                             self.io_loop.spawn_callback(self._tune_in_master, master)
                         except SaltClientError as exc:
                             remaining = True
@@ -1645,18 +1641,6 @@ class Minion(MinionBase):
         Tear down the minion
         '''
         self._running = False
-        if getattr(self, 'poller', None) is not None:
-            if isinstance(self.poller.sockets, dict):
-                for socket in six.iterkeys(self.poller.sockets):
-                    if socket.closed is False:
-                        socket.close()
-                    self.poller.unregister(socket)
-            else:
-                for socket in self.poller.sockets:
-                    if socket[0].closed is False:
-                        socket[0].close()
-                    self.poller.unregister(socket[0])
-
         if hasattr(self, 'pub_channel'):
             del self.pub_channel
 
