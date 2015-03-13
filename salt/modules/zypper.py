@@ -187,7 +187,7 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
