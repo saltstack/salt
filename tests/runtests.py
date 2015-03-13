@@ -56,6 +56,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default='zeromq',
             choices=('zeromq', 'raet'),
             help='Set to raet to run integration tests with raet transport. Default: %default')
+        self.add_option(
+            '--no-test',
+            default=False,
+            action='store_true',
+            help='Do not run any tests. Simply start the daemons.'
+        )
 
         self.test_selection_group.add_option(
             '-m',
