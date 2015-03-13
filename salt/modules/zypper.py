@@ -102,7 +102,7 @@ def latest_version(*names, **kwargs):
     name/version pairs is returned.
 
     If the latest version of a given package is already installed, an empty
-    string will be returned for that package.
+    dict will be returned for that package.
 
     CLI example:
 
