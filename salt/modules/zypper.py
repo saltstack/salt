@@ -95,6 +95,51 @@ def list_upgrades(refresh=True):
 list_updates = list_upgrades
 
 
+def info(*names, **kwargs):
+    '''
+    Return the information of the named package available for the system.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info <package name>
+        salt '*' pkg.info <package1> <package2> <package3> ...
+    '''
+    ret = {}
+
+    if not names:
+        return ret
+    else:
+        names = sorted(list(set(names)))
+
+    # Refresh db before extracting the latest package
+    if salt.utils.is_true(kwargs.pop('refresh', True)):
+        refresh_db()
+
+    pkg_info = []
+    batch = names[:]
+    batch_size = 200
+
+    # Run in batches
+    while batch:
+        cmd = 'zypper info -t package {0}'.format(' '.join(batch[:batch_size]))
+        pkg_info.extend(re.split("----*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
+        batch = batch[batch_size:]
+
+    for pkg_data in pkg_info:
+        nfo = {}
+        for line in [data for data in pkg_data.split("\n") if ":" in data]:
+            kw = [data.strip() for data in line.split(":", 1)]
+            if len(kw) == 2 and kw[1]:
+                nfo[kw[0].lower()] = kw[1]
+        if nfo.get("name"):
+            name = nfo.pop("name")
+            ret[name] = nfo
+
+    return ret
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
