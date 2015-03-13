@@ -45,7 +45,7 @@ def __virtual__():
     '''
     if HAS_SSL:
         return True
-    return False
+    return False, ['PyOpenSSL must be installed before this module can be used.']
 
 
 def cert_base_path(cacert_path=None):
