@@ -980,6 +980,9 @@ def create(vm_):
         else:
             vm_['ssh_host'] = node_data.public_ips[0]
 
+    # If a password wasn't supplied in the profile or provider config, set it now.
+    vm_['password'] = get_password(vm_)
+
     # Bootstrap, either apache-libcloud or linode-python
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
