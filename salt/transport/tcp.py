@@ -10,7 +10,6 @@ header is a msgpack'd dict which includes (at least) msgLen
 
 import socket
 import os
-import ctypes
 import urlparse  # TODO: remove
 
 
@@ -54,6 +53,9 @@ def noop_future_callback(_):
     pass
 
 def frame_msg(msg, header=None):
+    '''
+    Frame the given message with our wire protocol
+    '''
     if header is None:
         header = {}
 
@@ -80,7 +82,7 @@ def socket_frame_recv(s, recv_size=4096):
     while len(buf) < header_len:
         data = s.recv(recv_size)
         if data == '':
-           raise socket.error('msg stopped, we are missing some data!')
+            raise socket.error('msg stopped, we are missing some data!')
         else:
             buf += data
 
@@ -90,7 +92,7 @@ def socket_frame_recv(s, recv_size=4096):
     while len(buf) < msg_len:
         data = s.recv(recv_size)
         if data == '':
-           raise socket.error('msg stopped, we are missing some data!')
+            raise socket.error('msg stopped, we are missing some data!')
         else:
             buf += data
 
@@ -289,7 +291,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             stream.write(frame_msg(self.serial.dumps(self._encrypt_private(ret,
                                                                            req_opts['key'],
                                                                            req_opts['tgt'],
-                                                                           )),header=header))
+                                                                           )), header=header))
         else:
             log.error('Unknown req_fun {0}'.format(req_fun))
             stream.close()
