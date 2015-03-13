@@ -94,7 +94,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             if self.options.static:
 
-                batch = salt.cli.batch.Batch(self.config, quiet=True)
+                batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
 
                 ret = {}
 
@@ -104,7 +104,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 self._output_ret(ret, '')
 
             else:
-                batch = salt.cli.batch.Batch(self.config)
+                batch = salt.cli.batch.Batch(self.config, eauth=eauth)
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
                     pass
