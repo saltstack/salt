@@ -1184,6 +1184,9 @@ class Minion(MinionBase):
                     'id': self.opts['id'],
                     'jid': jid,
                     'fun': fun,
+                    'arg': ret.get('arg'),
+                    'tgt': ret.get('tgt'),
+                    'tgt_type': ret.get('tgt_type'),
                     'load': ret.get('__load__')}
             load['return'] = {}
             for key, value in ret.items():
