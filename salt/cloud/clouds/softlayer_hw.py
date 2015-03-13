@@ -95,24 +95,6 @@ def get_conn(service='SoftLayer_Hardware'):
     return client[service]
 
 
-def create_options(call=None):
-    '''
-    List all available locations
-    '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The create_options function must be called with '
-            '-f or --function'
-        )
-
-    ret = {}
-    conn = get_conn(service='SoftLayer_Hardware')
-    ret['service'] = conn
-    ret['service_dir'] = dir(conn)
-
-    return ret
-
-
 def avail_locations(call=None):
     '''
     List all available locations
