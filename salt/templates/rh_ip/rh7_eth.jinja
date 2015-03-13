@@ -19,7 +19,7 @@ DEVICE="{{name}}"
 {%endif%}{% if peerdns %}PEERDNS="{{peerdns}}"
 {%endif%}{% if defroute %}DEFROUTE="{{defroute}}"
 {%endif%}{% if bridge %}BRIDGE="{{bridge}}"
-{%endif%}{% if delay %}DELAY="{{delay}}"
+{%endif%}{% if delay or delay == 0 %}DELAY="{{delay}}"
 {%endif%}{% if mtu %}MTU="{{mtu}}"
 {%endif%}{% if my_inner_ipaddr %}MY_INNER_IPADDR={{my_inner_ipaddr}}
 {%endif%}{% if my_outer_ipaddr %}MY_OUTER_IPADDR={{my_outer_ipaddr}}
