@@ -1080,15 +1080,15 @@ def list_products():
 
         salt '*' pkg.list_products
     '''
-    products = '/etc/products.d'
-    if not os.path.exists(products):
-        raise CommandExecutionError('Directory {0} does not exists.'.format(products))
+    products_dir = '/etc/products.d'
+    if not os.path.exists(products_dir):
+        raise CommandExecutionError('Directory {0} does not exists.'.format(products_dir))
 
-    products = {}
-    for fname in os.listdir('/etc/products.d'):
-        pth_name = os.path.join(products, fname)
+    p_data = {}
+    for fname in os.listdir(products_dir):
+        pth_name = os.path.join(products_dir, fname)
         r_pth_name = os.path.realpath(pth_name)
-        products[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
+        p_data[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
 
     info = ['vendor', 'name', 'version', 'baseversion', 'patchlevel',
             'predecessor', 'release', 'endoflife', 'arch', 'cpeid',
@@ -1096,7 +1096,7 @@ def list_products():
             'description']
 
     ret = {}
-    for prod_meta, is_base_product in six.iteritems(products):
+    for prod_meta, is_base_product in six.iteritems(p_data):
         product = _parse_suse_product(prod_meta, *info)
         product['baseproduct'] = is_base_product is not None
         ret[product.pop('name')] = product
