@@ -27,6 +27,7 @@ import salt.utils.verify
 import salt.utils.event
 import salt.payload
 import salt.exceptions
+import functools
 
 import logging
 
@@ -56,13 +57,6 @@ def noop_future_callback(_):
     This allows us to create a future which we won't do anything with
     '''
     pass
-
-def sync_future(io_loop, future):
-    def stop_loop(future):
-        io_loop.stop()
-    io_loop.add_future(future, stop_loop)
-    io_loop.start()
-    return future.result()
 
 def frame_msg(msg, header=None):
     if header is None:
@@ -108,6 +102,7 @@ def socket_frame_recv(s, recv_size=4096):
     return buf
 
 
+# TODO: make singleton
 class TCPReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to tcp.
@@ -130,12 +125,11 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
         host, port = parse.netloc.rsplit(':', 1)
         self.master_addr = (host, int(port))
 
-        if 'io_loop' in kwargs:
-            self.io_loop = kwargs['io_loop']
-        else:
-            self.io_loop = tornado.ioloop.IOLoop()
 
-        self.message_client = SaltMessageClient(host, int(port), io_loop=self.io_loop)
+        # used for making async stuff sync
+        self._io_loop = tornado.ioloop.IOLoop()
+
+        self.message_client = SaltMessageClient(host, int(port), io_loop=self._io_loop)
 
     def _package_load(self, load):
         return self.serial.dumps({
@@ -154,8 +148,8 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
         '''
         Do a blocking send/recv combo
         '''
-        future = self.message_client.send(msg)
-        return sync_future(self.io_loop, future)
+        return self._io_loop.run_sync(functools.partial(
+            self.message_client.send, msg))
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         # send msg
@@ -210,10 +204,7 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
         self.auth = salt.crypt.SAuth(self.opts)  # TODO: make optionally non-blocking?
         self.serial = salt.payload.Serial(self.opts)
 
-        if 'io_loop' in kwargs:
-            self.io_loop = kwargs['io_loop']
-        else:
-            self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop = kwargs['io_loop'] or tornado.ioloop.IOLoop.current()
         self.message_client = SaltMessageClient(self.opts['master_ip'],
                                                 int(self.auth.creds['publish_port']),
                                                 io_loop=self.io_loop)
@@ -370,10 +361,11 @@ class SaltMessageClient(object):
     '''
     Low-level message sending client
     '''
-    def __init__(self, host, port, io_loop):
+    def __init__(self, host, port, io_loop=None):
         self.host = host
         self.port = port
-        self.io_loop = io_loop
+
+        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
         self._tcp_client = tornado.tcpclient.TCPClient(io_loop=self.io_loop)
 

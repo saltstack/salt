@@ -588,6 +588,7 @@ class Minion(MinionBase):
             self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         else:
             self.io_loop = io_loop
+        self.io_loop.install()
 
         # Warn if ZMQ < 3.2
         if HAS_ZMQ:
@@ -1926,6 +1927,7 @@ class MultiSyndic(MinionBase):
             self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         else:
             self.io_loop = io_loop
+        self.io_loop.install()
 
         # create all of the syndics you need
         self.master_syndics = {}
