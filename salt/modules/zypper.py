@@ -439,7 +439,7 @@ def mod_repo(repo, **kwargs):
         raise CommandExecutionError(
                 'Modification of the repository \'{0}\' was not specified.'.format(repo))
 
-    return {}
+    return get_repo(repo)
 
 
 def refresh_db():
