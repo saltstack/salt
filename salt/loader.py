@@ -633,56 +633,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     Goals here:
         - lazy loading
         - minimize disk usage
-        - singletons (per tag)
 
     # TODO:
         - move modules_max_memory into here
-        - re-enable singletons (TODO: tests)
+        - singletons (per tag)
     '''
-    instances = {}
-
-    def __new__(cls,
-                module_dirs,
-                opts=None,
-                tag='module',
-                loaded_base_name=None,
-                mod_type_check=None,
-                pack=None,
-                whitelist=None,
-                virtual_enable=True,
-                singleton=False,
-                ):
-        def new_object():
-            ret = object.__new__(cls)
-            ret.__singleton_init__(module_dirs,
-                                   opts=opts,
-                                   tag=tag,
-                                   loaded_base_name=loaded_base_name,
-                                   mod_type_check=mod_type_check,
-                                   pack=pack,
-                                   whitelist=whitelist,
-                                   virtual_enable=virtual_enable,
-                                   singleton=singleton,
-                                   )
-            return ret
-
-        if not singleton:
-            return new_object()
-
-        key = (tag,
-               virtual_enable,
-               'proxy' in opts,
-               opts.get('id'),
-               )
-
-        if key not in LazyLoader.instances:
-            log.debug('Initializing new LazyLoader for {0}'.format(key))
-            LazyLoader.instances[key] = new_object()
-        else:
-            log.debug('Re-using LazyLoader for {0}'.format(key))
-        return LazyLoader.instances[key]
-
-    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self,
                  module_dirs,
                  opts=None,
@@ -692,23 +647,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
-                 singleton=True,
                  ):  # pylint: disable=W0231
-        self.opts = self.__prep_mod_opts(opts)
-        self.singleton = singleton
-
-    # an init for the singleton instance to call
-    def __singleton_init__(self,
-                 module_dirs,
-                 opts=None,
-                 tag='module',
-                 loaded_base_name=None,
-                 mod_type_check=None,
-                 pack=None,
-                 whitelist=None,
-                 virtual_enable=True,
-                 singleton=True,
-                 ):
         super(LazyLoader, self).__init__()  # init the lazy loader
         self.opts = self.__prep_mod_opts(opts)
 
@@ -861,30 +800,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 continue
             mod_opts[key] = val
         return mod_opts
-
-    # TODO: stop this? seems bad...
-    def __getitem__(self, key):
-        '''
-        When you get a module, make sure to pack the most recent opts/grains/pillar
-
-        This might be problematic, since this means they change after __virtual__,
-        but its been doing this for a while... so it must be fine :/
-        '''
-        mod = super(LazyLoader, self).__getitem__(key)
-
-        # if we aren't a singleton, we don't have to worry about these changing
-        if not self.singleton:
-            return mod
-
-        if '__opts__' in mod.__globals__:
-            mod.__globals__['__opts__'].update(self.opts)
-        else:
-            mod.__globals__['__opts__'] = self.opts
-
-        mod.__globals__['__grains__'] = self.grains
-        mod.__globals__['__pillar__'] = self.pillar
-
-        return mod
 
     def _iter_files(self, mod_name):
         '''

@@ -587,6 +587,9 @@ class Schedule(object):
         for job, data in schedule.items():
             if job == 'enabled' or not data:
                 continue
+            if not isinstance(data, dict):
+                log.error('Scheduled job "{0}" should have a dict value, not {1}'.format(job, type(data)))
+                continue
             # Job is disabled, continue
             if 'enabled' in data and not data['enabled']:
                 continue
