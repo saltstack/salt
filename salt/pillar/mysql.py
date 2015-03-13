@@ -2,6 +2,9 @@
 '''
 Retrieve Pillar data by doing a MySQL query
 
+MariaDB provides Python support through the MySQL Python package.
+Therefore, you may use this module with both MySQL or MariaDB.
+
 :maturity: new
 :depends: python-mysqldb
 :platform: all
@@ -90,7 +93,7 @@ Depth of 0 translates to the largest depth needed, so 3 in this case.
 
 The legacy compatibility translates to depth 1.
 
-Then they are merged the in a similar way to plain pillar data, in the order
+Then they are merged in a similar way to plain pillar data, in the order
 returned by MySQL.
 
 Thus subsequent results overwrite previous ones when they collide.
@@ -141,9 +144,9 @@ These columns define list grouping
 The range for with_lists is 1 to number_of_fields, inclusive.
 Numbers outside this range are ignored.
 
-Finally, if you use pass the queries in via a mapping, the key will be the
+Finally, if you pass the queries in via a mapping, the key will be the
 first level name where as passing them in as a list will place them in the
-root.  This isolates the query results in to their own subtrees.
+root.  This isolates the query results into their own subtrees.
 This may be a help or hindrance to your aims and can be used as such.
 
 You can basically use any SELECT query that gets you the information, you
@@ -265,7 +268,7 @@ class merger(object):
 
     def extract_queries(self, args, kwargs):
         '''
-            This function normalizes the config block in to a set of queries we
+            This function normalizes the config block into a set of queries we
             can use.  The return is a list of consistently laid out dicts.
         '''
         # Please note the function signature is NOT an error.  Neither args, nor
@@ -298,7 +301,7 @@ class merger(object):
                 (isinstance(x[1], dict) and 'query' in x[1] and len(x[1]['query']))
             )]
 
-        # Next, turn the whole buffer in to full dicts.
+        # Next, turn the whole buffer into full dicts.
         for qb in qbuffer:
             defaults = {'query': '',
                         'depth': 0,
@@ -351,7 +354,7 @@ class merger(object):
     def process_results(self, rows):
         '''
             This function takes a list of database results and iterates over,
-            merging them in to a dict form.
+            merging them into a dict form.
         '''
         listify = OrderedDict()
         listify_dicts = OrderedDict()
@@ -424,7 +427,7 @@ class merger(object):
                     if ret[self.depth-1] not in listify[id(crd)]:
                         listify[id(crd)].append(ret[self.depth-1])
                 crd = crd[ret[self.depth-1]]
-                # Now for the remaining keys, we put them in to the dict
+                # Now for the remaining keys, we put them into the dict
                 for i in range(self.depth, self.num_fields):
                     nk = self.field_names[i]
                     # Listify
