@@ -209,11 +209,14 @@ def present(
             else:
                 # Split keyline to get key und commen
                 keyline = keyline.split(' ')
+                key_type = keyline[0]
+                key_value = keyline[1]
+                key_comment = keyline[2] if len(keyline) > 2 else ''
                 data = __salt__['ssh.set_auth_key'](
                         user,
-                        keyline[1],
-                        keyline[0],
-                        keyline[2],
+                        key_value,
+                        key_type,
+                        key_comment,
                         options or [],
                         config)
     else:
