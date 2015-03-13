@@ -104,7 +104,7 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
-    CLI Example:
+    CLI example:
 
     .. code-block:: bash
 
