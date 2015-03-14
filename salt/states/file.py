@@ -312,18 +312,36 @@ def _gen_keep_files(name, require):
     Generate the list of files that need to be kept when a dir based function
     like directory or recurse has a clean.
     '''
+    def _is_subdir(path, directory):
+        path = os.path.realpath(path)
+        directory = os.path.realpath(directory)
+
+        relative = os.path.relpath(path, directory)
+
+        return (not relative.startswith(os.pardir))
+
+    def _process(name):
+        ret = set()
+        if os.path.isdir(name):
+            for root, dirs, files in os.walk(name):
+                for name in files:
+                    ret.add(os.path.join(root, name))
+                for name in dirs:
+                    ret.add(os.path.join(root, name))
+        return ret
+
     keep = set()
-    keep.add(name)
     if isinstance(require, list):
-        for comp in require:
-            if 'file' in comp:
-                keep.add(comp['file'])
-                if os.path.isdir(comp['file']):
-                    for root, dirs, files in os.walk(comp['file']):
-                        for name in files:
-                            keep.add(os.path.join(root, name))
-                        for name in dirs:
-                            keep.add(os.path.join(root, name))
+        required_files = [comp for comp in require if 'file' in comp]
+        for comp in required_files:
+            for low in __lowstate__:
+                if low['__id__'] == comp['file']:
+                    fn = low['name']
+                    if os.path.isdir(comp['file']):
+                        if _is_subdir(comp['file'], name):
+                            keep.update(_process(fn))
+                    else:
+                        keep.add(fn)
     return list(keep)
 
 
@@ -1751,6 +1769,8 @@ def directory(name,
 
     if clean:
         keep = _gen_keep_files(name, require)
+        log.debug('List of kept files when use file.directory with clean: %s',
+                  keep)
         removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             ret['changes']['removed'] = removed
