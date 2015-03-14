@@ -686,6 +686,26 @@ def list_folders(kwargs=None, call=None):  # pylint: disable=W0613
     return ret
 
 
+def status(name, call=None):
+    '''
+    To check the status of a VM using it\'s name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a status vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The status action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    return instance.get_status()
+
+
 def start(name, call=None):
     '''
     To start/power on a VM using it\'s name
