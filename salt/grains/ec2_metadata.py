@@ -65,7 +65,7 @@ def ec2_metadata():
     metadata = {'ec2_metadata': {}}
     for key, url in mdata.items():
         value = _get_instance_data(url)
-        if not value is None:
+        if value is not None:
             metadata['ec2_metadata'][key] = value
 
     return metadata
