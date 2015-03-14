@@ -85,9 +85,14 @@ def ext_pillar(minion_id,
     # security risk, the master config must contain a use_grain: True option
     # for this external pillar, which defaults to no
     if re.search(r'^i-[0-9a-z]{8}$', minion_id) is None:
-        if 'instance-id' not in __grains__:
+        if 'instance-id' in __grains__:
+            grain_id = __grians__['instance-id']
+        elif 'ec2_metadata' in __grains__ and 'instance-id' in __grains__['ec2_metadata']:
+            grain_id = __grains__['ec2_metadata']['instance-id']
+        else:
             log.debug("Minion-id is not in AWS instance-id formation, and there "
-                      "is no instance-id grain for minion {0}".format(minion_id))
+                      "is no instance-id grain for minion {0}, grains {1}".format(
+                            __grains__, minion_id))
             return {}
         if not use_grain:
             log.debug("Minion-id is not in AWS instance-id formation, and option "
@@ -103,8 +108,8 @@ def ext_pillar(minion_id,
                       "not in the list of allowed minions {1}".format(minion_id,
                       minion_ids))
             return {}
-        if re.search(r'^i-[0-9a-z]{8}$', __grains__['instance-id']) is not None:
-            minion_id = __grains__['instance-id']
+        if re.search(r'^i-[0-9a-z]{8}$', grain_id) is not None:
+            minion_id = grain_id
             log.debug("Minion-id is not in AWS instance ID format, but a grain"
                       " is, so using {0} as the minion ID".format(minion_id))
         else:
