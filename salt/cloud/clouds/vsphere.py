@@ -712,7 +712,7 @@ def start(name, call=None):
         instance.power_on()
     except Exception as exc:
         log.error('Could not power on VM {0}: {1}'.format(name, exc))
-        return exc
+        return 'failed to power on'
     return 'powered on'
 
 
@@ -742,5 +742,35 @@ def stop(name, call=None):
         instance.power_off()
     except Exception as exc:
         log.error('Could not power off VM {0}: {1}'.format(name, exc))
-        return exc
+        return 'failed to power off'
     return 'powered off'
+
+
+def suspend(name, call=None):
+    '''
+    To suspend a VM using it\'s name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a suspend vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The suspend action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_suspended():
+        ret = 'already suspended'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Suspending VM {0}'.format(name))
+        instance.suspend()
+    except Exception as exc:
+        log.error('Could not suspend VM {0}: {1}'.format(name, exc))
+        return 'failed to suspend'
+    return 'suspended'
