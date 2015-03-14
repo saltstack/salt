@@ -774,3 +774,33 @@ def suspend(name, call=None):
         log.error('Could not suspend VM {0}: {1}'.format(name, exc))
         return 'failed to suspend'
     return 'suspended'
+
+
+def reset(name, call=None):
+    '''
+    To reset a VM using it\'s name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reset vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The reset action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_resetting():
+        ret = 'already resetting'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Resetting VM {0}'.format(name))
+        instance.reset()
+    except Exception as exc:
+        log.error('Could not reset VM {0}: {1}'.format(name, exc))
+        return 'failed to reset'
+    return 'reset'
