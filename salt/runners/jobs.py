@@ -35,7 +35,12 @@ def active(outputter=None, display_progress=False):
     '''
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
-    active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
+    try:
+        active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
+    except six.SaltClientError as client_error:
+        print(client_error)
+        return ret
+
     if display_progress:
         __jid_event__.fire_event({
             'message': 'Attempting to contact minions: {0}'.format(list(active_.keys()))

@@ -303,7 +303,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    cmd = ['sc', 'config', name, 'start=', 'demand']
+    cmd = ['sc', 'config', name, 'start=', 'disabled']
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 

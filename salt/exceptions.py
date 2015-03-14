@@ -74,6 +74,12 @@ class LoaderError(SaltException):
     '''
 
 
+class PublishError(SaltException):
+    '''
+    Problems encountered when trying to publish a command
+    '''
+
+
 class MinionError(SaltException):
     '''
     Minion problems reading uris such as salt:// or http://

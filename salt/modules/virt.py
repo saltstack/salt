@@ -8,7 +8,6 @@ Work with virtual machines managed by libvirt
 # of his in the virt func module have been used
 
 # Import python libs
-from __future__ import absolute_import
 import os
 import re
 import sys
@@ -35,6 +34,7 @@ import salt.utils
 import salt.utils.files
 import salt.utils.templates
 import salt.utils.validate.net
+from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -101,6 +101,8 @@ def __get_conn():
          - http://libvirt.org/uri.html#URI_config
         '''
         connection = __salt__['config.get']('libvirt:connection', 'esx')
+        if connection.startswith('esx://'):
+            return connection
         return connection
 
     def __esxi_auth():
@@ -1684,7 +1686,7 @@ def vm_netstats(vm_=None):
                 'tx_errs': 0,
                 'tx_drop': 0
                }
-        for attrs in six.itervalues(nics):
+        for attrs in nics.itervalues():
             if 'target' in attrs:
                 dev = attrs['target']
                 stats = dom.interfaceStats(dev)

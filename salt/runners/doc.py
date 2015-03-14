@@ -14,6 +14,7 @@ import salt.wheel
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.exceptions import SaltClientError
 
 
 def __virtual__():
@@ -66,11 +67,42 @@ def execution():
     client = salt.client.get_local_client(__opts__['conf_file'])
 
     docs = {}
-    for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
-        for val in six.itervalues(ret):
-            docs.update(val)
+    try:
+        for ret in client.cmd_iter('*', 'sys.doc', timeout=__opts__['timeout']):
+            for v in six.itervalues(ret):
+                docs.update(v)
+    except SaltClientError as exc:
+        print exc
+        return []
 
     i = itertools.chain.from_iterable([six.iteritems(i) for i in six.itervalues(docs)])
     ret = dict(list(i))
 
     return ret
+
+
+# Still need to modify some of the backend for auth checks to make this work
+def __list_functions(user=None):
+    '''
+    List all of the functions, optionally pass in a user to evaluate
+    permissions on
+    '''
+    client = salt.client.get_local_client(__opts__['conf_file'])
+    funcs = {}
+    try:
+        gener = client.cmd_iter(
+                '*',
+                'sys.list_functions',
+                timeout=__opts__['timeout'])
+    except SaltClientError as client_error:
+        print client_error
+        return funcs
+
+    for ret in gener:
+        funcs.update(ret)
+    if not user:
+        __jid_event__.fire_event({'message': funcs}, 'progress')
+        return funcs
+    for _, val in __opts__['external_auth'].items():
+        if user in val:
+            pass
