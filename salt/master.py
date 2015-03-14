@@ -554,8 +554,8 @@ class Publisher(multiprocessing.Process):
                         else:
                             try:
                                 log.error(
-                                    "Invalid payload: {0}".pformat(
-                                        unpacked_package), exc_info=True)
+                                    "Invalid payload: {0}".format(
+                                        pformat(unpacked_package), exc_info=True))
                             except Exception:
                                 # dont fail on a format error here !
                                 # but log something as it is hard to track down
