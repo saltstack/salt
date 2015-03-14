@@ -8,5 +8,3 @@ DIVERGENCES TO KEEP AT ALL COSTS:
 
         - https://github.com/saltstack/salt/issues/21441
         - https://github.com/saltstack/salt/pull/20918
-
-- zcbuildout mod & states in makina-states/salt_fork

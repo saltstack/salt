@@ -17,9 +17,6 @@ import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 
-import logging
-log = logging.getLogger(__name__)
-
 
 def __virtual__():
     '''
@@ -429,8 +426,6 @@ def save(filename=None, family='ipv4'):
     '''
     if _conf() and not filename:
         filename = _conf(family)
-
-    log.debug('Saving rules to {0}'.format(filename))
 
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):

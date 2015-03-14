@@ -6,27 +6,12 @@ Wrapper around uptime API
 
 # Import Python Libs
 from __future__ import absolute_import
+import requests
 import logging
-
-try:
-    import requests
-    ENABLED = True
-except ImportError:
-    ENABLED = False
-
 
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
-
-
-def __virtual__():
-    '''
-    Only load this module if the requests python module is available
-    '''
-    if ENABLED:
-        return 'uptime'
-    return False, ['uptime module needs the python requests module to work']
 
 
 def create(name, **params):

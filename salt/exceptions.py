@@ -37,12 +37,6 @@ class SaltMasterError(SaltException):
     '''
 
 
-class SaltNoMinionsFound(SaltException):
-    '''
-    An attempt to retrieve a list of minions failed
-    '''
-
-
 class SaltSyndicMasterError(SaltException):
     '''
     Problem while proxying a request in the syndication master

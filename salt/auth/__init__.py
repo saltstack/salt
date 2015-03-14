@@ -420,36 +420,3 @@ class Resolver(object):
         load['cmd'] = 'get_token'
         tdata = self._send_token_request(load)
         return tdata
-
-
-class AuthUser(object):
-    '''
-    Represents a user requesting authentication to the salt master
-    '''
-
-    def __init__(self, user):
-        '''
-        Instantiate an AuthUser object.
-
-        Takes a user to reprsent, as a string.
-        '''
-        self.user = user
-
-    def is_sudo(self):
-        '''
-        Determines if the user is running with sudo
-
-        Returns True if the user is running with sudo and False if the
-        user is not running with sudo
-        '''
-        return self.user.startswith('sudo_')
-
-    def is_running_user(self):
-        '''
-        Determines if the user is the same user as the one running
-        this process
-
-        Returns True if the user is the same user as the one running
-        this process and False if not.
-        '''
-        return self.user == salt.utils.get_user()

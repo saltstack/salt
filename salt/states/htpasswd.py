@@ -30,47 +30,34 @@ def __virtual__():
 
 
 def user_exists(name, password=None, htpasswd_file=None, options='',
-                force=False, runas=None):
+                force=False, **kwargs):
     '''
-    Make sure the user is inside the specified htpasswd file
+    Make sure the user is inside the ``/etc/nginx/htpasswd``
 
-    name
-        User name
+    ``name``
+        username
 
-    password
-        User password
+    ``password``
+        password of the user
 
-    htpasswd_file
-        Path to the htpasswd file
+    ``htpasswd_file``
+        path to the file that htpasswd will handle
 
-    options
-        See :mod:`salt.modules.htpasswd.useradd`
+    ``options``
+        see :mod:`salt.module.htpasswd.useradd`
 
-    force
-        Touch the file even if user already created
-
-    runas
-        The system user to run htpasswd command with
-
+    ``force``
+        touch the file even if user already created
     '''
     ret = {'name': name,
            'changes': {},
            'comment': '',
            'result': None}
-
+    useradd = __salt__['webutil.useradd_all']
     grep = __salt__['file.grep']
     grep_ret = grep(htpasswd_file, name)
     if grep_ret['retcode'] != 0 or force:
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = ('User {0!r} is set to be added to htpasswd '
-                              'file').format(name)
-            ret['changes'] = {name: True}
-            return ret
-
-        useradd_ret = __salt__['webutil.useradd_all'](htpasswd_file, name,
-                                                      password, opts=options,
-                                                      runas=runas)
+        useradd_ret = useradd(htpasswd_file, name, password, opts=options)
         if useradd_ret['retcode'] == 0:
             ret['result'] = True
             ret['comment'] = useradd_ret['stderr']
@@ -80,10 +67,6 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
             ret['result'] = False
             ret['comment'] = useradd_ret['stderr']
             return ret
-
-    if __opts__['test']:
-        ret['result'] = None
-    else:
-        ret['result'] = True
+    ret['result'] = True
     ret['comment'] = 'User already known'
     return ret
