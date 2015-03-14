@@ -684,3 +684,63 @@ def list_folders(kwargs=None, call=None):  # pylint: disable=W0613
     for folder in folders:
         ret.append(folders[folder])
     return ret
+
+
+def start(name, call=None):
+    '''
+    To start/power on a VM.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.get_status() == 'POWERED ON':
+        ret = 'already powered on'
+        log.error('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Starting VM {0}'.format(name))
+        instance.power_on()
+    except Exception as exc:
+        log.error('Could not power on VM {0}: {1}'.format(name, exc))
+        return exc
+    return 'powered on'
+
+
+def stop(name, call=None):
+    '''
+    To stop/power off a VM.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.get_status() == 'POWERED OFF':
+        ret = 'already powered off'
+        log.error('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Stopping VM {0}'.format(name))
+        instance.power_off()
+    except Exception as exc:
+        log.error('Could not power off VM {0}: {1}'.format(name, exc))
+        return exc
+    return 'powered off'
