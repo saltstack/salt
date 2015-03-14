@@ -6,6 +6,7 @@ involves preparing the three listeners and the workers needed by the master.
 
 # Import python libs
 from __future__ import absolute_import
+from pprint import pformat
 import os
 import re
 import sys
@@ -543,7 +544,23 @@ class Publisher(multiprocessing.Process):
                 try:
                     package = pull_sock.recv()
                     unpacked_package = salt.payload.unpackage(package)
-                    payload = unpacked_package['payload']
+                    try:
+                        payload = unpacked_package['payload']
+                    except (KeyError,) as exc:
+                        # somehow not packaged !?
+                        if 'enc' in payload and 'load' in payload:
+                            payload = package
+                        else:
+                            try:
+                                log.error(
+                                    "Invalid payload: {0}".pformat(
+                                        unpacked_package), exc_info=True))
+                            except Exception:
+                                # dont fail on a format error here !
+                                # but log something as it is hard to track down
+                                log.error("Received invalid payload", exc_info=True))
+                            raise exc
+
                     if self.opts['zmq_filtering']:
                         # if you have a specific topic list, use that
                         if 'topic_lst' in unpacked_package:
