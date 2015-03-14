@@ -644,7 +644,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['enable_ipv6'] = opts['enable_ipv6']
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onparent', 'peerdns', 'slave', 'vlan', 'defroute']:
+    for opt in ['onparent', 'peerdns', 'slave', 'vlan', 'defroute', 'stp']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
