@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 ec2_metadata.py - exports all instance metadata in an 'ec2_metadata' grain
 
@@ -14,11 +15,8 @@ Licensed under Apache License (https://raw.github.com/saltstack/salt/develop/LIC
 
 """
 
-import os
 import logging
 import requests
-from distutils.version import StrictVersion
-import salt.log
 
 log = logging.getLogger(__name__)
 
@@ -41,30 +39,30 @@ def _get_instance_data(uri=None):
 def ec2_metadata():
     mdata = {
         'ami-id' : 'ami-id',
-        'ami-launch-index' : 'ami-launch-index',
-        'ami-mainfest-path' : 'ami-mainfest-path',
-        'ancestor-ami-ids' : 'ancestor-ami-ids',
-        'block-device-mapping' : 'block-device-mapping',
-        'hostname' : 'hostname',
-        'iam-role' : 'iam/security-credentials/',
-        'instance-action' : 'instance-action',
-        'instance-id' : 'instance-id',
-        'instance-type' : 'instance-type',
-        'kernel-id' : 'kernel-id',
-        'local-hostname' : 'local-hostname',
-        'local-ipv4' : 'local-ipv4',
-        'mac' : 'mac',
-        'availability-zone' : 'palcement/availability-zone',
-        'product-codes' : 'product-codes',
-        'public-ipv4' : 'public-ipv4',
-        'openssh-key' : 'public-keys/0/openssh-key',
-        'ramdisk-id' : 'ramdisk-id',
-        'reservation-id' : 'reservation-id',
-        'security-groups' : 'security-groups',
-        'aws-services-domain' : 'services/domain',
-        'spot-termination-time' : 'spot/termination-time'
+        'ami-launch-index': 'ami-launch-index',
+        'ami-mainfest-path': 'ami-mainfest-path',
+        'ancestor-ami-ids': 'ancestor-ami-ids',
+        'block-device-mapping': 'block-device-mapping',
+        'hostname': 'hostname',
+        'iam-role': 'iam/security-credentials/',
+        'instance-action': 'instance-action',
+        'instance-id': 'instance-id',
+        'instance-type': 'instance-type',
+        'kernel-id': 'kernel-id',
+        'local-hostname': 'local-hostname',
+        'local-ipv4': 'local-ipv4',
+        'mac': 'mac',
+        'availability-zone': 'palcement/availability-zone',
+        'product-codes': 'product-codes',
+        'public-ipv4': 'public-ipv4',
+        'openssh-key': 'public-keys/0/openssh-key',
+        'ramdisk-id': 'ramdisk-id',
+        'reservation-id': 'reservation-id',
+        'security-groups': 'security-groups',
+        'aws-services-domain': 'services/domain',
+        'spot-termination-time': 'spot/termination-time'
     }
-    metadata = {'ec2_metadata' : {}}
+    metadata = {'ec2_metadata': {}}
     for key, url in mdata.items():
         value = _get_instance_data(url)
         if value != None:
@@ -74,4 +72,3 @@ def ec2_metadata():
 
 if __name__ == '__main__':
     print ec2_metadata()
-

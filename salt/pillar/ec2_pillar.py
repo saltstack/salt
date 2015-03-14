@@ -86,7 +86,7 @@ def ext_pillar(minion_id,
     # for this external pillar, which defaults to no
     if re.search(r'^i-[0-9a-z]{8}$', minion_id) is None:
         if 'instance-id' in __grains__:
-            grain_id = __grians__['instance-id']
+            grain_id = __grains__['instance-id']
         elif 'ec2_metadata' in __grains__ and 'instance-id' in __grains__['ec2_metadata']:
             grain_id = __grains__['ec2_metadata']['instance-id']
         else:
