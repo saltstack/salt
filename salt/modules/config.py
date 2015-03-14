@@ -12,7 +12,13 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
-import salt.utils.cloud
+try:
+    # Gated for salt-ssh (salt.utils.cloud imports msgpack)
+    import salt.utils.cloud
+    HAS_CLOUD = True
+except ImportError:
+    HAS_CLOUD = False
+
 import salt._compat
 import salt.syspaths as syspaths
 import salt.utils.sdb as sdb
@@ -390,6 +396,8 @@ def gather_bootstrap_script(bootstrap=None):
 
         salt '*' config.gather_bootstrap_script
     '''
+    if not HAS_CLOUD:
+        return False, 'config.gather_bootstrap_script is unavailable'
     ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
     if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
         return ret['Success']['Files updated'][0]
