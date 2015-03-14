@@ -554,11 +554,11 @@ class Publisher(multiprocessing.Process):
                             try:
                                 log.error(
                                     "Invalid payload: {0}".pformat(
-                                        unpacked_package), exc_info=True))
+                                        unpacked_package), exc_info=True)
                             except Exception:
                                 # dont fail on a format error here !
                                 # but log something as it is hard to track down
-                                log.error("Received invalid payload", exc_info=True))
+                                log.error("Received invalid payload", exc_info=True)
                             raise exc
 
                     if self.opts['zmq_filtering']:
