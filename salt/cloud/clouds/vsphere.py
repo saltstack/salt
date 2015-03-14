@@ -688,7 +688,7 @@ def list_folders(kwargs=None, call=None):  # pylint: disable=W0613
 
 def status(name, call=None):
     '''
-    To check the status of a VM using it\'s name
+    To check the status of a VM using its name
 
     CLI Example:
 
@@ -708,7 +708,7 @@ def status(name, call=None):
 
 def start(name, call=None):
     '''
-    To start/power on a VM using it\'s name
+    To start/power on a VM using its name
 
     CLI Example:
 
@@ -738,7 +738,7 @@ def start(name, call=None):
 
 def stop(name, call=None):
     '''
-    To stop/power off a VM using it\'s name
+    To stop/power off a VM using its name
 
     CLI Example:
 
@@ -768,7 +768,7 @@ def stop(name, call=None):
 
 def suspend(name, call=None):
     '''
-    To suspend a VM using it\'s name
+    To suspend a VM using its name
 
     CLI Example:
 
@@ -798,7 +798,7 @@ def suspend(name, call=None):
 
 def reset(name, call=None):
     '''
-    To reset a VM using it\'s name
+    To reset a VM using its name
 
     CLI Example:
 
