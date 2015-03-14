@@ -488,25 +488,21 @@ def _check_directory(name,
             changes[name] = fchange
     if clean:
         keep = _gen_keep_files(name, require)
+
+        def _check_changes(fname):
+            path = os.path.join(root, fname)
+            if path not in keep:
+                if not salt.utils.check_include_exclude(
+                        path[len(name) + 1:], None, exclude_pat):
+                    continue
+                return {path: {'removed': 'Removed due to clean'}}
+            return {}
+
         for root, dirs, files in os.walk(name):
             for fname in files:
-                fchange = {}
-                path = os.path.join(root, fname)
-                if path not in keep:
-                    if not salt.utils.check_include_exclude(
-                            path[len(name) + 1:], None, exclude_pat):
-                        continue
-                    fchange['removed'] = 'Removed due to clean'
-                    changes[path] = fchange
+                changes.update(_check_changes(fname))
             for name_ in dirs:
-                fchange = {}
-                path = os.path.join(root, name_)
-                if path not in keep:
-                    if not salt.utils.check_include_exclude(
-                            path[len(name) + 1:], None, exclude_pat):
-                        continue
-                    fchange['removed'] = 'Removed due to clean'
-                    changes[path] = fchange
+                changes.update(_check_changes(name_))
 
     if not os.path.isdir(name):
         changes[name] = {'directory': 'new'}
