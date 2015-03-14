@@ -7,9 +7,15 @@ The Linode cloud module is used to control access to the Linode VPS system
 
 Use of this module only requires the ``apikey`` parameter.
 
-:depends: linode-python >= 1.0
+:depends: linode-python >= 1.1.1
 OR
 :depends: apache-libcloud >= 0.13.2
+
+.. note::
+
+    The linode-python driver will work with earlier versions of linode-python,
+    but it is highly recommended to use a minimum version of 1.1.1. Earlier
+    versions leak sensitive information into the debug logs.
 
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/linode.conf``:
@@ -980,6 +986,9 @@ def create(vm_):
             vm_['ssh_host'] = node_data.private_ips[0]
         else:
             vm_['ssh_host'] = node_data.public_ips[0]
+
+    # If a password wasn't supplied in the profile or provider config, set it now.
+    vm_['password'] = get_password(vm_)
 
     # Bootstrap, either apache-libcloud or linode-python
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
