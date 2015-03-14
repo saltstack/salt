@@ -38,7 +38,7 @@ def _get_instance_data(uri=None):
 
 def ec2_metadata():
     mdata = {
-        'ami-id' : 'ami-id',
+        'ami-id': 'ami-id',
         'ami-launch-index': 'ami-launch-index',
         'ami-mainfest-path': 'ami-mainfest-path',
         'ancestor-ami-ids': 'ancestor-ami-ids',
@@ -65,7 +65,7 @@ def ec2_metadata():
     metadata = {'ec2_metadata': {}}
     for key, url in mdata.items():
         value = _get_instance_data(url)
-        if value != None:
+        if not value is None:
             metadata['ec2_metadata'][key] = value
 
     return metadata
