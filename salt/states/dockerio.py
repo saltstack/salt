@@ -69,7 +69,7 @@ Available Functions
       my_service:
         docker.running:
           - container: mysuperdocker
-          - port_bindings:
+          - ports:
               "5000/tcp":
                   HostIp: ""
                   HostPort: "5000"
