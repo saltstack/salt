@@ -57,7 +57,9 @@ import salt.utils.zeromq
 import salt.utils.jid
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import FileserverConfigError
-from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
+from salt.utils.debug import (
+    enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
+)
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
@@ -2192,27 +2194,36 @@ class ClearFuncs(object):
                 )
                 return ''
             try:
-                name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
-                groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
-                group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
+                # The username with which we are attempting to auth
+                name = self.loadauth.load_name(extra)
+                # The groups to which this user belongs
+                groups = self.loadauth.get_groups(extra)
+                # The configured auth groups
+                group_perm_keys = [
+                    item for item in self.opts['external_auth'][extra['eauth']]
+                    if item.endswith('%')
+                ]
 
-                # First we need to know if the user is allowed to proceed via any of their group memberships.
+                # First we need to know if the user is allowed to proceed via
+                # any of their group memberships.
                 group_auth_match = False
                 for group_config in group_perm_keys:
                     group_config = group_config.rstrip('%')
                     for group in groups:
                         if group == group_config:
                             group_auth_match = True
-                # If a group_auth_match is set it means only that we have a user which matches at least one or more
-                # of the groups defined in the configuration file.
+                # If a group_auth_match is set it means only that we have a
+                # user which matches at least one or more of the groups defined
+                # in the configuration file.
 
                 external_auth_in_db = False
                 for d in self.opts['external_auth'][extra['eauth']]:
                     if d.startswith('^'):
                         external_auth_in_db = True
 
-                # If neither a catchall, a named membership or a group membership is found, there is no need
-                # to continue. Simply deny the user access.
+                # If neither a catchall, a named membership or a group
+                # membership is found, there is no need to continue. Simply
+                # deny the user access.
                 if not ((name in self.opts['external_auth'][extra['eauth']]) |
                         ('*' in self.opts['external_auth'][extra['eauth']]) |
                         group_auth_match | external_auth_in_db):
@@ -2225,7 +2236,8 @@ class ClearFuncs(object):
                     )
                     return ''
 
-                # Perform the actual authentication. If we fail here, do not continue.
+                # Perform the actual authentication. If we fail here, do not
+                # continue.
                 if not self.loadauth.time_auth(extra):
                     log.warning(
                         'Authentication failure of type "eauth" occurred.'
@@ -2362,17 +2374,25 @@ class ClearFuncs(object):
                         'minions': minions
                     }
                 }
-        # Retrieve the jid
+
+        # the jid in clear_load can be None, '', or something else. this is an
+        # attempt to clean up the value before passing to plugins
+        passed_jid = clear_load['jid'] if clear_load.get('jid') else None
+        nocache = extra.get('nocache', False)
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         try:
-            clear_load['jid'] = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
-                                                            # the jid in clear_load can be None, '', or something else.
-                                                            # this is an attempt to clean up the value before passing to plugins
-                                                            passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
-        except TypeError:  # The returner is not present
-            log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
-            return {}
-            # TODO Error reporting over the master event bus
+            # Retrieve the jid
+            clear_load['jid'] = \
+                self.mminion.returners[fstr](nocache=nocache,
+                                             passed_jid=passed_jid)
+        except (KeyError, TypeError):
+            # The returner is not present
+            msg = (
+                'Failed to allocate a jid. The requested returner \'{0}\' '
+                'could not be loaded.'.format(fstr.split('.')[0])
+            )
+            log.error(msg)
+            return {'error': msg}
 
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
