@@ -2571,12 +2571,13 @@ class MultiSyndic(MinionBase):
                                       'timeout': self.SYNDIC_EVENT_TIMEOUT,
                                       },
                               )
-        for jid, jid_ret in six.iteritems(self.jids):
+        for jid, jid_ret in self.jids.items():
             self._call_syndic('_return_pub',
                               args=(jid_ret, '_syndic_return'),
                               kwargs={'timeout': self.SYNDIC_EVENT_TIMEOUT},
                               master_id=jid_ret.get('__master_id__'),
                               )
+
         self._reset_event_aggregation()
 
 
