@@ -397,7 +397,7 @@ def _clean_dir(root, keep, exclude_pat):
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
                 if not salt.utils.check_include_exclude(
-                        nfn[len(root) + 1:], None, exclude_pat):
+                        os.path.relpath(nfn, root), None, exclude_pat):
                     continue
                 removed.add(nfn)
                 if not __opts__['test']:
@@ -408,7 +408,7 @@ def _clean_dir(root, keep, exclude_pat):
                 # -- check if this is a part of exclude_pat(only). No need to
                 # check include_pat
                 if not salt.utils.check_include_exclude(
-                        nfn[len(root) + 1:], None, exclude_pat):
+                        os.path.relpath(nfn, root), None, exclude_pat):
                     continue
                 removed.add(nfn)
                 if not __opts__['test']:
