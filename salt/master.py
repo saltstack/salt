@@ -2375,24 +2375,49 @@ class ClearFuncs(object):
                     }
                 }
 
-        # the jid in clear_load can be None, '', or something else. this is an
-        # attempt to clean up the value before passing to plugins
-        passed_jid = clear_load['jid'] if clear_load.get('jid') else None
-        nocache = extra.get('nocache', False)
+        jid = self._prep_jid(clear_load, extra)
+        if jid is None:
+            return {}
+        int_payload = self._prep_pub(minions, jid, clear_load, extra)
+
+        #Send it!
+        self._send_pub(int_payload)
+
+        return {
+            'enc': 'clear',
+            'load': {
+                'jid': clear_load['jid'],
+                'minions': minions
+            }
+        }
+
+    def _prep_jid(self, clear_load, extra):
+        '''
+        Return a jid for this publication
+        '''
+        # Retrieve the jid
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         try:
-            # Retrieve the jid
-            clear_load['jid'] = \
-                self.mminion.returners[fstr](nocache=nocache,
-                                             passed_jid=passed_jid)
-        except (KeyError, TypeError):
-            # The returner is not present
-            msg = (
-                'Failed to allocate a jid. The requested returner \'{0}\' '
-                'could not be loaded.'.format(fstr.split('.')[0])
+            jid = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
+                                                            # the jid in clear_load can be None, '', or something else.
+                                                            # this is an attempt to clean up the value before passing to plugins
+                                                            passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
+        except TypeError:  # The returner is not present
+            log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
+            return None
+        return jid
+
+    def _send_pub(self, load):
+        '''
+        Take a load and send it across the network to connected minions
+        '''
+        # Send 0MQ to the publisher
+        context = zmq.Context(1)
+        pub_sock = context.socket(zmq.PUSH)
+        pull_uri = 'ipc://{0}'.format(
+            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
             )
-            log.error(msg)
-            return {'error': msg}
+        pub_sock.connect(pull_uri)
 
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
