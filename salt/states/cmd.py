@@ -114,6 +114,31 @@ a simple protocol described below:
    Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
    then be watched by some other states as well.
 
+4. :strong:`The stateful argument can optionally include a test_name parameter.`
+
+   This is used to specify a command to run in test mode.  This command should
+   return stateful data for changes that would be made by the command in the
+   name parameter.
+
+   .. versionadded:: 2015.2.0
+
+   .. code-block:: yaml
+
+       Run myscript:
+         cmd.run:
+           - name: /path/to/myscript
+           - cwd: /
+           - stateful:
+             - test_name: /path/to/myscript test
+
+       Run masterscript:
+         cmd.script:
+           - name: masterscript
+           - source: salt://path/to/masterscript
+           - cwd: /
+           - stateful:
+             - test_name: masterscript test
+
 ``cmd.wait`` is not restricted to watching only cmd states. For example
 it can also watch a git state for changes
 
@@ -672,6 +697,14 @@ def run(name,
     ###       of unsupported arguments in a cmd.run state will result in a
     ###       traceback.
 
+    test_name = None
+    if not isinstance(stateful, list):
+        stateful = stateful is True
+    elif isinstance(stateful, list) and 'test_name' in stateful[0]:
+        test_name = stateful[0]['test_name']
+    if __opts__['test'] and test_name:
+        name = test_name
+
     ret = {'name': name,
            'changes': {},
            'result': False,
@@ -709,23 +742,28 @@ def run(name,
             ret.update(cret)
             return ret
 
-        # Wow, we passed the test, run this sucker!
-        if not __opts__['test']:
-            try:
-                cmd_all = __salt__['cmd.run_all'](
-                    name, timeout=timeout, python_shell=True, **cmd_kwargs
-                )
-            except CommandExecutionError as err:
-                ret['comment'] = str(err)
-                return ret
-
-            ret['changes'] = cmd_all
-            ret['result'] = not bool(cmd_all['retcode'])
-            ret['comment'] = 'Command "{0}" run'.format(name)
+        if __opts__['test'] and not test_name:
+            ret['result'] = None
+            ret['comment'] = 'Command "{0}" would have been executed'.format(name)
             return _reinterpreted_state(ret) if stateful else ret
-        ret['result'] = None
-        ret['comment'] = 'Command "{0}" would have been executed'.format(name)
-        return _reinterpreted_state(ret) if stateful else ret
+
+        # Wow, we passed the test, run this sucker!
+        try:
+            cmd_all = __salt__['cmd.run_all'](
+                name, timeout=timeout, python_shell=True, **cmd_kwargs
+            )
+        except CommandExecutionError as err:
+            ret['comment'] = str(err)
+            return ret
+
+        ret['changes'] = cmd_all
+        ret['result'] = not bool(cmd_all['retcode'])
+        ret['comment'] = 'Command "{0}" run'.format(name)
+        if stateful:
+            ret = _reinterpreted_state(ret)
+        if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+            ret['result'] = None
+        return ret
 
     finally:
         if HAS_GRP:
@@ -840,6 +878,14 @@ def script(name,
         regardless, unless ``quiet`` is used for this value.
 
     '''
+    test_name = None
+    if not isinstance(stateful, list):
+        stateful = stateful is True
+    elif isinstance(stateful, list) and 'test_name' in stateful[0]:
+        test_name = stateful[0]['test_name']
+    if __opts__['test'] and test_name:
+        name = test_name
+
     ret = {'name': name,
            'changes': {},
            'result': False,
@@ -900,7 +946,7 @@ def script(name,
             ret.update(cret)
             return ret
 
-        if __opts__['test']:
+        if __opts__['test'] and not test_name:
             ret['result'] = None
             ret['comment'] = 'Command {0!r} would have been ' \
                              'executed'.format(name)
@@ -923,7 +969,11 @@ def script(name,
                              '{1!r}'.format(source, __env__)
         else:
             ret['comment'] = 'Command {0!r} run'.format(name)
-        return _reinterpreted_state(ret) if stateful else ret
+        if stateful:
+            ret = _reinterpreted_state(ret)
+        if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+            ret['result'] = None
+        return ret
 
     finally:
         if HAS_GRP:

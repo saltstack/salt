@@ -481,6 +481,15 @@ def _elb_present(
             ret['comment'] = 'Failed to create {0} ELB.'.format(name)
     else:
         ret['comment'] = 'ELB {0} present.'.format(name)
+        _ret = _security_groups_present(
+            name, security_groups, region, key, keyid, profile
+        )
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
         _ret = _listeners_present(name, _listeners, region, key, keyid,
                                   profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -563,6 +572,48 @@ def _listeners_present(
         lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid,
                                                  profile)
         ret['changes']['new'] = {'listeners': lb['listeners']}
+    return ret
+
+
+def _security_groups_present(
+        name,
+        security_groups,
+        region,
+        key,
+        keyid,
+        profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+    if not lb:
+        msg = '{0} ELB configuration could not be retrieved.'.format(name)
+        ret['comment'] = msg
+        ret['result'] = False
+        return ret
+    if not security_groups:
+        security_groups = []
+    change_needed = False
+    if set(security_groups) != set(lb['security_groups']):
+        change_needed = True
+    if change_needed:
+        if __opts__['test']:
+            msg = 'ELB {0} set to have security groups modified.'.format(name)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        changed = __salt__['boto_elb.apply_security_groups'](
+            name, security_groups, region, key, keyid, profile
+        )
+        if changed:
+            msg = 'Modified security_groups on {0} ELB.'.format(name)
+            ret['comment'] = msg
+        else:
+            msg = 'Failed to modify security_groups on {0} ELB.'.format(name)
+            ret['comment'] = msg
+            ret['result'] = False
+        ret['changes']['old'] = {'security_groups': lb['security_groups']}
+        ret['changes']['new'] = {'security_groups': security_groups}
+    else:
+        ret['comment'] = 'security_groups already set on ELB {0}.'.format(name)
     return ret
 
 
