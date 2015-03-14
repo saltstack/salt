@@ -703,9 +703,9 @@ def start(name, call=None):
 
     conn = get_conn()
     instance = conn.get_vm_by_name(name)
-    if instance.get_status() == 'POWERED ON':
+    if instance.is_powered_on():
         ret = 'already powered on'
-        log.error('VM {0} {1}'.format(name, ret))
+        log.info('VM {0} {1}'.format(name, ret))
         return ret
     try:
         log.info('Starting VM {0}'.format(name))
@@ -733,9 +733,9 @@ def stop(name, call=None):
 
     conn = get_conn()
     instance = conn.get_vm_by_name(name)
-    if instance.get_status() == 'POWERED OFF':
+    if instance.is_powered_off():
         ret = 'already powered off'
-        log.error('VM {0} {1}'.format(name, ret))
+        log.info('VM {0} {1}'.format(name, ret))
         return ret
     try:
         log.info('Stopping VM {0}'.format(name))
