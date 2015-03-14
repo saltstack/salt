@@ -688,7 +688,7 @@ def list_folders(kwargs=None, call=None):  # pylint: disable=W0613
 
 def start(name, call=None):
     '''
-    To start/power on a VM.
+    To start/power on a VM using it\'s name
 
     CLI Example:
 
@@ -718,7 +718,7 @@ def start(name, call=None):
 
 def stop(name, call=None):
     '''
-    To stop/power off a VM.
+    To stop/power off a VM using it\'s name
 
     CLI Example:
 
