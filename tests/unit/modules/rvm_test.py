@@ -3,7 +3,7 @@
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 ensure_in_syspath('../../')
 
 
@@ -28,15 +28,25 @@ class TestRvmModule(TestCase):
             )
 
     def test__rvm_do(self):
-        mock = MagicMock(return_value=None)
-        with patch.object(rvm, '_rvm', new=mock):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout'})
+        with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm._rvm_do('1.9.3', 'gemset list')
-            mock.assert_called_once_with('1.9.3 do gemset list', runas=None, cwd=None)
+            mock.assert_called_once_with('/usr/local/rvm/bin/rvm 1.9.3 do gemset list', runas=None, cwd=None)
 
     def test_install(self):
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm.install()
+            mock.assert_called_once_with('curl -Ls https://raw.githubusercontent.com/wayneeseguin/rvm/master/binscripts/rvm-installer | bash -s stable', runas=None, python_shell=True)
+
+    def test_install_ruby_nonroot(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout'})
+        expected = [
+            call('/usr/local/rvm/bin/rvm autolibs disable 2.0.0', runas='rvm', cwd=None),
+            call('/usr/local/rvm/bin/rvm install --disable-binary 2.0.0', runas='rvm', cwd=None)]
+        with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
+            rvm.install_ruby('2.0.0', runas='rvm')
+            self.assertEqual(mock.call_args_list, expected)
 
     def test_list(self):
         list_output = '''
