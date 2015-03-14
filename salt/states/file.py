@@ -235,6 +235,7 @@ A more complex ``recurse`` example:
 
 # Import python libs
 import difflib
+import itertools
 import json
 import logging
 import os
@@ -378,34 +379,23 @@ def _clean_dir(root, keep, exclude_pat):
                 if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\'])]:
                     break
 
-    for roots, dirs, files in os.walk(root):
-        for name in dirs:
-            nfn = os.path.join(roots, name)
-            if os.path.islink(nfn):
-                # the "directory" is in fact a symlink and cannot be
-                # removed by shutil.rmtree
-                files.append(nfn)
+    def _delete_not_kept(nfn):
+        if nfn not in real_keep:
+            # -- check if this is a part of exclude_pat(only). No need to
+            # check include_pat
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(root, nfn), None, exclude_pat):
                 continue
-            if nfn not in real_keep:
-                # -- check if this is a part of exclude_pat(only). No need to
-                # check include_pat
-                if not salt.utils.check_include_exclude(
-                        os.path.relpath(root, nfn), None, exclude_pat):
-                    continue
-                removed.add(nfn)
-                if not __opts__['test']:
-                    shutil.rmtree(nfn)
-        for name in files:
-            nfn = os.path.join(roots, name)
-            if nfn not in real_keep:
-                # -- check if this is a part of exclude_pat(only). No need to
-                # check include_pat
-                if not salt.utils.check_include_exclude(
-                        os.path.relpath(root, nfn), None, exclude_pat):
-                    continue
-                removed.add(nfn)
-                if not __opts__['test']:
+            removed.add(nfn)
+            if not __opts__['test']:
+                try:
                     os.remove(nfn)
+                except OSError:
+                    shutil.rmtree(nfn)
+
+    for roots, dirs, files in os.walk(root):
+        for name in itertools.chain(dirs, files):
+            _delete_not_kept(os.path.join(roots, name))
     return list(removed)
 
 
