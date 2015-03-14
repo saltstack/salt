@@ -446,18 +446,14 @@ class AsyncClientMixin(object):
         if suffix in ('new',):
             return
 
-        outputter = self.opts.get('output', event.get('outputter', None))
-        # if this is a ret, we have our own set of rules
-        if suffix == 'ret':
-            # Check if ouputter was passed in the return data. If this is the case,
-            # then the return data will be a dict two keys: 'data' and 'outputter'
-            if isinstance(event.get('return'), dict) \
-                    and set(event['return']) == set(('data', 'outputter')):
-                event_data = event['return']['data']
-                outputter = event['return']['outputter']
-            else:
-                event_data = event['return']
+        # Check if ouputter was passed in the return data. If this is the case,
+        # then the return data will be a dict two keys: 'data' and 'outputter'
+        if isinstance(event.get('return'), dict) \
+                and set(event['return']) == set(('data', 'outputter')):
+            event_data = event['return']['data']
+            outputter = event['return']['outputter']
         else:
-            event_data = {'suffix': suffix, 'event': event}
+            event_data = event['return']
+            outputter = None
 
         salt.output.display_output(event_data, outputter, self.opts)

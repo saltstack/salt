@@ -41,6 +41,7 @@ import salt.wheel
 import salt.minion
 import salt.search
 import salt.key
+import salt.acl
 import salt.engines
 import salt.fileserver
 import salt.daemons.masterapi
@@ -57,9 +58,7 @@ import salt.utils.zeromq
 import salt.utils.jid
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import FileserverConfigError
-from salt.utils.debug import (
-    enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
-)
+from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
@@ -1494,10 +1493,12 @@ class ClearFuncs(object):
     # _auth
     def __init__(self, opts, key, master_key, crypticle):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.key = key
         self.master_key = master_key
         self.crypticle = crypticle
+
+        # Create the serializer
+        self.serial = salt.payload.Serial(opts)
         # Create the event manager
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         # Make a client
@@ -1513,7 +1514,9 @@ class ClearFuncs(object):
             rend=False)
         # Make a wheel object
         self.wheel_ = salt.wheel.Wheel(opts)
+        # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
+        # Make an auto_key
         self.auto_key = salt.daemons.masterapi.AutoKey(opts)
 
         # only create a con_cache-client if the con_cache is active
@@ -2114,28 +2117,10 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
 
-        # check blacklist/whitelist
-        good = True
-        # Check if the user is blacklisted
-        for user_re in self.opts['client_acl_blacklist'].get('users', []):
-            if re.match(user_re, clear_load['user']):
-                good = False
-                break
+        client_acl = salt.acl.ClientACL(self.opts['client_acl_blacklist'])
 
-        # check if the cmd is blacklisted
-        for module_re in self.opts['client_acl_blacklist'].get('modules', []):
-            # if this is a regular command, its a single function
-            if isinstance(clear_load['fun'], str):
-                funs_to_check = [clear_load['fun']]
-            # if this a compound function
-            else:
-                funs_to_check = clear_load['fun']
-            for fun in funs_to_check:
-                if re.match(module_re, fun):
-                    good = False
-                    break
-
-        if good is False:
+        if client_acl.user_is_blacklisted(clear_load['user']) or \
+                client_acl.cmd_is_blacklisted(clear_load['fun']):
             log.error(
                 '{user} does not have permissions to run {function}. Please '
                 'contact your local administrator if you believe this is in '
@@ -2145,8 +2130,6 @@ class ClearFuncs(object):
                 )
             )
             return ''
-        # to make sure we don't step on anyone else's toes
-        del good
 
         # Check for external auth calls
         if extra.get('token', False):
@@ -2160,10 +2143,7 @@ class ClearFuncs(object):
                     )
                 )
                 return ''
-            if not token:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
-            if token['eauth'] not in self.opts['external_auth']:
+            if not token or token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
             if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
@@ -2277,7 +2257,8 @@ class ClearFuncs(object):
             clear_load['user'] = name
         # Verify that the caller has root on master
         elif 'user' in clear_load:
-            if clear_load['user'].startswith('sudo_'):
+            auth_user = salt.auth.AuthUser(clear_load['user'])
+            if auth_user.is_sudo():
                 # If someone sudos check to make sure there is no ACL's around their username
                 if clear_load.get('key', 'invalid') == self.key.get('root'):
                     clear_load.pop('key')
@@ -2300,19 +2281,13 @@ class ClearFuncs(object):
                                 'occurred.'
                             )
                             return ''
-            elif clear_load['user'] == self.opts.get('user', 'root'):
+            elif clear_load['user'] == self.opts.get('user', 'root') or clear_load['user'] == 'root':
                 if clear_load.pop('key') != self.key[self.opts.get('user', 'root')]:
                     log.warning(
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-            elif clear_load['user'] == 'root':
-                if clear_load.pop('key') != self.key.get(self.opts.get('user', 'root')):
-                    log.warning(
-                        'Authentication failure of type "user" occurred.'
-                    )
-                    return ''
-            elif clear_load['user'] == salt.utils.get_user():
+            elif auth_user.is_running_user():
                 if clear_load.pop('key') != self.key.get(clear_load['user']):
                     log.warning(
                         'Authentication failure of type "user" occurred.'
@@ -2355,6 +2330,7 @@ class ClearFuncs(object):
                     'Authentication failure of type "other" occurred.'
                 )
                 return ''
+        # FIXME Needs additional refactoring
         # Retrieve the minions list
         delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
         minions = self.ckminions.check_minions(
@@ -2374,7 +2350,6 @@ class ClearFuncs(object):
                         'minions': minions
                     }
                 }
-
         jid = self._prep_jid(clear_load, extra)
         if jid is None:
             return {}
@@ -2419,6 +2394,21 @@ class ClearFuncs(object):
             )
         pub_sock.connect(pull_uri)
 
+        pub_sock.send(self.serial.dumps(load))
+        # TODO Check return from send()?
+
+    def _prep_pub(self, minions, jid, clear_load, extra):
+        '''
+        Take a given load and perform the necessary steps
+        to prepare a publication.
+
+        TODO: This is really only bound by temporal cohesion
+        and thus should be refactored even further.
+        '''
+        clear_load['jid'] = jid
+        delimiter = clear_load.get('kwargs', {}).get('delimiter', DEFAULT_TARGET_DELIM)
+
+        # TODO Error reporting over the master event bus
         self.event.fire_event({'minions': minions}, clear_load['jid'])
 
         new_job_load = {
@@ -2467,7 +2457,6 @@ class ClearFuncs(object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-
         # Set up the payload
         payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here

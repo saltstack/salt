@@ -8,50 +8,55 @@ Management of the windows update agent
 Set windows updates to run by category. Default behavior is to install
 all updates that do not require user interaction to complete.
 
-Optionally set ``category`` to a category of your choosing to only
-install certain updates. default is all available updates.
+Optionally set ``category`` to a category of your choice to only
+install certain updates. Default is to set to install all available updates.
 
-In the example below, will install all Security and Critical Updates,
+The following example will install all Security and Critical Updates,
 and download but not install standard updates.
-
-Example:
 
 .. code-block:: yaml
 
     updates:
-        win_update.installed:
-            - categories:
-                - 'Critical Updates'
-                - 'Security Updates'
-        win_update.downloaded:
-            - categories:
-                - 'Updates'
+      win_update.installed:
+        - categories:
+          - 'Critical Updates'
+          - 'Security Updates'
+      win_update.downloaded:
+        - categories:
+          - 'Updates'
 
 You can also specify a number of features about the update to have a
 fine grain approach to specific types of updates. These are the following
 features/states of updates available for configuring:
 
-* **UI** - User interaction required, skipped by default
-* **downloaded** - Already downloaded, skipped by default (downloading)
-* **present** - Present on computer, included by default (installing)
-* **installed** - Already installed, skipped by default
-* **reboot** - Reboot required, included by default
-* **hidden** - skip those updates that have been hidden.
-* **software** - Software updates, included by default
-* **driver** - driver updates, skipped by default
+.. code-block:: text
 
-This example installs all driver updates that don't require a reboot:
-Example:
+    'UI' - User interaction required, skipped by default
+    'downloaded' - Already downloaded, skipped by default (downloading)
+    'present' - Present on computer, included by default (installing)
+    'installed' - Already installed, skipped by default
+    'reboot' - Reboot required, included by default
+    'hidden' - skip those updates that have been hidden.
+    'software' - Software updates, included by default
+    'driver' - driver updates, skipped by default
+
+The following example installs all driver updates that don't require a reboot:
 
 .. code-block:: yaml
 
     gryffindor:
-        win_update.installed:
-            - includes:
-                - driver: True
-                - software: False
-                - reboot: False
+      win_update.install:
+        - includes:
+          - driver: True
+          - software: False
+          - reboot: False
 
+To just update your windows machine, add this your sls:
+
+.. code-block:: yaml
+
+    updates:
+      win_update.installed
 '''
 
 # Import Python libs
@@ -399,34 +404,36 @@ def installed(name, categories=None, includes=None, retries=10):
     '''
     Install specified windows updates.
 
-    name
-        If ``categories`` is left empty, it will be assumed that you are
-        passing the category option through the name. These are separate
-        because you can only have one name, but can have multiple categories.
+    name:
+        if categories is left empty, it will be assumed that you are passing the category option
+        through the name. These are separate because you can only have one name, but can have
+        multiple categories.
 
-    categories
-        The list of categories to be downloaded. These are simply strings in
-        the update's information, so there is no enumeration of the categories
-        available. Known categories include:
+    categories:
+        the list of categories to be downloaded. These are simply strings in the update's
+        information, so there is no enumeration of the categories available. Some known categories:
 
-        * Updates
-        * Windows 7
-        * Critical Updates
-        * Security Updates
-        * Update Rollups
+        .. code-block:: text
 
-    includes
-        A list of features of the updates to cull by. Available features
-        include:
+            Updates
+            Windows 7
+            Critical Updates
+            Security Updates
+            Update Rollups
 
-        * **UI** - User interaction required, skipped by default
-        * **downloaded** - Already downloaded, skipped by default (downloading)
-        * **present** - Present on computer, included by default (installing)
-        * **installed** - Already installed, skipped by default
-        * **reboot** - Reboot required, included by default
-        * **hidden** - Kkip those updates that have been hidden.
-        * **software** - Software updates, included by default
-        * **driver** - Driver updates, skipped by default
+    includes:
+        a list of features of the updates to cull by. Available features:
+
+        .. code-block:: text
+
+            'UI' - User interaction required, skipped by default
+            'downloaded' - Already downloaded, skipped by default (downloading)
+            'present' - Present on computer, included by default (installing)
+            'installed' - Already installed, skipped by default
+            'reboot' - Reboot required, included by default
+            'hidden' - skip those updates that have been hidden.
+            'software' - Software updates, included by default
+            'driver' - driver updates, skipped by default
 
     retries
         Number of retries to make before giving up. This is total, not per
@@ -475,34 +482,36 @@ def downloaded(name, categories=None, includes=None, retries=10):
     '''
     Cache updates for later install.
 
-    name
-        If ``categories`` is left empty, it will be assumed that you are
-        passing the category option through the name. These are separate
-        because you can only have one name, but can have multiple categories.
+    name:
+        if categories is left empty, it will be assumed that you are passing the category option
+        through the name. These are separate because you can only have one name, but can have
+        multiple categories.
 
-    categories
-        The list of categories to be downloaded. These are simply strings in
-        the update's information, so there is no enumeration of the categories
-        available. Known categories include:
+    categories:
+        the list of categories to be downloaded. These are simply strings in the update's
+        information, so there is no enumeration of the categories available. Some known categories:
 
-        * Updates
-        * Windows 7
-        * Critical Updates
-        * Security Updates
-        * Update Rollups
+        .. code-block:: text
 
-    includes
-        A list of features of the updates to cull by. Available features
-        include:
+            Updates
+            Windows 7
+            Critical Updates
+            Security Updates
+            Update Rollups
 
-        * **UI** - User interaction required, skipped by default
-        * **downloaded** - Already downloaded, skipped by default (downloading)
-        * **present** - Present on computer, included by default (installing)
-        * **installed** - Already installed, skipped by default
-        * **reboot** - Reboot required, included by default
-        * **hidden** - Kkip those updates that have been hidden.
-        * **software** - Software updates, included by default
-        * **driver** - Driver updates, skipped by default
+    includes:
+        a list of features of the updates to cull by. Available features:
+
+        .. code-block:: text
+
+            'UI' - User interaction required, skipped by default
+            'downloaded' - Already downloaded, skipped by default (downloading)
+            'present' - Present on computer, included by default (installing)
+            'installed' - Already installed, skipped by default
+            'reboot' - Reboot required, included by default
+            'hidden' - skip those updates that have been hidden.
+            'software' - Software updates, included by default
+            'driver' - driver updates, skipped by default
 
     retries
         Number of retries to make before giving up. This is total, not per

@@ -40,12 +40,12 @@ import copy
 import logging
 import pprint
 import time
-import inspect
 
 # Import salt libs
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+import salt.ext.six as six
 
 # Import 3rd-party libs
 import yaml
@@ -170,23 +170,10 @@ def avail_images(conn=None, call=None):
         conn = get_conn()
 
     ret = {}
-    images = conn.list_os_images()
-    for image in images:
-        ret[image.name] = {
-            'category': image.category,
-            'description': image.description.encode('ascii', 'replace'),
-            'eula': image.eula,
-            'label': image.label,
-            'logical_size_in_gb': image.logical_size_in_gb,
-            'name': image.name,
-            'os': image.os,
-        }
-        if hasattr(image, 'affinity_group'):
-            ret[image.name]['affinity_group'] = image.affinity_group
-        if hasattr(image, 'location'):
-            ret[image.name]['location'] = image.location
-        if hasattr(image, 'media_link'):
-            ret[image.name]['media_link'] = image.media_link
+    for item in conn.list_os_images():
+        ret[item.name] = object_to_dict(item)
+    for item in conn.list_vm_images():
+        ret[item.name] = object_to_dict(item)
     return ret
 
 
@@ -398,37 +385,6 @@ def show_instance(name, call=None):
         return {}
     salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
     return nodes[name]
-
-
-def show_service(kwargs=None, conn=None, call=None):
-    '''
-    Show the details from the provider concerning an instance
-    '''
-    if call != 'function':
-        raise SaltCloudSystemExit(
-            'The show_service function must be called with -f or --function.'
-        )
-
-    if not conn:
-        conn = get_conn()
-
-    services = conn.list_hosted_services()
-    for service in services:
-        if kwargs['service_name'] != service.service_name:
-            continue
-        props = service.hosted_service_properties
-        ret = {
-            'affinity_group': props.affinity_group,
-            'date_created': props.date_created,
-            'date_last_modified': props.date_last_modified,
-            'description': props.description,
-            'extended_properties': props.extended_properties,
-            'label': props.label,
-            'location': props.location,
-            'status': props.status,
-        }
-        return ret
-    return None
 
 
 def create(vm_):
@@ -1047,6 +1003,8 @@ def list_storage_services(conn=None, call=None):
 
 def get_operation_status(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: 2015.2
+
     Get Operation Status, based on a request ID
 
     CLI Example::
@@ -1079,8 +1037,371 @@ def get_operation_status(kwargs=None, conn=None, call=None):
     return ret
 
 
+def list_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List storage accounts associated with the account
+
+    CLI Example::
+
+        salt-cloud -f list_storage my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_storage_accounts()
+    pprint.pprint(dir(data))
+    ret = {}
+    for item in data.storage_services:
+        ret[item.service_name] = object_to_dict(item)
+    return ret
+
+
+def show_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List storage service properties
+
+    CLI Example::
+
+        salt-cloud -f show_storage my-azure name=my_storage
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    data = conn.get_storage_account_properties(
+        kwargs['name'],
+    )
+    return object_to_dict(data)
+
+
+# To reflect the Azure API
+get_storage = show_storage
+
+
+def show_storage_keys(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show storage account keys
+
+    CLI Example::
+
+        salt-cloud -f show_storage_keys my-azure name=my_storage
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage_keys function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    try:
+        data = conn.get_storage_account_keys(
+            kwargs['name'],
+        )
+    except WindowsAzureMissingResourceError as exc:
+        storage_data = show_storage(kwargs={'name': kwargs['name']}, call='function')
+        if storage_data['storage_service_properties']['status'] == 'Creating':
+            return {'Error': 'The storage account keys have not yet been created'}
+        else:
+            return {'Error': exc.message}
+    return object_to_dict(data)
+
+
+# To reflect the Azure API
+get_storage_keys = show_storage_keys
+
+
+def create_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Create a new storage account
+
+    CLI Example::
+
+        salt-cloud -f create_storage my-azure name=my_storage label=my_storage location='West US'
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'description' not in kwargs:
+        raise SaltCloudSystemExit('A description must be specified as "description"')
+
+    if 'label' not in kwargs:
+        raise SaltCloudSystemExit('A label must be specified as "label"')
+
+    if 'location' not in kwargs and 'affinity_group' not in kwargs:
+        raise SaltCloudSystemExit('Either a location or an affinity_group '
+                                  'must be specified (but not both)')
+
+    try:
+        data = conn.create_storage_account(
+            service_name=kwargs['name'],
+            label=kwargs['label'],
+            description=kwargs.get('description', None),
+            location=kwargs.get('location', None),
+            affinity_group=kwargs.get('affinity_group', None),
+            extended_properties=kwargs.get('extended_properties', None),
+            geo_replication_enabled=kwargs.get('geo_replication_enabled', None),
+            account_type=kwargs.get('account_type', 'Standard_GRS'),
+        )
+        return {'Success': 'The storage account was successfully created'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the storage account already exists.'}
+
+
+def update_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Update a storage account's properties
+
+    CLI Example::
+
+        salt-cloud -f update_storage my-azure name=my_storage label=my_storage
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    data = conn.update_storage_account(
+        service_name=kwargs['name'],
+        label=kwargs.get('label', None),
+        description=kwargs.get('description', None),
+        extended_properties=kwargs.get('extended_properties', None),
+        geo_replication_enabled=kwargs.get('geo_replication_enabled', None),
+        account_type=kwargs.get('account_type', 'Standard_GRS'),
+    )
+    return show_storage(kwargs={'name': kwargs['name']}, call='function')
+
+
+def regenerate_storage_keys(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Create a new storage account
+
+    CLI Example::
+
+        salt-cloud -f regenerate_storage_keys my-azure name=my_storage key_type=primary
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'key_type' not in kwargs or kwargs['key_type'] not in ('primary', 'secondary'):
+        raise SaltCloudSystemExit('A key_type must be specified ("primary" or "secondary")')
+
+    try:
+        data = conn.regenerate_storage_account_keys(
+            service_name=kwargs['name'],
+            key_type=kwargs['key_type'],
+        )
+        return show_storage_keys(kwargs={'name': kwargs['name']}, call='function')
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the storage account already exists.'}
+
+
+def delete_storage(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific storage account
+
+    CLI Examples::
+
+        salt-cloud -f delete_storage my-azure name=my_storage
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_storage function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_storage_account(kwargs['name'])
+        return {'Success': 'The storage account was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
+
+
+def list_services(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List hosted services associated with the account
+
+    CLI Example::
+
+        salt-cloud -f list_services my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_services function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_hosted_services()
+    ret = {}
+    for item in data.hosted_services:
+        ret[item.service_name] = object_to_dict(item)
+        ret[item.service_name]['name'] = item.service_name
+    return ret
+
+
+def show_service(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List hosted service properties
+
+    CLI Example::
+
+        salt-cloud -f show_service my-azure name=my_service
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_service function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    data = conn.get_hosted_service_properties(
+        kwargs['name'],
+        kwargs.get('details', False)
+    )
+    ret = object_to_dict(data)
+    return ret
+
+
+def create_service(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Create a new hosted service
+
+    CLI Example::
+
+        salt-cloud -f create_service my-azure name=my_service label=my_service location='West US'
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_service function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'label' not in kwargs:
+        raise SaltCloudSystemExit('A label must be specified as "label"')
+
+    if 'location' not in kwargs and 'affinity_group' not in kwargs:
+        raise SaltCloudSystemExit('Either a location or an affinity_group '
+                                  'must be specified (but not both)')
+
+    try:
+        data = conn.create_hosted_service(
+            kwargs['name'],
+            kwargs['label'],
+            kwargs.get('description', None),
+            kwargs.get('location', None),
+            kwargs.get('affinity_group', None),
+            kwargs.get('extended_properties', None),
+        )
+        return {'Success': 'The service was successfully created'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the service already exists.'}
+
+
+def delete_service(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific service associated with the account
+
+    CLI Examples::
+
+        salt-cloud -f delete_service my-azure name=my_service
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_service function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_hosted_service(kwargs['name'])
+        return {'Success': 'The service was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
+
+
 def list_disks(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     List disks associated with the account
 
     CLI Example::
@@ -1097,18 +1418,20 @@ def list_disks(kwargs=None, conn=None, call=None):
 
     data = conn.list_disks()
     ret = {}
-    for image in data.disks:
-        ret[image.name] = object_to_dict(image)
+    for item in data.disks:
+        ret[item.name] = object_to_dict(item)
     return ret
 
 
-def get_disk(kwargs=None, conn=None, call=None):
+def show_disk(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     Return information about a disk
 
     CLI Example::
 
-        salt-cloud -f list_disks my-azure
+        salt-cloud -f show_disk my-azure name=my_disk
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1125,12 +1448,14 @@ def get_disk(kwargs=None, conn=None, call=None):
     return object_to_dict(data)
 
 
-# For consistency with other providers
-show_disk = get_disk
+# For consistency with Azure SDK
+get_disk = show_disk
 
 
 def delete_disk(kwargs=None, conn=None, call=None):
     '''
+    .. versionadded:: Beryllium
+
     Delete a specific disk associated with the account
 
     CLI Examples::
@@ -1153,20 +1478,340 @@ def delete_disk(kwargs=None, conn=None, call=None):
         data = conn.delete_disk(kwargs['name'], kwargs.get('delete_vhd', False))
         return {'Success': 'The disk was successfully deleted'}
     except WindowsAzureMissingResourceError as exc:
-        pprint.pprint(dir(exc))
+        return {'Error': exc.message}
+
+
+def update_disk(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Update a disk's properties
+
+    CLI Example::
+
+        salt-cloud -f update_disk my-azure name=my_disk label=my_disk
+        salt-cloud -f update_disk my-azure name=my_disk new_name=another_disk
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_disk function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    old_data = show_disk(kwargs={'name': kwargs['name']}, call='function')
+    data = conn.update_disk(
+        disk_name=kwargs['name'],
+        has_operating_system=kwargs.get('has_operating_system', old_data['has_operating_system']),
+        label=kwargs.get('label', old_data['label']),
+        media_link=kwargs.get('media_link', old_data['media_link']),
+        name=kwargs.get('new_name', old_data['name']),
+        os=kwargs.get('os', old_data['os']),
+    )
+    return show_disk(kwargs={'name': kwargs['name']}, call='function')
+
+
+def list_service_certificates(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List certificates associated with the service
+
+    CLI Example::
+
+        salt-cloud -f list_service_certificates my-azure name=my_service
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_service_certificates function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A service name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_service_certificates(service_name=kwargs['name'])
+    ret = {}
+    for item in data.certificates:
+        ret[item.thumbprint] = object_to_dict(item)
+    return ret
+
+
+def show_service_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Return information about a service certificate
+
+    CLI Example::
+
+        salt-cloud -f show_service_certificate my-azure name=my_service_certificate \
+            thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_service_certificate function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A service name must be specified as "name"')
+
+    if 'thumbalgorithm' not in kwargs:
+        raise SaltCloudSystemExit('A thumbalgorithm must be specified as "thumbalgorithm"')
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    data = conn.get_service_certificate(
+        kwargs['name'],
+        kwargs['thumbalgorithm'],
+        kwargs['thumbprint'],
+    )
+    return object_to_dict(data)
+
+
+# For consistency with Azure SDK
+get_service_certificate = show_service_certificate
+
+
+def add_service_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Add a new service certificate
+
+    CLI Example::
+
+        salt-cloud -f add_service_certificate my-azure name=my_service_certificate \
+            data='...CERT_DATA...' certificate_format=sha1 password=verybadpass
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The add_service_certificate function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'data' not in kwargs:
+        raise SaltCloudSystemExit('Certificate data must be specified as "data"')
+
+    if 'certificate_format' not in kwargs:
+        raise SaltCloudSystemExit('A certificate_format must be specified as "certificate_format"')
+
+    if 'password' not in kwargs:
+        raise SaltCloudSystemExit('A password must be specified as "password"')
+
+    try:
+        data = conn.add_service_certificate(
+            kwargs['name'],
+            kwargs['data'],
+            kwargs['certificate_format'],
+            kwargs['password'],
+        )
+        return {'Success': 'The service certificate was successfully added'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the service certificate already exists.'}
+
+
+def delete_service_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific certificate associated with the service
+
+    CLI Examples::
+
+        salt-cloud -f delete_service_certificate my-azure name=my_service_certificate \
+            thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_service_certificate function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'thumbalgorithm' not in kwargs:
+        raise SaltCloudSystemExit('A thumbalgorithm must be specified as "thumbalgorithm"')
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_service_certificate(
+            kwargs['name'],
+            kwargs['thumbalgorithm'],
+            kwargs['thumbprint'],
+        )
+        return {'Success': 'The service certificate was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
+
+
+def list_management_certificates(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List management certificates associated with the subscription
+
+    CLI Example::
+
+        salt-cloud -f list_management_certificates my-azure name=my_management
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_management_certificates function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_management_certificates()
+    ret = {}
+    for item in data.subscription_certificates:
+        ret[item.subscription_certificate_thumbprint] = object_to_dict(item)
+    return ret
+
+
+def show_management_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Return information about a management_certificate
+
+    CLI Example::
+
+        salt-cloud -f get_management_certificate my-azure name=my_management_certificate \
+            thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_management_certificate function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    data = conn.get_management_certificate(kwargs['thumbprint'])
+    return object_to_dict(data)
+
+
+# For consistency with Azure SDK
+get_management_certificate = show_management_certificate
+
+
+def add_management_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Add a new management certificate
+
+    CLI Example::
+
+        salt-cloud -f add_management_certificate my-azure public_key='...PUBKEY...' \
+            thumbprint=0123456789ABCDEF data='...CERT_DATA...'
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The add_management_certificate function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'public_key' not in kwargs:
+        raise SaltCloudSystemExit('A public_key must be specified as "public_key"')
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    if 'data' not in kwargs:
+        raise SaltCloudSystemExit('Certificate data must be specified as "data"')
+
+    try:
+        data = conn.add_management_certificate(
+            kwargs['name'],
+            kwargs['thumbprint'],
+            kwargs['data'],
+        )
+        return {'Success': 'The management certificate was successfully added'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the management certificate already exists.'}
+
+
+def delete_management_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific certificate associated with the management
+
+    CLI Examples::
+
+        salt-cloud -f delete_management_certificate my-azure name=my_management_certificate \
+            thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_management_certificate function must be called with -f or --function.'
+        )
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_management_certificate(kwargs['thumbprint'])
+        return {'Success': 'The management certificate was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
         return {'Error': exc.message}
 
 
 def object_to_dict(obj):
     '''
+    .. versionadded:: Beryllium
+
     Convert an object to a dictionary
     '''
-    ret = {}
-    for item in dir(obj):
-        if item.startswith('__'):
-            continue
-        if inspect.isclass(obj.__dict__[item]):
-            ret[item] = object_to_dict(obj.__dict__[item])
-        else:
-            ret[item] = obj.__dict__[item]
+    if isinstance(obj, list):
+        ret = []
+        for item in obj:
+            ret.append(obj.__dict__[item])
+    elif isinstance(obj, six.text_type):
+        ret = obj.encode('ascii', 'replace'),
+    elif isinstance(obj, six.string_types):
+        ret = obj
+    else:
+        ret = {}
+        for item in dir(obj):
+            if item.startswith('__'):
+                continue
+            # This is ugly, but inspect.isclass() doesn't seem to work
+            if 'class' in str(type(obj.__dict__[item])):
+                ret[item] = object_to_dict(obj.__dict__[item])
+            elif isinstance(obj.__dict__[item], six.text_type):
+                ret[item] = obj.__dict__[item].encode('ascii', 'replace'),
+            else:
+                ret[item] = obj.__dict__[item]
     return ret

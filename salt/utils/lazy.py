@@ -16,11 +16,16 @@ def verify_fun(lazy_obj, fun):
     if not fun:
         raise salt.exceptions.SaltInvocationError(
             'Must specify a function to run!\n'
-            'ex: manage.up'
+            'ex: salt-run manage.up'
         )
     if fun not in lazy_obj:
-        # If the requested function isn't available, lets say why
-        raise salt.exceptions.CommandExecutionError(lazy_obj.missing_fun_string(fun))
+        try:
+            lazy_obj[fun]
+        except KeyError:
+            # Runner function not found in the LazyLoader object
+            raise salt.exceptions.CommandExecutionError(
+                '\'{0}\' is not available'.format(fun)
+            )
 
 
 class LazyDict(collections.MutableMapping):

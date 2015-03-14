@@ -712,6 +712,21 @@ def ip_in_subnet(ip_addr, cidr):
     return salt.utils.network.ip_in_subnet(ip_addr, cidr)
 
 
+def calculate_subnet(ip_addr, netmask):
+    '''
+    Returns the CIDR of a subnet based on an IP address and network.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.calculate_subnet 172.17.0.5 255.255.255.240
+
+    .. versionadded:: Beryllium
+    '''
+    return salt.utils.network.calculate_subnet(ip_addr, netmask)
+
+
 def ip_addrs(interface=None, include_loopback=False, cidr=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
