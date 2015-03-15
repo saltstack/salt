@@ -1051,7 +1051,7 @@ class Minion(MinionBase):
         '''
         pass
 
-    def _handle_clear(self, load):
+    def _handle_clear(self, load, sig=None):
         '''
         Handle un-encrypted transmissions
         '''
