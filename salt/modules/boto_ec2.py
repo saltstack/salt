@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+'''
+Connection module for Amazon ec2
+
+.. versionadded:: 
+
+:depends: boto
+'''
+
 from __future__ import absolute_import
 
 # Import Python libs
