@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-'''test for pillar git_pillar.py'''
+'''test for pillar git_pillar.py
+
+
+  :codeauthor: :email:`Georges Racinet (gracinet@anybox.fr)`
+
+Based on joint work with Paul Tonelli about hg_pillar integration.
+
+'''
 
 # Import python libs
 from __future__ import absolute_import
@@ -74,12 +81,15 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         return repo
 
     @property
-    def repo_url(self):
-        return 'file://{0}'.format(self.repo_path)
+    def conf_line(self):
+        return 'master file://{0}'.format(self.repo_path)
 
     def test_base(self):
-        'check git repo pillar data is imported correctly'
-        mypillar = git_pillar.ext_pillar('*', None, self.repo_url)
+        'check direct call ``ext_pillar()`` interface'
+        git_pillar.__opts__['environment'] = None
+        mypillar = git_pillar.ext_pillar('myminion',
+                                         self.conf_line,
+                                         {})
         self.assertEqual(PILLAR_CONTENT, mypillar)
 
     def test_from_upper(self):
@@ -88,32 +98,77 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         This test is closer to what happens in real life, and demonstrates
         how ``compile_pillar()`` is called twice.
 
-        GR: this kind of test should become non-necessary, once git_pillar,
-        hg_pillar and the like don't instantiate a pillar object themselves
-        (and risk a loop condition)
+        This kind of test should/would become non-necessary, once git_pillar,
+        all these pillar are called exactly in the same way (git is an
+        exception for now), and don't recurse.
         '''
         git_pillar.__opts__['ext_pillar'] = [
-            dict(git='master {0}'.format(self.repo_url))]
-        pil = Pillar(git_pillar.__opts__, git_pillar.__grains__,
-                     'myminon', 'base')
-        self.assertEqual(PILLAR_CONTENT, pil.compile_pillar())
+            dict(git=self.conf_line)
+        ]
+        pil = Pillar(git_pillar.__opts__,
+                     git_pillar.__grains__,
+                     'myminon', None)
+        self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
 
-    def xtest_loop(self):
-        '''Check whole calling stack from parent Pillar instance
+    def test_no_loop(self):
+        '''Check that the reinstantiation of a pillar object does recurse.
 
-        This test is closer to what happens in real life, and demonstrates
-        how ``compile_pillar()`` is called twice.
+        This test goes in great details of patching that the dedicated
+        utilities might do in a simpler way.
+        Namely, we replace the main ``ext_pillar`` entry function by one
+        that keeps count of its calls.
 
-        GR: this kind of test should become non-necessary, once git_pillar,
-        hg_pillar and the like don't instantiate a pillar object themselves
-        (and risk a loop condition)
+        Otherwise, the fact that the :class:`MaximumRecursion` error is catched
+        can go in the way on the testing.
+
+        On the current code base, this test fails if the two first lines of
+        :func:``git_pillar.ext_pillar`::
+
+            if pillar_dirs is None:
+                return
+
+        are replaced by::
+
+            if pillar_dirs is None:
+                pillar_dirs = {}
+
+        .. note:: the explicit anti-recursion protection does not prevent
+                  looping between two different Git pillars.
+
+        This test will help subsequent refactors, and also as a base for other
+        external pillars of the same kind.
         '''
-        hg_repo2 = os.path.join(self.tmpdir, 'repo_pillar2')
-        hg_repo_url2 = 'file://{0}'.format(hg_repo2)
-        subprocess.check_call(['hg', 'clone', self.hg_repo_path, hg_repo2])
-        hg_pillar.__opts__['ext_pillar'] = [dict(hg=self.hg_repo_url),
-                                            dict(hg=hg_repo_url2),
-                                        ]
-        pil = Pillar(hg_pillar.__opts__, hg_pillar.__grains__,
+        repo2 = os.path.join(self.tmpdir, 'repo_pillar2')
+        conf_line2 = 'master file://{0}'.format(repo2)
+        subprocess.check_call(['git', 'clone', self.repo_path, repo2])
+        git_pillar.__opts__['ext_pillar'] = [
+            dict(git=self.conf_line),
+            dict(git=conf_line2),
+        ]
+
+        pil = Pillar(git_pillar.__opts__,
+                     git_pillar.__grains__,
                      'myminon', 'base')
-        self.assertEqual(PILLAR_CONTENT, pil.compile_pillar())
+
+        orig_ext_pillar = pil.ext_pillars['git']
+        orig_ext_pillar.count = 0
+
+        def ext_pillar_count_calls(minion_id, repo_string, pillar_dirs):
+            orig_ext_pillar.count += 1
+            if orig_ext_pillar.count > 6:
+                # going all the way to an infinite loop is harsh on the
+                # test machine
+                raise RuntimeError("Infinite loop detected")
+            return orig_ext_pillar(minion_id, repo_string, pillar_dirs)
+
+        from salt.loader import LazyLoader
+        orig_getitem = LazyLoader.__getitem__
+
+        def __getitem__(self, key):
+            if key == 'git.ext_pillar':
+                return ext_pillar_count_calls
+            return orig_getitem(self, key)
+        LazyLoader.__getitem__ = __getitem__
+
+        self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
+        self.assertTrue(orig_ext_pillar.count < 7)
