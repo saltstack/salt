@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon ec2
 
-.. versionadded:: 
+.. versionadded::
 
 :depends: boto
 '''
@@ -35,6 +35,13 @@ def __virtual__():
 
 
 def get_key(key_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check to see if a key exists. Returns fingerprint and name if
+    it does and False if it doesn't
+    CLI example::
+
+        salt myminion boto_ec2.get_key mykey
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -51,6 +58,13 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
 
 def create_key(key_name, save_path, region=None, key=None, keyid=None,
                profile=None):
+    '''
+    Creates a key and saves it to a given path.
+    Returns the private key.
+    CLI example::
+
+        salt myminion boto_ec2.create mykey /root/
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -66,6 +80,18 @@ def create_key(key_name, save_path, region=None, key=None, keyid=None,
 
 def import_key(key_name, public_key_material, region=None, key=None,
                keyid=None, profile=None):
+    '''
+    Imports the public key from an RSA key pair that you created with a third-party tool.
+    Supported formats:
+    - OpenSSH public key format (e.g., the format in ~/.ssh/authorized_keys)
+    - Base64 encoded DER format
+    - SSH public key file format as specified in RFC4716
+    - DSA keys are not supported. Make sure your key generator is set up to create RSA keys.
+    Supported lengths: 1024, 2048, and 4096.
+    CLI example::
+
+        salt myminion boto_ec2.import mykey publickey
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -79,6 +105,12 @@ def import_key(key_name, public_key_material, region=None, key=None,
 
 
 def delete_key(key_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a key. Always returns True
+    CLI example::
+
+        salt myminion boto_ec2.delete_key mykey
+    '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
@@ -93,6 +125,20 @@ def delete_key(key_name, region=None, key=None, keyid=None, profile=None):
 
 def get_keys(keynames=None, filters=None, region=None, key=None,
              keyid=None, profile=None):
+    '''
+    Gets all keys or filters them by name and returns a list.
+    keynames (list):: A list of the names of keypairs to retrieve. 
+    If not provided, all key pairs will be returned.
+    filters (dict) :: Optional filters that can be used to limit the 
+    results returned. Filters are provided in the form of a dictionary
+    consisting of filter names as the key and filter values as the
+    value. The set of allowable filter names/values is dependent on
+    the request being performed. Check the EC2 API guide for details.
+    CLI example::
+
+        salt myminion boto_ec2.get_keys 
+    '''
+    
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
