@@ -259,15 +259,16 @@ def _rds_present(name, allocated_storage, storage_type, db_instance_class,
     return ret
 
 
-def create_replica(name, source, db_instance_class=None, port=None,
-                   availability_zone=None,
-                   auto_minor_version_upgrade=None,
+def create_replica(name, source, db_instance_class=None,
+                   availability_zone=None, port=None,
+                   auto_minor_version_upgrade=None, iops=None,
                    option_group_name=None,
                    publicly_accessible=None,
                    tags=None, region=None, key=None, keyid=None,
                    profile=None):
     '''
     Create RDS replica
+
     .. code-block:: yaml
 
     Ensure myrds replica RDS exists:
@@ -280,18 +281,14 @@ def create_replica(name, source, db_instance_class=None, port=None,
            'comment': '',
            'changes': {}
            }
-    source_exists = __salt__['boto_rds.exists'](source, tags, region, key,
-                                                keyid, profile)
-    if not source_exists:
-        ret['result'] = False
-        ret['comment'] = 'RDS source {0} does not exist.'.format(source)
-    replica_exists = __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile)
+    replica_exists = __salt__['boto_rds.exists'](name, tags, region, key,
+                                                 keyid, profile)
     if not replica_exists:
         created = __salt__['boto_rds.create_read_replica'](name, source,
-                                                           db_instance_class, port,
-                                                           availability_zone,
+                                                           db_instance_class,
+                                                           availability_zone, port,
                                                            auto_minor_version_upgrade,
-                                                           option_group_name,
+                                                           iops, option_group_name,
                                                            publicly_accessible,
                                                            tags, region, key,
                                                            keyid, profile)
@@ -305,8 +302,6 @@ def create_replica(name, source, db_instance_class=None, port=None,
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to create RDS replica {0}.'.format(name)
-    ret['result'] = True
-    ret['comment'] = 'RDS replica {0} exists.'.format(name)
     return ret
 
 
