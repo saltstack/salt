@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 # Import Python libs
 import logging
 from salt.ext.six import string_types
-from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def create_key(key_name, save_path, region=None, key=None, keyid=None, 
+def create_key(key_name, save_path, region=None, key=None, keyid=None,
                profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
@@ -94,7 +94,7 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
         key_values = []
         if keys:
             for key in keys:
-               key_values.append(key.name)
+                key_values.append(key.name)
         return key_values
     except boto.exception.BotoServerError as e:
         log.debug(e)
