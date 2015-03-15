@@ -251,8 +251,9 @@ def create(name, allocated_storage, storage_type, db_instance_class, engine,
         return False
 
 
-def create_read_replica(name, source_name, db_instance_class=None, port=None,
-                        availability_zone=None, auto_minor_version_upgrade=None,
+def create_read_replica(name, source_name, db_instance_class=None,
+                        availability_zone=None, port=None,
+                        auto_minor_version_upgrade=None, iops=None,
                         option_group_name=None, publicly_accessible=None,
                         tags=None,
                         region=None, key=None, keyid=None, profile=None):
@@ -266,9 +267,9 @@ def create_read_replica(name, source_name, db_instance_class=None, port=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if not __salt__['boto_rds.exists'](source_name, region, key, keyid, profile):
+    if not __salt__['boto_rds.exists'](source_name, tags, region, key, keyid, profile):
         return False
-    if __salt__['boto_rds.exists'](name, region, key, keyid, profile):
+    if __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile):
         return True
     try:
         rds_replica = conn.create_db_instance_read_replica(name, source_name,
@@ -276,15 +277,16 @@ def create_read_replica(name, source_name, db_instance_class=None, port=None,
                                                            availability_zone,
                                                            port,
                                                            auto_minor_version_upgrade,
-                                                           option_group_name,
+                                                           iops, option_group_name,
                                                            publicly_accessible,
                                                            tags)
-        if not rds_replica:
+        if rds_replica:
+            log.info('Created replica {0} from {1}'.format(name, source_name))
+            return True
+        else:
             msg = 'Failed to create RDS replica {0}'.format(name)
             log.error(msg)
             return False
-        log.info('Created replica {0} from {1}'.format(name, source_name))
-        return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to create RDS replica {0}'.format(name)
