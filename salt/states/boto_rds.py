@@ -302,6 +302,9 @@ def create_replica(name, source, db_instance_class=None,
         else:
             ret['result'] = False
             ret['comment'] = 'Failed to create RDS replica {0}.'.format(name)
+    else:
+        ret['result'] = True
+        ret['comment'] = 'RDS replica {0} exists.'.format(name)
     return ret
 
 
