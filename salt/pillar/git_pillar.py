@@ -306,11 +306,6 @@ def ext_pillar(minion_id,
 
     pillar_dirs[pillar_dir].setdefault(branch, True)
 
-    # Don't recurse forever-- the Pillar object will re-call the ext_pillar
-    # function
-    if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
-        return {}
-
     gitpil.update()
 
     opts = deepcopy(__opts__)
@@ -319,4 +314,4 @@ def ext_pillar(minion_id,
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 
-    return pil.compile_pillar()
+    return pil.compile_pillar(ext=False)
