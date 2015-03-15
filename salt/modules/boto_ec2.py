@@ -127,18 +127,17 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
              keyid=None, profile=None):
     '''
     Gets all keys or filters them by name and returns a list.
-    keynames (list):: A list of the names of keypairs to retrieve. 
+    keynames (list):: A list of the names of keypairs to retrieve.
     If not provided, all key pairs will be returned.
-    filters (dict) :: Optional filters that can be used to limit the 
+    filters (dict) :: Optional filters that can be used to limit the
     results returned. Filters are provided in the form of a dictionary
     consisting of filter names as the key and filter values as the
     value. The set of allowable filter names/values is dependent on
     the request being performed. Check the EC2 API guide for details.
     CLI example::
 
-        salt myminion boto_ec2.get_keys 
+        salt myminion boto_ec2.get_keys
     '''
-    
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
