@@ -69,14 +69,10 @@ def ext_pillar(minion_id, pillar, repo, branch='default', root=None):
     else:
         path = repo.working_dir
 
-    # Do not recurse, Pillar will call ext_pillar again!
-    if __opts__['pillar_roots'].get(envname, []) == [path]:
-        return {}
-
     opts = copy.deepcopy(__opts__)
     opts['pillar_roots'][envname] = [path]
     pil = salt.pillar.Pillar(opts, __grains__, minion_id, envname)
-    return pil.compile_pillar()
+    return pil.compile_pillar(ext=False)
 
 
 def update(repo_uri):
