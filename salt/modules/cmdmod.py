@@ -1380,7 +1380,7 @@ def exec_code(lang, code, cwd=None):
     '''
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
-    the code you wish to execute. The stdout and stderr will be returned
+    the code you wish to execute. The stdout will be returned.
 
     CLI Example:
 
@@ -1388,13 +1388,29 @@ def exec_code(lang, code, cwd=None):
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
+    return exec_code_all(lang, code, cwd)['stdout']
+
+
+def exec_code_all(lang, code, cwd=None):
+    '''
+    Pass in two strings, the first naming the executable language, aka -
+    python2, python3, ruby, perl, lua, etc. the second string containing
+    the code you wish to execute. All cmd artifacts (stdout, stderr, retcode, pid)
+    will be returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.exec_code_all ruby 'puts "cheese"'
+    '''
     codefile = salt.utils.mkstemp()
     with salt.utils.fopen(codefile, 'w+t') as fp_:
         fp_.write(code)
     cmd = [lang, codefile]
-    stdout = run(cmd, cwd=cwd, python_shell=False)
+    ret = run_all(cmd, cwd=cwd, python_shell=False)
     os.remove(codefile)
-    return stdout
+    return ret
 
 
 def tty(device, echo=None):
