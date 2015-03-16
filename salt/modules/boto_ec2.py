@@ -37,6 +37,7 @@ Connection module for Amazon EC2
 
 # Import Python libs
 from __future__ import absolute_import
+import hashlib
 import logging
 import time
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
@@ -79,7 +80,7 @@ def __virtual__():
 
 
 def find_instances(instance_id=None, name=None, tags=None, region=None,
-                   key=None, keyid=None, profile=None, **kwargs):
+                   key=None, keyid=None, profile=None, return_objs=False):
 
     '''
     Given instance properties, find and return matching instance ids
@@ -92,7 +93,7 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
         salt myminion boto_ec2.find_instances tags='{"mytag": "value"}'
 
     '''
-    conn = _get_conn(region, key, keyid, profile, kwargs)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
@@ -115,7 +116,7 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
                   'instances:{1}'.format(filter_parameters, instances))
 
         if instances:
-            if kwargs.get('return_objs'):
+            if return_objs:
                 return instances
             return [instance.id for instance in instances]
         else:
@@ -126,10 +127,10 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
 
 
 def terminate(instance_id=None, name=None, region=None,
-              key=None, keyid=None, profile=None, **kwargs):
+              key=None, keyid=None, profile=None):
     instances = find_instances(instance_id=instance_id, name=name,
                                region=region, key=key, keyid=keyid,
-                               profile=profile, return_objs=True, **kwargs)
+                               profile=profile, return_objs=True)
     if instances in (False, None):
         return instances
 
@@ -142,7 +143,7 @@ def terminate(instance_id=None, name=None, region=None,
 
 
 def get_id(name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None, **kwargs):
+           keyid=None, profile=None):
 
     '''
     Given instace properties, return the instance id if it exist.
@@ -154,11 +155,12 @@ def get_id(name=None, tags=None, region=None, key=None,
         salt myminion boto_ec2.get_id myinstance
 
     '''
-    conn = _get_conn(region, key, keyid, profile, kwargs)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return None
 
-    instance_ids = find_instances(name=name, tags=tags, conn=conn)
+    instance_ids = find_instances(name=name, tags=tags, region=region, key=key,
+                                  keyid=keyid, profile=profile)
     if instance_ids:
         log.info("Instance ids: {0}".format(" ".join(instance_ids)))
         if len(instance_ids) == 1:
@@ -172,7 +174,7 @@ def get_id(name=None, tags=None, region=None, key=None,
 
 
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None, **kwargs):
+           keyid=None, profile=None):
     '''
     Given a instance id, check to see if the given instance id exists.
 
@@ -186,11 +188,11 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
         salt myminion boto_ec2.exists myinstance
 
     '''
-    conn = _get_conn(region, key, keyid, profile, kwargs)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
-    instances = find_instances(instance_id=instance_id, name=name, tags=tags, conn=conn)
+    instances = find_instances(instance_id=instance_id, name=name, tags=tags)
     if instances:
         log.info('instance exists.')
         return True
@@ -201,7 +203,7 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
 
 def run(image_id, name=None, tags=None, instance_type='m1.small',
         key_name=None, security_groups=None, user_data=None, placement=None,
-        region=None, key=None, keyid=None, profile=None, **kwargs):
+        region=None, key=None, keyid=None, profile=None):
     '''
     Create and start an EC2 instance.
 
@@ -216,7 +218,7 @@ def run(image_id, name=None, tags=None, instance_type='m1.small',
     '''
     #TODO: support multi-instance reservations
 
-    conn = _get_conn(region, key, keyid, profile, kwargs)
+    conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
@@ -247,13 +249,10 @@ def run(image_id, name=None, tags=None, instance_type='m1.small',
         return False
 
 
-def _get_conn(region, key, keyid, profile, kwargs):
+def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to ec2.
     '''
-    if kwargs and 'conn' in kwargs:
-        return kwargs['conn']
-
     if profile:
         if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
@@ -274,6 +273,12 @@ def _get_conn(region, key, keyid, profile, kwargs):
     if not keyid and __salt__['config.option']('ec2.keyid'):
         keyid = __salt__['config.option']('ec2.keyid')
 
+    # avoid repeatedly creating new connections
+    cxkey = 'boto_ec2:' + hashlib.md5(region + keyid + key).hexdigest()
+    if cxkey in __context__:
+        log.debug('found conn in context')
+        return __context__[cxkey]
+
     try:
         conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
                                           aws_secret_access_key=key)
@@ -281,4 +286,5 @@ def _get_conn(region, key, keyid, profile, kwargs):
         log.error('No authentication credentials found when attempting to'
                   ' make boto autoscale connection.')
         return None
+    __context__[cxkey] = conn
     return conn
