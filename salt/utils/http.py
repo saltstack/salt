@@ -247,6 +247,7 @@ def query(url,
         result = sess.request(
             method, url, params=params, data=data, **req_kwargs
         )
+        result.raise_for_status()
         if stream is True or handle is True:
             return {'handle': result}
 
