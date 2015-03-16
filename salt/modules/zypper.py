@@ -572,9 +572,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    if salt.utils.is_true(refresh):
-        refresh_db()
-
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -628,8 +625,10 @@ def install(name=None,
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ''
-    cmd_install = ['zypper', '--no-refresh', '--non-interactive', 'install',
-                   '--name', '--auto-agree-with-licenses']
+    cmd_install = ['zypper', '--non-interactive']
+    if not refresh:
+        cmd_install.append('--no-refresh')
+    cmd_install += ['install', '--name', '--auto-agree-with-licenses']
     if downloadonly:
         cmd_install.append('--download-only')
     if fromrepo:
@@ -637,8 +636,7 @@ def install(name=None,
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        cmd = cmd_install
-        cmd.extend(targets[:500])
+        cmd = cmd_install + targets[:500]
         targets = targets[500:]
 
         out = __salt__['cmd.run'](
@@ -655,8 +653,7 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = cmd_install + ['--force']
-        cmd.extend(downgrades[:500])
+        cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
