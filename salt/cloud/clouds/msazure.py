@@ -1423,7 +1423,7 @@ def list_disks(kwargs=None, conn=None, call=None):
     return ret
 
 
-def get_disk(kwargs=None, conn=None, call=None):
+def show_disk(kwargs=None, conn=None, call=None):
     '''
     .. versionadded:: Beryllium
 
@@ -1431,7 +1431,7 @@ def get_disk(kwargs=None, conn=None, call=None):
 
     CLI Example::
 
-        salt-cloud -f get_disk my-azure name=my_disk
+        salt-cloud -f show_disk my-azure name=my_disk
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1448,8 +1448,8 @@ def get_disk(kwargs=None, conn=None, call=None):
     return object_to_dict(data)
 
 
-# For consistency with other providers
-show_disk = get_disk
+# For consistency with Azure SDK
+get_disk = show_disk
 
 
 def delete_disk(kwargs=None, conn=None, call=None):
@@ -1513,6 +1513,279 @@ def update_disk(kwargs=None, conn=None, call=None):
         os=kwargs.get('os', old_data['os']),
     )
     return show_disk(kwargs={'name': kwargs['name']}, call='function')
+
+
+def list_service_certificates(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List certificates associated with the service
+
+    CLI Example::
+
+        salt-cloud -f list_service_certificates my-azure name=my_service
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_service_certificates function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A service name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_service_certificates(service_name=kwargs['name'])
+    ret = {}
+    for item in data.certificates:
+        ret[item.thumbprint] = object_to_dict(item)
+    return ret
+
+
+def show_service_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Return information about a service certificate
+
+    CLI Example::
+
+        salt-cloud -f show_service_certificate my-azure name=my_service_certificate \
+            thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_service_certificate function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A service name must be specified as "name"')
+
+    if 'thumbalgorithm' not in kwargs:
+        raise SaltCloudSystemExit('A thumbalgorithm must be specified as "thumbalgorithm"')
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    data = conn.get_service_certificate(
+        kwargs['name'],
+        kwargs['thumbalgorithm'],
+        kwargs['thumbprint'],
+    )
+    return object_to_dict(data)
+
+
+# For consistency with Azure SDK
+get_service_certificate = show_service_certificate
+
+
+def add_service_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Add a new service certificate
+
+    CLI Example::
+
+        salt-cloud -f add_service_certificate my-azure name=my_service_certificate \
+            data='...CERT_DATA...' certificate_format=sha1 password=verybadpass
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The add_service_certificate function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'data' not in kwargs:
+        raise SaltCloudSystemExit('Certificate data must be specified as "data"')
+
+    if 'certificate_format' not in kwargs:
+        raise SaltCloudSystemExit('A certificate_format must be specified as "certificate_format"')
+
+    if 'password' not in kwargs:
+        raise SaltCloudSystemExit('A password must be specified as "password"')
+
+    try:
+        data = conn.add_service_certificate(
+            kwargs['name'],
+            kwargs['data'],
+            kwargs['certificate_format'],
+            kwargs['password'],
+        )
+        return {'Success': 'The service certificate was successfully added'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the service certificate already exists.'}
+
+
+def delete_service_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific certificate associated with the service
+
+    CLI Examples::
+
+        salt-cloud -f delete_service_certificate my-azure name=my_service_certificate \
+            thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_service_certificate function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'thumbalgorithm' not in kwargs:
+        raise SaltCloudSystemExit('A thumbalgorithm must be specified as "thumbalgorithm"')
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_service_certificate(
+            kwargs['name'],
+            kwargs['thumbalgorithm'],
+            kwargs['thumbprint'],
+        )
+        return {'Success': 'The service certificate was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
+
+
+def list_management_certificates(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List management certificates associated with the subscription
+
+    CLI Example::
+
+        salt-cloud -f list_management_certificates my-azure name=my_management
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_management_certificates function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_management_certificates()
+    ret = {}
+    for item in data.subscription_certificates:
+        ret[item.subscription_certificate_thumbprint] = object_to_dict(item)
+    return ret
+
+
+def show_management_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Return information about a management_certificate
+
+    CLI Example::
+
+        salt-cloud -f get_management_certificate my-azure name=my_management_certificate \
+            thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_management_certificate function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    data = conn.get_management_certificate(kwargs['thumbprint'])
+    return object_to_dict(data)
+
+
+# For consistency with Azure SDK
+get_management_certificate = show_management_certificate
+
+
+def add_management_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Add a new management certificate
+
+    CLI Example::
+
+        salt-cloud -f add_management_certificate my-azure public_key='...PUBKEY...' \
+            thumbprint=0123456789ABCDEF data='...CERT_DATA...'
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The add_management_certificate function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'public_key' not in kwargs:
+        raise SaltCloudSystemExit('A public_key must be specified as "public_key"')
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    if 'data' not in kwargs:
+        raise SaltCloudSystemExit('Certificate data must be specified as "data"')
+
+    try:
+        data = conn.add_management_certificate(
+            kwargs['name'],
+            kwargs['thumbprint'],
+            kwargs['data'],
+        )
+        return {'Success': 'The management certificate was successfully added'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the management certificate already exists.'}
+
+
+def delete_management_certificate(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific certificate associated with the management
+
+    CLI Examples::
+
+        salt-cloud -f delete_management_certificate my-azure name=my_management_certificate \
+            thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_management_certificate function must be called with -f or --function.'
+        )
+
+    if 'thumbprint' not in kwargs:
+        raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_management_certificate(kwargs['thumbprint'])
+        return {'Success': 'The management certificate was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
 
 
 def object_to_dict(obj):
