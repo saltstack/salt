@@ -637,8 +637,7 @@ def install(name=None,
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        cmd = cmd_install
-        cmd.extend(targets[:500])
+        cmd = cmd_install + targets[:500]
         targets = targets[500:]
 
         out = __salt__['cmd.run'](
@@ -655,8 +654,7 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = cmd_install + ['--force']
-        cmd.extend(downgrades[:500])
+        cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
