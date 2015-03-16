@@ -13,6 +13,7 @@ import os
 import salt.utils
 import salt.ext.six as six
 import salt.utils.decorators as decorators
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -246,18 +247,23 @@ def gen_locale(locale):
     on_debian = __grains__.get('os') == 'Debian'
     on_ubuntu = __grains__.get('os') == 'Ubuntu'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
+    on_suse = __grains__.get('os_family') == 'Suse'
+    locale_info = _split_locale(locale)
 
     if on_debian or on_gentoo:  # file-based search
         search = '/usr/share/i18n/SUPPORTED'
         valid = __salt__['file.search'](search, '^{0}$'.format(locale))
     else:  # directory-based search
-        search_parts = _split_locale(locale)
-        search_parts['codeset'] = ''
-        search_parts['charmap'] = ''
-        search_locale = _join_locale(search_parts)
-
-        search = '/usr/share/i18n/locales'
-        valid = search_locale in os.listdir(search)
+        if on_suse:
+            search = '/usr/share/locale'
+        else:
+            search = '/usr/share/i18n/locales'
+        try:
+            valid = "{0}_{1}".format(locale_info['language'],
+                                     locale_info['territory']) in os.listdir(search)
+        except OSError, ex:
+            log.error(ex)
+            raise CommandExecutionError("Locale \"{0}\" is not available.".format(search_locale))
 
     if not valid:
         log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
@@ -271,12 +277,11 @@ def gen_locale(locale):
             append_if_not_found=True
         )
     elif on_ubuntu:
-        parts = _split_locale(locale)
         __salt__['file.touch'](
-            '/var/lib/locales/supported.d/{0}'.format(parts['language'])
+            '/var/lib/locales/supported.d/{0}'.format(locale_info['language'])
         )
         __salt__['file.replace'](
-            '/var/lib/locales/supported.d/{0}'.format(parts['language']),
+            '/var/lib/locales/supported.d/{0}'.format(locale_info['language']),
             locale,
             locale,
             append_if_not_found=True
