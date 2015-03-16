@@ -289,10 +289,23 @@ def gen_locale(locale):
             append_if_not_found=True
         )
 
-    cmd = ['locale-gen']
-    if on_gentoo:
-        cmd.append('--generate')
-    if not on_ubuntu:
-        cmd.append(locale)
+    if salt.utils.which("locale-gen") is not None:
+        cmd = ['locale-gen']
+        if on_gentoo:
+            cmd.append('--generate')
+        if not on_ubuntu:
+            cmd.append(locale)
+    elif salt.utils.which("localedef") is not None:
+        cmd = ['localedef', '--quiet', '--force', 
+               '-i', "{0}_{1}".format(locale_info['language'], locale_info['territory']), 
+               '-f', locale_info['codeset'], 
+               locale]
+    else:
+        raise CommandExecutionError(
+            'Command "locale-gen" or "localedef" was not found on this system.')
 
-    return __salt__['cmd.retcode'](cmd, python_shell=False)
+    res = __salt__['cmd.run_all'](cmd)
+    if res['retcode']:
+        log.error(res['stderr'])
+
+    return res['retcode']
