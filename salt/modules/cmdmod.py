@@ -1388,13 +1388,7 @@ def exec_code(lang, code, cwd=None):
 
         salt '*' cmd.exec_code ruby 'puts "cheese"'
     '''
-    codefile = salt.utils.mkstemp()
-    with salt.utils.fopen(codefile, 'w+t') as fp_:
-        fp_.write(code)
-    cmd = [lang, codefile]
-    stdout = run(cmd, cwd=cwd, python_shell=False)
-    os.remove(codefile)
-    return stdout
+    return exec_code_all(lang, code, cwd)['stdout']
 
 
 def exec_code_all(lang, code, cwd=None):
