@@ -227,7 +227,6 @@ def avail(locale):
     return locale_exists
 
 
-@decorators.which('locale-gen')
 def gen_locale(locale):
     '''
     Generate a locale.
