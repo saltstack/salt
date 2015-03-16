@@ -193,9 +193,9 @@ def lock(path,
         Forcibly acquire the lock regardless of available slots
 
     Example:
-   
+
     ... code-block: bash
-    
+
         salt minion zk_concurrency.lock /lock/path host1:1234,host2:1234
     '''
     zk = _get_zk_conn(zk_hosts)
@@ -249,9 +249,9 @@ def unlock(path,
         Whether the locks in zookeper should be ephemeral
 
     Example:
-   
+
     ... code-block: bash
-    
+
         salt minion zk_concurrency.unlock /lock/path host1:1234,host2:1234
     '''
     # if someone passed in zk_hosts, and the path isn't in SEMAPHORE_MAP, lets
