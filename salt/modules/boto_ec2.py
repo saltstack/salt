@@ -401,7 +401,7 @@ def _get_conn(region, key, keyid, profile):
                                           aws_secret_access_key=key)
     except boto.exception.NoAuthHandlerFound:
         log.error('No authentication credentials found when attempting to'
-                  ' make boto autoscale connection.')
+                  ' make boto ec2 connection.')
         return None
     __context__[cxkey] = conn
     return conn
