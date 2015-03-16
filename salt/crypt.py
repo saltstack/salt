@@ -35,6 +35,8 @@ from salt.exceptions import (
     AuthenticationError, SaltClientError, SaltReqTimeoutError
 )
 
+import tornado.gen
+
 log = logging.getLogger(__name__)
 
 
@@ -782,6 +784,233 @@ class SAuth(object):
         )
         sys.exit(42)
 
+
+class AsyncAuth(SAuth):
+    '''
+    Set up an Async object to maintain authentication with the salt master
+    '''
+    # This class is only a singleton per minion/master pair
+    instances = {}
+
+    def __new__(cls, opts):
+        '''
+        Only create one instance of SAuth per __key()
+        '''
+        key = cls.__key(opts)
+        if key not in SAuth.instances:
+            log.debug('Initializing new SAuth for {0}'.format(key))
+            AsyncAuth.instances[key] = object.__new__(cls)
+            AsyncAuth.instances[key].__singleton_init__(opts)
+        else:
+            log.debug('Re-using SAuth for {0}'.format(key))
+        return AsyncAuth.instances[key]
+
+    @classmethod
+    def __key(cls, opts):
+        return (opts['pki_dir'],     # where the keys are stored
+                opts['id'],          # minion ID
+                opts['master_uri'],  # master ID
+                )
+
+    # has to remain empty for singletons, since __init__ will *always* be called
+    def __init__(self, opts):
+        pass
+
+    # an init for the singleton instance to call
+    def __singleton_init__(self, opts):
+        '''
+        Init an Auth instance
+
+        :param dict opts: Options for this server
+        :return: Auth instance
+        :rtype: Auth
+        '''
+        self.opts = opts
+        self.token = Crypticle.generate_key_string()
+        self.serial = salt.payload.Serial(self.opts)
+        self.pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
+        self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
+        if 'syndic_master' in self.opts:
+            self.mpub = 'syndic_master.pub'
+        elif 'alert_master' in self.opts:
+            self.mpub = 'monitor_master.pub'
+        else:
+            self.mpub = 'minion_master.pub'
+        if not os.path.isfile(self.pub_path):
+            self.get_keys()
+
+        # TODO: make singleton per io_loop?
+        self.io_loop = tornado.ioloop.IOLoop.current()
+
+        self.authenticate()
+
+    @property
+    def creds(self):
+        return self._creds
+
+    @property
+    def crypticle(self):
+        return self._crypticle
+
+    def authenticate(self, callback=None):
+        '''
+        Ask for this client to reconnect to the origin
+
+        This function will de-dupe all calls here and return a *single* future
+        for the sign-in-- whis way callers can all assume there aren't others
+        '''
+        # if an auth is in flight-- and not done-- just pass that back as the future to wait on
+        if hasattr(self, '_authenticate_future') and not self._authenticate_future.done():
+            future = self._authenticate_future
+        else:
+            future = tornado.concurrent.Future()
+            self._authenticate_future = future
+
+            self.io_loop.add_callback(self._authenticate)
+
+        if callback is not None:
+            def handle_future(future):
+                response = future.result()
+                self.io_loop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+
+        return future
+
+    @tornado.gen.coroutine
+    def _authenticate(self):
+        '''
+        Authenticate with the master, this method breaks the functional
+        paradigm, it will update the master information from a fresh sign
+        in, signing in can occur as often as needed to keep up with the
+        revolving master AES key.
+
+        :rtype: Crypticle
+        :returns: A crypticle used for encryption operations
+        '''
+        acceptance_wait_time = self.opts['acceptance_wait_time']
+        acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        if not acceptance_wait_time_max:
+            acceptance_wait_time_max = acceptance_wait_time
+        while True:
+            creds = yield self.sign_in()
+            if creds == 'retry':
+                if self.opts.get('caller'):
+                    print('Minion failed to authenticate with the master, '
+                          'has the minion key been accepted?')
+                    sys.exit(2)
+                if acceptance_wait_time:
+                    log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
+                    yield tornado.gen.sleep(acceptance_wait_time)
+                if acceptance_wait_time < acceptance_wait_time_max:
+                    acceptance_wait_time += acceptance_wait_time
+                    log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
+                continue
+            break
+        self._creds = creds
+        self._crypticle = Crypticle(self.opts, creds['aes'])
+        self._authenticate_future.set_result(True)  # mark the sign-in as complete
+
+    @tornado.gen.coroutine
+    def sign_in(self, timeout=60, safe=True, tries=1):
+        '''
+        Send a sign in request to the master, sets the key information and
+        returns a dict containing the master publish interface to bind to
+        and the decrypted aes key for transport decryption.
+
+        :param int timeout: Number of seconds to wait before timing out the sign-in request
+        :param bool safe: If True, do not raise an exception on timeout. Retry instead.
+        :param int tries: The number of times to try to authenticate before giving up.
+
+        :raises SaltReqTimeoutError: If the sign-in request has timed out and :param safe: is not set
+
+        :return: Return a string on failure indicating the reason for failure. On success, return a dictionary
+        with the publication port and the shared AES key.
+
+        '''
+        auth = {}
+
+        auth_timeout = self.opts.get('auth_timeout', None)
+        if auth_timeout is not None:
+            timeout = auth_timeout
+        auth_safemode = self.opts.get('auth_safemode', None)
+        if auth_safemode is not None:
+            safe = auth_safemode
+        auth_tries = self.opts.get('auth_tries', None)
+        if auth_tries is not None:
+            tries = auth_tries
+
+        m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
+
+        auth['master_uri'] = self.opts['master_uri']
+
+        channel = salt.transport.client.AsyncReqChannel.factory(self.opts, crypt='clear')
+
+        try:
+            payload = yield channel.send(
+                self.minion_sign_in_payload()['load'],  # TODO: change func to retur load instead of payload
+                tries=tries,
+                timeout=timeout
+            )
+        except SaltReqTimeoutError as e:
+            if safe:
+                log.warning('SaltReqTimeoutError: {0}'.format(e))
+                raise tornado.gen.Return('retry')
+            raise SaltClientError('Attempt to authenticate with the salt master failed')
+        if 'load' in payload:
+            if 'ret' in payload['load']:
+                if not payload['load']['ret']:
+                    if self.opts['rejected_retry']:
+                        log.error(
+                            'The Salt Master has rejected this minion\'s public '
+                            'key.\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master.\nThe Salt '
+                            'Minion will attempt to to re-authenicate.'
+                        )
+                        raise tornado.gen.Return('retry')
+                    else:
+                        log.critical(
+                            'The Salt Master has rejected this minion\'s public '
+                            'key!\nTo repair this issue, delete the public key '
+                            'for this minion on the Salt Master and restart this '
+                            'minion.\nOr restart the Salt Master in open mode to '
+                            'clean out the keys. The Salt Minion will now exit.'
+                        )
+                        sys.exit(salt.defaults.exitcodes.EX_OK)
+                # has the master returned that its maxed out with minions?
+                elif payload['load']['ret'] == 'full':
+                    raise tornado.gen.Return('full')
+                else:
+                    log.error(
+                        'The Salt Master has cached the public key for this '
+                        'node, this salt minion will wait for {0} seconds '
+                        'before attempting to re-authenticate'.format(
+                            self.opts['acceptance_wait_time']
+                        )
+                    )
+                    raise tornado.gen.Return('retry')
+        auth['aes'] = self.verify_master(payload)
+        if not auth['aes']:
+            log.critical(
+                'The Salt Master server\'s public key did not authenticate!\n'
+                'The master may need to be updated if it is a version of Salt '
+                'lower than {0}, or\n'
+                'If you are confident that you are connecting to a valid Salt '
+                'Master, then remove the master public key and restart the '
+                'Salt Minion.\nThe master public key can be found '
+                'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
+            )
+            sys.exit(42)
+        if self.opts.get('syndic_master', False):  # Is syndic
+            syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
+            if syndic_finger:
+                if salt.utils.pem_finger(m_pub_fn) != syndic_finger:
+                    self._finger_fail(syndic_finger, m_pub_fn)
+        else:
+            if self.opts.get('master_finger', False):
+                if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
+                    self._finger_fail(self.opts['master_finger'], m_pub_fn)
+        auth['publish_port'] = payload['publish_port']
+        raise tornado.gen.Return(auth)
 
 class Crypticle(object):
     '''

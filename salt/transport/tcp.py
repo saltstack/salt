@@ -122,12 +122,6 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
         host, port = parse.netloc.rsplit(':', 1)
         self.master_addr = (host, int(port))
 
-
-        # used for making async stuff sync
-        self._io_loop = tornado.ioloop.IOLoop()
-
-        self.message_client = SaltMessageClient(host, int(port), io_loop=self._io_loop)
-
     def _package_load(self, load):
         return self.serial.dumps({
             'enc': self.crypt,
@@ -145,8 +139,8 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
         '''
         Do a blocking send/recv combo
         '''
-        return self._io_loop.run_sync(functools.partial(
-            self.message_client.send, msg, timeout=timeout))
+        self.socket.send(frame_msg(msg))
+        return socket_frame_recv(self.socket)
 
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         # send msg
@@ -193,18 +187,102 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
             return self._crypted_transfer(load, tries, timeout)
 
 
+class TCPAsyncReqChannel(salt.transport.client.ReqChannel):
+    '''
+    Encapsulate sending routines to tcp.
+
+    TODO:
+        - add timeouts
+    '''
+    def __init__(self, opts, **kwargs):
+        self.opts = dict(opts)
+
+        self.serial = salt.payload.Serial(self.opts)
+
+        # crypt defaults to 'aes'
+        self.crypt = kwargs.get('crypt', 'aes')
+
+        if self.crypt != 'clear':
+            self.auth = salt.crypt.SAuth(self.opts)
+
+        parse = urlparse.urlparse(self.opts['master_uri'])
+        host, port = parse.netloc.rsplit(':', 1)
+        self.master_addr = (host, int(port))
+
+        self._io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+
+        self.message_client = SaltMessageClient(host, int(port), io_loop=self._io_loop)
+
+    def _package_load(self, load):
+        return self.serial.dumps({
+            'enc': self.crypt,
+            'load': load,
+        })
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        # send msg
+        ret = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
+        # wait for response
+        ret = self.serial.loads(ret)
+        key = self.auth.get_keys()
+        aes = key.private_decrypt(ret['key'], 4)
+        pcrypt = salt.crypt.Crypticle(self.opts, aes)
+        return pcrypt.loads(ret[dictkey])
+
+    def _crypted_transfer(self, load, tries=3, timeout=60):
+        '''
+        In case of authentication errors, try to renegotiate authentication
+        and retry the method.
+        Indeed, we can fail too early in case of a master restart during a
+        minion state execution call
+        '''
+        def _do_transfer():
+            data = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)),
+                                   timeout=timeout)
+            data = self.serial.loads(data)
+            # we may not have always data
+            # as for example for saltcall ret submission, this is a blind
+            # communication, we do not subscribe to return events, we just
+            # upload the results to the master
+            if data:
+                data = self.auth.crypticle.loads(data)
+            return data
+        try:
+            return _do_transfer()
+        except salt.crypt.AuthenticationError:
+            self.auth.authenticate()
+            return _do_transfer()
+
+    @tornado.gen.coroutine
+    def _uncrypted_transfer(self, load, tries=3, timeout=60):
+        ret = yield self.message_client.send(self._package_load(load), timeout=timeout)
+        raise tornado.gen.Return(self.serial.loads(ret))
+
+    @tornado.gen.coroutine
+    def send(self, load, tries=3, timeout=60, callback=None):
+        '''
+        Send a request, return a future which will complete when we send the message
+        '''
+        if self.crypt == 'clear':
+            ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
+        else:
+            ret = yield self._encrypted_transfer(load, tries=tries, timeout=timeout)
+        raise tornado.gen.Return(ret)
+
+
 class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
     def __init__(self,
                  opts,
                  **kwargs):
         self.opts = opts
 
-        self.auth = salt.crypt.SAuth(self.opts)  # TODO: make optionally non-blocking?
+        self.serial = salt.payload.Serial(self.opts)
+        self.io_loop = kwargs['io_loop'] or tornado.ioloop.IOLoop.current()
+
+        self.auth = salt.crypt.SAuth(self.opts)  # TODO: make optionally non-blocking
         if self.auth.creds is None:
             self.auth.authenticate()
-        self.serial = salt.payload.Serial(self.opts)
 
-        self.io_loop = kwargs['io_loop'] or tornado.ioloop.IOLoop.current()
         self.message_client = SaltMessageClient(self.opts['master_ip'],
                                                 int(self.auth.creds['publish_port']),
                                                 io_loop=self.io_loop)
@@ -217,6 +295,40 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
             return self.message_client.on_recv(callback)
 
         self.message_client.send('connect')
+        def wrap_callback(body):
+            callback(self._decode_payload(self.serial.loads(body)))
+        return self.message_client.on_recv(wrap_callback)
+
+# TODO: switch everything to this
+class TCPAsyncPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
+    def __init__(self,
+                 opts,
+                 **kwargs):
+        self.opts = opts
+
+        self.serial = salt.payload.Serial(self.opts)
+
+        self.io_loop = kwargs['io_loop'] or tornado.ioloop.IOLoop.current()
+        self.connected = False
+
+    @tornado.gen.coroutine
+    def connect(self):
+        self.auth = salt.crypt.AsyncAuth(self.opts)
+        creds = yield self.auth.authenticate()
+        self.message_client = SaltMessageClient(self.opts['master_ip'],
+                                                int(self.auth.creds['publish_port']),
+                                                io_loop=self.io_loop)
+
+        yield self.message_client.connect()  # wait for the client to be connected
+        self.connected = True
+
+    def on_recv(self, callback):
+        '''
+        Register an on_recv callback
+        '''
+        if callback is None:
+            return self.message_client.on_recv(callback)
+
         def wrap_callback(body):
             callback(self._decode_payload(self.serial.loads(body)))
         return self.message_client.on_recv(wrap_callback)
@@ -380,14 +492,19 @@ class SaltMessageClient(object):
         '''
         Ask for this client to reconnect to the origin
         '''
-        future = tornado.concurrent.Future()
+        if hasattr(self, '_connecting_future') and not self._connecting_future.done():
+            future = self._connecting_future
+        else:
+            future = tornado.concurrent.Future()
+            self._connecting_future = future
+            self.io_loop.add_callback(self._connect)
+
         if callback is not None:
             def handle_future(future):
                 response = future.result()
                 self.io_loop.add_callback(callback, response)
             future.add_done_callback(handle_future)
 
-        self.io_loop.add_callback(self._connect)
         return future
 
     # TODO: tcp backoff opts

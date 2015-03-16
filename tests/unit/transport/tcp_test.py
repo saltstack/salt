@@ -9,6 +9,7 @@ import os
 import threading
 
 import tornado.ioloop
+from tornado.testing import AsyncTestCase
 
 import salt.config
 import salt.utils
@@ -105,7 +106,7 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
                 ret = self.channel.send(msg)
 
 
-class BaseTCPPubCase(TestCase):
+class BaseTCPPubCase(AsyncTestCase):
     '''
     Test the req server/client pair
     '''
@@ -159,12 +160,15 @@ class PubChannelTest(BaseTCPPubCase):
     Tests around the publish system
     '''
     def test_basic(self):
-        io_loop = tornado.ioloop.IOLoop()
         self.pub = None
         def handle_pub(ret):
             self.pub = ret
-            io_loop.stop()
-        self.pub_channel = salt.transport.client.PubChannel.factory(self.minion_opts, io_loop=io_loop)
+            self.stop()
+        self.pub_channel = salt.transport.client.PubChannel.factory(self.minion_opts, io_loop=self.io_loop)
+        connect_future = self.pub_channel.connect()
+        connect_future.add_done_callback(lambda f: self.stop())
+        self.wait()
+        connect_future.result()
         self.pub_channel.on_recv(handle_pub)
         load = {
                     'fun': 'f',
@@ -174,11 +178,8 @@ class PubChannelTest(BaseTCPPubCase):
                     'ret': 'r',
                     'tgt_type': 'glob',
                 }
-        self.pub_channel.message_client._connecting_future.add_done_callback(lambda f: io_loop.stop())
-        # make sure the publish happens after we have given the ioloop a chance to connect up
-        io_loop.start()
         self.server_channel.publish(load)
-        io_loop.start()
+        self.wait()
         self.assertEqual(self.pub['load'], load)
 
 if __name__ == '__main__':
