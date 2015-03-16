@@ -299,30 +299,6 @@ def get_site_packages(venv):
     return ret['stdout']
 
 
-def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
-    if not salt.utils.is_windows():
-        tmppath = salt.utils.mkstemp(dir=cwd)
-    else:
-        tmppath = __salt__['cp.cache_file'](source, saltenv)
-
-    if not salt.utils.is_windows():
-        fn_ = __salt__['cp.cache_file'](source, saltenv)
-        shutil.copyfile(fn_, tmppath)
-        os.chmod(tmppath, 0o500)
-        os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
-    try:
-        return __salt__['cmd.run_all'](
-            '{0} {1}'.format(python, tmppath),
-            runas=user,
-            cwd=cwd,
-            env={'VIRTUAL_ENV': cwd},
-            use_vt=use_vt,
-            python_shell=False,
-        )
-    finally:
-        os.remove(tmppath)
-
-
 def get_resource_path(venv, package_or_requirement, resource_name):
     '''
     Returns the path to a resource of a package or a distribution inside a virtualenv
@@ -375,3 +351,27 @@ def get_resource_content(venv, package_or_requirement, resource_name):
         raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
 
     return ret['stdout']
+
+
+def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
+    if not salt.utils.is_windows():
+        tmppath = salt.utils.mkstemp(dir=cwd)
+    else:
+        tmppath = __salt__['cp.cache_file'](source, saltenv)
+
+    if not salt.utils.is_windows():
+        fn_ = __salt__['cp.cache_file'](source, saltenv)
+        shutil.copyfile(fn_, tmppath)
+        os.chmod(tmppath, 0o500)
+        os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
+    try:
+        return __salt__['cmd.run_all'](
+            '{0} {1}'.format(python, tmppath),
+            runas=user,
+            cwd=cwd,
+            env={'VIRTUAL_ENV': cwd},
+            use_vt=use_vt,
+            python_shell=False,
+        )
+    finally:
+        os.remove(tmppath)
