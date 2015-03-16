@@ -22,7 +22,7 @@ def __virtual__():
     '''
     Only runs if sysrc exists
     '''
-    if salt.utils.which_bin('sysrc') is not None:
+    if salt.utils.which('sysrc') is not None:
         return True
     return False
 
