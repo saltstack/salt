@@ -836,7 +836,7 @@ def config_set(cwd=None, setting_name=None, setting_value=None, user=None, is_gl
         salt '*' git.config_set /path/to/repo user.email me@example.com
     '''
     if setting_name is None or setting_value is None:
-        raise TypeError
+        raise TypeError('Missing required parameter setting_name for git.config_set')
     if cwd is None and not is_global:
         raise SaltInvocationError('Either `is_global` must be set to True or '
                                   'you must provide `cwd`')
@@ -875,7 +875,7 @@ def config_get(cwd=None, setting_name=None, user=None):
         salt '*' git.config_get /path/to/repo user.name arthur
     '''
     if setting_name is None:
-        raise TypeError
+        raise TypeError('Missing required parameter setting_name for git.config_get')
     _check_git()
 
     return _git_run('git config {0}'.format(setting_name), cwd=cwd, runas=user)
