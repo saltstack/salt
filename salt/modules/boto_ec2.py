@@ -43,8 +43,8 @@ import time
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
-from salt.exceptions import CommandExecutionError
 import salt.ext.six as six
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 try:
