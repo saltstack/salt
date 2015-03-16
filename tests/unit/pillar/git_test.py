@@ -35,6 +35,7 @@ FILE_DATA = {
 # Import Salt Libs
 from salt.pillar import Pillar, git_pillar
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not git_pillar.HAS_GIT, 'no GitPython')
 class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
@@ -172,3 +173,8 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
 
         self.assertEqual(PILLAR_CONTENT, pil.compile_pillar(pillar_dirs={}))
         self.assertTrue(orig_ext_pillar.count < 7)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(GitPillarTestCase, needs_daemon=False)
