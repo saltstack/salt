@@ -291,8 +291,12 @@ def get_site_packages(venv):
         raise salt.exceptions.CommandExecutionError(
             "Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    return __salt__['cmd.exec_code'](bin_path,
-            'from distutils import sysconfig; print sysconfig.get_python_lib()')
+    ret = __salt__['cmd.exec_code_all'](bin_path, 'from distutils import sysconfig; print sysconfig.get_python_lib()')
+
+    if ret['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
+
+    return ret['stdout']
 
 
 def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
@@ -338,7 +342,12 @@ def get_resource_path(venv, package_or_requirement, resource_name):
     if not os.path.exists(bin_path):
         raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
+    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
+
+    if ret['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
+
+    return ret['stdout']
 
 
 def get_resource_content(venv, package_or_requirement, resource_name):
@@ -360,4 +369,9 @@ def get_resource_content(venv, package_or_requirement, resource_name):
     if not os.path.exists(bin_path):
         raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))
+    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))
+
+    if ret['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
+
+    return ret['stdout']
