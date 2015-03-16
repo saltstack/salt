@@ -228,9 +228,12 @@ def avail(locale):
     return locale_exists
 
 
-def gen_locale(locale):
+def gen_locale(locale, **kwargs):
     '''
-    Generate a locale.
+    Generate a locale. Options:
+
+    verbose
+        Show extra warnings about errors that are normally ignored.
 
     .. versionadded:: 2014.7.0
 
@@ -294,10 +297,11 @@ def gen_locale(locale):
         if not on_ubuntu:
             cmd.append(locale)
     elif salt.utils.which("localedef") is not None:
-        cmd = ['localedef', '--quiet', '--force', 
+        cmd = ['localedef', '--force', 
                '-i', "{0}_{1}".format(locale_info['language'], locale_info['territory']), 
                '-f', locale_info['codeset'], 
                locale]
+        cmd.append(kwargs.get('verbose', False) and '--verbose' or '--quiet')            
     else:
         raise CommandExecutionError(
             'Command "locale-gen" or "localedef" was not found on this system.')
@@ -306,4 +310,7 @@ def gen_locale(locale):
     if res['retcode']:
         log.error(res['stderr'])
 
-    return res['retcode']
+    if kwargs.get('verbose'):
+        return res
+    else: 
+        return res['retcode']
