@@ -47,8 +47,6 @@ import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 import salt.ext.six as six
-from salt._compat import ElementTree as ET
-import salt.utils.xmlutil as xml
 
 # Import 3rd-party libs
 import yaml
