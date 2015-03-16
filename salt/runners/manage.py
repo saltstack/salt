@@ -148,6 +148,8 @@ def list_state(subset=None, show_ipv4=False, state=None):
         Show minions being in specific state that is one of 'available', 'joined',
         'allowed', 'alived' or 'reaped'.
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -192,6 +194,8 @@ def list_not_state(subset=None, show_ipv4=False, state=None):
         Show minions being in specific state that is one of 'available', 'joined',
         'allowed', 'alived' or 'reaped'.
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -228,6 +232,8 @@ def present(subset=None, show_ipv4=False):
 
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -269,6 +275,8 @@ def joined(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -288,6 +296,8 @@ def not_joined(subset=None, show_ipv4=False):
 
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -329,6 +339,8 @@ def not_allowed(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -348,6 +360,8 @@ def alived(subset=None, show_ipv4=False):
 
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -369,6 +383,8 @@ def not_alived(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -389,6 +405,8 @@ def reaped(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
+    .. verionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -408,6 +426,8 @@ def not_reaped(subset=None, show_ipv4=False):
 
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
