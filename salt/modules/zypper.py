@@ -59,8 +59,6 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
-        refresh_db()
     ret = {}
     call = __salt__['cmd.run_all'](
         'zypper list-updates', output_loglevel='trace'
@@ -572,9 +570,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    if salt.utils.is_true(refresh):
-        refresh_db()
-
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -628,8 +623,10 @@ def install(name=None,
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ''
-    cmd_install = ['zypper', '--no-refresh', '--non-interactive', 'install',
-                   '--name', '--auto-agree-with-licenses']
+    cmd_install = ['zypper', '--non-interactive']
+    if not refresh:
+        cmd_install.append('--no-refresh')
+    cmd_install += ['install', '--name', '--auto-agree-with-licenses']
     if downloadonly:
         cmd_install.append('--download-only')
     if fromrepo:
