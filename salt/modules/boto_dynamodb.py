@@ -142,11 +142,11 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
         'write':    write_capacity_units
     }
     local_table_indexes = []
-    # Add the table's key
-    local_table_indexes.append(
-        AllIndex(primary_index_name, parts=primary_index_fields)
-    )
     if local_indexes:
+        # Add the table's key
+        local_table_indexes.append(
+            AllIndex(primary_index_name, parts=primary_index_fields)
+        )
         for index in local_indexes:
             local_table_indexes.append(_extract_index(index))
     global_table_indexes = []
