@@ -1376,7 +1376,7 @@ def exec_code(lang, code, cwd=None):
     '''
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
-    the code you wish to execute. The stdout and stderr will be returned
+    the code you wish to execute. The stdout will be returned.
 
     CLI Example:
 
@@ -1392,7 +1392,7 @@ def exec_code_all(lang, code, cwd=None):
     Pass in two strings, the first naming the executable language, aka -
     python2, python3, ruby, perl, lua, etc. the second string containing
     the code you wish to execute. All cmd artifacts (stdout, stderr, retcode, pid)
-    will be returned
+    will be returned.
 
     CLI Example:
 
