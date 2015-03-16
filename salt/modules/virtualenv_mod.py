@@ -229,7 +229,7 @@ def create(path,
 
     # Let's create the virtualenv
     ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
-    if ret['retcode'] > 0:
+    if ret['retcode'] != 0:
         # Something went wrong. Let's bail out now!
         return ret
 
@@ -254,7 +254,7 @@ def create(path,
         for fpath in glob.glob(os.path.join(path, 'distribute-*.tar.gz*')):
             os.unlink(fpath)
 
-    if ret['retcode'] > 0:
+    if ret['retcode'] != 0:
         # Something went wrong. Let's bail out now!
         return ret
 
