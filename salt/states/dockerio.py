@@ -98,6 +98,30 @@ Available Functions
           - unless: grep -q something /var/log/foo
           - docker_unless: grep -q done /install_log
 
+Use Cases
+---------
+
+   Ensures the container is running with the latest image available
+
+   .. code-block:: yaml
+
+      my-service-image:
+        docker.pulled:
+          - name: registry/my-service:latest
+          - force: true
+
+      my-service-container:
+        docker.installed:
+          - image: registry/my-service:latest
+          - watch:
+            - docker: my-service-image
+
+      my-service:
+        docker.running:
+          - container: my-service-container
+          - watch:
+            - docker: my-service-container
+
 .. note::
 
     The docker modules are named ``dockerio`` because
