@@ -46,6 +46,8 @@ import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 import salt.ext.six as six
+from salt._compat import ElementTree as ET
+import salt.utils.xmlutil as xml
 
 # Import 3rd-party libs
 import yaml
@@ -222,6 +224,9 @@ def list_nodes_full(conn=None, call=None):
         raise SaltCloudSystemExit(
             'The list_nodes_full function must be called with -f or --function.'
         )
+
+    if not conn:
+        conn = get_conn()
 
     ret = {}
     services = list_hosted_services(conn=conn, call=call)
@@ -1788,6 +1793,272 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
         return {'Error': exc.message}
 
 
+def list_virtual_networks(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List input endpoints associated with the deployment
+
+    CLI Example::
+
+        salt-cloud -f list_virtual_networks my-azure service=myservice deployment=mydeployment
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_virtual_networks function must be called with -f or --function.'
+        )
+
+    path = 'services/networking/virtualnetwork'
+    data = query(path)
+    return data
+
+
+def list_input_endpoints(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List input endpoints associated with the deployment
+
+    CLI Example::
+
+        salt-cloud -f list_input_endpoints my-azure service=myservice deployment=mydeployment
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_input_endpoints function must be called with -f or --function.'
+        )
+
+    if 'service' not in kwargs:
+        raise SaltCloudSystemExit('A service name must be specified as "service"')
+
+    if 'deployment' not in kwargs:
+        raise SaltCloudSystemExit('A deployment name must be specified as "deployment"')
+
+    path = 'services/hostedservices/{0}/deployments/{1}'.format(
+        kwargs['service'],
+        kwargs['deployment'],
+    )
+    data = query(path)
+
+    ret = {}
+    for item in data:
+        if 'Role' not in item:
+            continue
+        input_endpoint = item['Role']['ConfigurationSets']['ConfigurationSet']['InputEndpoints']['InputEndpoint']
+        if not isinstance(input_endpoint, list):
+            input_endpoint = [input_endpoint]
+        for endpoint in input_endpoint:
+            ret[endpoint['Name']] = endpoint
+    return ret
+
+
+def show_input_endpoint(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show an input endpoint associated with the deployment
+
+    CLI Example::
+
+        salt-cloud -f show_input_endpoint my-azure service=myservice deployment=mydeployment name=SSH
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_input_endpoint function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An endpoint name must be specified as "name"')
+
+    data = list_input_endpoints(kwargs=kwargs, call='function')
+    return data.get(kwargs['name'], None)
+
+
+# For consistency with Azure SDK
+get_input_endpoint = show_input_endpoint
+
+
+def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
+    '''
+    .. versionadded:: Beryllium
+
+    Update an input endpoint associated with the deployment. Please note that
+    there may be a delay before the changes show up.
+
+    CLI Example::
+
+        salt-cloud -f update_input_endpoint my-azure service=myservice \
+            deployment=mydeployment name=HTTP local_port=80 port=80 protocol=tcp \
+            enable_direct_server_return=False timeout_for_tcp_idle_connection=4
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The update_input_endpoint function must be called with -f or --function.'
+        )
+
+    if 'service' not in kwargs:
+        raise SaltCloudSystemExit('A service name must be specified as "service"')
+
+    if 'deployment' not in kwargs:
+        raise SaltCloudSystemExit('A deployment name must be specified as "deployment"')
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An endpoint name must be specified as "name"')
+
+    if activity != 'delete':
+        if 'port' not in kwargs:
+            raise SaltCloudSystemExit('An endpoint port must be specified as "port"')
+
+        if 'protocol' not in kwargs:
+            raise SaltCloudSystemExit('An endpoint protocol (tcp or udp) must be specified as "protocol"')
+
+        if 'local_port' not in kwargs:
+            kwargs['local_port'] = kwargs['port']
+
+        if 'enable_direct_server_return' not in kwargs:
+            kwargs['enable_direct_server_return'] = False
+        kwargs['enable_direct_server_return'] = str(kwargs['enable_direct_server_return']).lower()
+
+        if 'timeout_for_tcp_idle_connection' not in kwargs:
+            kwargs['timeout_for_tcp_idle_connection'] = 4
+
+    old_endpoints = list_input_endpoints(kwargs, call='function')
+
+    endpoints_xml = ''
+    endpoint_xml = '''
+        <InputEndpoint>
+          <LocalPort>{local_port}</LocalPort>
+          <Name>{name}</Name>
+          <Port>{port}</Port>
+          <Protocol>{protocol}</Protocol>
+          <EnableDirectServerReturn>{enable_direct_server_return}</EnableDirectServerReturn>
+          <IdleTimeoutInMinutes>{timeout_for_tcp_idle_connection}</IdleTimeoutInMinutes>
+        </InputEndpoint>'''
+
+    if activity == 'add':
+        old_endpoints[kwargs['name']] = kwargs
+        old_endpoints[kwargs['name']]['Name'] = kwargs['name']
+
+    for endpoint in old_endpoints:
+        if old_endpoints[endpoint]['Name'] == kwargs['name']:
+            if activity != 'delete':
+                this_endpoint_xml = endpoint_xml.format(**kwargs)
+                endpoints_xml += this_endpoint_xml
+        else:
+            this_endpoint_xml = endpoint_xml.format(
+                local_port=old_endpoints[endpoint]['LocalPort'],
+                name=old_endpoints[endpoint]['Name'],
+                port=old_endpoints[endpoint]['Port'],
+                protocol=old_endpoints[endpoint]['Protocol'],
+                enable_direct_server_return=old_endpoints[endpoint]['EnableDirectServerReturn'],
+                timeout_for_tcp_idle_connection=old_endpoints[endpoint].get('IdleTimeoutInMinutes', 4),
+            )
+            endpoints_xml += this_endpoint_xml
+
+    request_xml = '''<PersistentVMRole xmlns="http://schemas.microsoft.com/windowsazure"
+xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+  <ConfigurationSets>
+    <ConfigurationSet>
+      <ConfigurationSetType>NetworkConfiguration</ConfigurationSetType>
+      <InputEndpoints>{0}
+      </InputEndpoints>
+    </ConfigurationSet>
+  </ConfigurationSets>
+  <OSVirtualHardDisk>
+  </OSVirtualHardDisk>
+</PersistentVMRole>'''.format(endpoints_xml)
+
+    path = 'services/hostedservices/{0}/deployments/{1}/roles/{2}'.format(
+        kwargs['service'],
+        kwargs['deployment'],
+        'techhatmaster',
+    )
+    query(
+        path=path,
+        method='PUT',
+        header_dict={'Content-Type': 'application/xml'},
+        data=request_xml,
+        decode=False,
+    )
+    return True
+
+
+def add_input_endpoint(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Add an input endpoint to the deployment. Please note that
+    there may be a delay before the changes show up.
+
+    CLI Example::
+
+        salt-cloud -f add_input_endpoint my-azure service=myservice \
+            deployment=mydeployment name=HTTP local_port=80 port=80 protocol=tcp \
+            enable_direct_server_return=False timeout_for_tcp_idle_connection=4
+    '''
+    return update_input_endpoint(
+        kwargs=kwargs,
+        conn=conn,
+        call='function',
+        activity='add',
+    )
+
+
+def delete_input_endpoint(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete an input endpoint from the deployment. Please note that
+    there may be a delay before the changes show up.
+
+    CLI Example::
+
+        salt-cloud -f delete_input_endpoint my-azure service=myservice \
+            deployment=mydeployment name=HTTP
+    '''
+    return update_input_endpoint(
+        kwargs=kwargs,
+        conn=conn,
+        call='function',
+        activity='delete',
+    )
+
+
+def show_deployment(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Return information about a deployment
+
+    CLI Example::
+
+        salt-cloud -f show_deployment my-azure name=my_deployment
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_deployment function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'service_name' not in kwargs:
+        raise SaltCloudSystemExit('A service name must be specified as "service_name"')
+
+    if 'deployment_name' not in kwargs:
+        raise SaltCloudSystemExit('A deployment name must be specified as "deployment_name"')
+
+    data = conn.get_deployment_by_name(
+        service_name=kwargs['service_name'],
+        deployment_name=kwargs['deployment_name'],
+    )
+    return object_to_dict(data)
+
+
+# For consistency with Azure SDK
+get_deployment = show_deployment
+
+
 def object_to_dict(obj):
     '''
     .. versionadded:: Beryllium
@@ -1815,3 +2086,55 @@ def object_to_dict(obj):
             else:
                 ret[item] = obj.__dict__[item]
     return ret
+
+
+def query(path, method='GET', data=None, params=None, header_dict=None, decode=True):
+    '''
+    Perform a query directly against the Azure REST API
+    '''
+    certificate_path = config.get_cloud_config_value(
+        'certificate_path',
+        get_configured_provider(), __opts__, search_global=False
+    )
+    subscription_id = config.get_cloud_config_value(
+        'subscription_id',
+        get_configured_provider(), __opts__, search_global=False
+    )
+    management_host = config.get_cloud_config_value(
+        'management_host',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default='management.core.windows.net'
+    )
+    requests_lib = config.get_cloud_config_value(
+        'requests_lib',
+        get_configured_provider(), __opts__, search_global=False
+    )
+    url = 'https://{management_host}/{subscription_id}/{path}'.format(
+        management_host=management_host,
+        subscription_id=subscription_id,
+        path=path,
+    )
+
+    if header_dict is None:
+        header_dict = {}
+
+    header_dict['x-ms-version'] = '2014-06-01'
+
+    result = salt.utils.http.query(
+        url,
+        method=method,
+        params=params,
+        data=data,
+        header_dict=header_dict,
+        port=443,
+        text=True,
+        cert=certificate_path,
+        requests_lib=requests_lib,
+        decode=decode,
+        decode_type='xml',
+    )
+    if 'dict' in result:
+        return result['dict']
+    return
