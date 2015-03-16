@@ -200,7 +200,9 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     ret = []
-    for name, state in six.iteritems(_get_all_unit_files() + _get_all_legacy_init_scripts()):
+    known_services = _get_all_unit_files()
+    known_services.update(_get_all_legacy_init_scripts())
+    for name, state in six.iteritems(known_services):
         if state == 'disabled':
             ret.append(name)
     return sorted(ret)
