@@ -24,6 +24,7 @@ import jinja2.exceptions
 from xml.dom import minidom
 import salt.ext.six as six
 from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
+from xml.dom import minidom
 try:
     import libvirt  # pylint: disable=import-error
     HAS_LIBVIRT = True
