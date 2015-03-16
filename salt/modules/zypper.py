@@ -628,16 +628,16 @@ def install(name=None,
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ''
+    cmd_install = ['zypper', '--no-refresh', '--non-interactive', 'install',
+                   '--name', '--auto-agree-with-licenses']
+    if downloadonly:
+        cmd_install.append('--download-only')
+    if fromrepo:
+        cmd_install.extend(fromrepoopt)
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        cmd = ['zypper', '--non-interactive', 'install', '--name',
-               '--auto-agree-with-licenses']
-        if downloadonly:
-            cmd.append('--download-only')
-
-        if fromrepo:
-            cmd.extend(fromrepoopt)
+        cmd = cmd_install
         cmd.extend(targets[:500])
         targets = targets[500:]
 
@@ -655,13 +655,7 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = ['zypper', '--non-interactive', 'install', '--name',
-               '--auto-agree-with-licenses', '--force']
-        if downloadonly:
-            cmd.append('--download-only')
-
-        if fromrepo:
-            cmd.extend(fromrepoopt)
+        cmd = cmd_install + ['--force']
         cmd.extend(downgrades[:500])
         downgrades = downgrades[500:]
 
