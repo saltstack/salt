@@ -1859,7 +1859,8 @@ def show_input_endpoint(kwargs=None, conn=None, call=None):
 
     CLI Example::
 
-        salt-cloud -f show_input_endpoint my-azure service=myservice deployment=mydeployment name=SSH
+        salt-cloud -f show_input_endpoint my-azure service=myservice \
+            deployment=mydeployment name=SSH
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1887,8 +1888,9 @@ def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
     CLI Example::
 
         salt-cloud -f update_input_endpoint my-azure service=myservice \
-            deployment=mydeployment name=HTTP local_port=80 port=80 protocol=tcp \
-            enable_direct_server_return=False timeout_for_tcp_idle_connection=4
+            deployment=mydeployment role=myrole name=HTTP local_port=80 \
+            port=80 protocol=tcp enable_direct_server_return=False \
+            timeout_for_tcp_idle_connection=4
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1903,6 +1905,9 @@ def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An endpoint name must be specified as "name"')
+
+    if 'role' not in kwargs:
+        raise SaltCloudSystemExit('An role name must be specified as "role"')
 
     if activity != 'delete':
         if 'port' not in kwargs:
@@ -1970,7 +1975,7 @@ xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
     path = 'services/hostedservices/{0}/deployments/{1}/roles/{2}'.format(
         kwargs['service'],
         kwargs['deployment'],
-        'techhatmaster',
+        kwargs['role'],
     )
     query(
         path=path,
@@ -1992,8 +1997,9 @@ def add_input_endpoint(kwargs=None, conn=None, call=None):
     CLI Example::
 
         salt-cloud -f add_input_endpoint my-azure service=myservice \
-            deployment=mydeployment name=HTTP local_port=80 port=80 protocol=tcp \
-            enable_direct_server_return=False timeout_for_tcp_idle_connection=4
+            deployment=mydeployment role=myrole name=HTTP local_port=80 \
+            port=80 protocol=tcp enable_direct_server_return=False \
+            timeout_for_tcp_idle_connection=4
     '''
     return update_input_endpoint(
         kwargs=kwargs,
@@ -2013,7 +2019,7 @@ def delete_input_endpoint(kwargs=None, conn=None, call=None):
     CLI Example::
 
         salt-cloud -f delete_input_endpoint my-azure service=myservice \
-            deployment=mydeployment name=HTTP
+            deployment=mydeployment role=myrole name=HTTP
     '''
     return update_input_endpoint(
         kwargs=kwargs,
