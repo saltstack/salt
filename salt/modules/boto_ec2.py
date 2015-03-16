@@ -126,6 +126,16 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
 
 def terminate(instance_id=None, name=None, region=None,
               key=None, keyid=None, profile=None):
+    '''
+    Terminate the instance described by instance_id or name.
+    
+    CLI example::
+
+    .. code-block:: bash
+        
+        salt myminion boto_ec2.terminate name=myinstance
+        salt myminion boto_ec2.terminate instance_id=i-a46b9f
+    '''
     instances = find_instances(instance_id=instance_id, name=name,
                                region=region, key=key, keyid=keyid,
                                profile=profile, return_objs=True)
