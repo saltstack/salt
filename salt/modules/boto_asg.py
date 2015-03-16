@@ -163,8 +163,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
-           scaling_policies=None, region=None, key=None, keyid=None,
-           profile=None):
+           scaling_policies=None, region=None,
+           notification_arn=None, notification_types=None,
+           key=None, keyid=None, profile=None):
     '''
     Create an autoscale group.
 
@@ -221,6 +222,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_auto_scaling_group(_asg)
         # create scaling policies
         _create_scaling_policies(conn, name, scaling_policies)
+        # create notifications
+        if notification_arn and notification_types:
+            conn.put_notification_configuration(_asg, notification_arn, notification_types)
         log.info('Created ASG {0}'.format(name))
         return True
     except boto.exception.BotoServerError as e:
@@ -236,8 +240,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
            scaling_policies=None,
-           region=None, key=None, keyid=None,
-           profile=None):
+           notification_arn=None, notification_types=None,
+           region=None, key=None, keyid=None, profile=None):
     '''
     Update an autoscale group.
 
@@ -292,6 +296,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             placement_group=placement_group, tags=_tags,
             vpc_zone_identifier=vpc_zone_identifier,
             termination_policies=termination_policies)
+        if notification_arn and notification_types:
+            conn.put_notification_configuration(_asg, notification_arn, notification_types)
         _asg.update()
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.

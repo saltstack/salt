@@ -14,6 +14,7 @@ import hashlib
 import tarfile
 import os
 import re
+import sys
 import time
 import yaml
 import uuid
@@ -97,7 +98,7 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 
 # NOTE: there are two passes of formatting:
 # 1) Substitute in static values
-#   - EX_THIN_PYTHON_OLD  - exit code if a suitable python is not found
+#   - EX_THIN_PYTHON_INVALID  - exit code if a suitable python is not found
 # 2) Substitute in instance-specific commands
 #   - DEBUG       - enable shim debugging (any non-zero string enables)
 #   - SUDO        - load python and execute as root (any non-zero string enables)
@@ -122,20 +123,20 @@ SUDO=""
 if [ -n "{{SUDO}}" ]
 then SUDO="sudo "
 fi
-EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}
+EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
-do if "$py_cmd" -c "import sys; sys.exit(not sys.hexversion >= 0x02060000);" >/dev/null 2>&1
-then py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
-exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")'
+do if "$py_cmd" -c "import sys; sys.exit(not (sys.hexversion >= 0x02060000 and sys.version_info.major is {{HOST_PY_MAJOR}}));" >/dev/null 2>&1
+then py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function; import sys; print(sys.executable);'`
+exec $SUDO "$py_cmd_path" -c 'import base64; exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
 exit 0
 else continue
 fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
-exit $EX_PYTHON_OLD
+exit $EX_PYTHON_INVALID
 EOF'''.format(
-    EX_THIN_PYTHON_OLD=salt.defaults.exitcodes.EX_THIN_PYTHON_OLD,
+    EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
 )
 
 if not is_windows():
@@ -876,6 +877,7 @@ ARGS = {9}\n'''.format(self.minion_config,
             DEBUG=debug,
             SUDO=sudo,
             SSH_PY_CODE=py_code_enc,
+            HOST_PY_MAJOR=sys.version_info.major,
         )
 
         return cmd
@@ -1023,9 +1025,9 @@ ARGS = {9}\n'''.format(self.minion_config,
                 'sudo expected a password, NOPASSWD required'
             ),
             (
-                (salt.defaults.exitcodes.EX_THIN_PYTHON_OLD,),
+                (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
                 'Python interpreter is too old',
-                'salt requires python 2.6 or newer on target hosts'
+                'salt requires python 2.6 or newer on target hosts, must have same major version as origin host'
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),

@@ -62,7 +62,7 @@ def list_upgrades(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
     ret = {}
-    call = __salt__['cmd.run_stdout'](
+    call = __salt__['cmd.run_all'](
         'zypper list-updates', output_loglevel='trace'
     )
     if call['retcode'] != 0:
@@ -95,6 +95,51 @@ def list_upgrades(refresh=True):
 list_updates = list_upgrades
 
 
+def info(*names, **kwargs):
+    '''
+    Return the information of the named package available for the system.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info <package name>
+        salt '*' pkg.info <package1> <package2> <package3> ...
+    '''
+    ret = {}
+
+    if not names:
+        return ret
+    else:
+        names = sorted(list(set(names)))
+
+    # Refresh db before extracting the latest package
+    if salt.utils.is_true(kwargs.pop('refresh', True)):
+        refresh_db()
+
+    pkg_info = []
+    batch = names[:]
+    batch_size = 200
+
+    # Run in batches
+    while batch:
+        cmd = 'zypper info -t package {0}'.format(' '.join(batch[:batch_size]))
+        pkg_info.extend(re.split("----*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
+        batch = batch[batch_size:]
+
+    for pkg_data in pkg_info:
+        nfo = {}
+        for line in [data for data in pkg_data.split("\n") if ":" in data]:
+            kw = [data.strip() for data in line.split(":", 1)]
+            if len(kw) == 2 and kw[1]:
+                nfo[kw[0].lower()] = kw[1]
+        if nfo.get("name"):
+            name = nfo.pop("name")
+            ret[name] = nfo
+
+    return ret
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -102,60 +147,32 @@ def latest_version(*names, **kwargs):
     name/version pairs is returned.
 
     If the latest version of a given package is already installed, an empty
-    string will be returned for that package.
+    dict will be returned for that package.
 
-    CLI Example:
+    CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-
-    if len(names) == 0:
-        return ''
-
     ret = {}
+
+    if not names:
+        return ret
+
+    names = sorted(list(set(names)))
+    package_info = info(*names)
     for name in names:
-        ret[name] = ''
+        pkg_info = package_info.get(name)
+        if pkg_info is not None and pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
+            ret_data = {}
+            for k in ['version', 'vendor']:
+                ret_data[k] = pkg_info.get(k)
+            ret[name] = ret_data
 
-    # Refresh before looking for the latest version available
-    if refresh:
-        refresh_db()
-
-    restpackages = names
-    outputs = []
-    # Split call to zypper into batches of 500 packages
-    while restpackages:
-        cmd = 'zypper info -t package {0}'.format(' '.join(restpackages[:500]))
-        output = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
-        outputs.extend(re.split('Information for package \\S+:\n', output))
-        restpackages = restpackages[500:]
-    for package in outputs:
-        pkginfo = {}
-        for line in package.splitlines():
-            try:
-                key, val = line.split(':', 1)
-                key = key.lower()
-                val = val.strip()
-            except ValueError:
-                continue
-            else:
-                pkginfo[key] = val
-
-        # Ignore if the needed keys weren't found in this iteration
-        if not set(('name', 'version', 'status')) <= set(pkginfo):
-            continue
-
-        status = pkginfo['status'].lower()
-        if 'not installed' in status or 'out-of-date' in status:
-            ret[pkginfo['name']] = pkginfo['version']
-
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
     return ret
+
 
 # available_version is being deprecated
 available_version = latest_version
@@ -171,12 +188,12 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name) != ''
+    return latest_version(name).get(name) is not None
 
 
 def version(*names, **kwargs):
     '''
-    Returns a string representing the package version or an empty string if not
+    Returns a string representing the package version or an empty dict if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
@@ -187,7 +204,7 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -439,7 +456,7 @@ def mod_repo(repo, **kwargs):
         raise CommandExecutionError(
                 'Modification of the repository \'{0}\' was not specified.'.format(repo))
 
-    return {}
+    return get_repo(repo)
 
 
 def refresh_db():
@@ -555,9 +572,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    if salt.utils.is_true(refresh):
-        refresh_db()
-
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -611,14 +625,18 @@ def install(name=None,
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ''
+    cmd_install = ['zypper', '--non-interactive']
+    if not refresh:
+        cmd_install.append('--no-refresh')
+    cmd_install += ['install', '--name', '--auto-agree-with-licenses']
+    if downloadonly:
+        cmd_install.append('--download-only')
+    if fromrepo:
+        cmd_install.extend(fromrepoopt)
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        cmd = ['zypper', '--non-interactive', 'install', '--name',
-               '--auto-agree-with-licenses']
-        if fromrepo:
-            cmd.extend(fromrepoopt)
-        cmd.extend(targets[:500])
+        cmd = cmd_install + targets[:500]
         targets = targets[500:]
 
         out = __salt__['cmd.run'](
@@ -635,14 +653,7 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = ['zypper', '--non-interactive', 'install', '--name',
-               '--auto-agree-with-licenses', '--force']
-        if downloadonly:
-            cmd.append('--download-only')
-
-        if fromrepo:
-            cmd.extend(fromrepoopt)
-        cmd.extend(downgrades[:500])
+        cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
@@ -793,18 +804,16 @@ def list_locks():
 
         salt '*' pkg.list_locks
     '''
-    if not os.path.exists(LOCKS):
-        return False
-
     locks = {}
-    with salt.utils.fopen(LOCKS) as fhr:
-        for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
-            lock = {}
-            for element in [el for el in meta if el]:
-                if ':' in element:
-                    lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
-            if lock.get('solvable_name'):
-                locks[lock.pop('solvable_name')] = lock
+    if os.path.exists(LOCKS):
+        with salt.utils.fopen(LOCKS) as fhr:
+            for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
+                lock = {}
+                for element in [el for el in meta if el]:
+                    if ':' in element:
+                        lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
+                if lock.get('solvable_name'):
+                    locks[lock.pop('solvable_name')] = lock
 
     return locks
 
@@ -1077,15 +1086,15 @@ def list_products():
 
         salt '*' pkg.list_products
     '''
-    products = '/etc/products.d'
-    if not os.path.exists(products):
-        raise CommandExecutionError('Directory {0} does not exists.'.format(products))
+    products_dir = '/etc/products.d'
+    if not os.path.exists(products_dir):
+        raise CommandExecutionError('Directory {0} does not exists.'.format(products_dir))
 
-    products = {}
-    for fname in os.listdir('/etc/products.d'):
-        pth_name = os.path.join(products, fname)
+    p_data = {}
+    for fname in os.listdir(products_dir):
+        pth_name = os.path.join(products_dir, fname)
         r_pth_name = os.path.realpath(pth_name)
-        products[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
+        p_data[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
 
     info = ['vendor', 'name', 'version', 'baseversion', 'patchlevel',
             'predecessor', 'release', 'endoflife', 'arch', 'cpeid',
@@ -1093,7 +1102,7 @@ def list_products():
             'description']
 
     ret = {}
-    for prod_meta, is_base_product in six.iteritems(products):
+    for prod_meta, is_base_product in six.iteritems(p_data):
         product = _parse_suse_product(prod_meta, *info)
         product['baseproduct'] = is_base_product is not None
         ret[product.pop('name')] = product

@@ -684,3 +684,143 @@ def list_folders(kwargs=None, call=None):  # pylint: disable=W0613
     for folder in folders:
         ret.append(folders[folder])
     return ret
+
+
+def status(name, call=None):
+    '''
+    To check the status of a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a status vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The status action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    return instance.get_status()
+
+
+def start(name, call=None):
+    '''
+    To start/power on a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_powered_on():
+        ret = 'already powered on'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Starting VM {0}'.format(name))
+        instance.power_on()
+    except Exception as exc:
+        log.error('Could not power on VM {0}: {1}'.format(name, exc))
+        return 'failed to power on'
+    return 'powered on'
+
+
+def stop(name, call=None):
+    '''
+    To stop/power off a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_powered_off():
+        ret = 'already powered off'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Stopping VM {0}'.format(name))
+        instance.power_off()
+    except Exception as exc:
+        log.error('Could not power off VM {0}: {1}'.format(name, exc))
+        return 'failed to power off'
+    return 'powered off'
+
+
+def suspend(name, call=None):
+    '''
+    To suspend a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a suspend vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The suspend action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_suspended():
+        ret = 'already suspended'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Suspending VM {0}'.format(name))
+        instance.suspend()
+    except Exception as exc:
+        log.error('Could not suspend VM {0}: {1}'.format(name, exc))
+        return 'failed to suspend'
+    return 'suspended'
+
+
+def reset(name, call=None):
+    '''
+    To reset a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reset vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The reset action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_resetting():
+        ret = 'already resetting'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Resetting VM {0}'.format(name))
+        instance.reset()
+    except Exception as exc:
+        log.error('Could not reset VM {0}: {1}'.format(name, exc))
+        return 'failed to reset'
+    return 'reset'
