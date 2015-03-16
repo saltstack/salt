@@ -14,6 +14,7 @@ The Azure cloud module is used to control access to Microsoft Azure
     * ``apikey``
     * ``certificate_path``
     * ``subscription_id``
+    * ``requests_lib``
 
     A Management Certificate (.pem and .crt files) must be created and the .pem
     file placed on the same machine that salt-cloud is run from. Information on
@@ -21,6 +22,8 @@ The Azure cloud module is used to control access to Microsoft Azure
     found at:
 
     http://www.windowsazure.com/en-us/develop/python/how-to-guides/service-management/
+
+    For users with Python < 2.7.9, requests_lib must currently be set to True.
 
 Example ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/azure.conf`` configuration:
