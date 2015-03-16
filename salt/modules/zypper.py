@@ -59,6 +59,8 @@ def list_upgrades(refresh=True):
 
         salt '*' pkg.list_upgrades
     '''
+    if salt.utils.is_true(refresh):
+        refresh_db()
     ret = {}
     call = __salt__['cmd.run_all'](
         'zypper list-updates', output_loglevel='trace'
