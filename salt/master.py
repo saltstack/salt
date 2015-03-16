@@ -1185,7 +1185,7 @@ class AESFuncs(object):
         if any(key not in load for key in ('return', 'jid', 'id')):
             return None
         # if we have a load, save it
-        if 'load' in load:
+        if load.get('load'):
             fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[fstr](load['jid'], load)
 
@@ -1194,6 +1194,10 @@ class AESFuncs(object):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
+            if 'fun' in load:
+                ret['fun'] = load['fun']
+            if 'arg' in load:
+                ret['fun_args'] = load['arg']
             if 'out' in load:
                 ret['out'] = load['out']
             self._return(ret)
