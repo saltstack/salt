@@ -962,6 +962,53 @@ def file_dict(*packages):
     return __salt__['lowpkg.file_dict'](*packages)
 
 
+def modified(*packages, **flags):
+    """
+    List the modified files that belong to a package. Not specifying any packages
+    will return a list of _all_ modified files on the system's RPM database.
+
+    Filtering by flags (True or False):
+
+    size
+        Include only files where size changed.
+
+    mode
+        Include only files which file's mode has been changed.
+
+    checksum
+        Include only files which MD5 checksum has been changed.
+
+    device
+        Include only files which major and minor numbers has been changed.
+
+    symlink
+        Include only files which are symbolic link contents.
+
+    owner
+        Include only files where owner has been changed.
+
+    group
+        Include only files where group has been changed.
+
+    time
+        Include only files where modification time of the file has been changed.
+
+    capabilities
+        Include only files where capabilities differ or not. Note: supported only on newer RPM versions.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.modified
+        salt '*' pkg.modified httpd
+        salt '*' pkg.modified httpd postfix
+        salt '*' pkg.modified httpd owner=True group=False
+    """
+
+    return __salt__['lowpkg.modified'](*packages, **flags)
+
+
 def owner(*paths):
     '''
     Return the name of the package that owns the file. Multiple file paths can
