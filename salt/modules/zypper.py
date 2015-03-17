@@ -361,6 +361,9 @@ def mod_repo(repo, **kwargs):
     gpgcheck
         Enable or disable (True or False) GOG check for this repository.
 
+    gpgautoimport
+        Automatically trust and import new repository.
+
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
     url can only be deleted if a mirrorlist is specified (or vice versa).
@@ -446,6 +449,9 @@ def mod_repo(repo, **kwargs):
 
     if 'gpgcheck' in kwargs:
         cmd_opt.append(kwargs['gpgcheck'] and '--gpgcheck' or '--no-gpgcheck')
+
+    if kwargs.get('gpgautoimport') is True:
+        cmd_opt.append('--gpg-auto-import-keys')
 
     if cmd_opt:
         __salt__['cmd.run'](('zypper -x mr {0} \'{1}\''.format(' '.join(cmd_opt), repo)),
@@ -572,9 +578,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    if salt.utils.is_true(refresh):
-        refresh_db()
-
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -628,17 +631,18 @@ def install(name=None,
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ''
+    cmd_install = ['zypper', '--non-interactive']
+    if not refresh:
+        cmd_install.append('--no-refresh')
+    cmd_install += ['install', '--name', '--auto-agree-with-licenses']
+    if downloadonly:
+        cmd_install.append('--download-only')
+    if fromrepo:
+        cmd_install.extend(fromrepoopt)
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        cmd = ['zypper', '--non-interactive', 'install', '--name',
-               '--auto-agree-with-licenses']
-        if downloadonly:
-            cmd.append('--download-only')
-
-        if fromrepo:
-            cmd.extend(fromrepoopt)
-        cmd.extend(targets[:500])
+        cmd = cmd_install + targets[:500]
         targets = targets[500:]
 
         out = __salt__['cmd.run'](
@@ -655,14 +659,7 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = ['zypper', '--non-interactive', 'install', '--name',
-               '--auto-agree-with-licenses', '--force']
-        if downloadonly:
-            cmd.append('--download-only')
-
-        if fromrepo:
-            cmd.extend(fromrepoopt)
-        cmd.extend(downgrades[:500])
+        cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)

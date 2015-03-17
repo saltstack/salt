@@ -359,6 +359,7 @@ def purge(name, delete_key=True):
                 timeout=600)
     except SaltClientError as client_error:
         return 'Virtual machine {0} could not be purged: {1}'.format(name, client_error)
+
     for comp in cmd_ret:
         ret.update(comp)
 

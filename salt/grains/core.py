@@ -1237,6 +1237,7 @@ def os_data():
         osrelease = __salt__['cmd.run']('sw_vers -productVersion')
         grains['os'] = 'MacOS'
         grains['osrelease'] = osrelease
+        grains['osmajorrelease'] = osrelease.rsplit('.', 1)[0]
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
     else:
@@ -1754,6 +1755,14 @@ def _hw_data(osdata):
             result = __salt__['cmd.run_all']('{0} -n {1}'.format(sysctl, oid))
             if result['retcode'] == 0:
                 grains[key] = result['stdout']
+    elif osdata['kernel'] == 'Darwin':
+        grains['manufacturer'] = 'Apple Inc.'
+        sysctl = salt.utils.which('sysctl')
+        hwdata = {'productname': 'hw.model'}
+        for key, oid in hwdata.items():
+            value = __salt__['cmd.run']('{0} -b {1}'.format(sysctl, oid))
+            if not value.endswith(' is invalid'):
+                grains[key] = value
 
     return grains
 

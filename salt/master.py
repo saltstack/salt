@@ -6,7 +6,6 @@ involves preparing the three listeners and the workers needed by the master.
 
 # Import python libs
 from __future__ import absolute_import
-import ctypes
 from pprint import pformat
 import os
 import re
@@ -2382,16 +2381,25 @@ class ClearFuncs(object):
         '''
         Return a jid for this publication
         '''
+        # the jid in clear_load can be None, '', or something else. this is an
+        # attempt to clean up the value before passing to plugins
+        passed_jid = clear_load['jid'] if clear_load.get('jid') else None
+        nocache = extra.get('nocache', False)
+
         # Retrieve the jid
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
         try:
-            jid = self.mminion.returners[fstr](nocache=extra.get('nocache', False),
-                                                            # the jid in clear_load can be None, '', or something else.
-                                                            # this is an attempt to clean up the value before passing to plugins
-                                                            passed_jid=clear_load['jid'] if clear_load.get('jid') else None)
-        except TypeError:  # The returner is not present
-            log.error('The requested returner {0} could not be loaded. Publication not sent.'.format(fstr.split('.')[0]))
-            return None
+            # Retrieve the jid
+            jid = self.mminion.returners[fstr](nocache=nocache,
+                                               passed_jid=passed_jid)
+        except (KeyError, TypeError):
+            # The returner is not present
+            msg = (
+                'Failed to allocate a jid. The requested returner \'{0}\' '
+                'could not be loaded.'.format(fstr.split('.')[0])
+            )
+            log.error(msg)
+            return {'error': msg}
         return jid
 
     def _send_pub(self, load):
