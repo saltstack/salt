@@ -121,6 +121,53 @@ orch = orchestrate  # pylint: disable=invalid-name
 sls = orchestrate  # pylint: disable=invalid-name
 
 
+def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs):
+    '''
+    versionadded:: 2015.2
+
+    Execute a single state orchestration routine
+    '''
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+    __opts__['file_client'] = 'local'
+    minion = salt.minion.MasterMinion(__opts__)
+    running = minion.functions['state.single'](
+            fun,
+            name,
+            test=None,
+            queue=False,
+            pillar=pillar,
+            **kwargs)
+    ret = {minion.opts['id']: running}
+    __jid_event__.fire_event({'data': ret, 'outputter': 'highstate'}, 'progress')
+    return ret
+
+
+def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
+    '''
+    versionadded:: 2015.2
+
+    Execute a single state orchestration routine
+    '''
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+    __opts__['file_client'] = 'local'
+    minion = salt.minion.MasterMinion(__opts__)
+    running = minion.functions['state.high'](
+            data,
+            test=None,
+            queue=False,
+            pillar=pillar,
+            **kwargs)
+    ret = {minion.opts['id']: running}
+    __jid_event__.fire_event({'data': ret, 'outputter': 'highstate'}, 'progress')
+    return ret
+
+
 def show_stages(saltenv='base', os_fn=None):
     '''
     .. versionadded:: 0.11.0
