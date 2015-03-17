@@ -2,24 +2,26 @@
 '''
 Manage events
 
-Events are all fired off via a zeromq 'pub' socket, and listened to with
-local zeromq 'sub' sockets
+Events are all fired off via a zeromq 'pub' socket, and listened to with local
+zeromq 'sub' sockets
 
 
-All of the formatting is self contained in the event module, so
-we should be able to modify the structure in the future since the same module
-used to read events is the same module used to fire off events.
+All of the formatting is self contained in the event module, so we should be
+able to modify the structure in the future since the same module used to read
+events is the same module used to fire off events.
 
-Old style event messages were comprised of two parts delimited
-at the 20 char point. The first 20 characters are used for the zeromq
-subscriber to match publications and 20 characters was chosen because it was at
-the time a few more characters than the length of a jid (Job ID).
-Any tags of length less than 20 characters were padded with "|" chars out to
-20 characters. Although not explicit, the data for an event comprised a
-python dict that was serialized by msgpack.
+Old style event messages were comprised of two parts delimited at the 20 char
+point. The first 20 characters are used for the zeromq subscriber to match
+publications and 20 characters was chosen because it was at the time a few more
+characters than the length of a jid (Job ID).  Any tags of length less than 20
+characters were padded with "|" chars out to 20 characters.
+
+Although not explicit, the data for an event comprised a python dict that was
+serialized by msgpack.
 
 New style event messages support event tags longer than 20 characters while
 still being backwards compatible with old style tags.
+
 The longer tags better enable name spaced event tags which tend to be longer.
 Moreover, the constraint that the event data be a python dict is now an
 explicit constraint and fire-event will now raise a ValueError if not. Tags
@@ -29,15 +31,14 @@ Since the msgpack dict (map) indicators have values greater than or equal to
 0x80 it can be unambiguously determined if the start of data is at char 21
 or not.
 
-In the new style:
-When the tag is longer than 20 characters, an end of tag string is appended to
-the tag given by the string constant TAGEND, that is, two line feeds '\n\n'.
-When the tag is less than 20 characters then the tag is padded with pipes
-"|" out to 20 characters as before.
-When the tag is exactly 20 characters no padded is done.
+In the new style, when the tag is longer than 20 characters, an end of tag
+string is appended to the tag given by the string constant TAGEND, that is, two
+line feeds '\n\n'.  When the tag is less than 20 characters then the tag is
+padded with pipes "|" out to 20 characters as before.  When the tag is exactly
+20 characters no padded is done.
 
-The get_event method intelligently figures out if the tag is longer than
-20 characters.
+The get_event method intelligently figures out if the tag is longer than 20
+characters.
 
 
 The convention for namespacing is to use dot characters "." as the name space
@@ -258,6 +259,7 @@ class SaltEvent(object):
         self.sub.connect(self.puburi)
         self.poller.register(self.sub, zmq.POLLIN)
         self.sub.setsockopt(zmq.SUBSCRIBE, '')
+        self.sub.setsockopt(zmq.LINGER, 5000)
         self.cpub = True
 
     def connect_pull(self, timeout=1000):
@@ -275,6 +277,7 @@ class SaltEvent(object):
             # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
             #                        CentOS5, which still uses 2.1.9)
             pass
+        self.push.setsockopt(zmq.LINGER, timeout)
         self.push.connect(self.pulluri)
         self.cpush = True
 
@@ -514,10 +517,8 @@ class SaltEvent(object):
             # Wait at most 2.5 secs to send any remaining messages in the
             # socket or the context.term() below will hang indefinitely.
             # See https://github.com/zeromq/pyzmq/issues/102
-            self.sub.setsockopt(zmq.LINGER, linger)
             self.sub.close()
         if self.cpush is True and self.push.closed is False:
-            self.push.setsockopt(zmq.LINGER, linger)
             self.push.close()
         # If sockets are not unregistered from a poller, nothing which touches
         # that poller gets garbage collected. The Poller itself, its
@@ -723,20 +724,22 @@ class EventReturn(multiprocessing.Process):
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
         event_queue = []
-        try:
-            for event in events:
-                if self._filter(event):
-                    event_queue.append(event)
-                if len(event_queue) >= self.event_return_queue:
-                    self.minion.returners[
-                        '{0}.event_return'.format(self.opts['event_return'])
-                    ](event_queue)
+        for event in events:
+            if self._filter(event):
+                event_queue.append(event)
+            if len(event_queue) >= self.event_return_queue:
+                event_return = '{0}.event_return'.format(
+                    self.opts['event_return']
+                )
+                if event_return in self.minion.returners:
+                    self.minion.returners[event_return](event_queue)
                     event_queue = []
-        except KeyError:
-            log.error((
-                'Could not store return for events {0}. Returner {1} '
-                'not found.'
-            ).format(events, self.opts.get('event_return', None)))
+                else:
+                    log.error(
+                        'Could not store return for event(s) {0}. Returner '
+                        '\'{1}\' not found.'
+                        .format(event_queue, self.opts['event_return'])
+                    )
 
     def _filter(self, event):
         '''

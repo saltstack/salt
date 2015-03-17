@@ -1051,7 +1051,7 @@ class Minion(MinionBase):
         '''
         pass
 
-    def _handle_clear(self, load):
+    def _handle_clear(self, load, sig=None):
         '''
         Handle un-encrypted transmissions
         '''
@@ -2052,15 +2052,18 @@ class Syndic(Minion):
             if field in data:
                 kwargs[field] = data[field]
 
-        # Send out the publication
-        self.local.pub(data['tgt'],
-                       data['fun'],
-                       data['arg'],
-                       data['tgt_type'],
-                       data['ret'],
-                       data['jid'],
-                       data['to'],
-                       **kwargs)
+        try:
+            # Send out the publication
+            self.local.pub(data['tgt'],
+                           data['fun'],
+                           data['arg'],
+                           data['tgt_type'],
+                           data['ret'],
+                           data['jid'],
+                           data['to'],
+                           **kwargs)
+        except Exception as exc:
+            log.warning('Unable to forward pub data: {0}'.format(exc))
 
     def _setsockopts(self):
         # no filters for syndication masters, unless we want to maintain a
@@ -2398,10 +2401,10 @@ class MultiSyndic(MinionBase):
                 minion['auth_wait'] += self.opts['acceptance_wait_time']
         return False
 
-    # TODO: Move to an async framework of some type-- channel (the event thing underneath)
-    # doesn't handle failures well, and will retry 3 times at 60s timeouts-- which all block
-    # the main thread's execution. For now we just cause failures to kick off threads to look
-    # for the master to come back up
+    # TODO: Move to an async framework of some type-- channel (the event thing
+    # underneath) doesn't handle failures well, and will retry 3 times at 60s
+    # timeouts-- which all block the main thread's execution. For now we just
+    # cause failures to kick off threads to look for the master to come back up
     def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
         Wrapper to call a given func on a syndic, best effort to get the one you asked for
@@ -2496,8 +2499,8 @@ class MultiSyndic(MinionBase):
                 if socks.get(self.local.event.sub) == zmq.POLLIN:
                     self._process_event_socket()
 
-                if (self.event_forward_timeout is not None and
-                    self.event_forward_timeout < time.time()):
+                if self.event_forward_timeout is not None \
+                        and self.event_forward_timeout < time.time():
                     self._forward_events()
             # We don't handle ZMQErrors like the other minions
             # I've put explicit handling around the receive calls

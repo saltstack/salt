@@ -221,7 +221,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if return_url is True:
             return ret, requesturl
     else:
-        if method == 'GET' or method == 'HEAD':
+        if result.status_code != requests.codes.ok:
             return
         ret = {'headers': []}
         for header in result.headers:

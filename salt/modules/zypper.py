@@ -361,6 +361,9 @@ def mod_repo(repo, **kwargs):
     gpgcheck
         Enable or disable (True or False) GOG check for this repository.
 
+    gpgautoimport
+        Automatically trust and import new repository.
+
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
     url can only be deleted if a mirrorlist is specified (or vice versa).
@@ -446,6 +449,9 @@ def mod_repo(repo, **kwargs):
 
     if 'gpgcheck' in kwargs:
         cmd_opt.append(kwargs['gpgcheck'] and '--gpgcheck' or '--no-gpgcheck')
+
+    if kwargs.get('gpgautoimport') is True:
+        cmd_opt.append('--gpg-auto-import-keys')
 
     if cmd_opt:
         __salt__['cmd.run'](('zypper -x mr {0} \'{1}\''.format(' '.join(cmd_opt), repo)),
