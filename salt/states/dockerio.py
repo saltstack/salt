@@ -139,13 +139,6 @@ from salt.ext.six import string_types
 import salt.utils
 import salt.ext.six as six
 
-# Import third party libs
-try:
-    import docker
-    HAS_DOCKER = True
-except ImportError:
-    HAS_DOCKER = False
-
 # Enable proper logging
 log = logging.getLogger(__name__)
 
@@ -155,11 +148,8 @@ __virtualname__ = 'docker'
 
 def __virtual__():
     '''
-    Only load if the docker libs are available.
+    Only load if the dockerio execution module is available
     '''
-    if not HAS_DOCKER:
-        return False
-
     if 'docker.version' in __salt__:
         return __virtualname__
     return False
