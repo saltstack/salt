@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Watch the shell commands being executed actively
 '''
