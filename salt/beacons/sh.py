@@ -41,6 +41,7 @@ def beacon(config):
     for pid in track_pids:
         if pid not in __context__[pkey]:
             cmd = ['strace', '-f', '-e', 'execve', '-p', '{0}'.format(pid)]
+            __context__[pkey][pid] = {}
             __context__[pkey][pid]['vt'] = salt.utils.vt.Terminal(
                     cmd,
                     log_stdout=True,
@@ -53,6 +54,8 @@ def beacon(config):
         err = ''
         while __context__[pkey][pid]['vt'].has_unread_data:
             tout, terr = __context__[pkey][pid]['vt'].recv()
+            if not err:
+                break
             out += tout
             err += terr
         for line in err.split('\n'):
@@ -68,7 +71,7 @@ def beacon(config):
                         event['args'].append(comps[ind])
                 event['user'] = __context__[pkey][pid]['user']
                 ret.append(event)
-        if not __context__[pkey][pid]['vt'].is_alive():
+        if not __context__[pkey][pid]['vt'].isalive():
             __context__[pkey][pid]['vt'].close()
             __context__[pkey].pop(pid)
     return ret
