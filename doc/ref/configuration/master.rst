@@ -1832,7 +1832,7 @@ There are additional details at :ref:`salt-pillars`
 ``ext_pillar_first``
 --------------------
 
-.. versionadded:: 2015.2
+.. versionadded:: 2015.2.0
 
 The ext_pillar_first option allows for external pillar sources to populate
 before file system pillar. This allows for targeting file system pillar from
@@ -1885,7 +1885,7 @@ strategy between different sources. It accepts 3 values:
 
 * aggregate:
 
-  instructs aggregation of elements between sources that use the #!yamlex rendered.
+  instructs aggregation of elements between sources that use the #!yamlex renderer.
 
   For example, these two documents:
 

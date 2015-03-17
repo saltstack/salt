@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import salt.client
 from salt.ext.six.moves import range
+from salt.exceptions import SaltClientError
 
 
 def hash(*args, **kwargs):
@@ -157,13 +158,18 @@ def _get_pool_results(*args, **kwargs):
 
     tgt = args[0]
     cmd = args[1]
+    ret = {}
 
     sort = kwargs.get('survey_sort', 'down')
     direction = sort != 'up'
 
     client = salt.client.get_local_client(__opts__['conf_file'])
-    minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'])
-    ret = {}
+    try:
+        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'])
+    except SaltClientError as client_error:
+        print(client_error)
+        return ret
+
     # hash minion return values as a string
     for minion in sorted(minions):
         digest = hashlib.sha256(str(minions[minion])).hexdigest()
