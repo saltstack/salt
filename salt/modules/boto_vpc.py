@@ -37,6 +37,7 @@ Connection module for Amazon VPC
 
 # Import Python libs
 from __future__ import absolute_import
+import hashlib
 import logging
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
@@ -1257,6 +1258,11 @@ def _get_conn(region, key, keyid, profile):
     if not keyid and __salt__['config.option']('vpc.keyid'):
         keyid = __salt__['config.option']('vpc.keyid')
 
+    # avoid repeatedly creating new connections
+    cxkey = 'boto_vpc:' + hashlib.md5(region + keyid + key).hexdigest()
+    if cxkey in __context__:
+        return __context__[cxkey]
+
     try:
         conn = boto.vpc.connect_to_region(region, aws_access_key_id=keyid,
                                           aws_secret_access_key=key)
@@ -1264,6 +1270,8 @@ def _get_conn(region, key, keyid, profile):
         log.error('No authentication credentials found when attempting to'
                   ' make boto VPC connection.')
         return None
+    __context__[cxkey] = conn
+
     return conn
 
 
@@ -1304,6 +1312,59 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
             for k in six.iterkeys(_ret):
                 _ret[k] = getattr(vpc, k)
             return _ret
+
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
+def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Describe all VPCs, matching the filter criteria if provided.
+
+    Returns a a list of dictionaries with interesting properties.
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_vpcs
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    items = ('cidr_block',
+             'is_default',
+             'state',
+             'tags',
+             'dhcp_options_id',
+             'instance_tenancy')
+
+    if not conn:
+        return False
+
+    try:
+        filter_parameters = {'filters': {}}
+
+        if vpc_id:
+            filter_parameters['vpc_ids'] = [vpc_id]
+
+        if cidr:
+            filter_parameters['filters']['cidr'] = cidr
+
+        if name:
+            filter_parameters['filters']['tag:Name'] = name
+
+        if tags:
+            for tag_name, tag_value in six.iteritems(tags):
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        vpcs = conn.get_all_vpcs(**filter_parameters)
+
+        if vpcs:
+            ret = []
+            for vpc in vpcs:
+                ret.append(dict((k, getattr(vpc, k)) for k in items))
+            return ret
 
     except boto.exception.BotoServerError as exc:
         log.error(exc)
