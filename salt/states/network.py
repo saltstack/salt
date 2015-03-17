@@ -286,8 +286,7 @@ def managed(name, type, enabled=True, **kwargs):
                 diff = difflib.unified_diff(old, new, lineterm='')
                 ret['result'] = None
                 ret['comment'] = 'Interface {0} is set to be ' \
-                                 'updated.'.format(name)
-                ret['changes']['interface'] = '\n'.join(diff)
+                                 'updated:\n{1}'.format(name, '\n'.join(diff))
         else:
             if not old and new:
                 ret['comment'] = 'Interface {0} ' \
@@ -324,8 +323,7 @@ def managed(name, type, enabled=True, **kwargs):
                     diff = difflib.unified_diff(old, new, lineterm='')
                     ret['result'] = None
                     ret['comment'] = 'Bond interface {0} is set to be ' \
-                                     'updated.'.format(name)
-                    ret['changes']['bond'] = '\n'.join(diff)
+                                     'updated:\n{1}'.format(name, '\n'.join(diff))
             else:
                 if not old and new:
                     ret['comment'] = 'Bond interface {0} ' \
@@ -436,8 +434,8 @@ def routes(name, **kwargs):
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm='')
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} routes are set to be updated.'.format(name)
-                ret['changes']['network_routes'] = '\n'.join(diff)
+                ret['comment'] = 'Interface {0} routes are set to be ' \
+                                 'updated:\n{1}'.format(name, '\n'.join(diff))
                 return ret
         if not old and new:
             apply_routes = True
@@ -498,8 +496,8 @@ def system(name, **kwargs):
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm='')
                 ret['result'] = None
-                ret['comment'] = 'Global network settings are set to be updated.'
-                ret['changes']['network_settings'] = '\n'.join(diff)
+                ret['comment'] = 'Global network settings are set to be ' \
+                                 'updated:\n{0}'.format('\n'.join(diff))
                 return ret
         if not old and new:
             apply_net_settings = True
