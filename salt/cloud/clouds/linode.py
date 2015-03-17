@@ -39,13 +39,15 @@ minion gets new keys and the keys get pre-seeded on the master, and the
 Cloning requires a post 2015-02-01 salt-bootstrap.
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import pprint
 import logging
 import time
 from os.path import exists, expanduser
+
+# pylint: disable=E0102
 
 
 # Import salt cloud libs
