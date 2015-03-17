@@ -227,7 +227,7 @@ def groups(username, **kwargs):
     else:
         return False
     for _, entry in search_results:
-        if entry['memberUid'][0] == username:
+        if username in entry['memberUid']:
             group_list.append(entry['cn'][0])
     log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
     return group_list
