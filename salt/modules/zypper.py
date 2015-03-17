@@ -398,11 +398,11 @@ def mod_repo(repo, **kwargs):
             new_url = _urlparse(url)
             if not new_url.path:
                 new_url = _urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
-                                               netloc=new_url.netloc,
-                                               path='/',
-                                               params=new_url.params,
-                                               query=new_url.query,
-                                               fragment=new_url.fragment)
+                                                netloc=new_url.netloc,
+                                                path='/',
+                                                params=new_url.params,
+                                                query=new_url.query,
+                                                fragment=new_url.fragment)
             base_url = _urlparse(repo_meta['baseurl'])
 
             if new_url == base_url:
@@ -460,7 +460,7 @@ def mod_repo(repo, **kwargs):
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
         raise CommandExecutionError(
-                'Modification of the repository \'{0}\' was not specified.'.format(repo))
+            'Modification of the repository \'{0}\' was not specified.'.format(repo))
 
     return get_repo(repo)
 
@@ -1045,7 +1045,7 @@ def search(criteria):
     out = {}
     for solvable in [s for s in solvables
                      if s.getAttribute('status') == 'not-installed' and
-                     s.getAttribute('kind') == 'package']:
+                        s.getAttribute('kind') == 'package']:
         out[solvable.getAttribute('name')] = {
             'summary': solvable.getAttribute('summary')
         }
