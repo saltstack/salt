@@ -332,7 +332,7 @@ def del_repo(repo):
                 return {
                     repo: True,
                     'message': msg[0].childNodes[0].nodeValue,
-                    }
+                }
 
     raise CommandExecutionError('Repository \'{0}\' not found.'.format(repo))
 
@@ -686,7 +686,7 @@ def upgrade(refresh=True):
     ret = {'changes': {},
            'result': True,
            'comment': '',
-           }
+    }
 
     if salt.utils.is_true(refresh):
         refresh_db()
