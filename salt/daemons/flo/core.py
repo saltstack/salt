@@ -1157,7 +1157,8 @@ class SaltRaetRouterMaster(SaltRaetRouter):
 
         if d_share == 'pub_ret':
             # only publish to available minions
-            msg['return']['ret']['minions'] = self._availablize(msg['return']['ret']['minions'])
+            if not self.opts.value.get('zmq_behavior'):
+                msg['return']['ret']['minions'] = self._availablize(msg['return']['ret']['minions'])
             if msg.get('__worker_verify') == self.worker_verify.value:
                 self.publish.value.append(msg)
 
