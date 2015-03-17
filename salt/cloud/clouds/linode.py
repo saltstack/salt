@@ -49,7 +49,6 @@ from os.path import exists, expanduser
 
 # pylint: disable=E0102
 
-
 # Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
