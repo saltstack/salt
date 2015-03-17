@@ -1854,7 +1854,7 @@ class Minion(MinionBase):
             try:
                 beacons = self.process_beacons(self.functions)
             except Exception:
-                log.critical('The beacon errored: ', exec_info=True)
+                log.critical('The beacon errored: ', exc_info=True)
             if beacons:
                 self._fire_master(events=beacons)
 
