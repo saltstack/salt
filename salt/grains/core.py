@@ -1755,6 +1755,7 @@ def _hw_data(osdata):
             if result['retcode'] == 0:
                 grains[key] = result['stdout']
     elif osdata['kernel'] == 'Darwin':
+        grains['manufacturer'] = 'Apple Inc.'
         sysctl = salt.utils.which('sysctl')
         hwdata = {'productname': 'hw.model'}
         for key, oid in hwdata.items():
