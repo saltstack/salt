@@ -1185,6 +1185,9 @@ class Minion(MinionBase):
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']
         ret['fun_args'] = data['arg']
+        for key in ('tgt', 'tgt_type'):
+            if key in data:
+                ret[key] = data[key]
         if 'master_id' in data:
             ret['master_id'] = data['master_id']
         if 'metadata' in data:
@@ -1288,7 +1291,10 @@ class Minion(MinionBase):
                     'id': self.opts['id'],
                     'jid': jid,
                     'fun': fun,
-                    'load': ret.get('__load__')}
+                    'load': ret.get('__load__'),
+                    'arg': ret.get('__arg__'),
+                    'tgt': ret.get('__tgt__'),
+                    'tgt_type': ret.get('__tgt_type__')}
             if '__master_id__' in ret:
                 load['master_id'] = ret['__master_id__']
             load['return'] = {}
@@ -2214,6 +2220,7 @@ class Syndic(Minion):
                 if 'jid' not in event['data']:
                     # Not a job return
                     continue
+
                 jdict = self.jids.setdefault(event['tag'], {})
                 if not jdict:
                     jdict['__fun__'] = event['data'].get('fun')
@@ -2227,6 +2234,11 @@ class Syndic(Minion):
                     # __'s to make sure it doesn't print out on the master cli
                     jdict['__master_id__'] = event['data']['master_id']
                 jdict[event['data']['id']] = event['data']['return']
+                for data_key, event_key in (('fun_args', '__arg__'),
+                                            ('tgt', '__tgt__'),
+                                            ('tgt_type', '__tgt_type__')):
+                    if data_key in event['data']:
+                        jdict[event_key] = event['data'][data_key]
             else:
                 # Add generic event aggregation here
                 if 'retcode' not in event['data']:
@@ -2526,10 +2538,15 @@ class MultiSyndic(MinionBase):
                     # __'s to make sure it doesn't print out on the master cli
                     jdict['__master_id__'] = event['data']['master_id']
                 jdict[event['data']['id']] = event['data']['return']
+                for data_key, event_key in (('fun_args', '__arg__'),
+                                            ('tgt', '__tgt__'),
+                                            ('tgt_type', '__tgt_type__')):
+                    if data_key in event['data']:
+                        jdict[event_key] = event['data'][data_key]
             else:
-                # TODO: config to forward these? If so we'll have to keep track of who
-                # has seen them
-                # if we are the top level masters-- don't forward all the minion events
+                # TODO: config to forward these? If so we'll have to keep track
+                # of who has seen them if we are the top level masters-- don't
+                # forward all the minion events
                 if self.syndic_mode == 'sync':
                     # Add generic event aggregation here
                     if 'retcode' not in event['data']:
