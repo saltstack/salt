@@ -403,7 +403,6 @@ def _get_conn(region, key, keyid, profile):
     # avoid repeatedly creating new connections
     cxkey = 'boto_ec2:' + hashlib.md5(region + keyid + key).hexdigest()
     if cxkey in __context__:
-        log.debug('found conn in context')
         return __context__[cxkey]
 
     try:
