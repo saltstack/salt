@@ -1524,3 +1524,30 @@ def _is_valid_shell(shell):
         return True
     else:
         return False
+
+
+def shells():
+    '''
+    Lists the valid shells on this system via the /etc/shells file
+
+    CLI Example::
+
+        salt '*' cmd.shells
+    '''
+    shells_fn = '/etc/shells'
+    ret = []
+    if os.path.exists(shells_fn):
+        try:
+            with salt.utils.fopen(shells_fn, 'r') as shell_fp:
+                lines = shell_fp.read().splitlines()
+            for line in lines:
+                line = line.strip()
+                if line.startswith('#'):
+                    continue
+                elif not line:
+                    continue
+                else:
+                    ret.append(line)
+        except OSError:
+            log.error("File '{0}' was not found".format(shells_fn))
+    return ret
