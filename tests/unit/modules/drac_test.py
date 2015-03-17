@@ -98,7 +98,7 @@ class DracTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': 'cfgUserAdminUserName=value'})
         with patch.dict(drac.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(drac.list_users(), {'value': {'index': 17}})
+            self.assertEqual(drac.list_users(), {'value': {'index': 16}})
 
     def test_delete_user(self):
         '''
