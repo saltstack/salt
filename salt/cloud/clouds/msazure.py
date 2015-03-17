@@ -974,20 +974,96 @@ def destroy(name, conn=None, call=None, kwargs=None):
 
     instance_data = show_instance(name, call='action')
     service_name = instance_data['deployment']['name']
+    disk_name = instance_data['role_info']['os_virtual_hard_disk']['disk_name']
 
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
     try:
+        log.debug('Deleting role')
         result = conn.delete_role(service_name, service_name, name)
+        delete_type = 'delete_role'
     except WindowsAzureError:
-        result = conn.delete_deployment(service_name, service_name)
+        log.debug('Failed to delete role, deleting deployment')
+        try:
+            result = conn.delete_deployment(service_name, service_name)
+        except WindowsAzureConflictError as exc:
+            log.error(exc.message)
+            return {'Error': exc.message}
+        delete_type = 'delete_deployment'
     _wait_for_async(conn, result.request_id)
     ret[name] = {
-        'request_id': result.request_id,
+        delete_type: {'request_id': result.request_id},
     }
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
+    cleanup_disks = config.get_cloud_config_value(
+        'cleanup_disks',
+        get_configured_provider(), __opts__, search_global=False, default=False,
+    )
+    if cleanup_disks:
+        cleanup_vhds = kwargs.get('delete_vhd', config.get_cloud_config_value(
+            'cleanup_vhds',
+            get_configured_provider(), __opts__, search_global=False, default=False,
+        ))
+        log.debug('Deleting disk {0}'.format(disk_name))
+        if cleanup_vhds:
+            log.debug('Deleting vhd')
+
+        def wait_for_destroy():
+            '''
+            Wait for the VM to be deleted
+            '''
+            try:
+                data = delete_disk(kwargs={'name': disk_name, 'delete_vhd': cleanup_vhds}, call='function')
+                return data
+            except WindowsAzureConflictError:
+                log.debug('Waiting for VM to be destroyed...')
+            time.sleep(5)
+            return False
+
+        data = salt.utils.cloud.wait_for_fun(
+            wait_for_destroy,
+            timeout=config.get_cloud_config_value(
+                'wait_for_fun_timeout', {}, __opts__, default=15 * 60),
+        )
+        ret[name]['delete_disk'] = {
+            'name': disk_name,
+            'delete_vhd': cleanup_vhds,
+            'data': data
+        }
+
+        # Services can't be cleaned up unless disks are too
+        cleanup_services = config.get_cloud_config_value(
+            'cleanup_services',
+            get_configured_provider(), __opts__, search_global=False, default=False
+        )
+        if cleanup_services:
+            log.debug('Deleting service {0}'.format(service_name))
+
+            def wait_for_disk_delete():
+                '''
+                Wait for the disk to be deleted
+                '''
+                try:
+                    data = delete_service(kwargs={'name': service_name}, call='function')
+                    return data
+                except WindowsAzureConflictError:
+                    log.debug('Waiting for disk to be deleted...')
+                time.sleep(5)
+                return False
+
+            data = salt.utils.cloud.wait_for_fun(
+                wait_for_disk_delete,
+                timeout=config.get_cloud_config_value(
+                    'wait_for_fun_timeout', {}, __opts__, default=15 * 60),
+            )
+            ret[name]['delete_services'] = {
+                'name': service_name,
+                'data': data
+            }
+
     return ret
 
 
@@ -1467,6 +1543,36 @@ def show_disk(kwargs=None, conn=None, call=None):
 
 # For consistency with Azure SDK
 get_disk = show_disk
+
+
+def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Cleans up all disks associated with the account, which are not attached.
+    *** CAUTION *** This is a destructive function with no undo button, and no
+    "Are you sure?" confirmation!
+
+    CLI Examples::
+
+        salt-cloud -f cleanup_unattached_disks my-azure name=my_disk
+        salt-cloud -f cleanup_unattached_disks my-azure name=my_disk delete_vhd=True
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_disk function must be called with -f or --function.'
+        )
+
+    disks = list_disks(kwargs=kwargs, conn=conn, call='function')
+    for disk in disks:
+        if disks[disk]['attached_to'] is None:
+            del_kwargs = {
+                'name': disks[disk]['name'][0],
+                'delete_vhd': kwargs.get('delete_vhd', False)
+            }
+            log.info('Deleting disk {name}, deleting VHD: {delete_vhd}'.format(**del_kwargs))
+            data = delete_disk(kwargs=del_kwargs, call='function')
+    return True
 
 
 def delete_disk(kwargs=None, conn=None, call=None):
