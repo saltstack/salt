@@ -732,6 +732,13 @@ class MWorker(multiprocessing.Process):
                     raise
                 # catch all other exceptions, so we don't go defunct
                 except Exception as exc:
+                    # since we are in an exceptional state, lets attempt to tell
+                    # the minion we have a problem, otherwise the minion will get
+                    # no response and be forced to wait for their max timeout
+                    try:
+                        socket.send('Unexpected Error in Mworker')
+                    except:  # pylint: disable=W0702
+                        pass
                     # Properly handle EINTR from SIGUSR1
                     if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
                         continue
