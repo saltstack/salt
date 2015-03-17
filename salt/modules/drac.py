@@ -172,7 +172,7 @@ def list_users():
     users = {}
     _username = ''
 
-    for idx in range(1, 12):
+    for idx in range(1, 17):
         cmd = __salt__['cmd.run_all']('racadm getconfig -g \
                 cfgUserAdmin -i {0}'.format(idx))
 
@@ -181,7 +181,7 @@ def list_users():
                     code \'{0}\'.'.format(cmd['retcode']))
 
         for user in cmd['stdout'].splitlines():
-            if 'cfgUserAdminIndex' in user or user.startswith('#'):
+            if not user.startswith('cfg'):
                 continue
 
             (key, val) = user.split('=')
