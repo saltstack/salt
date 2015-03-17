@@ -231,13 +231,13 @@ def gen_locale(locale, **kwargs):
     '''
     Generate a locale. Options:
 
-    verbose
-        Show extra warnings about errors that are normally ignored.
-
     .. versionadded:: 2014.7.0
 
     :param locale: Any locale listed in /usr/share/i18n/locales or
         /usr/share/i18n/SUPPORTED for debian and gentoo based distros
+
+    verbose
+        Show extra warnings about errors that are normally ignored.
 
     CLI Example:
 
