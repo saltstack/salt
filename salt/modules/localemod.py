@@ -311,5 +311,5 @@ def gen_locale(locale, **kwargs):
 
     if kwargs.get('verbose'):
         return res
-    else: 
+    else:
         return res['retcode']
