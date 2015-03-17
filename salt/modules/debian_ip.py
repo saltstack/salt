@@ -615,7 +615,7 @@ def _parse_interfaces(interface_files=None):
     # Return a sorted list of the keys for bond, bridge and ethtool options to
     # ensure a consistent order
     for iface_name in adapters:
-        if not adapters[iface_name].has_key('data'):
+        if 'data' not in adapters[iface_name]:
             msg = 'Interface file malformed for interface: {0}.'.format(iface_name)
             log.error(msg)
             adapters.pop(iface_name)
