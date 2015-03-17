@@ -1114,3 +1114,36 @@ def list_products():
         ret[product.pop('name')] = product
 
     return ret
+
+
+def download(*packages):
+    """
+    Download packages to the local disk.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.download httpd
+        salt '*' pkg.download httpd postfix
+    """
+    if not packages:
+        raise CommandExecutionError("No packages has been specified.")
+
+    doc = dom.parseString(__salt__['cmd.run'](
+        ('zypper -x --non-interactive download {0}'.format(' '.join(package))),
+        output_loglevel='trace'))
+    packages = {}
+    for dld_result in doc.getElementsByTagName("download-result"):
+        repo = dld_result.getElementsByTagName("repository")[0]
+        pkg_info = {
+            'repository-name': repo.getAttribute("name"),
+            'repository-alias': repo.getAttribute("alias"),
+            'path': dld_result.getElementsByTagName("localfile")[0].getAttribute("path"),
+        }
+        packages[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
+
+    if packages:
+        return packages
+
+    raise CommandExecutionError("Unable to download package {0}.".format(package))
