@@ -663,7 +663,7 @@ def run(cmd,
                 # Rewrite file
                 with salt.utils.fopen(jid_file, 'w+b') as fn_:
                     fn_.write(serial.dumps(jid_dict))
-        except NameError:
+        except (NameError, TypeError):
             # Avoids errors from msgpack not being loaded in salt-ssh
             pass
 

@@ -1875,6 +1875,13 @@ class Minion(MinionBase):
                     'An exception occurred while polling the minion',
                     exc_info=True
                 )
+            # Process Beacons
+            try:
+                beacons = self.process_beacons(self.functions)
+            except Exception:
+                log.critical('The beacon errored: ', exc_info=True)
+            if beacons:
+                self._fire_master(events=beacons)
 
     def tune_in_no_block(self):
         '''
