@@ -12,7 +12,6 @@ import os
 # Import salt libs
 import salt.utils
 import salt.ext.six as six
-import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -266,7 +265,7 @@ def gen_locale(locale, **kwargs):
                                      locale_info['territory']) in os.listdir(search)
         except OSError, ex:
             log.error(ex)
-            raise CommandExecutionError("Locale \"{0}\" is not available.".format(search_locale))
+            raise CommandExecutionError("Locale \"{0}\" is not available.".format(locale))
 
     if not valid:
         log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
@@ -297,11 +296,11 @@ def gen_locale(locale, **kwargs):
         if not on_ubuntu:
             cmd.append(locale)
     elif salt.utils.which("localedef") is not None:
-        cmd = ['localedef', '--force', 
-               '-i', "{0}_{1}".format(locale_info['language'], locale_info['territory']), 
-               '-f', locale_info['codeset'], 
+        cmd = ['localedef', '--force',
+               '-i', "{0}_{1}".format(locale_info['language'], locale_info['territory']),
+               '-f', locale_info['codeset'],
                locale]
-        cmd.append(kwargs.get('verbose', False) and '--verbose' or '--quiet')            
+        cmd.append(kwargs.get('verbose', False) and '--verbose' or '--quiet')
     else:
         raise CommandExecutionError(
             'Command "locale-gen" or "localedef" was not found on this system.')
