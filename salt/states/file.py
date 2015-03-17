@@ -2418,13 +2418,13 @@ def replace(name,
                                        show_changes=show_changes)
 
     if changes:
-        ret['changes'] = {'diff': changes}
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Changes would have been made'
+            ret['comment'] = 'Changes would have been made:\ndiff:\n{0}'.format(changes)
         else:
             ret['result'] = True
             ret['comment'] = 'Changes were made'
+            ret['changes'] = {'diff': changes}
     else:
         ret['result'] = True
         ret['comment'] = 'No changes needed to be made'
