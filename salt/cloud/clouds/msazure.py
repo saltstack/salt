@@ -436,12 +436,22 @@ def create(vm_):
     network_config.input_endpoints.input_endpoints.append(ssh_endpoint)
     network_config.configuration_set_type = 'NetworkConfiguration'
 
-    linux_config = azure.servicemanagement.LinuxConfigurationSet(
-        host_name=vm_['name'],
-        user_name=vm_['ssh_username'],
-        user_password=vm_['ssh_password'],
-        disable_ssh_password_authentication=False,
-    )
+    if 'win_username' in vm_:
+        system_config = azure.servicemanagement.WindowsConfigurationSet(
+            computer_name=vm_['name'],
+            admin_username=vm_['win_username'],
+            admin_password=vm_['win_password'],
+        )
+        # Domain and WinRM configuration not yet supported by Salt Cloud
+        system_config.domain_join = None
+        system_config.win_rm = None
+    else:
+        system_config = azure.servicemanagement.LinuxConfigurationSet(
+            host_name=vm_['name'],
+            user_name=vm_['ssh_username'],
+            user_password=vm_['ssh_password'],
+            disable_ssh_password_authentication=False,
+        )
 
     # TODO: Might need to create a storage account
     media_link = vm_['media_link']
@@ -455,7 +465,7 @@ def create(vm_):
         'deployment_slot': vm_['slot'],
         'label': label,
         'role_name': vm_['name'],
-        'system_config': linux_config,
+        'system_config': system_config,
         'os_virtual_hard_disk': os_hd,
         'role_size': vm_['size'],
         'network_config': network_config,
