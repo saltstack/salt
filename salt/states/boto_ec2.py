@@ -85,13 +85,13 @@ def import_key(name, public_key, region=None, key=None,
             ret['comment'] = 'The key {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_ec2.import_key'](name, public_key, region,
-                                                  key, keyid, profile)
-        if created:
+        imported = __salt__['boto_ec2.import_key'](name, public_key, region,
+                                                   key, keyid, profile)
+        if imported:
             ret['result'] = True
             ret['comment'] = 'The key {0} is created.'.format(name)
             ret['changes']['old'] = None
-            ret['changes']['new'] = created
+            ret['changes']['new'] = imported
         else:
             ret['result'] = False
             ret['comment'] = 'Could not create key {0} '.format(name)
