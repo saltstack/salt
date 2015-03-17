@@ -6,8 +6,6 @@ import time
 # Import salt libs
 import salt.utils.vt
 
-# Command
-# strace -f -e execve -p 3145
 
 def _get_shells():
     '''
@@ -23,6 +21,7 @@ def _get_shells():
         __context__['sh.last_shells'] = start
         __context__['sh.shells'] = __salt__['cmd.shells']()
     return __context__['sh.shells']
+
 
 def beacon(config):
     '''
@@ -54,7 +53,7 @@ def beacon(config):
         err = ''
         while __context__[pkey][pid]['vt'].has_unread_data:
             tout, terr = __context__[pkey][pid]['vt'].recv()
-            if not err:
+            if not terr:
                 break
             out += tout
             err += terr
