@@ -1549,5 +1549,5 @@ def shells():
                 else:
                     ret.append(line)
         except OSError:
-            return ret
+            log.error("File '{0}' was not found".format(shells_fn))
     return ret
