@@ -26,7 +26,12 @@ def _get_shells():
 
 def beacon(config):
     '''
-    Scan the shell execve
+    Scan the shell execve routines. This beacon will convert all login shells
+
+    .. code-block:: yaml
+
+        beacons:
+          sh: {}
     '''
     ret = []
     pkey = 'sh.vt'
