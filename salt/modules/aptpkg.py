@@ -358,6 +358,18 @@ def refresh_db():
     return ret
 
 
+def _parse_version(version):
+    prefix = ''
+    match = re.match('^([<>])?(=)?([^<>=]*)$', version)
+    if match:
+        gt_lt, eq, version = match.groups()
+        prefix = gt_lt or ''
+        prefix += eq or ''
+        if not prefix:
+            prefix = '='
+    return (prefix, version)
+
+
 def install(name=None,
             refresh=False,
             fromrepo=None,
@@ -464,7 +476,7 @@ def install(name=None,
         if 'version' in kwargs and kwargs['version']:
             refreshdb = False
             _latest_version = latest_version(name, refresh=False, show_installed=True)
-            _version = kwargs.get('version')
+            _prefix, _version = _parse_version(kwargs.get('version'))
             # If the versions don't match, refresh is True, otherwise no need to refresh
             if not _latest_version == _version:
                 refreshdb = True
@@ -520,6 +532,7 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
+                _prefix, version_num = _parse_version(version_num)
                 cver = old.get(param)
                 if cver is not None \
                         and salt.utils.compare_versions(ver1=version_num,
@@ -527,7 +540,7 @@ def install(name=None,
                                                         ver2=cver,
                                                         cmp_func=version_cmp):
                     downgrade = True
-                targets.append('{0}={1}'.format(param, version_num.lstrip('=')))
+                targets.append('{0}{1}{2}'.format(param, _prefix, version_num))
         if fromrepo:
             log.info('Targeting repo {0!r}'.format(fromrepo))
         cmd = ['apt-get', '-q', '-y']
@@ -1995,3 +2008,20 @@ def owner(*paths):
     if len(ret) == 1:
         return next(six.itervalues(ret))
     return ret
+
+
+def check_extra_requirements(pkgname, pkgver):
+    ops = {'>': [1],
+           '<': [-1],
+           '=': [0],
+           '>=': [0, 1],
+           '<=': [-1, 0]}
+    prefix, pkgver = _parse_version(pkgver)
+    if prefix:
+        _pkgver = version(pkgname)
+        if not _pkgver:
+            return False
+        compare = version_cmp(_pkgver, pkgver)
+        return compare in ops[prefix]
+    else:
+        return True
