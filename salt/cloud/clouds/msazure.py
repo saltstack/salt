@@ -428,7 +428,7 @@ def create(vm_):
         else:
             service_kwargs['location'] = vm_['location']
     elif 'affinity_group' in vm_:
-        service_kwargs['affiinity_group'] = vm_['affiinity_group']
+        service_kwargs['affinity_group'] = vm_['affinity_group']
     else:
         loc_error = True
 
