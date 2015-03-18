@@ -77,6 +77,22 @@ def __virtual__():
         return True
 
 
+def get_zones(region=None, key=None, keyid=None, profile=None):
+    '''
+    Get a list of AZs for the configured region.
+
+    CLI example::
+    .. code-block:: bash
+
+        salt myminion boto_ec2.get_zones
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    return [z.name for z in conn.get_all_zones()]
+
+
 def find_instances(instance_id=None, name=None, tags=None, region=None,
                    key=None, keyid=None, profile=None, return_objs=False):
 
@@ -401,7 +417,11 @@ def _get_conn(region, key, keyid, profile):
         keyid = __salt__['config.option']('ec2.keyid')
 
     # avoid repeatedly creating new connections
-    cxkey = 'boto_ec2:' + hashlib.md5(region + keyid + key).hexdigest()
+    if keyid:
+        cxkey = 'boto_ec2:' + hashlib.md5(region + keyid + key).hexdigest()
+    else:
+        cxkey = 'boto_ec2:' + region
+
     if cxkey in __context__:
         return __context__[cxkey]
 

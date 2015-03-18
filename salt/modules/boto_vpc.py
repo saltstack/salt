@@ -371,7 +371,8 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def subnet_exists(subnet_id=None, name=None, cidr=None, tags=None, zones=None,
+                  region=None, key=None, keyid=None, profile=None):
     '''
     Check if a subnet exists.
 
@@ -388,8 +389,10 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
     if not conn:
         return False
 
-    if not subnet_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: subnet id, name or tags.')
+    if not any((subnet_id, name, cidr, tags, zones)):
+        raise SaltInvocationError('At least on of the following must be '
+                                  'specified: subnet id, cidr, name , tags '
+                                  'or zones.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -400,9 +403,15 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
         if name:
             filter_parameters['filters']['tag:Name'] = name
 
+        if cidr:
+            filter_parameters['filters']['cidr'] = cidr
+
         if tags:
             for tag_name, tag_value in six.iteritems(tags):
                 filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        if zones:
+            filter_parameters['filters']['availability_zone'] = zones
 
         subnets = conn.get_all_subnets(**filter_parameters)
         log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
@@ -1259,7 +1268,11 @@ def _get_conn(region, key, keyid, profile):
         keyid = __salt__['config.option']('vpc.keyid')
 
     # avoid repeatedly creating new connections
-    cxkey = 'boto_vpc:' + hashlib.md5(region + keyid + key).hexdigest()
+    if keyid:
+        cxkey = 'boto_vpc:' + hashlib.md5(region + keyid + key).hexdigest()
+    else:
+        cxkey = 'boto_vpc:' + region
+
     if cxkey in __context__:
         return __context__[cxkey]
 
