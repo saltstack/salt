@@ -110,6 +110,17 @@ def service_status(hostname, service_description):
     '''
     Check the status in Nagios for a particular
     service on a particular host
+
+    :param hostname:                The hostname to check the status of the service in Nagios.
+    :param service_description:     The service to check the status of in Nagios.
+    :return: Boolean                True is the status is 'OK' or 'Warning', False if 'Critical'
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nagios_json.service_status hostname=webserver.domain.com service_description='HTTP'
+
     '''
 
     config = _config()
@@ -141,6 +152,16 @@ def service_status(hostname, service_description):
 def host_status(hostname):
     '''
     Check the status in Nagios for a particular host
+
+    :param hostname:                The hostname to check the status in Nagios.
+    :return: Boolean                True is the status is 'OK' or 'Warning', False if 'Critical'
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nagios_json.host_status hostname=webserver.domain.com
+
     '''
 
     config = _config()
