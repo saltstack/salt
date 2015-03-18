@@ -237,6 +237,12 @@ def diff(package, path):
     :param package: The name of the package
     :param path: Full path to the installed file
     :return: Difference or empty string. For binary files only a notification.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.diff apache2 /etc/apache2/httpd.conf
     '''
 
     cmd = "rpm2cpio {0} " \
