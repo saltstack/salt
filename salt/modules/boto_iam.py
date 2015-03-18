@@ -168,6 +168,9 @@ def describe_role(nome, region=None, key=None, keyid=None, profile=None):
             return False
         return info
     except boto.exception.BotoServerError:
+        log.debug(e)
+        msg = 'Failed to get {0} information.'
+        log.error(msg.format(name))
         return False
 
 
