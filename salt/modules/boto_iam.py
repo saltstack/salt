@@ -174,6 +174,135 @@ def describe_role(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def create_user(user_name, path=None, region=None, key=None, keyid=None,
+                profile=None):
+    '''
+    Create a user
+
+    CLI example::
+
+        salt myminion boto_iam.create_user myuser
+    '''
+    if not path:
+        path = '/'
+    if __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile):
+        return True
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        conn.create_user(user_name, path)
+        log.info('Created user : {0} .'.format(user_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create user {0} .'
+        log.error(msg.format(user_name))
+        return False
+
+
+def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get user information
+
+    CLI example::
+
+        salt myminion boto_iam.get_user myuser
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_user(user_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get user {0} info .'
+        log.error(msg.format(user_name))
+        return False
+
+
+def create_group(group_name, path=None, region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Create a group
+
+    CLI example::
+
+        salt myminion boto_iam.create_group group
+    '''
+    if not path:
+        path = '/'
+    if __salt__['boto_iam.get_group'](group_name, region, key, keyid, profile):
+        return True
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        conn.create_group(group_name, path)
+        log.info('Created group : {0} .'.format(group_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create group {0} .'
+        log.error(msg.format(group_name))
+        return False
+
+
+def get_group(group_name, marker=None, max_items=None, region=None, key=None,
+              keyid=None, profile=None):
+    '''
+    Get group information
+
+    CLI example::
+
+        salt myminion boto_iam.get_group mygroup
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_group(group_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get group {0} info .'
+        log.error(msg.format(group_name))
+        return False
+
+
+def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
+                      profile=None):
+    '''
+    Add user to group
+
+    CLI example::
+
+        salt myminion boto_iam.add_user_to_group myuser mygroup
+    '''
+    users = __salt__['boto_iam.get_group'](group_name, region, key, keyid,
+                                           profile)
+    if users:
+        for _users in users['get_group_response']['get_group_result']['users']:
+            if user_name in _users['user_name']:
+                msg = 'Username : {0} is already in group {1} .'
+                log.info(msg.format(user_name, group_name))
+                return True
+    group = __salt__['boto_iam.get_group'](group_name, region, key, keyid, profile)
+    user = __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile)
+    if not group or not user:
+        msg = 'Username : {0} or group {1} do not exist .'
+        log.error(msg.format(user_name, group_name))
+        return False
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.add_user_to_group(user_name, group_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to add user {0} to group {1} .'
+        log.error(msg.format(user_name, group_name))
+        return False
+
+
 def create_role(name, policy_document=None, path=None, region=None, key=None,
                 keyid=None, profile=None):
     '''
