@@ -16,18 +16,13 @@ for orchestration, remote execution, configuration management and much more.
 
     Download an offline copy of the latest Salt documentation:
 
-    * `PDF`_
-    * `ePub`_
-
-    See documentation for past Salt releases at http://salt.readthedocs.org.
-    Download offline copies on the `ReadTheDocs download page`_.
+    * `PDF`_ builds of the docs for each Salt release can usually be found on
+      the corresponding release page on GitHub.
 
     Watch announcements, demonstrations, and video tutorials on the `SaltStack
     YouTube channel`_.
 
-.. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
-.. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
-.. _`ReadTheDocs download page`: https://readthedocs.org/projects/salt/downloads/
+.. _`PDF`: https://github.com/saltstack/salt/releases/latest
 .. _`SaltStack YouTube channel`: http://www.youtube.com/saltstack
 
 Download
