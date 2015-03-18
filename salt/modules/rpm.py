@@ -183,7 +183,7 @@ def modified(*packages, **flags):
     elif not ret['retcode']:
         return data
 
-    ptrn = re.compile("\s+")
+    ptrn = re.compile(r"\s+")
     changes = cfg = f_name = None
     for f_info in ret['stdout'].splitlines():
         f_info = ptrn.split(f_info)
