@@ -198,18 +198,22 @@ class SaltClientsMixIn(object):
     '''
     MixIn class to container all of the salt clients that the API needs
     '''
+    # TODO: load this proactively, instead of waiting for a request
+    __saltclients = None
+
     @property
     def saltclients(self):
-        if not hasattr(self, '__saltclients'):
+        if SaltClientsMixIn.__saltclients is None:
+            local_client = salt.client.get_local_client(mopts=self.application.opts)
             # TODO: refreshing clients using cachedict
-            self.__saltclients = {
-                'local': salt.client.get_local_client(mopts=self.application.opts).run_job,
+            SaltClientsMixIn.__saltclients = {
+                'local': local_client.run_job,
                 # not the actual client we'll use.. but its what we'll use to get args
-                'local_batch': salt.client.get_local_client(mopts=self.application.opts).cmd_batch,
-                'local_async': salt.client.get_local_client(mopts=self.application.opts).run_job,
+                'local_batch': local_client.cmd_batch,
+                'local_async': local_client.run_job,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).async,
                 }
-        return self.__saltclients
+        return SaltClientsMixIn.__saltclients
 
 
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -259,6 +263,8 @@ class EventListener(object):
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
 
+        self.timeout_map = {}  # map of future -> timeout_callback
+
         self.stream = zmqstream.ZMQStream(self.event.sub,
                                           io_loop=tornado.ioloop.IOLoop.current())
         self.stream.on_recv(self._handle_event_socket_recv)
@@ -270,23 +276,13 @@ class EventListener(object):
         if request not in self.request_map:
             return
         for tag, future in self.request_map[request]:
-            # TODO: log, this shouldn't happen...
-            if tag not in self.tag_map:
-                continue
-            # if the future isn't complete, mark it as a timeout
-            if not future.done():
-                future.set_exception(TimeoutException())
-                # if we marked it as a timeout, we need to remove it from tag_map
-                self.tag_map[tag].remove(future)
-
-            # if that was the last of them, remove the key all together
-            if len(self.tag_map[tag]) == 0:
-                del self.tag_map[tag]
+            self._timeout_future(tag, future)
 
     def get_event(self,
                   request,
                   tag='',
                   callback=None,
+                  timeout=None
                   ):
         '''
         Get an event (async of course) return a future that will get it later
@@ -294,14 +290,29 @@ class EventListener(object):
         future = Future()
         if callback is not None:
             def handle_future(future):
-                response = future.result()
-                tornado.ioloop.IOLoop.current().add_callback(callback, response)
+                tornado.ioloop.IOLoop.current().add_callback(callback, future)
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
         self.tag_map[tag].append(future)
         self.request_map[request].append((tag, future))
 
+        if timeout:
+            timeout_future = tornado.ioloop.IOLoop.current().call_later(timeout, self._timeout_future, tag, future)
+            self.timeout_map[future] = timeout_future
+
         return future
+
+    def _timeout_future(self, tag, future):
+        '''
+        Timeout a specific future
+        '''
+        if tag not in self.tag_map:
+            return
+        if not future.done():
+            future.set_exception(TimeoutException())
+            self.tag_map[tag].remove(future)
+        if len(self.tag_map[tag]) == 0:
+            del self.tag_map[tag]
 
     def _handle_event_socket_recv(self, raw):
         '''
@@ -316,6 +327,9 @@ class EventListener(object):
                         continue
                     future.set_result({'data': data, 'tag': mtag})
                     self.tag_map[tag_prefix].remove(future)
+                    if future in self.timeout_map:
+                        tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
+                        del self.timeout_map[future]
 
 
 # TODO: move to a utils function within salt-- the batching stuff is a bit tied together
@@ -881,7 +895,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         minions_remaining = pub_data['minions']
 
         ret_event = self.application.event_listener.get_event(self, tag=ret_tag)
-        ping_event = self.application.event_listener.get_event(self, tag=ping_tag)
+        ping_event = self.application.event_listener.get_event(self, tag=ping_tag, timeout=self.application.opts['gather_job_timeout'])
 
         # while we are waiting on all the mininons
         while len(minions_remaining) > 0 or not self.min_syndic_wait_done():
@@ -896,7 +910,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                 ping_id = event['data']['id']
                 if ping_id not in chunk_ret and ping_id not in minions_remaining:
                     minions_remaining.append(ping_id)
-                ping_event = self.application.event_listener.get_event(self, tag=ping_tag)
+                ping_event = self.application.event_listener.get_event(self, tag=ping_tag, timeout=self.application.opts['gather_job_timeout'])
             # if it is a ret future, its just a regular return
             else:
                 chunk_ret[event['data']['id']] = event['data']['return']

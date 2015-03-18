@@ -536,10 +536,11 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
         return application
 
     def test_post(self):
-        def verify_event(event):
+        def verify_event(future):
             '''
             Verify that the event fired on the master matches what we sent
             '''
+            event = future.result()
             self.assertEqual(event['tag'], 'salt/netapi/hook')
             self.assertIn('headers', event['data'])
             self.assertEqual(event['data']['post'], {'foo': 'bar'})

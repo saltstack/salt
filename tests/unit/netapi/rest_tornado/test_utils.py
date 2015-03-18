@@ -83,6 +83,23 @@ class TestEventListener(tornado.testing.AsyncTestCase):
             self.assertEqual(event_future.result()['tag'], 'evt1')
             self.assertEqual(event_future.result()['data']['data'], 'foo1')
 
+    def test_timeout(self):
+        '''
+        Make sure timeouts work correctly
+        '''
+        with eventpublisher_process():
+            event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
+                                                    {'sock_dir': SOCK_DIR,
+                                                     'transport': 'zeromq'})
+            event_future = event_listener.get_event(1,
+                                                    tag='evt1',
+                                                    callback=self.stop,
+                                                    timeout=1,
+                                                    )  # get an event future
+            self.wait()
+            self.assertTrue(event_future.done())
+            with self.assertRaises(saltnado.TimeoutException):
+                event_future.result()
 
 if __name__ == '__main__':
     from integration import run_tests
