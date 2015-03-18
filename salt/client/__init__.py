@@ -794,7 +794,7 @@ class LocalClient(object):
             jid,
             event=None,
             gather_errors=False,
-           additional_tags=None
+            additional_tags=None
            ):
         '''
         Raw function to just return events of jid excluding timeout logic
@@ -822,9 +822,9 @@ class LocalClient(object):
                 try:
                     raw = event.get_event_noblock()
                     if gather_errors:
-                         if (raw and
+                        if (raw and
                                 (raw.get('tag', '').startswith('_salt_error') or
-                                [raw.get('tag', '').startswith(tag) for tag in tag_search])):
+                                any([raw.get('tag', '').startswith(tag) for tag in tag_search]))):
                             yield raw
                     else:
                         if raw and raw.get('tag', '').startswith(jid_tag):
@@ -886,7 +886,7 @@ class LocalClient(object):
         last_time = False
         # iterator for this job's return
         if self.opts['order_masters']:
-           # If we are a MoM, we need to gather expected minions from downstreams masters.
+            # If we are a MoM, we need to gather expected minions from downstreams masters.
             ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors, additional_tags='syndic')
         else:
             ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
@@ -938,13 +938,13 @@ class LocalClient(object):
                 log.debug('jid {0} found all minions {1}'.format(jid, found))
                 break
             elif len(found.intersection(minions)) >= len(minions) and self.opts['order_masters']:
-               if len(found) >= len(minions) and len(minions) > 0 and time.time() > gather_syndic_wait:
-                   # There were some minions to find and we found them
-                   # However, this does not imply that *all* masters have yet responded with expected minion lists.
-                   # Therefore, continue to wait up to the syndic_wait period (calculated in gather_syndic_wait) to see
-                   # if additional lower-level masters deliver their lists of expected
-                   # minions.
-                   break
+                if len(found) >= len(minions) and len(minions) > 0 and time.time() > gather_syndic_wait:
+                    # There were some minions to find and we found them
+                    # However, this does not imply that *all* masters have yet responded with expected minion lists.
+                    # Therefore, continue to wait up to the syndic_wait period (calculated in gather_syndic_wait) to see
+                    # if additional lower-level masters deliver their lists of expected
+                    # minions.
+                    break
            # If we get here we may not have gathered the minion list yet. Keep waiting
            # for all lower-level masters to respond with their minion lists
 
