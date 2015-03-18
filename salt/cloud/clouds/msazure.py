@@ -437,7 +437,6 @@ def create(vm_):
             'Either a location or affinity group must be specified, but not both'
         )
 
-    return
     ssh_port = config.get_cloud_config_value('port', vm_, __opts__,
                                              default='22', search_global=True)
 
