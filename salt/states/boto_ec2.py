@@ -13,7 +13,7 @@ The below code creates a key pair:
     create-key-pair:
       boto_ec2.present:
         - name: mykeypair
-        - save_priv: /root/
+        - save_private: /root/
         - region: eu-west-1
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -23,7 +23,7 @@ The below code creates a key pair:
     import-key-pair:
        boto_ec2.present:
         - name: mykeypair
-        - upload_pub: 'ssh-rsa AAAA'
+        - upload_public: 'ssh-rsa AAAA'
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 The below code deleted a key pair:
@@ -50,7 +50,7 @@ def __virtual__():
         return False
 
 
-def present(name, save_priv=None, upload_pub=None, region=None, key=None,
+def present(name, save_private=None, upload_public=None, region=None, key=None,
             keyid=None, profile=None):
     '''
     Ensure key pair is present.
@@ -67,8 +67,8 @@ def present(name, save_priv=None, upload_pub=None, region=None, key=None,
             ret['comment'] = 'The key {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        if save_priv and not upload_pub:
-            created = __salt__['boto_ec2.create_key'](name, save_priv, region,
+        if save_private and not upload_public:
+            created = __salt__['boto_ec2.create_key'](name, save_private, region,
                                                       key, keyid, profile)
             if created:
                 ret['result'] = True
@@ -77,8 +77,8 @@ def present(name, save_priv=None, upload_pub=None, region=None, key=None,
             else:
                 ret['result'] = False
                 ret['comment'] = 'Could not create key {0} '.format(name)
-        elif not save_priv and upload_pub:
-            imported = __salt__['boto_ec2.import_key'](name, upload_pub,
+        elif not save_private and upload_public:
+            imported = __salt__['boto_ec2.import_key'](name, upload_public,
                                                        region, key, keyid,
                                                        profile)
             if imported:
