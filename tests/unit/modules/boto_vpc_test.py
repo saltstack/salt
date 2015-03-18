@@ -62,6 +62,7 @@ dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': 
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
+boto_vpc.__context__ = {}
 
 def _has_required_boto():
     '''
