@@ -1104,4 +1104,4 @@ def running(name,
                                 .format(name, started['out'],)))
         else:
             changes.append('Container {0!r} started.\n'.format(name))
-    return _valid(comment=','.join(changes), changes={name: True})
+    return _valid(comment='\n'.join(changes), changes={name: True})
