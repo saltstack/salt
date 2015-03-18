@@ -1323,7 +1323,8 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
     '''
     .. versionadded:: Beryllium
 
-    Create a new storage account
+    Regenerate storage account keys. Requires a key_type ("primary" or
+    "secondary") to be specified.
 
     CLI Example::
 
