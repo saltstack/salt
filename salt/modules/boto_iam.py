@@ -163,7 +163,10 @@ def describe_role(nome, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region, key, keyid, profile)
     try:
-        return conn.get_role(name)
+        info = conn.get_role(name)
+        if not info:
+            return False
+        return info
     except boto.exception.BotoServerError:
         return False
 
