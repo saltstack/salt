@@ -2222,7 +2222,7 @@ class Syndic(Minion):
                     jdict['__fun__'] = event['data'].get('fun')
                     jdict['__jid__'] = event['data']['jid']
                     jdict['__load__'] = {}
-                    fstr = '{0}.get_jid'.format(self.opts['master_job_cache'])
+                    fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
                     jdict['__load__'].update(
                         self.mminion.returners[fstr](event['data']['jid'])
                         )
