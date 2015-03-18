@@ -1025,10 +1025,9 @@ def running(name,
                 else:
                     target = str(vol[source])
                     read_only = False
-                bindvolumes[source] = {
-                'bind': target,
-                'ro': read_only
-                }
+                bindvolumes[source] = {'bind': target,
+                                       'ro': read_only
+                                       }
             else:
                 # assume just an own volumes
                 contvolumes.append(str(vol))
@@ -1039,7 +1038,7 @@ def running(name,
         for port in ports:
             if isinstance(port, dict):
                 container_port = list(port.keys())[0]
-                #find target
+                # find target
                 if isinstance(port[container_port], dict):
                     host_port = port[container_port]['HostPort']
                     host_ip = port[container_port].get('HostIp', '0.0.0.0')
@@ -1051,7 +1050,7 @@ def running(name,
                     'HostIp': host_ip
                 }
             else:
-                #assume just a port to expose
+                # assume just a port to expose
                 exposeports.append(str(port))
     if not already_exists:
         kwargs = dict(command=command,
@@ -1100,10 +1099,9 @@ def running(name,
             if is_running:
                 changes.append('Container {0!r} started.\n'.format(name))
             else:
-                return _invalid(
-                        comment=(
-                        'Container {0!r} cannot be started\n{1!s}'
-                        .format(name, started['out'],)))
+                return _invalid(comment=(
+                                'Container {0!r} cannot be started\n{1!s}'
+                                .format(name, started['out'],)))
         else:
             changes.append('Container {0!r} started.\n'.format(name))
     return _valid(comment=','.join(changes), changes={name: True})
