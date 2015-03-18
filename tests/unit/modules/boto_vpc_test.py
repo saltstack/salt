@@ -64,6 +64,7 @@ dhcp_options_parameters.update(conn_parameters)
 
 boto_vpc.__context__ = {}
 
+
 def _has_required_boto():
     '''
     Returns True/False boolean depending on if Boto is installed and correct
