@@ -303,6 +303,60 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         return False
 
 
+def put_group_policy(group_name, policy_name, policy_json, region=None, key=None,
+                     keyid=None, profile=None):
+    '''
+    Adds or updates the specified policy document for the specified group.
+
+    CLI example::
+
+        salt myminion boto_iam.put_group_policy mygroup policyname policyrules
+    '''
+    group = __salt__['boto_iam.get_group'](group_name, region, key, keyid,
+                                           profile)
+    if group:
+        conn = _get_conn(region, key, keyid, profile)
+        try:
+            created = conn.put_group_policy(group_name, policy_name,
+                                            policy_json)
+            if created:
+                log.info('Created policy for group {0}.'.format(group_name))
+                return True
+            msg = 'Could not create policy for group {0}'
+            log.error(msg.format(group_name))
+            return False
+        except boto.exception.BotoServerError as e:
+            log.debug(e)
+            msg = 'Failed to create policy for group {0}'
+            log.error(msg.format(group_name))
+            return False
+    else:
+        log.error('Group {0} does not exist'.format(group_name))
+        return False
+
+
+def get_group_policy(group_name, policy_name, region=None, key=None,
+                     keyid=None, profile=None):
+    '''
+    Retrieves the specified policy document for the specified group.
+
+    CLI example::
+
+        salt myminion boto_iam.get_group_policy mygroup policyname
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_group_policy(group_name, policy_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get group {0} info .'
+        log.error(msg.format(group_name))
+        return False
+
+
 def create_role(name, policy_document=None, path=None, region=None, key=None,
                 keyid=None, profile=None):
     '''
