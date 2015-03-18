@@ -1,5 +1,5 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "{{ salt_version }}"
+!define PRODUCT_VERSION "2015.2.0rc1"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -142,30 +142,30 @@ ShowUnInstDetails show
 ; See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
 Section -Prerequisites
 
-  !define VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
-  !define VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
-  !define VC_REDIST_X64_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe"
-  !define VC_REDIST_X86_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe"
+;  !define VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
+;  !define VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
+;  !define VC_REDIST_X64_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe"
+;  !define VC_REDIST_X86_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe"
 
-  Var /GLOBAL VcRedistGuid
-  Var /GLOBAL VcRedistUri
-  ${If} ${RunningX64}
-    StrCpy $VcRedistGuid ${VC_REDIST_X64_GUID}
-    StrCpy $VcRedistUri  ${VC_REDIST_X64_URI}
-  ${Else}
-    StrCpy $VcRedistGuid ${VC_REDIST_X86_GUID}
-    StrCpy $VcRedistUri  ${VC_REDIST_X86_URI}
-  ${EndIf}
+;  Var /GLOBAL VcRedistGuid
+;  Var /GLOBAL VcRedistUri
+;  ${If} ${RunningX64}
+;    StrCpy $VcRedistGuid ${VC_REDIST_X64_GUID}
+;    StrCpy $VcRedistUri  ${VC_REDIST_X64_URI}
+;  ${Else}
+;    StrCpy $VcRedistGuid ${VC_REDIST_X86_GUID}
+;    StrCpy $VcRedistUri  ${VC_REDIST_X86_URI}
+;  ${EndIf}
 
-  Push $VcRedistGuid
-  Call MsiQueryProductState
-  ${If} $NeedVcRedist == "True"
-    NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
-    Pop $R0
-    StrCmp $R0 "success" +2
-      MessageBox MB_OK "VC redist package download failed: $R0" /SD IDOK    ; just report, do not break installation
-    Execwait '"$TEMP\vcredist.exe" /q'
-  ${EndIf}
+;  Push $VcRedistGuid
+;  Call MsiQueryProductState
+;  ${If} $NeedVcRedist == "True"
+;    NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
+;    Pop $R0
+;    StrCmp $R0 "success" +2
+;      MessageBox MB_OK "VC redist package download failed: $R0" /SD IDOK    ; just report, do not break installation
+;    Execwait '"$TEMP\vcredist.exe" /q'
+;  ${EndIf}
 
 SectionEnd
 
@@ -177,14 +177,13 @@ Section "MainSection" SEC01
   SetOverwrite try
   CreateDirectory $INSTDIR\conf\pki\minion
   File /r "..\buildenv\"
-  Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F' 
-  
+  Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F'
 
 SectionEnd
 
 Section -Post
   WriteUninstaller "$INSTDIR\uninst.exe"
-  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\salt-minion.exe"
+  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\bin\Scripts\salt-minion.exe"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\salt.ico"
@@ -196,7 +195,7 @@ Section -Post
 SectionEnd
 
 Function .onInstSuccess
-  Exec "nssm.exe install salt-minion $INSTDIR\salt-minion.exe -c $INSTDIR\conf -l quiet"
+  Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
   RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
   ExecWait "net start salt-minion"
 FunctionEnd
@@ -238,7 +237,8 @@ Section Uninstall
   ExecWait "sc delete salt-minion"
   Delete "$INSTDIR\uninst.exe"
   Delete "$INSTDIR\nssm.exe"
-  Delete "$INSTDIR\python*"
+  Delete "$INSTDIR\salt*"
+  Delete "$INSTDIR\bin"
 
   #Delete "$SMPROGRAMS\Salt Minion\Uninstall.lnk"
   #RMDir /r "$SMPROGRAMS\Salt Minion"
