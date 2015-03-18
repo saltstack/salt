@@ -53,6 +53,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         .. code-block:: python
 
+<<<<<<< HEAD
             >>> opts = salt.config.master_config('/etc/salt/master')
             >>> runner = salt.runner.RunnerClient(opts)
             >>> runner.cmd('jobs.list_jobs', [])
