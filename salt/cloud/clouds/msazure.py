@@ -419,9 +419,25 @@ def create(vm_):
         'service_name': service_name,
         'label': label,
         'description': vm_.get('desc', vm_['name']),
-        'location': vm_['location'],
     }
 
+    loc_error = False
+    if 'location' in vm_:
+        if 'affinity_group' in vm_:
+            loc_error = True
+        else:
+            service_kwargs['location'] = vm_['location']
+    elif 'affinity_group' in vm_:
+        service_kwargs['affiinity_group'] = vm_['affiinity_group']
+    else:
+        loc_error = True
+
+    if loc_error:
+        raise SaltCloudSystemExit(
+            'Either a location or affinity group must be specified, but not both'
+        )
+
+    return
     ssh_port = config.get_cloud_config_value('port', vm_, __opts__,
                                              default='22', search_global=True)
 
@@ -1433,7 +1449,7 @@ def create_service(kwargs=None, conn=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The show_service function must be called with -f or --function.'
+            'The create_service function must be called with -f or --function.'
         )
 
     if not conn:
@@ -2181,6 +2197,160 @@ def show_deployment(kwargs=None, conn=None, call=None):
 
 # For consistency with Azure SDK
 get_deployment = show_deployment
+
+
+def list_affinity_groups(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List input endpoints associated with the deployment
+
+    CLI Example::
+
+        salt-cloud -f list_affinity_groups my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_affinity_groups function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_affinity_groups()
+    ret = {}
+    for item in data.affinity_groups:
+        ret[item.name] = object_to_dict(item)
+    return ret
+
+
+def show_affinity_group(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show an affinity group associated with the account
+
+    CLI Example::
+
+        salt-cloud -f show_affinity_group my-azure service=myservice \
+            deployment=mydeployment name=SSH
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_affinity_group function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An affinity group name must be specified as "name"')
+
+    data = conn.get_affinity_group_properties(affinity_group_name=kwargs['name'])
+    return object_to_dict(data)
+
+
+# For consistency with Azure SDK
+get_affinity_group = show_affinity_group
+
+
+def create_affinity_group(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Create a new affinity group
+
+    CLI Example::
+
+        salt-cloud -f create_affinity_group my-azure name=my_affinity_group
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_affinity_group function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'label' not in kwargs:
+        raise SaltCloudSystemExit('A label must be specified as "label"')
+
+    if 'location' not in kwargs:
+        raise SaltCloudSystemExit('A location must be specified as "location"')
+
+    try:
+        data = conn.create_affinity_group(
+            kwargs['name'],
+            kwargs['label'],
+            kwargs['location'],
+            kwargs.get('description', None),
+        )
+        return {'Success': 'The affinity group was successfully created'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the affinity group already exists.'}
+
+
+def update_affinity_group(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Update an affinity group's properties
+
+    CLI Example::
+
+        salt-cloud -f update_affinity_group my-azure name=my_group label=my_group
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The update_affinity_group function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'label' not in kwargs:
+        raise SaltCloudSystemExit('A label must be specified as "label"')
+
+    data = conn.update_affinity_group(
+        affinity_group_name=kwargs['name'],
+        label=kwargs['label'],
+        description=kwargs.get('description', None),
+    )
+    return show_affinity_group(kwargs={'name': kwargs['name']}, call='function')
+
+
+def delete_affinity_group(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific affinity group associated with the account
+
+    CLI Examples::
+
+        salt-cloud -f delete_affinity_group my-azure name=my_affinity_group
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_affinity_group function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_affinity_group(kwargs['name'])
+        return {'Success': 'The affinity group was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
 
 
 def object_to_dict(obj):
