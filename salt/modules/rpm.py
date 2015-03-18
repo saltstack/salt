@@ -2,15 +2,16 @@
 '''
 Support for rpm
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import re
 
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
