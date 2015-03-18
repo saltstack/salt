@@ -315,7 +315,7 @@ def del_repo(repo):
                 return {
                     repo: True,
                     'message': msg[0].childNodes[0].nodeValue,
-                    }
+                }
 
     raise CommandExecutionError('Repository \'{0}\' not found.'.format(repo))
 
@@ -662,7 +662,7 @@ def upgrade(refresh=True):
     ret = {'changes': {},
            'result': True,
            'comment': '',
-           }
+    }
 
     if salt.utils.is_true(refresh):
         refresh_db()
@@ -1090,5 +1090,73 @@ def list_products():
         product = _parse_suse_product(prod_meta, *info)
         product['baseproduct'] = is_base_product is not None
         ret[product.pop('name')] = product
+
+    return ret
+
+
+def download(*packages):
+    """
+    Download packages to the local disk.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.download httpd
+        salt '*' pkg.download httpd postfix
+    """
+    if not packages:
+        raise CommandExecutionError("No packages has been specified.")
+
+    doc = dom.parseString(__salt__['cmd.run'](
+        ('zypper -x --non-interactive download {0}'.format(' '.join(packages))),
+        output_loglevel='trace'))
+    pkg_ret = {}
+    for dld_result in doc.getElementsByTagName("download-result"):
+        repo = dld_result.getElementsByTagName("repository")[0]
+        pkg_info = {
+            'repository-name': repo.getAttribute("name"),
+            'repository-alias': repo.getAttribute("alias"),
+            'path': dld_result.getElementsByTagName("localfile")[0].getAttribute("path"),
+        }
+        pkg_ret[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
+
+    if pkg_ret:
+        return pkg_ret
+
+    raise CommandExecutionError("Unable to download packages: {0}.".format(', '.join(packages)))
+
+
+def diff(*paths):
+    '''
+    Return a formatted diff between current files and original in a package.
+    NOTE: this function includes all files (configuration and not), but does
+    not work on binary content.
+
+    :param path: Full path to the installed file
+    :return: Difference string or raises and exception if examined file is binary.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.diff /etc/apache2/httpd.conf /etc/sudoers
+    '''
+    ret = {}
+
+    pkg_to_paths = {}
+    for pth in paths:
+        pth_pkg = __salt__['lowpkg.owner'](pth)
+        if not pth_pkg:
+            ret[pth] = os.path.exists(pth) and 'Not managed' or 'N/A'
+        else:
+            if pkg_to_paths.get(pth_pkg) is None:
+                pkg_to_paths[pth_pkg] = []
+            pkg_to_paths[pth_pkg].append(pth)
+
+    local_pkgs = __salt__['pkg.download'](*pkg_to_paths.keys())
+    for pkg, files in pkg_to_paths.items():
+        for path in files:
+            ret[path] = __salt__['lowpkg.diff'](local_pkgs[pkg]['path'], path) or 'Unchanged'
 
     return ret

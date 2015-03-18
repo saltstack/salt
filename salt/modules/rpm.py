@@ -9,6 +9,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
@@ -222,3 +223,33 @@ def owner(*paths):
     if len(ret) == 1:
         return list(ret.values())[0]
     return ret
+
+
+@decorators.which('rpm2cpio')
+@decorators.which('cpio')
+@decorators.which('diff')
+def diff(package, path):
+    '''
+    Return a formatted diff between current file and original in a package.
+    NOTE: this function includes all files (configuration and not), but does
+    not work on binary content.
+
+    :param package: The name of the package
+    :param path: Full path to the installed file
+    :return: Difference or empty string. For binary files only a notification.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.diff apache2 /etc/apache2/httpd.conf
+    '''
+
+    cmd = "rpm2cpio {0} " \
+          "| cpio -i --quiet --to-stdout .{1} " \
+          "| diff -u --label 'A {1}' --from-file=- --label 'B {1}' {1}"
+    res = __salt__['cmd.shell'](cmd.format(package, path), output_loglevel='trace')
+    if res and res.startswith('Binary file'):
+        return 'File "{0}" is binary and its content has been modified.'.format(path)
+
+    return res
