@@ -1158,9 +1158,11 @@ def diff(*paths):
     :param path: Full path to the installed file
     :return: Difference string or raises and exception if examined file is binary.
 
+    CLI example:
+
     .. code-block:: bash
 
-        salt '*' pkg.diff httpd /etc/apache2/httpd.conf
+        salt '*' pkg.diff /etc/apache2/httpd.conf /etc/sudoers
     '''
     ret = {}
 
