@@ -12,13 +12,29 @@ import json
 import logging
 
 # Import 3rd-party libs
-import requests
 import salt.ext.six as six
 from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 from salt.exceptions import CommandExecutionError
 
+try:
+    import requests
+    ENABLED = True
+except ImportError:
+    ENABLED = False
+
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    '''
+    Return virtual name of the module.
+
+    :return: The virtual name of the module.
+    '''
+    if not ENABLED:
+        return False
+    return "serverdensity_device"
 
 
 def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
