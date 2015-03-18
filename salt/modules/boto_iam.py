@@ -357,6 +357,68 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
         return False
 
 
+def create_login_profile(user_name, password, region=None, key=None,
+                         keyid=None, profile=None):
+    '''
+    Creates a login profile for the specified user, give the user the
+    ability to access AWS services and the AWS Management Console.
+
+    CLI example::
+
+        salt myminion boto_iam.create_login_profile user_name password
+    '''
+    user = __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username {0} does not exist'
+        log.error(msg.format(user_name))
+        return False
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.create_login_profile(user_name, password)
+        log.info('Created profile for user {0} .'.format(user_name))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to update profile for user {0} .'
+        log.error(msg.format(user_name))
+        return False
+
+
+def update_account_password_policy(allow_users_to_change_password=None,
+                                   hard_expiry=None, max_password_age=None,
+                                   minimum_password_length=None,
+                                   password_reuse_prevention=None,
+                                   require_lowercase_characters=None,
+                                   require_numbers=None, require_symbols=None,
+                                   require_uppercase_characters=None,
+                                   region=None, key=None, keyid=None,
+                                   profile=None):
+    '''
+    Update the password policy for the AWS account.
+
+    CLI example::
+
+        salt myminion boto_iam.update_account_password_policy True
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        update = conn.update_account_password_policy(allow_users_to_change_password,
+                                                     hard_expiry, max_password_age,
+                                                     minimum_password_length,
+                                                     password_reuse_prevention,
+                                                     require_lowercase_characters,
+                                                     require_numbers, require_symbols,
+                                                     require_uppercase_characters)
+        log.info('The password policy has been updated .')
+        info = conn.get_account_password_policy()
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to update the password policy'
+        log.error(msg)
+        return False
+
+
 def create_role(name, policy_document=None, path=None, region=None, key=None,
                 keyid=None, profile=None):
     '''
