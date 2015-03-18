@@ -961,17 +961,40 @@ def running(name,
     create = __salt__['docker.create_container']
     image_name = _get_image_name(image, tag)
     iinfos = ins_image(image_name)
+    image_exists = iinfos['status']
+
+    if not image_exists:
+        return _invalid(comment='image "{0}" does not exists'.format(image_name))
+
     cinfos = ins_container(name)
     already_exists = cinfos['status']
-    image_exists = iinfos['status']
-    is_running = False
-    if already_exists:
-        is_running = __salt__['docker.is_running'](container)
+    already_exists_with_same_image = (
+        # if container is known by name,
+        already_exists
+        # and the container is based on expected image,
+        and cinfos['out']['Image'] == iinfos['out']['Id']
+        # then assume it already exists.
+    )
+
+    is_running = __salt__['docker.is_running'](container)
+
     # if container exists but is not started, try to start it
-    if already_exists and (is_running or not start):
+    if already_exists_with_same_image and (is_running or not start):
         return _valid(comment='container {0!r} already exists'.format(name))
-    if not image_exists:
-        return _invalid(comment='image "{0}" does not exist'.format(image))
+    if not already_exists_with_same_image and already_exists:
+        # Outdated container: It means it runs against an old image.
+        # We're gonna have to stop and remove the old container, to let
+        # the name available for the new one.
+        if is_running:
+            stop_status = __salt__['docker.stop'](name)
+            if not stop_status['status']:
+                return _invalid(comment='Failed to stop outdated container {0!r}'.format(name))
+
+        remove_status = __salt__['docker.remove_container'](name)
+        if not remove_status['status']:
+            return _invalid(comment='Failed to remove outdated container {0!r}'.format(name))
+        # now it's clear, the name is available for the new container
+
     # parse input data
     exposeports, bindports, contvolumes, bindvolumes, denvironment, changes = [], {}, [], {}, {}, []
     if not ports:
