@@ -105,6 +105,9 @@ Token expiration time can be set in the Salt master config file.
 
 LDAP
 ----
+.. note::
+
+    LDAP usage requires that you have installed python-ldap.
 
 Salt supports both user and group authentication for LDAP.
 
