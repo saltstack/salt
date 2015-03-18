@@ -3,7 +3,7 @@
     :codeauthor: :email:`Nicole Thomas (nicole@saltstack.com)`
 '''
 
-# Import Pyhton Libs
+# Import Python Libs
 from inspect import ArgSpec
 
 # Import Salt Libs
