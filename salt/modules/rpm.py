@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import re
 
 # Import Salt libs
 import salt.utils
@@ -151,6 +152,77 @@ def file_list(*packages):
             python_shell=False,
             output_loglevel='trace').splitlines()
     return {'errors': [], 'files': ret}
+
+
+def modified(*packages, **flags):
+    """
+    List the modified files that belong to a package. Not specifying any packages
+    will return a list of _all_ modified files on the system's RPM database.
+
+    CLI examples:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.modified httpd
+        salt '*' lowpkg.modified httpd postfix
+        salt '*' lowpkg.modified
+    """
+    ret = __salt__['cmd.run_all'](
+        ['rpm', '-Va'] + list(packages),
+        python_shell=False,
+        output_loglevel='trace')
+
+    data = {}
+
+    # If verification has an output, then it means it failed
+    # and the return code will be 1. We are interested in any bigger
+    # than 1 code.
+    if ret['retcode'] > 1:
+        del ret['stdout']
+        return ret
+    elif not ret['retcode']:
+        return data
+
+    ptrn = re.compile(r"\s+")
+    changes = cfg = f_name = None
+    for f_info in ret['stdout'].splitlines():
+        f_info = ptrn.split(f_info)
+        if len(f_info) == 3:  # Config file
+            changes, cfg, f_name = f_info
+        else:
+            changes, f_name = f_info
+            cfg = None
+        keys = ['size', 'mode', 'checksum', 'device', 'symlink',
+                'owner', 'group', 'time', 'capabilities']
+        changes = list(changes)
+        if len(changes) == 8:  # Older RPMs do not support capabilities
+            changes.append(".")
+        stats = []
+        for k, v in zip(keys, changes):
+            if v != '.':
+                stats.append(k)
+        if cfg is not None:
+            stats.append('config')
+        data[f_name] = stats
+
+    if not flags:
+        return data
+
+    # Filtering
+    filtered_data = {}
+    for f_name, stats in data.items():
+        include = True
+        for param, pval in flags.items():
+            if param.startswith("_"):
+                continue
+            if (not pval and param in stats) or \
+               (pval and param not in stats):
+                include = False
+                break
+        if include:
+            filtered_data[f_name] = stats
+
+    return filtered_data
 
 
 def file_dict(*packages):
