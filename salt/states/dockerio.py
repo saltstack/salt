@@ -839,11 +839,11 @@ def running(name,
 
             - volumes:
               - /home/user1:
-                bind: /mnt/vol2
-                ro: true
+                  bind: /mnt/vol2
+                  ro: true
               - /var/www:
-                bind: /mnt/vol1
-                ro: false
+                  bind: /mnt/vol1
+                  ro: false
 
         Or (mostly for backwards compatibility) a dict style
 
