@@ -1015,6 +1015,7 @@ def syndic_config(master_config_path,
         'sock_dir': os.path.join(
             opts['cachedir'], opts.get('syndic_sock_dir', opts['sock_dir'])
         ),
+        'cachedir': master_opts['cachedir'],
     }
     opts.update(syndic_opts)
     # Prepend root_dir to other paths
