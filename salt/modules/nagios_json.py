@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Check Host & Service status from Nagios via JSON.
+
+.. versionadded:: Beryllium
+
 '''
 
 # Import python libs
