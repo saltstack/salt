@@ -23,11 +23,16 @@ import logging
 
 # Import 3rd-party libs
 import json
-import requests
-from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 # pylint: enable=import-error,no-name-in-module
+
+try:
+    import requests
+    from requests.exceptions import ConnectionError
+    ENABLED = True
+except ImportError:
+    ENABLED = False
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'random_org'
@@ -65,6 +70,8 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
+    if not ENABLED:
+        return False
     return __virtualname__
 
 
