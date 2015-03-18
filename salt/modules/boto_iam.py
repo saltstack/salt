@@ -153,7 +153,7 @@ def role_exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def describe_role(nome, region=None, key=None, keyid=None, profile=None):
+def describe_role(name, region=None, key=None, keyid=None, profile=None):
     '''
     Get information for a role
 
@@ -167,7 +167,7 @@ def describe_role(nome, region=None, key=None, keyid=None, profile=None):
         if not info:
             return False
         return info
-    except boto.exception.BotoServerError:
+    except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to get {0} information.'
         log.error(msg.format(name))
