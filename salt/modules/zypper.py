@@ -1109,7 +1109,7 @@ def download(*packages):
         raise CommandExecutionError("No packages has been specified.")
 
     doc = dom.parseString(__salt__['cmd.run'](
-        ('zypper -x --non-interactive download {0}'.format(' '.join(package))),
+        ('zypper -x --non-interactive download {0}'.format(' '.join(packages))),
         output_loglevel='trace'))
     packages = {}
     for dld_result in doc.getElementsByTagName("download-result"):
