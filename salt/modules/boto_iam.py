@@ -402,13 +402,13 @@ def update_account_password_policy(allow_users_to_change_password=None,
     '''
     conn = _get_conn(region, key, keyid, profile)
     try:
-        update = conn.update_account_password_policy(allow_users_to_change_password,
-                                                     hard_expiry, max_password_age,
-                                                     minimum_password_length,
-                                                     password_reuse_prevention,
-                                                     require_lowercase_characters,
-                                                     require_numbers, require_symbols,
-                                                     require_uppercase_characters)
+        conn.update_account_password_policy(allow_users_to_change_password,
+                                            hard_expiry, max_password_age,
+                                            minimum_password_length,
+                                            password_reuse_prevention,
+                                            require_lowercase_characters,
+                                            require_numbers, require_symbols,
+                                            require_uppercase_characters)
         log.info('The password policy has been updated .')
         info = conn.get_account_password_policy()
         return info
