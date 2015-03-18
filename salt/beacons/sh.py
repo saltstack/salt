@@ -3,6 +3,7 @@
 Watch the shell commands being executed actively. This beacon requires strace.
 '''
 # Import python libs
+from __future__ import absolute_import
 import time
 # Import salt libs
 import salt.utils

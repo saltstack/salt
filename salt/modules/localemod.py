@@ -263,7 +263,7 @@ def gen_locale(locale, **kwargs):
         try:
             valid = "{0}_{1}".format(locale_info['language'],
                                      locale_info['territory']) in os.listdir(search)
-        except OSError, ex:
+        except OSError as ex:
             log.error(ex)
             raise CommandExecutionError("Locale \"{0}\" is not available.".format(locale))
 
