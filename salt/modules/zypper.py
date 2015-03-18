@@ -1098,7 +1098,7 @@ def download(*packages):
     """
     Download packages to the local disk.
 
-    CLI Examples:
+    CLI example:
 
     .. code-block:: bash
 
