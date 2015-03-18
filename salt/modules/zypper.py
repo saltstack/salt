@@ -1111,7 +1111,7 @@ def download(*packages):
     doc = dom.parseString(__salt__['cmd.run'](
         ('zypper -x --non-interactive download {0}'.format(' '.join(packages))),
         output_loglevel='trace'))
-    packages = {}
+    pkg_ret = {}
     for dld_result in doc.getElementsByTagName("download-result"):
         repo = dld_result.getElementsByTagName("repository")[0]
         pkg_info = {
@@ -1119,9 +1119,9 @@ def download(*packages):
             'repository-alias': repo.getAttribute("alias"),
             'path': dld_result.getElementsByTagName("localfile")[0].getAttribute("path"),
         }
-        packages[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
+        pkg_ret[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
 
-    if packages:
-        return packages
+    if pkg_ret:
+        return pkg_ret
 
-    raise CommandExecutionError("Unable to download package {0}.".format(package))
+    raise CommandExecutionError("Unable to download packages: {0}.".format(', '.join(packages)))
