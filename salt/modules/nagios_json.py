@@ -6,21 +6,28 @@ Check Host & Service status from Nagios via JSON.
 # Import python libs
 from __future__ import absolute_import
 import logging
-import requests
 
 # Import 3rd-party libs
-from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 # pylint: enable=import-error,no-name-in-module
+
+try:
+    import requests
+    from requests.exceptions import ConnectionError
+    HAS_DEPS = True
+except ImportError:
+    HAS_DEPS = False
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Only load if nagios-plugins are installed
+    Only load if requests is successfully imported
     '''
+    if not HAS_DEPS:
+        return False
     return 'nagios_json'
 
 
