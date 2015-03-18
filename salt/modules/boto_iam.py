@@ -153,6 +153,21 @@ def role_exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def describe_role(nome, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get information for a role
+
+    CLI example::
+
+        salt myminion boto_iam.describe_role myrole
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        return conn.get_role(name)
+    except boto.exception.BotoServerError:
+        return False
+
+
 def create_role(name, policy_document=None, path=None, region=None, key=None,
                 keyid=None, profile=None):
     '''
