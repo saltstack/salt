@@ -236,7 +236,7 @@ def diff(package, path):
 
     :param package: The name of the package
     :param path: Full path to the installed file
-    :return: Difference string or raises and exception if examined file is binary.
+    :return: Difference or empty string. For binary files only a notification.
     '''
 
     cmd = "rpm2cpio {0} " \
