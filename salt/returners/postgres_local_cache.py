@@ -68,8 +68,9 @@ and then:
 
 Required python modules: psycopg2
 '''
-from __future__ import absolute_import
+
 # Import python libs
+from __future__ import absolute_import
 import json
 import logging
 import re
@@ -78,6 +79,8 @@ import sys
 # Import salt libs
 import salt.utils
 import salt.utils.jid
+import salt.ext.six as six
+
 # Import third party libs
 try:
     import psycopg2
@@ -211,7 +214,7 @@ def returner(load):
         sql, (
             load['fun'],
             load['jid'],
-            json.dumps(unicode(str(load['return']), 'utf-8', 'replace')),
+            json.dumps(six.text_type(str(load['return']), 'utf-8', 'replace')),
             load['id'],
             success
         )
