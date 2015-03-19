@@ -9,6 +9,7 @@ Check Host & Service status from Nagios via JSON RPC.
 # Import python libs
 from __future__ import absolute_import
 import logging
+import httplib
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -103,12 +104,10 @@ def _status_query(query, method='GET', **kwargs):
                 data=data,
                 verify=True,
             )
-        if result.status_code == 200:
+        if result.status_code == httplib.OK:
             data = result.json()
-        elif result.status_code == 401:
-            log.info('Authentication failed. Check nagios_username and nagios_password.')
-        elif result.status_code == 404:
-            log.info('Url {0} not found.'.format(url))
+        elif result.status_code == httplib.UNAUTHORIZED:
+        elif result.status_code == httplib.NOT_FOUND:
         else:
             log.info('Results: {0}'.format(result.text))
     except ConnectionError as _error:
