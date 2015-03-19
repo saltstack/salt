@@ -351,7 +351,7 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
         if not info:
             return False
         info = info.get_group_policy_response.get_group_policy_result.policy_document
-        info = urllib.unquote(info)
+        info = _unquote(info)
         info = json.loads(info, object_pairs_hook=odict.OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
