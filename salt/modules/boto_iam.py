@@ -292,7 +292,7 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         return False
     conn = _get_conn(region, key, keyid, profile)
     try:
-        info = conn.add_user_to_group(group_name,user_name)
+        info = conn.add_user_to_group(group_name, user_name)
         if not info:
             return False
         return info
@@ -351,7 +351,7 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
         if not info:
             return False
         info = info.get_group_policy_response.get_group_policy_result.policy_document
-        info =  urllib.unquote(info)
+        info = urllib.unquote(info)
         info = json.loads(info, object_pairs_hook=odict.OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
