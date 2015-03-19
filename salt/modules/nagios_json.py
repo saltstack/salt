@@ -84,9 +84,11 @@ def _status_query(query, hostname, service=None, method='GET', **kwargs):
         if result.status_code == httplib.OK:
             data = result.json()
         elif result.status_code == httplib.UNAUTHORIZED:
+            log.error('Nagios authentication failed. Please check the configuration.')
         elif result.status_code == httplib.NOT_FOUND:
+            log.error('URL {0} for Nagios was not found.'.format(url))
         else:
-            log.info('Results: {0}'.format(result.text))
+            log.debug('Results: {0}'.format(result.text))
     except ConnectionError as conn_err:
         log.error('Error {0}'.format(conn_err))
 
