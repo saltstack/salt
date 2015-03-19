@@ -30,6 +30,7 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
@@ -1937,3 +1938,49 @@ def modified(*packages, **flags):
     """
 
     return __salt__['lowpkg.modified'](*packages, **flags)
+
+
+@decorators.which('yumdownloader')
+def download(*packages):
+    '''
+    Download packages to the local disk.
+    It requires "yumdownloader" from "yum-utils" package.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.download httpd
+        salt '*' pkg.download httpd postfix
+    '''
+    if not packages:
+        raise CommandExecutionError("No packages has been specified.")
+
+    CACHE_DIR = "/var/cache/yum/packages"
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+    for pkg in packages:
+        __salt__['cmd.run']("rm {0}/{1}*".format(CACHE_DIR, pkg))
+
+    __salt__['cmd.run'](('yumdownloader -q {0} --destdir={1}'.format(' '.join(packages), CACHE_DIR)),
+                        output_loglevel='trace')
+    pkg_ret = {}
+    for dld_result in os.listdir(CACHE_DIR):
+        if not dld_result.endswith(".rpm"):
+            continue
+        pkg_name = None
+        pkg_file = None
+        for query_pkg in packages:
+            if dld_result.startswith("{0}-".format(query_pkg)):
+                pkg_name = query_pkg
+                pkg_file = dld_result
+                break
+        pkg_info = {
+            'path': "{0}/{1}".format(CACHE_DIR, pkg_file),
+        }
+        pkg_ret[pkg_name] = pkg_info
+
+    if pkg_ret:
+        return pkg_ret
+
+    raise CommandExecutionError("Unable to download packages: {0}.".format(', '.join(packages)))
