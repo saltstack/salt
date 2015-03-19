@@ -24,7 +24,12 @@ except ImportError:
     REQUESTS_AVAILABLE = False
 
 log = logging.getLogger(__name__)
-
+_STATUS_ENUM = {
+    0: 'OK',
+    1: 'Warning',
+    2: 'Critical',
+    3: 'Unknown'
+}
 
 def __virtual__():
     '''
@@ -126,4 +131,4 @@ def status(hostname, service=None):
                             username=config['username'],
                             password=config['password'])
 
-    return results.get('data', {}).get(target, {}).get('status', 'critical') != 'critical'
+    return _STATUS_ENUM.get(results.get('data', {}).get(target, {}).get('status', 0))
