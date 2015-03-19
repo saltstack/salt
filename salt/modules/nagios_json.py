@@ -97,19 +97,19 @@ def _status_query(query, hostname, service=None, method='GET', **kwargs):
 
 def status(hostname, service=None):
     '''
-    Check the status in Nagios for a particular
-    service on a particular host
+    Check status of a particular host or particular service on it in Nagios.
+    If service parameter is omitted, then check host itself.
 
-    :param hostname:                The hostname to check the status of the service in Nagios.
-    :param service_description:     The service to check the status of in Nagios.
-    :return: Boolean                True is the status is 'OK' or 'Warning', False if 'Critical'
+    :param hostname:     The hostname to check the status of the service in Nagios.
+    :param service:      The service to check the status of in Nagios.
+    :return: Boolean     True is the status is 'OK' or 'Warning', False if 'Critical'
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' nagios_json.service_status hostname=webserver.domain.com service_description='HTTP'
-
+        salt '*' nagios_rpc.service_status hostname=webserver.domain.com
+        salt '*' nagios_rpc.service_status hostname=webserver.domain.com service='HTTP'
     '''
 
     config = _config()
