@@ -26,6 +26,7 @@ import sys
 import time
 import logging
 import errno
+import re
 from datetime import datetime
 from salt.ext.six import string_types
 
@@ -794,29 +795,30 @@ class LocalClient(object):
             jid,
             event=None,
             gather_errors=False,
-            additional_tags=None
+            tags_regex=None
            ):
         '''
         Raw function to just return events of jid excluding timeout logic
 
         Yield either the raw event data or None
 
-       Pass a list of additional tags as `additional_tags` to search the
-       event bus for non-return data, such as minion lists returned from
+       Pass a list of additional regular expressions as `tags_regex` to search
+       the event bus for non-return data, such as minion lists returned from
        syndics.
         '''
         if event is None:
             event = self.event
 
         jid_tag = 'salt/job/{0}'.format(jid)
+        jid_tag_regex = '^salt/job/{0}'.format(jid)
 
         tag_search = []
-        tag_search.append(jid_tag)
-        if isinstance(additional_tags, str):
-            tag_search.append(additional_tags)
-        elif isinstance(additional_tags, list):
-            for tag in additional_tags:
-                tag_search.append(tag)
+        tag_search.append(re.compile(jid_tag_regex))
+        if isinstance(tags_regex, str):
+            tag_search.append(re.compile(tags_regex))
+        elif isinstance(tags_regex, list):
+            for tag in tags_regex:
+                tag_search.append(re.compile(tag))
         while True:
             if self.opts.get('transport') == 'zeromq':
                 try:
@@ -824,7 +826,7 @@ class LocalClient(object):
                     if gather_errors:
                         if (raw and
                                 (raw.get('tag', '').startswith('_salt_error') or
-                                any([raw.get('tag', '').startswith(tag) for tag in tag_search]))):
+                                any([tag.search(raw.get('tag', '')) for tag in tag_search]))):
                             yield raw
                     else:
                         if raw and raw.get('tag', '').startswith(jid_tag):
