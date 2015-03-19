@@ -126,6 +126,7 @@ def status(hostname, service=None):
                             servicedescription=service_description)
 
     if not config['url']:
+        log.error('Missing Nagios URL in the configuration')
         return False
 
 
