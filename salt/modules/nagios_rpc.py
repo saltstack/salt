@@ -126,4 +126,4 @@ def status(hostname, service=None):
                             username=config['username'],
                             password=config['password'])
 
-    return results.get('data', {}).get(target, {}).get('status', 0) > 0
+    return results.get('data', {}).get('service', {}).get('status', 'critical') != 'critical'
