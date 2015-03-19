@@ -102,7 +102,7 @@ def status(hostname, service=None):
 
     :param hostname:     The hostname to check the status of the service in Nagios.
     :param service:      The service to check the status of in Nagios.
-    :return: Boolean     True is the status is 'OK' or 'Warning', False if 'Critical'
+    :return: status:     'OK', 'Warning', 'Critical' or 'Unknown'
 
     CLI Example:
 
