@@ -83,7 +83,7 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.enableServer(server=name, backend=backend)
     ha_conn.sendCmd(ha_cmd)
-    return list_servers(backend)
+    return list_servers(backend, socket=socket)
 
 
 def disable_server(name, backend, socket='/var/run/haproxy.sock'):
@@ -106,7 +106,7 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.disableServer(server=name, backend=backend)
     ha_conn.sendCmd(ha_cmd)
-    return list_servers(backend)
+    return list_servers(backend, socket=socket)
 
 
 def get_weight(name, backend, socket='/var/run/haproxy.sock'):
