@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Check Host & Service status from Nagios via JSON.
+Check Host & Service status from Nagios via JSON RPC.
 
 .. versionadded:: Beryllium
 
