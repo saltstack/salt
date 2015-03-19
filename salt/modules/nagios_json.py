@@ -134,16 +134,8 @@ def service_status(hostname, service_description):
                             hostname=hostname,
                             servicedescription=service_description)
 
-    data = results.get('data', '')
-    if data:
-        status = data.get('service', '').get('status', '')
-        if status and status == 0:
-            return False
-        elif status and status > 0:
-            return True
-        else:
-            return False
-    else:
+    if not config['url']:
         return False
 
 
+    return results.get('data', {}).get(target, {}).get('status', 0) > 0
