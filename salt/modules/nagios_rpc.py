@@ -100,7 +100,7 @@ def _status_query(query, hostname, service=None, method='GET', **kwargs):
     return data
 
 
-def status(hostname, service=None):
+def status(hostname, service=None, **kwargs):
     '''
     Check status of a particular host or particular service on it in Nagios.
     If service parameter is omitted, then check host itself.
