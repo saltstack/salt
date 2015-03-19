@@ -75,19 +75,19 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
             ret['changes']['user'] = created
             ret['comment'] = '\n'.join([ret['comment'], 'User {0} has been created.'.format(name)])
             if password:
-                ret = __case_password(ret, name, password, region, key, keyid, profile)
+                ret = _case_password(ret, name, password, region, key, keyid, profile)
             if group:
-                ret = __case_group(ret, name, group, region, key, keyid, profile)
+                ret = _case_group(ret, name, group, region, key, keyid, profile)
     else:
         ret['comment'] = '\n'.join([ret['comment'], 'User {0} is present.'.format(name)])
         if password:
-            ret = __case_password(ret, name, password, region, key, keyid, profile)
+            ret = _case_password(ret, name, password, region, key, keyid, profile)
         if group:
-            ret = __case_group(ret, name, group, region, key, keyid, profile)
+            ret = _case_group(ret, name, group, region, key, keyid, profile)
     return ret
 
 
-def __case_password(ret, name, password, region=None, key=None, keyid=None, profile=None):
+def _case_password(ret, name, password, region=None, key=None, keyid=None, profile=None):
     login = __salt__['boto_iam.create_login_profile'](name, password, region, key, keyid, profile)
     log.debug('login is : {0}'.format(login))
     if login:
@@ -102,7 +102,7 @@ def __case_password(ret, name, password, region=None, key=None, keyid=None, prof
     return ret
 
 
-def __case_group(ret, name, group, region=None, key=None, keyid=None, profile=None):
+def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=None):
     exists = __salt__['boto_iam.get_group'](group_name=group, region=region, key=key, keyid=keyid, profile=profile)
     if exists:
         result = __salt__['boto_iam.add_user_to_group'](name, group, region, key, keyid, profile)
@@ -131,25 +131,25 @@ def group_present(name, policy_name=None, policy=None, users=None, region=None, 
             ret['changes']['group'] = created
             ret['comment'] = '\n'.join([ret['comment'], 'Group {0} has been created.'.format(name)])
             if policy_name and policy:
-                ret = __case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
+                ret = _case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
             if users:
                 log.debug('users are : {0}'.format(users))
                 for user in users:
                     log.debug('user is : {0}'.format(user))
-                    ret = __case_group(ret, user, name, region, key, keyid, profile)
+                    ret = _case_group(ret, user, name, region, key, keyid, profile)
     else:
         ret['comment'] = '\n'.join([ret['comment'], 'Group {0} is present.'.format(name)])
         if policy_name and policy:
-            ret = __case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
+            ret = _case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
         if users:
             log.debug('users are : {0}'.format(users))
             for user in users:
                 log.debug('user is : {0}'.format(user))
-                ret = __case_group(ret, user, name, region, key, keyid, profile)
+                ret = _case_group(ret, user, name, region, key, keyid, profile)
     return ret
 
 
-def __case_policy(ret, group_name, policy_name, policy, region=None, key=None, keyid=None, profile=None):
+def _case_policy(ret, group_name, policy_name, policy, region=None, key=None, keyid=None, profile=None):
     exists = __salt__['boto_iam.get_group_policy'](group_name, policy_name, region, key, keyid, profile)
     if exists:
         log.debug('exists is : {0}'.format(exists))
