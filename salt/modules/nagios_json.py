@@ -8,6 +8,7 @@ Check Host & Service status from Nagios via JSON.
 
 # Import python libs
 from __future__ import absolute_import
+import httplib
 import logging
 
 # Import 3rd-party libs
@@ -24,6 +25,12 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__NAGIOS_STATUS = {
+    'critical': False,
+    'warning': True,
+    'ok': True,
+}
+
 
 def __virtual__():
     '''
@@ -38,14 +45,11 @@ def _config():
     '''
     Get configuration items for URL, Username and Password
     '''
-    nagios_url = __salt__['config.get']('nagios_json:nagios_url', '')
-    nagios_username = __salt__['config.get']('nagios_json:nagios_username', '')
-    nagios_password = __salt__['config.get']('nagios_json:nagios_password', '')
 
     config = {
-        'nagios_url': nagios_url,
-        'nagios_username': nagios_username,
-        'nagios_password': nagios_password,
+        'nagios_url': __salt__['config.get']('nagios_json:nagios_url', ''),
+        'nagios_username': __salt__['config.get']('nagios_json:nagios_username', ''),
+        'nagios_password': __salt__['config.get']('nagios_json:nagios_password', ''),
     }
     return config
 
@@ -72,6 +76,8 @@ def _status_query(query, method='GET', **kwargs):
         ],
     }
     parameters['query'] = query
+    parameters['formatoptions'] = 'enumerate'
+
     for param in query_params[query]:
         parameters[param] = kwargs[param]
 
@@ -103,14 +109,14 @@ def _status_query(query, method='GET', **kwargs):
                 data=data,
                 verify=True,
             )
-        if result.status_code == 200:
+        if result.status_code == httplib.OK:
             data = result.json()
-        elif result.status_code == 401:
+        elif result.status_code == httplib.UNAUTHORIZED:
             log.info('Authentication failed. Check nagios_username and nagios_password.')
-        elif result.status_code == 404:
+        elif result.status_code == httplib.NOT_FOUND:
             log.info('Url {0} not found.'.format(url))
         else:
-            log.info('Results: {0}'.format(result.text))
+            log.info('Status {0} - Results: {1}'.format(result.status_code, result.text))
     except ConnectionError as _error:
         log.info('Error {0}'.format(_error))
     return data
@@ -146,17 +152,7 @@ def service_status(hostname, service_description):
                             hostname=hostname,
                             servicedescription=service_description)
 
-    data = results.get('data', '')
-    if data:
-        status = data.get('service', '').get('status', '')
-        if status and status == 0:
-            return False
-        elif status and status > 0:
-            return True
-        else:
-            return False
-    else:
-        return False
+    return __NAGIOS_STATUS[results.get('data', {}).get('service', {}).get('status', 'critical')]
 
 
 def host_status(hostname):
@@ -186,14 +182,4 @@ def host_status(hostname):
                             nagios_password=config['nagios_password'],
                             hostname=hostname)
 
-    data = results.get('data', '')
-    if data:
-        status = data.get('host', '').get('status', '')
-        if status and status == 0:
-            return False
-        elif status and status > 0:
-            return True
-        else:
-            return False
-    else:
-        return False
+    return __NAGIOS_STATUS[results.get('data', {}).get('host', {}).get('status', 'critical')]
