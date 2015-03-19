@@ -1154,9 +1154,10 @@ def diff(*paths):
                 pkg_to_paths[pth_pkg] = []
             pkg_to_paths[pth_pkg].append(pth)
 
-    local_pkgs = __salt__['pkg.download'](*pkg_to_paths.keys())
-    for pkg, files in pkg_to_paths.items():
-        for path in files:
-            ret[path] = __salt__['lowpkg.diff'](local_pkgs[pkg]['path'], path) or 'Unchanged'
+    if pkg_to_paths:
+        local_pkgs = __salt__['pkg.download'](*pkg_to_paths.keys())
+        for pkg, files in pkg_to_paths.items():
+            for path in files:
+                ret[path] = __salt__['lowpkg.diff'](local_pkgs[pkg]['path'], path) or 'Unchanged'
 
     return ret
