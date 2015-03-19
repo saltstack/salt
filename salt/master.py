@@ -17,7 +17,6 @@ import shutil
 import logging
 import hashlib
 import binascii
-import resource
 import tempfile
 import multiprocessing
 
@@ -66,6 +65,13 @@ from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
 from salt.utils.cache import CacheCli
 
+try:
+    import resource
+    HAS_RESOURCE = True
+except ImportError:
+    # resource is not available on windows
+    HAS_RESOURCE = False
+
 # Import halite libs
 try:
     import halite  # pylint: disable=import-error
@@ -94,6 +100,25 @@ class SMaster(object):
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
         self.crypticle = self.__prep_crypticle()
+
+    # We need __setstate__ and __getstate__ to also pickle 'SMaster.aes'.
+    # Otherwise, 'SMaster.aes' won't be copied over to the spawned process
+    # on Windows since spawning processes on Windows requires pickling.
+    # These methods are only used when pickling so will not be used on
+    # non-Windows platforms.
+    def __setstate__(self, state):
+        self.opts = state['opts']
+        self.master_key = state['master_key']
+        self.key = state['key']
+        self.crypticle = state['crypticle']
+        SMaster.aes = state['aes']
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'master_key': self.master_key,
+                'key': self.key,
+                'crypticle': self.crypticle,
+                'aes': SMaster.aes}
 
     def __prep_crypticle(self):
         '''
@@ -308,6 +333,8 @@ class Master(SMaster):
         SMaster.__init__(self, opts)
 
     def __set_max_open_files(self):
+        if not HAS_RESOURCE:
+            return
         # Let's check to see how our max open files(ulimit -n) setting is
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
         if mof_h == resource.RLIM_INFINITY:
@@ -361,7 +388,12 @@ class Master(SMaster):
         '''
         errors = []
 
-        home = os.path.expanduser('~' + self.opts['user'])
+        if salt.utils.is_windows() and self.opts['user'] == 'root':
+            # 'root' doesn't typically exist on Windows. Use the current user
+            # home directory instead.
+            home = os.path.expanduser('~' + salt.utils.get_user())
+        else:
+            home = os.path.expanduser('~' + self.opts['user'])
         try:
             os.chdir(home)
         except OSError as err:
@@ -389,6 +421,16 @@ class Master(SMaster):
                 log.error(error)
             log.error('Master failed pre flight checks, exiting\n')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+    # run_reqserver cannot be defined within a class method in order for it
+    # to be picklable.
+    def run_reqserver(self):
+        reqserv = ReqServer(
+            self.opts,
+            self.crypticle,
+            self.key,
+            self.master_key)
+        reqserv.run()
 
     def start(self):
         '''
@@ -445,15 +487,8 @@ class Master(SMaster):
             log.debug('Sleeping for two seconds to let concache rest')
             time.sleep(2)
 
-        def run_reqserver():
-            reqserv = ReqServer(
-                self.opts,
-                self.crypticle,
-                self.key,
-                self.master_key)
-            reqserv.run()
         log.info('Creating master request server process')
-        process_manager.add_process(run_reqserver)
+        process_manager.add_process(self.run_reqserver)
         try:
             process_manager.run()
         except KeyboardInterrupt:
@@ -522,9 +557,14 @@ class Publisher(multiprocessing.Process):
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-        )
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_publish_pull', 4514)
+                )
+        else:
+            pull_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+                )
         salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
 
         # Start the minion command publisher
@@ -629,9 +669,14 @@ class ReqServer(object):
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
 
         self.workers = self.context.socket(zmq.DEALER)
-        self.w_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'workers.ipc')
-        )
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            self.w_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_workers', 4515)
+                )
+        else:
+            self.w_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'workers.ipc')
+                )
 
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
@@ -687,7 +732,8 @@ class ReqServer(object):
         if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
         # Also stop the workers
-        self.process_manager.kill_children()
+        if hasattr(self, 'process_manager'):
+            self.process_manager.kill_children()
 
     def __del__(self):
         self.destroy()
@@ -722,15 +768,44 @@ class MWorker(multiprocessing.Process):
         self.key = key
         self.k_mtime = 0
 
+    # We need __setstate__ and __getstate__ to also pickle 'SMaster.aes'.
+    # Otherwise, 'SMaster.aes' won't be copied over to the spawned process
+    # on Windows since spawning processes on Windows requires pickling.
+    # These methods are only used when pickling so will not be used on
+    # non-Windows platforms.
+    def __setstate__(self, state):
+        multiprocessing.Process.__init__(self)
+        self.opts = state['opts']
+        self.serial = state['serial']
+        self.crypticle = state['crypticle']
+        self.mkey = state['mkey']
+        self.key = state['key']
+        self.k_mtime = state['k_mtime']
+        SMaster.aes = state['aes']
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'serial': self.serial,
+                'crypticle': self.crypticle,
+                'mkey': self.mkey,
+                'key': self.key,
+                'k_mtime': self.k_mtime,
+                'aes': SMaster.aes}
+
     def __bind(self):
         '''
         Bind to the local port
         '''
         context = zmq.Context(1)
         socket = context.socket(zmq.REP)
-        w_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'workers.ipc')
-            )
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            w_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_workers', 4515)
+                )
+        else:
+            w_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'workers.ipc')
+                )
         log.info('Worker binding to socket {0}'.format(w_uri))
         try:
             socket.connect(w_uri)
@@ -749,7 +824,7 @@ class MWorker(multiprocessing.Process):
                     # Properly handle EINTR from SIGUSR1
                     if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
                         continue
-                    log.critical('Unexpected Error in Mworker',
+                    log.critical('Unexpected Error in MWorker',
                                  exc_info=True)
                     # lets just redo the socket (since we won't know what state its in).
                     # This protects against a single minion doing a send but not
@@ -2411,9 +2486,14 @@ class ClearFuncs(object):
         # Send 0MQ to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-            )
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_publish_pull', 4514)
+                )
+        else:
+            pull_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+                )
         pub_sock.connect(pull_uri)
 
         pub_sock.send(self.serial.dumps(load))
@@ -2572,7 +2652,12 @@ class FloMWorker(MWorker):
         self.aes_funcs = salt.master.AESFuncs(self.opts, self.crypticle)
         self.context = zmq.Context(1)
         self.socket = self.context.socket(zmq.REP)
-        self.w_uri = 'ipc://{0}'.format(
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            self.w_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_workers', 4515)
+                )
+        else:
+            self.w_uri = 'ipc://{0}'.format(
                 os.path.join(self.opts['sock_dir'], 'workers.ipc')
                 )
         log.info('ZMQ Worker binding to socket {0}'.format(self.w_uri))

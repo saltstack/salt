@@ -12,12 +12,6 @@ import os
 import re
 import time
 import stat
-try:
-    import pwd
-except ImportError:
-    # In case a non-master needs to import this module
-    pass
-
 import tempfile
 
 # Import salt libs
@@ -46,6 +40,13 @@ from salt.exceptions import SaltMasterError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    # pwd is not available on windows
+    HAS_PWD = False
 
 log = logging.getLogger(__name__)
 
@@ -187,8 +188,9 @@ def access_keys(opts):
     if opts.get('user'):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
-    for user in pwd.getpwall():
-        users.append(user.pw_name)
+    if HAS_PWD:
+        for user in pwd.getpwall():
+            users.append(user.pw_name)
     for user in acl_users:
         log.info(
             'Preparing the {0} key for local communication'.format(
@@ -196,12 +198,13 @@ def access_keys(opts):
             )
         )
 
-        if user not in users:
-            try:
-                user = pwd.getpwnam(user).pw_name
-            except KeyError:
-                log.error('ACL user {0} is not available'.format(user))
-                continue
+        if HAS_PWD:
+            if user not in users:
+                try:
+                    user = pwd.getpwnam(user).pw_name
+                except KeyError:
+                    log.error('ACL user {0} is not available'.format(user))
+                    continue
         keyfile = os.path.join(
             opts['cachedir'], '.{0}_key'.format(user)
         )
@@ -215,13 +218,17 @@ def access_keys(opts):
         with salt.utils.fopen(keyfile, 'w+') as fp_:
             fp_.write(key)
         os.umask(cumask)
-        os.chmod(keyfile, 256)
-        try:
-            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
-        except OSError:
-            # The master is not being run as root and can therefore not
-            # chown the key file
-            pass
+        # 600 octal: Read and write access to the owner only.
+        # Write access is necessary since on subsequent runs, if the file
+        # exists, it needs to be written to again. Windows enforces this.
+        os.chmod(keyfile, 0o600)
+        if HAS_PWD:
+            try:
+                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            except OSError:
+                # The master is not being run as root and can therefore not
+                # chown the key file
+                pass
         keys[user] = key
     return keys
 

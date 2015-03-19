@@ -1053,6 +1053,44 @@ def _freebsd_remotes_on(port, which_end):
     return remotes
 
 
+def _windows_remotes_on(port, which_end):
+    '''
+    Windows specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    C:\>netstat -n
+
+    Active Connections
+
+       Proto  Local Address          Foreign Address        State
+       TCP    10.2.33.17:3007        130.164.12.233:10123   ESTABLISHED
+       TCP    10.2.33.17:3389        130.164.30.5:10378     ESTABLISHED
+       '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-n'])
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = data.split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[1].rsplit(':', 1)
+        remote_host, remote_port = chunks[2].rsplit(':', 1)
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
+    return remotes
+
+
 def remotes_on_local_tcp_port(port):
     '''
     Returns set of ipv4 host addresses of remote established connections
@@ -1075,6 +1113,8 @@ def remotes_on_local_tcp_port(port):
         return _sunos_remotes_on(port, 'local_port')
     if salt.utils.is_freebsd():
         return _freebsd_remotes_on(port, 'local_port')
+    if salt.utils.is_windows():
+        return _windows_remotes_on(port, 'local_port')
 
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
@@ -1126,6 +1166,8 @@ def remotes_on_remote_tcp_port(port):
         return _sunos_remotes_on(port, 'remote_port')
     if salt.utils.is_freebsd():
         return _freebsd_remotes_on(port, 'remote_port')
+    if salt.utils.is_windows():
+        return _windows_remotes_on(port, 'remote_port')
 
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])

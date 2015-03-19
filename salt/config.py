@@ -46,6 +46,14 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
+if salt.utils.is_windows():
+    # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
+    # support in ZeroMQ, we want the default to be something that has a
+    # chance of working.
+    _DFLT_IPC_MODE = 'tcp'
+else:
+    _DFLT_IPC_MODE = 'ipc'
+
 FLO_DIR = os.path.join(
         os.path.dirname(__file__),
         'daemons', 'flo')
@@ -106,6 +114,10 @@ VALID_OPTS = {
     'file_buffer_size': int,
     'tcp_pub_port': int,
     'tcp_pull_port': int,
+    'tcp_master_pub_port': int,
+    'tcp_master_pull_port': int,
+    'tcp_master_publish_pull': int,
+    'tcp_master_workers': int,
     'log_file': str,
     'log_level': bool,
     'log_level_logfile': bool,
@@ -364,7 +376,7 @@ DEFAULT_MINION_OPTS = {
     'autosign_timeout': 120,
     'multiprocessing': True,
     'mine_interval': 60,
-    'ipc_mode': 'ipc',
+    'ipc_mode': _DFLT_IPC_MODE,
     'ipv6': False,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
@@ -539,7 +551,12 @@ DEFAULT_MASTER_OPTS = {
     'master_job_cache': 'local_cache',
     'minion_data_cache': True,
     'enforce_mine_cache': False,
+    'ipc_mode': _DFLT_IPC_MODE,
     'ipv6': False,
+    'tcp_master_pub_port': 4512,
+    'tcp_master_pull_port': 4513,
+    'tcp_master_publish_pull': 4514,
+    'tcp_master_workers': 4515,
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'master'),
     'log_level': None,
     'log_level_logfile': None,

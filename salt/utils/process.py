@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import signal
+import subprocess
 import logging
 import multiprocessing
 
@@ -274,12 +275,16 @@ class ProcessManager(object):
                 # in case someone died while we were waiting...
                 self.check_children()
 
-                pid, exit_status = os.wait()
-                if pid not in self._process_map:
-                    log.debug(('Process of pid {0} died, not a known'
-                               ' process, will not restart').format(pid))
-                    continue
-                self.restart_process(pid)
+                if not salt.utils.is_windows():
+                    pid, exit_status = os.wait()
+                    if pid not in self._process_map:
+                        log.debug(('Process of pid {0} died, not a known'
+                                   ' process, will not restart').format(pid))
+                        continue
+                    self.restart_process(pid)
+                else:
+                    # os.wait() is not supported on Windows.
+                    time.sleep(10)
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
@@ -305,9 +310,19 @@ class ProcessManager(object):
                 return signal.default_int_handler(signal.SIGTERM)(*args)
             else:
                 return
-
-        for p_map in six.itervalues(self._process_map):
-            p_map['Process'].terminate()
+        if salt.utils.is_windows():
+            with open(os.devnull, 'wb') as devnull:
+                for pid, p_map in six.iteritems(self._process_map):
+                    # On Windows, we need to explicitly terminate sub-processes
+                    # because the processes don't have a sigterm handler.
+                    subprocess.call(
+                        ['taskkill', '/F', '/T', '/PID', str(pid)],
+                        stdout=devnull, stderr=devnull
+                        )
+                    p_map['Process'].terminate()
+        else:
+            for p_map in six.itervalues(self._process_map):
+                p_map['Process'].terminate()
 
         end_time = time.time() + self.wait_for_kill  # when to die
 

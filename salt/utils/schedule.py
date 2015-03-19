@@ -242,6 +242,8 @@ import salt.utils
 import salt.utils.jid
 import salt.utils.process
 import salt.utils.args
+import salt.loader
+import salt.minion
 import salt.payload
 import salt.syspaths
 from salt.utils.odict import OrderedDict
@@ -459,6 +461,9 @@ class Schedule(object):
         Execute this method in a multiprocess or thread
         '''
         if salt.utils.is_windows():
+            # Since function references can't be pickled and pickling
+            # is required when spawning new processes on Windows, regenerate
+            # the functions and returners.
             self.functions = salt.loader.minion_mods(self.opts)
             self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),
@@ -951,6 +956,14 @@ class Schedule(object):
                              'job {0}, defaulting to 1.'.format(job))
                     data['maxrunning'] = 1
 
+            if salt.utils.is_windows():
+                # Temporarily stash our function references.
+                # You can't pickle function references, and pickling is
+                # required when spawning new processes on Windows.
+                functions = self.functions
+                self.functions = {}
+                returners = self.returners
+                self.returners = {}
             try:
                 if self.opts.get('multiprocessing', True):
                     thread_cls = multiprocessing.Process
@@ -962,6 +975,10 @@ class Schedule(object):
                     proc.join()
             finally:
                 self.intervals[job] = now
+            if salt.utils.is_windows():
+                # Restore our function references.
+                self.functions = functions
+                self.returners = returners
 
 
 def clean_proc_dir(opts):
