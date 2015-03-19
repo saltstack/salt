@@ -19,9 +19,9 @@ from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 try:
     import requests
     from requests.exceptions import ConnectionError
-    HAS_DEPS = True
+    REQUESTS_AVAILABLE = True
 except ImportError:
-    HAS_DEPS = False
+    REQUESTS_AVAILABLE = False
 
 log = logging.getLogger(__name__)
 
@@ -30,9 +30,11 @@ def __virtual__():
     '''
     Only load if requests is successfully imported
     '''
-    if not HAS_DEPS:
-        return False
-    return 'nagios_json'
+    if REQUESTS_AVAILABLE:
+        return 'nagios_rpc'
+    log.debug('Unable to initialize "nagios_rpc": library "requests" is not installed.')
+
+    return False
 
 
 def _config():
