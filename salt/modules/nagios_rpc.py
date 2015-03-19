@@ -143,4 +143,6 @@ def status(hostname, service=None, **kwargs):
                             username=config['username'],
                             password=config['password'])
 
-    return _STATUS_ENUM.get(results.get('data', {}).get(target, {}).get('status', 0))
+    status_code = results.get('data', {}).get(target, {}).get('status', 0)
+
+    return kwargs.get("numeric") is False and  _STATUS_ENUM.get(status_code) or status_code
