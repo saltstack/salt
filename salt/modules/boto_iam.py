@@ -159,7 +159,7 @@ def describe_role(name, region=None, key=None, keyid=None, profile=None):
 
     CLI example::
 
-        salt myminion boto_iam.describe_role myrole
+        salt myminion boto_iam.describe_role myirole
     '''
     conn = _get_conn(region, key, keyid, profile)
     try:
@@ -231,7 +231,7 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
     '''
     if not path:
         path = '/'
-    if __salt__['boto_iam.get_group'](group_name, region, key, keyid, profile):
+    if __salt__['boto_iam.get_group'](group_name=group_name, region=region, key=key, keyid=keyid, profile=profile):
         return True
     conn = _get_conn(region, key, keyid, profile)
     try:
@@ -276,15 +276,15 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.add_user_to_group myuser mygroup
     '''
-    users = __salt__['boto_iam.get_group'](group_name, region, key, keyid,
-                                           profile)
-    if users:
-        for _users in users['get_group_response']['get_group_result']['users']:
-            if user_name in _users['user_name']:
+    group = __salt__['boto_iam.get_group'](group_name=group_name,
+                                           region=region, key=key,
+                                           keyid=keyid, profile=profile)
+    if group:
+        for _users in group['get_group_response']['get_group_result']['users']:
+            if user_name == _users['user_name']:
                 msg = 'Username : {0} is already in group {1} .'
                 log.info(msg.format(user_name, group_name))
-                return True
-    group = __salt__['boto_iam.get_group'](group_name, region, key, keyid, profile)
+                return 'Exists'
     user = __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile)
     if not group or not user:
         msg = 'Username : {0} or group {1} do not exist .'
@@ -292,7 +292,7 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         return False
     conn = _get_conn(region, key, keyid, profile)
     try:
-        info = conn.add_user_to_group(user_name, group_name)
+        info = conn.add_user_to_group(group_name,user_name)
         if not info:
             return False
         return info
@@ -312,8 +312,8 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
 
         salt myminion boto_iam.put_group_policy mygroup policyname policyrules
     '''
-    group = __salt__['boto_iam.get_group'](group_name, region, key, keyid,
-                                           profile)
+    group = __salt__['boto_iam.get_group'](group_name=group_name, region=region,
+                                           key=key, keyid=keyid, profile=profile)
     if group:
         conn = _get_conn(region, key, keyid, profile)
         try:
@@ -347,8 +347,12 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
     conn = _get_conn(region, key, keyid, profile)
     try:
         info = conn.get_group_policy(group_name, policy_name)
+        log.debug('info for group policy is : {0}'.format(info))
         if not info:
             return False
+        info = info.get_group_policy_response.get_group_policy_result.policy_document
+        info =  urllib.unquote(info)
+        info = json.loads(info, object_pairs_hook=odict.OrderedDict)
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -379,6 +383,9 @@ def create_login_profile(user_name, password, region=None, key=None,
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
+        if 'Conflict' in e:
+            log.info('Profile already exists for user {0} .'.format(user_name))
+            return 'Conflict'
         msg = 'Failed to update profile for user {0} .'
         log.error(msg.format(user_name))
         return False
@@ -410,8 +417,26 @@ def update_account_password_policy(allow_users_to_change_password=None,
                                             require_numbers, require_symbols,
                                             require_uppercase_characters)
         log.info('The password policy has been updated .')
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to update the password policy'
+        log.error(msg)
+        return False
+
+
+def get_account_policy(region=None, key=None, keyid=None, profile=None):
+    '''
+    Get account policy for the AWS account.
+
+    CLI example::
+
+    salt myminion boto_iam.get_account_policy
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
         info = conn.get_account_password_policy()
-        return info
+        return info.get_account_password_policy_response.get_account_password_policy_result.password_policy
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to update the password policy'
