@@ -82,25 +82,16 @@ def _status_query(query, method='GET', **kwargs):
         url = _urljoin(nagios_url, 'cgi-bin/statusjson.cgi')
 
     try:
-        if nagios_username and nagios_password:
-            result = requests.request(
-                method=method,
-                url=url,
-                headers=headers,
-                params=parameters,
-                data=data,
-                verify=True,
-                auth=(nagios_username, nagios_password)
-            )
+        if username and password:
+            auth = (username, password,)
         else:
-            result = requests.request(
-                method=method,
-                url=url,
-                headers=headers,
-                params=parameters,
-                data=data,
-                verify=True,
-            )
+            auth = None
+        result = requests.request(method=method,
+                                  url=url,
+                                  params=req_params,
+                                  data=data,
+                                  verify=True,
+                                  auth=auth)
         if result.status_code == httplib.OK:
             data = result.json()
         elif result.status_code == httplib.UNAUTHORIZED:
