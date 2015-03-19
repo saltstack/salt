@@ -1,5 +1,5 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "2015.2.0rc1"
+!define PRODUCT_VERSION "{{ salt_version }}"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -158,7 +158,7 @@ Section -Prerequisites
 ;  ${EndIf}
 
 ;  Push $VcRedistGuid
-;  Call MsiQueryProductState
+  Call MsiQueryProductState
 ;  ${If} $NeedVcRedist == "True"
 ;    NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
 ;    Pop $R0
