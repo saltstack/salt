@@ -1054,7 +1054,7 @@ def _freebsd_remotes_on(port, which_end):
 
 
 def _windows_remotes_on(port, which_end):
-    '''
+    r'''
     Windows specific helper function.
     Returns set of ipv4 host addresses of remote established connections
     on local or remote tcp port.
@@ -1068,7 +1068,7 @@ def _windows_remotes_on(port, which_end):
        Proto  Local Address          Foreign Address        State
        TCP    10.2.33.17:3007        130.164.12.233:10123   ESTABLISHED
        TCP    10.2.33.17:3389        130.164.30.5:10378     ESTABLISHED
-    '''  # pylint: disable=W1401
+    '''
     remotes = set()
     try:
         data = subprocess.check_output(['netstat', '-n'])
