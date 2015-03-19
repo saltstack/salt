@@ -140,7 +140,7 @@ def group_present(name, policy_name=None, policy=None, users=None, region=None, 
     else:
         ret['comment'] = '\n'.join([ret['comment'], 'Group {0} is present.'.format(name)])
         if policy_name and policy:
-                ret = __case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
+            ret = __case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
         if users:
             log.debug('users are : {0}'.format(users))
             for user in users:
@@ -160,7 +160,7 @@ def __case_policy(ret, group_name, policy_name, policy, region=None, key=None, k
         else:
             __salt__['boto_iam.put_group_policy'](group_name, policy_name, policy, region, key, keyid, profile)
             ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
-            ret['changes']['policy_name'] =  policy
+            ret['changes']['policy_name'] = policy
     else:
         __salt__['boto_iam.put_group_policy'](group_name, policy_name, policy, region, key, keyid, profile)
         ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
@@ -191,7 +191,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
     config = locals()
     for key, value in config['info'].iteritems():
         if value is not None and str(info[key]) != str(value).lower():
-            ret['comment'] = '\n'.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value,info[key])])
+            ret['comment'] = '\n'.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
             ret['changes'][key] = str(value).lower()
     if not ret['changes']:
         ret['comment'] = 'Account policy is not changed'
