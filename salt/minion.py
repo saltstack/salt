@@ -1967,6 +1967,7 @@ class Syndic(Minion):
         opts['loop_interval'] = 1
         super(Syndic, self).__init__(opts, **kwargs)
         self.mminion = salt.minion.MasterMinion(opts)
+        self.jid_forward_cache = set()
 
     def _handle_aes(self, load, sig=None):
         '''
@@ -2222,7 +2223,9 @@ class Syndic(Minion):
                     jdict['__fun__'] = event['data'].get('fun')
                     jdict['__jid__'] = event['data']['jid']
                     jdict['__load__'] = {}
-                    fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
+                    if event['data']['jid'] not in self.jid_forward_cache:
+                        fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
+                        self.jid_forward_cache.add(event['data']['jid'])
                     jdict['__load__'].update(
                         self.mminion.returners[fstr](event['data']['jid'])
                         )
