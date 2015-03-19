@@ -151,15 +151,15 @@ If you are commonly passing in CLI options to ``salt-ssh``, you can create
 a ``Saltfile`` to automatically use these options. This is common if you're
 managing several different salt projects on the same server.
 
-So if you ``cd`` into a directory with a ``Saltfile`` with the following
+So you can ``cd`` into a directory that has a ``Saltfile`` with the following
 YAML contents:
 
 .. code-block:: yaml
 
     salt-ssh:
       config_dir: path/to/config/dir
-      max_prox: 30
-      wipe_ssh: true
+      max_procs: 30
+      wipe_ssh: True
 
 Instead of having to call
 ``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
@@ -175,4 +175,4 @@ Boolean-style options should be specified in their YAML representation.
    case of the ``--wipe`` command line option, its ``dest`` is configured to
    be ``wipe_ssh`` and thus this is what should be configured in the
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
-   true`` or ``w: true``, will not work.
+   True`` or ``w: True``, will not work.
