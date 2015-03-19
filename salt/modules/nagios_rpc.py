@@ -143,5 +143,5 @@ def status(hostname, service=None, **kwargs):
                             username=config['username'],
                             password=config['password'])
 
-    return results.get('data', {}).get(target, {}).get('status', not numeric and 'Critical' or 0)
+    return results.get('data', {}).get(target, {}).get('status', not numeric and 'Unknown' or 0)
 
