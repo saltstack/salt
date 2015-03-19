@@ -114,20 +114,16 @@ def status(hostname, service=None):
 
     config = _config()
 
-    if not config['nagios_url']:
-        log.error('Missing nagios_url')
-        return False
-
-    results = _status_query(query='service',
-                            nagios_url=config['nagios_url'],
-                            nagios_username=config['nagios_username'],
-                            nagios_password=config['nagios_password'],
-                            hostname=hostname,
-                            servicedescription=service_description)
-
     if not config['url']:
         log.error('Missing Nagios URL in the configuration')
         return False
 
+    target = service and 'service' or 'host'
+    results = _status_query(target,
+                            hostname,
+                            service=service,
+                            url=config['url'],
+                            username=config['username'],
+                            password=config['password'])
 
     return results.get('data', {}).get(target, {}).get('status', 0) > 0
