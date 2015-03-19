@@ -203,6 +203,13 @@ def _invalid(exec_status=None, name='', comment='', changes=None):
                        result=False)
 
 
+def _get_image_name(image, tag):
+    if ':' not in image:
+        # backward compatibility: name could be already tagged
+        return ':'.join((image, tag))
+    return image
+
+
 def mod_watch(name, sfun=None, *args, **kw):
     if sfun == 'built':
         # Needs to refresh the image
@@ -277,14 +284,15 @@ def pulled(name,
     '''
 
     inspect_image = __salt__['docker.inspect_image']
-    image_infos = inspect_image('{0}:{1}'.format(name, tag))
+    image_name = _get_image_name(name, tag)
+    image_infos = inspect_image(image_name)
     if image_infos['status'] and not force:
         return _valid(
             name=name,
-            comment='Image already pulled: {0}:{1}'.format(name, tag))
+            comment='Image already pulled: {0}'.format(image_name))
 
     if __opts__['test'] and force:
-        comment = 'Image {0}:{1} will be pulled'.format(name, tag)
+        comment = 'Image {0} will be pulled'.format(image_name)
         return _ret_status(name=name, comment=comment)
 
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
@@ -324,8 +332,9 @@ def pushed(name, tag='latest', insecure_registry=False):
         Set to ``True`` to allow connections to non-HTTPS registries. Default ``False``.
     '''
 
+    image_name = _get_image_name(name, tag)
     if __opts__['test']:
-        comment = 'Image {0}:{1} will be pushed'.format(name, tag)
+        comment = 'Image {0} will be pushed'.format(image_name)
         return _ret_status(name=name, comment=comment)
 
     push = __salt__['docker.push']
@@ -338,12 +347,15 @@ def pushed(name, tag='latest', insecure_registry=False):
     return _ret_status(returned, name, changes=changes)
 
 
-def loaded(name, source=None, source_hash='', force=False):
+def loaded(name, tag='latest', source=None, source_hash='', force=False):
     '''
     Load an image into the local docker registry (`docker load`)
 
     name
         Name of the docker image
+
+    tag
+        tag of the image (defaults to 'latest')
 
     source
         The source .tar file to download to the minion, created by docker save
@@ -375,11 +387,12 @@ def loaded(name, source=None, source_hash='', force=False):
     '''
 
     inspect_image = __salt__['docker.inspect_image']
-    image_infos = inspect_image(name)
+    image_name = _get_image_name(name, tag)
+    image_infos = inspect_image(image_name)
     if image_infos['status'] and not force:
         return _valid(
             name=name,
-            comment='Image already loaded: {0}'.format(name))
+            comment='Image already loaded: {0}'.format(image_name))
 
     tmp_filename = salt.utils.mkstemp()
     __salt__['state.single']('file.managed',
@@ -391,25 +404,28 @@ def loaded(name, source=None, source_hash='', force=False):
     if image_infos['status']:
         changes['old'] = image_infos['out']['Id']
         remove_image = __salt__['docker.remove_image']
-        remove_info = remove_image(name)
+        remove_info = remove_image(image_name)
         if not remove_info['status']:
-            return _invalid(name=name,
-                    comment='Image could not be removed: {0}'.format(name))
+            return _invalid(
+                name=name,
+                comment='Image could not be removed: {0}'.format(image_name))
 
     load = __salt__['docker.load']
     returned = load(tmp_filename)
 
-    image_infos = inspect_image(name)
+    image_infos = inspect_image(image_name)
     if image_infos['status']:
         changes['new'] = image_infos['out']['Id']
     else:
-        return _invalid(name=name,
-                        comment='Image {0} was not loaded into docker'.format(name))
+        return _invalid(
+            name=name,
+            comment='Image {0} was not loaded into docker'.format(image_name))
 
     return _ret_status(returned, name, changes=changes)
 
 
 def built(name,
+          tag='latest',
           path=None,
           quiet=False,
           nocache=False,
@@ -423,21 +439,25 @@ def built(name,
     name
         Name of the image
 
+    tag
+        tag of the image (defaults to 'latest')
+
     path
         URL (e.g. `url/branch/docker_dir/dockerfile`)
         or filesystem path to the dockerfile
 
     '''
     inspect_image = __salt__['docker.inspect_image']
-    image_infos = inspect_image(name)
+    image_name = _get_image_name(name, tag)
+    image_infos = inspect_image(image_name)
     if image_infos['status'] and not force:
         return _valid(
             name=name,
             comment='Image already built: {0}, id: {1}'.format(
-                name, image_infos['out']['Id']))
+                image_name, image_infos['out']['Id']))
 
     if __opts__['test'] and force:
-        comment = 'Image {0} will be built'.format(name)
+        comment = 'Image {0} will be built'.format(image_name)
         return {'name': name,
                 'changes': {},
                 'result': None,
@@ -445,7 +465,7 @@ def built(name,
 
     previous_id = image_infos['out']['Id'] if image_infos['status'] else None
     build = __salt__['docker.build']
-    kw = dict(tag=name,
+    kw = dict(tag=image_name,
               path=path,
               quiet=quiet,
               nocache=nocache,
@@ -465,6 +485,7 @@ def built(name,
 
 def installed(name,
               image,
+              tag='latest',
               command=None,
               hostname=None,
               user=None,
@@ -491,6 +512,9 @@ def installed(name,
     image
         Image from which to build this container
 
+    tag
+        tag of the image (defaults to 'latest')
+
     environment
         Environment variables for the container, either
             - a mapping of key, values
@@ -515,9 +539,10 @@ def installed(name,
     ins_image = __salt__['docker.inspect_image']
     ins_container = __salt__['docker.inspect_container']
     create = __salt__['docker.create_container']
-    iinfos = ins_image(image)
+    image_name = _get_image_name(image, tag)
+    iinfos = ins_image(image_name)
     if not iinfos['status']:
-        return _invalid(comment='image "{0}" does not exist'.format(image))
+        return _invalid(comment='image "{0}" does not exist'.format(image_name))
     cinfos = ins_container(name)
     already_exists = cinfos['status']
     # if container exists but is not started, try to start it
@@ -550,7 +575,7 @@ def installed(name,
             for k in p:
                 vals.append('{0}:{1}'.format(k, p[k]))
         dvolumes.extend(vals)
-    a, kw = [image], dict(
+    kw = dict(
         command=command,
         hostname=hostname,
         user=user,
@@ -566,7 +591,7 @@ def installed(name,
         name=name,
         cpu_shares=cpu_shares,
         cpuset=cpuset)
-    out = create(*a, **kw)
+    out = create(image_name, **kw)
     # if container has been created, even if not started, we mark
     # it as installed
     changes = 'Container created'
@@ -632,16 +657,18 @@ def absent(name):
         return _valid(comment="Container {0!r} not found".format(name))
 
 
-def present(name, image=None, is_latest=False):
+def present(name, image=None, tag='latest', is_latest=False):
     '''
     If a container with the given name is not present, this state will fail.
-    Supports optionally checking for specific image/version
+    Supports optionally checking for specific image/tag
     (`docker inspect`)
 
     name:
         container id
     image:
         image the container should be running (defaults to any)
+    tag:
+        tag of the image (defaults to 'latest')
     is_latest:
         also check if the container runs the latest version of the image (
         latest defined as the latest pulled onto the local machine)
@@ -656,12 +683,13 @@ def present(name, image=None, is_latest=False):
         return _invalid(comment='Container {0} not found'.format(cid or name))
     if cinfos['status'] and image is None:
         return _valid(comment='Container {0} exists'.format(cid))
-    if cinfos['status'] and cinfos['out']['Config']["Image"] == image and not is_latest:
-        return _valid(comment='Container {0} exists and has image {1}'.format(cid, image))
+    image_name = _get_image_name(image, tag)
+    if cinfos['status'] and cinfos['out']['Config']["Image"] == image_name and not is_latest:
+        return _valid(comment='Container {0} exists and has image {1}'.format(cid, image_name))
     ins_image = __salt__['docker.inspect_image']
-    iinfos = ins_image(image)
+    iinfos = ins_image(image_name)
     if cinfos['status'] and cinfos['out']['Image'] == iinfos['out']['Id']:
-        return _valid(comment='Container {0} exists and has latest version of image {1}'.format(cid, image))
+        return _valid(comment='Container {0} exists and has latest version of image {1}'.format(cid, image_name))
     return _invalid(comment='Container {0} found with wrong image'.format(cid or name))
 
 
@@ -761,6 +789,7 @@ def script(*args, **kw):
 
 def running(name,
             image,
+            tag='latest',
             container=None,
             command=None,
             hostname=None,
@@ -796,6 +825,9 @@ def running(name,
 
     image
         Image from which to build this container
+
+    tag
+        tag of the image (defaults to 'latest')
 
     environment
         Environment variables for the container, either
@@ -927,7 +959,8 @@ def running(name,
     ins_image = __salt__['docker.inspect_image']
     ins_container = __salt__['docker.inspect_container']
     create = __salt__['docker.create_container']
-    iinfos = ins_image(image)
+    image_name = _get_image_name(image, tag)
+    iinfos = ins_image(image_name)
     cinfos = ins_container(name)
     already_exists = cinfos['status']
     image_exists = iinfos['status']
@@ -998,22 +1031,21 @@ def running(name,
                 #assume just a port to expose
                 exposeports.append(str(port))
     if not already_exists:
-        args, kwargs = [image], dict(
-                        command=command,
-                        hostname=hostname,
-                        user=user,
-                        detach=detach,
-                        stdin_open=stdin_open,
-                        tty=tty,
-                        mem_limit=mem_limit,
-                        ports=exposeports,
-                        environment=denvironment,
-                        dns=dns,
-                        volumes=contvolumes,
-                        name=name,
-                        cpu_shares=cpu_shares,
-                        cpuset=cpuset)
-        out = create(*args, **kwargs)
+        kwargs = dict(command=command,
+                      hostname=hostname,
+                      user=user,
+                      detach=detach,
+                      stdin_open=stdin_open,
+                      tty=tty,
+                      mem_limit=mem_limit,
+                      ports=exposeports,
+                      environment=denvironment,
+                      dns=dns,
+                      volumes=contvolumes,
+                      name=name,
+                      cpu_shares=cpu_shares,
+                      cpuset=cpuset)
+        out = create(image_name, **kwargs)
         # if container has been created, even if not started, we mark
         # it as installed
         try:
