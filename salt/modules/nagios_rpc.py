@@ -103,10 +103,21 @@ def _status_query(query, hostname, service=None, method='GET', **kwargs):
 def status(hostname, service=None, **kwargs):
     '''
     Check status of a particular host or particular service on it in Nagios.
-    If service parameter is omitted, then check host itself.
+    If service parameter is omitted, then check host itself. By default
+    statuses are returned in a numeric format.
 
-    :param hostname:     The hostname to check the status of the service in Nagios.
-    :param service:      The service to check the status of in Nagios.
+    Parameters:
+
+    hostname
+        The hostname to check the status of the service in Nagios.
+
+    service
+        The service to check the status of in Nagios.
+
+    numeric
+        Turn to false in order to return status in text format
+        ('OK' instead of 0, 'Warning' instead of 1 etc)
+
     :return: status:     'OK', 'Warning', 'Critical' or 'Unknown'
 
     CLI Example:
@@ -115,6 +126,7 @@ def status(hostname, service=None, **kwargs):
 
         salt '*' nagios_rpc.service_status hostname=webserver.domain.com
         salt '*' nagios_rpc.service_status hostname=webserver.domain.com service='HTTP'
+        salt '*' nagios_rpc.service_status hostname=webserver.domain.com numeric=False
     '''
 
     config = _config()
