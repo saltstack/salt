@@ -29,7 +29,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 .. code-block:: yaml
 
-    creats-group:
+    create-group:
       boto_iam.group_present:
         - name: mygroup
         - users:
