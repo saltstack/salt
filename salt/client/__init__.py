@@ -889,7 +889,7 @@ class LocalClient(object):
         # iterator for this job's return
         if self.opts['order_masters']:
             # If we are a MoM, we need to gather expected minions from downstreams masters.
-            ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors, additional_tags='syndic')
+            ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors, tags_regex='^syndic/.*/{0}'.format(jid))
         else:
             ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
         # iterator for the info of this job
