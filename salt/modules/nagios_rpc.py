@@ -31,6 +31,7 @@ _STATUS_ENUM = {
     3: 'Unknown'
 }
 
+
 def __virtual__():
     '''
     Only load if requests is successfully imported
@@ -145,4 +146,4 @@ def status(hostname, service=None, **kwargs):
 
     status_code = results.get('data', {}).get(target, {}).get('status', 0)
 
-    return kwargs.get("numeric") is False and  _STATUS_ENUM.get(status_code) or status_code
+    return kwargs.get("numeric") is False and _STATUS_ENUM.get(status_code) or status_code
