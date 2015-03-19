@@ -98,8 +98,9 @@ def _status_query(query, method='GET', **kwargs):
         elif result.status_code == httplib.NOT_FOUND:
         else:
             log.info('Results: {0}'.format(result.text))
-    except ConnectionError as _error:
-        log.info('Error {0}'.format(_error))
+    except ConnectionError as conn_err:
+        log.error('Error {0}'.format(conn_err))
+
     return data
 
 
