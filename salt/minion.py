@@ -582,7 +582,10 @@ class MultiMinion(MinionBase):
             package = None
             for minion in minions.values():
                 if isinstance(minion, dict):
-                    minion = minion['minion']
+                    if 'minion' in minion:
+                        minion = minion['minion']
+                    else:
+                        continue
                 if not hasattr(minion, 'schedule'):
                     continue
                 loop_interval = self.process_schedule(minion, loop_interval)
@@ -1499,7 +1502,7 @@ class Minion(MinionBase):
             )
         )
         auth = salt.crypt.SAuth(self.opts)
-        auth.authenticate()
+        auth.authenticate(timeout=timeout, safe=safe)
         # TODO: remove these and just use a local reference to auth??
         self.tok = auth.gen_token('salt')
         self.crypticle = auth.crypticle

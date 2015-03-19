@@ -307,7 +307,7 @@ class SAuth(object):
 
         self.authenticate()
 
-    def authenticate(self):
+    def authenticate(self, timeout=None, safe=None):
         '''
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -323,7 +323,7 @@ class SAuth(object):
             acceptance_wait_time_max = acceptance_wait_time
 
         while True:
-            creds = self.sign_in()
+            creds = self.sign_in(timeout, safe)
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
