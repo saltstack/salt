@@ -41,16 +41,11 @@ def _config():
     '''
     Get configuration items for URL, Username and Password
     '''
-    nagios_url = __salt__['config.get']('nagios_json:nagios_url', '')
-    nagios_username = __salt__['config.get']('nagios_json:nagios_username', '')
-    nagios_password = __salt__['config.get']('nagios_json:nagios_password', '')
-
-    config = {
-        'nagios_url': nagios_url,
-        'nagios_username': nagios_username,
-        'nagios_password': nagios_password,
+    return {
+        'url': __salt__['config.get']('nagios:url', ''),
+        'username': __salt__['config.get']('nagios:username', ''),
+        'password': __salt__['config.get']('nagios:password', ''),
     }
-    return config
 
 
 def _status_query(query, method='GET', **kwargs):
