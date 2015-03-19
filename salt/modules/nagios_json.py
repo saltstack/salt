@@ -48,38 +48,27 @@ def _config():
     }
 
 
-def _status_query(query, method='GET', **kwargs):
+def _status_query(query, hostname, service=None, method='GET', **kwargs):
     '''
-    Send query along to Nagios
+    Send query along to Nagios.
     '''
-    headers = {}
-    parameters = {}
     data = {}
-
-    nagios_url = kwargs.get('nagios_url')
-    nagios_username = kwargs.get('nagios_username')
-    nagios_password = kwargs.get('nagios_password')
-
-    query_params = {
-        'service': [
-            'hostname',
-            'servicedescription',
-        ],
-        'host': [
-            'hostname',
-        ],
+    req_params = {
+        'hostname': hostname,
+        'query': query,
     }
-    parameters['query'] = query
-    for param in query_params[query]:
-        parameters[param] = kwargs[param]
 
-    if not nagios_url.endswith('/'):
-        nagios_url = nagios_url + '/'
+    if service:
+        req_params['servicedescription'] = service
+    url = kwargs.get('url')
+    username = kwargs.get('username')
+    password = kwargs.get('password')
 
-    if 'cgi-bin' in nagios_url:
-        url = _urljoin(nagios_url, 'statusjson.cgi')
-    else:
-        url = _urljoin(nagios_url, 'cgi-bin/statusjson.cgi')
+    # Make sure "cgi-bin/statusjson.cgi" in the URL
+    url = url.split("cgi-bin")[0]
+    if not url.endswith('/'):
+        url += '/'
+    url = _urljoin(url, 'statusjson.cgi')
 
     try:
         if username and password:
