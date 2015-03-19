@@ -477,7 +477,10 @@ def _virtual(osdata):
         if salt.utils.which('virt-what'):
             _cmds = (['virt-what'])
         else:
-            log.info('Please install "virt-what" to improve results of the "virtual" grain.')
+            log.debug(
+                'Please install \'virt-what\' to improve results of the '
+                '\'virtual\' grain.'
+            )
     # Check if enable_lspci is True or False
     elif __opts__.get('enable_lspci', True) is False:
         _cmds = (['dmidecode', 'dmesg'])
