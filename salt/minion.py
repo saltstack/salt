@@ -1825,6 +1825,7 @@ class Syndic(Minion):
         opts['loop_interval'] = 1
         super(Syndic, self).__init__(opts, **kwargs)
         self.mminion = salt.minion.MasterMinion(opts)
+        self.jid_forward_cache = set()
 
     def _handle_aes(self, load, sig=None):
         '''
@@ -2073,9 +2074,18 @@ class Syndic(Minion):
                     jdict['__jid__'] = event['data']['jid']
                     jdict['__load__'] = {}
                     fstr = '{0}.get_jid'.format(self.opts['master_job_cache'])
-                    jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
-                        )
+                    # Only need to forward each load once. Don't hit the disk
+                    # for every minion return!
+                    if event['data']['jid'] not in self.jid_forward_cache:
+                        jdict['__load__'].update(
+                            self.mminion.returners[fstr](event['data']['jid'])
+                            )
+                        self.jid_forward_cache.add(event['data']['jid'])
+                        if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
+                            # Pop the oldest jid from the cache
+                            tmp = sorted(list(self.jid_forward_cache))
+                            tmp.pop(0)
+                            self.jid_forward_cache = set(tmp)
                 if 'master_id' in event['data']:
                     jdict['master_id'] = event['data']['master_id']
                 jdict[event['data']['id']] = event['data']['return']
@@ -2128,6 +2138,7 @@ class MultiSyndic(MinionBase):
         opts['loop_interval'] = 1
         super(MultiSyndic, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
+        self.jid_forward_cache = set()
 
         # create all of the syndics you need
         self.master_syndics = {}
@@ -2310,9 +2321,18 @@ class MultiSyndic(MinionBase):
                     jdict['__jid__'] = event['data']['jid']
                     jdict['__load__'] = {}
                     fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
-                    jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
-                        )
+                    # Only need to forward each load once. Don't hit the disk
+                    # for every minion return!
+                    if event['data']['jid'] not in self.jid_forward_cache:
+                        jdict['__load__'].update(
+                            self.mminion.returners[fstr](event['data']['jid'])
+                            )
+                        self.jid_forward_cache.add(event['data']['jid'])
+                        if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
+                            # Pop the oldest jid from the cache
+                            tmp = sorted(list(self.jid_forward_cache))
+                            tmp.pop(0)
+                            self.jid_forward_cache = set(tmp)
                 if 'master_id' in event['data']:
                     # __'s to make sure it doesn't print out on the master cli
                     jdict['__master_id__'] = event['data']['master_id']
