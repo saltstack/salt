@@ -1276,7 +1276,7 @@ class AESFuncs(object):
         # if we have a load, save it
         if load.get('load'):
             fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
-            self.mminion.returners[fstr](load['jid'], load)
+            self.mminion.returners[fstr](load['jid'], load['load'])
 
         # Format individual return loads
         for key, item in load['return'].items():
