@@ -24,12 +24,6 @@ except ImportError:
     REQUESTS_AVAILABLE = False
 
 log = logging.getLogger(__name__)
-_STATUS_ENUM = {
-    0: 'OK',
-    1: 'Warning',
-    2: 'Critical',
-    3: 'Unknown'
-}
 
 
 def __virtual__():
@@ -54,7 +48,7 @@ def _config():
     }
 
 
-def _status_query(query, hostname, service=None, method='GET', **kwargs):
+def _status_query(query, hostname, retcode=True, service=None, method='GET', **kwargs):
     '''
     Send query along to Nagios.
     '''
@@ -64,8 +58,11 @@ def _status_query(query, hostname, service=None, method='GET', **kwargs):
         'query': query,
     }
 
+    if not retcode:
+        req_params['formatoptions'] = 'enumerate'
     if service:
         req_params['servicedescription'] = service
+
     url = kwargs.get('url')
     username = kwargs.get('username')
     password = kwargs.get('password')
@@ -136,14 +133,15 @@ def status(hostname, service=None, **kwargs):
         log.error('Missing Nagios URL in the configuration')
         return False
 
+    numeric = kwargs.get('numeric') is True
     target = service and 'service' or 'host'
     results = _status_query(target,
                             hostname,
+                            retcode=numeric,
                             service=service,
                             url=config['url'],
                             username=config['username'],
                             password=config['password'])
 
-    status_code = results.get('data', {}).get(target, {}).get('status', 0)
+    return results.get('data', {}).get(target, {}).get('status', not numeric and 'Critical' or 0)
 
-    return kwargs.get("numeric") is False and _STATUS_ENUM.get(status_code) or status_code
