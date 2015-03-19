@@ -2226,6 +2226,11 @@ class Syndic(Minion):
                     if event['data']['jid'] not in self.jid_forward_cache:
                         fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
                         self.jid_forward_cache.add(event['data']['jid'])
+                        if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
+                            # Pop the oldest jid from the cache
+                            tmp = sorted(list(self.jid_forward_cache))
+                            tmp.pop(0)
+                            self.jid_forward_cache = set(tmp)
                     jdict['__load__'].update(
                         self.mminion.returners[fstr](event['data']['jid'])
                         )
