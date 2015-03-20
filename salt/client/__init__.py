@@ -806,14 +806,6 @@ class LocalClient(object):
        the event bus for non-return data, such as minion lists returned from
        syndics.
         '''
-        tag_search = []
-        tag_search.append(jid)
-        if isinstance(additional_tags, str):
-            tag_search.append(additional_tags)
-        elif isinstance(additional_tags, list):
-            for tag in additional_tags:
-                tag_search.append(tag)
-
         if event is None:
             event = self.event
 
