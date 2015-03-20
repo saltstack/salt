@@ -22,7 +22,11 @@ def _auth():
     Return the auth object
     '''
     if 'auth' not in __context__:
-        __context__['auth'] = salt.crypt.SAuth(__opts__)
+        try:
+            __context__['auth'] = salt.crypt.SAuth(__opts__)
+        except SaltClientError:
+            log.error('Could not authenticate with master. Mine data '
+                      'will not be transmitted.')
     return __context__['auth']
 
 
@@ -96,7 +100,12 @@ def update(clear=False):
             'clear': clear,
     }
     if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
+        try:
+            load['tok'] = _auth().gen_token('salt')
+        except AttributeError:
+            log.error('Mine could not authenticate with master. Mine data '
+                      'not sent.')
+            return False
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
@@ -148,7 +157,12 @@ def send(func, *args, **kwargs):
             'id': __opts__['id'],
     }
     if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
+        try:
+            load['tok'] = _auth().gen_token('salt')
+        except AttributeError:
+            log.error('Mine could not authenticate with master. Mine data '
+                      'not sent.')
+            return False
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
@@ -203,7 +217,12 @@ def get(tgt, fun, expr_form='glob'):
             'expr_form': expr_form,
     }
     if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
+        try:
+            load['tok'] = _auth().gen_token('salt')
+        except AttributeError:
+            log.error('Mine could not authenticate with master. Mine data '
+                      'not sent.')
+            return False
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
@@ -230,7 +249,12 @@ def delete(fun):
             'fun': fun,
     }
     if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
+        try:
+            load['tok'] = _auth().gen_token('salt')
+        except AttributeError:
+            log.error('Mine could not authenticate with master. Mine data '
+                      'not sent.')
+            return False
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
@@ -253,7 +277,12 @@ def flush():
             'id': __opts__['id'],
     }
     if __opts__.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
+        try:
+            load['tok'] = _auth().gen_token('salt')
+        except AttributeError:
+            log.error('Mine could not authenticate with master. Mine data '
+                      'not sent.')
+            return False
     sreq = salt.transport.Channel.factory(__opts__)
     ret = sreq.send(load)
     return ret
