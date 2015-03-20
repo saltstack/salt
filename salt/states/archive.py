@@ -189,14 +189,13 @@ def extracted(name,
             tar_cmd = ['tar']
             tar_shortopts = 'x'
             tar_longopts = []
-            tar_afterfile = []
 
             for position, opt in enumerate(tar_opts):
                 if opt.startswith('-'):
                     tar_longopts.append(opt)
                 else:
                     if position > 0:
-                        tar_afterfile.append(opt)
+                        tar_longopts.append(opt)
                     else:
                         append_opt = opt
                         append_opt = append_opt.replace('x', '').replace('f', '')
@@ -205,7 +204,6 @@ def extracted(name,
             tar_cmd.append(tar_shortopts)
             tar_cmd.extend(tar_longopts)
             tar_cmd.extend(['-f', filename])
-            tar_cmd.extend(tar_afterfile)
 
             results = __salt__['cmd.run_all'](tar_cmd, cwd=name, python_shell=False)
             if results['retcode'] != 0:
