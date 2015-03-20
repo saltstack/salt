@@ -72,7 +72,7 @@ class ArchiveTest(TestCase):
                                                 source,
                                                 'tar',
                                                 tar_options=test_opts)
-                        ret_opts.append(os.path.join(tmp_dir, 'files/test/_tmp_test_archive.tar'))
+                        ret_opts.append(os.path.join(tmp_dir, 'files/test/_tmp_test_archive_.tar'))
                         mock_run.assert_called_with(ret_opts, python_shell=False, cwd=os.path.join(tmp_dir, ''))
 
 
