@@ -263,6 +263,7 @@ VALID_OPTS = {
     'random_reauth_delay': int,
     'syndic_event_forward_timeout': float,
     'syndic_max_event_process_time': float,
+    'syndic_jid_forward_cache_hwm': int,
     'ssh_passwd': str,
     'ssh_port': str,
     'ssh_sudo': bool,
@@ -607,6 +608,7 @@ DEFAULT_MASTER_OPTS = {
     'gather_job_timeout': 5,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
+    'syndic_jid_forward_cache_hwm': 100,
     'ssh_passwd': '',
     'ssh_port': '22',
     'ssh_sudo': False,
@@ -1043,6 +1045,7 @@ def syndic_config(master_config_path,
         'sock_dir': os.path.join(
             opts['cachedir'], opts.get('syndic_sock_dir', opts['sock_dir'])
         ),
+        'cachedir': master_opts['cachedir'],
     }
     opts.update(syndic_opts)
     # Prepend root_dir to other paths

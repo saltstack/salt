@@ -187,7 +187,7 @@ def low(data, queue=False, **kwargs):
     return ret
 
 
-def high(data, queue=False, **kwargs):
+def high(data, test=False, queue=False, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
     This function is mostly intended for testing the state system
@@ -201,7 +201,21 @@ def high(data, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
+
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    elif test is not None:
+        opts['test'] = test
+    else:
+        opts['test'] = __opts__.get('test', None)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+    st_ = salt.state.State(__opts__, pillar)
     ret = st_.call_high(data)
     _set_retcode(ret)
     return ret
