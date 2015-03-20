@@ -29,6 +29,7 @@ import salt
 import salt.payload
 import salt.state
 import salt.client
+import salt.config
 import salt.runner
 import salt.utils
 import salt.utils.process
@@ -750,7 +751,16 @@ def runner(fun, **kwargs):
 
         salt '*' saltutil.runner jobs.list_jobs
     '''
-    rclient = salt.runner.RunnerClient(__opts__)
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+
+    if 'master_job_cache' not in __opts__:
+        master_config = os.path.join(os.path.dirname(__opts__['conf_file']),
+                                     'master')
+        master_opts = salt.config.master_config(master_config)
+        rclient = salt.runner.RunnerClient(master_opts)
+    else:
+        rclient = salt.runner.RunnerClient(__opts__)
+
     return rclient.cmd(fun, [], kwarg=kwargs)
 
 
