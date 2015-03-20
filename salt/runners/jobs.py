@@ -204,6 +204,33 @@ def list_jobs(ext_source=None,
     '''
     List all detectable jobs and associated functions
 
+    ext_source
+        The external job cache to use. Default: `None`.
+
+    search_metadata
+        Search the metadata of a job for the provided string of dictionary.
+        Default: 'None'.
+
+    search_function
+        Search the function of a job for the provided string.
+        Default: 'None'.
+
+    search_target
+        Search the target of a job for the provided minion name.
+        Default: 'None'.
+
+    start_time
+        Search for jobs where the start time of the job is greater than
+        or equal to the provided time stamp.  Any timestamp supported
+        by the Dateutil (required) module can be used.
+        Default: 'None'.
+
+    end_time
+        Search for jobs where the start time of the job is less than
+        or equal to the provided time stamp.  Any timestamp supported
+        by the Dateutil (required) module can be used.
+        Default: 'None'.
+
     CLI Example:
 
     .. code-block:: bash
