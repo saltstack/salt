@@ -89,9 +89,9 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
 
 def _case_password(ret, name, password, region=None, key=None, keyid=None, profile=None):
     if __opts__['test']:
-            ret['comment'] = 'Login policy for {0} is set to be changed.'.format(name)
-            ret['result'] = None
-            return ret
+        ret['comment'] = 'Login policy for {0} is set to be changed.'.format(name)
+        ret['result'] = None
+        return ret
     login = __salt__['boto_iam.create_login_profile'](name, password, region, key, keyid, profile)
     log.debug('login is : {0}'.format(login))
     if login:
@@ -203,7 +203,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
         ret['comment'] = 'Account policy is not changed'
         return ret
     if __opts__['test']:
-        ret['comment'] = 'Account policy is set to be changed'.format(name)
+        ret['comment'] = 'Account policy is set to be changed'
         ret['result'] = None
         return ret
     __salt__['boto_iam.update_account_password_policy'](allow_users_to_change_password,
