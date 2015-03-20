@@ -3405,10 +3405,10 @@ def manage_file(name,
                                     real_name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
-            except IOError:
+            except IOError as io_error:
                 __clean_tmp(sfn)
                 return _error(
-                    ret, 'Failed to commit change, permission error')
+                    ret, 'Failed to commit change: {0}'.format(io_error))
 
         if contents is not None:
             # Write the static contents to a temporary file
@@ -3443,10 +3443,10 @@ def manage_file(name,
                                         real_name,
                                         __salt__['config.backup_mode'](backup),
                                         __opts__['cachedir'])
-                except IOError:
+                except IOError as io_error:
                     __clean_tmp(tmp)
                     return _error(
-                        ret, 'Failed to commit change, permission error')
+                        ret, 'Failed to commit change: {0}'.format(io_error))
             __clean_tmp(tmp)
 
         # check for changing symlink to regular file here
@@ -3474,10 +3474,10 @@ def manage_file(name,
                                     name,
                                     __salt__['config.backup_mode'](backup),
                                     __opts__['cachedir'])
-            except IOError:
+            except IOError as io_error:
                 __clean_tmp(sfn)
                 return _error(
-                    ret, 'Failed to commit change, permission error')
+                    ret, 'Failed to commit change: {0}'.format(io_error))
 
             ret['changes']['diff'] = \
                 'Replace symbolic link with regular file'
