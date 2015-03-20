@@ -382,10 +382,16 @@ class MockExceptions(object):
     """
     Mock of exceptions class
     """
-#     Unauthorized = Unauthorized
-
     def __init__(self):
         self.Unauthorized = Unauthorized
+
+
+class MockKeystoneClient(object):
+    """
+    Mock of keystoneclient module
+    """
+    def __init__(self):
+        self.exceptions = MockExceptions()
 
 
 class MockClient(object):
@@ -412,7 +418,7 @@ class MockClient(object):
         return True
 
 keystone.client = MockClient()
-keystone.keystoneclient.exceptions = MockExceptions()
+keystone.keystoneclient = MockKeystoneClient()
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
