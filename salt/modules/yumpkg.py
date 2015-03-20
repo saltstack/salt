@@ -1910,7 +1910,7 @@ def download(*packages):
     to_purge = []
     for pkg in packages:
         to_purge.extend([os.path.join(CACHE_DIR, x)
-                         for x in os.listdir(CACHE_DIR)
+                         for x in cached_pkgs
                          if x.startswith('{0}-'.format(pkg))])
     for purge_target in set(to_purge):
         log.debug('Removing cached package {0}'.format(purge_target))
