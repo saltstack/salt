@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import re
 
 # Import Salt libs
 import salt.utils
