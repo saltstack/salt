@@ -12,8 +12,15 @@
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
+!include "x64.nsh"
 
-!include x64.nsh
+!if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
+  !define CPUARCH "AMD64"
+!else if "$%PROCESSOR_ARCHITEW6432%" == "AMD64"
+  !define CPUARCH "AMD64"
+!else
+  !define CPUARCH "x86"
+!endif
 
 Var Dialog
 Var Label
@@ -130,9 +137,8 @@ Function MsiQueryProductState
 
 FunctionEnd
 
-
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-$%PROCESSOR_ARCHITEW6432%-Setup.exe"
+OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
@@ -158,11 +164,7 @@ Section -Prerequisites
 ;  ${EndIf}
 
 ;  Push $VcRedistGuid
-<<<<<<< HEAD
   Call MsiQueryProductState
-=======
-;  Call MsiQueryProductState
->>>>>>> upstream/2014.7
 ;  ${If} $NeedVcRedist == "True"
 ;    NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
 ;    Pop $R0
