@@ -158,7 +158,11 @@ Section -Prerequisites
 ;  ${EndIf}
 
 ;  Push $VcRedistGuid
+<<<<<<< HEAD
   Call MsiQueryProductState
+=======
+;  Call MsiQueryProductState
+>>>>>>> upstream/2014.7
 ;  ${If} $NeedVcRedist == "True"
 ;    NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
 ;    Pop $R0
