@@ -88,6 +88,10 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
 
 
 def _case_password(ret, name, password, region=None, key=None, keyid=None, profile=None):
+    if __opts__['test']:
+            ret['comment'] = 'Login policy for {0} is set to be changed.'.format(name)
+            ret['result'] = None
+            return ret
     login = __salt__['boto_iam.create_login_profile'](name, password, region, key, keyid, profile)
     log.debug('login is : {0}'.format(login))
     if login:
@@ -105,6 +109,10 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
 def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=None):
     exists = __salt__['boto_iam.get_group'](group_name=group, region=region, key=key, keyid=keyid, profile=profile)
     if exists:
+        if __opts__['test']:
+            ret['comment'] = 'Group {0} is set to be created.'.format(group)
+            ret['result'] = None
+            return ret
         result = __salt__['boto_iam.add_user_to_group'](name, group, region, key, keyid, profile)
         log.debug('result of the group is : {0} '.format(result))
         if 'Exists' in result:
@@ -158,10 +166,18 @@ def _case_policy(ret, group_name, policy_name, policy, region=None, key=None, ke
         if exists == policy:
             ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} is present.'.format(group_name)])
         else:
+            if __opts__['test']:
+                ret['comment'] = 'Group policy {0} is set to be updated.'.format(policy_name)
+                ret['result'] = None
+                return ret
             __salt__['boto_iam.put_group_policy'](group_name, policy_name, policy, region, key, keyid, profile)
             ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
             ret['changes']['policy_name'] = policy
     else:
+        if __opts__['test']:
+            ret['comment'] = 'Group policy {0} is set to be created.'.format(policy_name)
+            ret['result'] = None
+            return ret
         __salt__['boto_iam.put_group_policy'](group_name, policy_name, policy, region, key, keyid, profile)
         ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
         ret['changes'][policy_name] = policy
@@ -178,16 +194,6 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
                    profile=None):
     ret = {'name': 'Account Policy', 'result': True, 'comment': '', 'changes': {}}
     info = __salt__['boto_iam.get_account_policy'](region, key, keyid, profile)
-    changed = __salt__['boto_iam.update_account_password_policy'](allow_users_to_change_password,
-                                                                  hard_expiry,
-                                                                  max_password_age,
-                                                                  minimum_password_length,
-                                                                  password_reuse_prevention,
-                                                                  require_lowercase_characters,
-                                                                  require_numbers,
-                                                                  require_symbols,
-                                                                  require_uppercase_characters,
-                                                                  region, key, keyid, profile)
     config = locals()
     for key, value in config['info'].iteritems():
         if value is not None and str(info[key]) != str(value).lower():
@@ -195,4 +201,19 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
             ret['changes'][key] = str(value).lower()
     if not ret['changes']:
         ret['comment'] = 'Account policy is not changed'
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Account policy is set to be changed'.format(name)
+        ret['result'] = None
+        return ret
+    __salt__['boto_iam.update_account_password_policy'](allow_users_to_change_password,
+                                                        hard_expiry,
+                                                        max_password_age,
+                                                        minimum_password_length,
+                                                        password_reuse_prevention,
+                                                        require_lowercase_characters,
+                                                        require_numbers,
+                                                        require_symbols,
+                                                        require_uppercase_characters,
+                                                        region, key, keyid, profile)
     return ret
