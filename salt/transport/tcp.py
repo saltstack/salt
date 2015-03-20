@@ -190,9 +190,6 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
 class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to tcp.
-
-    TODO:
-        - add timeouts
     '''
     def __init__(self, opts, **kwargs):
         self.opts = dict(opts)
@@ -299,7 +296,7 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
             callback(self._decode_payload(self.serial.loads(body)))
         return self.message_client.on_recv(wrap_callback)
 
-# TODO: switch everything to this
+# TODO: switch everything to this?
 class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
     def __init__(self,
                  opts,
