@@ -463,6 +463,8 @@ def login_test(name, password, database=None, host=None, port=None):
     If a database is specified: it will check for database user existence.
     If a database is not specified: it will check for cluster admin existence.
 
+    .. versionadded:: 2015.2.0
+
     name
         The user to connect as
 
