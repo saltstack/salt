@@ -373,25 +373,19 @@ class Unauthorized(Exception):
     """
     The base exception class for all exceptions.
     """
-    def __init__(self, message):
+    def __init__(self, message='Test'):
         super(Unauthorized, self).__init__(message)
         self.msg = message
 
 
-class exceptions(object):
+class MockExceptions(object):
     """
     Mock of exceptions class
     """
-    def __init__(self):
-        self.Unauthorized = Unauthorized('test')
+#     Unauthorized = Unauthorized
 
-
-class keystoneclient(object):
-    """
-    Mock of KeystoneClient class
-    """
     def __init__(self):
-        self.exceptions = exceptions()
+        self.Unauthorized = Unauthorized
 
 
 class MockClient(object):
@@ -414,10 +408,11 @@ class MockClient(object):
         Mock of Client method
         """
         if self.flag == 1:
-            raise keystone.keystoneclient.exceptions.Unauthorized('Test')
+            raise Unauthorized
         return True
 
 keystone.client = MockClient()
+keystone.keystoneclient.exceptions = MockExceptions()
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
