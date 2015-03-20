@@ -236,6 +236,8 @@ def present(subset=None, show_ipv4=False):
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
+    .. versionadded:: Beryllium
+
     subset : None
         Pass in a CIDR range to filter minions by IP address.
 
@@ -263,6 +265,8 @@ def not_present(subset=None, show_ipv4=False):
 
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -327,6 +331,8 @@ def allowed(subset=None, show_ipv4=False):
 
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
