@@ -131,9 +131,11 @@ def verify(*package, **kwargs):
 
 
 def modified(*packages, **flags):
-    """
+    '''
     List the modified files that belong to a package. Not specifying any packages
     will return a list of _all_ modified files on the system's RPM database.
+
+    .. versionadded:: 2015.2.0
 
     CLI examples:
 
@@ -142,7 +144,7 @@ def modified(*packages, **flags):
         salt '*' lowpkg.modified httpd
         salt '*' lowpkg.modified httpd postfix
         salt '*' lowpkg.modified
-    """
+    '''
     ret = __salt__['cmd.run_all'](
         ['rpm', '-Va'] + list(packages),
         python_shell=False,
