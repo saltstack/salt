@@ -201,6 +201,17 @@ class MasterKeys(dict):
                                                   opts['master_sign_key_name'] + '.pem')
                 self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
 
+    # We need __setstate__ and __getstate__ to avoid pickling errors since
+    # some of the member variables correspond to Cython objects which are
+    # not picklable.
+    # These methods are only used when pickling so will not be used on
+    # non-Windows platforms.
+    def __setstate__(self, state):
+        self.__init__(state['opts'])
+
+    def __getstate__(self):
+        return {'opts': self.opts}
+
     def __get_keys(self, name='master'):
         '''
         Returns a key object for a key in the pki-dir

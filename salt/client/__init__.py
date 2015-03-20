@@ -1422,8 +1422,9 @@ class LocalClient(object):
                 A set, the targets that the tgt passed should match.
         '''
         # Make sure the publisher is running by checking the unix socket
-        if not os.path.exists(os.path.join(self.opts['sock_dir'],
-                                           'publish_pull.ipc')):
+        if (self.opts.get('ipc_mode', '') != 'tcp' and
+                not os.path.exists(os.path.join(self.opts['sock_dir'],
+                'publish_pull.ipc'))):
             log.error(
                 'Unable to connect to the salt master publisher at '
                 '{0}'.format(self.opts['sock_dir'])

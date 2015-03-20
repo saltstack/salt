@@ -174,6 +174,8 @@ class SaltEvent(object):
         self.opts = opts
         if sock_dir is None:
             sock_dir = opts.get('sock_dir', None)
+        if salt.utils.is_windows() and not hasattr(opts, 'ipc_mode'):
+            opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.subscribe()
         self.pending_events = []
@@ -201,34 +203,42 @@ class SaltEvent(object):
         # max socket path length.
         id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
         if node == 'master':
-            puburi = 'ipc://{0}'.format(os.path.join(
-                sock_dir,
-                'master_event_pub.ipc'
-            ))
-            salt.utils.zeromq.check_ipc_path_max_len(puburi)
-            pulluri = 'ipc://{0}'.format(os.path.join(
-                sock_dir,
-                'master_event_pull.ipc'
-            ))
-            salt.utils.zeromq.check_ipc_path_max_len(pulluri)
+            if self.opts.get('ipc_mode', '') == 'tcp':
+                puburi = 'tcp://127.0.0.1:{0}'.format(
+                    self.opts.get('tcp_master_pub_port', 4512)
+                    )
+                pulluri = 'tcp://127.0.0.1:{0}'.format(
+                    self.opts.get('tcp_master_pull_port', 4513)
+                    )
+            else:
+                puburi = 'ipc://{0}'.format(os.path.join(
+                    sock_dir,
+                    'master_event_pub.ipc'
+                    ))
+                salt.utils.zeromq.check_ipc_path_max_len(puburi)
+                pulluri = 'ipc://{0}'.format(os.path.join(
+                    sock_dir,
+                    'master_event_pull.ipc'
+                    ))
+                salt.utils.zeromq.check_ipc_path_max_len(pulluri)
         else:
             if self.opts.get('ipc_mode', '') == 'tcp':
                 puburi = 'tcp://127.0.0.1:{0}'.format(
                     self.opts.get('tcp_pub_port', 4510)
-                )
+                    )
                 pulluri = 'tcp://127.0.0.1:{0}'.format(
                     self.opts.get('tcp_pull_port', 4511)
-                )
+                    )
             else:
                 puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'minion_event_{0}_pub.ipc'.format(id_hash)
-                ))
+                    ))
                 salt.utils.zeromq.check_ipc_path_max_len(puburi)
                 pulluri = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'minion_event_{0}_pull.ipc'.format(id_hash)
-                ))
+                    ))
                 salt.utils.zeromq.check_ipc_path_max_len(pulluri)
         log.debug(
             '{0} PUB socket URI: {1}'.format(self.__class__.__name__, puburi)
@@ -653,23 +663,33 @@ class EventPublisher(multiprocessing.Process):
         self.context = zmq.Context(1)
         # Prepare the master event publisher
         self.epub_sock = self.context.socket(zmq.PUB)
-        epub_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
-        )
-        salt.utils.zeromq.check_ipc_path_max_len(epub_uri)
         # Prepare master event pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
-        epull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
-        )
-        salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            epub_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_pub_port', 4512)
+                )
+            epull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_pull_port', 4513)
+                )
+        else:
+            epub_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'master_event_pub.ipc')
+                )
+            salt.utils.zeromq.check_ipc_path_max_len(epub_uri)
+            epull_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'master_event_pull.ipc')
+                )
+            salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
 
         # Start the master event publisher
         old_umask = os.umask(0o177)
         try:
             self.epull_sock.bind(epull_uri)
             self.epub_sock.bind(epub_uri)
-            if self.opts.get('client_acl') or self.opts.get('external_auth'):
+            if (self.opts.get('ipc_mode', '') != 'tcp' and (
+                    self.opts.get('client_acl') or
+                    self.opts.get('external_auth'))):
                 os.chmod(os.path.join(
                     self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
         finally:
