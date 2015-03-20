@@ -1091,90 +1091,91 @@ def os_data():
                             grains[
                                 'lsb_{0}'.format(match.groups()[0].lower())
                             ] = match.groups()[1].rstrip()
-            elif os.path.isfile('/etc/os-release'):
-                # Arch ARM Linux
-                with salt.utils.fopen('/etc/os-release') as ifile:
-                    # Imitate lsb-release
-                    for line in ifile:
-                        # NAME="Arch Linux ARM"
-                        # ID=archarm
-                        # ID_LIKE=arch
-                        # PRETTY_NAME="Arch Linux ARM"
-                        # ANSI_COLOR="0;36"
-                        # HOME_URL="http://archlinuxarm.org/"
-                        # SUPPORT_URL="https://archlinuxarm.org/forum"
-                        # BUG_REPORT_URL=
-                        #   "https://github.com/archlinuxarm/PKGBUILDs/issues"
-                        regex = re.compile(
-                            '^([\\w]+)=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?'
-                        )
-                        match = regex.match(line.rstrip('\n'))
-                        if match:
-                            name, value = match.groups()
-                            if name.lower() == 'name':
-                                grains['lsb_distrib_id'] = value.strip()
-            elif os.path.isfile('/etc/SuSE-release'):
-                grains['lsb_distrib_id'] = 'SUSE'
-                with salt.utils.fopen('/etc/SuSE-release') as fhr:
-                    rel = re.sub("[^0-9]", "", fhr.read().split('\n')[1])
-                with salt.utils.fopen('/etc/SuSE-release') as fhr:
-                    patch = re.sub("[^0-9]", "", fhr.read().split('\n')[2])
-                release = rel + " SP" + patch
-                grains['lsb_distrib_release'] = release
-                grains['lsb_distrib_codename'] = "n.a"
-            elif os.path.isfile('/etc/altlinux-release'):
-                # ALT Linux
-                grains['lsb_distrib_id'] = 'altlinux'
-                with salt.utils.fopen('/etc/altlinux-release') as ifile:
-                    # This file is symlinked to from:
-                    #     /etc/fedora-release
-                    #     /etc/redhat-release
-                    #     /etc/system-release
-                    for line in ifile:
-                        # ALT Linux Sisyphus (unstable)
-                        comps = line.split()
-                        if comps[0] == 'ALT':
-                            grains['lsb_distrib_release'] = comps[2]
-                            grains['lsb_distrib_codename'] = \
-                                comps[3].replace('(', '').replace(')', '')
-            elif os.path.isfile('/etc/centos-release'):
-                # CentOS Linux
-                grains['lsb_distrib_id'] = 'CentOS'
-                with salt.utils.fopen('/etc/centos-release') as ifile:
-                    for line in ifile:
-                        # Need to pull out the version and codename
-                        # in the case of custom content in /etc/centos-release
-                        find_release = re.compile(r'\d+\.\d+')
-                        find_codename = re.compile(r'(?<=\()(.*?)(?=\))')
-                        release = find_release.search(line)
-                        codename = find_codename.search(line)
-                        if release is not None:
-                            grains['lsb_distrib_release'] = release.group()
-                        if codename is not None:
-                            grains['lsb_distrib_codename'] = codename.group()
-            elif os.path.isfile('/etc.defaults/VERSION') \
-                    and os.path.isfile('/etc.defaults/synoinfo.conf'):
-                grains['osfullname'] = 'Synology'
-                with salt.utils.fopen('/etc.defaults/VERSION', 'r') as fp_:
-                    synoinfo = {}
-                    for line in fp_:
-                        try:
-                            key, val = line.rstrip('\n').split('=')
-                        except ValueError:
-                            continue
-                        if key in ('majorversion', 'minorversion',
-                                   'buildnumber'):
-                            synoinfo[key] = val.strip('"')
-                    if len(synoinfo) != 3:
-                        log.warning(
-                            'Unable to determine Synology version info. '
-                            'Please report this, as it is likely a bug.'
-                        )
-                    else:
-                        grains['osrelease'] = (
-                            '{majorversion}.{minorversion}-{buildnumber}'
-                            .format(**synoinfo)
-                        )
+            if 'lsb_distrib_id' not in grains:
+                if os.path.isfile('/etc/os-release'):
+                    # Arch ARM Linux
+                    with salt.utils.fopen('/etc/os-release') as ifile:
+                        # Imitate lsb-release
+                        for line in ifile:
+                            # NAME="Arch Linux ARM"
+                            # ID=archarm
+                            # ID_LIKE=arch
+                            # PRETTY_NAME="Arch Linux ARM"
+                            # ANSI_COLOR="0;36"
+                            # HOME_URL="http://archlinuxarm.org/"
+                            # SUPPORT_URL="https://archlinuxarm.org/forum"
+                            # BUG_REPORT_URL=
+                            #   "https://github.com/archlinuxarm/PKGBUILDs/issues"
+                            regex = re.compile(
+                                '^([\\w]+)=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?'
+                            )
+                            match = regex.match(line.rstrip('\n'))
+                            if match:
+                                name, value = match.groups()
+                                if name.lower() == 'name':
+                                    grains['lsb_distrib_id'] = value.strip()
+                elif os.path.isfile('/etc/SuSE-release'):
+                    grains['lsb_distrib_id'] = 'SUSE'
+                    with salt.utils.fopen('/etc/SuSE-release') as fhr:
+                        rel = re.sub("[^0-9]", "", fhr.read().split('\n')[1])
+                    with salt.utils.fopen('/etc/SuSE-release') as fhr:
+                        patch = re.sub("[^0-9]", "", fhr.read().split('\n')[2])
+                    release = rel + " SP" + patch
+                    grains['lsb_distrib_release'] = release
+                    grains['lsb_distrib_codename'] = "n.a"
+                elif os.path.isfile('/etc/altlinux-release'):
+                    # ALT Linux
+                    grains['lsb_distrib_id'] = 'altlinux'
+                    with salt.utils.fopen('/etc/altlinux-release') as ifile:
+                        # This file is symlinked to from:
+                        #     /etc/fedora-release
+                        #     /etc/redhat-release
+                        #     /etc/system-release
+                        for line in ifile:
+                            # ALT Linux Sisyphus (unstable)
+                            comps = line.split()
+                            if comps[0] == 'ALT':
+                                grains['lsb_distrib_release'] = comps[2]
+                                grains['lsb_distrib_codename'] = \
+                                    comps[3].replace('(', '').replace(')', '')
+                elif os.path.isfile('/etc/centos-release'):
+                    # CentOS Linux
+                    grains['lsb_distrib_id'] = 'CentOS'
+                    with salt.utils.fopen('/etc/centos-release') as ifile:
+                        for line in ifile:
+                            # Need to pull out the version and codename
+                            # in the case of custom content in /etc/centos-release
+                            find_release = re.compile(r'\d+\.\d+')
+                            find_codename = re.compile(r'(?<=\()(.*?)(?=\))')
+                            release = find_release.search(line)
+                            codename = find_codename.search(line)
+                            if release is not None:
+                                grains['lsb_distrib_release'] = release.group()
+                            if codename is not None:
+                                grains['lsb_distrib_codename'] = codename.group()
+                elif os.path.isfile('/etc.defaults/VERSION') \
+                        and os.path.isfile('/etc.defaults/synoinfo.conf'):
+                    grains['osfullname'] = 'Synology'
+                    with salt.utils.fopen('/etc.defaults/VERSION', 'r') as fp_:
+                        synoinfo = {}
+                        for line in fp_:
+                            try:
+                                key, val = line.rstrip('\n').split('=')
+                            except ValueError:
+                                continue
+                            if key in ('majorversion', 'minorversion',
+                                       'buildnumber'):
+                                synoinfo[key] = val.strip('"')
+                        if len(synoinfo) != 3:
+                            log.warning(
+                                'Unable to determine Synology version info. '
+                                'Please report this, as it is likely a bug.'
+                            )
+                        else:
+                            grains['osrelease'] = (
+                                '{majorversion}.{minorversion}-{buildnumber}'
+                                .format(**synoinfo)
+                            )
 
         # Use the already intelligent platform module to get distro info
         # (though apparently it's not intelligent enough to strip quotes)
