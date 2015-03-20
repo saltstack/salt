@@ -954,8 +954,8 @@ def running(name,
         This command does not verify that the named container
         is running the specified image.
     '''
-    if container is not None:
-        name = container
+    if container is None:
+        container = name
     ins_image = __salt__['docker.inspect_image']
     ins_container = __salt__['docker.inspect_container']
     create = __salt__['docker.create_container']
