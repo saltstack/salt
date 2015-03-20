@@ -99,11 +99,14 @@ from salt://map.sls import Samba as Other
 Pkg.removed("samba-imported", names=[Other.server, Other.client])
 '''
 
-stdlib_template = '''#!pyobjects
-import random
+random_password_template = '''#!pyobjects
+import random, string
 password = ''.join(random.SystemRandom().choice(
         string.ascii_letters + string.digits) for _ in range(20))
-File.managed('/tmp/passwd', owner='root', group='root', mode='600', contents=password)
+'''
+
+random_password_import_template = '''#!pyobjecs
+from salt://password.sls import password
 '''
 
 class StateTests(TestCase):
@@ -314,10 +317,14 @@ class RendererTests(RendererMixin, TestCase):
         render_and_assert(from_import_template)
         render_and_assert(import_as_template)
 
-    def test_stdlib_import(self):
+    def test_random_password(self):
         '''Test for https://github.com/saltstack/salt/issues/21796'''
+        ret = self.render(random_password_template)
 
-        ret = self.render(stdlib_template)
+    def test_import_random_password(self):
+        '''Import test for https://github.com/saltstack/salt/issues/21796'''
+        self.write_template_file("password.sls", random_password_template)
+        ret = self.render(random_password_import_template)
 
 class MapTests(RendererMixin, TestCase):
     def test_map(self):
