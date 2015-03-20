@@ -50,7 +50,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from six import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():
