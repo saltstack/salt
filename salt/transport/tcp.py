@@ -187,7 +187,7 @@ class TCPReqChannel(salt.transport.client.ReqChannel):
             return self._crypted_transfer(load, tries, timeout)
 
 
-class TCPAsyncReqChannel(salt.transport.client.ReqChannel):
+class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to tcp.
 

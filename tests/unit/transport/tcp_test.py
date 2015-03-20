@@ -165,7 +165,7 @@ class PubChannelTest(BaseTCPPubCase):
         def handle_pub(ret):
             self.pub = ret
             self.stop()
-        self.pub_channel = salt.transport.client.PubChannel.factory(self.minion_opts, io_loop=self.io_loop)
+        self.pub_channel = salt.transport.client.AsyncPubChannel.factory(self.minion_opts, io_loop=self.io_loop)
         connect_future = self.pub_channel.connect()
         connect_future.add_done_callback(lambda f: self.stop())
         self.wait()
