@@ -738,7 +738,7 @@ def init():
                         'information.'.format(
                             param,
                             repo_url,
-                            ', '.join(PER_REMOTE_PARAMS)
+                            ', '.join(override_params)
                         )
                     )
                 per_remote_errors = True
