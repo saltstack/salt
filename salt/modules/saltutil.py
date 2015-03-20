@@ -750,6 +750,8 @@ def runner(fun, **kwargs):
 
         salt '*' saltutil.runner jobs.list_jobs
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+
     rclient = salt.runner.RunnerClient(__opts__)
     return rclient.cmd(fun, [], kwarg=kwargs)
 
