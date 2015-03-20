@@ -11,6 +11,7 @@ import logging
 import salt.crypt
 import salt.payload
 import salt.utils.network
+from salt.exceptions import SaltClientError
 
 __proxyenabled__ = ['*']
 
