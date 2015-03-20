@@ -7,7 +7,6 @@ A convenience system to manage jobs, both active and already run
 from __future__ import absolute_import, print_function
 import fnmatch
 import logging
-import pydoc
 import os
 
 # Import salt libs
