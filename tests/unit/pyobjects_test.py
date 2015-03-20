@@ -99,6 +99,12 @@ from salt://map.sls import Samba as Other
 Pkg.removed("samba-imported", names=[Other.server, Other.client])
 '''
 
+stdlib_template = '''#!pyobjects
+import random
+password = ''.join(random.SystemRandom().choice(
+        string.ascii_letters + string.digits) for _ in range(20))
+File.managed('/tmp/passwd', owner='root', group='root', mode='600', contents=password)
+'''
 
 class StateTests(TestCase):
     def setUp(self):
@@ -308,6 +314,10 @@ class RendererTests(RendererMixin, TestCase):
         render_and_assert(from_import_template)
         render_and_assert(import_as_template)
 
+    def test_stdlib_import(self):
+        '''Test for https://github.com/saltstack/salt/issues/21796'''
+
+        ret = self.render(stdlib_template)
 
 class MapTests(RendererMixin, TestCase):
     def test_map(self):
