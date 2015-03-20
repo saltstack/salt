@@ -1533,7 +1533,7 @@ __check_services_sysvinit() {
     servicename=$1
     echodebug "Checking if service ${servicename} is enabled"
 
-    if [ "$(/sbin/chkconfig --list  | grep salt-"$fname" | grep '[2-5]:on')" != "" ]; then
+    if [ "$(LC_ALL=C /sbin/chkconfig --list  | grep salt-"$fname" | grep '[2-5]:on')" != "" ]; then
         echodebug "Service ${servicename} is enabled"
         return 0
     else
