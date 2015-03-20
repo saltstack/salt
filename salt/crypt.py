@@ -906,9 +906,14 @@ class AsyncAuth(SAuth):
                     log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
                 continue
             break
-        self._creds = creds
-        self._crypticle = Crypticle(self.opts, creds['aes'])
-        self._authenticate_future.set_result(True)  # mark the sign-in as complete
+        if not isinstance(creds, dict) and 'auth' not in creds:
+            self._authenticate_future.set_exception(
+                SaltClientError('Attempt to authenticate with the salt master failed')
+            )
+        else:
+            self._creds = creds
+            self._crypticle = Crypticle(self.opts, creds['aes'])
+            self._authenticate_future.set_result(True)  # mark the sign-in as complete
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1):

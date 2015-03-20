@@ -209,7 +209,7 @@ class TCPAsyncReqChannel(salt.transport.client.ReqChannel):
         host, port = parse.netloc.rsplit(':', 1)
         self.master_addr = (host, int(port))
 
-        self._io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        self._io_loop = tornado.ioloop.IOLoop.current()
 
         self.message_client = SaltMessageClient(host, int(port), io_loop=self._io_loop)
 
@@ -300,7 +300,7 @@ class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport
         return self.message_client.on_recv(wrap_callback)
 
 # TODO: switch everything to this
-class TCPAsyncPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
+class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
     def __init__(self,
                  opts,
                  **kwargs):
@@ -318,7 +318,6 @@ class TCPAsyncPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         self.message_client = SaltMessageClient(self.opts['master_ip'],
                                                 int(self.auth.creds['publish_port']),
                                                 io_loop=self.io_loop)
-
         yield self.message_client.connect()  # wait for the client to be connected
         self.connected = True
 
@@ -513,16 +512,16 @@ class SaltMessageClient(object):
         '''
         Try to connect for the rest of time!
         '''
-        while not self._connecting_future.done():
-            try:
-                self._stream = yield self._tcp_client.connect(self.host, self.port)
-                self._connecting_future.set_result(True)
-            except Exception as e:
-                yield tornado.gen.sleep(1)
+        try:
+            self._stream = yield self._tcp_client.connect(self.host, self.port)
+            self._connecting_future.set_result(True)
+        except Exception as e:
+            self._connecting_future.set_exception(e)
 
     @tornado.gen.coroutine
     def _stream_return(self):
-        yield self._connecting_future
+        while not self._connecting_future.done() or self._connecting_future.exception() is not None:
+            yield self._connecting_future
         while True:
             try:
                 header_len = yield self._stream.read_until(' ')
@@ -561,7 +560,8 @@ class SaltMessageClient(object):
     # in the case where we don't have anything to send
     @tornado.gen.coroutine
     def _stream_send(self):
-        yield self._connecting_future
+        while not self._connecting_future.done() or self._connecting_future.exception() is not None:
+            yield self._connecting_future
         while True:
             try:
                 message_id, item = self.send_queue.pop(0)
@@ -575,6 +575,7 @@ class SaltMessageClient(object):
             # attempt to reconnect
             except tornado.iostream.StreamClosedError as e:
                 self.send_future_map.pop(message_id).set_exception(e)
+                self.remove_message_timeout(message_id)
                 # if the last connect finished, then we need to make a new one
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()

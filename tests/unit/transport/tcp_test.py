@@ -123,6 +123,7 @@ class BaseTCPPubCase(AsyncTestCase):
         cls.minion_opts.update({
             'transport': 'tcp',
             'master_ip': '127.0.0.1',
+            'auth_timeout': 1,
         })
 
         cls.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
