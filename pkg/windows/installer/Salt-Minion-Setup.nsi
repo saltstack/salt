@@ -12,8 +12,15 @@
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
+!include "x64.nsh"
 
-!include x64.nsh
+!if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
+  !define CPUARCH "AMD64"
+!else if "$%PROCESSOR_ARCHITEW6432%" == "AMD64"
+  !define CPUARCH "AMD64"
+!else
+  !define CPUARCH "x86"
+!endif
 
 Var Dialog
 Var Label
@@ -130,9 +137,8 @@ Function MsiQueryProductState
 
 FunctionEnd
 
-
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-$%PROCESSOR_ARCHITEW6432%-Setup.exe"
+OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
@@ -202,11 +208,11 @@ FunctionEnd
 
 Function un.onUninstSuccess
   HideWindow
-  MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer."
+  MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer." /SD IDOK
 FunctionEnd
 
 Function un.onInit
-  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" IDYES +2
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" /SD IDYES IDYES +2
   Abort
 FunctionEnd
 
