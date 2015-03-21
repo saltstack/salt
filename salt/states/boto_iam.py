@@ -46,6 +46,10 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     change-policy:
       boto_iam.account_policy:
         - change_password: True
+        - region: eu-west-1
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'safsdfsal;fdkjsafkljsASSADFalkfj'
+
 '''
 
 import logging
@@ -62,6 +66,26 @@ def __virtual__():
 
 
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
+     '''
+    Ensure the IAM group is present
+
+    name (string) – The name of the new user.
+
+    password (string) - The password for the new user. Must comply with account policy.
+
+    path (string) - The path of the user. Default is '/'
+
+    grouo (string) - The name of the group to add the user to.
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    that contains a dict with region, key and keyid.
+    '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_iam.get_user'](name, region, key, keyid, profile)
     log.debug('getuser is {0}'.format(exists))
@@ -127,6 +151,24 @@ def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=Non
 
 
 def group_present(name, policy_name=None, policy=None, users=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the IAM group is present
+
+    name (string) – The name of the new group.
+
+    policy_name (string) - The policy document to add to the group.
+
+    users (list) - A list of users to be added to the group.
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    that contains a dict with region, key and keyid.
+    '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_iam.get_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
     if not exists:
@@ -192,6 +234,43 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
                    require_uppercase_characters=None,
                    region=None, key=None, keyid=None,
                    profile=None):
+    '''
+    Change account policy
+
+    allow_users_to_change_password (bool) – Allows all IAM users in your account to
+    use the AWS Management Console to change their own passwords.
+
+    hard_expiry (bool) – Prevents IAM users from setting a new password after their
+    password has expired.
+
+    max_password_age (int) – The number of days that an IAM user password is valid.
+
+    minimum_password_length (int) – The minimum number of characters allowed in an
+    IAM user password.
+
+    password_reuse_prevention (int) – Specifies the number of previous passwords
+    that IAM users are prevented from reusing.
+
+    require_lowercase_characters (bool) – Specifies whether IAM user passwords
+    must contain at least one lowercase character from the ISO basic Latin alphabet (a to z).
+
+    require_numbers (bool) – Specifies whether IAM user passwords must contain at
+    least one numeric character (0 to 9).
+
+    require_symbols (bool) – Specifies whether IAM user passwords must contain at
+    least one of the following non-alphanumeric characters: ! @ # $ % ^ & * ( ) _ + - = [ ] { } | '
+
+    require_uppercase_characters (bool) – Specifies whether IAM user passwords must 
+    contain at least one uppercase character from the ISO basic Latin alphabet (A to Z).
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    '''
     config = locals()
     ret = {'name': 'Account Policy', 'result': True, 'comment': '', 'changes': {}}
     info = __salt__['boto_iam.get_account_policy'](region, key, keyid, profile)
