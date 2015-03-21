@@ -66,7 +66,7 @@ def __virtual__():
 
 
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
-     '''
+    '''
     Ensure the IAM group is present
 
     name (string) – The name of the new user.
