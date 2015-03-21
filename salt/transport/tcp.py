@@ -266,38 +266,8 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             ret = yield self._encrypted_transfer(load, tries=tries, timeout=timeout)
         raise tornado.gen.Return(ret)
 
-# TODO: remove
-class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
-    def __init__(self,
-                 opts,
-                 **kwargs):
-        self.opts = opts
-
-        self.serial = salt.payload.Serial(self.opts)
-        self.io_loop = kwargs['io_loop'] or tornado.ioloop.IOLoop.current()
-
-        self.auth = salt.crypt.SAuth(self.opts)  # TODO: make optionally non-blocking
-        if self.auth.creds is None:
-            self.auth.authenticate()
-
-        self.message_client = SaltMessageClient(self.opts['master_ip'],
-                                                int(self.auth.creds['publish_port']),
-                                                io_loop=self.io_loop)
-
-    def on_recv(self, callback):
-        '''
-        Register an on_recv callback
-        '''
-        if callback is None:
-            return self.message_client.on_recv(callback)
-
-        self.message_client.send('connect')
-        def wrap_callback(body):
-            callback(self._decode_payload(self.serial.loads(body)))
-        return self.message_client.on_recv(wrap_callback)
-
 # TODO: switch everything to this?
-class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
+class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
     def __init__(self,
                  opts,
                  **kwargs):

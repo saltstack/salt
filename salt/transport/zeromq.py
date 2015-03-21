@@ -148,7 +148,7 @@ class ZeroMQReqChannel(salt.transport.client.ReqChannel):
             return self._crypted_transfer(load, tries, timeout)
 
 
-class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
+class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
     def __init__(self,
                  opts,
                  **kwargs):
