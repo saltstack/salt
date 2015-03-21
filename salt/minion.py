@@ -442,6 +442,8 @@ class MultiMinion(MinionBase):
 
     def __init__(self, opts):
         super(MultiMinion, self).__init__(opts)
+        self.auth_wait = self.opts['acceptance_wait_time']
+        self.max_wait = self.opts['acceptance_wait_time_max']
 
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
 
@@ -453,7 +455,6 @@ class MultiMinion(MinionBase):
             log.error(
                 'Attempting to start a multimaster system with one master')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-        ret = {}
         for master in set(self.opts['master']):
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
@@ -463,6 +464,9 @@ class MultiMinion(MinionBase):
 
     @tornado.gen.coroutine
     def _connect_minion(self, opts):
+        '''
+        Create a minion, and asynchronously connect it to a master
+        '''
         last = 0  # never have we signed in
         auth_wait = opts['acceptance_wait_time']
         while True:
@@ -494,11 +498,10 @@ class MultiMinion(MinionBase):
         to yet, but once the initial connection is made it is up to ZMQ to do the
         reconnect (don't know of an API to get the state here in salt)
         '''
-        # Prepare the minion generators
-        self.auth_wait = self.opts['acceptance_wait_time']
-        self.max_wait = self.opts['acceptance_wait_time_max']
+        # Fire off all the minion coroutines
         self.minions = self._spawn_minions()
 
+        # serve forever!
         self.io_loop.start()
 
 
