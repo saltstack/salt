@@ -131,35 +131,12 @@ def verify(*package, **kwargs):
     return ret
 
 
-def file_list(*packages):
-    '''
-    List the files that belong to a package. Not specifying any packages will
-    return a list of _every_ file on the system's rpm database (not generally
-    recommended).
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' lowpkg.file_list httpd
-        salt '*' lowpkg.file_list httpd postfix
-        salt '*' lowpkg.file_list
-    '''
-    if not packages:
-        cmd = 'rpm -qla'
-    else:
-        cmd = 'rpm -ql {0}'.format(' '.join(packages))
-    ret = __salt__['cmd.run'](
-            cmd,
-            python_shell=False,
-            output_loglevel='trace').splitlines()
-    return {'errors': [], 'files': ret}
-
-
 def modified(*packages, **flags):
-    """
+    '''
     List the modified files that belong to a package. Not specifying any packages
     will return a list of _all_ modified files on the system's RPM database.
+
+    .. versionadded:: 2015.2.0
 
     CLI examples:
 
@@ -168,7 +145,7 @@ def modified(*packages, **flags):
         salt '*' lowpkg.modified httpd
         salt '*' lowpkg.modified httpd postfix
         salt '*' lowpkg.modified
-    """
+    '''
     ret = __salt__['cmd.run_all'](
         ['rpm', '-Va'] + list(packages),
         python_shell=False,
@@ -225,6 +202,31 @@ def modified(*packages, **flags):
             filtered_data[f_name] = stats
 
     return filtered_data
+
+
+def file_list(*packages):
+    '''
+    List the files that belong to a package. Not specifying any packages will
+    return a list of _every_ file on the system's rpm database (not generally
+    recommended).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.file_list httpd
+        salt '*' lowpkg.file_list httpd postfix
+        salt '*' lowpkg.file_list
+    '''
+    if not packages:
+        cmd = 'rpm -qla'
+    else:
+        cmd = 'rpm -ql {0}'.format(' '.join(packages))
+    ret = __salt__['cmd.run'](
+            cmd,
+            python_shell=False,
+            output_loglevel='trace').splitlines()
+    return {'errors': [], 'files': ret}
 
 
 def file_dict(*packages):

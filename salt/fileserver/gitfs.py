@@ -668,7 +668,7 @@ def init():
     # default to empty strings. If any of them are defined and the gitfs
     # provider is not one that supports auth, then error out and do not
     # proceed.
-    override_params = PER_REMOTE_PARAMS
+    override_params = copy.deepcopy(PER_REMOTE_PARAMS)
     global_auth_params = [
         'gitfs_{0}'.format(x) for x in AUTH_PARAMS
         if __opts__['gitfs_{0}'.format(x)]

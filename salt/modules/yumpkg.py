@@ -232,7 +232,7 @@ def _rpm_pkginfo(name):
     Parses RPM metadata and returns a pkginfo namedtuple
     '''
     # REPOID is not a valid tag for the rpm command. Remove it and replace it
-    # with "none"
+    # with 'none'
     queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
     output = __salt__['cmd.run_stdout'](
         'rpm -qp --queryformat {0!r} {1}'.format(_cmd_quote(queryformat), name),
@@ -1798,9 +1798,10 @@ def _parse_repo_file(filename):
                     comps = line.strip().split('=')
                     repos[repo][comps[0].strip()] = '='.join(comps[1:])
                 except KeyError:
-                    log.error('Failed to parse line in {0}, '
-                              'offending line was "{1}"'.format(filename,
-                                                                line.rstrip()))
+                    log.error(
+                        'Failed to parse line in {0}, offending line was '
+                        '\'{1}\''.format(filename, line.rstrip())
+                    )
 
     return (header, repos)
 
@@ -1894,9 +1895,11 @@ def owner(*paths):
 
 
 def modified(*packages, **flags):
-    """
+    '''
     List the modified files that belong to a package. Not specifying any packages
     will return a list of _all_ modified files on the system's RPM database.
+
+    .. versionadded:: 2015.2.0
 
     Filtering by flags (True or False):
 
@@ -1935,7 +1938,7 @@ def modified(*packages, **flags):
         salt '*' pkg.modified httpd
         salt '*' pkg.modified httpd postfix
         salt '*' pkg.modified httpd owner=True group=False
-    """
+    '''
 
     return __salt__['lowpkg.modified'](*packages, **flags)
 
@@ -1943,8 +1946,15 @@ def modified(*packages, **flags):
 @decorators.which('yumdownloader')
 def download(*packages):
     '''
-    Download packages to the local disk.
-    It requires "yumdownloader" from "yum-utils" package.
+    .. versionadded:: 2015.2.0
+
+    Download packages to the local disk. Requires ``yumdownloader`` from
+    ``yum-utils`` package.
+
+    .. note::
+
+        ``yum-utils`` will already be installed on the minion if the package
+        was installed from the Fedora / EPEL repositories.
 
     CLI example:
 
@@ -1954,36 +1964,55 @@ def download(*packages):
         salt '*' pkg.download httpd postfix
     '''
     if not packages:
-        raise CommandExecutionError("No packages has been specified.")
+        raise SaltInvocationError('No packages were specified')
 
-    CACHE_DIR = "/var/cache/yum/packages"
+    CACHE_DIR = '/var/cache/yum/packages'
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
+    cached_pkgs = os.listdir(CACHE_DIR)
+    to_purge = []
     for pkg in packages:
-        __salt__['cmd.run']("rm {0}/{1}*".format(CACHE_DIR, pkg))
+        to_purge.extend([os.path.join(CACHE_DIR, x)
+                         for x in cached_pkgs
+                         if x.startswith('{0}-'.format(pkg))])
+    for purge_target in set(to_purge):
+        log.debug('Removing cached package {0}'.format(purge_target))
+        try:
+            os.unlink(purge_target)
+        except OSError as exc:
+            log.error('Unable to remove {0}: {1}'.format(purge_target, exc))
 
-    __salt__['cmd.run'](('yumdownloader -q {0} --destdir={1}'.format(' '.join(packages), CACHE_DIR)),
-                        output_loglevel='trace')
-    pkg_ret = {}
+    __salt__['cmd.run'](
+        'yumdownloader -q {0} --destdir={1}'.format(
+            ' '.join(packages), CACHE_DIR
+        ),
+        output_loglevel='trace'
+    )
+    ret = {}
     for dld_result in os.listdir(CACHE_DIR):
-        if not dld_result.endswith(".rpm"):
+        if not dld_result.endswith('.rpm'):
             continue
         pkg_name = None
         pkg_file = None
         for query_pkg in packages:
-            if dld_result.startswith("{0}-".format(query_pkg)):
+            if dld_result.startswith('{0}-'.format(query_pkg)):
                 pkg_name = query_pkg
                 pkg_file = dld_result
                 break
-        pkg_info = {
-            'path': "{0}/{1}".format(CACHE_DIR, pkg_file),
-        }
-        pkg_ret[pkg_name] = pkg_info
+        if pkg_file is not None:
+            ret[pkg_name] = os.path.join(CACHE_DIR, pkg_file)
 
-    if pkg_ret:
-        return pkg_ret
+    if not ret:
+        raise CommandExecutionError(
+            'Unable to download any of the following packages: {0}'
+            .format(', '.join(packages))
+        )
 
-    raise CommandExecutionError("Unable to download packages: {0}.".format(', '.join(packages)))
+    failed = [x for x in packages if x not in ret]
+    if failed:
+        ret['_error'] = ('The following package(s) failed to download: {0}'
+                         .format(', '.join(failed)))
+    return ret
 
 
 def diff(*paths):

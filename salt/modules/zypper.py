@@ -963,9 +963,11 @@ def file_dict(*packages):
 
 
 def modified(*packages, **flags):
-    """
+    '''
     List the modified files that belong to a package. Not specifying any packages
     will return a list of _all_ modified files on the system's RPM database.
+
+    .. versionadded:: 2015.2.0
 
     Filtering by flags (True or False):
 
@@ -1004,7 +1006,7 @@ def modified(*packages, **flags):
         salt '*' pkg.modified httpd
         salt '*' pkg.modified httpd postfix
         salt '*' pkg.modified httpd owner=True group=False
-    """
+    '''
 
     return __salt__['lowpkg.modified'](*packages, **flags)
 
