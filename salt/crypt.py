@@ -797,7 +797,7 @@ class AsyncAuth(SAuth):
         Only create one instance of SAuth per __key()
         '''
         key = cls.__key(opts)
-        if key not in SAuth.instances:
+        if key not in AsyncAuth.instances:
             log.debug('Initializing new SAuth for {0}'.format(key))
             AsyncAuth.instances[key] = object.__new__(cls)
             AsyncAuth.instances[key].__singleton_init__(opts)

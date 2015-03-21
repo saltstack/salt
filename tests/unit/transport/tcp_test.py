@@ -64,8 +64,9 @@ class BaseTCPReqCase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.process_manager.kill_children()
         cls.io_loop.stop()
+        cls.server_thread.join()
+        cls.process_manager.kill_children()
         cls.server_channel.close()
 
 
@@ -152,9 +153,10 @@ class BaseTCPPubCase(AsyncTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.process_manager.kill_children()
         cls.io_loop.stop()
-        #cls.server_channel.close()
+        cls.server_thread.join()
+        cls.process_manager.kill_children()
+        cls.req_server_channel.close()
 
 
 class AsyncPubChannelTest(BaseTCPPubCase, PubChannelMixin):
