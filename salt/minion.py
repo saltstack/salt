@@ -547,7 +547,7 @@ class Minion(MinionBase):
                 )
         # Late setup the of the opts grains, so we can log from the grains
         # module
-        opts['grains'] = salt.loader.grains(opts)
+        self.opts['grains'] = salt.loader.grains(opts)
 
     # TODO: remove?
     def sync_connect_master(self):
@@ -649,7 +649,7 @@ class Minion(MinionBase):
                     safe=True,
                     failed=False):
         '''
-        Evaluates and returns the current master address.
+        Evaluates and returns a tuple of the current master address and the pub_channel.
 
         In standard mode, just creates a pub_channel with the given master address.
 
@@ -1545,15 +1545,15 @@ class Minion(MinionBase):
                     exc)
             )
 
-        periodic_callbacks = {}
+        self.periodic_callbacks = {}
         # schedule the stuff that runs every interval
         ping_interval = self.opts.get('ping_interval', 0) * 60
         if ping_interval > 0:
             def ping_master():
                 self._fire_master('ping', 'minion_ping')
-            periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
+            self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
-        periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
+        self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
         def handle_beacons():
             # Process Beacons
             try:
@@ -1562,15 +1562,15 @@ class Minion(MinionBase):
                 log.critical('The beacon errored: ', exec_info=True)
             if beacons:
                 self._fire_master(events=beacons)
-        periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
+        self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 
         # TODO: actually listen to the return and change period
         def handle_schedule():
             self.process_schedule(self, loop_interval)
-        periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
+        self.periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
 
         # start all the other callbacks
-        for name, periodic_cb in periodic_callbacks.iteritems():
+        for periodic_cb in self.periodic_callbacks.itervalues():
             periodic_cb.start()
 
         # add handler to subscriber
@@ -1578,29 +1578,6 @@ class Minion(MinionBase):
 
         if start:
             self.io_loop.start()
-
-    # TODO: remove? Make another one which does this as a future
-    def tune_in_no_block(self):
-        '''
-        Executes the tune_in sequence but omits extra logging and the
-        management of the event bus assuming that these are handled outside
-        the tune_in sequence
-        '''
-        self.block_until_connected()
-
-        self._pre_tune()
-
-        self._fire_master_minion_start()
-
-        loop_interval = int(self.opts['loop_interval'])
-
-        # On first startup execute a state run if configured to do so
-        self._state_run()
-
-        self.pub_channel.on_recv(self._handle_payload)
-
-    def tune_out_no_block(self):
-        self.pub_channel.on_recv(None)
 
     def _handle_payload(self, payload):
         if payload is not None and self._target_load(payload['load']):
@@ -1642,7 +1619,11 @@ class Minion(MinionBase):
         '''
         self._running = False
         if hasattr(self, 'pub_channel'):
+            self.pub_channel.on_recv(None)
             del self.pub_channel
+        if hasattr(self, 'periodic_callbacks'):
+            for cb in self.periodic_callbacks.itervalues():
+                cb.stop()
 
     def __del__(self):
         self.destroy()
@@ -1720,24 +1701,6 @@ class Syndic(Minion):
             tagify([self.opts['id'], 'start'], 'syndic'),
         )
 
-    # TODO: clean up docs
-    def tune_in_no_block(self):
-        '''
-        Executes the tune_in sequence but omits extra logging and the
-        management of the event bus assuming that these are handled outside
-        the tune_in sequence
-        '''
-        # Instantiate the local client
-        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
-        self.local.event.subscribe('')
-
-
-        # add handler to subscriber
-        self.pub_channel.on_recv(self._process_cmd_socket)
-
-    def tune_out_no_block(self):
-        self.pub_channel.on_recv(None)
-
     # Syndic Tune In
     def tune_in(self, start=True):
         '''
@@ -1745,6 +1708,9 @@ class Syndic(Minion):
         '''
         signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Syndic {0!r} trying to tune in'.format(self.opts['id']))
+
+        if start:
+            self.sync_connect_master()
 
         # Instantiate the local client
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
@@ -1980,7 +1946,7 @@ class MultiSyndic(MinionBase):
         '''
         # stop recieving pub stuff from this master
         master_dict = self.master_syndics[master]
-        master_dict['syndic'].tune_out_no_block()
+        master_dict['syndic'].destroy()
         del master_dict['syndic']
         master_dict['dead_until'] = time.time() + master_dict['auth_wait']
         if master_dict['auth_wait'] < self.opts['acceptance_wait_time_max']:
