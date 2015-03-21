@@ -90,6 +90,16 @@ from   salt://map.sls  import     Samba
 Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
 '''
 
+random_password_template = '''#!pyobjects
+import random, string
+password = ''.join(random.SystemRandom().choice(
+        string.ascii_letters + string.digits) for _ in range(20))
+'''
+
+random_password_import_template = '''#!pyobjecs
+from salt://password.sls import password
+'''
+
 
 class StateTests(TestCase):
     def setUp(self):
@@ -325,6 +335,15 @@ class MapTests(RendererMixin, TestCase):
 
         ret = samba_with_grains({'os_family': 'RedHat', 'os': 'CentOS'})
         assert_ret(ret, 'samba', 'samba', 'smb')
+
+    def test_random_password(self):
+        '''Test for https://github.com/saltstack/salt/issues/21796'''
+        ret = self.render(random_password_template)
+
+    def test_import_random_password(self):
+        '''Import test for https://github.com/saltstack/salt/issues/21796'''
+        self.write_template_file("password.sls", random_password_template)
+        ret = self.render(random_password_import_template)
 
 
 class SaltObjectTests(TestCase):
