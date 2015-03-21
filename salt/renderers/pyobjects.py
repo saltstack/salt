@@ -316,7 +316,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
         load_states()
 
     # these hold the scope that our sls file will be executed with
-    _locals = {}
     _globals = {}
 
     # create our StateFactory objects
@@ -444,9 +443,9 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     # now exec our template using our created scopes
     if sys.version_info[0] > 2:
         # in py3+ exec is a function
-        exec(final_template, _globals, _locals)
+        exec(final_template, _globals)
     else:
         # prior to that it is a statement
-        exec final_template in _globals, _locals
+        exec final_template in _globals
 
     return Registry.salt_data()
