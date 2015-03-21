@@ -260,7 +260,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
     require_symbols (bool) – Specifies whether IAM user passwords must contain at
     least one of the following non-alphanumeric characters: ! @ # $ % ^ & * ( ) _ + - = [ ] { } | '
 
-    require_uppercase_characters (bool) – Specifies whether IAM user passwords must 
+    require_uppercase_characters (bool) – Specifies whether IAM user passwords must
     contain at least one uppercase character from the ISO basic Latin alphabet (A to Z).
 
     region (string) - Region to connect to.
