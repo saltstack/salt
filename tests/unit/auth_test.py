@@ -91,8 +91,12 @@ class MasterACLTestCase(integration.ModuleCase):
                                                        '*': [{'my_minion': ['my_mod.my_func']}],
                                          }
                                  }
-
+        # make sure to configure the AES key
+        import salt.transport.mixins.auth
+        salt.transport.mixins.auth.AESReqServerMixin().pre_fork(None)
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
+        # make sure to return a JID, instead of a mock
+        self.clear.mminion.returners = {'.prep_jid': lambda x: 1}
 
         self.valid_clear_load = {'tgt_type': 'glob',
                                 'jid': '',
