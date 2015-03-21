@@ -319,6 +319,8 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             yield self.message_client.connect()  # wait for the client to be connected
             self.connected = True
         # TODO: better exception handling...
+        except KeyboardInterrupt:
+            raise
         except:
             raise SaltClientError('Unable to sign_in to master')  # TODO: better error message
 
@@ -513,15 +515,18 @@ class SaltMessageClient(object):
         '''
         Try to connect for the rest of time!
         '''
-        try:
-            self._stream = yield self._tcp_client.connect(self.host, self.port)
-            self._connecting_future.set_result(True)
-        except Exception as e:
-            self._connecting_future.set_exception(e)
+        while True:
+            try:
+                self._stream = yield self._tcp_client.connect(self.host, self.port)
+                self._connecting_future.set_result(True)
+                break
+            except Exception as e:
+                yield tornado.gen.sleep(1)  # TODO: backoff
+                #self._connecting_future.set_exception(e)
 
     @tornado.gen.coroutine
     def _stream_return(self):
-        while not self._connecting_future.done() or self._connecting_future.exception() is not None:
+        while not self._connecting_future.done() or self._connecting_future.result() is not True:
             yield self._connecting_future
         while True:
             try:
@@ -561,7 +566,7 @@ class SaltMessageClient(object):
     # in the case where we don't have anything to send
     @tornado.gen.coroutine
     def _stream_send(self):
-        while not self._connecting_future.done() or self._connecting_future.exception() is not None:
+        while not self._connecting_future.done() or self._connecting_future.result() is not True:
             yield self._connecting_future
         while True:
             try:
@@ -575,7 +580,7 @@ class SaltMessageClient(object):
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
             except tornado.iostream.StreamClosedError as e:
-                self.send_future_map.pop(message_id).set_exception(e)
+                self.send_future_map.pop(message_id).set_exception(Exception())
                 self.remove_message_timeout(message_id)
                 # if the last connect finished, then we need to make a new one
                 if self._connecting_future.done():

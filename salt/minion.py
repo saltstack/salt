@@ -1726,9 +1726,10 @@ class Syndic(Minion):
         self.local_event_stream.on_recv(self._process_event)
 
         # forward events every syndic_event_forward_timeout
-        forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
-                                                         self.opts['syndic_event_forward_timeout'] * 1000,
-                                                         io_loop=self.io_loop)
+        self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
+                                                              self.opts['syndic_event_forward_timeout'] * 1000,
+                                                              io_loop=self.io_loop)
+        self.forward_events.start()
 
         # Send an event to the master that the minion is live
         self._fire_master_syndic_start()
@@ -1748,8 +1749,6 @@ class Syndic(Minion):
         '''
         # Instantiate the local client
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
-        self.local.event.subscribe('')
-
 
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
@@ -1826,6 +1825,9 @@ class Syndic(Minion):
         super(Syndic, self).destroy()
         if hasattr(self, 'local'):
             del self.local
+
+        if hasattr(self, 'forward_events'):
+            self.forward_events.stop()
 
 # TODO: consolidate syndic classes together?
 # need a way of knowing if the syndic connection is busted
@@ -1904,7 +1906,9 @@ class MultiSyndic(MinionBase):
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
-            except Exception as e:
+            except KeyboardInterrupt:
+                raise
+            except:
                 log.critical('Unexpected error while connecting to {0}'.format(opts['master']), exc_info=True)
 
         raise tornado.gen.Return(syndic)
@@ -1927,38 +1931,33 @@ class MultiSyndic(MinionBase):
         '''
         if kwargs is None:
             kwargs = {}
-        for master, syndic_dict in self.iter_master_options(master_id):
-            if 'syndic' not in syndic_dict:
+        for master, syndic_future in self.iter_master_options(master_id):
+            if not syndic_future.done() or syndic_future.exception():
+                log.error('Unable to call {0} on {1}, that syndic is not connected'.format(func, master_id))
                 continue
-            if syndic_dict['dead_until'] > time.time():
-                log.error('Unable to call {0} on {1}, that syndic is dead for now'.format(func, master))
-                continue
+
             try:
-                ret = getattr(syndic_dict['syndic'], func)(*args, **kwargs)
-                if ret is not False:
-                    log.debug('{0} called on {1}'.format(func, master))
-                    return
-            except (SaltClientError, SaltReqTimeoutError):
-                pass
-            log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
-            # If the connection is dead, lets have another thread wait for it to come back
-            self._init_master_conn(master)
-            continue
+                getattr(syndic_future.result(), func)(*args, **kwargs)
+                return
+            except SaltClientError:
+                log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
+                self._mark_master_dead(master)
+                continue
         log.critical('Unable to call {0} on any masters!'.format(func))
 
     def iter_master_options(self, master_id=None):
         '''
         Iterate (in order) over your options for master
         '''
-        masters = list(self.master_syndics.keys())
+        masters = list(self._syndics.keys())
         shuffle(masters)
-        if master_id not in self.master_syndics:
+        if master_id not in self._syndics:
             master_id = masters.pop(0)
         else:
             masters.remove(master_id)
 
         while True:
-            yield master_id, self.master_syndics[master_id]
+            yield master_id, self._syndics[master_id]
             if len(masters) == 0:
                 break
             master_id = masters.pop(0)
@@ -1973,7 +1972,6 @@ class MultiSyndic(MinionBase):
         Lock onto the publisher. This is the main event loop for the syndic
         '''
         self._spawn_syndics()
-        #self.io_loop.start()
         # Instantiate the local client
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
@@ -1986,9 +1984,10 @@ class MultiSyndic(MinionBase):
         self.local_event_stream.on_recv(self._process_event)
 
         # forward events every syndic_event_forward_timeout
-        forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
-                                                         self.opts['syndic_event_forward_timeout'] * 1000,
-                                                         io_loop=self.io_loop)
+        self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
+                                                              self.opts['syndic_event_forward_timeout'] * 1000,
+                                                              io_loop=self.io_loop)
+        self.forward_events.start()
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
