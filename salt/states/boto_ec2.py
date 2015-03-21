@@ -34,7 +34,7 @@ You can also use salt:// in order to define the public key.
     import-key-pair:
        boto_ec2.present:
         - name: mykeypair
-	- upload_public: salt://mybase/public_key.pub
+        - upload_public: salt://mybase/public_key.pub
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
@@ -76,7 +76,7 @@ def key_present(name, save_private=None, upload_public=None, region=None, key=No
     exists = __salt__['boto_ec2.get_key'](name, region, key, keyid, profile)
     log.debug('exists is {0}'.format(exists))
     if 'salt://' in upload_public:
-        upload_public = __salt__['cp.get_file_str'](upload_pubic)
+        upload_public = __salt__['cp.get_file_str'](upload_public)
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'The key {0} is set to be created.'.format(name)
