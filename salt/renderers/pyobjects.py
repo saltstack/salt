@@ -319,7 +319,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
         load_states()
 
     # these hold the scope that our sls file will be executed with
-    _locals = {}
     _globals = {}
 
     # create our StateFactory objects
@@ -441,6 +440,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     Registry.enabled = True
 
     # now exec our template using our created scopes
-    exec_(final_template, _globals, _locals)
+    exec_(final_template, _globals)
 
     return Registry.salt_data()
