@@ -66,6 +66,8 @@ from collections import MutableMapping
 import salt.ext.six as six
 try:
     import zmq
+    import zmq.eventloop.ioloop
+    import zmq.eventloop.zmqstream
 except ImportError:
     # Local mode does not need zmq
     pass

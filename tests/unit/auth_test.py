@@ -92,7 +92,7 @@ class MasterACLTestCase(integration.ModuleCase):
                                          }
                                  }
 
-        self.clear = salt.master.ClearFuncs(opts, MagicMock(), MagicMock(), MagicMock())
+        self.clear = salt.master.ClearFuncs(opts, MagicMock())
 
         self.valid_clear_load = {'tgt_type': 'glob',
                                 'jid': '',
