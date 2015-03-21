@@ -45,13 +45,6 @@ log = logging.getLogger(__name__)
 
 import msgpack
 
-# TODO: put in some lib?
-def noop_future_callback(_):
-    '''
-    This allows us to create a future which we won't do anything with
-    '''
-    pass
-
 def frame_msg(msg, header=None):
     '''
     Frame the given message with our wire protocol
@@ -266,7 +259,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             ret = yield self._encrypted_transfer(load, tries=tries, timeout=timeout)
         raise tornado.gen.Return(ret)
 
-# TODO: switch everything to this?
+
 class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
     def __init__(self,
                  opts,
@@ -366,10 +359,12 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             yield stream.write(frame_msg(self.serial.dumps(self._auth(payload['load'])), header=header))
             raise tornado.gen.Return()
 
-        # TODO: handle exceptions
+        # TODO: test
         try:
             ret, req_opts = self.payload_handler(payload)  # TODO: check if a future
         except Exception as e:
+            # always attempt to return an error to the minion
+            stream.write('Some exception handling minion payload')
             log.error('Some exception handling a payload from minion', exc_info=True)
             stream.close()
             raise tornado.gen.Return()
@@ -386,6 +381,8 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                                                                            )), header=header))
         else:
             log.error('Unknown req_fun {0}'.format(req_fun))
+            # always attempt to return an error to the minion
+            stream.write('Server-side exception handling payload')
             stream.close()
         raise tornado.gen.Return()
 
@@ -629,7 +626,7 @@ class PubServer(tornado.tcpserver.TCPServer):
             client, address = item
             try:
                 f = client.write(payload)
-                self.io_loop.add_future(f, noop_future_callback)
+                self.io_loop.add_future(f, lambda f: True)
             except tornado.iostream.StreamClosedError:
                 to_remove.append(item)
         for item in to_remove:

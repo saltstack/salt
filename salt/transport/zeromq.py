@@ -361,12 +361,13 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             stream.send(self.serial.dumps(self._auth(payload['load'])))
             raise tornado.gen.Return()
 
-        # TODO: handle exceptions
+        # TODO: test
         try:
             ret, req_opts = self.payload_handler(payload)  # TODO: check if a future
         except Exception as e:
+            # always attempt to return an error to the minion
+            stream.write('Some exception handling minion payload')
             log.error('Some exception handling a payload from minion', exc_info=True)
-            stream.send('bad low')
             raise tornado.gen.Return()
 
         req_fun = req_opts.get('fun', 'send')
@@ -381,7 +382,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
                                                                 )))
         else:
             log.error('Unknown req_fun {0}'.format(req_fun))
-            stream.send('err')
+            # always attempt to return an error to the minion
+            stream.send('Server-side exception handling payload')
         raise tornado.gen.Return()
 
 
