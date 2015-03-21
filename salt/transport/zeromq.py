@@ -148,7 +148,7 @@ class ZeroMQReqChannel(salt.transport.client.ReqChannel):
             return self._crypted_transfer(load, tries, timeout)
 
 
-class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
+class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
     def __init__(self,
                  opts,
                  **kwargs):
@@ -224,6 +224,10 @@ class ZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transp
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
         self.publish_port = self.auth.creds['publish_port']
+
+    # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
+    @tornado.gen.coroutine
+    def connect(self):
         self._socket.connect(self.master_pub)
 
     @property
