@@ -192,10 +192,12 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
                    require_uppercase_characters=None,
                    region=None, key=None, keyid=None,
                    profile=None):
+    config = locals()
     ret = {'name': 'Account Policy', 'result': True, 'comment': '', 'changes': {}}
     info = __salt__['boto_iam.get_account_policy'](region, key, keyid, profile)
-    config = locals()
-    for key, value in config['info'].iteritems():
+    for key, value in config.iteritems():
+        if key == 'region' or key == 'key' or key == 'keyid' or key == 'profile':
+            continue
         if value is not None and str(info[key]) != str(value).lower():
             ret['comment'] = '\n'.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
             ret['changes'][key] = str(value).lower()
