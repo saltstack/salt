@@ -26,12 +26,25 @@ The below code creates a key pair:
         - upload_public: 'ssh-rsa AAAA'
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-The below code deleted a key pair:
+
+You can also use salt:// in order to define the public key.
 
 .. code-block:: yaml
+
+    import-key-pair:
+       boto_ec2.present:
+        - name: mykeypair
+	- upload_public: salt://mybase/public_key.pub
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+The below code deletes a key pair:
+
+.. code-block:: yaml
+
     delete-key-pair:
       boto_ec2.absent:
-        - name: mykeypair9
+        - name: mykeypair
         - region: eu-west-1
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -50,7 +63,7 @@ def __virtual__():
         return False
 
 
-def present(name, save_private=None, upload_public=None, region=None, key=None,
+def key_present(name, save_private=None, upload_public=None, region=None, key=None,
             keyid=None, profile=None):
     '''
     Ensure key pair is present.
@@ -62,6 +75,8 @@ def present(name, save_private=None, upload_public=None, region=None, key=None,
            }
     exists = __salt__['boto_ec2.get_key'](name, region, key, keyid, profile)
     log.debug('exists is {0}'.format(exists))
+    if 'salt://' in upload_public:
+        upload_public = __salt__['cp.get_file_str'](upload_pubic)
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'The key {0} is set to be created.'.format(name)
@@ -98,7 +113,7 @@ def present(name, save_private=None, upload_public=None, region=None, key=None,
     return ret
 
 
-def absent(name, region=None, key=None, keyid=None, profile=None):
+def key_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes a key pair
     '''
