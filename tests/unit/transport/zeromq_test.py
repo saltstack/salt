@@ -9,6 +9,7 @@ import os
 import threading
 
 import zmq.eventloop.ioloop
+from tornado.testing import AsyncTestCase
 
 import salt.config
 import salt.utils
@@ -109,7 +110,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
                 ret = self.channel.send(msg)
 
 
-class BaseZMQPubCase(TestCase):
+class BaseZMQPubCase(AsyncTestCase):
     '''
     Test the req server/client pair
     '''
@@ -158,7 +159,7 @@ class BaseZMQPubCase(TestCase):
         cls.req_server_channel.close()
 
 
-class PubChannelTest(BaseZMQPubCase):
+class AsyncPubChannelTest(BaseZMQPubCase):
     '''
     Tests around the publish system
     '''
@@ -168,7 +169,11 @@ class PubChannelTest(BaseZMQPubCase):
         def handle_pub(ret):
             self.pub = ret
             io_loop.stop()
-        self.pub_channel = salt.transport.client.PubChannel.factory(self.minion_opts, io_loop=io_loop)
+        self.pub_channel = salt.transport.client.AsyncPubChannel.factory(self.minion_opts, io_loop=io_loop)
+        connect_future = self.pub_channel.connect()
+        connect_future.add_done_callback(lambda f: self.stop())
+        self.wait()
+        connect_future.result()
         self.pub_channel.on_recv(handle_pub)
         load = {
                     'fun': 'f',
