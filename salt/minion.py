@@ -1079,10 +1079,6 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
-        # If we are running in multi-master mode, re-inject opts into module funcs
-        if instance.opts.get('multimaster', False):
-            for func in instance.functions:
-                sys.modules[instance.functions[func].__module__].__opts__ = self.opts
         if self.opts['multiprocessing']:
             if sys.platform.startswith('win'):
                 # let python reconstruct the minion on the other side if we're
@@ -2331,6 +2327,7 @@ class MultiSyndic(MinionBase):
         self.syndic_mode = self.opts.get('syndic_mode', 'sync')
 
         self._has_master = threading.Event()
+        self.jid_forward_cache = set()
 
         # create all of the syndics you need
         self.master_syndics = {}
@@ -2564,10 +2561,19 @@ class MultiSyndic(MinionBase):
                     jdict['__fun__'] = event['data'].get('fun')
                     jdict['__jid__'] = event['data']['jid']
                     jdict['__load__'] = {}
-                    fstr = '{0}.get_jid'.format(self.opts['master_job_cache'])
-                    jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
-                        )
+                    fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
+                    # Only need to forward each load once. Don't hit the disk
+                    # for every minion return!
+                    if event['data']['jid'] not in self.jid_forward_cache:
+                        jdict['__load__'].update(
+                            self.mminion.returners[fstr](event['data']['jid'])
+                            )
+                        self.jid_forward_cache.add(event['data']['jid'])
+                        if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
+                            # Pop the oldest jid from the cache
+                            tmp = sorted(list(self.jid_forward_cache))
+                            tmp.pop(0)
+                            self.jid_forward_cache = set(tmp)
                 if 'master_id' in event['data']:
                     # __'s to make sure it doesn't print out on the master cli
                     jdict['__master_id__'] = event['data']['master_id']

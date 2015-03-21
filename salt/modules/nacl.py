@@ -76,7 +76,7 @@ import salt.syspaths
 REQ_ERROR = None
 try:
     import libnacl.secret
-except ImportError as e:
+except (ImportError, OSError) as e:
     REQ_ERROR = 'libnacl import error, perhaps missing python libnacl package'
 
 __virtualname__ = 'nacl'

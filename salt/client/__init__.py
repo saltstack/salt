@@ -26,6 +26,7 @@ import time
 import copy
 import errno
 import logging
+import re
 from datetime import datetime
 
 # Import 3rd-party libs
@@ -799,29 +800,30 @@ class LocalClient(object):
             jid,
             event=None,
             gather_errors=False,
-            additional_tags=None
+            tags_regex=None
            ):
         '''
         Raw function to just return events of jid excluding timeout logic
 
         Yield either the raw event data or None
 
-       Pass a list of additional tags as `additional_tags` to search the
-       event bus for non-return data, such as minion lists returned from
+       Pass a list of additional regular expressions as `tags_regex` to search
+       the event bus for non-return data, such as minion lists returned from
        syndics.
         '''
         if event is None:
             event = self.event
 
         jid_tag = 'salt/job/{0}'.format(jid)
+        jid_tag_regex = '^salt/job/{0}'.format(jid)
 
         tag_search = []
-        tag_search.append(jid_tag)
-        if isinstance(additional_tags, str):
-            tag_search.append(additional_tags)
-        elif isinstance(additional_tags, list):
-            for tag in additional_tags:
-                tag_search.append(tag)
+        tag_search.append(re.compile(jid_tag_regex))
+        if isinstance(tags_regex, str):
+            tag_search.append(re.compile(tags_regex))
+        elif isinstance(tags_regex, list):
+            for tag in tags_regex:
+                tag_search.append(re.compile(tag))
         while True:
             if self.opts.get('transport') == 'zeromq':
                 try:
@@ -829,7 +831,7 @@ class LocalClient(object):
                     if gather_errors:
                         if (raw and
                                 (raw.get('tag', '').startswith('_salt_error') or
-                                any([raw.get('tag', '').startswith(tag) for tag in tag_search]))):
+                                any([tag.search(raw.get('tag', '')) for tag in tag_search]))):
                             yield raw
                     else:
                         if raw and raw.get('tag', '').startswith(jid_tag):
@@ -892,7 +894,7 @@ class LocalClient(object):
         # iterator for this job's return
         if self.opts['order_masters']:
             # If we are a MoM, we need to gather expected minions from downstreams masters.
-            ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors, additional_tags='syndic')
+            ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors, tags_regex='^syndic/.*/{0}'.format(jid))
         else:
             ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
         # iterator for the info of this job
