@@ -1739,6 +1739,21 @@ class Syndic(Minion):
         if start:
             self.io_loop.start()
 
+    # TODO: clean up docs
+    def tune_in_no_block(self):
+        '''
+        Executes the tune_in sequence but omits extra logging and the
+        management of the event bus assuming that these are handled outside
+        the tune_in sequence
+        '''
+        # Instantiate the local client
+        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
+        self.local.event.subscribe('')
+
+
+        # add handler to subscriber
+        self.pub_channel.on_recv(self._process_cmd_socket)
+
     def _process_cmd_socket(self, payload):
         if payload is not None:
             log.trace('Handling payload')
@@ -1853,104 +1868,58 @@ class MultiSyndic(MinionBase):
             self.io_loop = io_loop
         self.io_loop.install()
 
-        # create all of the syndics you need
-        self.master_syndics = {}
+    def _spawn_syndics(self):
+        '''
+        Spawn all the coroutines which will sign in the syndics
+        '''
+        self._syndics = {}  # mapping of opts['master'] -> syndic
         for master in set(self.opts['master']):
-            self._init_master_conn(master)
+            s_opts = copy.copy(self.opts)
+            s_opts['master'] = master
+            self._syndics[master] = self._connect_syndic(s_opts)
 
-        log.info('Syndic waiting on any master to connect...')
-        # threading events are un-interruptible in python 2 :/
-        while not self._has_master.is_set():
-            self._has_master.wait(1)
-
-    def _init_master_conn(self, master):
+    @tornado.gen.coroutine
+    def _connect_syndic(self, opts):
         '''
-        Start a thread to connect to the master `master`
+        Create a syndic, and asynchronously connect it to a master
         '''
-        # if we are re-creating one, lets make sure its not still in use
-        if master in self.master_syndics:
-            if 'sign_in_thread' in self.master_syndics[master]:
-                self.master_syndics[master]['sign_in_thread'].join(0)
-                if self.master_syndics[master]['sign_in_thread'].is_alive():
-                    return
-        # otherwise we make one!
-        s_opts = copy.copy(self.opts)
-        s_opts['master'] = master
-        t = threading.Thread(target=self._connect_to_master_thread, args=(master,))
-        t.daemon = True
-        self.master_syndics[master] = {'opts': s_opts,
-                                       'auth_wait': s_opts['acceptance_wait_time'],
-                                       'dead_until': 0,
-                                       'sign_in_thread': t,
-                                       }
-        t.start()
-
-    def _connect_to_master_thread(self, master):
-        '''
-        Thread target to connect to a master
-        '''
-        connected = False
-        master_dict = self.master_syndics[master]
-        while connected is False:
-            # if we marked it as dead, wait a while
-            if master_dict['dead_until'] > time.time():
-                time.sleep(master_dict['dead_until'] - time.time())
-            if master_dict['dead_until'] > time.time():
-                time.sleep(master_dict['dead_until'] - time.time())
-            connected = self._connect_to_master(master)
-            if not connected:
-                time.sleep(1)
-
-        self._has_master.set()
-
-    # TODO: do we need all of this?
-    def _connect_to_master(self, master):
-        '''
-        Attempt to connect to master, including back-off for each one
-
-        return boolean of whether you connected or not
-        '''
-        log.debug('Syndic attempting to connect to {0}'.format(master))
-        if master not in self.master_syndics:
-            log.error('Unable to connect to {0}, not in the list of masters'.format(master))
-            return False
-
-        minion = self.master_syndics[master]
-
-        if time.time() - minion['auth_wait'] > minion.get('last', 0):
+        last = 0  # never have we signed in
+        auth_wait = opts['acceptance_wait_time']
+        while True:
+            log.debug('Syndic attempting to connect to {0}'.format(master))
             try:
-                t_minion = Syndic(minion['opts'],
-                                  timeout=self.SYNDIC_CONNECT_TIMEOUT,
-                                  safe=False,
-                                  io_loop=self.io_loop
-                                  )
+                syndic = Syndic(opts,
+                                timeout=self.SYNDIC_CONNECT_TIMEOUT,
+                                safe=False,
+                                io_loop=self.io_loop,
+                                )
+                yield syndic.connect_master()
+                # set up the syndic to handle publishes (specifically not event forwarding)
+                syndic.tune_in_no_block()
+                log.info('Syndic successfully connected to {0}'.format(master))
+                break
+            except SaltClientError as exc:
+                log.error('Error while bringing up syndic for multi-syndic. Is master at {0} responding?'.format(opts['master']))
+                last = time.time()
+                if auth_wait < self.max_auth_wait:
+                    auth_wait += self.auth_wait
+                yield tornado.gen.sleep(auth_wait)  # TODO: log?
+            except Exception as e:
+                log.critical('Unexpected error while connecting to {0}'.format(opts['master']), exc_info=True)
 
-                self.master_syndics[master]['syndic'] = t_minion
-                # no longer a generator, just registering a callback
-                self.master_syndics[master]['auth_wait'] = self.opts['acceptance_wait_time']
-                self.master_syndics[master]['dead_until'] = 0
-
-            log.info('Syndic successfully connected to {0}'.format(master))
-            return True
-        except SaltClientError:
-            log.error('Error while bring up minion for multi-syndic. Is master {0} responding?'.format(master))
-            # re-use auth-wait as backoff for syndic
-            minion['dead_until'] = time.time() + minion['auth_wait']
-            if minion['auth_wait'] < self.opts['acceptance_wait_time_max']:
-                minion['auth_wait'] += self.opts['acceptance_wait_time']
-        return False
+        raise tornado.gen.Return(syndic)
 
     def _mark_master_dead(self, master):
         '''
         Mark a master as dead. This will start the sign-in routine
         '''
-        # stop recieving pub stuff from this master
-        master_dict = self.master_syndics[master]
-        master_dict['syndic'].destroy()
-        del master_dict['syndic']
-        master_dict['dead_until'] = time.time() + master_dict['auth_wait']
-        if master_dict['auth_wait'] < self.opts['acceptance_wait_time_max']:
-            master_dict['auth_wait'] += self.opts['acceptance_wait_time']
+        # if its connected, mark it dead
+        if self._syndics[master].done():
+            syndic = self._syndics.result()
+            syndic.destroy()
+            self._syndics[master] = self._connect_syndic(syndic.opts)
+        else:
+            log.info('Attempting to mark {0} as dead, although it is already marked dead'.format(master))  # TODO: debug?
 
     def _call_syndic(self, func, args=(), kwargs=None, master_id=None):
         '''
@@ -2003,15 +1972,14 @@ class MultiSyndic(MinionBase):
         '''
         Lock onto the publisher. This is the main event loop for the syndic
         '''
+        self._spawn_syndics()
+        #self.io_loop.start()
         # Instantiate the local client
         self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
         self.local.event.subscribe('')
 
         log.debug('MultiSyndic {0!r} trying to tune in'.format(self.opts['id']))
 
-        #
-        self.pub_channel.on_recv(self._handle_payload)
-        #self.pub_channel.on_recv(self._process_cmd_socket)
         # register the event sub to the poller
         self._reset_event_aggregation()
         self.local_event_stream = zmq.eventloop.zmqstream.ZMQStream(self.local.event.sub, io_loop=self.io_loop)
