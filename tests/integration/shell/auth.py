@@ -25,6 +25,7 @@ import integration
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+
 def gen_password():
     '''
     generate a password and hash it
