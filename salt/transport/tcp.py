@@ -27,7 +27,7 @@ import logging
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
-from salt.exceptions import SaltReqTimeoutError
+from salt.exceptions import SaltReqTimeoutError, SaltClientError
 
 # for IPC (for now)
 import zmq
@@ -266,7 +266,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             ret = yield self._encrypted_transfer(load, tries=tries, timeout=timeout)
         raise tornado.gen.Return(ret)
 
-
+# TODO: remove
 class TCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.PubChannel):
     def __init__(self,
                  opts,
@@ -310,13 +310,17 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
 
     @tornado.gen.coroutine
     def connect(self):
-        self.auth = salt.crypt.AsyncAuth(self.opts)
-        creds = yield self.auth.authenticate()
-        self.message_client = SaltMessageClient(self.opts['master_ip'],
-                                                int(self.auth.creds['publish_port']),
-                                                io_loop=self.io_loop)
-        yield self.message_client.connect()  # wait for the client to be connected
-        self.connected = True
+        try:
+            self.auth = salt.crypt.AsyncAuth(self.opts)
+            creds = yield self.auth.authenticate()
+            self.message_client = SaltMessageClient(self.opts['master_ip'],
+                                                    int(self.auth.creds['publish_port']),
+                                                    io_loop=self.io_loop)
+            yield self.message_client.connect()  # wait for the client to be connected
+            self.connected = True
+        # TODO: better exception handling...
+        except:
+            raise SaltClientError('Unable to sign_in to master')  # TODO: better error message
 
     def on_recv(self, callback):
         '''

@@ -97,7 +97,7 @@ class AsyncReqChannel(object):
         '''
         raise NotImplementedError()
 
-
+# TODO: remove, already deprecated
 class PubChannel(object):
     '''
     Factory class to create subscription channels to the master's Publisher

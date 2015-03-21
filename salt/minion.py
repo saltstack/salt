@@ -545,7 +545,7 @@ class Minion(MinionBase):
     and loads all of the functions into the minion
     '''
 
-    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None, auto_connect=True):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
@@ -578,16 +578,45 @@ class Minion(MinionBase):
         # module
         opts['grains'] = salt.loader.grains(opts)
 
-        # evaluate the master to connect to and authenticate with it
-        opts['master'] = self.eval_master(opts,
-                                          timeout,
-                                          safe)
+        # future of us connecting to a master
+        if auto_connect:
+            self._connect_master_future = self.connect_master(opts, timeout, safe)
+
+    # TODO: remove?
+    def block_until_connected(self):
+        '''
+        Block until we are connected to a master
+        '''
+        # finish connecting to master
+        self._connect_master_future.add_done_callback(lambda f: self.io_loop.stop())
+        self.io_loop.start()
+        if self._connect_master_future.exception():
+            raise self._connect_master_future.exception()
+
+    @tornado.gen.coroutine
+    def connect_master(self, opts, timeout, safe):
+        '''
+        Return a future which will complete when you are connected to a master
+        defined in opts
+        '''
+        master, self.pub_channel = yield self.eval_master(opts, timeout, safe)
+        self._post_master_init(master)
+
+    # TODO: better name...
+    def _post_master_init(self, master):
+        '''
+        Function to finish init after connecting to a master
+
+        This is primarily loading modules, pillars, etc. (since they need
+        to know which master they connected to)
+        '''
+        self.opts['master'] = master
 
         self.opts['pillar'] = salt.pillar.get_pillar(
-            opts,
-            opts['grains'],
-            opts['id'],
-            opts['environment']
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment']
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
@@ -608,7 +637,7 @@ class Minion(MinionBase):
                 '__mine_interval':
                 {
                     'function': 'mine.update',
-                    'minutes': opts['mine_interval'],
+                    'minutes': self.opts['mine_interval'],
                     'jid_include': True,
                     'maxrunning': 2
                 }
@@ -620,7 +649,7 @@ class Minion(MinionBase):
                 '__master_alive':
                 {
                     'function': 'status.master',
-                    'seconds': opts['master_alive_interval'],
+                    'seconds': self.opts['master_alive_interval'],
                     'jid_include': True,
                     'maxrunning': 1,
                     'kwargs': {'master': self.opts['master'],
@@ -646,8 +675,7 @@ class Minion(MinionBase):
             log.debug('I am {0} and I am not supposed to start any proxies. '
                       '(Likely not a problem)'.format(self.opts['id']))
 
-        # __init__() from MinionBase is called in Minion.eval_master()
-
+    @tornado.gen.coroutine
     def eval_master(self,
                     opts,
                     timeout=60,
@@ -729,15 +757,20 @@ class Minion(MinionBase):
             for master in local_masters:
                 opts['master'] = master
                 opts.update(resolve_dns(opts))
-                super(Minion, self).__init__(opts)
+                super(Minion, self).__init__(opts)  # TODO: only run init once?? This will run once per attempt
 
                 # on first run, update self.opts with the whole master list
                 # to enable a minion to re-use old masters if they get fixed
-                if 'master_list' not in self.opts:
-                    self.opts['master_list'] = local_masters
+                if 'master_list' not in opts:
+                    opts['master_list'] = local_masters
 
                 try:
-                    self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe, io_loop=self.io_loop)
+                    pub_channel = salt.transport.client.AsyncPubChannel.factory(opts,
+                                                                                timeout=timeout,
+                                                                                safe=safe,
+                                                                                io_loop=self.io_loop,
+                                                                                )
+                    yield pub_channel.connect()
                     conn = True
                     break
                 except SaltClientError:
@@ -753,16 +786,22 @@ class Minion(MinionBase):
                 log.error(msg)
             else:
                 self.connected = True
-                return opts['master']
+                super(Minion, self).__init__(opts)
+                raise tornado.gen.Return((opts['master'], pub_channel))
 
         # single master sign in
         else:
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
-            self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe, io_loop=self.io_loop)
-            self.tok = self.pub_channel.auth.gen_token('salt')
+            pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts,
+                                                                             timeout=timeout,
+                                                                             safe=safe,
+                                                                             io_loop=self.io_loop,
+                                                                             )
+            yield pub_channel.connect()
+            self.tok = pub_channel.auth.gen_token('salt')
             self.connected = True
-            return opts['master']
+            raise tornado.gen.Return((opts['master'], pub_channel))
 
     def _prep_mod_opts(self):
         '''
@@ -1432,7 +1471,8 @@ class Minion(MinionBase):
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
                         del self.pub_channel
-                        self.pub_channel = salt.transport.client.PubChannel.factory(self.opts, timeout=timeout, safe=safe, io_loop=self.io_loop)
+                        self._connect_master_future = self.connect_master(self.opts, timeout, safe, io_loop=self.io_loop)
+                        self.block_until_connected()  # TODO: remove
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
 
@@ -1502,6 +1542,8 @@ class Minion(MinionBase):
         signal.signal(signal.SIGTERM, self.clean_die)
 
         log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
+
+        self.block_until_connected()
 
         salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
         self._fire_master_minion_start()
@@ -1574,13 +1616,14 @@ class Minion(MinionBase):
         if start:
             self.io_loop.start()
 
-    # TODO: remove?
+    # TODO: remove? Make another one which does this as a future
     def tune_in_no_block(self):
         '''
         Executes the tune_in sequence but omits extra logging and the
         management of the event bus assuming that these are handled outside
         the tune_in sequence
         '''
+        self.block_until_connected()
 
         self._pre_tune()
 

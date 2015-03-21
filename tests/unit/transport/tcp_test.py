@@ -156,7 +156,7 @@ class BaseTCPPubCase(AsyncTestCase):
         #cls.server_channel.close()
 
 
-class PubChannelTest(BaseTCPPubCase):
+class AsyncPubChannelTest(BaseTCPPubCase):
     '''
     Tests around the publish system
     '''
