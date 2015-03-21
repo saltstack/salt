@@ -182,6 +182,10 @@ class AsyncPubChannelTest(BaseTCPPubCase):
         self.server_channel.publish(load)
         self.wait()
         self.assertEqual(self.pub['load'], load)
+        self.pub_channel.on_recv(None)
+        self.server_channel.publish(load)
+        with self.assertRaises(self.failureException):
+            self.wait(timeout=0.5)
 
 if __name__ == '__main__':
     from integration import run_tests
