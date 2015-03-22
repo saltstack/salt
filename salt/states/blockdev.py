@@ -149,9 +149,13 @@ def formatted(name, fs_type='ext4', **kwargs):
     cmd = 'mkfs -t {0} '.format(fs_type)
     if 'inode_size' in kwargs:
         if fs_type[:3] == 'ext':
-            cmd += '-i {0}'.format(kwargs['inode_size'])
+            cmd += '-i {0} '.format(kwargs['inode_size'])
         elif fs_type == 'xfs':
             cmd += '-i size={0} '.format(kwargs['inode_size'])
+    if 'lazy_itable_init' in kwargs:
+        if fs_type[:3] == 'ext':
+            cmd += '-E lazy_itable_init={0} '.format(kwargs['lazy_itable_init'])
+
     cmd += name
     __salt__['cmd.run'](cmd).splitlines()
     __salt__['cmd.run']('sync').splitlines()
