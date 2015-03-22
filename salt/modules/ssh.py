@@ -258,7 +258,14 @@ def host_keys(keydir=None):
                 kname += '.{0}'.format(top[1])
             try:
                 with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
-                    keys[kname] = _fh.readline().strip()
+                    # As of RFC 4716 "a key file is a text file, containing a sequence of lines",
+                    # although some SSH implementations (e.g. OpenSSH) manage their own format(s).
+                    # Please see #20708 for a discussion about how to handle SSH key files in the future
+                    if fn_.endswith('.pub'):
+                        # strip() for backwards compatibility
+                        keys[kname] = _fh.read.strip()
+                    else:
+                        keys[kname] = _fh.read()
             except (IOError, OSError):
                 keys[kname] = ''
     return keys
