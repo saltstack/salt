@@ -406,7 +406,6 @@ def read_csr(csr):
     Reads a certificate signing request
     '''
     csr = _get_request_obj(csr)
-    print 'got request obj'
     ret = {
            # X509 Verison 3 has a value of 2 in the field.
            # Version 2 has a value of 1.
@@ -446,11 +445,13 @@ def create_certificate(path=None, text=False, subject={},
     if not signing_private_key:
         raise ValueError('signing_private_key must be specified')
 
-    if not (public_key or csr):
-        public_key = get_public_key(signing_private_key)
-
     if (public_key and csr):
         raise ValueError('Include either public_key or csr, not both.')
+
+    if not (public_key or csr):
+        public_key = get_public_key(signing_private_key)
+    elif csr:
+        public_key = get_public_key(csr)
 
     if (get_public_key(signing_private_key) == get_public_key(public_key) and
             signing_cert):
@@ -472,8 +473,6 @@ def create_certificate(path=None, text=False, subject={},
 
     subject = _parse_subject_in(subject)
     signing_private_key = _get_private_key_obj(signing_private_key)
-    if csr:
-        public_key = csr
     public_key = _get_public_key_obj(public_key)
 
     if signing_cert:
@@ -522,7 +521,7 @@ def create_certificate(path=None, text=False, subject={},
 
     # Add CSR extensions that don't already exist
     if csr:
-        for csrext in _get_csr_extensions(csr):
+        for csrext in _get_csr_extensions(_get_request_obj(csr)):
             superseded= False
             for ext in extensions:
                 if ext['name'] == csrext['name']:
