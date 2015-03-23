@@ -298,3 +298,59 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
                                                         require_uppercase_characters,
                                                         region, key, keyid, profile)
     return ret
+
+
+def server_cert_present(name, public_key, private_key, cert_chain=None, path=None,
+                        region=None, key=None, keyid=None, profile=None):
+    '''
+    .. code-block:: yaml
+
+    create server certificate:
+      boto_iam.server_cert_present:
+        - name: mycert
+        - public_key: salt://mycert.crt
+        - private_key: salt://mycert.key
+        - cert_chain: salt://mycert_chain.crt
+        - region: eu-west-1
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'fdkjsafkljsASSADFalkfjasdf'
+
+    name (string) - The name for the server certificate. Do not include the path in this value.
+
+    public_key (string) -  The contents of the public key certificate in PEM-encoded format.
+
+    private_key (string) - The contents of the private key in PEM-encoded format.
+
+    cert_chain (string) - The contents of the certificate chain. This is typically a
+    concatenation of the PEM-encoded public key certificates of the chain.
+
+    path (string) - The path for the server certificate.
+
+    region (string) - The name of the region to connect to.
+
+    key (string) - The key to be used in order to connect
+
+    keyid (string) - The keyid to be used in order to connect
+
+    profile (string) - The profile that contains a dict of region, key, keyid
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    exists = __salt__['boto_iam.get_server_certificate'](name, region, key, keyid, profile)
+    log.debug('variables are : {0}'.format(locals()))
+    if exists:
+        ret['comment'] = 'Certificate {0} exists.'.format(name)
+        return ret
+    if 'salt://' in public_key:
+        public_key = __salt__['cp.get_file_str'](public_key)
+    if 'salt://' in private_key:
+        private_key = __salt__['cp.get_file_str'](private_key)
+    if cert_chain is not None and 'salt://' in cert_chain:
+        cert_chain = __salt__['cp.get_file_str'](cert_chain)
+    created = __salt__['boto_iam.upload_server_cert'](name, public_key, private_key, cert_chain,
+                                                      path, region, key, keyid, profile)
+    if not created:
+        ret['result'] = False
+        ret['comment'] = 'Certificate {0} failed to be created.'.format(name)
+    ret['comment'] = 'Certificate {0} was created.'.format(name)
+    ret['changes'] = created
+    return ret
