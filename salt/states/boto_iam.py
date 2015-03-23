@@ -341,11 +341,29 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
         ret['comment'] = 'Certificate {0} exists.'.format(name)
         return ret
     if 'salt://' in public_key:
-        public_key = __salt__['cp.get_file_str'](public_key)
+        try:
+            public_key = __salt__['cp.get_file_str'](public_key)
+        except IOError as e:
+            log.debug(e)
+            ret['comment'] = 'File {0} not found.'.format(public_key)
+            ret['result'] = False
+            return ret
     if 'salt://' in private_key:
-        private_key = __salt__['cp.get_file_str'](private_key)
+        try:
+            private_key = __salt__['cp.get_file_str'](private_key)
+        except IOError as e:
+            log.debug(e)
+            ret['comment'] = 'File {0} not found.'.format(private_key)
+            ret['result'] = False
+            return ret
     if cert_chain is not None and 'salt://' in cert_chain:
-        cert_chain = __salt__['cp.get_file_str'](cert_chain)
+        try:
+            cert_chain = __salt__['cp.get_file_str'](cert_chain)
+        except IOError as e:
+            log.debug(e)
+            ret['comment'] = 'File {0} not found.'.format(cert_chain)
+            ret['result'] = False
+            return ret
     created = __salt__['boto_iam.upload_server_cert'](name, public_key, private_key, cert_chain,
                                                       path, region, key, keyid, profile)
     if not created:
