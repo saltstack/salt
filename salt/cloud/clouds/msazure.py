@@ -419,8 +419,23 @@ def create(vm_):
         'service_name': service_name,
         'label': label,
         'description': vm_.get('desc', vm_['name']),
-        'location': vm_['location'],
     }
+
+    loc_error = False
+    if 'location' in vm_:
+        if 'affinity_group' in vm_:
+            loc_error = True
+        else:
+            service_kwargs['location'] = vm_['location']
+    elif 'affinity_group' in vm_:
+        service_kwargs['affinity_group'] = vm_['affinity_group']
+    else:
+        loc_error = True
+
+    if loc_error:
+        raise SaltCloudSystemExit(
+            'Either a location or affinity group must be specified, but not both'
+        )
 
     ssh_port = config.get_cloud_config_value('port', vm_, __opts__,
                                              default='22', search_global=True)
@@ -974,20 +989,96 @@ def destroy(name, conn=None, call=None, kwargs=None):
 
     instance_data = show_instance(name, call='action')
     service_name = instance_data['deployment']['name']
+    disk_name = instance_data['role_info']['os_virtual_hard_disk']['disk_name']
 
     ret = {}
     # TODO: Add the ability to delete or not delete a hosted service when
     # deleting a VM
     try:
+        log.debug('Deleting role')
         result = conn.delete_role(service_name, service_name, name)
+        delete_type = 'delete_role'
     except WindowsAzureError:
-        result = conn.delete_deployment(service_name, service_name)
+        log.debug('Failed to delete role, deleting deployment')
+        try:
+            result = conn.delete_deployment(service_name, service_name)
+        except WindowsAzureConflictError as exc:
+            log.error(exc.message)
+            return {'Error': exc.message}
+        delete_type = 'delete_deployment'
     _wait_for_async(conn, result.request_id)
     ret[name] = {
-        'request_id': result.request_id,
+        delete_type: {'request_id': result.request_id},
     }
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
+    cleanup_disks = config.get_cloud_config_value(
+        'cleanup_disks',
+        get_configured_provider(), __opts__, search_global=False, default=False,
+    )
+    if cleanup_disks:
+        cleanup_vhds = kwargs.get('delete_vhd', config.get_cloud_config_value(
+            'cleanup_vhds',
+            get_configured_provider(), __opts__, search_global=False, default=False,
+        ))
+        log.debug('Deleting disk {0}'.format(disk_name))
+        if cleanup_vhds:
+            log.debug('Deleting vhd')
+
+        def wait_for_destroy():
+            '''
+            Wait for the VM to be deleted
+            '''
+            try:
+                data = delete_disk(kwargs={'name': disk_name, 'delete_vhd': cleanup_vhds}, call='function')
+                return data
+            except WindowsAzureConflictError:
+                log.debug('Waiting for VM to be destroyed...')
+            time.sleep(5)
+            return False
+
+        data = salt.utils.cloud.wait_for_fun(
+            wait_for_destroy,
+            timeout=config.get_cloud_config_value(
+                'wait_for_fun_timeout', {}, __opts__, default=15 * 60),
+        )
+        ret[name]['delete_disk'] = {
+            'name': disk_name,
+            'delete_vhd': cleanup_vhds,
+            'data': data
+        }
+
+        # Services can't be cleaned up unless disks are too
+        cleanup_services = config.get_cloud_config_value(
+            'cleanup_services',
+            get_configured_provider(), __opts__, search_global=False, default=False
+        )
+        if cleanup_services:
+            log.debug('Deleting service {0}'.format(service_name))
+
+            def wait_for_disk_delete():
+                '''
+                Wait for the disk to be deleted
+                '''
+                try:
+                    data = delete_service(kwargs={'name': service_name}, call='function')
+                    return data
+                except WindowsAzureConflictError:
+                    log.debug('Waiting for disk to be deleted...')
+                time.sleep(5)
+                return False
+
+            data = salt.utils.cloud.wait_for_fun(
+                wait_for_disk_delete,
+                timeout=config.get_cloud_config_value(
+                    'wait_for_fun_timeout', {}, __opts__, default=15 * 60),
+            )
+            ret[name]['delete_services'] = {
+                'name': service_name,
+                'data': data
+            }
+
     return ret
 
 
@@ -1232,7 +1323,8 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
     '''
     .. versionadded:: Beryllium
 
-    Create a new storage account
+    Regenerate storage account keys. Requires a key_type ("primary" or
+    "secondary") to be specified.
 
     CLI Example::
 
@@ -1357,7 +1449,7 @@ def create_service(kwargs=None, conn=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The show_service function must be called with -f or --function.'
+            'The create_service function must be called with -f or --function.'
         )
 
     if not conn:
@@ -1467,6 +1559,36 @@ def show_disk(kwargs=None, conn=None, call=None):
 
 # For consistency with Azure SDK
 get_disk = show_disk
+
+
+def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Cleans up all disks associated with the account, which are not attached.
+    *** CAUTION *** This is a destructive function with no undo button, and no
+    "Are you sure?" confirmation!
+
+    CLI Examples::
+
+        salt-cloud -f cleanup_unattached_disks my-azure name=my_disk
+        salt-cloud -f cleanup_unattached_disks my-azure name=my_disk delete_vhd=True
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_disk function must be called with -f or --function.'
+        )
+
+    disks = list_disks(kwargs=kwargs, conn=conn, call='function')
+    for disk in disks:
+        if disks[disk]['attached_to'] is None:
+            del_kwargs = {
+                'name': disks[disk]['name'][0],
+                'delete_vhd': kwargs.get('delete_vhd', False)
+            }
+            log.info('Deleting disk {name}, deleting VHD: {delete_vhd}'.format(**del_kwargs))
+            data = delete_disk(kwargs=del_kwargs, call='function')
+    return True
 
 
 def delete_disk(kwargs=None, conn=None, call=None):
@@ -2075,6 +2197,160 @@ def show_deployment(kwargs=None, conn=None, call=None):
 
 # For consistency with Azure SDK
 get_deployment = show_deployment
+
+
+def list_affinity_groups(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List input endpoints associated with the deployment
+
+    CLI Example::
+
+        salt-cloud -f list_affinity_groups my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_affinity_groups function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    data = conn.list_affinity_groups()
+    ret = {}
+    for item in data.affinity_groups:
+        ret[item.name] = object_to_dict(item)
+    return ret
+
+
+def show_affinity_group(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show an affinity group associated with the account
+
+    CLI Example::
+
+        salt-cloud -f show_affinity_group my-azure service=myservice \
+            deployment=mydeployment name=SSH
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_affinity_group function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An affinity group name must be specified as "name"')
+
+    data = conn.get_affinity_group_properties(affinity_group_name=kwargs['name'])
+    return object_to_dict(data)
+
+
+# For consistency with Azure SDK
+get_affinity_group = show_affinity_group
+
+
+def create_affinity_group(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Create a new affinity group
+
+    CLI Example::
+
+        salt-cloud -f create_affinity_group my-azure name=my_affinity_group
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_affinity_group function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'label' not in kwargs:
+        raise SaltCloudSystemExit('A label must be specified as "label"')
+
+    if 'location' not in kwargs:
+        raise SaltCloudSystemExit('A location must be specified as "location"')
+
+    try:
+        data = conn.create_affinity_group(
+            kwargs['name'],
+            kwargs['label'],
+            kwargs['location'],
+            kwargs.get('description', None),
+        )
+        return {'Success': 'The affinity group was successfully created'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the affinity group already exists.'}
+
+
+def update_affinity_group(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Update an affinity group's properties
+
+    CLI Example::
+
+        salt-cloud -f update_affinity_group my-azure name=my_group label=my_group
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The update_affinity_group function must be called with -f or --function.'
+        )
+
+    if not conn:
+        conn = get_conn()
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if 'label' not in kwargs:
+        raise SaltCloudSystemExit('A label must be specified as "label"')
+
+    data = conn.update_affinity_group(
+        affinity_group_name=kwargs['name'],
+        label=kwargs['label'],
+        description=kwargs.get('description', None),
+    )
+    return show_affinity_group(kwargs={'name': kwargs['name']}, call='function')
+
+
+def delete_affinity_group(kwargs=None, conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a specific affinity group associated with the account
+
+    CLI Examples::
+
+        salt-cloud -f delete_affinity_group my-azure name=my_affinity_group
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_affinity_group function must be called with -f or --function.'
+        )
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('A name must be specified as "name"')
+
+    if not conn:
+        conn = get_conn()
+
+    try:
+        data = conn.delete_affinity_group(kwargs['name'])
+        return {'Success': 'The affinity group was successfully deleted'}
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': exc.message}
 
 
 def object_to_dict(obj):

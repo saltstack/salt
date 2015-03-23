@@ -45,7 +45,7 @@ def _get_conn(socket='/var/run/haproxy.sock'):
     return ha_conn
 
 
-def list_servers(backend, socket='/var/run/haproxy.sock'):
+def list_servers(backend, socket='/var/run/haproxy.sock', objectify=False):
     '''
     List servers in haproxy backend.
 
@@ -61,7 +61,7 @@ def list_servers(backend, socket='/var/run/haproxy.sock'):
     '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.listServers(backend=backend)
-    return ha_conn.sendCmd(ha_cmd)
+    return ha_conn.sendCmd(ha_cmd, objectify=objectify)
 
 
 def enable_server(name, backend, socket='/var/run/haproxy.sock'):

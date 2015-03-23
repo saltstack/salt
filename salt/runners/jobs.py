@@ -206,10 +206,7 @@ def list_jobs(ext_source=None,
         __jid_event__.fire_event({'message': 'Querying returner {0} for jobs.'.format(returner)}, 'progress')
     mminion = salt.minion.MasterMinion(__opts__)
 
-    try:
-        ret = mminion.returners['{0}.get_jids'.format(returner)]()
-    except TypeError:
-        return 'Error: Requested returner could not be loaded. No jobs could be retrieved.'
+    ret = mminion.returners['{0}.get_jids'.format(returner)]()
 
     if search_metadata:
         mret = {}

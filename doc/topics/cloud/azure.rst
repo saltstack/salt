@@ -136,6 +136,11 @@ using the following command:
 
     salt-cloud --list-locations my-azure-config
 
+affinity_group
+--------------
+The name of the affinity group to create a VM in. Either a ``location`` or an
+``affinity_group`` may be specified, but not both. See Affinity Groups below.
+
 ssh_username
 ------------
 The user to use to log into the newly-created VM to install Salt.
@@ -164,6 +169,11 @@ that will be used. It generally looks like:
 
     http://portalvhdabcdefghijklmn.blob.core.windows.net/vhds
 
+service_name
+------------
+The name of the service in which to create the VM. If this is not specified,
+then a service will be created with the same name as the VM.
+
 
 Show Instance
 =============
@@ -175,3 +185,701 @@ instance.
 .. code-block:: bash
 
     salt-cloud -a show_instance myinstance
+
+
+Destroying VMs
+==============
+There are certain options which can be specified in the global cloud
+configuration file (usually ``/etc/salt/cloud``) which affect Salt Cloud's
+behavior when a VM is destroyed.
+
+cleanup_disks
+-------------
+.. versionadded:: Beryllium
+
+Default is ``False``. When set to ``True``, Salt Cloud will wait for the VM to
+be destroyed, then attempt to destroy the main disk that is associated with the
+VM.
+
+cleanup_vhds
+------------
+.. versionadded:: Beryllium
+
+Default is ``False``. Requires ``cleanup_disks`` to be set to ``True``. When
+also set to ``True``, Salt Cloud will ask Azure to delete the VHD associated
+with the disk that is also destroyed.
+
+cleanup_services
+----------------
+.. versionadded:: Beryllium
+
+Default is ``False``. Requires ``cleanup_disks`` to be set to ``True``. When
+also set to ``True``, Salt Cloud will wait for the disk to be destroyed, then
+attempt to remove the service that is associated with the VM. Because the disk
+belongs to the service, the disk must be destroyed before the service can be.
+
+
+Managing Hosted Services
+========================
+.. versionadded:: Beryllium
+
+An account can have one or more hosted services. A hosted service is required
+in order to create a VM. However, as mentioned above, if a hosted service is not
+specified when a VM is created, then one will automatically be created with the
+name of the name. The following functions are also available.
+
+create_service
+--------------
+Create a hosted service. The following options are available.
+
+name
+~~~~
+Required. The name of the hosted service to create.
+
+label
+~~~~~
+Required. A label to apply to the hosted service.
+
+description
+~~~~~~~~~~~
+Optional. A longer description of the hosted service.
+
+location
+~~~~~~~~
+Required, if ``affinity_group`` is not set. The location in which to create the
+hosted service. Either the ``location`` or the ``affinity_group`` must be set,
+but not both.
+
+affinity_group
+~~~~~~~~~~~~~~
+Required, if ``location`` is not set. The affinity group in which to create the
+hosted service. Either the ``location`` or the ``affinity_group`` must be set,
+but not both.
+
+extended_properties
+~~~~~~~~~~~~~~~~~~~
+Optional. Dictionary containing name/value pairs of hosted service properties.
+You can have a maximum of 50 extended property name/value pairs. The maximum
+length of the Name element is 64 characters, only alphanumeric characters and
+underscores are valid in the Name, and the name must start with a letter.
+The value has a maximum length of 255 characters.
+
+CLI Example
+~~~~~~~~~~~
+The following example illustrates creating a hosted service.
+
+.. code-block:: bash
+
+    salt-cloud -f create_service my-azure name=my-service label=my-service location='West US'
+
+show_service
+------------
+Return details about a specific hosted service. Can also be called with
+``get_service``.
+
+.. code-block:: bash
+
+    salt-cloud -f show_storage my-azure name=my-service
+
+list_services
+-------------
+List all hosted services associates with the subscription.
+
+.. code-block:: bash
+
+    salt-cloud -f list_services my-azure-config
+
+
+delete_service
+--------------
+Delete a specific hosted service.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_service my-azure name=my-service
+
+
+Managing Storage Accounts
+=========================
+.. versionadded:: Beryllium
+
+Salt Cloud can manage storage accounts associated with the account. The
+following functions are available. Deprecated marked as deprecated are marked
+as such as per the SDK documentation, but are still included for completeness
+with the SDK.
+
+create_storage
+--------------
+Create a storage account. The following options are supported.
+
+name
+~~~~
+Required. The name of the storage account to create.
+
+label
+~~~~~
+Required. A label to apply to the storage account.
+
+description
+~~~~~~~~~~~
+Optional. A longer description of the storage account.
+
+location
+~~~~~~~~
+Required, if ``affinity_group`` is not set. The location in which to create the
+storage account. Either the ``location`` or the ``affinity_group`` must be set,
+but not both.
+
+affinity_group
+~~~~~~~~~~~~~~
+Required, if ``location`` is not set. The affinity group in which to create the
+storage account. Either the ``location`` or the ``affinity_group`` must be set,
+but not both.
+
+extended_properties
+~~~~~~~~~~~~~~~~~~~
+Optional. Dictionary containing name/value pairs of storage account properties.
+You can have a maximum of 50 extended property name/value pairs. The maximum
+length of the Name element is 64 characters, only alphanumeric characters and
+underscores are valid in the Name, and the name must start with a letter. The
+value has a maximum length of 255 characters.
+
+geo_replication_enabled
+~~~~~~~~~~~~~~~~~~~~~~~
+Deprecated. Replaced by the account_type parameter.
+
+account_type
+~~~~~~~~~~~~
+Specifies whether the account supports locally-redundant storage, geo-redundant
+storage, zone-redundant storage, or read access geo-redundant storage. Possible
+values are:
+
+- Standard_LRS
+- Standard_ZRS
+- Standard_GRS
+- Standard_RAGRS
+
+CLI Example
+~~~~~~~~~~~
+The following example illustrates creating a storage account.
+
+.. code-block:: bash
+
+    salt-cloud -f create_storage my-azure name=my-storage label=my-storage location='West US'
+
+list_storage
+------------
+List all storage accounts associates with the subscription.
+
+.. code-block:: bash
+
+    salt-cloud -f list_storage my-azure-config
+
+show_storage
+------------
+Return details about a specific storage account. Can also be called with
+``get_storage``.
+
+.. code-block:: bash
+
+    salt-cloud -f show_storage my-azure name=my-storage
+
+update_storage
+--------------
+Update details concerning a storage account. Any of the options available in
+``create_storage`` can be used, but the name cannot be changed.
+
+.. code-block:: bash
+
+    salt-cloud -f update_storage my-azure name=my-storage label=my-storage
+
+delete_storage
+------------
+Delete a specific storage account.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_storage my-azure name=my-storage
+
+show_storage_keys
+-----------------
+Returns the primary and secondary access keys for the specified storage account.
+
+.. code-block:: bash
+
+    salt-cloud -f show_storage_keys my-azure name=my-storage
+
+regenerate_storage_keys
+-----------------------
+Regenerate storage account keys. Requires a key_type ("primary" or "secondary")
+to be specified.
+
+.. code-block:: bash
+
+    salt-cloud -f regenerate_storage_keys my-azure name=my-storage key_type=primary
+
+
+Managing Disks
+==============
+.. versionadded:: Beryllium
+
+When a VM is created, a disk will also be created for it. The following
+functions are available for managing disks. Deprecated marked as deprecated are
+marked as such as per the SDK documentation, but are still included for
+completeness with the SDK.
+
+show_disk
+---------
+Return details about a specific disk. Can also be called with ``get_disk``.
+
+.. code-block:: bash
+
+    salt-cloud -f show_disk my-azure name=my-disk
+
+list_disks
+----------
+List all disks associates with the account.
+
+.. code-block:: bash
+
+    salt-cloud -f list_disks my-azure
+
+update_disk
+-----------
+Update details for a disk. The following options are available.
+
+name
+~~~~
+Required. The name of the disk to update.
+
+has_operating_system
+~~~~~~~~~~~~~~~~~~~~
+Deprecated.
+
+label
+~~~~~
+Required. The label for the disk.
+
+media_link
+~~~~~~~~~~
+Deprecated. The location of the disk in the account, including the storage
+container that it is in. This should not need to be changed.
+
+new_name
+~~~~~~~~
+Deprecated. If renaming the disk, the new name.
+
+os
+~~~
+Deprecated.
+
+CLI Example
+~~~~~~~~~~~
+The following example illustrates updating a disk.
+
+.. code-block:: bash
+
+    salt-cloud -f update_disk my-azure name=my-disk label=my-disk
+
+delete_disk
+-----------
+Delete a specific disk.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_disk my-azure name=my-disk
+
+
+Managing Service Certificates
+=============================
+.. versionadded:: Beryllium
+
+Stored at the cloud service level, these certificates are used by your deployed
+services. For more information on service certificates, see the following link:
+
+* `Manage Certificates`__
+
+.. __: https://msdn.microsoft.com/en-us/library/azure/gg981929.aspx
+
+The following functions are available.
+
+list_service_certificates
+-------------------------
+List service certificates associated with the account.
+
+.. code-block:: bash
+
+    salt-cloud -f list_service_certificates my-azure
+
+show_service_certificate
+------------------------
+Show the data for a specific service certificate associated with the account.
+The ``name``, ``thumbprint``, and ``thumbalgorithm`` can be obtained from
+``list_service_certificates``. Can also be called with
+``get_service_certificate``.
+
+.. code-block:: bash
+
+    salt-cloud -f show_service_certificate my-azure name=my_service_certificate \
+        thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+
+add_service_certificate
+-----------------------
+Add a service certificate to the account. This requires that a certificate
+already exists, which is then added to the account. For more information on
+creating the certificate itself, see:
+
+* `Create a Service Certificate for Azure`__
+
+.. __: https://msdn.microsoft.com/en-us/library/azure/gg432987.aspx
+
+The following options are available.
+
+name
+~~~~
+Required. The name of the hosted service that the certificate will belong to.
+
+data
+~~~~
+Required. The base-64 encoded form of the pfx file.
+
+certificate_format
+~~~~~~~~~~~~~~~~~~
+Required. The service certificate format. The only supported value is pfx.
+
+password
+~~~~~~~~
+The certificate password.
+
+.. code-block:: bash
+
+    salt-cloud -f add_service_certificate my-azure name=my-cert \
+        data='...CERT_DATA...' certificate_format=pfx password=verybadpass
+
+delete_service_certificate
+--------------------------
+Delete a service certificate from the account. The ``name``, ``thumbprint``,
+and ``thumbalgorithm`` can be obtained from ``list_service_certificates``.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_service_certificate my-azure \
+        name=my_service_certificate \
+        thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+
+
+Managing Management Certificates
+================================
+.. versionadded:: Beryllium
+
+A Azure management certificate is an X.509 v3 certificate used to authenticate
+an agent, such as Visual Studio Tools for Windows Azure or a client application
+that uses the Service Management API, acting on behalf of the subscription owner
+to manage subscription resources. Azure management certificates are uploaded to
+Azure and stored at the subscription level. The management certificate store can
+hold up to 100 certificates per subscription. These certificates are used to
+authenticate your Windows Azure deployment.
+
+For more information on management certificates, see the following link.
+
+* `Manage Certificates`__
+
+.. __: https://msdn.microsoft.com/en-us/library/azure/gg981929.aspx
+
+The following functions are available.
+
+list_management_certificates
+----------------------------
+List management certificates associated with the account.
+
+.. code-block:: bash
+
+    salt-cloud -f list_management_certificates my-azure
+
+show_management_certificate
+------------------------
+Show the data for a specific management certificate associated with the account.
+The ``name``, ``thumbprint``, and ``thumbalgorithm`` can be obtained from
+``list_management_certificates``. Can also be called with
+``get_management_certificate``.
+
+.. code-block:: bash
+
+    salt-cloud -f show_management_certificate my-azure name=my_management_certificate \
+        thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
+
+add_management_certificate
+-----------------------
+Management certificates must have a key length of at least 2048 bits and should
+reside in the Personal certificate store. When the certificate is installed on
+the client, it should contain the private key of the certificate. To upload to
+the certificate to the Microsoft Azure Management Portal, you must export it as
+a .cer format file that does not contain the private key. For more information
+on creating management certificates, see the following link:
+
+* `Create and Upload a Management Certificate for Azure`__
+
+.. __: https://msdn.microsoft.com/en-us/library/azure/gg551722.aspx
+
+The following options are available.
+
+public_key
+~~~~~~~~~~
+A base64 representation of the management certificate public key.
+
+thumbprint
+~~~~~~~~~~
+The thumb print that uniquely identifies the management certificate.
+
+data
+~~~~
+The certificate's raw data in base-64 encoded .cer format.
+
+.. code-block:: bash
+
+    salt-cloud -f add_management_certificate my-azure public_key='...PUBKEY...' \
+        thumbprint=0123456789ABCDEF data='...CERT_DATA...'
+
+delete_management_certificate
+-----------------------------
+Delete a management certificate from the account. The ``thumbprint`` can be
+obtained from ``list_management_certificates``.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_management_certificate my-azure thumbprint=0123456789ABCDEF
+
+
+Virtual Network Management
+==========================
+.. versionadded:: Beryllium
+
+The following are functions for managing virtual networks.
+
+list_virtual_networks
+---------------------
+List input endpoints associated with the deployment.
+
+.. code-block:: bash
+
+    salt-cloud -f list_virtual_networks my-azure service=myservice deployment=mydeployment
+
+
+Managing Input Endpoints
+========================
+.. versionadded:: Beryllium
+
+Input endpoints are used to manage port access for roles. Because endpoints
+cannot be managed by the Azure Python SDK, Salt Cloud uses the API directly.
+With versions of Python before 2.7.9, the ``requests-python`` package needs to
+be installed in order for this to work. Additionally, the following needs to be
+set in the master's configuration file:
+
+.. code-block:: bash
+
+    requests_lib: True
+
+The following functions are available.
+
+list_input_endpoints
+--------------------
+List input endpoints associated with the deployment
+
+.. code-block:: bash
+
+    salt-cloud -f list_input_endpoints my-azure service=myservice deployment=mydeployment
+
+show_input_endpoint
+-------------------
+Show an input endpoint associated with the deployment
+
+.. code-block:: bash
+
+    salt-cloud -f show_input_endpoint my-azure service=myservice \
+        deployment=mydeployment name=SSH
+
+add_input_endpoint
+------------------
+Add an input endpoint to the deployment. Please note that there may be a delay
+before the changes show up. The following options are available.
+
+service
+~~~~~~~
+Required. The name of the hosted service which the VM belongs to.
+
+deployment
+~~~~~~~~~~
+Required. The name of the deployment that the VM belongs to. If the VM was
+created with Salt Cloud, the deployment name probably matches the VM name.
+
+role
+~~~~
+Required. The name of the role that the VM belongs to. If the VM was created
+with Salt Cloud, the role name probably matches the VM name.
+
+name
+~~~~
+Required. The name of the input endpoint. This typically matches the port that
+the endpoint is set to. For instance, port 22 would be called SSH.
+
+port
+~~~~
+Required. The public (Internet-facing) port that is used for the endpoint.
+
+local_port
+~~~~~~~~~~
+Optional. The private port on the VM itself that will be matched with the port.
+This is typically the same as the ``port``. If this value is not specified, it
+will be copied from ``port``.
+
+protocol
+~~~~~~~~
+Required. Either ``tcp`` or ``udp``.
+
+enable_direct_server_return
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Optional. If an internal load balancer exists in the account, it can be used
+with a direct server return. The default value is ``False``. Please see the
+following article for an explanation of this option.
+
+* `Load Balancing for Azure Infrastructure Services`__
+
+.. __: http://azure.microsoft.com/en-us/documentation/articles/virtual-machines-load-balance/
+
+timeout_for_tcp_idle_connection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Optional. The default value is ``4``. Please see the following article for an
+explanation of this option.
+
+* `Configurable Idle Timeout for Azure Load Balancer`__
+
+.. __: http://azure.microsoft.com/blog/2014/08/14/new-configurable-idle-timeout-for-azure-load-balancer/
+
+CLI Example
+~~~~~~~~~~~
+The following example illustrates adding an input endpoint.
+
+.. code-block:: bash
+
+    salt-cloud -f add_input_endpoint my-azure service=myservice \
+        deployment=mydeployment role=myrole name=HTTP local_port=80 \
+        port=80 protocol=tcp enable_direct_server_return=False \
+        timeout_for_tcp_idle_connection=4
+
+update_input_endpoint
+---------------------
+Updates the details for a specific input endpoint. All options from
+``add_input_endpoint`` are supported.
+
+.. code-block:: bash
+
+    salt-cloud -f update_input_endpoint my-azure service=myservice \
+        deployment=mydeployment role=myrole name=HTTP local_port=80 \
+        port=80 protocol=tcp enable_direct_server_return=False \
+        timeout_for_tcp_idle_connection=4
+
+delete_input_endpoint
+---------------------
+Delete an input endpoint from the deployment. Please note that there may be a
+delay before the changes show up.  The following items are required.
+
+CLI Example
+~~~~~~~~~~~
+The following example illustrates deleting an input endpoint.
+
+service
+~~~~~~~
+The name of the hosted service which the VM belongs to.
+
+deployment
+~~~~~~~~~~
+The name of the deployment that the VM belongs to. If the VM was created with
+Salt Cloud, the deployment name probably matches the VM name.
+
+role
+~~~~
+The name of the role that the VM belongs to. If the VM was created with Salt
+Cloud, the role name probably matches the VM name.
+
+name
+~~~~
+The name of the input endpoint. This typically matches the port that the
+endpoint is set to. For instance, port 22 would be called SSH.
+
+.. code-block:: bash
+
+    salt-cloud -f delete_input_endpoint my-azure service=myservice \
+        deployment=mydeployment role=myrole name=HTTP
+
+
+Managing Affinity Groups
+========================
+.. versionadded:: Beryllium
+
+Affinity groups allow you to group your Azure services to optimize performance.
+All services and VMs within an affinity group will be located in the same
+region. For more information on Affinity groups, see the following link:
+
+* `Create an Affinity Group in the Management Portal`__
+
+.. __: https://msdn.microsoft.com/en-us/library/azure/jj156209.aspx
+
+The following functions are available.
+
+list_affinity_groups
+--------------------
+List input endpoints associated with the account
+
+.. code-block:: bash
+
+    salt-cloud -f list_affinity_groups my-azure
+
+show_affinity_group
+-------------------
+Show an affinity group associated with the account
+
+.. code-block:: bash
+
+    salt-cloud -f show_affinity_group my-azure service=myservice \
+        deployment=mydeployment name=SSH
+
+create_affinity_group
+---------------------
+Create a new affinity group. The following options are supported.
+
+name
+~~~~
+Required. The name of the new affinity group.
+
+location
+~~~~~~~~
+Required. The region in which the affinity group lives.
+
+label
+~~~~~
+Required. A label describing the new affinity group.
+
+description
+~~~~~~~~~~~
+Optional. A longer description of the affinity group.
+
+.. code-block:: bash
+
+    salt-cloud -f create_affinity_group my-azure name=my_affinity_group \
+       label=my-affinity-group location='West US'
+
+update_affinity_group
+---------------------
+Update an affinity group's properties
+
+.. code-block:: bash
+
+    salt-cloud -f update_affinity_group my-azure name=my_group label=my_group
+
+delete_affinity_group
+---------------------
+Delete a specific affinity group associated with the account
+
+.. code-block:: bash
+
+    salt-cloud -f delete_affinity_group my-azure name=my_affinity_group

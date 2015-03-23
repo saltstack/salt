@@ -2,13 +2,16 @@
 '''
 Support for rpm
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+import re
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -128,6 +131,79 @@ def verify(*package, **kwargs):
     return ret
 
 
+def modified(*packages, **flags):
+    '''
+    List the modified files that belong to a package. Not specifying any packages
+    will return a list of _all_ modified files on the system's RPM database.
+
+    .. versionadded:: 2015.2.0
+
+    CLI examples:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.modified httpd
+        salt '*' lowpkg.modified httpd postfix
+        salt '*' lowpkg.modified
+    '''
+    ret = __salt__['cmd.run_all'](
+        ['rpm', '-Va'] + list(packages),
+        python_shell=False,
+        output_loglevel='trace')
+
+    data = {}
+
+    # If verification has an output, then it means it failed
+    # and the return code will be 1. We are interested in any bigger
+    # than 1 code.
+    if ret['retcode'] > 1:
+        del ret['stdout']
+        return ret
+    elif not ret['retcode']:
+        return data
+
+    ptrn = re.compile(r"\s+")
+    changes = cfg = f_name = None
+    for f_info in ret['stdout'].splitlines():
+        f_info = ptrn.split(f_info)
+        if len(f_info) == 3:  # Config file
+            changes, cfg, f_name = f_info
+        else:
+            changes, f_name = f_info
+            cfg = None
+        keys = ['size', 'mode', 'checksum', 'device', 'symlink',
+                'owner', 'group', 'time', 'capabilities']
+        changes = list(changes)
+        if len(changes) == 8:  # Older RPMs do not support capabilities
+            changes.append(".")
+        stats = []
+        for k, v in zip(keys, changes):
+            if v != '.':
+                stats.append(k)
+        if cfg is not None:
+            stats.append('config')
+        data[f_name] = stats
+
+    if not flags:
+        return data
+
+    # Filtering
+    filtered_data = {}
+    for f_name, stats in data.items():
+        include = True
+        for param, pval in flags.items():
+            if param.startswith("_"):
+                continue
+            if (not pval and param in stats) or \
+               (pval and param not in stats):
+                include = False
+                break
+        if include:
+            filtered_data[f_name] = stats
+
+    return filtered_data
+
+
 def file_list(*packages):
     '''
     List the files that belong to a package. Not specifying any packages will
@@ -222,3 +298,33 @@ def owner(*paths):
     if len(ret) == 1:
         return list(ret.values())[0]
     return ret
+
+
+@decorators.which('rpm2cpio')
+@decorators.which('cpio')
+@decorators.which('diff')
+def diff(package, path):
+    '''
+    Return a formatted diff between current file and original in a package.
+    NOTE: this function includes all files (configuration and not), but does
+    not work on binary content.
+
+    :param package: The name of the package
+    :param path: Full path to the installed file
+    :return: Difference or empty string. For binary files only a notification.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.diff apache2 /etc/apache2/httpd.conf
+    '''
+
+    cmd = "rpm2cpio {0} " \
+          "| cpio -i --quiet --to-stdout .{1} " \
+          "| diff -u --label 'A {1}' --from-file=- --label 'B {1}' {1}"
+    res = __salt__['cmd.shell'](cmd.format(package, path), output_loglevel='trace')
+    if res and res.startswith('Binary file'):
+        return 'File "{0}" is binary and its content has been modified.'.format(path)
+
+    return res

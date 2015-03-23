@@ -60,6 +60,7 @@ def add(name,
         roomnumber=False,
         workphone=False,
         homephone=False,
+        loginclass=False,
         createhome=False
         # pylint: enable=W0613
         ):

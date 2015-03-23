@@ -66,6 +66,7 @@ starting the other Salt daemons.
 
 Topology
 ========
+
 The ``salt-syndic`` is little more than a command and event forwarder. When a
 command is issued from a higher-level master, it will be received by the
 configured syndics on lower-level masters, and propagated to to their minions,
@@ -83,3 +84,22 @@ Nodes on the lowest points of the hierarchy (minions which do not propagate
 data to another level) will only have the ``salt-minion`` daemon running. There
 is no need for either ``salt-master`` or ``salt-syndic`` to be running on a
 standard minion.
+
+Syndic and the CLI
+==================
+
+In order for the high-level master to return information from minions that are
+below the syndic(s), the CLI requires a short wait time in order to allow the
+syndic(s) to gather responses from their minions. This value is defined in the
+``syndic_wait` and has a default of five seconds.
+
+While it is possible to run a syndic without a minion installed on the same machine,
+it is recommended, for a faster CLI response time, to do so. Without a minion
+installed on the syndic, the timeout value of ``syndic_wait`` increases
+significantly - about three-fold. With a minion installed on the syndic, the CLI
+timeout resides at the value defined in ``syndic_wait``. 
+
+.. note::
+
+    To reduce the amount of time the CLI waits for minions to respond, install a minion
+    on the syndic or tune the value of the ``syndic_wait`` configuration.

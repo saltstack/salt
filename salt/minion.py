@@ -586,7 +586,10 @@ class MultiMinion(MinionBase):
             package = None
             for minion in six.itervalues(minions):
                 if isinstance(minion, dict):
-                    minion = minion['minion']
+                    if 'minion' in minion:
+                        minion = minion['minion']
+                    else:
+                        continue
                 if not hasattr(minion, 'schedule'):
                     continue
                 loop_interval = self.process_schedule(minion, loop_interval)
@@ -1076,10 +1079,6 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
-        # If we are running in multi-master mode, re-inject opts into module funcs
-        if instance.opts.get('multimaster', False):
-            for func in instance.functions:
-                sys.modules[instance.functions[func].__module__].__opts__ = self.opts
         if self.opts['multiprocessing']:
             if sys.platform.startswith('win'):
                 # let python reconstruct the minion on the other side if we're
@@ -1319,6 +1318,9 @@ class Minion(MinionBase):
                     'id': self.opts['id'],
                     'jid': jid,
                     'fun': fun,
+                    'arg': ret.get('arg'),
+                    'tgt': ret.get('tgt'),
+                    'tgt_type': ret.get('tgt_type'),
                     'load': ret.get('__load__')}
             if '__master_id__' in ret:
                 load['master_id'] = ret['__master_id__']
@@ -1527,7 +1529,7 @@ class Minion(MinionBase):
             )
         )
         auth = salt.crypt.SAuth(self.opts)
-        auth.authenticate()
+        auth.authenticate(timeout=timeout, safe=safe)
         # TODO: remove these and just use a local reference to auth??
         self.tok = auth.gen_token('salt')
         self.crypticle = auth.crypticle
@@ -1875,13 +1877,6 @@ class Minion(MinionBase):
                     'An exception occurred while polling the minion',
                     exc_info=True
                 )
-            # Process Beacons
-            try:
-                beacons = self.process_beacons(self.functions)
-            except Exception:
-                log.critical('The beacon errored: ', exc_info=True)
-            if beacons:
-                self._fire_master(events=beacons)
 
     def tune_in_no_block(self):
         '''
@@ -2001,6 +1996,7 @@ class Syndic(Minion):
         opts['loop_interval'] = 1
         super(Syndic, self).__init__(opts, **kwargs)
         self.mminion = salt.minion.MasterMinion(opts)
+        self.jid_forward_cache = set()
 
     def _handle_aes(self, load, sig=None):
         '''
@@ -2256,10 +2252,19 @@ class Syndic(Minion):
                     jdict['__fun__'] = event['data'].get('fun')
                     jdict['__jid__'] = event['data']['jid']
                     jdict['__load__'] = {}
-                    fstr = '{0}.get_jid'.format(self.opts['master_job_cache'])
-                    jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
-                        )
+                    fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
+                    # Only need to forward each load once. Don't hit the disk
+                    # for every minion return!
+                    if event['data']['jid'] not in self.jid_forward_cache:
+                        jdict['__load__'].update(
+                            self.mminion.returners[fstr](event['data']['jid'])
+                            )
+                        self.jid_forward_cache.add(event['data']['jid'])
+                        if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
+                            # Pop the oldest jid from the cache
+                            tmp = sorted(list(self.jid_forward_cache))
+                            tmp.pop(0)
+                            self.jid_forward_cache = set(tmp)
                 if 'master_id' in event['data']:
                     # __'s to make sure it doesn't print out on the master cli
                     jdict['__master_id__'] = event['data']['master_id']
@@ -2322,6 +2327,7 @@ class MultiSyndic(MinionBase):
         self.syndic_mode = self.opts.get('syndic_mode', 'sync')
 
         self._has_master = threading.Event()
+        self.jid_forward_cache = set()
 
         # create all of the syndics you need
         self.master_syndics = {}
@@ -2555,10 +2561,19 @@ class MultiSyndic(MinionBase):
                     jdict['__fun__'] = event['data'].get('fun')
                     jdict['__jid__'] = event['data']['jid']
                     jdict['__load__'] = {}
-                    fstr = '{0}.get_jid'.format(self.opts['master_job_cache'])
-                    jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
-                        )
+                    fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
+                    # Only need to forward each load once. Don't hit the disk
+                    # for every minion return!
+                    if event['data']['jid'] not in self.jid_forward_cache:
+                        jdict['__load__'].update(
+                            self.mminion.returners[fstr](event['data']['jid'])
+                            )
+                        self.jid_forward_cache.add(event['data']['jid'])
+                        if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
+                            # Pop the oldest jid from the cache
+                            tmp = sorted(list(self.jid_forward_cache))
+                            tmp.pop(0)
+                            self.jid_forward_cache = set(tmp)
                 if 'master_id' in event['data']:
                     # __'s to make sure it doesn't print out on the master cli
                     jdict['__master_id__'] = event['data']['master_id']

@@ -63,7 +63,8 @@ packages. Also, while this is not explicitly mentioned in the pygit2_
 installation instructions, libssh2 development headers must be installed before
 building libgit2 in order to enable access to SSH-protected git repositories.
 Luckily, these are available in most distros' repositories, usually as either
-``libssh2-devel`` or ``libssh2-dev``, depending on platform.
+``libssh2-devel`` or ``libssh2-dev``, depending on platform. On some distros
+(debian based) ``pkg-config`` is also required to link libgit2 with libssh2.
 
 .. __: http://www.pygit2.org/install.html
 
