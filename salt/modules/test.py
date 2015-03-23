@@ -134,6 +134,9 @@ def versions_report():
     return '\n'.join(salt.version.versions_report())
 
 
+versions = versions_report
+
+
 def conf_test():
     '''
     Return the value for test.foo in the minion configuration file, or return
