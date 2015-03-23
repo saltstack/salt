@@ -50,6 +50,22 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'safsdfsal;fdkjsafkljsASSADFalkfj'
 
+.. code-block:: yaml
+
+    create server certificate:
+      boto_iam.server_cert_present:
+        - name: mycert
+        - public_key: salt://base/mycert.crt
+        - private_key: salt://base/mycert.key
+        - cert_chain: salt://base/mycert_chain.crt
+        - region: eu-west-1
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'fdkjsafkljsASSADFalkfjasdf'
+
+.. code-block:: yaml
+    delete server certificate:
+      boto_iam.server_cert_absent:
+        - name: mycert
 '''
 
 import logging
@@ -337,18 +353,6 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
 def server_cert_present(name, public_key, private_key, cert_chain=None, path=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
-    .. code-block:: yaml
-
-    create server certificate:
-      boto_iam.server_cert_present:
-        - name: mycert
-        - public_key: salt://base/mycert.crt
-        - private_key: salt://base/mycert.key
-        - cert_chain: salt://base/mycert_chain.crt
-        - region: eu-west-1
-        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
-        - key: 'fdkjsafkljsASSADFalkfjasdf'
-
     name (string) - The name for the server certificate. Do not include the path in this value.
 
     public_key (string) -  The contents of the public key certificate in PEM-encoded format.
