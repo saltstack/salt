@@ -1049,6 +1049,8 @@ Walkthrough <gitfs-per-remote-config>`.
 Specify the provider to be used for gitfs. More information can be found in the
 :ref:`GitFS Walkthrough <gitfs-dependencies>`.
 
+Specify one value among valid values: ``gitpython``, ``pygit2``, ``dulwich``
+
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _dulwich: https://www.samba.org/~jelmer/dulwich/
