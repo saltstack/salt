@@ -76,7 +76,13 @@ def key_present(name, save_private=None, upload_public=None, region=None, key=No
     exists = __salt__['boto_ec2.get_key'](name, region, key, keyid, profile)
     log.debug('exists is {0}'.format(exists))
     if 'salt://' in upload_public:
-        upload_public = __salt__['cp.get_file_str'](upload_public)
+        try:
+            upload_public = __salt__['cp.get_file_str'](upload_public)
+        except IOError as e:
+            log.debug(e)
+            ret['comment'] = 'File {0} not found.'.format(upload_public)
+            ret['result'] = False
+            return ret
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'The key {0} is set to be created.'.format(name)
