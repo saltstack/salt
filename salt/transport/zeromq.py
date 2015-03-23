@@ -366,7 +366,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             ret, req_opts = self.payload_handler(payload)  # TODO: check if a future
         except Exception as e:
             # always attempt to return an error to the minion
-            stream.write('Some exception handling minion payload')
+            stream.send('Some exception handling minion payload')
             log.error('Some exception handling a payload from minion', exc_info=True)
             raise tornado.gen.Return()
 

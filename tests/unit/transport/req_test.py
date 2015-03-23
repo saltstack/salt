@@ -11,7 +11,7 @@ class ReqChannelMixin(object):
             {'baz': 'qux', 'list': [1, 2, 3]},
         ]
         for msg in msgs:
-            ret = self.channel.send(msg)
+            ret = self.channel.send(msg, timeout=2, tries=1)
             self.assertEqual(ret['load'], msg)
 
     def test_normalization(self):
@@ -25,7 +25,7 @@ class ReqChannelMixin(object):
             {'list': tuple([1, 2, 3])},
         ]
         for msg in msgs:
-            ret = self.channel.send(msg)
+            ret = self.channel.send(msg, timeout=2, tries=1)
             for k, v in ret['load'].iteritems():
                 self.assertEqual(types[k], type(v))
 
@@ -35,5 +35,5 @@ class ReqChannelMixin(object):
         '''
         msgs = ['', [], tuple()]
         for msg in msgs:
-            ret = self.channel.send(msg)
+            ret = self.channel.send(msg, timeout=2, tries=1)
             self.assertEqual(ret, 'payload and load must be a dict')

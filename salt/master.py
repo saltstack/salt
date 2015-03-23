@@ -112,14 +112,12 @@ class SMaster(object):
         self.opts = state['opts']
         self.master_key = state['master_key']
         self.key = state['key']
-        self.crypticle = state['crypticle']
         SMaster.aes = state['aes']
 
     def __getstate__(self):
         return {'opts': self.opts,
                 'master_key': self.master_key,
                 'key': self.key,
-                'crypticle': self.crypticle,
                 'aes': SMaster.aes}
 
     def __prep_key(self):
@@ -424,7 +422,6 @@ class Master(SMaster):
     def run_reqserver(self):
         reqserv = ReqServer(
             self.opts,
-            self.crypticle,
             self.key,
             self.master_key)
         reqserv.run()
@@ -660,7 +657,6 @@ class MWorker(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
         self.opts = state['opts']
         self.serial = state['serial']
-        self.crypticle = state['crypticle']
         self.mkey = state['mkey']
         self.key = state['key']
         self.k_mtime = state['k_mtime']
@@ -669,7 +665,6 @@ class MWorker(multiprocessing.Process):
     def __getstate__(self):
         return {'opts': self.opts,
                 'serial': self.serial,
-                'crypticle': self.crypticle,
                 'mkey': self.mkey,
                 'key': self.key,
                 'k_mtime': self.k_mtime,
@@ -2116,8 +2111,8 @@ class FloMWorker(MWorker):
                  opts,
                  mkey,
                  key,
-                 crypticle):
-        MWorker.__init__(self, opts, mkey, key, crypticle)
+                 ):
+        MWorker.__init__(self, opts, mkey, key)
 
     def setup(self):
         '''
@@ -2128,8 +2123,8 @@ class FloMWorker(MWorker):
                 self.opts,
                 self.key,
                 self.mkey,
-                self.crypticle)
-        self.aes_funcs = salt.master.AESFuncs(self.opts, self.crypticle)
+                )
+        self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.context = zmq.Context(1)
         self.socket = self.context.socket(zmq.REP)
         if self.opts.get('ipc_mode', '') == 'tcp':

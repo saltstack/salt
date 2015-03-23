@@ -346,7 +346,7 @@ class SAuth(object):
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         while True:
-            creds = self.sign_in(timeout, safe)
+            creds = self.sign_in()
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '

@@ -589,9 +589,9 @@ class Minion(MinionBase):
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
-        self.beacons = salt.beacons.Beacon(opts, self.functions)
-        uid = salt.utils.get_uid(user=opts.get('user', None))
-        self.proc_dir = get_proc_dir(opts['cachedir'], uid=uid)
+        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+        uid = salt.utils.get_uid(user=self.opts.get('user', None))
+        self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
@@ -1778,7 +1778,7 @@ class Syndic(Minion):
             'return' in event['data']:
             if 'jid' not in event['data']:
                 # Not a job return
-                continue
+                return
             jdict = self.jids.setdefault(event['tag'], {})
             if not jdict:
                 jdict['__fun__'] = event['data'].get('fun')
@@ -2011,10 +2011,10 @@ class MultiSyndic(MinionBase):
             'return' in event['data']:
             if 'jid' not in event['data']:
                 # Not a job return
-                continue
+                return
             if self.syndic_mode == 'cluster' and event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
                 log.debug('Return recieved with matching master_id, not forwarding')
-                continue
+                return
 
             jdict = self.jids.setdefault(event['tag'], {})
             if not jdict:
