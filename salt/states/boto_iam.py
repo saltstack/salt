@@ -364,6 +364,10 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
             ret['comment'] = 'File {0} not found.'.format(cert_chain)
             ret['result'] = False
             return ret
+    if __opts__['test']:
+        ret['comment'] = 'Account policy is set to be changed'
+        ret['result'] = None
+        return ret
     created = __salt__['boto_iam.upload_server_cert'](name, public_key, private_key, cert_chain,
                                                       path, region, key, keyid, profile)
     if not created:
