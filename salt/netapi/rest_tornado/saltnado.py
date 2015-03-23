@@ -882,7 +882,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
 
         # seed minions_remaining with the pub_data
-        self.minions_remaining = pub_data['minions']
+        minions_remaining = pub_data['minions']
 
         syndic_min_wait = None
         if self.application.opts['order_masters']:
@@ -891,13 +891,17 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         job_not_running = self.job_not_running(pub_data['jid'],
                                                chunk['tgt'],
                                                f_call['kwargs']['expr_form'],
+                                               minions_remaining=minions_remaining
                                                )
 
         # if we have a min_wait, do that
         if syndic_min_wait is not None:
             yield syndic_min_wait
         # we are completed when either all minions return or the job isn't running anywhere
-        chunk_ret = yield self.all_returns(pub_data['jid'], finish_futures=[job_not_running])
+        chunk_ret = yield self.all_returns(pub_data['jid'],
+                                           finish_futures=[job_not_running],
+                                           minions_remaining=minions_remaining,
+                                           )
 
         raise tornado.gen.Return(chunk_ret)
 
@@ -905,13 +909,16 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
     def all_returns(self,
                     jid,
                     finish_futures=None,
+                    minions_remaining=None,
                     ):
         '''
         Return a future which will complete once all returns are completed
-        (according to self.minions_remaining), or one of the passed in"        finish_futures" completes
+        (according to minions_remaining), or one of the passed in "finish_futures" completes
         '''
         if finish_futures is None:
             finish_futures = []
+        if minions_remaining is None:
+            minions_remaining = []
 
         ret_tag = tagify([jid, 'ret'], 'job')
         chunk_ret = {}
@@ -926,10 +933,10 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             chunk_ret[event['data']['id']] = event['data']['return']
             # its possible to get a return that wasn't in the minion_remaining list
             try:
-                self.minions_remaining.remove(event['data']['id'])
+                minions_remaining.remove(event['data']['id'])
             except ValueError:
                 pass
-            if len(self.minions_remaining) == 0:
+            if len(minions_remaining) == 0:
                 raise tornado.gen.Return(chunk_ret)
 
     @tornado.gen.coroutine
@@ -937,11 +944,14 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                   jid,
                   tgt,
                   tgt_type,
+                  minions_remaining=None,
                   ):
         '''
         Return a future which will complete once jid (passed in) is no longer
         running on tgt
         '''
+        if minions_remaining is None:
+            minions_remaining = []
 
         ping_pub_data = self.saltclients['local'](tgt,
                                                   'saltutil.find_job',
@@ -972,8 +982,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
                 continue
             minion_running = True
             id_ = event['data']['id']
-            if hasattr(self, 'minions_remaining') and id_ not in self.minions_remaining:
-                self.minions_remaining.append(event['data']['id'])
+            if id_ not in minions_remaining:
+                minions_remaining.append(event['data']['id'])
 
     @tornado.gen.coroutine
     def _disbatch_local_async(self, chunk):
