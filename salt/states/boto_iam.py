@@ -67,7 +67,7 @@ def __virtual__():
 
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Ensure the IAM group is present
+    Ensure the IAM user is present
 
     name (string) – The name of the new user.
 
@@ -75,7 +75,7 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
 
     path (string) - The path of the user. Default is '/'
 
-    grouo (string) - The name of the group to add the user to.
+    group (string) - The name of the group to add the user to.
 
     region (string) - Region to connect to.
 
@@ -203,7 +203,8 @@ def _case_policy(ret, group_name, policy_name, policy, region=None, key=None, ke
     exists = __salt__['boto_iam.get_group_policy'](group_name, policy_name, region, key, keyid, profile)
     if exists:
         log.debug('exists is : {0}'.format(exists))
-        policy = json.loads(policy, object_pairs_hook=odict.OrderedDict)
+        if not isinstance(policy, str):
+            policy = json.loads(policy, object_pairs_hook=odict.OrderedDict)
         log.debug('policy is  : {0}'.format(policy))
         if exists == policy:
             ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} is present.'.format(group_name)])
@@ -308,9 +309,9 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
     create server certificate:
       boto_iam.server_cert_present:
         - name: mycert
-        - public_key: salt://mycert.crt
-        - private_key: salt://mycert.key
-        - cert_chain: salt://mycert_chain.crt
+        - public_key: salt://base/mycert.crt
+        - private_key: salt://base/mycert.key
+        - cert_chain: salt://base/mycert_chain.crt
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'fdkjsafkljsASSADFalkfjasdf'
