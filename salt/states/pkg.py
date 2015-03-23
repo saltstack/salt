@@ -1551,7 +1551,7 @@ def purged(name, version=None, pkgs=None, **kwargs):
                 'comment': str(exc)}
 
 
-def uptodate(name, refresh=False):
+def uptodate(name, refresh=False, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1563,6 +1563,11 @@ def uptodate(name, refresh=False):
 
     refresh
         refresh the package database before checking for new upgrades
+
+    kwargs
+        Any keyword arguments to pass through to ``pkg.upgrade``.
+
+        .. versionadded:: 2015.2
     '''
     ret = {'name': name,
            'changes': {},
@@ -1592,7 +1597,7 @@ def uptodate(name, refresh=False):
         ret['result'] = None
         return ret
 
-    updated = __salt__['pkg.upgrade'](refresh=refresh)
+    updated = __salt__['pkg.upgrade'](refresh=refresh, **kwargs)
 
     if updated.get('result') is False:
         ret.update(updated)
