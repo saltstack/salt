@@ -743,6 +743,64 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
     return __context__[cache_key]
 
 
+def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=None,
+                       region=None, key=None, keyid=None, profile=None):
+    '''
+    Upload a certificate to Amazon
+
+    CLI example::
+
+        salt myminion boto_iam.upload_server_cert mycert_name crt priv_key
+
+    :param cert_name: The name for the server certificate. Do not include the path in this value.
+    :param cert_body: The contents of the public key certificate in PEM-encoded format.
+    :param private_key: The contents of the private key in PEM-encoded format.
+    :param cert_chain:  The contents of the certificate chain. This is typically a
+    concatenation of the PEM-encoded public key certificates of the chain.
+    :param path: The path for the server certificate.
+    :param region: The name of the region to connect to.
+    :param key: The key to be used in order to connect
+    :param keyid: The keyid to be used in order to connect
+    :param profile: The profile that contains a dict of region, key, keyid
+    :return: True / False
+    '''
+
+    exists = __salt__['boto_iam.get_server_certificate'](cert_name, region, key, keyid, profile)
+    if exists:
+        return True
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.upload_server_cert(cert_name, cert_body, private_key, cert_chain)
+        log.info('Created certificate {0} .'.format(cert_name))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to failed to create certificate {0} .'
+        log.error(msg.format())
+        return False
+
+
+def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns certificate information from Amazon
+
+    CLI example::
+
+        salt myminion boto_iam.upload_server_cert mycert_name
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_server_certificate(cert_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get certificate {0} information.'
+        log.error(msg.format(cert_name))
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to IAM.
