@@ -261,11 +261,7 @@ def host_keys(keydir=None):
                     # As of RFC 4716 "a key file is a text file, containing a sequence of lines",
                     # although some SSH implementations (e.g. OpenSSH) manage their own format(s).
                     # Please see #20708 for a discussion about how to handle SSH key files in the future
-                    if fn_.endswith('.pub'):
-                        # strip() for backwards compatibility
-                        keys[kname] = _fh.read.strip()
-                    else:
-                        keys[kname] = _fh.read()
+                    keys[kname] = _fh.read.strip()
             except (IOError, OSError):
                 keys[kname] = ''
     return keys
