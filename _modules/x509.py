@@ -16,16 +16,101 @@ import logging
 import hashlib
 import glob
 from salt.ext.six.moves import range
-import OpenSSL
 import M2Crypto
 import random
 import ctypes
+import tempfile
+import yaml
+import subprocess
+import re
 from M2Crypto import m2, X509, RSA, BIO, EVP
 
 # Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
+
+
+# Everything in this section is an ugly hack to fix an ancient bug in M2Crypto
+# https://bugzilla.osafoundation.org/show_bug.cgi?id=7530#c13
+class _Ctx(ctypes.Structure):
+    _fields_ = [ ('flags', ctypes.c_int),
+                 ('issuer_cert', ctypes.c_void_p),
+                 ('subject_cert', ctypes.c_void_p),
+                 ('subject_req', ctypes.c_void_p),
+                 ('crl', ctypes.c_void_p),
+                 ('db_meth', ctypes.c_void_p),
+                 ('db', ctypes.c_void_p),
+                ]
+
+def _fix_ctx(m2_ctx, issuer = None):
+    ctx = _Ctx.from_address(int(m2_ctx))
+
+    ctx.flags = 0
+    ctx.subject_cert = None
+    ctx.subject_req = None
+    ctx.crl = None
+    if issuer is None:
+        ctx.issuer_cert = None
+    else:
+        ctx.issuer_cert = int(issuer.x509)
+
+
+def _new_extension(name, value, critical=0, issuer=None, _pyfree = 1):
+    """
+    Create new X509_Extension instance.
+    """
+    if name == 'subjectKeyIdentifier' and \
+        value.strip('0123456789abcdefABCDEF:') is not '':
+        raise ValueError('value must be precomputed hash')
+
+
+    lhash = M2Crypto.m2.x509v3_lhash()
+    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)
+    #ctx not zeroed
+    _fix_ctx(ctx, issuer)
+
+    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)
+    #ctx,lhash freed
+
+    if x509_ext_ptr is None:
+        raise Exception
+    x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
+    x509_ext.set_critical(critical)
+    return x509_ext 
+# End of ugly hacks
+
+
+# This is another ugly hack, because M2Crypto doesn't support getting
+# Extensions from CSRs. https://github.com/martinpaljak/M2Crypto/issues/63
+def _req_extensions(csrFilename):
+    cmd = ('openssl req -text -noout -in %s'
+        % csrFilename)
+
+    output = subprocess.check_output(cmd.split(),
+        stderr=subprocess.STDOUT)
+
+    output = re.sub(r': rsaEncryption', ':', output)
+    output = re.sub(r'[0-9a-f]{2}:', '', output)
+
+    return yaml.safe_load(output)
+
+
+def _get_csr_extensions(csr):
+    # Currently only supports SAN
+    # Add SubjectAlternativeName from CSR
+    ret = []
+
+    csrtempfile = tempfile.NamedTemporaryFile()
+    csrtempfile.write(csr.as_pem())
+    csrtempfile.flush()
+    csryaml = _req_extensions(csrtempfile.name)
+    csrtempfile.close()
+    csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
+    if 'X509v3 Subject Alternative Name' in csrexts:
+        ret.append({'name': 'subjectAltName',
+                           'value': csrexts['X509v3 Subject Alternative Name']})
+    return ret
 
 
 def get_pem_entry(text, pem_type=None):
@@ -133,15 +218,15 @@ def read_certificate(certificate):
         'Not After': str(cert.get_not_after().get_datetime()),
     }
 
-    exts = {}
+    exts = []
     for ext_index in range(0, cert.get_ext_count()):
         ext = cert.get_ext_at(ext_index)
         name = ext.get_name()
-        exts[name] = {
-            'index': ext_index,
-            'critical': bool(ext.get_critical()),
+        exts.append({
+            'name': name,
             'value': ext.get_value(),
-        }
+            'critical': bool(ext.get_critical()),
+        })
 
     if exts:
         ret['X509v3 Extensions'] = exts
@@ -187,68 +272,18 @@ def write_pem(text, path, pem_type=None):
     return 'PEM written to {0}'.format(path)
 
 
-def _parse_subject_in(subject_list):
+def _parse_subject_in(subject_dict):
     '''
-    designed to parse the lists of ordereddicts that salt states provide
+    parses a dict of subject entries
     '''
     subject = X509.X509_Name()
 
-    for entry in subject_list:
-        if entry['name'] not in subject.nid:
-            raise ValueError('{0} is not a valid subject property'.format(entry['name']))
-        setattr(subject, entry['name'], entry['value'])
+    for name, value in subject_dict.iteritems():
+        if name not in subject.nid:
+            raise ValueError('{0} is not a valid subject property'.format(name))
+        setattr(subject, name, value)
 
     return subject
-
-
-# Everything in this section is an ugly hack to fix an ancient bug in M2Crypto
-# https://bugzilla.osafoundation.org/show_bug.cgi?id=7530#c13
-class _Ctx(ctypes.Structure):
-    _fields_ = [ ('flags', ctypes.c_int),
-                 ('issuer_cert', ctypes.c_void_p),
-                 ('subject_cert', ctypes.c_void_p),
-                 ('subject_req', ctypes.c_void_p),
-                 ('crl', ctypes.c_void_p),
-                 ('db_meth', ctypes.c_void_p),
-                 ('db', ctypes.c_void_p),
-                ]
-
-def _fix_ctx(m2_ctx, issuer = None):
-    ctx = _Ctx.from_address(int(m2_ctx))
-
-    ctx.flags = 0
-    ctx.subject_cert = None
-    ctx.subject_req = None
-    ctx.crl = None
-    if issuer is None:
-        ctx.issuer_cert = None
-    else:
-        ctx.issuer_cert = int(issuer.x509)
-
-
-def _new_extension(name, value, critical=0, issuer=None, _pyfree = 1):
-    """
-    Create new X509_Extension instance.
-    """
-    if name == 'subjectKeyIdentifier' and \
-        value.strip('0123456789abcdefABCDEF:') is not '':
-        raise ValueError('value must be precomputed hash')
-
-
-    lhash = M2Crypto.m2.x509v3_lhash()
-    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)
-    #ctx not zeroed
-    _fix_ctx(ctx, issuer)
-
-    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)
-    #ctx,lhash freed
-
-    if x509_ext_ptr is None:
-        raise Exception
-    x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
-    x509_ext.set_critical(critical)
-    return x509_ext 
-# End of ugly hacks
 
 
 def _parse_extensions_in(ext_list):
@@ -360,9 +395,36 @@ def _get_pubkey_hash(cert):
     return ":".join(["%02X"%ord(byte) for byte in sha_hash])
 
 
-def create_certificate(path=None, text=None, subject=None,
+def _get_request_obj(csr):
+    text = _text_or_file(csr)
+    text = get_pem_entry(text, pem_type='CERTIFICATE REQUEST')
+    return X509.load_request_string(text)
+
+
+def read_csr(csr):
+    '''
+    Reads a certificate signing request
+    '''
+    csr = _get_request_obj(csr)
+    print 'got request obj'
+    ret = {
+           # X509 Verison 3 has a value of 2 in the field.
+           # Version 2 has a value of 1.
+           # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
+           'Version': csr.get_version()+1,
+           # Get size returns in bytes. The world thinks of key sizes in bits.
+           'Subject': _parse_subject(csr.get_subject()),
+           'Subject Hash': _dec2hex(csr.get_subject().as_hash()),
+           }
+
+    ret['X509v3 Extensions'] = _get_csr_extensions(csr)
+
+    return ret
+
+
+def create_certificate(path=None, text=False, subject={},
         signing_private_key=None, signing_cert=None, public_key=None,
-        extensions=None, days_valid=365, version=3,
+        csr=None, extensions=[], days_valid=365, version=3,
         serial_number=None, serial_bits=64,
         algorithm='sha256',):
     '''
@@ -384,8 +446,11 @@ def create_certificate(path=None, text=None, subject=None,
     if not signing_private_key:
         raise ValueError('signing_private_key must be specified')
 
-    if not public_key:
+    if not (public_key or csr):
         public_key = get_public_key(signing_private_key)
+
+    if (public_key and csr):
+        raise ValueError('Include either public_key or csr, not both.')
 
     if (get_public_key(signing_private_key) == get_public_key(public_key) and
             signing_cert):
@@ -398,8 +463,17 @@ def create_certificate(path=None, text=None, subject=None,
         raise ValueError('this is not a self-signed certificate.'
                 'signing_cert is required.')
 
+    if csr:
+        # Reading csr
+        csrsubject = read_csr(csr)['Subject']
+        # Update will add entries from subject, overwriting any in the csr
+        csrsubject.update(subject)
+        subject = csrsubject
+
     subject = _parse_subject_in(subject)
     signing_private_key = _get_private_key_obj(signing_private_key)
+    if csr:
+        public_key = csr
     public_key = _get_public_key_obj(public_key)
 
     if signing_cert:
@@ -446,6 +520,17 @@ def create_certificate(path=None, text=None, subject=None,
                 ext['value'] = cert
         tmpext.append(ext)
 
+    # Add CSR extensions that don't already exist
+    if csr:
+        for csrext in _get_csr_extensions(csr):
+            superseded= False
+            for ext in extensions:
+                if ext['name'] == csrext['name']:
+                    superseded = True
+                    break
+            if superseded: continue
+            tmpext.append(csrext)
+
     extensions = tmpext
 
     # Process extensions list into ext objects
@@ -460,6 +545,46 @@ def create_certificate(path=None, text=None, subject=None,
                 pem_type="CERTIFICATE")
     else:
         return cert.as_pem()
+
+
+def create_csr(path=None, text=False, subject={}, public_key=None,
+        extensions=[], version=3,):
+    '''
+    Create a certificate signing request
+    '''
+    if (not path and not text):
+        raise ValueError('Either path or text must be specified.')
+    if (path and text):
+        raise ValueError('Either path or text must be specified, not both.')
+
+    subject = _parse_subject_in(subject)
+    public_key = _get_public_key_obj(public_key)
+
+    csr = X509.Request()
+    csr.set_version(version - 1)
+    csr.set_subject(subject)
+    csr.set_pubkey(public_key)
+
+    # subjectkeyidentifier and authoritykeyidentifier should not be in CSRs
+    for ext in extensions:
+        if ext['name'] == 'subjectKeyIdentifier':
+            raise ValueError('subjectKeyIdentifier should be added by the CA,'
+                'not include in the CSR')
+        if ext['name'] == 'authorityKeyIdentifier':
+            raise ValueError('authorityKeyIdentifier should be added by the CA,'
+                'not include in the CSR')
+
+    extensions = _parse_extensions_in(extensions)
+    extstack = X509.X509_Extension_Stack()
+    for ext in extensions:
+        extstack.push(ext)
+    csr.add_extensions(extstack)
+
+    if path:
+        return write_pem(text=csr.as_pem(), path=path, 
+                pem_type="CERTIFICATE REQUEST")
+    else:
+        return csr.as_pem()
 
 
 def verify_private_key(private_key, public_key):
