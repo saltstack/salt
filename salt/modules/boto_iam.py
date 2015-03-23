@@ -801,6 +801,24 @@ def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile
         return False
 
 
+def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a certificate from Amazon
+
+    CLI example::
+
+        salt myminion boto_iam.upload_server_cert mycert_name
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        return conn.delete_server_cert(cert_name)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete certificate {0} .'
+        log.error(msg.format(cert_name))
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to IAM.

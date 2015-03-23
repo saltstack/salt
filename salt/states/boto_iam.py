@@ -301,6 +301,39 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
     return ret
 
 
+def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a server certificate
+
+    name (string) - The name for the server certificate. Do not include the path in this value.
+
+    region (string) - The name of the region to connect to.
+
+    key (string) - The key to be used in order to connect
+
+    keyid (string) - The keyid to be used in order to connect
+
+    profile (string) - The profile that contains a dict of region, key, keyid
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    exists = __salt__['boto_iam.get_server_certificate'](name, region, key, keyid, profile)
+    if not exists:
+        ret['comment'] = 'Certificate {0} does not exist.'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Server certificate {0} is set to be deleted'.format(name)
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_iam.delete_server_cert'](name, region, key, keyid, profile)
+    if not deleted:
+        ret['result'] = False
+        ret['comment'] = 'Certificate {0} failed to be deleted.'.format(name)
+        return ret
+    ret['comment'] = 'Certificate {0} was deleted.'.format(name)
+    ret['changes'] = deleted
+    return ret
+
+
 def server_cert_present(name, public_key, private_key, cert_chain=None, path=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
@@ -366,7 +399,7 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
             ret['result'] = False
             return ret
     if __opts__['test']:
-        ret['comment'] = 'Account policy is set to be changed'
+        ret['comment'] = 'Server certificate {0} is set to be created'.format(name)
         ret['result'] = None
         return ret
     created = __salt__['boto_iam.upload_server_cert'](name, public_key, private_key, cert_chain,
@@ -374,6 +407,7 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
     if not created:
         ret['result'] = False
         ret['comment'] = 'Certificate {0} failed to be created.'.format(name)
+        return ret
     ret['comment'] = 'Certificate {0} was created.'.format(name)
     ret['changes'] = created
     return ret
