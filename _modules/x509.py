@@ -30,6 +30,13 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+ext_name_mappings = {'subjectKeyIdentifier': 'X509v3 Subject Key Identifier',
+                     'authorityKeyIdentifier': 'X509v3 Authority Key Identifier',
+                     'basicConstraints': 'X509v3 Basic Constraints',
+                     'keyUsage': 'X509v3 Key Usage', 
+                     'nsComment': 'Netscape Comment',
+                     'subjectAltName': 'X509v3 Subject Alternative Name',}
+
 
 # Everything in this section is an ugly hack to fix an ancient bug in M2Crypto
 # https://bugzilla.osafoundation.org/show_bug.cgi?id=7530#c13
@@ -107,9 +114,12 @@ def _get_csr_extensions(csr):
     csryaml = _req_extensions(csrtempfile.name)
     csrtempfile.close()
     csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
-    if 'X509v3 Subject Alternative Name' in csrexts:
-        ret.append({'name': 'subjectAltName',
-                           'value': csrexts['X509v3 Subject Alternative Name']})
+
+    for short_name, long_name in ext_name_mappings.iteritems():
+        if long_name in csrexts:
+            ret.append({'name': short_name,
+                'value': csrexts[long_name]})
+
     return ret
 
 
@@ -290,8 +300,8 @@ def read_certificate(certificate):
         'Subject Hash': _dec2hex(cert.get_subject().as_hash()),
         'Issuer': _parse_subject(cert.get_issuer()),
         'Issuer Hash': _dec2hex(cert.get_issuer().as_hash()),
-        'Not Before': str(cert.get_not_before().get_datetime()),
-        'Not After': str(cert.get_not_after().get_datetime()),
+        'Not Before': cert.get_not_before().get_datetime().strftime('%Y-%m-%d %H:%M:%S'),
+        'Not After': cert.get_not_after().get_datetime().strftime('%Y-%m-%d %H:%M:%S'),
     }
 
     exts = []
@@ -570,6 +580,8 @@ def create_csr(path=None, text=False, subject={}, public_key=None,
         if ext['name'] == 'authorityKeyIdentifier':
             raise ValueError('authorityKeyIdentifier should be added by the CA,'
                 'not include in the CSR')
+        if ext['name'] not in ext_name_mappings:
+            raise ValueError('Unknown Extension {0}'.format(ext['name']))
 
     extensions = _parse_extensions_in(extensions)
     extstack = X509.X509_Extension_Stack()
