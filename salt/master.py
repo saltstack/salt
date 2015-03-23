@@ -1916,10 +1916,10 @@ class ClearFuncs(object):
         jid = self._prep_jid(clear_load, extra)
         if jid is None:
             return {}
-        int_payload = self._prep_pub(minions, jid, clear_load, extra)
+        payload = self._prep_pub(minions, jid, clear_load, extra)
 
         #Send it!
-        self._send_pub(int_payload)
+        self._send_pub(payload)
 
         return {
             'enc': 'clear',
@@ -1958,21 +1958,9 @@ class ClearFuncs(object):
         '''
         Take a load and send it across the network to connected minions
         '''
-        # Send 0MQ to the publisher
-        context = zmq.Context(1)
-        pub_sock = context.socket(zmq.PUSH)
-        if self.opts.get('ipc_mode', '') == 'tcp':
-            pull_uri = 'tcp://127.0.0.1:{0}'.format(
-                self.opts.get('tcp_master_publish_pull', 4514)
-                )
-        else:
-            pull_uri = 'ipc://{0}'.format(
-                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-                )
-        pub_sock.connect(pull_uri)
-
-        pub_sock.send(self.serial.dumps(load))
-        # TODO Check return from send()?
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.transport.server.PubServerChannel.factory(opts)
+            chan.publish(load)
 
     def _prep_pub(self, minions, jid, clear_load, extra):
         '''
@@ -2088,19 +2076,7 @@ class ClearFuncs(object):
                 )
             )
         log.debug('Published command details {0}'.format(load))
-
-        # TODO: put in a static method oif PubServerChannel?
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.PubServerChannel.factory(opts)
-            chan.publish(load)
-
-        return {
-            'enc': 'clear',
-            'load': {
-                'jid': clear_load['jid'],
-                'minions': minions
-            }
-        }
+        return load
 
 
 class FloMWorker(MWorker):

@@ -1768,10 +1768,6 @@ class Syndic(Minion):
         mtag, data = self.local.event.unpack(raw, self.local.event.serial)
         event = {'data': data, 'tag': mtag}
         log.trace('Got event {0}'.format(event['tag']))
-        if self.event_forward_timeout is None:
-            self.event_forward_timeout = (
-                    time.time() + self.opts['syndic_event_forward_timeout']
-                    )
         tag_parts = event['tag'].split('/')
         if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
             salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
@@ -1888,7 +1884,7 @@ class MultiSyndic(MinionBase):
         last = 0  # never have we signed in
         auth_wait = opts['acceptance_wait_time']
         while True:
-            log.debug('Syndic attempting to connect to {0}'.format(master))
+            log.debug('Syndic attempting to connect to {0}'.format(opts['master']))
             try:
                 syndic = Syndic(opts,
                                 timeout=self.SYNDIC_CONNECT_TIMEOUT,
@@ -1898,7 +1894,7 @@ class MultiSyndic(MinionBase):
                 yield syndic.connect_master()
                 # set up the syndic to handle publishes (specifically not event forwarding)
                 syndic.tune_in_no_block()
-                log.info('Syndic successfully connected to {0}'.format(master))
+                log.info('Syndic successfully connected to {0}'.format(opts['master']))
                 break
             except SaltClientError as exc:
                 log.error('Error while bringing up syndic for multi-syndic. Is master at {0} responding?'.format(opts['master']))
@@ -2001,10 +1997,6 @@ class MultiSyndic(MinionBase):
         event = {'data': data, 'tag': mtag}
         log.trace('Got event {0}'.format(event['tag']))
 
-        if self.event_forward_timeout is None:
-            self.event_forward_timeout = (
-                    time.time() + self.opts['syndic_event_forward_timeout']
-                    )
         tag_parts = event['tag'].split('/')
         if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
             salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
