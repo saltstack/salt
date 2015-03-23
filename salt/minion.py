@@ -464,7 +464,7 @@ class MultiMinion(MinionBase):
             return False
         minions = []
         for master in set(self.opts['master']):
-            s_opts = copy.copy(self.opts)
+            s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
             try:
@@ -820,7 +820,7 @@ class Minion(MinionBase):
 
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
         if self.opts.get('multimaster', False):
-            s_opts = copy.copy(self.opts)
+            s_opts = copy.deepcopy(self.opts)
             functions = salt.loader.minion_mods(s_opts)
         else:
             functions = salt.loader.minion_mods(self.opts)
