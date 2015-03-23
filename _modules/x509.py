@@ -81,7 +81,7 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree = 1):
 # End of ugly hacks
 
 
-# This is another ugly hack, because M2Crypto doesn't support getting
+# The next two functions are more hacks because M2Crypto doesn't support getting
 # Extensions from CSRs. https://github.com/martinpaljak/M2Crypto/issues/63
 def _req_extensions(csrFilename):
     cmd = ('openssl req -text -noout -in %s'
@@ -113,53 +113,19 @@ def _get_csr_extensions(csr):
     return ret
 
 
-def get_pem_entry(text, pem_type=None):
-    '''
-    Takes PEM string that may be malformed and attempts to properly format it.
-
-    Can fix situations where python converts new lines to spaces and most other
-    whitespace related issues.
-
-    If type not inclued, it will only work with an PEM that contains a single entry.
-    '''
-
-    if not pem_type:
-        # Split based on headers
-        if len(text.split("-----")) is not 5:
-            raise ValueError('PEM text not valid:\n{0}'.format(text))
-        pem_header = "-----"+text.split("-----")[1]+"-----"
-        # Remove all whitespace from body
-        pem_footer = "-----"+text.split("-----")[3]+"-----"
-    else:
-        pem_header = "-----BEGIN {0}-----".format(pem_type)
-        pem_footer = "-----END {0}-----".format(pem_type)
-        # Split based on defined headers
-        if (len(text.split(pem_header)) is not 2 or
-                len(text.split(pem_footer)) is not 2):
-            raise ValueError(
-                    'PEM does not contain a single entry of type {0}:\n'
-                    '{1}'.format(pem_type, text))
-
-    pem_body = text.split(pem_header)[1].split(pem_footer)[0]
-
-    # Remove all whitespace from body
-    pem_body = ''.join(pem_body.split())
-
-    # Generate correctly formatted pem
-    ret = pem_header+'\n'
-    for i in range(0, len(pem_body), 64):
-        ret += pem_body[i:i+64]+'\n'
-    ret += pem_footer+'\n'
-
-    return ret
-
-
 def _pretty_hex(hex_str):
     return ':'.join([hex_str[i:i+2] for i in range(0, len(hex_str), 2)])
 
 
 def _dec2hex(decval):
     return _pretty_hex("{:X}".format(decval))
+
+
+def _text_or_file(input_):
+    if os.path.isfile(input_):
+        return salt.utils.fopen(input_).read()
+    else:
+        return input_
 
 
 def _parse_subject(subject):
@@ -174,102 +140,14 @@ def _parse_subject(subject):
 
 def _import_private_key(pem_text):
     pem_text = get_pem_entry(pem_text, pem_type='PRIVATE KEY')
-
     key = EVP.load_key_string(pem_text)
-
     return key
-
-
-def _text_or_file(input_):
-    if os.path.isfile(input_):
-        return salt.utils.fopen(input_).read()
-    else:
-        return input_
 
 
 def _get_certificate_obj(cert):
     text = _text_or_file(cert)
     text = get_pem_entry(text, pem_type='CERTIFICATE')
     return X509.load_cert_string(text)
-
-
-def read_certificate(certificate):
-    '''
-    Reads a certificate, can specified as text or a file.
-    '''
-    cert = _get_certificate_obj(certificate)
-
-    ret = {
-        # X509 Verison 3 has a value of 2 in the field.
-        # Version 2 has a value of 1.
-        # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
-        'Version': cert.get_version()+1,
-        # Get size returns in bytes. The world thinks of key sizes in bits.
-        'Key Size': cert.get_pubkey().size()*8,
-        'Serial Number': _dec2hex(cert.get_serial_number()),
-        'SHA-256 Finger Print': _pretty_hex(cert.get_fingerprint(md='sha256')),
-        'MD5 Finger Print': _pretty_hex(cert.get_fingerprint(md='md5')),
-        'SHA1 Finger Print': _pretty_hex(cert.get_fingerprint(md='sha1')),
-        'Subject': _parse_subject(cert.get_subject()),
-        'Subject Hash': _dec2hex(cert.get_subject().as_hash()),
-        'Issuer': _parse_subject(cert.get_issuer()),
-        'Issuer Hash': _dec2hex(cert.get_issuer().as_hash()),
-        'Not Before': str(cert.get_not_before().get_datetime()),
-        'Not After': str(cert.get_not_after().get_datetime()),
-    }
-
-    exts = []
-    for ext_index in range(0, cert.get_ext_count()):
-        ext = cert.get_ext_at(ext_index)
-        name = ext.get_name()
-        exts.append({
-            'name': name,
-            'value': ext.get_value(),
-            'critical': bool(ext.get_critical()),
-        })
-
-    if exts:
-        ret['X509v3 Extensions'] = exts
-
-    return ret
-
-
-def read_crl(crl):
-    text = _text_or_file(crl)
-    text = get_pem_entry(text, pem_type='X509 CRL')
-
-    # M2Crypto doesn't provide the same quick function to load CRL
-    bio = BIO.MemoryBuffer()
-    bio.write(text)
-    cptr=m2.x509_crl_read_pem(bio._ptr())
-    crl = CRL(cptr, 1)
-
-    return None
-
-
-def read_certificates(glob_path):
-    '''
-    Gets the details for all certs in a file or directory.
-    '''
-    ret = {}
-
-    for path in glob.glob(glob_path):
-        if os.path.isfile(path):
-            try:
-                ret[path] = read_certificate(path=path)
-            except ValueError:
-                pass
-
-    return ret
-
-
-def write_pem(text, path, pem_type=None):
-    '''
-    Writes out a pem file, fixes format before writing.
-    '''
-    text = get_pem_entry(text, pem_type=pem_type)
-    salt.utils.fopen(path, 'w').write(text)
-    return 'PEM written to {0}'.format(path)
 
 
 def _parse_subject_in(subject_dict):
@@ -318,25 +196,167 @@ def _parse_extensions_in(ext_list):
     return ret
 
 
-def create_private_key(path=None, text=False, bits=2048):
-    '''
-    Creates a private key.
-    choose to write the key to 'path' or return as text.
-    '''
-    if ( not path and not text):
-        raise ValueError('Either path or text must be specified.')
-    if (path and text):
-        raise ValueError('Either path or text must be specified, not both.')
-
-    rsa = RSA.gen_key(bits, m2.RSA_F4)
+def _get_public_key_obj(public_key):
+    public_key = _text_or_file(public_key)
+    public_key = get_pem_entry(public_key)
+    public_key = get_public_key(public_key)
     bio = BIO.MemoryBuffer()
-    rsa.save_key_bio(bio, cipher=None)
+    bio.write(public_key)
+    rsapubkey = RSA.load_pub_key_bio(bio)
+    evppubkey = EVP.PKey()
+    evppubkey.assign_rsa(rsapubkey)
+    return evppubkey
 
-    if path:
-        return write_pem(text=bio.read_all(), path=path, 
-                pem_type="RSA PRIVATE KEY")
+
+def _get_private_key_obj(private_key):
+    private_key = _text_or_file(private_key)
+    private_key = get_pem_entry(private_key)
+    rsaprivkey = RSA.load_key_string(private_key)
+    evpprivkey = EVP.PKey()
+    evpprivkey.assign_rsa(rsaprivkey)
+    return evpprivkey
+
+
+def _get_request_obj(csr):
+    text = _text_or_file(csr)
+    text = get_pem_entry(text, pem_type='CERTIFICATE REQUEST')
+    return X509.load_request_string(text)
+
+
+def _get_pubkey_hash(cert):
+    sha_hash = hashlib.sha1(cert.get_pubkey().get_modulus()).digest()
+    return ":".join(["%02X"%ord(byte) for byte in sha_hash])
+
+
+def get_pem_entry(text, pem_type=None):
+    '''
+    Takes PEM string that may be malformed and attempts to properly format it.
+
+    Can fix situations where python converts new lines to spaces and most other
+    whitespace related issues.
+
+    If type not inclued, it will only work with an PEM that contains a single entry.
+    '''
+
+    if not pem_type:
+        # Split based on headers
+        if len(text.split("-----")) is not 5:
+            raise ValueError('PEM text not valid:\n{0}'.format(text))
+        pem_header = "-----"+text.split("-----")[1]+"-----"
+        # Remove all whitespace from body
+        pem_footer = "-----"+text.split("-----")[3]+"-----"
     else:
-        return bio.read_all()
+        pem_header = "-----BEGIN {0}-----".format(pem_type)
+        pem_footer = "-----END {0}-----".format(pem_type)
+        # Split based on defined headers
+        if (len(text.split(pem_header)) is not 2 or
+                len(text.split(pem_footer)) is not 2):
+            raise ValueError(
+                    'PEM does not contain a single entry of type {0}:\n'
+                    '{1}'.format(pem_type, text))
+
+    pem_body = text.split(pem_header)[1].split(pem_footer)[0]
+
+    # Remove all whitespace from body
+    pem_body = ''.join(pem_body.split())
+
+    # Generate correctly formatted pem
+    ret = pem_header+'\n'
+    for i in range(0, len(pem_body), 64):
+        ret += pem_body[i:i+64]+'\n'
+    ret += pem_footer+'\n'
+
+    return ret
+
+
+def read_certificate(certificate):
+    '''
+    Reads a certificate, can specified as text or a file.
+    '''
+    cert = _get_certificate_obj(certificate)
+
+    ret = {
+        # X509 Verison 3 has a value of 2 in the field.
+        # Version 2 has a value of 1.
+        # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
+        'Version': cert.get_version()+1,
+        # Get size returns in bytes. The world thinks of key sizes in bits.
+        'Key Size': cert.get_pubkey().size()*8,
+        'Serial Number': _dec2hex(cert.get_serial_number()),
+        'SHA-256 Finger Print': _pretty_hex(cert.get_fingerprint(md='sha256')),
+        'MD5 Finger Print': _pretty_hex(cert.get_fingerprint(md='md5')),
+        'SHA1 Finger Print': _pretty_hex(cert.get_fingerprint(md='sha1')),
+        'Subject': _parse_subject(cert.get_subject()),
+        'Subject Hash': _dec2hex(cert.get_subject().as_hash()),
+        'Issuer': _parse_subject(cert.get_issuer()),
+        'Issuer Hash': _dec2hex(cert.get_issuer().as_hash()),
+        'Not Before': str(cert.get_not_before().get_datetime()),
+        'Not After': str(cert.get_not_after().get_datetime()),
+    }
+
+    exts = []
+    for ext_index in range(0, cert.get_ext_count()):
+        ext = cert.get_ext_at(ext_index)
+        name = ext.get_name()
+        exts.append({
+            'name': name,
+            'value': ext.get_value(),
+            'critical': bool(ext.get_critical()),
+        })
+
+    if exts:
+        ret['X509v3 Extensions'] = exts
+
+    return ret
+
+
+def read_certificates(glob_path):
+    '''
+    Gets the details for all certs in a file or directory.
+    '''
+    ret = {}
+
+    for path in glob.glob(glob_path):
+        if os.path.isfile(path):
+            try:
+                ret[path] = read_certificate(path=path)
+            except ValueError:
+                pass
+
+    return ret
+
+
+def read_csr(csr):
+    '''
+    Reads a certificate signing request
+    '''
+    csr = _get_request_obj(csr)
+    ret = {
+           # X509 Verison 3 has a value of 2 in the field.
+           # Version 2 has a value of 1.
+           # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
+           'Version': csr.get_version()+1,
+           # Get size returns in bytes. The world thinks of key sizes in bits.
+           'Subject': _parse_subject(csr.get_subject()),
+           'Subject Hash': _dec2hex(csr.get_subject().as_hash()),
+           }
+
+    ret['X509v3 Extensions'] = _get_csr_extensions(csr)
+
+    return ret
+
+
+def read_crl(crl):
+    text = _text_or_file(crl)
+    text = get_pem_entry(text, pem_type='X509 CRL')
+
+    # M2Crypto doesn't provide the same quick function to load CRL
+    bio = BIO.MemoryBuffer()
+    bio.write(text)
+    cptr=m2.x509_crl_read_pem(bio._ptr())
+    crl = CRL(cptr, 1)
+
+    return None
 
 
 def get_public_key(key):
@@ -365,60 +385,38 @@ def get_public_key(key):
     return bio.read_all()
 
 
-def _get_public_key_obj(public_key):
-    public_key = _text_or_file(public_key)
-    public_key = get_pem_entry(public_key)
-    public_key = get_public_key(public_key)
-    bio = BIO.MemoryBuffer()
-    bio.write(public_key)
-    rsapubkey = RSA.load_pub_key_bio(bio)
-    evppubkey = EVP.PKey()
-    evppubkey.assign_rsa(rsapubkey)
-    return evppubkey
-
-
-def _get_private_key_obj(private_key):
-    private_key = _text_or_file(private_key)
-    private_key = get_pem_entry(private_key)
-    rsaprivkey = RSA.load_key_string(private_key)
-    evpprivkey = EVP.PKey()
-    evpprivkey.assign_rsa(rsaprivkey)
-    return evpprivkey
-
-
 def get_private_key_size(private_key):
     return _get_private_key_obj(private_key).size()*8
 
 
-def _get_pubkey_hash(cert):
-    sha_hash = hashlib.sha1(cert.get_pubkey().get_modulus()).digest()
-    return ":".join(["%02X"%ord(byte) for byte in sha_hash])
-
-
-def _get_request_obj(csr):
-    text = _text_or_file(csr)
-    text = get_pem_entry(text, pem_type='CERTIFICATE REQUEST')
-    return X509.load_request_string(text)
-
-
-def read_csr(csr):
+def write_pem(text, path, pem_type=None):
     '''
-    Reads a certificate signing request
+    Writes out a pem file, fixes format before writing.
     '''
-    csr = _get_request_obj(csr)
-    ret = {
-           # X509 Verison 3 has a value of 2 in the field.
-           # Version 2 has a value of 1.
-           # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
-           'Version': csr.get_version()+1,
-           # Get size returns in bytes. The world thinks of key sizes in bits.
-           'Subject': _parse_subject(csr.get_subject()),
-           'Subject Hash': _dec2hex(csr.get_subject().as_hash()),
-           }
+    text = get_pem_entry(text, pem_type=pem_type)
+    salt.utils.fopen(path, 'w').write(text)
+    return 'PEM written to {0}'.format(path)
 
-    ret['X509v3 Extensions'] = _get_csr_extensions(csr)
 
-    return ret
+def create_private_key(path=None, text=False, bits=2048):
+    '''
+    Creates a private key.
+    choose to write the key to 'path' or return as text.
+    '''
+    if ( not path and not text):
+        raise ValueError('Either path or text must be specified.')
+    if (path and text):
+        raise ValueError('Either path or text must be specified, not both.')
+
+    rsa = RSA.gen_key(bits, m2.RSA_F4)
+    bio = BIO.MemoryBuffer()
+    rsa.save_key_bio(bio, cipher=None)
+
+    if path:
+        return write_pem(text=bio.read_all(), path=path, 
+                pem_type="RSA PRIVATE KEY")
+    else:
+        return bio.read_all()
 
 
 def create_certificate(path=None, text=False, subject={},
