@@ -19,7 +19,7 @@ from salttesting.mock import (
     MagicMock,
     patch
 )
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin,unused-import
 
 ensure_in_syspath('../../')
 
