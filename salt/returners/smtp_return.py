@@ -57,7 +57,11 @@ There are a few things to keep in mind:
 
     salt '*' test.ping --return smtp
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+  To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+  .. versionadded:: 2015.2.0
+
+  .. code-block:: bash
 
     salt '*' test.ping --return smtp --return_config alternative
 
