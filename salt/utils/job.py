@@ -66,6 +66,7 @@ def store_job(opts, load, event=None, mminion=None):
         return
 
     # otherwise, write to the master cache
+    savefstr = '{0}.save_load'.format(job_cache)
     fstr = '{0}.returner'.format(job_cache)
     if 'fun' not in load and load.get('return', {}):
         ret_ = load.get('return', {})
@@ -74,6 +75,8 @@ def store_job(opts, load, event=None, mminion=None):
         if 'user' in ret_:
             load.update({'user': ret_['user']})
     try:
+        if 'jid' in load:
+            mminion.returners[savefstr](load['jid'], load)
         mminion.returners[fstr](load)
     except KeyError:
         emsg = "Returner '{0}' does not support function returner".format(job_cache)
