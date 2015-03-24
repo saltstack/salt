@@ -87,9 +87,9 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
 # End of ugly hacks
 
 
-# The next two functions are more hacks because M2Crypto doesn't support getting
+# The next four functions are more hacks because M2Crypto doesn't support getting
 # Extensions from CSRs. https://github.com/martinpaljak/M2Crypto/issues/63
-def _req_extensions(csr_filename):
+def _parse_openssl_req(csr_filename):
     '''
     Parses openssl command line output, this is a workaround for M2Crypto's
     inability to get them from CSR objects.
@@ -115,7 +115,7 @@ def _get_csr_extensions(csr):
     csrtempfile = tempfile.NamedTemporaryFile()
     csrtempfile.write(csr.as_pem())
     csrtempfile.flush()
-    csryaml = _req_extensions(csrtempfile.name)
+    csryaml = _parse_openssl_req(csrtempfile.name)
     csrtempfile.close()
     csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
 
@@ -543,6 +543,98 @@ def create_private_key(path=None, text=False, bits=2048):
         return bio.read_all()
 
 
+def create_crl(path=None, text=False, signing_private_key=None,
+        signing_cert=None, revoked={}, include_expired=False,
+        days_valid=100, algorithm='sha256')
+    '''
+    Create a CRL
+    This function requires pyOpenSSL
+
+    path
+        Path to write the crl to.
+
+    text
+        If ``True``, return the PEM text without writing to a file. Default ``False``.
+
+    signing_private_key
+        A path or string of the private key in PEM format that will be used to sign this crl.
+        This is required.
+
+    signing_cert
+        A certificate matching the private key that will be used to sign this crl. This is
+        required.
+
+    revoked
+        A list of dicts containing all the certificates to revoke. Each dict represents one
+        certificate. A dict must contain either the key ``Serial Number`` with the value of
+        the serial number to revoke, or ``Certificate`` with either the PEM encoded text of
+        the certificate, or a path ot the certificate to revoke.
+
+        The dict can optionally contain the ``Revocation Date`` key. If this key is ommitted
+        the revocation date will be set to now. If should be a string in the format "%Y-%m-%d %H:%M:%S".
+
+        The dict can also optionally contain the ``Not After`` key. This is redundant if the
+        ``Certificate`` key is included. If the ``Certificate`` key is not included, this
+        can be used for the logic behind the ``include_expired`` parameter.
+        If should be a string in the format "%Y-%m-%d %H:%M:%S".
+        
+        The dict can also optionally contain the ``Reason`` key. This is the reason code for the
+        revocation. Available choices are ``unspecified``, ``keyCompromise``, ``CACompromise``,
+        ``affiliationChanged``, ``superseded``, ``cessationOfOperation`` and ``certificateHold``.
+
+    include_expired
+        Include expired certificates in the CRL. Default is ``False``.
+
+    days_valid
+        The number of days that the CRL should be valid. This sets the Next Update field in the CRL.
+    '''
+    # pyOpenSSL is required for dealing with CSLs. Importing inside these functions because
+    # Client operations like creating CRLs shouldn't require pyOpenSSL
+    import OpenSSL
+    crl = OpenSSL.crypto.CRL()
+
+    for rev_item in revoked:
+        if 'Certificate' in rev_item:
+            rev_cert = read_certificate(rev_item['Certificate'])
+            rev_item['Serial Number'] = rev_cert['Serial Number']
+            rev_item['Not After'] = rev_cert['Not After']
+
+        serial_number = rev_item['Serial Number'].replace(':', '')
+
+        if 'Not After' in rev_item and not include_expired:
+            not_after = datetime.datetime.strptime(rev_item['Not After'], '%Y-%m-%d %H:%M:%S')
+            if datetime.datetime.now() > not_after:
+                continue
+
+        if not 'Revocation Date' in rev_item:
+            rev_item['Revocation Date'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        rev_date = datetime.datetime.strptime(rev_item['Revocation Date'], '%Y-%m-%d %H:%M:%S')
+        rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
+
+        rev = OpenSSL.crypto.Revoked()
+        rev.set_serial(serial_number)
+        rev.set_rev_date(rev_date)
+
+        if 'Reason' in rev_item:
+            rev.set_reason(rev_item['Reason'])
+
+        crl.add_revoked(rev)
+
+    cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
+            get_pem_entry(signing_cert, pem_type='CERTIFICATE'))
+    key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
+            get_pem_entry(signing_private_key)
+
+    crltext = crl.export(cert, key, type=OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
+
+    if text:
+        return crltext
+
+    return write_pem(text=crltext, path=path,
+                pem_type='X509 CRL')
+
+
 def create_certificate(path=None, text=False, subject={},
         signing_private_key=None, signing_cert=None, public_key=None,
         csr=None, extensions=[], days_valid=365, version=3,
@@ -845,8 +937,7 @@ def verify_signature(certificate, signing_pub_key=None):
 
     signing_pub_key:
         The public key to verify, can be a string or path to a PEM formatted certificate, csr,
-        or private key. If omitted, the certificate is assumed to be self-signed and is
-        verified against itself.
+        or private key.
 
     CLI Example:
 
