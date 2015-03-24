@@ -79,7 +79,7 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_iam' if 'boto_iam.get_user' in __salt__ else False
+    return 'boto_iam.get_user' in __salt__
 
 
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):

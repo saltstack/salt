@@ -324,15 +324,13 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
                 return True
             msg = 'Could not create policy for group {0}'
             log.error(msg.format(group_name))
-            return False
         except boto.exception.BotoServerError as e:
             log.debug(e)
             msg = 'Failed to create policy for group {0}'
             log.error(msg.format(group_name))
-            return False
     else:
         log.error('Group {0} does not exist'.format(group_name))
-        return False
+    return False
 
 
 def get_group_policy(group_name, policy_name, region=None, key=None,
