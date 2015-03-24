@@ -157,7 +157,10 @@ def get_printout(out, opts=None, **kwargs):
 
     outputters = salt.loader.outputters(opts)
     if out not in outputters:
-        log.error('Invalid outputter {0} specified, fall back to nested'.format(out))
+        # Since the grains outputter was removed we don't need to fire this
+        # error when old minions are asking for it
+        if out != 'grains':
+            log.error('Invalid outputter {0} specified, fall back to nested'.format(out))
         return outputters['nested']
     return outputters[out]
 
