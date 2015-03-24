@@ -83,18 +83,6 @@ def update(repo_uri):
         repo.pull()
 
 
-def envs():
-    '''
-    Return a list of branches that can be used as environments
-    '''
-
-
-def purge_cache():
-    '''
-    Purge the hg_pillar cache
-    '''
-
-
 class Repo(object):
     '''
     Deal with remote hg (mercurial) repository for Pillar
