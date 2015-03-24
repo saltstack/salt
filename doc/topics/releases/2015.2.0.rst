@@ -77,3 +77,11 @@ Deprecations
   This alteration can be accomplished as follows:
 
     ``ALTER TABLE salt_events ADD master_id VARCHAR(255) NOT NULL;``
+
+Known Issues
+===========
+
+- In multimaster mode, a minion may become temporarily unresponsive
+  if modules or pillars are refreshed at the same time that one
+  or more masters are down. This can be worked around by setting
+  'auth_timeout' and 'auth_tries' down to shorter periods.  
