@@ -1409,12 +1409,18 @@ class Minion(MinionBase):
         '''
         Refresh the pillar
         '''
-        self.opts['pillar'] = salt.pillar.get_pillar(
-            self.opts,
-            self.opts['grains'],
-            self.opts['id'],
-            self.opts['environment'],
-        ).compile_pillar()
+        try:
+            self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+            ).compile_pillar()
+        except SaltClientError:
+            # Do not exit if a pillar refresh fails.
+            log.error('Pillar data could not be refreshed. '
+                      'One or more masters may be down!')
+            continue
         self.module_refresh(force_refresh)
 
     def manage_schedule(self, package):
