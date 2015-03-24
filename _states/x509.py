@@ -1,6 +1,6 @@
 import salt.exceptions
 import salt.utils
-from datetime import datetime
+import datetime
 import os
 
 
@@ -150,8 +150,8 @@ def certificate_managed(name,
             current_comp.pop('SHA1 Finger Print')
             current_comp.pop('SHA-256 Finger Print')
             current_notafter = current_comp.pop('Not After')
-            current_days_remaining = (datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') -
-                    datetime.now()).days
+            current_days_remaining = (datetime.datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') -
+                    datetime.datetime.now()).days
         except salt.exceptions.SaltInvocationError:
             current = '{0} is not a valid Certificate.'.format(name)
     else:
