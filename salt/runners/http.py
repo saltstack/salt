@@ -19,6 +19,8 @@ def query(url, output=True, **kwargs):
     '''
     Query a resource, and decode the return data
 
+    .. versionaddedd:: 2015.2
+
     CLI Example:
 
     .. code-block:: bash
@@ -41,6 +43,8 @@ def query(url, output=True, **kwargs):
 def update_ca_bundle(target=None, source=None, merge_files=None):
     '''
     Update the local CA bundle file from a URL
+
+    .. versionaddedd:: 2015.2
 
     CLI Example:
 
