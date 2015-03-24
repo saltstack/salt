@@ -546,7 +546,7 @@ class MultiMinion(MinionBase):
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         ret = {}
         for master in set(self.opts['master']):
-            s_opts = copy.copy(self.opts)
+            s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
             ret[master] = {'opts': s_opts,
@@ -900,7 +900,7 @@ class Minion(MinionBase):
 
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
         if self.opts.get('multimaster', False):
-            s_opts = copy.copy(self.opts)
+            s_opts = copy.deepcopy(self.opts)
             functions = salt.loader.minion_mods(s_opts)
         else:
             functions = salt.loader.minion_mods(self.opts)
