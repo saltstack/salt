@@ -1,3 +1,0 @@
-Minion polling: _do_poll makes all recv() slow since we are now pulled out of that code
-
-Master-side

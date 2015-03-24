@@ -761,7 +761,6 @@ class AESFuncs(object):
         Create a new AESFuncs
 
         :param dict opts: The salt options
-        :param salt.transport.server.ReqServerChannel req_channel: transport
 
         :rtype: AESFuncs
         :returns: Instance for handling AES operations
@@ -1918,7 +1917,7 @@ class ClearFuncs(object):
             return {}
         payload = self._prep_pub(minions, jid, clear_load, extra)
 
-        #Send it!
+        # Send it!
         self._send_pub(payload)
 
         return {
