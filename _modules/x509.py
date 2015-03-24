@@ -10,12 +10,9 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import time
-import datetime
 import logging
 import hashlib
 import glob
-from salt.ext.six.moves import range
 import M2Crypto
 import random
 import ctypes
@@ -31,10 +28,10 @@ import salt.exceptions
 
 log = logging.getLogger(__name__)
 
-ext_name_mappings = {'subjectKeyIdentifier': 'X509v3 Subject Key Identifier',
+EXT_NAME_MAPPINGS = {'subjectKeyIdentifier': 'X509v3 Subject Key Identifier',
                      'authorityKeyIdentifier': 'X509v3 Authority Key Identifier',
                      'basicConstraints': 'X509v3 Basic Constraints',
-                     'keyUsage': 'X509v3 Key Usage', 
+                     'keyUsage': 'X509v3 Key Usage',
                      'nsComment': 'Netscape Comment',
                      'subjectAltName': 'X509v3 Subject Alternative Name',}
 
@@ -42,16 +39,16 @@ ext_name_mappings = {'subjectKeyIdentifier': 'X509v3 Subject Key Identifier',
 # Everything in this section is an ugly hack to fix an ancient bug in M2Crypto
 # https://bugzilla.osafoundation.org/show_bug.cgi?id=7530#c13
 class _Ctx(ctypes.Structure):
-    _fields_ = [ ('flags', ctypes.c_int),
-                 ('issuer_cert', ctypes.c_void_p),
-                 ('subject_cert', ctypes.c_void_p),
-                 ('subject_req', ctypes.c_void_p),
-                 ('crl', ctypes.c_void_p),
-                 ('db_meth', ctypes.c_void_p),
-                 ('db', ctypes.c_void_p),
+    _fields_ = [('flags', ctypes.c_int),
+                ('issuer_cert', ctypes.c_void_p),
+                ('subject_cert', ctypes.c_void_p),
+                ('subject_req', ctypes.c_void_p),
+                ('crl', ctypes.c_void_p),
+                ('db_meth', ctypes.c_void_p),
+                ('db', ctypes.c_void_p),
                 ]
 
-def _fix_ctx(m2_ctx, issuer = None):
+def _fix_ctx(m2_ctx, issuer=None):
     ctx = _Ctx.from_address(int(m2_ctx))
 
     ctx.flags = 0
@@ -64,10 +61,10 @@ def _fix_ctx(m2_ctx, issuer = None):
         ctx.issuer_cert = int(issuer.x509)
 
 
-def _new_extension(name, value, critical=0, issuer=None, _pyfree = 1):
-    """
+def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
+    '''
     Create new X509_Extension instance.
-    """
+    '''
     if name == 'subjectKeyIdentifier' and \
         value.strip('0123456789abcdefABCDEF:') is not '':
         raise salt.exceptions.SaltInvocationError('value must be precomputed hash')
@@ -85,15 +82,14 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree = 1):
         raise Exception
     x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
     x509_ext.set_critical(critical)
-    return x509_ext 
+    return x509_ext
 # End of ugly hacks
 
 
 # The next two functions are more hacks because M2Crypto doesn't support getting
 # Extensions from CSRs. https://github.com/martinpaljak/M2Crypto/issues/63
-def _req_extensions(csrFilename):
-    cmd = ('openssl req -text -noout -in %s'
-        % csrFilename)
+def _req_extensions(csr_filename):
+    cmd = ('openssl req -text -noout -in {0}'.format(csr_filename))
 
     output = subprocess.check_output(cmd.split(),
         stderr=subprocess.STDOUT)
@@ -116,7 +112,7 @@ def _get_csr_extensions(csr):
     csrtempfile.close()
     csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
 
-    for short_name, long_name in ext_name_mappings.iteritems():
+    for short_name, long_name in EXT_NAME_MAPPINGS.iteritems():
         if long_name in csrexts:
             ret.append({'name': short_name,
                 'value': csrexts[long_name]})
@@ -129,7 +125,7 @@ def _pretty_hex(hex_str):
 
 
 def _dec2hex(decval):
-    return _pretty_hex("{:X}".format(decval))
+    return _pretty_hex('{:X}'.format(decval))
 
 
 def _text_or_file(input_):
@@ -183,22 +179,22 @@ def _parse_extensions_in(ext_list):
     '''
     ret = []
 
-    subjectKeyIdentifier = None
+    subject_key_identifier = None
     for ext in ext_list:
         if ext['name'] == 'subjectKeyIdentifier':
             # add the subjectkeyidentifier to a temp ext, so it can be used by
             # authorityKeyIdentifier
-            subjectKeyIdentifier = X509.new_extension(ext['name'], ext['value'])
+            subject_key_identifier = X509.new_extension(ext['name'], ext['value'])
         if ext['name'] == 'authorityKeyIdentifier':
             # Use the ugly hacks in place above
-            if subjectKeyIdentifier:
-                ext['value'].add_ext(subjectKeyIdentifier)
+            if subject_key_identifier:
+                ext['value'].add_ext(subject_key_identifier)
             ext = _new_extension('authorityKeyIdentifier',
                     'keyid,issuer:always', 0, issuer=ext['value'])
         else:
             ext = X509.new_extension(ext['name'], ext['value'])
         try:
-            ext.set_critical(properties['critical'])
+            ext.set_critical(ext['critical'])
         except NameError:
             pass
 
@@ -236,7 +232,7 @@ def _get_request_obj(csr):
 
 def _get_pubkey_hash(cert):
     sha_hash = hashlib.sha1(cert.get_pubkey().get_modulus()).digest()
-    return ":".join(["%02X"%ord(byte) for byte in sha_hash])
+    return ':'.join(['{0}02X'.format(ord(byte)) for byte in sha_hash])
 
 
 def get_pem_entry(text, pem_type=None):
@@ -251,14 +247,14 @@ def get_pem_entry(text, pem_type=None):
 
     if not pem_type:
         # Split based on headers
-        if len(text.split("-----")) is not 5:
+        if len(text.split('-----')) is not 5:
             raise salt.exceptions.SaltInvocationError('PEM text not valid:\n{0}'.format(text))
-        pem_header = "-----"+text.split("-----")[1]+"-----"
+        pem_header = '-----'+text.split('-----')[1]+'-----'
         # Remove all whitespace from body
-        pem_footer = "-----"+text.split("-----")[3]+"-----"
+        pem_footer = '-----'+text.split('-----')[3]+'-----'
     else:
-        pem_header = "-----BEGIN {0}-----".format(pem_type)
-        pem_footer = "-----END {0}-----".format(pem_type)
+        pem_header = '-----BEGIN {0}-----'.format(pem_type)
+        pem_footer = '-----END {0}-----'.format(pem_type)
         # Split based on defined headers
         if (len(text.split(pem_header)) is not 2 or
                 len(text.split(pem_footer)) is not 2):
@@ -330,7 +326,7 @@ def read_certificates(glob_path):
     for path in glob.glob(glob_path):
         if os.path.isfile(path):
             try:
-                ret[path] = read_certificate(path=path)
+                ret[path] = read_certificate(certificate=path)
             except ValueError:
                 pass
 
@@ -364,8 +360,8 @@ def read_crl(crl):
     # M2Crypto doesn't provide the same quick function to load CRL
     bio = BIO.MemoryBuffer()
     bio.write(text)
-    cptr=m2.x509_crl_read_pem(bio._ptr())
-    crl = CRL(cptr, 1)
+    cptr = m2.x509_crl_read_pem(bio._ptr())
+    crl = X509.CRL(cptr, 1)
 
     return None
 
@@ -414,9 +410,9 @@ def create_private_key(path=None, text=False, bits=2048):
     Creates a private key.
     choose to write the key to 'path' or return as text.
     '''
-    if ( not path and not text):
+    if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
-    if (path and text):
+    if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
     rsa = RSA.gen_key(bits, m2.RSA_F4)
@@ -424,8 +420,8 @@ def create_private_key(path=None, text=False, bits=2048):
     rsa.save_key_bio(bio, cipher=None)
 
     if path:
-        return write_pem(text=bio.read_all(), path=path, 
-                pem_type="RSA PRIVATE KEY")
+        return write_pem(text=bio.read_all(), path=path,
+                pem_type='RSA PRIVATE KEY')
     else:
         return bio.read_all()
 
@@ -446,15 +442,15 @@ def create_certificate(path=None, text=False, subject={},
     public key in DER format. Note this is not the same as openssl's
     subjectKeyIdentifier hash.
     '''
-    if (not path and not text):
+    if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
-    if (path and text):
+    if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
     if not signing_private_key:
         raise salt.exceptions.SaltInvocationError('signing_private_key must be specified')
 
-    if (public_key and csr):
+    if public_key and csr:
         raise salt.exceptions.SaltInvocationError('Include either public_key or csr, not both.')
 
     if not (public_key or csr):
@@ -493,7 +489,7 @@ def create_certificate(path=None, text=False, subject={},
     if not serial_number:
         serial_number = _dec2hex(random.getrandbits(serial_bits))
 
-    serial_number = int(serial_number.replace(":",""), 16)
+    serial_number = int(serial_number.replace(':', ''), 16)
 
     cert = X509.X509()
     cert.set_serial_number(serial_number)
@@ -531,12 +527,13 @@ def create_certificate(path=None, text=False, subject={},
     # Add CSR extensions that don't already exist
     if csr:
         for csrext in _get_csr_extensions(_get_request_obj(csr)):
-            superseded= False
+            superseded = False
             for ext in extensions:
                 if ext['name'] == csrext['name']:
                     superseded = True
                     break
-            if superseded: continue
+            if superseded:
+                continue
             tmpext.append(csrext)
 
     extensions = tmpext
@@ -549,8 +546,8 @@ def create_certificate(path=None, text=False, subject={},
     cert.sign(signing_private_key, algorithm)
 
     if path:
-        return write_pem(text=cert.as_pem(), path=path, 
-                pem_type="CERTIFICATE")
+        return write_pem(text=cert.as_pem(), path=path,
+                pem_type='CERTIFICATE')
     else:
         return cert.as_pem()
 
@@ -560,9 +557,9 @@ def create_csr(path=None, text=False, subject={}, public_key=None,
     '''
     Create a certificate signing request
     '''
-    if (not path and not text):
+    if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
-    if (path and text):
+    if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
     subject = _parse_subject_in(subject)
@@ -581,7 +578,7 @@ def create_csr(path=None, text=False, subject={}, public_key=None,
         if ext['name'] == 'authorityKeyIdentifier':
             raise salt.exceptions.SaltInvocationError('authorityKeyIdentifier should be added by the CA,'
                 'not include in the CSR')
-        if ext['name'] not in ext_name_mappings:
+        if ext['name'] not in EXT_NAME_MAPPINGS:
             raise salt.exceptions.SaltInvocationError('Unknown Extension {0}'.format(ext['name']))
 
     extensions = _parse_extensions_in(extensions)
@@ -591,8 +588,8 @@ def create_csr(path=None, text=False, subject={}, public_key=None,
     csr.add_extensions(extstack)
 
     if path:
-        return write_pem(text=csr.as_pem(), path=path, 
-                pem_type="CERTIFICATE REQUEST")
+        return write_pem(text=csr.as_pem(), path=path,
+                pem_type='CERTIFICATE REQUEST')
     else:
         return csr.as_pem()
 

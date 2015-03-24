@@ -23,7 +23,7 @@ def _exts_to_list(exts):
                     ext[val_name] = value
         _list.append(ext)
     return _list
-                    
+                  
 
 def private_key_managed(name,
                         bits=2048,
@@ -75,7 +75,7 @@ def csr_managed(name,
                 backup=False):
     '''
     Manage a CSR
-    ''' 
+    '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     subject = _subject_to_dict(subject)
@@ -150,7 +150,7 @@ def certificate_managed(name,
             current_comp.pop('SHA1 Finger Print')
             current_comp.pop('SHA-256 Finger Print')
             current_notafter = current_comp.pop('Not After')
-            current_days_remaining = (datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') - 
+            current_days_remaining = (datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') -
                     datetime.now()).days
         except salt.exceptions.SaltInvocationError:
             current = '{0} is not a valid Certificate.'.format(name)
@@ -160,7 +160,7 @@ def certificate_managed(name,
     new_cert = __salt__['x509.create_certificate'](text=True, subject=subject,
             signing_private_key=signing_private_key, signing_cert=signing_cert,
             public_key=public_key, csr=csr, extensions=extensions,
-            days_valid=days_valid, version=version, 
+            days_valid=days_valid, version=version,
             serial_number=serial_number, serial_bits=serial_bits,
             algorithm=algorithm)
 
@@ -174,7 +174,7 @@ def certificate_managed(name,
     new_comp.pop('SHA1 Finger Print')
     new_comp.pop('SHA-256 Finger Print')
 
-    if (current_comp == new_comp and current_days_remaining > days_remaining):
+    if current_comp == new_comp and current_days_remaining > days_remaining:
         ret['result'] = True
         ret['comment'] = 'The certificate is already in the correct state'
         return ret
