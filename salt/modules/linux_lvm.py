@@ -213,13 +213,16 @@ def pvcreate(devices, **kwargs):
         if kwargs[var] and var in valid:
             cmd.append('--{0}'.format(var))
             cmd.append(kwargs[var])
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    return out[0]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if out.get('retcode'):
+        raise CommandExecutionError(out.get('stderr'))
+
     # Verify pvcreate was successful
     for device in devices.split(','):
         if not pvdisplay(device):
             raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
 
+    return True
 
 def pvremove(devices):
     '''
