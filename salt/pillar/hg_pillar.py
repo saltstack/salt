@@ -3,6 +3,8 @@
 
 '''Use remote Mercurial repository as a Pillar source
 
+.. versionadded:: Beryllium
+
 The module depends on the ``hglib`` python module being available.
 This is the same requirement as for hgfs_ so should not pose any extra
 hurdles.
