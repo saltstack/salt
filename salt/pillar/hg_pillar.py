@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2014 Floris Bruynooghe <flub@devork.be>
 
-'''Use remote Mercurial repository as a Pillar source
+'''
+Use remote Mercurial repository as a Pillar source.
 
 .. versionadded:: Beryllium
 
@@ -9,7 +10,7 @@ The module depends on the ``hglib`` python module being available.
 This is the same requirement as for hgfs_ so should not pose any extra
 hurdles.
 
-This external Pillar source can be configued in the master config file as such:
+This external Pillar source can be configured in the master config file as such:
 
 .. code-block:: yaml
 
@@ -17,13 +18,17 @@ This external Pillar source can be configued in the master config file as such:
      - hg: ssh://hg@example.co/user/repo
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
 import copy
 import hashlib
 import logging
 import os
 
+# Import Salt Libs
 import salt.pillar
 
+# Import Third Party Libs
 try:
     import hglib
 except ImportError:
@@ -40,7 +45,7 @@ __opts__ = {}
 
 def __virtual__():
     '''
-    Only load if hglib is available
+    Only load if hglib is available.
     '''
     ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
     if not any(['hg' in x for x in ext_pillar_sources]):
