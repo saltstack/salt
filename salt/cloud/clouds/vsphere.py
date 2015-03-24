@@ -824,3 +824,46 @@ def reset(name, call=None):
         log.error('Could not reset VM {0}: {1}'.format(name, exc))
         return 'failed to reset'
     return 'reset'
+
+
+def snapshot_list(kwargs=None, call=None):
+    '''
+    List virtual machines with snapshots
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f snapshot_list
+    '''
+    ret = {}
+    vms = []
+
+    conn = get_conn()
+
+    qry = conn._retrieve_properties_traversal(
+        property_names=['name', 'rootSnapshot'],
+        obj_type="VirtualMachine"
+    )
+
+    for prop in qry:
+        has_snapshots = False
+        name = ""
+
+        for i in prop.PropSet:
+            if i.Name == 'rootSnapshot' and i.Val.ManagedObjectReference:
+                has_snapshots = True
+            if i.Name == 'name':
+                name = i.Val
+        if has_snapshots:
+            vms.append(name)
+
+    for vm in vms:
+        _vm = conn.get_vm_by_name(vm)
+
+        ret[vm] = {'snapshots': []}
+
+        for snap in _vm.get_snapshots():
+            ret[vm]['snapshots'].append(snap.get_name())
+
+    return ret
