@@ -461,7 +461,7 @@ def get_ca_bundle(opts=None):
         if os.path.exists(path):
             return path
 
-    if salt.utils.is_windows():
+    if salt.utils.is_windows() and HAS_CERTIFI:
         return certifi.where()
 
     return None
