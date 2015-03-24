@@ -206,8 +206,10 @@ def pvcreate(devices, override=True, **kwargs):
     cmd = ['pvcreate']
     for device in devices.split(','):
         if not os.path.exists(device):
-            return '{0} does not exist'.format(device)
-        cmd.append(device)
+            raise CommandExecutionError('{0} does not exist'.format(device))
+        # Verify pvcreate was successful
+        if not pvdisplay(device):
+            cmd.append(device)
         elif not override:
             raise CommandExecutionError('Device "{0}" is already an LVM physical volume.'.format(device))
 
