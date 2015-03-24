@@ -70,6 +70,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 import logging
 import json
+import os
 import salt.utils.odict as odict
 log = logging.getLogger(__name__)
 
@@ -113,13 +114,13 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
         created = __salt__['boto_iam.create_user'](name, path, region, key, keyid, profile)
         if created:
             ret['changes']['user'] = created
-            ret['comment'] = '\n'.join([ret['comment'], 'User {0} has been created.'.format(name)])
+            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been created.'.format(name)])
             if password:
                 ret = _case_password(ret, name, password, region, key, keyid, profile)
             if group:
                 ret = _case_group(ret, name, group, region, key, keyid, profile)
     else:
-        ret['comment'] = '\n'.join([ret['comment'], 'User {0} is present.'.format(name)])
+        ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is present.'.format(name)])
         if password:
             ret = _case_password(ret, name, password, region, key, keyid, profile)
         if group:
@@ -136,13 +137,13 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
     log.debug('login is : {0}'.format(login))
     if login:
         if 'Conflict' in login:
-            ret['comment'] = '\n'.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
+            ret['comment'] = os.linesep.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
         else:
-            ret['comment'] = '\n'.join([ret['comment'], 'Password has been added to User {0}.'.format(name)])
+            ret['comment'] = os.linesep.join([ret['comment'], 'Password has been added to User {0}.'.format(name)])
             ret['changes']['password'] = password
     else:
         ret['result'] = False
-        ret['comment'] = '\n'.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy'.format(name)])
+        ret['comment'] = os.linesep.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy'.format(name)])
     return ret
 
 
@@ -156,13 +157,13 @@ def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=Non
         result = __salt__['boto_iam.add_user_to_group'](name, group, region, key, keyid, profile)
         log.debug('result of the group is : {0} '.format(result))
         if 'Exists' in result:
-            ret['comment'] = '\n'.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(name, group)])
+            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(name, group)])
         else:
-            ret['comment'] = '\n'.join([ret['comment'], 'User {0} has been added to group {1}.'.format(name, group)])
+            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(name, group)])
             ret['changes']['group'] = name
     else:
         ret['result'] = False
-        ret['comment'] = '\n'.join([ret['comment'], 'Group {0} does not exist.'.format(group)])
+        ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} does not exist.'.format(group)])
     return ret
 
 
@@ -195,7 +196,7 @@ def group_present(name, policy_name=None, policy=None, users=None, region=None, 
         created = __salt__['boto_iam.create_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
         if created:
             ret['changes']['group'] = created
-            ret['comment'] = '\n'.join([ret['comment'], 'Group {0} has been created.'.format(name)])
+            ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} has been created.'.format(name)])
             if policy_name and policy:
                 ret = _case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
             if users:
@@ -204,7 +205,7 @@ def group_present(name, policy_name=None, policy=None, users=None, region=None, 
                     log.debug('user is : {0}'.format(user))
                     ret = _case_group(ret, user, name, region, key, keyid, profile)
     else:
-        ret['comment'] = '\n'.join([ret['comment'], 'Group {0} is present.'.format(name)])
+        ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} is present.'.format(name)])
         if policy_name and policy:
             ret = _case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
         if users:
@@ -223,14 +224,14 @@ def _case_policy(ret, group_name, policy_name, policy, region=None, key=None, ke
             policy = json.loads(policy, object_pairs_hook=odict.OrderedDict)
         log.debug('policy is  : {0}'.format(policy))
         if exists == policy:
-            ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} is present.'.format(group_name)])
+            ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is present.'.format(group_name)])
         else:
             if __opts__['test']:
                 ret['comment'] = 'Group policy {0} is set to be updated.'.format(policy_name)
                 ret['result'] = None
                 return ret
             __salt__['boto_iam.put_group_policy'](group_name, policy_name, policy, region, key, keyid, profile)
-            ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
+            ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
             ret['changes']['policy_name'] = policy
     else:
         if __opts__['test']:
@@ -238,7 +239,7 @@ def _case_policy(ret, group_name, policy_name, policy, region=None, key=None, ke
             ret['result'] = None
             return ret
         __salt__['boto_iam.put_group_policy'](group_name, policy_name, policy, region, key, keyid, profile)
-        ret['comment'] = '\n'.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
+        ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
         ret['changes'][policy_name] = policy
     return ret
 
@@ -295,7 +296,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
         if key == 'region' or key == 'key' or key == 'keyid' or key == 'profile':
             continue
         if value is not None and str(info[key]) != str(value).lower():
-            ret['comment'] = '\n'.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
+            ret['comment'] = os.linesep.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
             ret['changes'][key] = str(value).lower()
     if not ret['changes']:
         ret['comment'] = 'Account policy is not changed'
