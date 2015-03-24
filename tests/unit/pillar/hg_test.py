@@ -28,8 +28,9 @@ FILE_DATA = {
 from salt.pillar import hg_pillar
 HGLIB = hg_pillar.hglib
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(HGLIB == None, 'python-hglib no')
+@skipIf(HGLIB is None, 'python-hglib no')
 class HgPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     'test hg_pillar pillar'
     maxDiff = None
