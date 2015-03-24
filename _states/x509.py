@@ -100,7 +100,6 @@ def csr_managed(name,
     ret['changes'] = {
             'old': current,
             'new': new,}
-        return ret
 
     if __opts__['test'] == True:
         ret['comment'] = 'The CSR {0} will be updated.'.format(name)
@@ -116,8 +115,8 @@ def csr_managed(name,
 
 
 def certificate_managed(name,
-                        subject,
                         signing_private_key,
+                        subject=[],
                         signing_cert=None,
                         public_key=None,
                         csr=None,
@@ -133,23 +132,6 @@ def certificate_managed(name,
     Manage certificates
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
-    if (public_key and csr):
-        raise salt.exceptions.SaltInvocationError('Include either public_key or csr, not both.')
-
-    if (get_public_key(signing_private_key) == get_public_key(public_key) and
-            signing_cert):
-        raise salt.exceptions.SaltInvocationError('signing_private_key equals public_key,'
-                'this is a self-signed certificate.'
-                'Do not include signing_cert')
-
-    if (get_public_key(signing_private_key) != get_public_key(public_key) and
-            not signing_cert):
-        raise salt.exceptions.SaltInvocationError('this is not a self-signed certificate.'
-                'signing_cert is required.')
-
-    # delete notbefore notafter serial and fingerprint fields
-    # then compare read_certificate
 
     subject = _subject_to_dict(subject)
     extensions = _exts_to_list(extensions)
@@ -186,7 +168,7 @@ def certificate_managed(name,
     new_comp.pop('Not Before')
     new_comp.pop('Not After')
 
-    if (current_comp == new_comp and current_days_remaining > days_remaining)
+    if (current_comp == new_comp and current_days_remaining > days_remaining):
         ret['result'] = True
         ret['comment'] = 'The certificate is already in the correct state'
         return ret
