@@ -1021,8 +1021,8 @@ def setvcpus(vm_, vcpus, config=False):
 
 def freemem():
     '''
-    Return an int representing the amount of memory that has not been given
-    to virtual machines on this node
+    Return an int representing the amount of memory (in MB) that has not
+    been given to virtual machines on this node
 
     CLI Example:
 
