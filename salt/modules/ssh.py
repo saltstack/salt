@@ -231,7 +231,7 @@ def _get_known_hosts_file(config=None, user=None):
     return full
 
 
-def host_keys(keydir=None):
+def host_keys(keydir=None, private=True):
     '''
     Return the minion's host keys
 
@@ -240,6 +240,8 @@ def host_keys(keydir=None):
     .. code-block:: bash
 
         salt '*' ssh.host_keys
+        salt '*' ssh.host_keys keydir=/etc/ssh
+        salt '*' ssh.host_keys keydir=/etc/ssh private=False
     '''
     # TODO: support parsing sshd_config for the key directory
     if not keydir:
@@ -251,6 +253,10 @@ def host_keys(keydir=None):
     keys = {}
     for fn_ in os.listdir(keydir):
         if fn_.startswith('ssh_host_'):
+            if fn_.endswith('.pub') is False and private is False:
+                log.info('Skipping private key file {0} as private is set to False'.format(fn_))
+                continue
+
             top = fn_.split('.')
             comps = fn_.split('_')
             kname = comps[2]
