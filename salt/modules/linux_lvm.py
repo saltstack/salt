@@ -263,7 +263,7 @@ def pvremove(devices, override=True):
 
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out.get('retcode'):
-        raise (CommandExecutionError(out.get('stderr')))
+        raise CommandExecutionError(out.get('stderr'))
 
     # Verify pvcremove was successful
     for device in devices.split(','):
