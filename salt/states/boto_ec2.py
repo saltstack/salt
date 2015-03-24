@@ -2,7 +2,7 @@
 '''
 Manage EC2
 
-.. versionadded:: TBD
+.. versionadded:: Beryllium
 This module provides an interface to the Elastic Compute Cloud (EC2) service
 from AWS.
 
