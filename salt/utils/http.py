@@ -2,6 +2,8 @@
 '''
 Utils for making various web calls. Primarily designed for REST, SOAP, webhooks
 and the like, but also useful for basic HTTP testing.
+
+.. versionaddedd:: 2015.2
 '''
 from __future__ import absolute_import
 
