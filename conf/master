@@ -2,8 +2,9 @@
 ##########################################
 # This configuration file is used to manage the behavior of the Salt Master.
 # Values that are commented out but have an empty line after the comment are
-# defaults that need not be set in the config. If there is no blank line after the
-# comment that the value is presented as an example and is not the default.
+# defaults that do not need to be set in the config. If there is no blank line
+# after the comment then the value is presented as an example and is not the
+# default.
 
 # Per default, the master will automatically include all config files
 # from master.d/*.conf (master.d is a directory in the same directory
@@ -489,6 +490,15 @@
 # the pillar called "master". This is used to set simple configurations in the
 # master config file that can then be used on minions.
 #pillar_opts: True
+
+# The pillar_source_merging_strategy option allows you to configure merging strategy
+# between different sources. It accepts four values: recurse, aggregate, overwrite,
+# or smart. Recurse will merge recursively mapping of data. Aggregate instructs
+# aggregation of elements between sources that use the #!yamlex renderer. Overwrite
+# will verwrite elements according the order in which they are processed. This is
+# behavior of the 2014.1 branch and earlier. Smart guesses the best strategy based
+# on the "renderer" setting and is the default value.
+#pillar_source_merging_strategy: smart
 
 
 #####          Syndic settings       #####
