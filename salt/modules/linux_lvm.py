@@ -252,11 +252,6 @@ def pvremove(devices, override=True):
     '''
     cmd = ['pvremove', '-y']
     for device in devices.split(','):
-        if not __salt__['lvm.pvdisplay'](device):
-            return '{0} is not a physical volume'.format(device)
-        cmd.append(device)
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    return out[0]
         elif not override:
             raise CommandExecutionError('{0} is not a physical volume'.format(device))
 
