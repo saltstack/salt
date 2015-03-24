@@ -690,6 +690,9 @@ class ReqServer(object):
                 if exc.errno == errno.EINTR:
                     continue
                 raise exc
+            except KeyboardInterrupt:
+                log.warn('Stopping the Salt Master')
+                raise SystemExit('\nExiting on Ctrl-c')
 
     def __bind(self):
         '''
@@ -720,7 +723,11 @@ class ReqServer(object):
         '''
         Start up the ReqServer
         '''
-        self.__bind()
+        try:
+            self.__bind()
+        except KeyboardInterrupt:
+            log.warn('Stopping the Salt Master')
+            raise SystemExit('\nExiting on Ctrl-c')
 
     def destroy(self):
         if hasattr(self, 'clients') and self.clients.closed is False:
