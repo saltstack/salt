@@ -1806,7 +1806,7 @@ There are additional details at :ref:`salt-pillars`
 Default: ``smart``
 
 The pillar_source_merging_strategy option allows to configure merging strategy
-between different sources. It accepts 3 values:
+between different sources. It accepts 4 values:
 
 * recurse:
 
