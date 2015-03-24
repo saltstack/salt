@@ -114,8 +114,13 @@ def _get_csr_extensions(csr):
 
     for short_name, long_name in EXT_NAME_MAPPINGS.iteritems():
         if long_name in csrexts:
-            ret.append({'name': short_name,
-                'value': csrexts[long_name]})
+            retext = {}
+            if csrexts[long_name].startswith('critical '):
+                retext['critical'] = True
+                csrexts[long_name] = csrexts[long_name][9:]
+            retext['name'] = short_name
+            retext['value'] = csrexts[long_name]
+            ret.append(retext)
 
     return ret
 
@@ -187,18 +192,25 @@ def _parse_extensions_in(ext_list):
             subject_key_identifier = X509.new_extension(ext['name'], ext['value'])
         if ext['name'] == 'authorityKeyIdentifier':
             # Use the ugly hacks in place above
-            if subject_key_identifier:
+            # In preprocessing, for authorityKeyIdentifier, the value is replaced
+            # with the certificate object representing the issuer
+            # Or with the string self in case of a self-issuer
+            # We need to pass this certificate object as issuer to new_extension
+            # where the subjectKeyIdentifier extension will be copied to 
+            # authorityKeyIdentifier
+            if ext['value'] == 'self':
+                ext['value'] = X509.X509()
                 ext['value'].add_ext(subject_key_identifier)
-            ext = _new_extension('authorityKeyIdentifier',
-                    'keyid,issuer:always', 0, issuer=ext['value'])
+            ext_obj = X509.new_extension('authorityKeyIdentifier',
+                         'keyid,issuer:always', 0, issuer=ext['value'])
         else:
-            ext = X509.new_extension(ext['name'], ext['value'])
-        try:
-            ext.set_critical(ext['critical'])
-        except NameError:
-            pass
+            ext_obj = X509.new_extension(ext['name'], ext['value'])
 
-        ret.append(ext)
+        if 'critical' in ext:
+            ext_obj.set_critical(ext['critical'])
+        
+        print 'successfully processed {0}.'.format(ext['name'])
+        ret.append(ext_obj)
 
     return ret
 
@@ -521,7 +533,7 @@ def create_certificate(path=None, text=False, subject={},
             if signing_cert:
                 ext['value'] = signing_cert
             else:
-                ext['value'] = cert
+                ext['value'] = 'self'
         tmpext.append(ext)
 
     # Add CSR extensions that don't already exist
@@ -542,8 +554,11 @@ def create_certificate(path=None, text=False, subject={},
     extensions = _parse_extensions_in(extensions)
     for ext in extensions:
         cert.add_ext(ext)
+        print 'adding ext {}'.format(ext.get_name())
 
+    print 'extensions added'
     cert.sign(signing_private_key, algorithm)
+    print 'signed'
 
     if path:
         return write_pem(text=cert.as_pem(), path=path,

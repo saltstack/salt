@@ -142,7 +142,7 @@ def certificate_managed(name,
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
-            current_comp = current
+            current_comp = current.copy()
             if not serial_number:
                 current_comp.pop('Serial Number')
             current_comp.pop('Not Before')
@@ -165,7 +165,7 @@ def certificate_managed(name,
             algorithm=algorithm)
 
     new = __salt__['x509.read_certificate'](certificate=new_cert)
-    new_comp = new
+    new_comp = new.copy()
     if not serial_number:
         new_comp.pop('Serial Number')
     new_comp.pop('Not Before')
