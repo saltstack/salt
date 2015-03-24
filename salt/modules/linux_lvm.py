@@ -10,6 +10,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.ext.six as six
+from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'lvm'
@@ -214,6 +215,10 @@ def pvcreate(devices, **kwargs):
             cmd.append(kwargs[var])
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out[0]
+    # Verify pvcreate was successful
+    for device in devices.split(','):
+        if not pvdisplay(device):
+            raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
 
 
 def pvremove(devices):
