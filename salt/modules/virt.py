@@ -1542,8 +1542,6 @@ def is_kvm_hyper():
 
         salt '*' virt.is_kvm_hyper
     '''
-    if __grains__['virtual'] != 'physical':
-        return False
     try:
         if 'kvm_' not in salt.utils.fopen('/proc/modules').read():
             return False
