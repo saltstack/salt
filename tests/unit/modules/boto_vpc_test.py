@@ -681,7 +681,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         '''
         Tests checking subnet existence without any filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: subnet id, name or tags.'):
+        with self.assertRaisesRegexp(SaltInvocationError,
+                                     'At least on of the following must be specified: subnet id, cidr, name, tags, or zones.'):
             boto_vpc.subnet_exists(**conn_parameters)
 
 

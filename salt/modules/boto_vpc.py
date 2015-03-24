@@ -391,7 +391,7 @@ def subnet_exists(subnet_id=None, name=None, cidr=None, tags=None, zones=None,
 
     if not any((subnet_id, name, cidr, tags, zones)):
         raise SaltInvocationError('At least on of the following must be '
-                                  'specified: subnet id, cidr, name , tags '
+                                  'specified: subnet id, cidr, name, tags, '
                                   'or zones.')
 
     try:
