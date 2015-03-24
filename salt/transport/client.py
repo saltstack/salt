@@ -4,6 +4,35 @@ Encapsulate the different transports available to Salt.
 
 This includes client side transport, for the ReqServer and the Publisher
 '''
+import time
+import tornado.ioloop
+
+
+# TODO: singletons?
+class SyncReqChannelWrapper(object):
+    '''
+    A wrapper to make AsyncReqChannels synchronous
+    '''
+    def __init__(self, async_channel):
+        self.async_channel = async_channel
+        self.io_loop = tornado.ioloop.IOLoop()
+
+    def _block_future(self, future):
+        start = time.time()
+        self.io_loop.add_future(future, lambda future: self.io_loop.stop())
+        self.io_loop.start()
+        return future.result()
+
+    def send(self, load, tries=3, timeout=60):
+        future = self.async_channel.send(load, tries=tries, timeout=timeout)
+        return self._block_future(future)
+
+    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
+        future = self.async_channel.crypted_transfer_decode_dictentry(load,
+                                                                      dictkey=dictkey,
+                                                                      tries=tries,
+                                                                      timeout=timeout)
+        return self._block_future(future)
 
 
 class ReqChannel(object):
@@ -21,22 +50,13 @@ class ReqChannel(object):
         elif 'transport' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport']
 
-        # switch on available ttypes
         if ttype == 'zeromq':
             import salt.transport.zeromq
             return salt.transport.zeromq.ZeroMQReqChannel(opts, **kwargs)
-        elif ttype == 'raet':
-            import salt.transport.raet
-            return salt.transport.raet.RAETReqChannel(opts, **kwargs)
-        elif ttype == 'tcp':
-            import salt.transport.tcp
-            return salt.transport.tcp.TCPReqChannel(opts, **kwargs)
-        elif ttype == 'local':
-            import salt.transport.local
-            return salt.transport.local.LocalChannel(opts, **kwargs)
         else:
-            raise Exception('Channels are only defined for ZeroMQ and raet')
-            # return NewKindOfChannel(opts, **kwargs)
+            # TODO: switch everything to this
+            async = AsyncReqChannel.factory(opts, **kwargs)
+            return SyncReqChannelWrapper(async)
 
     def send(self, load, tries=3, timeout=60):
         '''

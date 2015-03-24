@@ -93,93 +93,6 @@ def socket_frame_recv(s, recv_size=4096):
 
 
 # TODO: make singleton
-class TCPReqChannel(salt.transport.client.ReqChannel):
-    '''
-    Encapsulate sending routines to tcp.
-
-    TODO:
-        - add timeouts
-    '''
-    def __init__(self, opts, **kwargs):
-        self.opts = dict(opts)
-
-        self.serial = salt.payload.Serial(self.opts)
-
-        # crypt defaults to 'aes'
-        self.crypt = kwargs.get('crypt', 'aes')
-
-        if self.crypt != 'clear':
-            self.auth = salt.crypt.SAuth(self.opts)
-
-        parse = urlparse.urlparse(self.opts['master_uri'])
-        host, port = parse.netloc.rsplit(':', 1)
-        self.master_addr = (host, int(port))
-
-    def _package_load(self, load):
-        return self.serial.dumps({
-            'enc': self.crypt,
-            'load': load,
-        })
-
-    @property
-    def socket(self):
-        if not hasattr(self, '_socket'):
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._socket.connect(self.master_addr)
-        return self._socket
-
-    def _send_recv(self, msg, timeout=5):
-        '''
-        Do a blocking send/recv combo
-        '''
-        self.socket.send(frame_msg(msg))
-        return socket_frame_recv(self.socket)
-
-    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
-        # send msg
-        ret = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
-        # wait for response
-        ret = self.serial.loads(ret)
-        key = self.auth.get_keys()
-        aes = key.private_decrypt(ret['key'], 4)
-        pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        return pcrypt.loads(ret[dictkey])
-
-    def _crypted_transfer(self, load, tries=3, timeout=60):
-        '''
-        In case of authentication errors, try to renegotiate authentication
-        and retry the method.
-        Indeed, we can fail too early in case of a master restart during a
-        minion state execution call
-        '''
-        def _do_transfer():
-            data = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)),
-                                   timeout=timeout)
-            data = self.serial.loads(data)
-            # we may not have always data
-            # as for example for saltcall ret submission, this is a blind
-            # communication, we do not subscribe to return events, we just
-            # upload the results to the master
-            if data:
-                data = self.auth.crypticle.loads(data)
-            return data
-        try:
-            return _do_transfer()
-        except salt.crypt.AuthenticationError:
-            self.auth.authenticate()
-            return _do_transfer()
-
-    def _uncrypted_transfer(self, load, tries=3, timeout=60):
-        ret = self._send_recv(self._package_load(load))
-        return self.serial.loads(ret)
-
-    def send(self, load, tries=3, timeout=60):
-        if self.crypt == 'clear':  # for sign-in requests
-            return self._uncrypted_transfer(load, tries, timeout)
-        else:  # for just about everything else
-            return self._crypted_transfer(load, tries, timeout)
-
-
 class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to tcp.
@@ -541,7 +454,7 @@ class SaltMessageClient(object):
                 message_id, item = self.send_queue.pop(0)
             # TODO: not this way
             except IndexError:
-                yield tornado.gen.sleep(1)
+                yield tornado.gen.sleep(0.1)
                 continue
             try:
                 yield self._stream.write(item)
