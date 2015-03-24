@@ -1,8 +1,8 @@
 ##### Primary configuration settings #####
 ##########################################
 # This configuration file is used to manage the behavior of the Salt Master.
-# Values that are commented out but have no space after the comment are
-# defaults that need not be set in the config. If there is a space after the
+# Values that are commented out but have an empty line after the comment are
+# defaults that need not be set in the config. If there is a blank line after the
 # comment that the value is presented as an example and is not the default.
 
 # Per default, the master will automatically include all config files
@@ -211,7 +211,7 @@
 #  larry:
 #    - test.ping
 #    - network.*
-
+#
 # Blacklist any of the following users or modules
 #
 # This example would blacklist all non sudo users, including root from
@@ -231,7 +231,7 @@
 #  pam:
 #    fred:
 #      - test.*
-
+#
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 #token_expire: 43200
 
@@ -356,7 +356,7 @@
 #   prod:
 #     - /srv/salt/prod/services
 #     - /srv/salt/prod/states
-
+#
 #file_roots:
 #  base:
 #    - /srv/salt
@@ -461,8 +461,8 @@
 # within the repository. The path is defined relative to the root of the
 # repository and defaults to the repository root.
 #gitfs_root: somefolder/otherfolder
-
-
+#
+#
 #####         Pillar settings        #####
 ##########################################
 # Salt Pillars allow for the building of global data that can be made selectively
@@ -557,8 +557,8 @@
 #peer_run:
 #  foo.example.com:
 #    - manage.up
-
-
+#
+#
 #####         Mine settings     #####
 ##########################################
 # Restrict mine.get access from minions. By default any minion has a full access
@@ -643,10 +643,11 @@
 ##############################################
 # Location of the repo on the master:
 #win_repo: '/srv/salt/win/repo'
-
+#
 # Location of the master's repo cache file:
 #win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
-
+#
 # List of git repositories to include with the local repo:
 #win_gitrepos:
 #  - 'https://github.com/saltstack/salt-winrepo.git'
+#
