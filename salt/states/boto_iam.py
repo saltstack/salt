@@ -3,7 +3,7 @@
 Manage IAM roles.
 =================
 
-.. versionadded:: TBD
+.. versionadded:: Beryllium
 
 This module uses ``boto``, which can be installed via package, or pip.
 
