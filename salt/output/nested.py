@@ -25,7 +25,6 @@ Example output::
 '''
 # Import python libs
 from numbers import Number
-import re
 
 # Import salt libs
 import salt.output
