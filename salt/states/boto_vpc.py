@@ -100,13 +100,8 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
            'changes': {}
            }
 
-    _id = {'salt_id': name}
-    if tags:
-        _tags = tags.update(_id)
-    else:
-        _tags = _id
-    exists = __salt__['boto_vpc.exists'](tags=_id, region=region, key=key,
-                                         keyid=keyid, profile=profile)
+    exists = __salt__['boto_vpc.exists'](name=name, tags=tags, region=region,
+                                         key=key, keyid=keyid, profile=profile)
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'VPC {0} is set to be created.'.format(name)
@@ -137,13 +132,8 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
            'changes': {}
            }
 
-    _id = {'salt_id': name}
-    if tags:
-        _tags = tags.update(_id)
-    else:
-        _tags = _id
-    exists = __salt__['boto_vpc.exists'](tags=_id, region=region, key=key,
-                                         keyid=keyid, profile=profile)
+    exists = __salt__['boto_vpc.exists'](name=name, tags=tags, region=region,
+                                         key=key, keyid=keyid, profile=profile)
     if not exists:
         ret['comment'] = '{0} VPC does not exist.'.format(name)
         return ret
