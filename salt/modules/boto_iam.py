@@ -776,7 +776,7 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to failed to create certificate {0} .'
-        log.error(msg.format())
+        log.error(msg.format(cert_name))
         return False
 
 
