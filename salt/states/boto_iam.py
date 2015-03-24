@@ -408,10 +408,10 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
         return ret
     created = __salt__['boto_iam.upload_server_cert'](name, public_key, private_key, cert_chain,
                                                       path, region, key, keyid, profile)
-    if not created:
-        ret['result'] = False
-        ret['comment'] = 'Certificate {0} failed to be created.'.format(name)
+    if created:
+        ret['comment'] = 'Certificate {0} was created.'.format(name)
+        ret['changes'] = created
         return ret
-    ret['comment'] = 'Certificate {0} was created.'.format(name)
-    ret['changes'] = created
+    ret['result'] = False
+    ret['comment'] = 'Certificate {0} failed to be created.'.format(name)
     return ret
