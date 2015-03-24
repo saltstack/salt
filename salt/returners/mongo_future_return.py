@@ -7,7 +7,9 @@ Required python modules: pymongo
 
 This returner will send data from the minions to a MongoDB server. To
 configure the settings for your MongoDB server, add the following lines
-to the minion config files::
+to the minion config files:
+
+.. cod-block:: yaml
 
     mongo.db: <database name>
     mongo.host: <server ip address>
@@ -17,7 +19,9 @@ to the minion config files::
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
+
+.. code-block:: yaml
 
     alternative.mongo.db: <database name>
     alternative.mongo.host: <server ip address>
@@ -29,11 +33,17 @@ the default location::
 This mongo returner is being developed to replace the default mongodb returner
 in the future and should not be considered API stable yet.
 
-  To use the mongo returner, append '--return mongo' to the salt command. ex:
+To use the mongo returner, append '--return mongo' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return mongo
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.2.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return mongo --return_config alternative
 '''
