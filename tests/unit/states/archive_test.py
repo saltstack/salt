@@ -11,12 +11,18 @@ import tempfile
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salttesting.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    patch
+)
 
 ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import archive as archive
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Globals
 archive.__salt__ = {}
