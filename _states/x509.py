@@ -39,7 +39,7 @@ def private_key_managed(name,
         try:
             current_bits = __salt__['x509.get_private_key_size'](private_key=name)
             current = "{0} bit private key".format(current_bits)
-        except ValueError:
+        except salt.exceptions.SaltInvocationError:
             current = '{0} is not a valid Private Key.'.format(name)
     else:
         current = '{0} does not exist.'.format(name)
@@ -83,7 +83,7 @@ def csr_managed(name,
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_csr'](csr=name)
-        except ValueError:
+        except salt.exceptions.SaltInvocationError:
             current = '{0} is not a valid CSR.'.format(name)
     else:
         current = '{0} does not exist.'.format(name)
@@ -120,6 +120,7 @@ def certificate_managed(name,
                         signing_private_key,
                         signing_cert=None,
                         public_key=None,
+                        csr=None,
                         extensions=None,
                         days_valid=365,
                         days_remaining=90,
@@ -132,6 +133,21 @@ def certificate_managed(name,
     Manage certificates
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if (public_key and csr):
+        raise salt.exceptions.SaltInvocationError('Include either public_key or csr, not both.')
+
+    if (get_public_key(signing_private_key) == get_public_key(public_key) and
+            signing_cert):
+        raise salt.exceptions.SaltInvocationError('signing_private_key equals public_key,'
+                'this is a self-signed certificate.'
+                'Do not include signing_cert')
+
+    if (get_public_key(signing_private_key) != get_public_key(public_key) and
+            not signing_cert):
+        raise salt.exceptions.SaltInvocationError('this is not a self-signed certificate.'
+                'signing_cert is required.')
+
     # delete notbefore notafter serial and fingerprint fields
     # then compare read_certificate
 
@@ -151,7 +167,7 @@ def certificate_managed(name,
             current_notafter = current_comp.pop('Not After')
             current_days_remaining = (datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') - 
                     datetime.now()).days
-        except ValueError:
+        except salt.exceptions.SaltInvocationError:
             current = '{0} is not a valid Certificate.'.format(name)
     else:
         current = '{0} does not exist.'.format(name)

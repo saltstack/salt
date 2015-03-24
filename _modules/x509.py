@@ -27,6 +27,7 @@ from M2Crypto import m2, X509, RSA, BIO, EVP
 
 # Import salt libs
 import salt.utils
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree = 1):
     """
     if name == 'subjectKeyIdentifier' and \
         value.strip('0123456789abcdefABCDEF:') is not '':
-        raise ValueError('value must be precomputed hash')
+        raise salt.exceptions.SaltInvocationError('value must be precomputed hash')
 
 
     lhash = M2Crypto.m2.x509v3_lhash()
@@ -168,7 +169,7 @@ def _parse_subject_in(subject_dict):
 
     for name, value in subject_dict.iteritems():
         if name not in subject.nid:
-            raise ValueError('{0} is not a valid subject property'.format(name))
+            raise salt.exceptions.SaltInvocationError('{0} is not a valid subject property'.format(name))
         setattr(subject, name, value)
 
     return subject
@@ -251,7 +252,7 @@ def get_pem_entry(text, pem_type=None):
     if not pem_type:
         # Split based on headers
         if len(text.split("-----")) is not 5:
-            raise ValueError('PEM text not valid:\n{0}'.format(text))
+            raise salt.exceptions.SaltInvocationError('PEM text not valid:\n{0}'.format(text))
         pem_header = "-----"+text.split("-----")[1]+"-----"
         # Remove all whitespace from body
         pem_footer = "-----"+text.split("-----")[3]+"-----"
@@ -261,7 +262,7 @@ def get_pem_entry(text, pem_type=None):
         # Split based on defined headers
         if (len(text.split(pem_header)) is not 2 or
                 len(text.split(pem_footer)) is not 2):
-            raise ValueError(
+            raise salt.exceptions.SaltInvocationError(
                     'PEM does not contain a single entry of type {0}:\n'
                     '{1}'.format(pem_type, text))
 
@@ -414,9 +415,9 @@ def create_private_key(path=None, text=False, bits=2048):
     choose to write the key to 'path' or return as text.
     '''
     if ( not path and not text):
-        raise ValueError('Either path or text must be specified.')
+        raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if (path and text):
-        raise ValueError('Either path or text must be specified, not both.')
+        raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
     rsa = RSA.gen_key(bits, m2.RSA_F4)
     bio = BIO.MemoryBuffer()
@@ -446,15 +447,15 @@ def create_certificate(path=None, text=False, subject={},
     subjectKeyIdentifier hash.
     '''
     if (not path and not text):
-        raise ValueError('Either path or text must be specified.')
+        raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if (path and text):
-        raise ValueError('Either path or text must be specified, not both.')
+        raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
     if not signing_private_key:
-        raise ValueError('signing_private_key must be specified')
+        raise salt.exceptions.SaltInvocationError('signing_private_key must be specified')
 
     if (public_key and csr):
-        raise ValueError('Include either public_key or csr, not both.')
+        raise salt.exceptions.SaltInvocationError('Include either public_key or csr, not both.')
 
     if not (public_key or csr):
         public_key = get_public_key(signing_private_key)
@@ -463,13 +464,13 @@ def create_certificate(path=None, text=False, subject={},
 
     if (get_public_key(signing_private_key) == get_public_key(public_key) and
             signing_cert):
-        raise ValueError('signing_private_key equals public_key,'
+        raise salt.exceptions.SaltInvocationError('signing_private_key equals public_key,'
                 'this is a self-signed certificate.'
                 'Do not include signing_cert')
 
     if (get_public_key(signing_private_key) != get_public_key(public_key) and
             not signing_cert):
-        raise ValueError('this is not a self-signed certificate.'
+        raise salt.exceptions.SaltInvocationError('this is not a self-signed certificate.'
                 'signing_cert is required.')
 
     if csr:
@@ -520,7 +521,7 @@ def create_certificate(path=None, text=False, subject={},
         if ext['name'] == 'authorityKeyIdentifier':
             # Part of the ugly hack for the authorityKeyIdentifier bug in M2Crypto
             if ext['value'] != 'keyid,issuer:always':
-                raise ValueError('authorityKeyIdentifier must be keyid,issuer:always')
+                raise salt.exceptions.SaltInvocationError('authorityKeyIdentifier must be keyid,issuer:always')
             if signing_cert:
                 ext['value'] = signing_cert
             else:
@@ -560,9 +561,9 @@ def create_csr(path=None, text=False, subject={}, public_key=None,
     Create a certificate signing request
     '''
     if (not path and not text):
-        raise ValueError('Either path or text must be specified.')
+        raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if (path and text):
-        raise ValueError('Either path or text must be specified, not both.')
+        raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
     subject = _parse_subject_in(subject)
     public_key = _get_public_key_obj(public_key)
@@ -575,13 +576,13 @@ def create_csr(path=None, text=False, subject={}, public_key=None,
     # subjectkeyidentifier and authoritykeyidentifier should not be in CSRs
     for ext in extensions:
         if ext['name'] == 'subjectKeyIdentifier':
-            raise ValueError('subjectKeyIdentifier should be added by the CA,'
+            raise salt.exceptions.SaltInvocationError('subjectKeyIdentifier should be added by the CA,'
                 'not include in the CSR')
         if ext['name'] == 'authorityKeyIdentifier':
-            raise ValueError('authorityKeyIdentifier should be added by the CA,'
+            raise salt.exceptions.SaltInvocationError('authorityKeyIdentifier should be added by the CA,'
                 'not include in the CSR')
         if ext['name'] not in ext_name_mappings:
-            raise ValueError('Unknown Extension {0}'.format(ext['name']))
+            raise salt.exceptions.SaltInvocationError('Unknown Extension {0}'.format(ext['name']))
 
     extensions = _parse_extensions_in(extensions)
     extstack = X509.X509_Extension_Stack()
