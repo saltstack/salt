@@ -1420,7 +1420,6 @@ class Minion(MinionBase):
             # Do not exit if a pillar refresh fails.
             log.error('Pillar data could not be refreshed. '
                       'One or more masters may be down!')
-            pass
         self.module_refresh(force_refresh)
 
     def manage_schedule(self, package):
