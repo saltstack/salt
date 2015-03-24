@@ -120,7 +120,7 @@ def certificate_managed(name,
                         signing_cert=None,
                         public_key=None,
                         csr=None,
-                        extensions=None,
+                        extensions=[],
                         days_valid=365,
                         days_remaining=90,
                         version=3,
@@ -146,6 +146,9 @@ def certificate_managed(name,
             if not serial_number:
                 current_comp.pop('Serial Number')
             current_comp.pop('Not Before')
+            current_comp.pop('MD5 Finger Print')
+            current_comp.pop('SHA1 Finger Print')
+            current_comp.pop('SHA-256 Finger Print')
             current_notafter = current_comp.pop('Not After')
             current_days_remaining = (datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') - 
                     datetime.now()).days
@@ -156,17 +159,20 @@ def certificate_managed(name,
 
     new_cert = __salt__['x509.create_certificate'](text=True, subject=subject,
             signing_private_key=signing_private_key, signing_cert=signing_cert,
-            public_key=public_key, extensions=extensions,
+            public_key=public_key, csr=csr, extensions=extensions,
             days_valid=days_valid, version=version, 
             serial_number=serial_number, serial_bits=serial_bits,
             algorithm=algorithm)
 
-    new = __salt__['x509.read_certificate'](certificate=new_csr)
+    new = __salt__['x509.read_certificate'](certificate=new_cert)
     new_comp = new
     if not serial_number:
         new_comp.pop('Serial Number')
     new_comp.pop('Not Before')
     new_comp.pop('Not After')
+    new_comp.pop('MD5 Finger Print')
+    new_comp.pop('SHA1 Finger Print')
+    new_comp.pop('SHA-256 Finger Print')
 
     if (current_comp == new_comp and current_days_remaining > days_remaining):
         ret['result'] = True
