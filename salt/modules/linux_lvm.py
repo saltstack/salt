@@ -234,9 +234,13 @@ def pvcreate(devices, override=True, **kwargs):
 
     return True
 
-def pvremove(devices):
+
+def pvremove(devices, override=True):
     '''
     Remove a physical device being used as an LVM physical volume
+
+    override
+        Skip devices, if they are already not used as an LVM physical volumes
 
     CLI Examples:
 
@@ -251,6 +255,13 @@ def pvremove(devices):
         cmd.append(device)
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out[0]
+        elif not override:
+            raise CommandExecutionError('{0} is not a physical volume'.format(device))
+
+    if not cmd[2:]:
+        # Nothing to do
+        return True
+
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out.get('retcode'):
         raise (CommandExecutionError(out.get('stderr')))
