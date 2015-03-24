@@ -9,7 +9,9 @@ Return data to a mysql server
 
 To enable this returner the minion will need the python client for mysql
 installed and the following values configured in the minion or master
-config, these are the defaults::
+config, these are the defaults:
+
+.. code-block:: yaml
 
     mysql.host: 'salt'
     mysql.user: 'salt'
@@ -19,7 +21,9 @@ config, these are the defaults::
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
+
+.. code-block:: yaml
 
     alternative.mysql.host: 'salt'
     alternative.mysql.user: 'salt'
@@ -27,7 +31,9 @@ the default location::
     alternative.mysql.db: 'salt'
     alternative.mysql.port: 3306
 
-Use the following mysql database schema::
+Use the following mysql database schema:
+
+.. code-block:: sql
 
     CREATE DATABASE  `salt`
       DEFAULT CHARACTER SET utf8
@@ -81,11 +87,17 @@ Use the following mysql database schema::
 
 Required python modules: MySQLdb
 
-  To use the mysql returner, append '--return mysql' to the salt command. ex:
+To use the mysql returner, append '--return mysql' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return mysql
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.2.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return mysql --return_config alternative
 '''
