@@ -241,11 +241,16 @@ def pvremove(devices):
         cmd.append(device)
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out[0]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if out.get('retcode'):
+        raise (CommandExecutionError(out.get('stderr')))
+
     # Verify pvcremove was successful
     for device in devices.split(','):
         if pvdisplay(device):
             raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
 
+    return True
 
 
 def vgcreate(vgname, devices, **kwargs):
