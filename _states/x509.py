@@ -4,6 +4,27 @@ from datetime import datetime
 import os
 
 
+def _subject_to_dict(subject):
+    _dict = {}
+    for item in subject:
+        for name, val in item.iteritems():
+            _dict[name] = val
+
+    return _dict
+
+
+def _exts_to_list(exts):
+    _list = []
+    for item in exts:
+        for name, data in item.iteritems():
+            ext = {'name': name}
+            for vals in data:
+                for val_name, value in vals.iteritems():
+                    ext[val_name] = value
+        _list.append(ext)
+    return _list
+                    
+
 def private_key_managed(name,
                         bits=2048,
                         new=False,
@@ -46,27 +67,6 @@ def private_key_managed(name,
     return ret
 
 
-def _subject_to_dict(subject):
-    _dict = {}
-    for item in subject:
-        for name, val in item.iteritems():
-            _dict[name] = val
-
-    return _dict
-
-
-def _exts_to_list(exts):
-    _list = []
-    for item in exts:
-        for name, data in item.iteritems():
-            ext = {'name': name}
-            for vals in data:
-                for val_name, value in vals.iteritems():
-                    ext[val_name] = value
-        _list.append(ext)
-    return _list
-                    
-
 def csr_managed(name,
                 public_key,
                 subject=[],
@@ -100,6 +100,7 @@ def csr_managed(name,
     ret['changes'] = {
             'old': current,
             'new': new,}
+        return ret
 
     if __opts__['test'] == True:
         ret['comment'] = 'The CSR {0} will be updated.'.format(name)
@@ -161,3 +162,32 @@ def certificate_managed(name,
             days_valid=days_valid, version=version, 
             serial_number=serial_number, serial_bits=serial_bits,
             algorithm=algorithm)
+
+    new = __salt__['x509.read_certificate'](certificate=new_csr)
+    new_comp = new
+    if not serial_number:
+        new_comp.pop('Serial Number')
+    new_comp.pop('Not Before')
+    new_comp.pop('Not After')
+
+    if (current_comp == new_comp and current_days_remaining > days_remaining)
+        ret['result'] = True
+        ret['comment'] = 'The certificate is already in the correct state'
+        return ret
+
+    ret['changes'] = {
+            'old': current,
+            'new': new,}
+
+    if __opts__['test'] == True:
+        ret['comment'] = 'The certificate {0} will be updated.'.format(name)
+        return ret
+
+    if os.path.isfile(name) and backup:
+        bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
+        salt.utils.backup_minion(name, bkroot)
+
+    ret['comment'] = __salt__['x509.write_pem'](text=new_cert, path=name, pem_type="CERTIFICATE")
+    ret['result'] = True
+
+    return ret
