@@ -2,7 +2,7 @@
 ##########################################
 # This configuration file is used to manage the behavior of the Salt Master.
 # Values that are commented out but have an empty line after the comment are
-# defaults that need not be set in the config. If there is a blank line after the
+# defaults that need not be set in the config. If there is no blank line after the
 # comment that the value is presented as an example and is not the default.
 
 # Per default, the master will automatically include all config files
