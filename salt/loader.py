@@ -112,7 +112,7 @@ def _create_loader(
     )
 
 
-def minion_mods(opts, context=None, whitelist=None):
+def minion_mods(opts, context=None, whitelist=None, loaded_base_name=None):
     '''
     Load execution modules
 
@@ -130,7 +130,11 @@ def minion_mods(opts, context=None, whitelist=None):
         __salt__ = salt.loader.minion_mods(__opts__)
         __salt__['test.ping']()
     '''
-    load = _create_loader(opts, 'modules', 'module')
+    load = _create_loader(
+            opts,
+            'modules',
+            'module',
+            loaded_base_name=loaded_base_name)
     if context is None:
         context = {}
     pack = {'name': '__context__',
