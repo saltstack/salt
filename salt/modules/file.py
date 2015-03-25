@@ -1241,6 +1241,10 @@ def line(path, content, match=None, mode=None, location=None,
          Create a backup of the original file with the extension:
          "Year-Month-Day-Hour-Minutes-Seconds".
 
+    :param quiet
+         Do not raise any exceptions. E.g. ignore the fact that the file that is
+         tried to be edited does not exist and nothing really happened.
+
     CLI Examples:
 
     .. code-block:: bash
