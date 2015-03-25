@@ -31,3 +31,4 @@ Reference
     tops/all/index
     wheel/all/index
     beacons/all/index
+    sdb/all/index
