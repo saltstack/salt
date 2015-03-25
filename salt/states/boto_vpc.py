@@ -126,6 +126,27 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
 
 
 def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure VPC with passed properties is absent.
+
+    name
+        Name of the VPC.
+    tags
+        A list of tags. All tags must match.
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+
     ret = {'name': name,
            'result': True,
            'comment': '',
