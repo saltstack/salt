@@ -37,7 +37,6 @@ Connection module for Amazon VPC
 
 # Import Python libs
 from __future__ import absolute_import
-import hashlib
 import logging
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
