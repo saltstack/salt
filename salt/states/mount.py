@@ -114,8 +114,9 @@ def mounted(name,
                 real_device = _real_device
             else:
                 # Remote file systems act differently.
-                opts = list(set(opts + active[_device]['opts'] + active[_device]['superopts']))
-                active[real_name]['opts'].append('bind')
+                if _device in active:
+                    opts = list(set(opts + active[_device]['opts'] + active[_device]['superopts']))
+                    active[real_name]['opts'].append('bind')
                 real_device = active[real_name]['device']
         else:
             real_device = os.path.realpath(device)
@@ -195,6 +196,7 @@ def mounted(name,
                     'soft',
                     'auto',
                     'users',
+                    'bind',
                 ]
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
