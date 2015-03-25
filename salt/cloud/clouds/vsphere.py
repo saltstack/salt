@@ -830,6 +830,8 @@ def snapshot_list(kwargs=None, call=None):
     '''
     List virtual machines with snapshots
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
