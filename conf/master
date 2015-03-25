@@ -1,9 +1,10 @@
 ##### Primary configuration settings #####
 ##########################################
 # This configuration file is used to manage the behavior of the Salt Master.
-# Values that are commented out but have no space after the comment are
-# defaults that need not be set in the config. If there is a space after the
-# comment that the value is presented as an example and is not the default.
+# Values that are commented out but have an empty line after the comment are
+# defaults that do not need to be set in the config. If there is no blank line
+# after the comment then the value is presented as an example and is not the
+# default.
 
 # Per default, the master will automatically include all config files
 # from master.d/*.conf (master.d is a directory in the same directory
@@ -237,7 +238,7 @@
 #  larry:
 #    - test.ping
 #    - network.*
-
+#
 # Blacklist any of the following users or modules
 #
 # This example would blacklist all non sudo users, including root from
@@ -262,7 +263,7 @@
 #  pam:
 #    fred:
 #      - test.*
-
+#
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 #token_expire: 43200
 
@@ -387,7 +388,7 @@
 #   prod:
 #     - /srv/salt/prod/services
 #     - /srv/salt/prod/states
-
+#
 #file_roots:
 #  base:
 #    - /srv/salt
@@ -492,8 +493,8 @@
 # within the repository. The path is defined relative to the root of the
 # repository and defaults to the repository root.
 #gitfs_root: somefolder/otherfolder
-
-
+#
+#
 #####         Pillar settings        #####
 ##########################################
 # Salt Pillars allow for the building of global data that can be made selectively
@@ -526,12 +527,22 @@
 # master config file that can then be used on minions.
 #pillar_opts: False
 
-# The pillar_safe_render_error option prevents the master from passing piller 
+# The pillar_safe_render_error option prevents the master from passing piller
 # render errors to the minion. This is set on by default because the error could
 # contain templating data which would give that minion information it shouldn't
 # have, like a password! When set true the error message will only show:
 #   Rendering SLS 'my.sls' failed. Please see master log for details.
 #pillar_safe_render_error: True
+
+# The pillar_source_merging_strategy option allows you to configure merging strategy
+# between different sources. It accepts four values: recurse, aggregate, overwrite,
+# or smart. Recurse will merge recursively mapping of data. Aggregate instructs
+# aggregation of elements between sources that use the #!yamlex renderer. Overwrite
+# will verwrite elements according the order in which they are processed. This is
+# behavior of the 2014.1 branch and earlier. Smart guesses the best strategy based
+# on the "renderer" setting and is the default value.
+#pillar_source_merging_strategy: smart
+
 
 #####          Syndic settings       #####
 ##########################################
@@ -599,8 +610,8 @@
 #peer_run:
 #  foo.example.com:
 #    - manage.up
-
-
+#
+#
 #####         Mine settings     #####
 ##########################################
 # Restrict mine.get access from minions. By default any minion has a full access
@@ -685,10 +696,10 @@
 ##############################################
 # Location of the repo on the master:
 #win_repo: '/srv/salt/win/repo'
-
+#
 # Location of the master's repo cache file:
 #win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
-
+#
 # List of git repositories to include with the local repo:
 #win_gitrepos:
 #  - 'https://github.com/saltstack/salt-winrepo.git'
