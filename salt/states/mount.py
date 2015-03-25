@@ -121,6 +121,16 @@ def mounted(name,
             real_device = os.path.realpath(device)
     elif device.upper().startswith('UUID='):
         real_device = device.split('=')[1].strip('"').lower()
+    elif device.upper().startswith('LABEL='):
+        _label = device.split('=')[1].lower()
+        cmd = 'blkid -L {0}'.format(_label)
+        res = __salt__['cmd.run_all']('{0}'.format(cmd))
+        if res['retcode'] > 0:
+            ret['comment'] = 'Unable to find device with label {0}.'.format(_label)
+            ret['result'] = False
+            return ret
+        else:
+            real_device = res['stdout']
     else:
         real_device = device
 
