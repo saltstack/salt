@@ -1185,7 +1185,8 @@ def _assert_occurrence(src, probe, target, amount=1):
 
 
 def line(path, content, match=None, mode=None, location=None,
-         before=None, after=None, show_changes=True, backup=False):
+         before=None, after=None, show_changes=True, backup=False,
+         quiet=False):
     '''
     Edit a line in the configuration file.
 
@@ -1241,6 +1242,12 @@ def line(path, content, match=None, mode=None, location=None,
 
         salt '*' file.line /etc/nsswitch.conf "networks:\tfiles dns", after="hosts:.*?", mode='ensure'
     '''
+    path = os.path.realpath(os.path.expanduser(path))
+    if not os.path.exists(path):
+        if not quiet:
+            raise CommandExecutionError('File "{0}" does not exists.'.format(path))
+        return False # No changes had happened
+
     mode = mode and mode.lower() or mode
     if mode not in ['insert', 'ensure', 'delete', 'replace']:
         if mode is None:
@@ -1256,7 +1263,6 @@ def line(path, content, match=None, mode=None, location=None,
         content = content.replace('\1', '\\1') \
                          .replace('\2', '\\2')
 
-    path = os.path.realpath(os.path.expanduser(path))
     body = salt.utils.fopen(path, mode='rb').read()
     body_before = hashlib.sha256(body).hexdigest()
     after = _regex_to_static(body, after)
