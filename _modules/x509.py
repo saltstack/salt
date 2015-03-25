@@ -1114,18 +1114,16 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
                     continue
 
                 if 'grain' in val:
-                    grain = __salt__['grains.get'](val['grain'], False)
-                    if not grain and 'default' in val:
+                    try:
+                        grain = grains[val['grains']]
+                    except KeyError:
                         val = val['default']
-                    else:
-                        val = grain
 
                 if 'pillar' in val:
-                    pillar = __salt__['pillar.get'](val['pillar'], False)
-                    if not pillar and 'default' in val:
+                    try:
+                        grain = pillar[val['pillar']]
+                    except KeyError:
                         val = val['default']
-                    else:
-                        val = pillar
 
                 signing_policy['subject'][entry] = val
 
@@ -1140,19 +1138,19 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
 
                     val = ext_props['value']
 
-                    if type(val) == dict and 'grain' in val:
-                        grain = __salt__['grains.get'](val['grain'], False)
-                        if not grain and 'default' in val:
+                    if 'grain' in val:
+                        try:
+                            grain = grains[val['grains']]
+                        except KeyError:
                             val = val['default']
-                        else:
-                            val = grain
 
-                    if type(val) == dict and 'pillar' in val:
-                        pillar = __salt__['pillar.get'](val['pillar'], False)
-                        if not pillar and 'default' in val:
+                    if 'pillar' in val:
+                        try:
+                            grain = pillar[val['pillar']]
+                        except KeyError:
                             val = val['default']
-                        else:
-                            val = pillar
+
+                    ext_props['value'] = val
 
                     extensions.append(ext_props)
 
