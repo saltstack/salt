@@ -29,7 +29,10 @@ def _default_logfile(exe_name):
     Retrieve the logfile name
     '''
     if salt.utils.is_windows():
-        logfile_tmp = tempfile.NamedTemporaryFile(dir=os.environ['TMP'],
+        tmp_dir = os.path.join(__opts__['cachedir'], 'tmp')
+        if not os.path.isdir(tmp_dir):
+            os.mkdir(tmp_dir)
+        logfile_tmp = tempfile.NamedTemporaryFile(dir=tmp_dir,
                                                   prefix=exe_name,
                                                   suffix='.log',
                                                   delete=False)
