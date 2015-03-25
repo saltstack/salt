@@ -987,7 +987,9 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
     :param public_key: The public key to be included in the signed certificate. If a CSR
         is used, this is not required. If ``public_key`` is used only the public
         key will be submitted to the CA, the subject and extensions in the certificate will
-        be entirely determined by the CA.
+        be entirely determined by the CA. This can also be the path to the private key.
+        This argument will always be converted into a public key PEM before being transmitted
+        to the event, so your private key will never leave the minion.
 
     :param csr: The CSR to be submitted. Using a csr rather than ``public_key`` allows 
         submitting subject and extension values that the CA may honor. If the CA
@@ -1015,10 +1017,10 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
             'signing_policy': signing_policy}
 
     if public_key:
-        data['public_key'] = public_key
+        data['public_key'] = get_public_key(public_key)
 
     if csr:
-        data['csr'] = csr
+        data['csr'] = get_pem_entry(csr, pem_type='CERTIFICATE REQUEST')
 
     return __salt__['event.send'](tag='/salt/x509/request_certificate', data=data,
             with_grains=with_grains, with_pillar=with_pillar)
@@ -1084,7 +1086,7 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
             csr = None
 
         if not public_key:
-            raise 
+            raise salt.exceptions.SaltInvocationError('public_key is required')
 
         signing_private_key = signing_policy['signing_private_key']
         signing_cert = signing_policy['signing_cert']
@@ -1115,15 +1117,23 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
 
                 if 'grain' in val:
                     try:
-                        grain = grains[val['grains']]
+                        val = grains[val['grain']]
                     except KeyError:
-                        val = val['default']
+                        try:
+                            val = val['default']
+                        except KeyError:
+                            raise salt.exceptions.SaltInvocationError('grain {0} not found '
+                            'and no default included for {1}.'.format(val['grain'], entry))
 
                 if 'pillar' in val:
                     try:
-                        grain = pillar[val['pillar']]
+                        val = pillar[val['pillar']]
                     except KeyError:
-                        val = val['default']
+                        try:
+                            val = val['default']
+                        except KeyError:
+                            raise salt.exceptions.SaltInvocationError('pillar {0} not found '
+                            'and no default included for {1}.'.format(val['pillar'], entry))
 
                 signing_policy['subject'][entry] = val
 
@@ -1140,15 +1150,23 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
 
                     if 'grain' in val:
                         try:
-                            grain = grains[val['grains']]
+                            val = grains[val['grain']]
                         except KeyError:
-                            val = val['default']
+                            try:
+                                val = val['default']
+                            except KeyError:
+                                raise salt.exceptions.SaltInvocationError('grain {0} not found '
+                                'and no default included for {1}.'.format(val['grain'], ext_name))
 
                     if 'pillar' in val:
                         try:
-                            grain = pillar[val['pillar']]
+                            val = pillar[val['pillar']]
                         except KeyError:
-                            val = val['default']
+                            try:
+                                val = val['default']
+                            except KeyError:
+                                raise salt.exceptions.SaltInvocationError('pillar {0} not found '
+                                'and no default included for {1}.'.format(val['pillar'], ext_name))
 
                     ext_props['value'] = val
 
