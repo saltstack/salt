@@ -255,7 +255,11 @@ def host_keys(keydir=None):
                 kname += '.{0}'.format(top[1])
             try:
                 with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
-                    keys[kname] = _fh.readline().strip()
+                    keys[kname] = _fh.readline()
+                    # only read the whole file if it is not in the legacy 1.1 binary format
+                    if keys[kname] != "SSH PRIVATE KEY FILE FORMAT 1.1\n":
+                        keys[kname] += _fh.read()
+                    keys[kname] = keys[kname].strip()
             except (IOError, OSError):
                 keys[kname] = ''
     return keys
