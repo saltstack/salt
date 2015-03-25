@@ -73,7 +73,7 @@ class _LDAPConnection(object):
     '''
 
     def __init__(self, uri, server, port, tls, no_verify, binddn, bindpw,
-                 anonymous, accountattributename, activedirectory):
+                 anonymous, accountattributename, activedirectory=False):
         '''
         Bind to an LDAP directory using passed credentials.
         '''
