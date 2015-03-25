@@ -830,6 +830,8 @@ def snapshot_list(kwargs=None, call=None):
     '''
     List virtual machines with snapshots
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -864,6 +866,12 @@ def snapshot_list(kwargs=None, call=None):
         ret[vm] = {'snapshots': []}
 
         for snap in _vm.get_snapshots():
-            ret[vm]['snapshots'].append(snap.get_name())
+            ret[vm]['snapshots'] = {
+                'name': snap.get_name(),
+                'description': snap.get_description(),
+                'created': time.strftime("%Y-%m-%d %H:%M:%S", snap.get_create_time()),
+                'state': snap.get_state(),
+                'path': snap.get_path()
+            }
 
     return ret
