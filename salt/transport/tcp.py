@@ -106,7 +106,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         self.crypt = kwargs.get('crypt', 'aes')
 
         if self.crypt != 'clear':
-            self.auth = salt.crypt.SAuth(self.opts)
+            self.auth = salt.crypt.AsyncAuth(self.opts)
 
         parse = urlparse.urlparse(self.opts['master_uri'])
         host, port = parse.netloc.rsplit(':', 1)
@@ -132,6 +132,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         return pcrypt.loads(ret[dictkey])
 
+    @tornado.gen.coroutine
     def _crypted_transfer(self, load, tries=3, timeout=60):
         '''
         In case of authentication errors, try to renegotiate authentication
@@ -139,22 +140,31 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         Indeed, we can fail too early in case of a master restart during a
         minion state execution call
         '''
+        @tornado.gen.coroutine
         def _do_transfer():
-            data = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)),
-                                   timeout=timeout)
+            data = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)),
+                                                  timeout=timeout,
+                                                  )
             data = self.serial.loads(data)
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data)
-            return data
+                try:
+                    data = self.auth.crypticle.loads(data)
+                except Exception as e:
+                    raise e
+            raise tornado.gen.Return(data)
+        if not self.auth.authenticated:
+            yield self.auth.authenticate()
         try:
-            return _do_transfer()
+            ret = yield _do_transfer()
+            raise tornado.gen.Return(ret)
         except salt.crypt.AuthenticationError:
-            self.auth.authenticate()
-            return _do_transfer()
+            yield self.auth.authenticate()
+            ret = yield _do_transfer()
+            raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
@@ -169,7 +179,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         if self.crypt == 'clear':
             ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
         else:
-            ret = yield self._encrypted_transfer(load, tries=tries, timeout=timeout)
+            ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
         raise tornado.gen.Return(ret)
 
 

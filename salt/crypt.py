@@ -843,6 +843,7 @@ class AsyncAuth(SAuth):
         self.io_loop = tornado.ioloop.IOLoop.current()
 
         self.authenticate()
+        self.authenticated = False
 
     @property
     def creds(self):
@@ -863,6 +864,7 @@ class AsyncAuth(SAuth):
         if hasattr(self, '_authenticate_future') and not self._authenticate_future.done():
             future = self._authenticate_future
         else:
+            self.authenticated = False
             future = tornado.concurrent.Future()
             self._authenticate_future = future
 
@@ -873,6 +875,11 @@ class AsyncAuth(SAuth):
                 response = future.result()
                 self.io_loop.add_callback(callback, response)
             future.add_done_callback(handle_future)
+
+        def mark_authenitcated(future):
+            self.authenticated = True
+
+        future.add_done_callback(mark_authenitcated)
 
         return future
 
