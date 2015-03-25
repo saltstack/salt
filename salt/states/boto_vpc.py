@@ -109,7 +109,7 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
             return ret
         created = __salt__['boto_vpc.create'](cidr_block, instance_tenancy,
                                               name, dns_support, dns_hostnames,
-                                              _tags, region, key, keyid,
+                                              tags, region, key, keyid,
                                               profile)
         if not created:
             ret['result'] = False
