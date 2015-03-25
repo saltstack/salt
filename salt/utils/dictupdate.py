@@ -13,7 +13,7 @@ def update(dest, upd):
         if isinstance(val, collections.Mapping):
             ret = update(dest.get(key, {}), val)
             dest[key] = ret
-        else:
+        elif key:
             dest[key] = upd[key]
     return dest
 
