@@ -366,7 +366,6 @@ class SaltMessageClient(object):
         self.send_timeout_map = {}  # request_id -> timeout_callback
 
         self._connecting_future = self.connect()
-        self.io_loop.spawn_callback(self._stream_send)
         self.io_loop.spawn_callback(self._stream_return)
 
         self._on_recv = None
@@ -443,19 +442,12 @@ class SaltMessageClient(object):
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()
 
-    # TODO: remove "sleep"-- since we'll call back into this more than we need
-    # in the case where we don't have anything to send
     @tornado.gen.coroutine
     def _stream_send(self):
         while not self._connecting_future.done() or self._connecting_future.result() is not True:
             yield self._connecting_future
-        while True:
-            try:
-                message_id, item = self.send_queue.pop(0)
-            # TODO: not this way
-            except IndexError:
-                yield tornado.gen.sleep(0.1)
-                continue
+        while len(self.send_queue) > 0:
+            message_id, item = self.send_queue.pop(0)
             try:
                 yield self._stream.write(item)
             # if the connection is dead, lets fail this send, and make sure we
@@ -513,6 +505,9 @@ class SaltMessageClient(object):
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message_id)
             self.send_timeout_map[message_id] = send_timeout
 
+        # if we don't have a send queue, we need to spawn the callback to do the sending
+        if len(self.send_queue) == 0:
+            self.io_loop.spawn_callback(self._stream_send)
         self.send_queue.append((message_id, frame_msg(msg, header=header)))
         return future
 
