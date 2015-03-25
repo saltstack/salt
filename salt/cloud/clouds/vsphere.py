@@ -878,6 +878,8 @@ def create_snapshot(kwargs=None, call=None):
     @description: Description of the snapshot (optional)
     @memory: Dump of the internal state of the virtual machine (optional)
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
