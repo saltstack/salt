@@ -3,7 +3,9 @@
 Salt returner that report execution results back to sentry. The returner will
 inspect the payload to identify errors and flag them as such.
 
-Pillar need something like::
+Pillar needs something like:
+
+.. code-block:: yaml
 
     raven:
       servers:

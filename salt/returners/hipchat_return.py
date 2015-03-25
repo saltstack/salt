@@ -21,40 +21,46 @@ the default location::
     hipchat.api_version
     hipchat.from_name
 
-Hipchat settings may also be configured as::
+Hipchat settings may also be configured as:
+
+.. code-block:: yaml
 
     hipchat:
-        room_id: RoomName
-        api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        api_version: v1
-        from_name: user@email.com
+      room_id: RoomName
+      api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      api_version: v1
+      from_name: user@email.com
 
     alternative.hipchat:
-        room_id: RoomName
-        api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        api_version: v1
-        from_name: user@email.com
+      room_id: RoomName
+      api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      api_version: v1
+      from_name: user@email.com
 
     hipchat_profile:
-        api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        api_version: v1
-        from_name: user@email.com
+      api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      api_version: v1
+      from_name: user@email.com
 
     hipchat:
-        profile: hipchat_profile
-        room_id: RoomName
+      profile: hipchat_profile
+      room_id: RoomName
 
     alternative.hipchat:
-        profile: hipchat_profile
-        room_id: RoomName
+      profile: hipchat_profile
+      room_id: RoomName
 
-  To use the HipChat returner, append '--return hipchat' to the salt command. ex:
+To use the HipChat returner, append '--return hipchat' to the salt command.
 
-  .. code-block:: bash
+.. code-block:: bash
 
     salt '*' test.ping --return hipchat
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.2.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return hipchat --return_config alternative
 '''

@@ -2,6 +2,8 @@
 '''
 Utils for making various web calls. Primarily designed for REST, SOAP, webhooks
 and the like, but also useful for basic HTTP testing.
+
+.. versionaddedd:: 2015.2
 '''
 
 # Import python libs
@@ -59,6 +61,12 @@ try:
 except ImportError:
     HAS_MSGPACK = False
 
+try:
+    import certifi
+    HAS_CERTIFI = True
+except ImportError:
+    HAS_CERTIFI = False
+
 log = logging.getLogger(__name__)
 JARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.txt')
 SESSIONJARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.session.p')
@@ -75,6 +83,7 @@ def query(url,
           header_file=None,
           username=None,
           password=None,
+          auth=None,
           decode=False,
           decode_type='auto',
           status=False,
@@ -454,6 +463,9 @@ def get_ca_bundle(opts=None):
     ):
         if os.path.exists(path):
             return path
+
+    if salt.utils.is_windows() and HAS_CERTIFI:
+        return certifi.where()
 
     return None
 
