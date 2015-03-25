@@ -522,74 +522,6 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
     return None
 
 
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to autoscale.
-    '''
-    if profile:
-        if isinstance(profile, six.string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('asg.region'):
-        region = __salt__['config.option']('asg.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('asg.key'):
-        key = __salt__['config.option']('asg.key')
-    if not keyid and __salt__['config.option']('asg.keyid'):
-        keyid = __salt__['config.option']('asg.keyid')
-
-    try:
-        conn = autoscale.connect_to_region(region, aws_access_key_id=keyid,
-                                           aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto autoscale connection.')
-        return None
-    return conn
-
-
-def _get_ec2_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to ec2.   Needed for get_instances
-    '''
-    if profile:
-        if isinstance(profile, six.string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('secgroup.region'):
-        region = __salt__['config.option']('secgroup.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('secgroup.key'):
-        key = __salt__['config.option']('secgroup.key')
-    if not keyid and __salt__['config.option']('secgroup.keyid'):
-        keyid = __salt__['config.option']('secgroup.keyid')
-
-    try:
-        conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make ec2 connection for security groups.')
-        return None
-    return conn
-
-
 def get_instances(name, lifecycle_state="InService", health_status="Healthy", attribute="private_ip_address", region=None, key=None, keyid=None, profile=None):
     """return attribute of all instances in the named autoscale group.
 
@@ -622,3 +554,20 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy", at
     # get full instance info, so that we can return the attribute
     instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
     return [getattr(instance, attribute).encode("ascii") for instance in instances]
+
+
+def _get_conn(region, key, keyid, profile):
+    '''
+    Get a boto connection to autoscale.
+    '''
+    return __salt__['boto_common.get_connection']('ec2.autoscale',
+                                                  region=region, keyid=keyid,
+                                                  profile=profile)
+
+
+def _get_ec2_conn(region, key, keyid, profile):
+    '''
+    Get a boto connection to ec2.   Needed for get_instances
+    '''
+    return __salt__['boto_common.get_connection']('ec2', region=region,
+                                                  keyid=keyid, profile=profile)
