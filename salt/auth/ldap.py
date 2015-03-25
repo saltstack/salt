@@ -224,7 +224,7 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-    
+
     if _bind(username, password):
         log.debug('LDAP authentication successful')
         return True
