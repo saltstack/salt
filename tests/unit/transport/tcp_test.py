@@ -11,6 +11,7 @@ import threading
 import tornado.ioloop
 from tornado.testing import AsyncTestCase
 
+import salt.crypt
 import salt.config
 import salt.utils
 import salt.transport.server
@@ -114,6 +115,7 @@ class BaseTCPPubCase(AsyncTestCase):
     '''
     @classmethod
     def setUpClass(cls):
+        salt.crypt.AsyncAuth.clear_singletons()  # clear the singletons
         cls.master_opts = salt.config.master_config(get_config_file_path('master'))
         cls.master_opts.update({
             'transport': 'tcp',

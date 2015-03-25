@@ -792,6 +792,13 @@ class AsyncAuth(SAuth):
     # This class is only a singleton per minion/master pair
     instances = {}
 
+    @classmethod
+    def clear_singletons(cls):
+        '''
+        Method to forcibly clear all singletons. This should only be used for testing
+        '''
+        AsyncAuth.instances = {}
+
     def __new__(cls, opts):
         '''
         Only create one instance of SAuth per __key()

@@ -151,10 +151,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                try:
                     data = self.auth.crypticle.loads(data)
-                except Exception as e:
-                    raise e
             raise tornado.gen.Return(data)
         if not self.auth.authenticated:
             yield self.auth.authenticate()
@@ -198,7 +195,8 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     def connect(self):
         try:
             self.auth = salt.crypt.AsyncAuth(self.opts)
-            creds = yield self.auth.authenticate()
+            if not self.auth.authenticated:
+                yield self.auth.authenticate()
             self.message_client = SaltMessageClient(self.opts['master_ip'],
                                                     int(self.auth.creds['publish_port']),
                                                     io_loop=self.io_loop)
@@ -355,7 +353,6 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
             self.clients.remove(item)
 
 # TODO: singleton? Something to not re-create the tcp connection so much
-# TODO: cleanup send/recv queue stuff
 class SaltMessageClient(object):
     '''
     Low-level message sending client
