@@ -98,14 +98,15 @@ User authentication does not need to be entered again until the token expires.
 Token expiration time can be set in the Salt master config file.
 
 
-LDAP
-----
+LDAP and Active Directory
+-------------------------
 
-Salt supports both user and group authentication for LDAP.
+Salt supports both user and group authentication for LDAP (and Active Directory
+accessed via its LDAP interface)
 
 LDAP configuration happens in the Salt master configuration file.
 
-Server configuration values:
+Server configuration values and their defaults:
 
 .. code-block:: yaml
 
@@ -113,6 +114,17 @@ Server configuration values:
     auth.ldap.port: 389
     auth.ldap.tls: False
     auth.ldap.scope: 2
+    auth.ldap.uri: ''
+    auth.ldap.tls: False
+    auth.ldap.no_verify: False
+    auth.ldap.anonymous: False
+    auth.ldap.groupou: 'Groups'
+    auth.ldap.groupclass: 'posixGroup'
+    auth.ldap.accountattributename: 'memberUid'
+
+    # These are only for Active Directory
+    auth.ldap.activedirectory: False
+    auth.ldap.persontype: 'person'
 
 Salt also needs to know which Base DN to search for users and groups and
 the DN to bind to:
@@ -128,21 +140,55 @@ To bind to a DN, a password is required
 
     auth.ldap.bindpw: mypassword
 
-Salt uses a filter to find the DN associated with a user. Salt substitutes
-the ``{{ username }}`` value for the username when querying LDAP.
+Salt uses a filter to find the DN associated with a user. Salt
+substitutes the ``{{ username }}`` value for the username when querying LDAP
 
 .. code-block:: yaml
 
     auth.ldap.filter: uid={{ username }}
 
-If group support for LDAP is desired, one can specify an OU that contains group
-data. This is prepended to the basedn to create a search path
+For OpenLDAP, to determine group membership, one can specify an OU that contains
+group data. This is prepended to the basedn to create a search path.  Then
+the results are filtered against ``auth.ldap.groupclass``, default
+``posixGroup``, and the account's 'name' attribute, ``memberUid`` by default.
 
 .. code-block:: yaml
 
     auth.ldap.groupou: Groups
 
-Once configured, LDAP permissions can be assigned to users and groups.
+Active Directory handles group membership differently, and does not utilize the
+``groupou`` configuration variable.  AD needs the following options in
+the master config:
+
+.. code-block:: yaml
+
+    auth.ldap.activedirectory: True
+    auth.ldap.filter: sAMAccountName={{username}}
+    auth.ldap.accountattributename: sAMAccountName
+    auth.ldap.groupclass: group
+    auth.ldap.persontype: person
+
+To determine group membership in AD, the username and password that is entered
+when LDAP is requested as the eAuth mechanism on the command line is used to
+bind to AD's LDAP interface.  If this fails, then it doesn't matter what groups
+the user belongs to, he or she is denied access.  Next, the distinguishedName
+of the user is looked up with the following LDAP search:
+
+.. code-block:: text
+
+    (&(<value of auth.ldap.accountattributename>={{username}})
+      (objectClass=<value of auth.ldap.persontype>)
+    )
+
+This should return a distinguishedName that we can use to filter for group
+membership.  Then the following LDAP quey is executed:
+
+.. code-block:: text
+
+    (&(member=<distinguishedName from search above>)
+      (objectClass=<value of auth.ldap.groupclass>)
+    )
+
 
 .. code-block:: yaml
 
