@@ -81,7 +81,7 @@ import salt.config as config
 # Attempt to import pysphere lib
 HAS_LIBS = False
 try:
-    from pysphere import VIServer, MORTypes
+    from pysphere import VIServer, MORTypes, VIException
     HAS_LIBS = True
 except Exception:  # pylint: disable=W0703
     pass
@@ -917,7 +917,7 @@ def create_snapshot(kwargs=None, call=None):
         ret['snapshot'] = kwargs['snapshot']
         ret['comment'] = 'Snapshot created'
         ret['result'] = True
-    except:
+    except VIException:
         log.error('Unable to create snapshot')
 
         ret['name'] = kwargs['name']
