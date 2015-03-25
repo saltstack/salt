@@ -37,7 +37,7 @@ def __virtual__():
     return True
 
 
-def get_connection(service, region=None, key=None, keyid=None, profile=None):
+def get_connection(service, module=None, region=None, key=None, keyid=None, profile=None):
     '''
     Return a boto connection for the service. Not intended for CLI usage.
 
@@ -46,7 +46,8 @@ def get_connection(service, region=None, key=None, keyid=None, profile=None):
         conn = __salt__['boto_common.get_connection']('ec2', profile='custom_profile')
     '''
 
-    svc_mod = __import__('boto.' + service, fromlist=[service])
+    module = module or service
+    svc_mod = __import__('boto.' + module, fromlist=[module])
 
     if profile:
         if isinstance(profile, six.string_types):
