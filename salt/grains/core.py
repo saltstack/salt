@@ -893,8 +893,9 @@ def os_data():
     # pylint: enable=unpacking-non-sequence
 
     if salt.utils.is_windows():
+        wmi_c = wmi.WMI()
         grains['osrelease'] = grains['kernelrelease']
-        grains['osversion'] = grains['kernelrelease'] = version
+        grains['osversion'] = grains['kernelrelease'] = wmi_c.Win32_OperatingSystem()[0].Version
         grains['os'] = 'Windows'
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
