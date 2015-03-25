@@ -199,6 +199,8 @@ def _pretty_hex(hex_str):
     '''
     Nicely formats hex strings
     '''
+    if len(hex_str) % 2 != 0:
+        hex_str = '0' + hex_str
     return ':'.join([hex_str[i:i+2] for i in range(0, len(hex_str), 2)]).upper()
 
 
