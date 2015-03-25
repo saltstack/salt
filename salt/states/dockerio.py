@@ -234,12 +234,19 @@ def mod_watch(name, sfun=None, *args, **kw):
                              comment=comment)
         return status
     elif sfun == 'running':
-        # Force a restart against new container
-        restarter = __salt__['docker.restart']
+        # Force a restart or kill the container
         container = kw.get('container', name)
-        status = _ret_status(restarter(container),
-                             name=name,
-                             changes={name: True})
+        kill_signal = kw.get('kill_signal')
+        if kill_signal:
+            killer = __salt__['docker.kill']
+            status = _ret_status(killer(container, signal=kill_signal),
+                                 name=name,
+                                 changes={name: True})
+        else:
+            restarter = __salt__['docker.restart']
+            status = _ret_status(restarter(container),
+                                 name=name,
+                                 changes={name: True})
         return status
 
     return {'name': name,
@@ -815,6 +822,7 @@ def running(name,
             restart_policy=None,
             cpu_shares=None,
             cpuset=None,
+            kill_signal=None,
             *args, **kwargs):
     '''
     Ensure that a container is running. If the container does not exist, it
@@ -944,6 +952,29 @@ def running(name,
         .. code-block:: yaml
 
             - cpuset: '0-3'
+    kill_signal
+        If defined, its value will be sent as a kill signal to the running
+        container. i.e. It will use client.kill(signal=kill_signal)
+        instead of client.restart(), when the state is triggered by a watcher
+        requisite.
+
+        possible use case: Soft reload of nginx
+
+        .. code-block:: yaml
+
+            nginx:
+              docker.running:
+                - image: some-fictional-registry.com/nginx
+                - tag: latest
+                - kill_signal: SIGHUP
+                - watch:
+                  - file: /etc/nginx/nginx.conf
+
+        This state will ask nginx to reload (instead of restart)
+        each time the /etc/nginx/nginx.conf is modified.
+
+        .. versionadded:: Beryllium
+
 
     For other parameters, see salt.modules.dockerio execution module
     and the docker-py python bindings for docker documentation
