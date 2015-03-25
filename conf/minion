@@ -1,10 +1,10 @@
 ##### Primary configuration settings #####
-##########################################
+########################################## 
 # This configuration file is used to manage the behavior of the Salt Minion.
-# With the exception of the location of the Salt Master Server, values that
-# are commented out but have no space after the comment are defaults that need
-# not be set in the config. If there is a space after the comment that the value
-# is presented as an example and is not the default.
+# With the exception of the location of the Salt Master Server, values that are
+# commented out but have an empty line after the comment are defaults that need
+# not be set in the config. If there is no blank line after the comment, the
+# value is presented as an example and is not the default.
 
 # Per default the minion will automatically include all config files
 # from minion.d/*.conf (minion.d is a directory in the same directory
@@ -68,7 +68,7 @@
 #  deployment: datacenter4
 #  cabinet: 13
 #  cab_u: 14-15
-
+#
 # Where cache data goes.
 #cachedir: /var/cache/salt/minion
 
@@ -215,7 +215,8 @@
 # recon_default: 100
 # recon_max: 5000
 # recon_randomize: False
-
+#
+#
 # The loop_interval sets how long in seconds the minion will wait between
 # evaluating the scheduler and running cleanup tasks. This defaults to a
 # sane 60 seconds, but if the minion scheduler needs to be evaluated more
@@ -276,8 +277,9 @@
 #include:
 #  - /etc/salt/extra_config
 #  - /etc/roles/webserver
-
-
+#
+#
+#
 #####   Minion module management     #####
 ##########################################
 # Disable specific modules. This allows the admin to limit the level of
@@ -427,8 +429,8 @@
 #pillar_roots:
 #  base:
 #    - /srv/pillar
-
-
+#
+#
 ######        Security settings       #####
 ###########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
@@ -554,8 +556,8 @@
 #
 # A dict for the test module:
 #test.baz: {spam: sausage, cheese: bread}
-
-
+#
+#
 ######      Update settings          ######
 ###########################################
 # Using the features in Esky, a salt minion can both run as a frozen app and

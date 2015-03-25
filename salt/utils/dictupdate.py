@@ -31,7 +31,7 @@ def update(dest, upd):
                 and isinstance(val, collections.Mapping):
             ret = update(dest_subkey, val)
             dest[key] = ret
-        else:
+        elif key:
             dest[key] = upd[key]
     return dest
 
