@@ -240,7 +240,7 @@ def groups(username, **kwargs):
     Behavior is highly dependent on if Active Directory is in use.
 
     AD handles group membership very differently than OpenLDAP.
-    See the :ref:`External Authentication <eauth>` documentation for a thorough
+    See the :ref:`External Authentication <acl-eauth>` documentation for a thorough
     discussion of available parameters for customizing the search.
 
     OpenLDAP allows you to search for all groups in the directory
