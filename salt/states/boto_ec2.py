@@ -75,7 +75,7 @@ def key_present(name, save_private=None, upload_public=None, region=None, key=No
            }
     exists = __salt__['boto_ec2.get_key'](name, region, key, keyid, profile)
     log.debug('exists is {0}'.format(exists))
-    if 'salt://' in upload_public:
+    if upload_public is not None and 'salt://' in upload_public:
         try:
             upload_public = __salt__['cp.get_file_str'](upload_public)
         except IOError as e:
