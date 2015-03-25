@@ -592,7 +592,9 @@ class Client(object):
         try:
             query = salt.utils.http.query(
                 fixed_url,
-                stream=True
+                stream=True,
+                username=url_data.username,
+                password=url_data.password
             )
             response = query['handle']
             chunk_size = 32 * 1024
