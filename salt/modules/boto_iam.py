@@ -437,7 +437,7 @@ def get_account_policy(region=None, key=None, keyid=None, profile=None):
         return info.get_account_password_policy_response.get_account_password_policy_result.password_policy
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to update the password policy'
+        msg = 'Failed to update the password policy.'
         log.error(msg)
         return False
 
