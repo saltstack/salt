@@ -9,7 +9,9 @@ cope with scale.
 :platform:      all
 
 To enable this returner the minion will need the psycopg2 installed and
-the following values configured in the master config::
+the following values configured in the master config:
+
+.. code-block:: yaml
 
     master_job_cache: postgres_local_cache
     master_job_cache.postgres.host: 'salt'
@@ -19,7 +21,9 @@ the following values configured in the master config::
     master_job_cache.postgres.port: 5432
 
 Running the following command as the postgres user should create the database
-correctly::
+correctly:
+
+.. code-block:: sql
 
     psql << EOF
     CREATE ROLE salt WITH PASSWORD 'salt';
@@ -27,6 +31,8 @@ correctly::
     EOF
 
 and then:
+
+.. code-block:: sql
 
     psql -h localhost -U salt << EOF
     --
