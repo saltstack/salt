@@ -21,7 +21,7 @@ import tempfile
 import yaml
 import subprocess
 import re
-import M2Crypto
+import datetime
 
 # Import salt libs
 import salt.utils
@@ -71,17 +71,17 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         raise salt.exceptions.SaltInvocationError('value must be precomputed hash')
 
 
-    lhash = M2crypto.m2.x509v3_lhash()
-    ctx = M2crypto.m2.x509v3_set_conf_lhash(lhash)
+    lhash = M2Crypto.m2.x509v3_lhash()
+    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)
     #ctx not zeroed
     _fix_ctx(ctx, issuer)
 
-    x509_ext_ptr = M2crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)
+    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)
     #ctx,lhash freed
 
     if x509_ext_ptr is None:
         raise Exception
-    x509_ext = M2crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
+    x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
     x509_ext.set_critical(critical)
     return x509_ext
 # End of ugly hacks
@@ -130,6 +130,69 @@ def _get_csr_extensions(csr):
             ret.append(retext)
 
     return ret
+
+
+# None of python libraries read CRLs. Again have to hack it with the openssl CLI
+def _parse_openssl_crl(crl_filename):
+    '''
+    Parses openssl command line output, this is a workaround for M2Crypto's
+    inability to get them from CSR objects.
+    '''
+    cmd = ('openssl crl -text -noout -in {0}'.format(crl_filename))
+
+    output = subprocess.check_output(cmd.split(),
+        stderr=subprocess.STDOUT)
+
+    crl = {}
+    for line in output.split('\n'):
+        line = line.strip()
+        if line.startswith('Version '):
+            crl['Version'] = line.replace('Version ', '')
+        if line.startswith('Signature Algorithm: '):
+            crl['Signature Algorithm'] = line.replace('Signature Algorithm: ', '')
+        if line.startswith('Issuer: '):
+            line = line.replace('Issuer: ', '')
+            subject = {}
+            for sub_entry in line.split('/'):
+                if '=' in sub_entry:
+                    sub_entry = sub_entry.split('=')
+                    subject[sub_entry[0]] = sub_entry[1]
+            crl['Issuer'] = subject
+        if line.startswith('Last Update: '):
+            crl['Last Update'] = line.replace('Last Update: ', '')
+            last_update = datetime.datetime.strptime(
+                    crl['Last Update'], "%b %d %H:%M:%S %Y %Z")
+            crl['Last Update'] = last_update.strftime("%Y-%m-%d %H:%M:%S")
+        if line.startswith('Next Update: '):
+            crl['Next Update'] = line.replace('Next Update: ', '')
+            next_update = datetime.datetime.strptime(
+                    crl['Next Update'], "%b %d %H:%M:%S %Y %Z")
+            crl['Next Update'] = next_update.strftime("%Y-%m-%d %H:%M:%S")
+        if line.startswith('Revoked Certificates:'):
+            break
+
+    output = output.split('Revoked Certificates:')[1]
+    output = output.split('Signature Algorithm:')[0]
+
+    rev = []
+    for revoked in output.split('Serial Number: '):
+        if not revoked.strip():
+            continue
+
+        rev_sn = revoked.split('\n')[0].strip()
+        revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
+        rev_yaml = yaml.safe_load(revoked)
+        for rev_item, rev_values in rev_yaml.iteritems():
+            if 'Revocation Date' in rev_values:
+                rev_date = datetime.datetime.strptime(
+                        rev_values['Revocation Date'], "%b %d %H:%M:%S %Y %Z")
+                rev_values['Revocation Date'] = rev_date.strftime("%Y-%m-%d %H:%M:%S")
+
+        rev.append(rev_yaml)
+
+    crl['Revoked Certificates'] = rev
+
+    return crl
 
 
 def _pretty_hex(hex_str):
@@ -259,7 +322,6 @@ def _parse_extensions_in(ext_list):
         if 'critical' in ext:
             ext_obj.set_critical(ext['critical'])
         
-        print 'successfully processed {0}.'.format(ext['name'])
         ret.append(ext_obj)
 
     return ret
@@ -270,8 +332,8 @@ def _get_pubkey_hash(cert):
     Returns the sha1 hash of the modulus of a public key in a cert
     Used for generating subject key identifiers
     '''
-    sha_hash = hashlib.sha1(cert.get_pubkey().get_modulus()).digest()
-    return ':'.join(['{0}02X'.format(ord(byte)) for byte in sha_hash])
+    sha_hash = hashlib.sha1(cert.get_pubkey().get_modulus()).hexdigest()
+    return _pretty_hex(sha_hash)
 
 
 def get_pem_entry(text, pem_type=None):
@@ -428,13 +490,13 @@ def read_crl(crl):
     text = _text_or_file(crl)
     text = get_pem_entry(text, pem_type='X509 CRL')
 
-    # M2Crypto doesn't provide the same quick function to load CRL
-    bio = M2Crypto.BIO.MemoryBuffer()
-    bio.write(text)
-    cptr = M2Crypto.m2.x509_crl_read_pem(bio._ptr())
-    crl = M2Crypto.X509.CRL(cptr, 1)
+    crltempfile = tempfile.NamedTemporaryFile()
+    crltempfile.write(text)
+    crltempfile.flush()
+    crlparsed = _parse_openssl_crl(crltempfile.name)
+    crltempfile.close()
 
-    return None
+    return crlparsed
 
 
 def get_public_key(key):
@@ -544,7 +606,7 @@ def create_private_key(path=None, text=False, bits=2048):
 
 
 def create_crl(path=None, text=False, signing_private_key=None,
-        signing_cert=None, revoked={}, include_expired=False,
+        signing_cert=None, revoked=[], include_expired=False,
         days_valid=100, algorithm='sha256'):
     '''
     Create a CRL
@@ -566,19 +628,19 @@ def create_crl(path=None, text=False, signing_private_key=None,
 
     revoked
         A list of dicts containing all the certificates to revoke. Each dict represents one
-        certificate. A dict must contain either the key ``Serial Number`` with the value of
-        the serial number to revoke, or ``Certificate`` with either the PEM encoded text of
+        certificate. A dict must contain either the key ``serial_number`` with the value of
+        the serial number to revoke, or ``certificate`` with either the PEM encoded text of
         the certificate, or a path ot the certificate to revoke.
 
-        The dict can optionally contain the ``Revocation Date`` key. If this key is ommitted
+        The dict can optionally contain the ``revocation_date`` key. If this key is ommitted
         the revocation date will be set to now. If should be a string in the format "%Y-%m-%d %H:%M:%S".
 
-        The dict can also optionally contain the ``Not After`` key. This is redundant if the
-        ``Certificate`` key is included. If the ``Certificate`` key is not included, this
+        The dict can also optionally contain the ``not_after`` key. This is redundant if the
+        ``certificate`` key is included. If the ``Certificate`` key is not included, this
         can be used for the logic behind the ``include_expired`` parameter.
         If should be a string in the format "%Y-%m-%d %H:%M:%S".
         
-        The dict can also optionally contain the ``Reason`` key. This is the reason code for the
+        The dict can also optionally contain the ``reason`` key. This is the reason code for the
         revocation. Available choices are ``unspecified``, ``keyCompromise``, ``CACompromise``,
         ``affiliationChanged``, ``superseded``, ``cessationOfOperation`` and ``certificateHold``.
 
@@ -590,39 +652,48 @@ def create_crl(path=None, text=False, signing_private_key=None,
     '''
     # pyOpenSSL is required for dealing with CSLs. Importing inside these functions because
     # Client operations like creating CRLs shouldn't require pyOpenSSL
+    # Note due to current limitations in pyOpenSSL it is impossible to specify a digest
+    # For signing the CRL. This will hopefully be fixed soon: https://github.com/pyca/pyopenssl/pull/161
     import OpenSSL
     crl = OpenSSL.crypto.CRL()
 
     for rev_item in revoked:
-        if 'Certificate' in rev_item:
-            rev_cert = read_certificate(rev_item['Certificate'])
-            rev_item['Serial Number'] = rev_cert['Serial Number']
-            rev_item['Not After'] = rev_cert['Not After']
+        if 'certificate' in rev_item:
+            rev_cert = read_certificate(rev_item['certificate'])
+            rev_item['serial_number'] = rev_cert['Serial Number']
+            rev_item['not_after'] = rev_cert['Not After']
 
-        serial_number = rev_item['Serial Number'].replace(':', '')
+        serial_number = rev_item['serial_number'].replace(':', '')
+        serial_number = str(int(serial_number, 16))
 
-        if 'Not After' in rev_item and not include_expired:
-            not_after = datetime.datetime.strptime(rev_item['Not After'], '%Y-%m-%d %H:%M:%S')
+        if 'not_after' in rev_item and not include_expired:
+            not_after = datetime.datetime.strptime(rev_item['not_after'], '%Y-%m-%d %H:%M:%S')
             if datetime.datetime.now() > not_after:
                 continue
 
-        if not 'Revocation Date' in rev_item:
-            rev_item['Revocation Date'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if not 'revocation_date' in rev_item:
+            rev_item['revocation_date'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        rev_date = datetime.datetime.strptime(rev_item['Revocation Date'], '%Y-%m-%d %H:%M:%S')
+        rev_date = datetime.datetime.strptime(rev_item['revocation_date'], '%Y-%m-%d %H:%M:%S')
         rev_date = rev_date.strftime('%Y%m%d%H%M%SZ')
 
         rev = OpenSSL.crypto.Revoked()
         rev.set_serial(serial_number)
         rev.set_rev_date(rev_date)
 
-        if 'Reason' in rev_item:
-            rev.set_reason(rev_item['Reason'])
+        if 'reason' in rev_item:
+            rev.set_reason(rev_item['reason'])
 
         crl.add_revoked(rev)
 
+    signing_cert = _text_or_file(signing_cert)
+    print 'signing_cert'
+    print signing_cert
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
             get_pem_entry(signing_cert, pem_type='CERTIFICATE'))
+    signing_private_key = _text_or_file(signing_private_key)
+    print 'signing_private_key'
+    print signing_private_key
     key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
             get_pem_entry(signing_private_key))
 
@@ -818,11 +889,8 @@ def create_certificate(path=None, text=False, subject={},
     extensions = _parse_extensions_in(extensions)
     for ext in extensions:
         cert.add_ext(ext)
-        print 'adding ext {}'.format(ext.get_name())
 
-    print 'extensions added'
     cert.sign(signing_private_key, algorithm)
-    print 'signed'
 
     if path:
         return write_pem(text=cert.as_pem(), path=path,
