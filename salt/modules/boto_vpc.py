@@ -1243,51 +1243,6 @@ def replace_route(route_table_id, destination_cidr_block, gateway_id=None, insta
         return False
 
 
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to vpc.
-    '''
-    if profile:
-        if isinstance(profile, six.string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('vpc.region'):
-        region = __salt__['config.option']('vpc.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('vpc.key'):
-        key = __salt__['config.option']('vpc.key')
-    if not keyid and __salt__['config.option']('vpc.keyid'):
-        keyid = __salt__['config.option']('vpc.keyid')
-
-    # avoid repeatedly creating new connections
-    if keyid:
-        cxkey = 'boto_vpc:' + hashlib.md5(region + keyid + key).hexdigest()
-    else:
-        cxkey = 'boto_vpc:' + region
-
-    if cxkey in __context__:
-        return __context__[cxkey]
-
-    try:
-        conn = boto.vpc.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto VPC connection.')
-        return None
-    __context__[cxkey] = conn
-
-    return conn
-
-
 def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
     '''
     Given a VPC ID describe it's properties.
@@ -1470,3 +1425,11 @@ def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: {0} on vpc {1}'.format(dns_hostnames, vpcid))
+
+
+def _get_conn(region, key, keyid, profile):
+    '''
+    Get a boto connection to vpc.
+    '''
+    return __salt__['boto_common.get_connection']('vpc', region=region,
+                                                  keyid=keyid, profile=profile)
