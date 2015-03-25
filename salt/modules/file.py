@@ -1188,7 +1188,7 @@ def line(path, content, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False):
     '''
-    .. versionadded:: Carbon
+    .. versionadded:: Beryllium
 
     Edit a line in the configuration file.
 
