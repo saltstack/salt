@@ -190,11 +190,11 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     try:
         conn.create_user(user_name, path)
-        log.info('Created user : {0} .'.format(user_name))
+        log.info('Created user : {0}.'.format(user_name))
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to create user {0} .'
+        msg = 'Failed to create user {0}.'
         log.error(msg.format(user_name))
         return False
 
@@ -215,7 +215,7 @@ def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to get user {0} info .'
+        msg = 'Failed to get user {0} info.'
         log.error(msg.format(user_name))
         return False
 
@@ -236,11 +236,11 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     try:
         conn.create_group(group_name, path)
-        log.info('Created group : {0} .'.format(group_name))
+        log.info('Created group : {0}.'.format(group_name))
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to create group {0} .'
+        msg = 'Failed to create group {0}.'
         log.error(msg.format(group_name))
         return False
 
@@ -262,7 +262,7 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to get group {0} info .'
+        msg = 'Failed to get group {0} info.'
         log.error(msg.format(group_name))
         return False
 
@@ -282,12 +282,12 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
     if group:
         for _users in group['get_group_response']['get_group_result']['users']:
             if user_name == _users['user_name']:
-                msg = 'Username : {0} is already in group {1} .'
+                msg = 'Username : {0} is already in group {1}.'
                 log.info(msg.format(user_name, group_name))
                 return 'Exists'
     user = __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile)
     if not group or not user:
-        msg = 'Username : {0} or group {1} do not exist .'
+        msg = 'Username : {0} or group {1} do not exist.'
         log.error(msg.format(user_name, group_name))
         return False
     conn = _get_conn(region, key, keyid, profile)
@@ -298,7 +298,7 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to add user {0} to group {1} .'
+        msg = 'Failed to add user {0} to group {1}.'
         log.error(msg.format(user_name, group_name))
         return False
 
@@ -354,7 +354,7 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to get group {0} info .'
+        msg = 'Failed to get group {0} info.'
         log.error(msg.format(group_name))
         return False
 
@@ -377,14 +377,14 @@ def create_login_profile(user_name, password, region=None, key=None,
     conn = _get_conn(region, key, keyid, profile)
     try:
         info = conn.create_login_profile(user_name, password)
-        log.info('Created profile for user {0} .'.format(user_name))
+        log.info('Created profile for user {0}.'.format(user_name))
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
         if 'Conflict' in e:
-            log.info('Profile already exists for user {0} .'.format(user_name))
+            log.info('Profile already exists for user {0}.'.format(user_name))
             return 'Conflict'
-        msg = 'Failed to update profile for user {0} .'
+        msg = 'Failed to update profile for user {0}.'
         log.error(msg.format(user_name))
         return False
 
@@ -414,7 +414,7 @@ def update_account_password_policy(allow_users_to_change_password=None,
                                             require_lowercase_characters,
                                             require_numbers, require_symbols,
                                             require_uppercase_characters)
-        log.info('The password policy has been updated .')
+        log.info('The password policy has been updated.')
         return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -769,11 +769,11 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
     conn = _get_conn(region, key, keyid, profile)
     try:
         info = conn.upload_server_cert(cert_name, cert_body, private_key, cert_chain)
-        log.info('Created certificate {0} .'.format(cert_name))
+        log.info('Created certificate {0}.'.format(cert_name))
         return info
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to failed to create certificate {0} .'
+        msg = 'Failed to failed to create certificate {0}.'
         log.error(msg.format(cert_name))
         return False
 
@@ -812,7 +812,7 @@ def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=Non
         return conn.delete_server_cert(cert_name)
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to delete certificate {0} .'
+        msg = 'Failed to delete certificate {0}.'
         log.error(msg.format(cert_name))
         return False
 
