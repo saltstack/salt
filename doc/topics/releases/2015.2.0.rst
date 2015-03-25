@@ -2,6 +2,15 @@
 Salt 2015.2.0 Release Notes - Codename Lithium
 ==============================================
 
+The 2015.2.0 feature release of Salt was focused on hardening Salt and
+mostly on improving existing systems. A few major additions were made,
+primarily the Beacon system. But most enhancements have been focused around
+improving existing features and interfaces.
+
+As usual the release notes are not exhaustive and primarily include the most
+notable additions and improvements. Hundreds of bugs have been fixed and
+many modules have been substantially updated and added.
+
 Beacons
 =======
 
@@ -14,6 +23,14 @@ changes, creation, deletion etc.
 This allows for the changes to be sent up to the master where the
 reactor can respond to changes.
 
+Sudo Minion Settings
+====================
+
+The new ability to run the minion as a non root user but add the ability for the
+minion to execute commands via sudo has been added, simply add `sudo_user: root`
+to the minion config, run the minion as a non-root user and grant that user
+sudo rights to execute salt-call.
+
 Lazy Loader
 ========
 
@@ -22,6 +39,22 @@ Lazy Loader will lazily load modules on access, instead of all on start. In
 addition to major performance improvement this "sandboxes" modules-- meaning a
 bad/broken import of a single module will only effect jobs that require accessing
 the broken module. (:pull: `20274`)
+
+Enhanced Active Directory Support
+=================================
+
+The eauth system for ldap has been extended to support Microsoft Active Directory
+out of the box. This includes Active Directory and LDAP group support for eauth
+
+Salt LXC Enhancements
+=====================
+
+The LXC systems have been overhauled to be more consistent and to fix many
+bugs.
+
+This overhaul makes using LXC with Salt much easier and substantially improves
+the underlying capabilities of Salt's LXC integration.
+
 
 Salt SSH
 ========
@@ -32,6 +65,49 @@ Salt SSH
 - Added support for ``publish.publish``, ``publish.full_data``, and
   ``publish.runner`` in ``salt-ssh``
 - Added support for ``mine.get`` in ``salt-ssh``
+
+New Windows Installer
+=====================
+
+The new Windows installer for Salt changes how salt is installed on windows.
+The old installer used bbfreeze to create an isolated python environment to
+execute in, this made adding modules and python libraries difficult. The new
+installer sets up a more flexible python environment making it easy to manage
+the python install and add python modules.
+
+Removed Requests Dependency
+===========================
+
+The hard dependency on the requests library has been removed. Requests is still
+required by a number of cloud modules but is no longer required for normal Salt
+operations.
+
+This removal fixes issues that were introduced with requests and salt-ssh, as
+well as issues users experienced from the many different packaging methods used
+by requests package maintainers
+
+Python 3 Updates
+================
+
+While Salt does not YET run on python 3 it has been updated to INSTALL on
+python 3, making us one step closer. What remains is getting the test suite
+to the point where it can run on python 3 so that we can verify compatibility.
+
+
+
+RAET Additions
+==============
+
+The RAET support continues to improve, RAET now supports multi master and many
+bugs and performance issues have been fixed. RAET is much closer to being a
+first class citizen.
+
+Modified File Detection
+=======================
+
+A number of functions have been added to the rpm based package managers to
+detect and diff files that are modified from the original package installs.
+This can be found in the new pkg.modified functions.
 
 Misc Fixes/Additions
 ====================
@@ -51,6 +127,8 @@ Misc Fixes/Additions
 - The SAuth object is now a singleton, meaning authentication state is
   global (per master) on each minion. This reduces sign-ins of minions from 3->1
   per startup.
+- Nested outputter has been optimized, it is now much faster
+- Extensive fileserver backend updates
 
 Deprecations
 ============
