@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 '''
-Return data by SMS
+Return data by SMS.
+
+.. versionadded:: 2015.2.0
 
 :maintainer:    Damian Myerscough
 :maturity:      new
@@ -10,14 +12,18 @@ Return data by SMS
 
 To enable this returner the minion will need the python twilio library
 installed and the following values configured in the minion or master
-config::
+config:
+
+.. code-block:: yaml
 
     twilio.sid: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     twilio.token: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
     twilio.to: '+1415XXXXXXX'
     twilio.from: '+1650XXXXXXX'
 
-To use the sms returner, append '--return sms' to the salt command. ex:
+To use the sms returner, append '--return sms' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return sms
 

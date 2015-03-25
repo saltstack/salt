@@ -595,6 +595,7 @@ class Client(object):
                 stream=True,
                 username=url_data.username,
                 password=url_data.password
+                **get_kwargs
             )
             response = query['handle']
             chunk_size = 32 * 1024
