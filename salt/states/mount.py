@@ -122,7 +122,7 @@ def mounted(name,
     elif device.upper().startswith('UUID='):
         real_device = device.split('=')[1].strip('"').lower()
     elif device.upper().startswith('LABEL='):
-        _label = device.split('=')[1].lower()
+        _label = device.split('=')[1]
         cmd = 'blkid -L {0}'.format(_label)
         res = __salt__['cmd.run_all']('{0}'.format(cmd))
         if res['retcode'] > 0:
