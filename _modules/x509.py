@@ -1022,15 +1022,47 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
             with_grains=with_grains, with_pillar=with_pillar)
 
 
-def sign_request(requestor, signing_policy, signing_policy_def, public_key=None, csr=None, grains={}, pillar={}):
+def sign_request(path=None, text=False, requestor=None, signing_policy=None, signing_policy_def=None, public_key=None, csr=None, grains={}, pillar={}):
     '''
     Sign and return a remotely requested certificate based on the a signing policy in signing_policy_def
 
-    :param signing_policy_def: A dict containing the signing policies for this CA. Top level key will be
+
+    path
+        Path to write the certificate to.
+
+    text
+        If ``True``, return the PEM text without writing to a file. Default ``False``.
+
+    :param signing_policy_def: The signing policies for this CA. Top level key will be
         used to match the minion. A match value can be included to determine how the minion is matched
-        according to the :doc:`match module </ref/modules/salt.modules.match>`.
+        according to the :doc:`match module </ref/modules/salt.modules.match>`. This can parameter can
+        be either a dict, a string containing a yaml definiton of the signing policy, a string
+        referencing a yaml file containing the signing policy, or a string beginning with ``pillar:``
+        followed by the name of the pillar which holds the signing policy.
+        For example ``pillar:x509_signing_policy``.
     '''
     ret = ''
+    if not path and not text:
+        raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
+    if path and text:
+        raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
+
+    if public_key and csr:
+        raise salt.exceptions.SaltInvocationError('Include either public_key or csr, not both.')
+
+    if not signing_policy_def:
+        raise salt.exceptions.SaltInvocationError('signing_policy_def is required.')
+
+    if not signing_policy:
+        raise salt.exceptions.SaltInvocationError('signing_policy is required.')
+
+    if type(signing_policy_def) != dict:
+        if signing_policy_def.startswith('pillar:'):
+            signing_policy_def = signing_policy_def.replace('pillar:', '')
+            signing_policy_def = __salt__['pillar.get'](signing_policy_def)
+        else:
+            signing_policy_def = _text_or_file(signing_policy_def)
+
     for target, policy in signing_policy_def.iteritems():
         if 'match' not in policy:
             policy['match'] = 'glob'
@@ -1098,38 +1130,31 @@ def sign_request(requestor, signing_policy, signing_policy_def, public_key=None,
             subject = signing_policy['subject']
 
         # Extensions are a list of dicts, because order matters.
+        extensions = []
         if 'extensions' in signing_policy:
             for idx, extension in enumerate(signing_policy['extensions']):
-                if not 'value' in extension or type(extension['value']) != dict:
-                    continue
+                for ext_name, ext_props in extension.iteritems():
+                    ext_props['name'] = ext_name
 
-                val = extension['value']
+                    val = ext_props['value']
 
-                if 'grain' in val:
-                    grain = __salt__['grains.get'](val['grain'], False)
-                    if not grain and 'default' in val:
-                        val = val['default']
-                    else:
-                        val = grain
+                    if type(val) == dict and 'grain' in val:
+                        grain = __salt__['grains.get'](val['grain'], False)
+                        if not grain and 'default' in val:
+                            val = val['default']
+                        else:
+                            val = grain
 
-                if 'pillar' in val:
-                    pillar = __salt__['pillar.get'](val['pillar'], False)
-                    if not pillar and 'default' in val:
-                        val = val['default']
-                    else:
-                        val = pillar
+                    if type(val) == dict and 'pillar' in val:
+                        pillar = __salt__['pillar.get'](val['pillar'], False)
+                        if not pillar and 'default' in val:
+                            val = val['default']
+                        else:
+                            val = pillar
 
-                signing_policy['extensions'][idx] = val
+                    extensions.append(ext_props)
 
-
-            extensions = signing_policy['extensions']
-
-    for param in ['subject', 'signing_private_key', 'signing_cert', 'public_key',
-            'csr', 'extensions', 'days_valid', 'version', 'serial_number', 'serial_bits',
-            'algorithm']:
-        exec('print {0}'.format(param))
-
-    return create_certificate(text=True, subject=subject,
+    return create_certificate(path=path, text=text, subject=subject,
             signing_private_key=signing_private_key, signing_cert=signing_cert,
             public_key=public_key, csr=csr, extensions=extensions,
             days_valid=days_valid, version=version,
