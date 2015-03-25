@@ -1923,10 +1923,10 @@ def wait_for_instance(
             'win_password', vm_, __opts__, default=''
         )
         win_deploy_auth_retries = config.get_cloud_config_value(
-            'win_deploy_auth_retries', vm_, __opts__, default='10'
+            'win_deploy_auth_retries', vm_, __opts__, default=10
         )
         win_deploy_auth_retry_delay = config.get_cloud_config_value(
-            'win_deploy_auth_retry_delay', vm_, __opts__, default='1'
+            'win_deploy_auth_retry_delay', vm_, __opts__, default=1
         )
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
