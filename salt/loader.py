@@ -91,7 +91,13 @@ def _module_dirs(
     return cli_module_dirs + ext_type_types + [ext_types, sys_types]
 
 
-def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False):
+def minion_mods(
+        opts,
+        context=None,
+        whitelist=None,
+        include_errors=False,
+        initial_load=False,
+        loaded_base_name=None):
     '''
     Load execution modules
 
@@ -117,7 +123,8 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
                      opts,
                      tag='module',
                      pack={'__context__': context},
-                     whitelist=whitelist)
+                     whitelist=whitelist,
+                     loaded_base_name=loaded_base_name)
     ret.pack['__salt__'] = ret
 
     return ret
