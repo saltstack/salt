@@ -545,7 +545,7 @@ def create_private_key(path=None, text=False, bits=2048):
 
 def create_crl(path=None, text=False, signing_private_key=None,
         signing_cert=None, revoked={}, include_expired=False,
-        days_valid=100, algorithm='sha256')
+        days_valid=100, algorithm='sha256'):
     '''
     Create a CRL
     This function requires pyOpenSSL
@@ -624,9 +624,9 @@ def create_crl(path=None, text=False, signing_private_key=None,
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
             get_pem_entry(signing_cert, pem_type='CERTIFICATE'))
     key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
-            get_pem_entry(signing_private_key)
+            get_pem_entry(signing_private_key))
 
-    crltext = crl.export(cert, key, type=OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
+    crltext = crl.export(cert, key, OpenSSL.crypto.FILETYPE_PEM, days=days_valid)
 
     if text:
         return crltext
