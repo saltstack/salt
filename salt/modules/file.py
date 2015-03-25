@@ -1197,6 +1197,9 @@ def line(path, content, match=None, mode=None, location=None,
 
     :param content:
         Content of the line
+    :param match:
+        Match the target line for an action by
+        a fragment of a string or regular expression.
 
     :param mode:
         Ensure
