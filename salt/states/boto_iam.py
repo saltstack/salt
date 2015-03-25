@@ -143,7 +143,7 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
             ret['changes']['password'] = password
     else:
         ret['result'] = False
-        ret['comment'] = os.linesep.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy'.format(name)])
+        ret['comment'] = os.linesep.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy.'.format(name)])
     return ret
 
 
@@ -293,7 +293,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
     ret = {'name': 'Account Policy', 'result': True, 'comment': '', 'changes': {}}
     info = __salt__['boto_iam.get_account_policy'](region, key, keyid, profile)
     if not info:
-        ret['comment'] = 'Account policy is not Enabled'
+        ret['comment'] = 'Account policy is not Enabled.'
         ret['result'] = False
         return ret
     for key, value in config.iteritems():
@@ -303,22 +303,26 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
             ret['comment'] = os.linesep.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
             ret['changes'][key] = str(value).lower()
     if not ret['changes']:
-        ret['comment'] = 'Account policy is not changed'
+        ret['comment'] = 'Account policy is not changed.'
         return ret
     if __opts__['test']:
-        ret['comment'] = 'Account policy is set to be changed'
+        ret['comment'] = 'Account policy is set to be changed.'
         ret['result'] = None
         return ret
-    __salt__['boto_iam.update_account_password_policy'](allow_users_to_change_password,
-                                                        hard_expiry,
-                                                        max_password_age,
-                                                        minimum_password_length,
-                                                        password_reuse_prevention,
-                                                        require_lowercase_characters,
-                                                        require_numbers,
-                                                        require_symbols,
-                                                        require_uppercase_characters,
-                                                        region, key, keyid, profile)
+    if __salt__['boto_iam.update_account_password_policy'](allow_users_to_change_password,
+                                                           hard_expiry,
+                                                           max_password_age,
+                                                           minimum_password_length,
+                                                           password_reuse_prevention,
+                                                           require_lowercase_characters,
+                                                           require_numbers,
+                                                           require_symbols,
+                                                           require_uppercase_characters,
+                                                           region, key, keyid, profile):
+        return ret
+    ret['comment'] = 'Account policy is not changed'
+    ret['changes'] = None
+    ret['result'] = False
     return ret
 
 
@@ -342,7 +346,7 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
         ret['comment'] = 'Certificate {0} does not exist.'.format(name)
         return ret
     if __opts__['test']:
-        ret['comment'] = 'Server certificate {0} is set to be deleted'.format(name)
+        ret['comment'] = 'Server certificate {0} is set to be deleted.'.format(name)
         ret['result'] = None
         return ret
     deleted = __salt__['boto_iam.delete_server_cert'](name, region, key, keyid, profile)
@@ -408,7 +412,7 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
             ret['result'] = False
             return ret
     if __opts__['test']:
-        ret['comment'] = 'Server certificate {0} is set to be created'.format(name)
+        ret['comment'] = 'Server certificate {0} is set to be created.'.format(name)
         ret['result'] = None
         return ret
     created = __salt__['boto_iam.upload_server_cert'](name, public_key, private_key, cert_chain,
