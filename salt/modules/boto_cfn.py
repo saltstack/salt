@@ -152,5 +152,7 @@ def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to CFN.
     '''
-    return __salt__['boto_common.get_connection']('cfn', region=region,
+    return __salt__['boto_common.get_connection']('cfn',
+                                                  module='cloudformation',
+                                                  region=region,
                                                   keyid=keyid, profile=profile)
