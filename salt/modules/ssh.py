@@ -249,7 +249,7 @@ def host_keys(keydir=None):
     for fn_ in os.listdir(keydir):
         if fn_.startswith('ssh_host_'):
             top = fn_.split('.')
-            comps = fn_.split('_')
+            comps = top[0].split('_')
             kname = comps[2]
             if len(top) > 1:
                 kname += '.{0}'.format(top[1])
