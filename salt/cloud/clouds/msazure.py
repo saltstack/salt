@@ -59,9 +59,12 @@ HAS_LIBS = False
 try:
     import azure
     import azure.servicemanagement
+    from azure.storage import BlobService
     from azure import (WindowsAzureConflictError,
                        WindowsAzureMissingResourceError,
                        WindowsAzureError)
+    import salt.utils.msazure
+    from salt.utils.msazure import object_to_dict
     HAS_LIBS = True
 except ImportError:
     pass
@@ -2353,33 +2356,583 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
         return {'Error': exc.message}
 
 
-def object_to_dict(obj):
+def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
     '''
     .. versionadded:: Beryllium
 
-    Convert an object to a dictionary
+    Return a storage_conn object for the storage account
     '''
-    if isinstance(obj, list):
-        ret = []
-        for item in obj:
-            ret.append(obj.__dict__[item])
-    elif isinstance(obj, six.text_type):
-        ret = obj.encode('ascii', 'replace'),
-    elif isinstance(obj, six.string_types):
-        ret = obj
-    else:
-        ret = {}
-        for item in dir(obj):
-            if item.startswith('__'):
-                continue
-            # This is ugly, but inspect.isclass() doesn't seem to work
-            if 'class' in str(type(obj.__dict__[item])):
-                ret[item] = object_to_dict(obj.__dict__[item])
-            elif isinstance(obj.__dict__[item], six.text_type):
-                ret[item] = obj.__dict__[item].encode('ascii', 'replace'),
-            else:
-                ret[item] = obj.__dict__[item]
+    if conn_kwargs is None:
+        conn_kwargs = {}
+
+    if not storage_account:
+        storage_account = config.get_cloud_config_value(
+            'storage_account',
+            get_configured_provider(), __opts__, search_global=False,
+            default=conn_kwargs.get('storage_account', None)
+        )
+    if not storage_key:
+        storage_key = config.get_cloud_config_value(
+            'storage_key',
+            get_configured_provider(), __opts__, search_global=False,
+            default=conn_kwargs.get('storage_key', None)
+        )
+    return azure.storage.BlobService(storage_account, storage_key)
+
+
+def make_blob_url(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Creates the URL to access a blob
+
+    CLI Example::
+
+        salt-cloud -f make_blob_url my-azure container=mycontainer blob=myblob
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The make_blob_url function must be called with -f or --function.'
+        )
+
+    if 'container' not in kwargs:
+        raise SaltCloudSystemExit('A container name must be specified as "container"')
+
+    if 'blob' not in kwargs:
+        raise SaltCloudSystemExit('A blob name must be specified as "blob"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    data = storage_conn.make_blob_url(
+        kwargs['container'],
+        kwargs['blob'],
+        kwargs.get('account', None),
+        kwargs.get('protocol', None),
+        kwargs.get('host_base', None),
+    )
+    ret = {}
+    for item in data.containers:
+        ret[item.name] = object_to_dict(item)
     return ret
+
+
+def list_storage_containers(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List containers associated with the storage account
+
+    CLI Example::
+
+        salt-cloud -f list_storage_containers my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_storage_containers function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    data = storage_conn.list_containers()
+    ret = {}
+    for item in data.containers:
+        ret[item.name] = object_to_dict(item)
+    return ret
+
+
+def create_storage_container(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Create a storage container
+
+    CLI Example::
+
+        salt-cloud -f create_storage_container my-azure name=mycontainer
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_storage_container function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    try:
+        data = storage_conn.create_container(
+            container_name=kwargs['name'],
+            x_ms_meta_name_values=kwargs.get('meta_name_values', None),
+            x_ms_blob_public_access=kwargs.get('blob_public_access', None),
+            fail_on_exist=kwargs.get('fail_on_exist', False),
+        )
+        return {'Success': 'The storage container was successfully created'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict. This usually means that the storage container already exists.'}
+
+
+def show_storage_container(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show a container associated with the storage account
+
+    CLI Example::
+
+        salt-cloud -f show_storage_container my-azure name=myservice
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage_container function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    data = storage_conn.get_container_properties(
+        container_name=kwargs['name'],
+        x_ms_lease_id=kwargs.get('lease_id', None),
+    )
+    return data
+
+
+# For consistency with Azure SDK
+get_storage_container = show_storage_container
+
+
+def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show a storage container's metadata
+
+    CLI Example::
+
+        salt-cloud -f show_storage_container_metadata my-azure name=myservice
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage_container function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    data = storage_conn.get_container_metadata(
+        container_name=kwargs['name'],
+        x_ms_lease_id=kwargs.get('lease_id', None),
+    )
+    return data
+
+
+# For consistency with Azure SDK
+get_storage_container_metadata = show_storage_container_metadata
+
+
+def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Set a storage container's metadata
+
+    CLI Example::
+
+        salt-cloud -f set_storage_container my-azure name=mycontainer \
+            x_ms_meta_name_values='{"my_name": "my_value"}'
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_storage_container function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    x_ms_meta_name_values = yaml.safe_load(
+        kwargs.get('meta_name_values', '')
+    )
+
+    try:
+        storage_conn.set_container_metadata(
+            container_name=kwargs['name'],
+            x_ms_meta_name_values=x_ms_meta_name_values,
+            x_ms_lease_id=kwargs.get('lease_id', None),
+        )
+        return {'Success': 'The storage container was successfully updated'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict.'}
+
+
+def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show a storage container's acl
+
+    CLI Example::
+
+        salt-cloud -f show_storage_container_acl my-azure name=myservice
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_storage_container function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    data = storage_conn.get_container_acl(
+        container_name=kwargs['name'],
+        x_ms_lease_id=kwargs.get('lease_id', None),
+    )
+    return data
+
+
+# For consistency with Azure SDK
+get_storage_container_acl = show_storage_container_acl
+
+
+def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Set a storage container's acl
+
+    CLI Example::
+
+        salt-cloud -f set_storage_container my-azure name=mycontainer
+
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_storage_container function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    try:
+        data = storage_conn.set_container_acl(
+            container_name=kwargs['name'],
+            signed_identifiers=kwargs.get('signed_identifiers', None),
+            x_ms_blob_public_access=kwargs.get('blob_public_access', None),
+            x_ms_lease_id=kwargs.get('lease_id', None),
+        )
+        return {'Success': 'The storage container was successfully updated'}
+    except WindowsAzureConflictError as exc:
+        return {'Error': 'There was a Conflict.'}
+
+
+def delete_storage_container(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Delete a container associated with the storage account
+
+    CLI Example::
+
+        salt-cloud -f delete_storage_container my-azure name=mycontainer
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_storage_container function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    data = storage_conn.delete_container(
+        container_name=kwargs['name'],
+        fail_not_exist=kwargs.get('fail_not_exist', None),
+        x_ms_lease_id=kwargs.get('lease_id', None),
+    )
+    return data
+
+
+def lease_storage_container(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Lease a container associated with the storage account
+
+    CLI Example::
+
+        salt-cloud -f lease_storage_container my-azure name=mycontainer
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The delete_storage_container function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    lease_actions = ('acquire', 'renew', 'release', 'break', 'change')
+
+    if kwargs.get('lease_action', None) not in lease_actions:
+        raise SaltCloudSystemExit(
+            'A lease_action must be one of: {0}'.format(
+                ', '.join(lease_actions)
+            )
+        )
+
+    if kwargs['lease_action'] != 'acquire' and 'lease_id' not in kwargs:
+        raise SaltCloudSystemExit(
+            'A lease ID must be specified for the "{0}" lease action '
+            'as "lease_id"'.format(kwargs['lease_action'])
+        )
+
+    data = storage_conn.lease_container(
+        container_name=kwargs['name'],
+        x_ms_lease_action=kwargs['lease_action'],
+        x_ms_lease_id=kwargs.get('lease_id', None),
+        x_ms_lease_duration=kwargs.get('lease_duration', 60),
+        x_ms_lease_break_period=kwargs.get('lease_break_period', None),
+        x_ms_proposed_lease_id=kwargs.get('proposed_lease_id', None),
+    )
+
+    return data
+
+
+def list_blobs(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    List blobs associated with the container
+
+    CLI Example::
+
+        salt-cloud -f list_blobs my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_blobs function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'container' not in kwargs:
+        raise SaltCloudSystemExit('An storage container name must be specified as "container"')
+
+    return salt.utils.msazure.list_blobs(storage_conn=storage_conn, **kwargs)
+
+
+def show_blob_service_properties(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show a blob's service properties
+
+    CLI Example::
+
+        salt-cloud -f show_blob_service_properties my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_blob_service_properties function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    data = storage_conn.get_blob_service_properties(
+        timeout=kwargs.get('timeout', None),
+    )
+    return data
+
+
+# For consistency with Azure SDK
+get_blob_service_properties = show_blob_service_properties
+
+
+def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Set a blob's service properties
+
+    CLI Example::
+
+        salt-cloud -f set_blob_service_properties my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The set_blob_service_properties function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'properties' not in kwargs:
+        raise SaltCloudSystemExit('The blob service properties name must be specified as "properties"')
+
+    data = storage_conn.get_blob_service_properties(
+        storage_service_properties=kwargs['properties'],
+        timeout=kwargs.get('timeout', None),
+    )
+    return data
+
+
+def show_blob_properties(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Show a blob's  properties
+
+    CLI Example::
+
+        salt-cloud -f show_blob_properties my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_blob_properties function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'container' not in kwargs:
+        raise SaltCloudSystemExit('The container name must be specified as "container"')
+
+    if 'blob' not in kwargs:
+        raise SaltCloudSystemExit('The blob name must be specified as "blob"')
+
+    try:
+        data = storage_conn.get_blob_properties(
+            container_name=kwargs['container'],
+            blob_name=kwargs['blob'],
+            x_ms_lease_id=kwargs.get('lease_id', None),
+        )
+    except WindowsAzureMissingResourceError as exc:
+        return {'Error': 'The specified blob does not exist.'}
+
+    return data
+
+
+# For consistency with Azure SDK
+get_blob_properties = show_blob_properties
+
+
+def set_blob_properties(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Set a blob's properties
+
+    CLI Example::
+
+        salt-cloud -f set_blob_properties my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The set_blob_properties function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'container' not in kwargs:
+        raise SaltCloudSystemExit('The blob container name must be specified as "container"')
+
+    if 'blob' not in kwargs:
+        raise SaltCloudSystemExit('The blob name must be specified as "blob"')
+
+    data = storage_conn.get_blob_properties(
+        container_name=kwargs['container'],
+        blob_name=kwargs['blob'],
+        x_ms_blob_cache_control=kwargs.get('blob_cache_control', None),
+        x_ms_blob_content_type=kwargs.get('blob_content_type', None),
+        x_ms_blob_content_md5=kwargs.get('blob_content_md5', None),
+        x_ms_blob_content_encoding=kwargs.get('blob_content_encoding', None),
+        x_ms_blob_content_language=kwargs.get('blob_content_language', None),
+        x_ms_lease_id=kwargs.get('lease_id', None),
+        x_ms_blob_content_disposition=kwargs.get('blob_content_disposition', None),
+    )
+
+    return data
+
+
+def put_blob(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Upload a blob
+
+    CLI Example::
+
+        salt-cloud -f put_blob my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The put_blob function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'container' not in kwargs:
+        raise SaltCloudSystemExit('The blob container name must be specified as "container"')
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('The blob name must be specified as "name"')
+
+    if not 'blob_path' in kwargs and not 'blob_content' in kwargs:
+        raise SaltCloudSystemExit(
+            'Either a path to a file needs to be passed in as "blob_path" or '
+            'the contents of a blob as "blob_content."'
+        )
+
+    return salt.utils.msazure.put_blob(storage_conn=storage_conn, **kwargs)
+
+
+def get_blob(kwargs=None, storage_conn=None, call=None):
+    '''
+    .. versionadded:: Beryllium
+
+    Download a blob
+
+    CLI Example::
+
+        salt-cloud -f get_blob my-azure
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_blob function must be called with -f or --function.'
+        )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
+    if 'container' not in kwargs:
+        raise SaltCloudSystemExit('The blob container name must be specified as "container"')
+
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('The blob name must be specified as "name"')
+
+    if not 'local_path' in kwargs and not 'return_content' in kwargs:
+        raise SaltCloudSystemExit(
+            'Either a local path needs to be passed in as "local_path" or '
+            '"return_content" to return the blob contents directly'
+        )
+
+    return salt.utils.msazure.get_blob(storage_conn=storage_conn, **kwargs)
 
 
 def query(path, method='GET', data=None, params=None, header_dict=None, decode=True):
