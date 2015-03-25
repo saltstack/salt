@@ -687,13 +687,9 @@ def create_crl(path=None, text=False, signing_private_key=None,
         crl.add_revoked(rev)
 
     signing_cert = _text_or_file(signing_cert)
-    print 'signing_cert'
-    print signing_cert
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
             get_pem_entry(signing_cert, pem_type='CERTIFICATE'))
     signing_private_key = _text_or_file(signing_private_key)
-    print 'signing_private_key'
-    print signing_private_key
     key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM,
             get_pem_entry(signing_private_key))
 
@@ -902,9 +898,6 @@ def create_certificate(path=None, text=False, subject={},
 def create_csr(path=None, text=False, subject={}, public_key=None,
         extensions=[], version=3,):
     '''
-    Create a certificate signing request
-    '''
-    '''
     Create a certificate signing request.
 
     path
@@ -974,6 +967,174 @@ def create_csr(path=None, text=False, subject={}, public_key=None,
                 pem_type='CERTIFICATE REQUEST')
     else:
         return csr.as_pem()
+
+
+def request_certificate(path, ca_server, signing_policy, public_key=None, csr=None,
+        with_grains=False, with_pillar=False):
+    '''
+    Request a signed certificate from a remote CA server.
+    Requires the reactor /salt/x509/request_certificate to be configured.
+
+    :param path: The path to save the signed certificate.
+
+    :param ca_server: The minion ID of the remote server that needs to sign the request.
+
+    :param signing_policy: The signing policy on the remote server to be used for
+        signing this request.
+
+    :param public_key: The public key to be included in the signed certificate. If a CSR
+        is used, this is not required. If ``public_key`` is used only the public
+        key will be submitted to the CA, the subject and extensions in the certificate will
+        be entirely determined by the CA.
+
+    :param csr: The CSR to be submitted. Using a csr rather than ``public_key`` allows 
+        submitting subject and extension values that the CA may honor. If the CA
+        signing policy is not configured to allow csr's, only the public key included
+        in the CSR will be used, all other values will be discarded.
+
+    :param with_grains: Include grains from the current minion. The signing policy
+        on the CA may use grains to populate subject fields. If so, this parameter
+        must include the grains that are required by the CA.
+    :type with_grains: Specify ``True`` to include all grains, or specify a
+        list of strings of grain names to include.
+
+    :param with_pillar: Include Pillar values from the current minion.
+        The signing policy on the CA may use pillars to populate subject fields.
+        If so, this parameter must include the pillars that are required by
+        the CA.
+    :type with_pillar: Specify ``True`` to include all Pillar values, or
+        specify a list of strings of Pillar keys to include. It is a
+        best-practice to only specify a relevant subset of Pillar data.
+    '''
+    if not public_key and not csr:
+        raise salt.exceptions.SaltInvocationError('public_key or csr must be included')
+
+    data = {'ca_server': ca_server,
+            'signing_policy': signing_policy}
+
+    if public_key:
+        data['public_key'] = public_key
+
+    if csr:
+        data['csr'] = csr
+
+    return __salt__['event.send'](tag='/salt/x509/request_certificate', data=data,
+            with_grains=with_grains, with_pillar=with_pillar)
+
+
+def sign_request(requestor, signing_policy, signing_policy_def, public_key=None, csr=None, grains={}, pillar={}):
+    '''
+    Sign and return a remotely requested certificate based on the a signing policy in signing_policy_def
+
+    :param signing_policy_def: A dict containing the signing policies for this CA. Top level key will be
+        used to match the minion. A match value can be included to determine how the minion is matched
+        according to the :doc:`match module </ref/modules/salt.modules.match>`.
+    '''
+    ret = ''
+    for target, policy in signing_policy_def.iteritems():
+        if 'match' not in policy:
+            policy['match'] = 'glob'
+
+        if not __salt__['match.' + policy['match']](target, requestor):
+            continue
+
+        if not signing_policy in policy:
+            continue
+
+        signing_policy = policy[signing_policy]
+
+        if csr and 'csr' in signing_policy and signing_policy['csr'] == True:
+            continue
+        elif csr:
+            public_key = csr
+            csr = None
+
+        if not public_key:
+            raise 
+
+        signing_private_key = signing_policy['signing_private_key']
+        signing_cert = signing_policy['signing_cert']
+
+        # Set default values:
+        for prop, default in {'subject': {}, 'extensions': [],
+                'days_valid': 365, 'version': 3, 'serial_number': None,
+                'serial_bits': 64, 'algorithm': 'sha256'}.iteritems():
+            if type(default) == str:
+                exec('{0} = "{1}"'.format(prop, default))
+            else:
+                exec('{0} = {1}'.format(prop, default))
+
+        # Set simple values from signing_policy where they exist.
+        for prop, default in {'days_valid': 365, 'version': 3, 'serial_number': None,
+                'serial_bits': 64, 'algorithm': 'sha256'}.iteritems():
+            if prop in signing_cert:
+                if type(signing_cert[prop]) == str:
+                    exec('{0} = "{1}"'.format(prop, signing_cert[prop]))
+                else:
+                    exec('{0} = {1}'.format(prop, signing_cert[prop]))
+
+        # Subject is a dict, because order is irrelevant
+        if 'subject' in signing_policy:
+            for entry, val in signing_policy['subject'].iteritems():
+                if type(val) != dict:
+                    continue
+
+                if 'grain' in val:
+                    grain = __salt__['grains.get'](val['grain'], False)
+                    if not grain and 'default' in val:
+                        val = val['default']
+                    else:
+                        val = grain
+
+                if 'pillar' in val:
+                    pillar = __salt__['pillar.get'](val['pillar'], False)
+                    if not pillar and 'default' in val:
+                        val = val['default']
+                    else:
+                        val = pillar
+
+                signing_policy['subject'][entry] = val
+
+            subject = signing_policy['subject']
+
+        # Extensions are a list of dicts, because order matters.
+        if 'extensions' in signing_policy:
+            for idx, extension in enumerate(signing_policy['extensions']):
+                if not 'value' in extension or type(extension['value']) != dict:
+                    continue
+
+                val = extension['value']
+
+                if 'grain' in val:
+                    grain = __salt__['grains.get'](val['grain'], False)
+                    if not grain and 'default' in val:
+                        val = val['default']
+                    else:
+                        val = grain
+
+                if 'pillar' in val:
+                    pillar = __salt__['pillar.get'](val['pillar'], False)
+                    if not pillar and 'default' in val:
+                        val = val['default']
+                    else:
+                        val = pillar
+
+                signing_policy['extensions'][idx] = val
+
+
+            extensions = signing_policy['extensions']
+
+    for param in ['subject', 'signing_private_key', 'signing_cert', 'public_key',
+            'csr', 'extensions', 'days_valid', 'version', 'serial_number', 'serial_bits',
+            'algorithm']:
+        exec('print {0}'.format(param))
+
+    return create_certificate(text=True, subject=subject,
+            signing_private_key=signing_private_key, signing_cert=signing_cert,
+            public_key=public_key, csr=csr, extensions=extensions,
+            days_valid=days_valid, version=version,
+            serial_number=serial_number, serial_bits=serial_bits,
+            algorithm=algorithm,)
 
 
 def verify_private_key(private_key, public_key):
