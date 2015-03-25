@@ -1193,20 +1193,21 @@ def line(path, content, match=None, mode=None, location=None,
     Edit a line in the configuration file.
 
     :param path:
-        Filesystem path to the file to be edited
+        Filesystem path to the file to be edited.
 
     :param content:
-        Content of the line
+        Content of the line.
+
     :param match:
         Match the target line for an action by
         a fragment of a string or regular expression.
 
     :param mode:
         Ensure
-            If line does not exist, it will be added
+            If line does not exist, it will be added.
 
         Replace
-            If line already exist, it will be replaced
+            If line already exist, it will be replaced.
 
         Delete
             Delete the line, once found.
@@ -1216,16 +1217,16 @@ def line(path, content, match=None, mode=None, location=None,
 
     :param location:
         start
-            Place the content at the beginning of the file
+            Place the content at the beginning of the file.
 
         end
-            Place the content at the end of the file
+            Place the content at the end of the file.
 
     :param before:
-        Regular expression or an exact case-sensitive fragment of the string
+        Regular expression or an exact case-sensitive fragment of the string.
 
     :param after:
-        Regular expression or an exact case-sensitive fragment of the string
+        Regular expression or an exact case-sensitive fragment of the string.
 
     :param show_changes
         Output a unified diff of the old file and the new file.
