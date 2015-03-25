@@ -242,16 +242,25 @@ Function .onInit
     "UninstallString"
   StrCmp $R0 "" done
 
-  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
-  "${PRODUCT_NAME} is already installed. $\n$\nClick `OK` to remove the \
-  previous version or `Cancel` to cancel this upgrade." \
-  IDOK uninst
+  IfSilent lblManualRemove
+
+  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed. $\n$\nClick `OK` to remove the previous version or `Cancel` to cancel this upgrade." IDOK lblUninst
   Abort
 
-  ;Run the uninstaller
-  uninst:
+  ; Delete previous version of salt
+  lblManualRemove:
+    ExecWait "net stop salt-minion"
+    ExecWait "sc delete salt-minion"
+    RMDir /r "C:\salt"
+
+    Goto done
+
+  lblUninst:
     ClearErrors
-    ExecWait '$R0 _?=$INSTDIR' ;Do not copy the uninstaller to a temp file
+
+    ExecWait "net stop salt-minion"
+    ExecWait "sc delete salt-minion"
+    ExecWait '$R0 /S _?=$INSTDIR' ;Do not copy the uninstaller to a temp file
 
     IfErrors no_remove_uninstaller done
       ;You can either use Delete /REBOOTOK in the uninstaller or add some code
@@ -266,7 +275,7 @@ FunctionEnd
 
 Section Uninstall
   ExecWait "net stop salt-minion"
-  ExecWait "$INSTDIR\nssm remove delete salt-minion"
+  ExecWait "$INSTDIR\sc delete salt-minion"
   Delete "$INSTDIR\uninst.exe"
   Delete "$INSTDIR\nssm.exe"
   Delete "$INSTDIR\salt*"
