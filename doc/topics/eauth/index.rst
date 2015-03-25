@@ -174,16 +174,20 @@ bind to AD's LDAP interface.  If this fails, then it doesn't matter what groups
 the user belongs to, he or she is denied access.  Next, the distinguishedName
 of the user is looked up with the following LDAP search:
 
-(&(<value of auth.ldap.accountattributename>={{username}})
-  (objectClass=<value of auth.ldap.persontype>)
-)
+.. code-block:: text
+
+    (&(<value of auth.ldap.accountattributename>={{username}})
+      (objectClass=<value of auth.ldap.persontype>)
+    )
 
 This should return a distinguishedName that we can use to filter for group
 membership.  Then the following LDAP quey is executed:
 
-(&(member=<distinguishedName from search above>)
-  (objectClass=<value of auth.ldap.groupclass>)
-)
+.. code-block:: text
+
+    (&(member=<distinguishedName from search above>)
+      (objectClass=<value of auth.ldap.groupclass>)
+    )
 
 
 .. code-block:: yaml
