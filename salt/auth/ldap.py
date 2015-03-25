@@ -189,10 +189,10 @@ def _bind(username, password):
                 cns = [tup[0] for tup in result]
                 total_not_none = sum(1 for c in cns if c is not None)
                 if total_not_none > 1:
-                    log.warn('Found multiple results for user {0}'.format(username))
+                    log.error('LDAP lookup found multiple results for user {0}'.format(username))
                     return False
                 elif total_not_none == 0:
-                    log.warn('Unable to find CN matching user {0}'.format(username))
+                    log.error('LDAP lookup--unable to find CN matching user {0}'.format(username))
                     return False
 
             connargs['binddn'] = result[0][0]
@@ -209,7 +209,7 @@ def _bind(username, password):
         ldap_conn = _LDAPConnection(**connargs).ldap
     except Exception:
         connargs.pop('bindpw', None)  # Don't log the password
-        log.warn('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
+        log.error('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
         log.debug('Error authenticating user dn via LDAP:', exc_info=True)
         return False
     log.debug(
@@ -229,7 +229,7 @@ def auth(username, password):
         log.debug('LDAP authentication successful')
         return True
     else:
-        log.debug('LDAP authentication FAILED')
+        log.error('LDAP _bind authentication FAILED')
         return False
 
 
@@ -252,7 +252,7 @@ def groups(username, **kwargs):
 
     bind = _bind(username, kwargs['password'])
     if bind:
-        log.debug('ldap bind to determine group membership succeeded! ------------------------')
+        log.debug('ldap bind to determine group membership succeeded!')
 
         if _config('activedirectory'):
             try:
@@ -263,10 +263,10 @@ def groups(username, **kwargs):
                                                 ldap.SCOPE_SUBTREE,
                                                 get_user_dn_search, ['distinguishedName'])
             except Exception as e:
-                log.debug('Exception thrown while looking up user DN in AD: {0}'.format(e))
+                log.error('Exception thrown while looking up user DN in AD: {0}'.format(e))
                 return group_list
             if not user_dn_results:
-                log.warn('Could not get distinguished name for user {0}'.format(username))
+                log.error('Could not get distinguished name for user {0}'.format(username))
                 return group_list
             # LDAP results are always tuples.  First entry in the tuple is the DN
             dn = user_dn_results[0][0]
@@ -277,7 +277,7 @@ def groups(username, **kwargs):
                                                ldap_search_string,
                                                [_config('accountattributename'), 'cn'])
             except Exception as e:
-                log.debug('Exception thrown while retrieving group membership in AD: {0}'.format(e))
+                log.error('Exception thrown while retrieving group membership in AD: {0}'.format(e))
                 return group_list
             for _, entry in search_results:
                 if 'cn' in entry:
@@ -294,7 +294,7 @@ def groups(username, **kwargs):
                     group_list.append(entry['cn'][0])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
     else:
-        log.debug('ldap bind for groups failed! ------------------------')
+        log.error('ldap bind to determine group membership FAILED!')
         return group_list
 
     return group_list
