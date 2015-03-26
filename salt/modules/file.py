@@ -1398,12 +1398,12 @@ def line(path, content, match=None, mode=None, location=None,
             body = body.splitlines()
             skip = None
             out = []
-            for _line in range(len(body)):
-                if skip != body[_line]:
-                    out.append(body[_line])
+            for idx in range(len(body)):
+                if skip != body[idx]:
+                    out.append(body[idx])
 
-                if body[_line].find(after) > -1:
-                    next_line = _line + 1 < len(body) and body[_line + 1] or None
+                if body[idx].find(after) > -1:
+                    next_line = idx + 1 < len(body) and body[idx + 1] or None
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
                     out.append(content)
