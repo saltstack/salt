@@ -275,7 +275,7 @@ FunctionEnd
 
 Section Uninstall
   ExecWait "net stop salt-minion"
-  ExecWait "$INSTDIR\sc delete salt-minion"
+  ExecWait "sc delete salt-minion"
   Delete "$INSTDIR\uninst.exe"
   Delete "$INSTDIR\nssm.exe"
   Delete "$INSTDIR\salt*"
