@@ -139,6 +139,7 @@ class Runner(RunnerClient):
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
                     salt.utils.args.parse_input(self.opts['arg']),
+                    self.opts,
                 )
                 low['args'] = args
                 low['kwargs'] = kwargs
