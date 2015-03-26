@@ -1181,7 +1181,7 @@ def _assert_occurrence(src, probe, target, amount=1):
         msg = None
 
     if msg:
-        raise Exception('Found {0} expected occurrences in "{1}" expression'.format(msg, target))
+        raise CommandExecutionError('Found {0} expected occurrences in "{1}" expression'.format(msg, target))
 
 
 def line(path, content, match=None, mode=None, location=None,
@@ -1261,9 +1261,9 @@ def line(path, content, match=None, mode=None, location=None,
     mode = mode and mode.lower() or mode
     if mode not in ['insert', 'ensure', 'delete', 'replace']:
         if mode is None:
-            raise Exception('Mode was not defined. How to process the file?')
+            raise CommandExecutionError('Mode was not defined. How to process the file?')
         else:
-            raise Exception('Unknown mode: "{0}"'.format(mode))
+            raise CommandExecutionError('Unknown mode: "{0}"'.format(mode))
 
     # Before/after has privilege. If nothing defined, match is used by content.
     if before is None and after is None and not match:
@@ -1293,7 +1293,7 @@ def line(path, content, match=None, mode=None, location=None,
             body = re.sub(match, content, body)
     elif mode == 'insert':
         if not location and not before and not after:
-            raise Exception('On insert must be defined either "location" or "before/after" conditions.')
+            raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
 
         if not location:
             if before and after:
@@ -1360,7 +1360,7 @@ def line(path, content, match=None, mode=None, location=None,
                     body[a_idx] = content
                 # if force...
             else:
-                raise Exception('Found more than one line between boundaries "before" and "after".')
+                raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
             body = os.linesep.join(body)
 
         elif before and not after:
@@ -1395,9 +1395,9 @@ def line(path, content, match=None, mode=None, location=None,
             body = os.linesep.join(out)
 
         else:
-            raise Exception("Wrong conditions? "
-                            "Unable to ensure line without knowing "
-                            "where to put it before and/or after.")
+            raise CommandExecutionError("Wrong conditions? "
+                                        "Unable to ensure line without knowing "
+                                        "where to put it before and/or after.")
 
     changed = body_before != hashlib.sha256(body).hexdigest()
 
