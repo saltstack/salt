@@ -42,6 +42,7 @@ class NestDisplay(object):
             get_colors(
                 __opts__.get('color'),
                 __opts__.get('color_theme'))
+        )
         self.strip_colors = __opts__.get('strip_colors', True)
 
     def ustring(self,
