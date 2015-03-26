@@ -527,9 +527,9 @@ def dns_check(addr, safe=False, ipv6=False):
     '''
     error = False
     try:
-	# issue #21397: force glibc to re-read resolv.conf
-	if HAS_RESINIT:
-	    res_init()
+        # issue #21397: force glibc to re-read resolv.conf
+        if HAS_RESINIT:
+            res_init()
         hostnames = socket.getaddrinfo(
             addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
         )
