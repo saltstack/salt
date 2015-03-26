@@ -1371,8 +1371,7 @@ def line(path, content, match=None, mode=None, location=None,
                 body = body[:a_idx] + [content] + body[b_idx - 1:]
             elif b_idx - a_idx - 1 == 1:
                 if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
-                    body[a_idx] = content
-                # if force...
+                    body[a_idx] = _get_line_indent(body[a_idx - 1], content, indent)
             else:
                 raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
             body = os.linesep.join(body)
@@ -1381,15 +1380,13 @@ def line(path, content, match=None, mode=None, location=None,
             _assert_occurrence(body, before, 'before')
             body = body.split(os.linesep)
             out = []
-            idx = 0
-            for _line in range(len(body)):
-                if body[_line].find(before) > -1:
-                    out.append(content)
+            for idx in range(len(body)):
+                if body[idx].find(before) > -1:
                     prev = (idx > 0 and idx or 1) - 1
+                    out.append(_get_line_indent(body[prev], content, indent))
                     if _starts_till(out[prev], content) > -1:
                         del out[prev]
-                out.append(body[_line])
-                idx += 1
+                out.append(body[idx])
             body = os.linesep.join(out)
 
         elif not before and after:
@@ -1405,7 +1402,7 @@ def line(path, content, match=None, mode=None, location=None,
                     next_line = idx + 1 < len(body) and body[idx + 1] or None
                     if next_line is not None and _starts_till(next_line, content) > -1:
                         skip = next_line
-                    out.append(content)
+                    out.append(_get_line_indent(body[idx], content, indent))
             body = os.linesep.join(out)
 
         else:
