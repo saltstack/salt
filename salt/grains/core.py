@@ -19,6 +19,7 @@ import re
 import platform
 import logging
 import locale
+import salt.exceptions
 
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
@@ -1631,11 +1632,17 @@ def _dmidecode_data(regex_dict):
         return {}
 
     # No use running if dmidecode/smbios isn't in the path
-    if salt.utils.which('dmidecode'):
-        out = __salt__['cmd.run']('dmidecode')
-    elif salt.utils.which('smbios'):
-        out = __salt__['cmd.run']('smbios')
-    else:
+    no_dmidecode = False
+    try:
+        if salt.utils.which('dmidecode'):
+            out = __salt__['cmd.run']('dmidecode')
+        elif salt.utils.which('smbios'):
+            out = __salt__['cmd.run']('smbios')
+        else:
+            no_dmidecode = True
+    except (salt.exceptions.CommandExecutionError,) as exc:
+        no_dmidecode = True
+    if no_dmidecode:
         log.debug(
             'The `dmidecode` binary is not available on the system. GPU '
             'grains will not be available.'
