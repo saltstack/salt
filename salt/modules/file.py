@@ -1299,7 +1299,7 @@ def line(path, content, match=None, mode=None, location=None,
                 _assert_occurrence(body, before, 'before')
                 _assert_occurrence(body, after, 'after')
                 out = []
-                lines = body.splitlines()
+                lines = body.split(os.linesep)
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     if _line.find(before) > -1 and idx <= len(lines) and lines[idx + 1].find(after) > -1:
@@ -1321,7 +1321,7 @@ def line(path, content, match=None, mode=None, location=None,
             elif after and not before:
                 _assert_occurrence(body, after, 'after')
                 out = []
-                for _line in body.splitlines():
+                for _line in body.split(os.linesep):
                     out.append(_line)
                     if _line.find(after) > -1:
                         out.append(content.strip())
