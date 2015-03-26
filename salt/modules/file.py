@@ -1206,7 +1206,7 @@ def _get_line_indent(src, line, indent):
 
 def line(path, content, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
-         quiet=False):
+         quiet=False, indent=True):
     '''
     .. versionadded:: Beryllium
 
