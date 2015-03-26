@@ -1712,7 +1712,7 @@ def push(repo, tag=None, quiet=False, insecure_registry=False):
                                        oper='>=',
                                        ver2='0.5.0'):
             kwargs['insecure_registry'] = insecure_registry
-        ret = client.pull(repo, **kwargs)
+        ret = client.push(repo, **kwargs)
         if ret:
             image_logs, infos = _parse_image_multilogs_string(ret)
             if image_logs:

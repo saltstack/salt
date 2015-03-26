@@ -172,9 +172,11 @@ class ReactWrap(object):
             f_call = salt.utils.format_call(l_fun, low)
             kwargs = f_call.get('kwargs', {})
 
-            # TODO: pick one...
-            kwargs['__user__'] = self.event_user
-            kwargs['user'] = self.event_user
+            # TODO: Setting the user doesn't seem to work for actual remote publishes
+            if low['state'] in ('runner', 'wheel'):
+                # TODO: pick one...
+                kwargs['__user__'] = self.event_user
+                kwargs['user'] = self.event_user
 
             l_fun(*f_call.get('args', ()), **kwargs)
         except Exception:

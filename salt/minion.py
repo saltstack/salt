@@ -550,14 +550,18 @@ class MultiMinion(MinionBase):
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         ret = {}
         for master in set(self.opts['master']):
-            s_opts = copy.copy(self.opts)
+            s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
             ret[master] = {'opts': s_opts,
                            'last': time.time(),
                            'auth_wait': s_opts['acceptance_wait_time']}
             try:
-                minion = Minion(s_opts, self.MINION_CONNECT_TIMEOUT, False)
+                minion = Minion(
+                        s_opts,
+                        self.MINION_CONNECT_TIMEOUT,
+                        False,
+                        'salt.loader.{0}'.format(master))
                 ret[master]['minion'] = minion
                 ret[master]['generator'] = minion.tune_in_no_block()
             except SaltClientError as exc:
@@ -648,12 +652,13 @@ class Minion(MinionBase):
     and loads all of the functions into the minion
     '''
 
-    def __init__(self, opts, timeout=60, safe=True):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
         self._running = None
         self.win_proc = []
+        self.loaded_base_name = loaded_base_name
 
         # Warn if ZMQ < 3.2
         if HAS_ZMQ:
@@ -931,8 +936,13 @@ class Minion(MinionBase):
 
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
         if self.opts.get('multimaster', False):
+<<<<<<< HEAD
             s_opts = copy.copy(self.opts)
             functions = salt.loader.minion_mods(s_opts, notify=notify)
+=======
+            s_opts = copy.deepcopy(self.opts)
+            functions = salt.loader.minion_mods(s_opts, loaded_base_name=self.loaded_base_name)
+>>>>>>> salt/2015.2
         else:
             functions = salt.loader.minion_mods(self.opts, notify=notify)
         returners = salt.loader.returners(self.opts, functions)
@@ -1552,12 +1562,17 @@ class Minion(MinionBase):
         Refresh the pillar
         '''
         log.debug('Refreshing pillar')
-        self.opts['pillar'] = salt.pillar.get_pillar(
-            self.opts,
-            self.opts['grains'],
-            self.opts['id'],
-            self.opts['environment'],
-        ).compile_pillar()
+        try:
+            self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+            ).compile_pillar()
+        except SaltClientError:
+            # Do not exit if a pillar refresh fails.
+            log.error('Pillar data could not be refreshed. '
+                      'One or more masters may be down!')
         self.module_refresh(force_refresh)
 
     def manage_schedule(self, package):
