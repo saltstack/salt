@@ -1283,12 +1283,7 @@ def line(path, content, match=None, mode=None, location=None,
     match = _regex_to_static(body, match)
 
     if mode == 'delete':
-        content = _regex_to_static(body, content)
-        out = []
-        for line in body.splitlines():
-            if _starts_till(line, content) < 0:
-                out.append(line)
-        body = os.linesep.join(out)
+        body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
 
     elif mode == 'replace':
         if body.find(match) > -1:
