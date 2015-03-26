@@ -1327,25 +1327,35 @@ def line(path, content, match=None, mode=None, location=None,
             if before and not after:
                 _assert_occurrence(body, before, 'before')
                 out = []
-                for _line in body.splitlines():
+                lines = body.split(os.linesep)
+                for idx in range(len(lines)):
+                    _line = lines[idx]
                     if _line.find(before) > -1:
-                        out.append(content.strip())
+                        cnd = _get_line_indent(_line, content, indent)
+                        if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
+                            out.append(cnd)
                     out.append(_line)
                 body = os.linesep.join(out)
 
             elif after and not before:
                 _assert_occurrence(body, after, 'after')
                 out = []
-                for _line in body.split(os.linesep):
+                lines = body.split(os.linesep)
+                for idx in range(len(lines)):
+                    _line = lines[idx]
                     out.append(_line)
+                    cnd = _get_line_indent(_line, content, indent)
                     if _line.find(after) > -1:
-                        out.append(content.strip())
+                        # No dupes or append, if "after" is the last line
+                        if (idx < len(lines) and _starts_till(lines[idx + 1], cnd) < 0) or idx + 1 == len(lines):
+                            out.append(cnd)
                 body = os.linesep.join(out)
+
         else:
             if location == 'start':
                 body = ''.join([content, body])
             elif location == 'end':
-                body = ''.join([body, content])
+                body = ''.join([body, _get_line_indent(body[-1], content, indent) if body else content])
 
     elif mode == 'ensure':
         after = after and after.strip()
