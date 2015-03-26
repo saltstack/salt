@@ -824,7 +824,8 @@ def user_verify_password(user_id=None, name=None, password=None,
               'auth_url': auth_url}
     try:
         userauth = client.Client(**kwargs)
-    except keystoneclient.exceptions.Unauthorized:
+    except (keystoneclient.exceptions.Unauthorized,
+            keystoneclient.exceptions.AuthorizationFailure):
         return False
     return True
 
