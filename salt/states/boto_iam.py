@@ -68,10 +68,15 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - name: mycert
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 import json
 import os
+
+# Import Salt Libs
 import salt.utils.odict as odict
+
 log = logging.getLogger(__name__)
 
 
