@@ -1188,6 +1188,22 @@ def _assert_occurrence(src, probe, target, amount=1):
         raise CommandExecutionError('Found {0} expected occurrences in "{1}" expression'.format(msg, target))
 
 
+def _get_line_indent(src, line, indent):
+    '''
+    Indent the line with the source line.
+    '''
+    if not (indent or line):
+        return line
+
+    idt = []
+    for c in src:
+        if c not in ['\t', ' ']:
+            break
+        idt.append(c)
+
+    return ''.join(idt) + line.strip()
+
+
 def line(path, content, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False):
