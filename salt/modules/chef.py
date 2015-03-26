@@ -6,6 +6,7 @@ Execute chef in server or solo mode
 # Import Python libs
 import logging
 import os
+import tempfile
 
 # Import Salt libs
 import salt.utils
@@ -24,12 +25,19 @@ def __virtual__():
 
 
 def _default_logfile(exe_name):
-
+    '''
+    Retrieve the logfile name
+    '''
     if salt.utils.is_windows():
-        logfile = salt.utils.path_join(
-            os.environ['TMP'],
-            '{0}.log'.format(exe_name)
-        )
+        tmp_dir = os.path.join(__opts__['cachedir'], 'tmp')
+        if not os.path.isdir(tmp_dir):
+            os.mkdir(tmp_dir)
+        logfile_tmp = tempfile.NamedTemporaryFile(dir=tmp_dir,
+                                                  prefix=exe_name,
+                                                  suffix='.log',
+                                                  delete=False)
+        logfile = logfile_tmp.name
+        logfile_tmp.close()
     else:
         logfile = salt.utils.path_join(
             '/var/log',
