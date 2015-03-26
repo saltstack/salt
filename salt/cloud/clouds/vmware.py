@@ -8,6 +8,7 @@ VMware Cloud Module
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
 :depends:   - pyVmomi Python module
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 
 Note: Ensure python pyVmomi module is installed by running following one-liner
 check. The output should be 0.
