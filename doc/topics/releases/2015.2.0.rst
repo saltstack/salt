@@ -110,6 +110,15 @@ A number of functions have been added to the RPM-based package managers to
 detect and diff files that are modified from the original package installs.
 This can be found in the new pkg.modified functions.
 
+Reactor Update
+==============
+
+Fix the infinite recursion problem for runner/wheel reactor jobs by passing a
+"user" (Reactor) to all jobs that the reactor starts. Then the reactor skips
+all events created by that username-- thereby only reacting to events not
+caused by itself. Because of this, runner and wheel executions from the runner
+will have user "Reactor" in the job cache.
+
 Misc Fixes/Additions
 ====================
 
