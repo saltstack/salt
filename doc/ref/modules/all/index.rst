@@ -299,6 +299,7 @@ Full list of builtin execution modules
     win_timezone
     win_update
     win_useradd
+    x509
     xapi
     xfs
     xmpp
