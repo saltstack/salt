@@ -14,6 +14,7 @@ import hashlib
 import logging
 import traceback
 import binascii
+import weakref
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
@@ -790,27 +791,31 @@ class AsyncAuth(SAuth):
     Set up an Async object to maintain authentication with the salt master
     '''
     # This class is only a singleton per minion/master pair
-    instances = {}
-
-    @classmethod
-    def clear_singletons(cls):
-        '''
-        Method to forcibly clear all singletons. This should only be used for testing
-        '''
-        AsyncAuth.instances = {}
+    # mapping of io_loop -> {key -> auth}
+    instance_map = weakref.WeakKeyDictionary()
 
     def __new__(cls, opts):
         '''
         Only create one instance of SAuth per __key()
         '''
+        # do we have any mapping for this io_loop
+        io_loop = tornado.ioloop.IOLoop.current()
+        if io_loop not in AsyncAuth.instance_map:
+            AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
+        loop_instance_map = AsyncAuth.instance_map[io_loop]
+
         key = cls.__key(opts)
-        if key not in AsyncAuth.instances:
+        if key not in loop_instance_map:
             log.debug('Initializing new SAuth for {0}'.format(key))
-            AsyncAuth.instances[key] = object.__new__(cls)
-            AsyncAuth.instances[key].__singleton_init__(opts)
+            # we need to make a local variable for this, as we are going to store
+            # it in a WeakValueDictionary-- which will remove the item if no one
+            # references it-- this forces a reference while we return to the caller
+            new_auth = object.__new__(cls)
+            new_auth.__singleton_init__(opts)
+            loop_instance_map[key] = new_auth
         else:
             log.debug('Re-using SAuth for {0}'.format(key))
-        return AsyncAuth.instances[key]
+        return loop_instance_map[key]
 
     @classmethod
     def __key(cls, opts):
@@ -846,7 +851,6 @@ class AsyncAuth(SAuth):
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        # TODO: make singleton per io_loop?
         self.io_loop = tornado.ioloop.IOLoop.current()
 
         self.authenticate()
