@@ -1273,14 +1273,11 @@ def line(path, content, match=None, mode=None, location=None,
     if before is None and after is None and not match:
         match = content
 
-    if match != content:  # Escape content
-        content = content.replace('\1', '\\1') \
-                         .replace('\2', '\\2')
-
     body = salt.utils.fopen(path, mode='rb').read()
     body_before = hashlib.sha256(body).hexdigest()
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
+    match = _regex_to_static(body, match)
 
     if mode == 'delete':
         content = _regex_to_static(body, content)
