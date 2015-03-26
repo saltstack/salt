@@ -1302,10 +1302,9 @@ def line(path, content, match=None, mode=None, location=None,
         body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
 
     elif mode == 'replace':
-        if body.find(match) > -1:
-            body = body.replace(match, content)
-        elif re.search(match, body):
-            body = re.sub(match, content, body)
+        body = os.linesep.join([(_get_line_indent(line, content, indent)
+                                if (line.find(match) > -1 and not line == content) else line)
+                                for line in body.split(os.linesep)])
     elif mode == 'insert':
         if not location and not before and not after:
             raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
