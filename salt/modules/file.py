@@ -1413,11 +1413,12 @@ def line(path, content, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'rb').readlines(), body.splitlines()))
+        fh_ = None
         try:
             fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
             fh_.write(body)
         finally:
-            fh_.close()
+            fh_ and fh_.close()
 
     return show_changes and changes_diff or changed
 
