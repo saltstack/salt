@@ -1318,7 +1318,7 @@ def line(path, content, match=None, mode=None, location=None,
                 lines = body.split(os.linesep)
                 for idx in range(len(lines)):
                     _line = lines[idx]
-                    if _line.find(before) > -1 and idx <= len(lines) and lines[idx + 1].find(after) > -1:
+                    if _line.find(before) > -1 and idx <= len(lines) and lines[idx - 1].find(after) > -1:
                         out.append(_line)
                         out.append(content)
                     else:
