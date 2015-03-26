@@ -133,7 +133,12 @@ class LinuxLVMTestCase(TestCase):
         self.assertEqual(linux_lvm.pvcreate(''),
                          'Error: at least one device is required')
 
-        self.assertEqual(linux_lvm.pvcreate('A'), 'A does not exist')
+        err = ""
+        try:
+            linux_lvm.pvcreate('A')  # Should raise an exception here
+        except Exception as ex:
+            err = ex.message
+        self.assertEqual(err, "A does not exist")
 
         with patch.object(os.path, 'exists', return_value=True):
             mock = MagicMock(return_value='A\nB')
