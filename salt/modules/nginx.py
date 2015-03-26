@@ -55,11 +55,23 @@ def configtest():
 
         salt '*' nginx.configtest
     '''
+    ret = {}
 
     cmd = '{0} -t'.format(__detect_os())
-    out = __salt__['cmd.run'](cmd).splitlines()
-    ret = out[0].split(': ')
-    return ret[-1]
+    out = __salt__['cmd.run_all'](cmd)
+
+    if out['retcode'] != 0:
+        ret['comment'] = 'Syntax Error'
+        ret['stderr'] = out['stderr']
+        ret['result'] = False
+
+        return ret
+
+    ret['comment'] = 'Syntax OK'
+    ret['stdout'] = out['stderr']
+    ret['result'] = True
+
+    return ret
 
 
 def signal(signal=None):
