@@ -26,13 +26,13 @@ reactor can respond to changes.
 Sudo Minion Settings
 ====================
 
-The new ability to run the minion as a non root user but add the ability for the
+The new ability to run the minion as a non-root user but add the ability for the
 minion to execute commands via sudo has been added, simply add `sudo_user: root`
 to the minion config, run the minion as a non-root user and grant that user
 sudo rights to execute salt-call.
 
 Lazy Loader
-========
+===========
 
 The Lazy Loader is a significant overhaul of Salt's module loader system. The
 Lazy Loader will lazily load modules on access, instead of all on start. In
@@ -43,8 +43,8 @@ the broken module. (:pull: `20274`)
 Enhanced Active Directory Support
 =================================
 
-The eauth system for ldap has been extended to support Microsoft Active Directory
-out of the box. This includes Active Directory and LDAP group support for eauth
+The eauth system for LDAP has been extended to support Microsoft Active Directory
+out of the box. This includes Active Directory and LDAP group support for eauth.
 
 Salt LXC Enhancements
 =====================
@@ -55,21 +55,23 @@ bugs.
 This overhaul makes using LXC with Salt much easier and substantially improves
 the underlying capabilities of Salt's LXC integration.
 
-
 Salt SSH
 ========
 
 - Additional configuration options and command line flags have been added to
   configure the scan roster on the fly
+
 - Added support for ``state.single`` in ``salt-ssh``
+
 - Added support for ``publish.publish``, ``publish.full_data``, and
   ``publish.runner`` in ``salt-ssh``
+
 - Added support for ``mine.get`` in ``salt-ssh``
 
 New Windows Installer
 =====================
 
-The new Windows installer for Salt changes how salt is installed on windows.
+The new Windows installer for Salt changes how salt is installed on Windows.
 The old installer used bbfreeze to create an isolated python environment to
 execute in, this made adding modules and python libraries difficult. The new
 installer sets up a more flexible python environment making it easy to manage
@@ -93,8 +95,6 @@ While Salt does not YET run on python 3 it has been updated to INSTALL on
 python 3, making us one step closer. What remains is getting the test suite
 to the point where it can run on python 3 so that we can verify compatibility.
 
-
-
 RAET Additions
 ==============
 
@@ -105,7 +105,7 @@ first class citizen.
 Modified File Detection
 =======================
 
-A number of functions have been added to the rpm based package managers to
+A number of functions have been added to the RPM-based package managers to
 detect and diff files that are modified from the original package installs.
 This can be found in the new pkg.modified functions.
 
@@ -115,23 +115,31 @@ Misc Fixes/Additions
 - Add ``only_upgrade`` argument to apt-based ``pkg.install`` to only install a
   package version if the package is already installed. (Great for security
   updates!)
+
 - Joyent now requires a ``keyname`` to be specified in the provider
   configuration. This change was necessitated upstream by the 7.0+ API.
+
 - Add ``args`` argument to ``cmd.script_retcode`` to match ``cmd.script`` in
   the :py:mod:`cmd module <salt.cmd.cmdmod>`. (:issue:`21122`)
+
 - Fixed bug where TCP keepalive was not being sent on the defined interval on
   the return port (4506) from minion to master. (:issue: `21465`)
+
 - LocalClient may now optionally raise SaltClientError exceptions. If using
   this class directly, checking for and handling this exception is recommended.
   (:issue: `21501`)
+
 - The SAuth object is now a singleton, meaning authentication state is
   global (per master) on each minion. This reduces sign-ins of minions from 3->1
   per startup.
-- Nested outputter has been optimized, it is now much faster
-- Extensive fileserver backend updates
+
+- Nested outputter has been optimized, it is now much faster.
+
+- Extensive fileserver backend updates.
 
 Deprecations
 ============
+
 - Removed ``parameter`` keyword argument from ``eselect.exec_action`` execution
   module.
 
@@ -157,7 +165,7 @@ Deprecations
     ``ALTER TABLE salt_events ADD master_id VARCHAR(255) NOT NULL;``
 
 Known Issues
-===========
+============
 
 - In multimaster mode, a minion may become temporarily unresponsive
   if modules or pillars are refreshed at the same time that one
