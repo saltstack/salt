@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import salt.exceptions
 import salt.utils
 import datetime
@@ -45,14 +46,14 @@ def _revoked_to_list(revs):
             dict_ = {}
             for prop in props:
                 for propname, val in prop.iteritems():
-                    if type(val) == datetime.datetime:
+                    if isinstance(val, datetime.datetime):
                         val = val.strftime('%Y-%m-%d %H:%M:%S')
                     dict_[propname] = val
             list_.append(dict_)
 
     return list_
 
-                  
+
 
 def private_key_managed(name,
                         bits=2048,
@@ -111,8 +112,8 @@ def private_key_managed(name,
 
 def csr_managed(name,
                 public_key,
-                subject=[],
-                extensions=[],
+                subject=None,
+                extensions=None,
                 version=3,
                 backup=False):
     '''
@@ -153,6 +154,12 @@ def csr_managed(name,
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if subject is None:
+        subject = []
+
+    if extensions is None:
+        subject = []
+
     subject = _subject_to_dict(subject)
     extensions = _exts_to_list(extensions)
     if os.path.isfile(name):
@@ -191,11 +198,11 @@ def csr_managed(name,
 
 def certificate_managed(name,
                         signing_private_key,
-                        subject=[],
+                        subject=None,
                         signing_cert=None,
                         public_key=None,
                         csr=None,
-                        extensions=[],
+                        extensions=None,
                         days_valid=365,
                         days_remaining=90,
                         version=3,
@@ -280,6 +287,12 @@ def certificate_managed(name,
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if subject is None:
+        subject = []
+
+    if extensions is None:
+        subject = []
+
     subject = _subject_to_dict(subject)
     extensions = _exts_to_list(extensions)
 
@@ -350,7 +363,7 @@ def certificate_managed(name,
 def crl_managed(name,
                 signing_private_key,
                 signing_cert=None,
-                revoked=[],
+                revoked=None,
                 days_valid=100,
                 days_remaining=30,
                 include_expired=False,
@@ -384,7 +397,7 @@ def crl_managed(name,
 
     include_expired
         Include expired certificates in the CRL. Default is ``False``.
-    
+
     algorithm
         The algorithm to be used to sign the certificate. Default is 'sha256'.
 
@@ -412,6 +425,9 @@ def crl_managed(name,
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if revoked is None:
+        revoked = []
+
     revoked = _revoked_to_list(revoked)
 
     current_days_remaining = 0
@@ -434,8 +450,8 @@ def crl_managed(name,
         current = '{0} does not exist.'.format(name)
 
     new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key,
-            signing_cert=signing_cert, revoked=revoked,
-            days_valid=days_valid, algorithm=algorithm)
+            signing_cert=signing_cert, revoked=revoked, days_valid=days_valid,
+            algorithm=algorithm, include_expired=include_expired)
 
     new = __salt__['x509.read_crl'](crl=new_crl)
     new_comp = new.copy()
@@ -524,20 +540,21 @@ def request_certificate_managed(name,
         best-practice to only specify a relevant subset of Pillar data.
 
     days_remaining
-        The crl should be automatically recreated if there are less than ``days_remaining``
+        The certificate should be automatically recreated if there are less than ``days_remaining``
         days until the crl expires. Set to 0 to disable automatic renewal. Default is 30.
 
     backup
         When replacing an existing file, backup the old file onthe minion. Default is False.
     '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
     current_days_remaining = 0
-    current_not_before = datetime.datetime.strptime('2000-01-01 00:00:00', '%Y-%m-%d %H:%M:%S')
-    current_comp = {}
+    current_notbefore = datetime.datetime.strptime('2000-01-01 00:00:00', '%Y-%m-%d %H:%M:%S')
 
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
-            current_notbefore = datetime.datetime.strptime(current['Not Before'], 
+            current_notbefore = datetime.datetime.strptime(current['Not Before'],
                     '%Y-%m-%d %H:%M:%S')
             current_notafter = current['Not After']
             current_days_remaining = (
@@ -549,13 +566,6 @@ def request_certificate_managed(name,
             current = '{0} is not a valid Certificate.'.format(name)
     else:
         current = '{0} does not exist.'.format(name)
-
-    new_cert = __salt__['x509.create_certificate'](text=True, subject=subject,
-            signing_private_key=signing_private_key, signing_cert=signing_cert,
-            public_key=public_key, csr=csr, extensions=extensions,
-            days_valid=days_valid, version=version,
-            serial_number=serial_number, serial_bits=serial_bits,
-            algorithm=algorithm)
 
     changes_needed = False
 
@@ -584,10 +594,10 @@ def request_certificate_managed(name,
         salt.utils.backup_minion(name, bkroot)
 
     __salt__['x509.request_certificate'](ca_server=ca_server, requestor=__salt__['grains.get']('id'),
-            signing_policy=signing_policy, public_key=public_key, csr=csr, 
+            signing_policy=signing_policy, public_key=public_key, csr=csr,
             with_grains=with_grains, with_pillar=with_pillar)
 
-    ret['comment'] = __salt__['x509.write_pem'](text=new_cert, path=name, pem_type="CERTIFICATE")
+    ret['comment'] = 'A new certificate request has been submitted to {0}'.format(ca_server)
     ret['result'] = True
 
     return ret

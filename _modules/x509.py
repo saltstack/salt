@@ -311,7 +311,7 @@ def _parse_extensions_in(ext_list):
             # with the certificate object representing the issuer
             # Or with the string self in case of a self-issuer
             # We need to pass this certificate object as issuer to new_extension
-            # where the subjectKeyIdentifier extension will be copied to 
+            # where the subjectKeyIdentifier extension will be copied
             # authorityKeyIdentifier
             if ext['value'] == 'self':
                 ext['value'] = M2Crypto.X509.X509()
@@ -323,7 +323,7 @@ def _parse_extensions_in(ext_list):
 
         if 'critical' in ext:
             ext_obj.set_critical(ext['critical'])
-        
+
         ret.append(ext_obj)
 
     return ret
@@ -347,7 +347,7 @@ def get_pem_entry(text, pem_type=None):
     possibly from a string containing multiple entries.
 
     CLI Example:
-    
+
     .. code-block:: bash
 
         salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
@@ -608,8 +608,8 @@ def create_private_key(path=None, text=False, bits=2048):
 
 
 def create_crl(path=None, text=False, signing_private_key=None,
-        signing_cert=None, revoked=[], include_expired=False,
-        days_valid=100, algorithm='sha256'):
+        signing_cert=None, revoked=None, include_expired=False,
+        days_valid=100):
     '''
     Create a CRL
     This function requires pyOpenSSL
@@ -641,7 +641,7 @@ def create_crl(path=None, text=False, signing_private_key=None,
         ``certificate`` key is included. If the ``Certificate`` key is not included, this
         can be used for the logic behind the ``include_expired`` parameter.
         If should be a string in the format "%Y-%m-%d %H:%M:%S".
-        
+
         The dict can also optionally contain the ``reason`` key. This is the reason code for the
         revocation. Available choices are ``unspecified``, ``keyCompromise``, ``CACompromise``,
         ``affiliationChanged``, ``superseded``, ``cessationOfOperation`` and ``certificateHold``.
@@ -651,6 +651,11 @@ def create_crl(path=None, text=False, signing_private_key=None,
 
     days_valid
         The number of days that the CRL should be valid. This sets the Next Update field in the CRL.
+
+    .. note
+
+        At this time the pyOpenSSL library does not allow choosing a signing algorithm for CRLs
+        See https://github.com/pyca/pyopenssl/issues/159
     '''
     # pyOpenSSL is required for dealing with CSLs. Importing inside these functions because
     # Client operations like creating CRLs shouldn't require pyOpenSSL
@@ -658,6 +663,9 @@ def create_crl(path=None, text=False, signing_private_key=None,
     # For signing the CRL. This will hopefully be fixed soon: https://github.com/pyca/pyopenssl/pull/161
     import OpenSSL
     crl = OpenSSL.crypto.CRL()
+
+    if revoked is None:
+        revoked = []
 
     for rev_item in revoked:
         if 'certificate' in rev_item:
@@ -704,9 +712,9 @@ def create_crl(path=None, text=False, signing_private_key=None,
                 pem_type='X509 CRL')
 
 
-def create_certificate(path=None, text=False, subject={},
+def create_certificate(path=None, text=False, subject=None,
         signing_private_key=None, signing_cert=None, public_key=None,
-        csr=None, extensions=[], days_valid=365, version=3,
+        csr=None, extensions=None, days_valid=365, version=3,
         serial_number=None, serial_bits=64,
         algorithm='sha256',):
     '''
@@ -742,10 +750,10 @@ def create_certificate(path=None, text=False, subject={},
         to the certificate, subject or extension information in the CSR will be lost.
 
     csr
-        A file or PEM string containing a certificate signing request. This will be used to supply the 
-        subject, extensions and public key of a certificate. Any subject or extensions specified 
-        explicitly will overwrite any in the CSR. If neither ``public_key`` or ``csr`` are specified, 
-        it will be assumed that this is a self-signed certificate, and the public key derived from 
+        A file or PEM string containing a certificate signing request. This will be used to supply the
+        subject, extensions and public key of a certificate. Any subject or extensions specified
+        explicitly will overwrite any in the CSR. If neither ``public_key`` or ``csr`` are specified,
+        it will be assumed that this is a self-signed certificate, and the public key derived from
         ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``, not both.
 
     extensions
@@ -784,13 +792,19 @@ def create_certificate(path=None, text=False, subject={},
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' x509.create_certificate path=/etc/pki/myca.crt signing_private_key=/etc/pki/myca.key csr=/etc/pki/myca.csr
     '''
     if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
+
+    if subject is None:
+        subject = {}
+
+    if extensions is None:
+        extensions = []
 
     if not signing_private_key:
         raise salt.exceptions.SaltInvocationError('signing_private_key must be specified')
@@ -846,10 +860,10 @@ def create_certificate(path=None, text=False, subject={},
     cert.set_issuer(signing_cert_subject)
     cert.set_pubkey(public_key)
 
-    notBefore = M2Crypto.m2.x509_get_not_before(cert.x509)
-    notAfter  = M2Crypto.m2.x509_get_not_after(cert.x509)
-    M2Crypto.m2.x509_gmtime_adj(notBefore, 0)
-    M2Crypto.m2.x509_gmtime_adj(notAfter, 60*60*24*days_valid)
+    not_before = M2Crypto.m2.x509_get_not_before(cert.x509)
+    not_after = M2Crypto.m2.x509_get_not_after(cert.x509)
+    M2Crypto.m2.x509_gmtime_adj(not_before, 0)
+    M2Crypto.m2.x509_gmtime_adj(not_after, 60*60*24*days_valid)
 
     # Preprocess key identifier extensions
     tmpext = []
@@ -897,8 +911,8 @@ def create_certificate(path=None, text=False, subject={},
         return cert.as_pem()
 
 
-def create_csr(path=None, text=False, subject={}, public_key=None,
-        extensions=[], version=3,):
+def create_csr(path=None, text=False, subject=None, public_key=None,
+        extensions=None, version=3,):
     '''
     Create a certificate signing request.
 
@@ -931,13 +945,19 @@ def create_csr(path=None, text=False, subject={}, public_key=None,
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' x509.create_csr path=/etc/pki/myca.csr public_key=/etc/pki/myca.key subject={'CN': 'My Cert'}
     '''
     if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
+
+    if subject is None:
+        subject = {}
+
+    if extensions is None:
+        extensions = []
 
     subject = _parse_subject_in(subject)
     public_key = _get_public_key_obj(public_key)
@@ -991,7 +1011,7 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
         This argument will always be converted into a public key PEM before being transmitted
         to the event, so your private key will never leave the minion.
 
-    :param csr: The CSR to be submitted. Using a csr rather than ``public_key`` allows 
+    :param csr: The CSR to be submitted. Using a csr rather than ``public_key`` allows
         submitting subject and extension values that the CA may honor. If the CA
         signing policy is not configured to allow csr's, only the public key included
         in the CSR will be used, all other values will be discarded.
@@ -1031,7 +1051,8 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
             with_grains=with_grains, with_pillar=with_pillar)
 
 
-def sign_request(path=None, text=False, requestor=None, signing_policy=None, signing_policy_def=None, public_key=None, csr=None, grains={}, pillar={}):
+def sign_request(path=None, text=False, requestor=None, signing_policy=None,
+        signing_policy_def=None, public_key=None, csr=None, grains=None, pillar=None):
     '''
     Sign and return a remotely requested certificate based on the a signing policy in signing_policy_def
 
@@ -1049,12 +1070,50 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
         referencing a yaml file containing the signing policy, or a string beginning with ``pillar:``
         followed by the name of the pillar which holds the signing policy.
         For example ``pillar:x509_signing_policy``.
+
+    Example signing policy:
+
+    .. code-block:: yaml
+
+        x509_signing_policy:
+          'pki':
+            myca:
+              signing_private_key: /etc/pki/ca.key
+              signing_cert: /etc/pki/ca.crt
+              csr: False
+              subject:
+                CN:
+                  grain: 'fqdn'
+                C: US
+                ST: Utah
+                L: Salt Lake City
+                emailAddress:
+                  pillar: 'x509:Email'
+                  default: 'ca@example.com'
+              extensions:
+                - basicConstraints:
+                    value: "CA:false"
+                    critical: True
+                - keyUsage:
+                    value: "cRLSign, keyCertSign"
+                    critical: True
+                - subjectKeyIdentifier:
+                    value: hash
+                - authorityKeyIdentifier:
+                    value: keyid,issuer:always
+              days_valid: 90
+              version: 3
     '''
-    ret = ''
     if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
+
+    if grains is None:
+        grains = {}
+
+    if pillar is None:
+        pillar = {}
 
     if public_key and csr:
         raise salt.exceptions.SaltInvocationError('Include either public_key or csr, not both.')
@@ -1065,7 +1124,7 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
     if not signing_policy:
         raise salt.exceptions.SaltInvocationError('signing_policy is required.')
 
-    if type(signing_policy_def) != dict:
+    if not isinstance(signing_policy_def, dict):
         if signing_policy_def.startswith('pillar:'):
             signing_policy_def = signing_policy_def.replace('pillar:', '')
             signing_policy_def = __salt__['pillar.get'](signing_policy_def)
@@ -1093,31 +1152,20 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
         if not public_key:
             raise salt.exceptions.SaltInvocationError('public_key is required')
 
-        signing_private_key = signing_policy['signing_private_key']
-        signing_cert = signing_policy['signing_cert']
-
-        # Set default values:
-        for prop, default in {'subject': {}, 'extensions': [],
+        # default values from signing_policy:
+        defaults = {'subject': {}, 'extensions': [],
                 'days_valid': 365, 'version': 3, 'serial_number': None,
-                'serial_bits': 64, 'algorithm': 'sha256'}.iteritems():
-            if type(default) == str:
-                exec('{0} = "{1}"'.format(prop, default))
-            else:
-                exec('{0} = {1}'.format(prop, default))
+                'serial_bits': 64, 'algorithm': 'sha256'}
 
-        # Set simple values from signing_policy where they exist.
-        for prop, default in {'days_valid': 365, 'version': 3, 'serial_number': None,
-                'serial_bits': 64, 'algorithm': 'sha256'}.iteritems():
-            if prop in signing_cert:
-                if type(signing_cert[prop]) == str:
-                    exec('{0} = "{1}"'.format(prop, signing_cert[prop]))
-                else:
-                    exec('{0} = {1}'.format(prop, signing_cert[prop]))
+        # Set initial simple values form signing_policy where they exist
+        for prop, val in defaults.iteritems():
+            if prop not in signing_policy:
+                signing_policy[prop] = val
 
         # Subject is a dict, because order is irrelevant
         if 'subject' in signing_policy:
             for entry, val in signing_policy['subject'].iteritems():
-                if type(val) != dict:
+                if not isinstance(val, dict):
                     continue
 
                 if 'grain' in val:
@@ -1142,10 +1190,7 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
 
                 signing_policy['subject'][entry] = val
 
-            subject = signing_policy['subject']
-
         # Extensions are a list of dicts, because order matters.
-        extensions = []
         if 'extensions' in signing_policy:
             for idx, extension in enumerate(signing_policy['extensions']):
                 for ext_name, ext_props in extension.iteritems():
@@ -1174,18 +1219,21 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
                                 'and no default included for {1}.'.format(val['pillar'], ext_name))
 
                     ext_props['value'] = val
+                    signing_policy['extensions'][idx] = ext_props
 
-                    extensions.append(ext_props)
-
-    if not signing_private_key or not signing_cert:
+    if 'signing_private_key' not in signing_policy or 'signing_cert' not in signing_policy:
         return "Invalid signing policy"
 
-    return create_certificate(path=path, text=text, subject=subject,
-            signing_private_key=signing_private_key, signing_cert=signing_cert,
-            public_key=public_key, csr=csr, extensions=extensions,
-            days_valid=days_valid, version=version,
-            serial_number=serial_number, serial_bits=serial_bits,
-            algorithm=algorithm,)
+    return create_certificate(path=path, text=text, public_key=public_key, csr=csr,
+            subject=signing_policy['subject'],
+            signing_private_key=signing_policy['signing_private_key'],
+            signing_cert=signing_policy['signing_cert'],
+            extensions=signing_policy['extensions'],
+            days_valid=signing_policy['days_valid'],
+            version=signing_policy['version'],
+            serial_number=signing_policy['serial_number'],
+            serial_bits=signing_policy['serial_bits'],
+            algorithm=signing_policy['algorithm'],)
 
 
 def verify_private_key(private_key, public_key):
@@ -1202,7 +1250,7 @@ def verify_private_key(private_key, public_key):
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' x509.verify_private_key private_key=/etc/pki/myca.key public_key=/etc/pki/myca.crt
     '''
     return bool(get_public_key(private_key) == get_public_key(public_key))
@@ -1222,7 +1270,7 @@ def verify_signature(certificate, signing_pub_key=None):
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' x509.verify_private_key private_key=/etc/pki/myca.key public_key=/etc/pki/myca.crt
     '''
     cert = _get_certificate_obj(certificate)

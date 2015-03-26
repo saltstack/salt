@@ -23,6 +23,7 @@ def request_and_sign(path, ca_server, requestor, signing_policy, signing_policy_
         sign_request:
           runner.x509.request_certificate:
             - requestor: {{ data['id'] }}
+            - path: {{data['data']['path'] }}
             - ca_server: {{ data['data']['ca_server'] }}
             - signing_policy: {{ data['data']['signing_policy'] }}
             - signing_policy_def: 'pillar:x509_signing_policy'
@@ -33,10 +34,10 @@ def request_and_sign(path, ca_server, requestor, signing_policy, signing_policy_
             - csr: {{ data['data']['csr'] }}
             {% endif %-}
             {% if 'grains' in data -%}
-            - grains: {{ data['grains'] }}
+            - grains: {{ data['data']['grains'] }}
             {% endif %-}
             {% if 'pillar' in data -%}
-            - pillar: {{ data['pillar'] }}
+            - pillar: {{ data['data']['pillar'] }}
             {% endif %-}
     '''
     client = salt.client.LocalClient(__opts__['conf_file'])
