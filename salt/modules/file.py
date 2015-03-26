@@ -1418,7 +1418,8 @@ def line(path, content, match=None, mode=None, location=None,
             fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
             fh_.write(body)
         finally:
-            fh_ and fh_.close()
+            if fh_:
+                fh_.close()
 
     return show_changes and changes_diff or changed
 
