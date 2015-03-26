@@ -102,7 +102,7 @@ try:
     libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
     res_init = libc.__res_init
     HAS_RESINIT = True
-except:
+except (ImportError, OSError, AttributeError):
     HAS_RESINIT = False
 
 # Import salt libs
