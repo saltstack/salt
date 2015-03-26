@@ -2389,6 +2389,22 @@ def make_blob_url(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f make_blob_url my-azure container=mycontainer blob=myblob
+
+    container:
+        Name of the container.
+    blob:
+        Name of the blob.
+    account:
+        Name of the storage account. If not specified, derives the host base
+        from the provider configuration.
+    protocol:
+        Protocol to use: 'http' or 'https'. If not specified, derives the host
+        base from the provider configuration.
+    host_base:
+        Live host base URL.  If not specified, derives the host base from the
+        provider configuration.
+
+        when BlobService was initialized.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -2451,6 +2467,16 @@ def create_storage_container(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f create_storage_container my-azure name=mycontainer
+
+    name:
+        Name of container to create.
+    meta_name_values:
+        Optional. A dict with name_value pairs to associate with the
+        container as metadata. Example:{'Category':'test'}
+    blob_public_access:
+        Optional. Possible values include: container, blob
+    fail_on_exist:
+        Specify whether to throw an exception when the container exists.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -2481,17 +2507,20 @@ def show_storage_container(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f show_storage_container my-azure name=myservice
+
+    name:
+        Name of container to show.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The show_storage_container function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
-
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     data = storage_conn.get_container_properties(
         container_name=kwargs['name'],
@@ -2513,17 +2542,23 @@ def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f show_storage_container_metadata my-azure name=myservice
+
+    name:
+        Name of container to show.
+    lease_id:
+        If specified, show_storage_container_metadata only succeeds if the
+        container's lease is active and matches this ID.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The show_storage_container function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
-
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     data = storage_conn.get_container_metadata(
         container_name=kwargs['name'],
@@ -2546,18 +2581,30 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
 
         salt-cloud -f set_storage_container my-azure name=mycontainer \
             x_ms_meta_name_values='{"my_name": "my_value"}'
+
+    name:
+        Name of existing container.
+    meta_name_values:
+        A dict containing name, value for metadata.
+        Example: {'category':'test'}
+    lease_id:
+        If specified, set_storage_container_metadata only succeeds if the
+        container's lease is active and matches this ID.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The create_storage_container function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+    if 'name' not in kwargs:
+        raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
     x_ms_meta_name_values = yaml.safe_load(
         kwargs.get('meta_name_values', '')
     )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     try:
         storage_conn.set_container_metadata(
@@ -2579,17 +2626,23 @@ def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f show_storage_container_acl my-azure name=myservice
+
+    name:
+        Name of existing container.
+    lease_id:
+        If specified, show_storage_container_acl only succeeds if the
+        container's lease is active and matches this ID.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The show_storage_container function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
-
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     data = storage_conn.get_container_acl(
         container_name=kwargs['name'],
@@ -2612,6 +2665,15 @@ def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
 
         salt-cloud -f set_storage_container my-azure name=mycontainer
 
+    name:
+        Name of existing container.
+    signed_identifiers:
+        SignedIdentifers instance
+    blob_public_access:
+        Optional. Possible values include: container, blob
+    lease_id:
+        If specified, set_storage_container_acl only succeeds if the
+        container's lease is active and matches this ID.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -2642,17 +2704,25 @@ def delete_storage_container(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f delete_storage_container my-azure name=mycontainer
+
+    name:
+        Name of container to create.
+    fail_not_exist:
+        Specify whether to throw an exception when the container exists.
+    lease_id:
+        If specified, delete_storage_container only succeeds if the
+        container's lease is active and matches this ID.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The delete_storage_container function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
-
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     data = storage_conn.delete_container(
         container_name=kwargs['name'],
@@ -2671,14 +2741,37 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f lease_storage_container my-azure name=mycontainer
+
+    name:
+        Name of container to create.
+    lease_action:
+        Required. Possible values: acquire|renew|release|break|change
+    lease_id:
+        Required if the container has an active lease.
+    lease_duration:
+        Specifies the duration of the lease, in seconds, or negative one
+        (-1) for a lease that never expires. A non-infinite lease can be
+        between 15 and 60 seconds. A lease duration cannot be changed
+        using renew or change. For backwards compatibility, the default is
+        60, and the value is only used on an acquire operation.
+    lease_break_period:
+        Optional. For a break operation, this is the proposed duration of
+        seconds that the lease should continue before it is broken, between
+        0 and 60 seconds. This break period is only used if it is shorter
+        than the time remaining on the lease. If longer, the time remaining
+        on the lease is used. A new lease will not be available before the
+        break period has expired, but the lease may be held for longer than
+        the break period. If this header does not appear with a break
+        operation, a fixed-duration lease breaks after the remaining lease
+        period elapses, and an infinite lease breaks immediately.
+    proposed_lease_id:
+        Optional for acquire, required for change. Proposed lease ID, in a
+        GUID string format.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The delete_storage_container function must be called with -f or --function.'
+            'The lease_storage_container function must be called with -f or --function.'
         )
-
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
@@ -2697,6 +2790,9 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
             'A lease ID must be specified for the "{0}" lease action '
             'as "lease_id"'.format(kwargs['lease_action'])
         )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     data = storage_conn.lease_container(
         container_name=kwargs['name'],
@@ -2718,18 +2814,61 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
 
     CLI Example::
 
-        salt-cloud -f list_blobs my-azure
+        salt-cloud -f list_blobs my-azure container=mycontainer
+
+    container:
+        The name of the storage container
+    prefix:
+        Optional. Filters the results to return only blobs whose names
+        begin with the specified prefix.
+    marker:
+        Optional. A string value that identifies the portion of the list
+        to be returned with the next list operation. The operation returns
+        a marker value within the response body if the list returned was
+        not complete. The marker value may then be used in a subsequent
+        call to request the next set of list items. The marker value is
+        opaque to the client.
+    maxresults:
+        Optional. Specifies the maximum number of blobs to return,
+        including all BlobPrefix elements. If the request does not specify
+        maxresults or specifies a value greater than 5,000, the server will
+        return up to 5,000 items. Setting maxresults to a value less than
+        or equal to zero results in error response code 400 (Bad Request).
+    include:
+        Optional. Specifies one or more datasets to include in the
+        response. To specify more than one of these options on the URI,
+        you must separate each option with a comma. Valid values are:
+            snapshots:
+                Specifies that snapshots should be included in the
+                enumeration. Snapshots are listed from oldest to newest in
+                the response.
+            metadata:
+                Specifies that blob metadata be returned in the response.
+            uncommittedblobs:
+                Specifies that blobs for which blocks have been uploaded,
+                but which have not been committed using Put Block List
+                (REST API), be included in the response.
+            copy:
+                Version 2012-02-12 and newer. Specifies that metadata
+                related to any current or previous Copy Blob operation
+                should be included in the response.
+    delimiter:
+        Optional. When the request includes this parameter, the operation
+        returns a BlobPrefix element in the response body that acts as a
+        placeholder for all blobs whose names begin with the same
+        substring up to the appearance of the delimiter character. The
+        delimiter may be a single character or a string.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The list_blobs function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
-
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "container"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     return salt.utils.msazure.list_blobs(storage_conn=storage_conn, **kwargs)
 
@@ -2766,22 +2905,30 @@ def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     '''
     .. versionadded:: Beryllium
 
-    Set a blob's service properties
+    Sets the properties of a storage account's Blob service, including
+    Windows Azure Storage Analytics. You can also use this operation to
+    set the default request version for all incoming requests that do not
+    have a version specified.
 
     CLI Example::
 
         salt-cloud -f set_blob_service_properties my-azure
+
+    properties:
+        a StorageServiceProperties object.
+    timeout:
+        Optional. The timeout parameter is expressed in seconds.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The set_blob_service_properties function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
-
     if 'properties' not in kwargs:
         raise SaltCloudSystemExit('The blob service properties name must be specified as "properties"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     data = storage_conn.get_blob_service_properties(
         storage_service_properties=kwargs['properties'],
@@ -2794,25 +2941,33 @@ def show_blob_properties(kwargs=None, storage_conn=None, call=None):
     '''
     .. versionadded:: Beryllium
 
-    Show a blob's  properties
+    Returns all user-defined metadata, standard HTTP properties, and
+    system properties for the blob.
 
     CLI Example::
 
-        salt-cloud -f show_blob_properties my-azure
+        salt-cloud -f show_blob_properties my-azure container=mycontainer blob=myblob
+
+    container:
+        Name of existing container.
+    blob:
+        Name of existing blob.
+    lease_id:
+        Required if the blob has an active lease.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The show_blob_properties function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
-
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The container name must be specified as "container"')
 
     if 'blob' not in kwargs:
         raise SaltCloudSystemExit('The blob name must be specified as "blob"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     try:
         data = storage_conn.get_blob_properties(
@@ -2839,20 +2994,45 @@ def set_blob_properties(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f set_blob_properties my-azure
+
+    container:
+        Name of existing container.
+    blob:
+        Name of existing blob.
+    blob_cache_control:
+        Optional. Modifies the cache control string for the blob.
+    blob_content_type:
+        Optional. Sets the blob's content type.
+    blob_content_md5:
+        Optional. Sets the blob's MD5 hash.
+    blob_content_encoding:
+        Optional. Sets the blob's content encoding.
+    blob_content_language:
+        Optional. Sets the blob's content language.
+    lease_id:
+        Required if the blob has an active lease.
+    blob_content_disposition:
+        Optional. Sets the blob's Content-Disposition header.
+        The Content-Disposition response header field conveys additional
+        information about how to process the response payload, and also can
+        be used to attach additional metadata. For example, if set to
+        attachment, it indicates that the user-agent should not display the
+        response, but instead show a Save As dialog with a filename other
+        than the blob name specified.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The set_blob_properties function must be called with -f or --function.'
         )
 
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
-
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')
 
     if 'blob' not in kwargs:
         raise SaltCloudSystemExit('The blob name must be specified as "blob"')
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     data = storage_conn.get_blob_properties(
         container_name=kwargs['container'],
@@ -2875,17 +3055,51 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
 
     Upload a blob
 
-    CLI Example::
+    CLI Examples::
 
-        salt-cloud -f put_blob my-azure
+        salt-cloud -f put_blob my-azure container=base name=top.sls blob_path=/srv/salt/top.sls
+        salt-cloud -f put_blob my-azure container=base name=content.txt blob_content='Some content'
+
+    container:
+        Name of existing container.
+    name:
+        Name of existing blob.
+    blob_path:
+        The path on the local machine of the file to upload as a blob. Either
+        this or blob_content must be specified.
+    blob_content:
+        The actual content to be uploaded as a blob. Either this or blob_path
+        must me specified.
+    cache_control:
+        Optional. The Blob service stores this value but does not use or
+        modify it.
+    content_language:
+        Optional. Specifies the natural languages used by this resource.
+    content_md5:
+        Optional. An MD5 hash of the blob content. This hash is used to
+        verify the integrity of the blob during transport. When this header
+        is specified, the storage service checks the hash that has arrived
+        with the one that was sent. If the two hashes do not match, the
+        operation will fail with error code 400 (Bad Request).
+    blob_content_type:
+        Optional. Set the blob's content type.
+    blob_content_encoding:
+        Optional. Set the blob's content encoding.
+    blob_content_language:
+        Optional. Set the blob's content language.
+    blob_content_md5:
+        Optional. Set the blob's MD5 hash.
+    blob_cache_control:
+        Optional. Sets the blob's cache control.
+    meta_name_values:
+        A dict containing name, value for metadata.
+    lease_id:
+        Required if the blob has an active lease.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The put_blob function must be called with -f or --function.'
         )
-
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')
@@ -2899,6 +3113,9 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
             'the contents of a blob as "blob_content."'
         )
 
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
+
     return salt.utils.msazure.put_blob(storage_conn=storage_conn, **kwargs)
 
 
@@ -2911,14 +3128,42 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
     CLI Example::
 
         salt-cloud -f get_blob my-azure
+
+    container:
+        Name of existing container.
+    name:
+        Name of existing blob.
+    local_path:
+        The path on the local machine to download the blob to. Either this or
+        return_content must be specified.
+    return_content:
+        Whether or not to return the content directly from the blob. If
+        specified, must be True or False. Either this or the local_path must
+        be specified.
+    snapshot:
+        Optional. The snapshot parameter is an opaque DateTime value that,
+        when present, specifies the blob snapshot to retrieve.
+    lease_id:
+        Required if the blob has an active lease.
+    progress_callback:
+        callback for progress with signature function(current, total) where
+        current is the number of bytes transfered so far, and total is the
+        size of the blob.
+    max_connections:
+        Maximum number of parallel connections to use when the blob size
+        exceeds 64MB.
+        Set to 1 to download the blob chunks sequentially.
+        Set to 2 or more to download the blob chunks in parallel. This uses
+        more system resources but will download faster.
+    max_retries:
+        Number of times to retry download of blob chunk if an error occurs.
+    retry_wait:
+        Sleep time in secs between retries.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The get_blob function must be called with -f or --function.'
         )
-
-    if not storage_conn:
-        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')
@@ -2931,6 +3176,9 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
             'Either a local path needs to be passed in as "local_path" or '
             '"return_content" to return the blob contents directly'
         )
+
+    if not storage_conn:
+        storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     return salt.utils.msazure.get_blob(storage_conn=storage_conn, **kwargs)
 
