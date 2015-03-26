@@ -213,8 +213,7 @@ def certificate_managed(name,
                         days_remaining=90,
                         version=3,
                         serial_number=None,
-                        serial_bits=64,
-                        algorithm='sha256',
+                        serial_bits=64, algorithm='sha256',
                         backup=False,):
     '''
     Manage a Certificate
@@ -606,6 +605,34 @@ def request_certificate_managed(name,
             with_grains=with_grains, with_pillar=with_pillar)
 
     ret['comment'] = 'A new certificate request has been submitted to {0}'.format(ca_server)
+    ret['result'] = True
+
+    return ret
+
+def pem_managed(name, text):
+    '''
+    Manage the contents of a PEM file directly with the content in text, ensuring correct formatting.
+
+    name:
+        The path to the file to manage
+
+    text:
+        The PEM formatted text to write.
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    
+    new = __salt__['get_pem_entry'](text=text)
+
+    if new == salt.utils.fopen(name).read():
+        ret['result'] = True
+        ret['comment'] = 'The file is already in the correct state'
+        return ret
+
+    if __opts__['test'] == True:
+        ret['comment'] = 'The file {0} will be updated.'.format(name)
+        return ret
+
+    ret['comment'] = __salt__['x509.write_pem'](text=text, path=name)
     ret['result'] = True
 
     return ret

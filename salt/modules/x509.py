@@ -342,7 +342,7 @@ def get_pem_entry(text, pem_type=None):
     any whitespace or line-break issues
 
     text:
-        Text containing the X509 PEM entry to be returned
+        Text containing the X509 PEM entry to be returned or path to a file containing the text.
 
     pem_type:
         If specified, this function will only return a pem of a certain type, for example
@@ -354,6 +354,7 @@ def get_pem_entry(text, pem_type=None):
 
         salt '*' x509.get_pem_entry "-----BEGIN CERTIFICATE REQUEST-----MIICyzCC Ar8CAQI...-----END CERTIFICATE REQUEST"
     '''
+    text = _text_or_file(text)
 
     if not pem_type:
         # Split based on headers
@@ -1081,7 +1082,7 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
         signing_policy_def=None, public_key=None, csr=None, grains=None, pillar=None):
     '''
     Sign and return a remotely requested certificate based on the a signing policy in signing_policy_def
-
+    This function is most useful when paired with a reactor. See a full example below.
 
     path:
         Path to write the certificate to.
@@ -1102,40 +1103,8 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
         be either a dict, a string containing a yaml definiton of the signing policy, a string
         referencing a yaml file containing the signing policy, or a string beginning with ``pillar:``
         followed by the name of the pillar which holds the signing policy.
-        For example ``pillar:x509_signing_policy``.
-
-    Example signing policy:
-
-    .. code-block:: yaml
-
-        x509_signing_policy:
-          'pki':
-            myca:
-              signing_private_key: /etc/pki/ca.key
-              signing_cert: /etc/pki/ca.crt
-              csr: False
-              subject:
-                CN:
-                  grain: 'fqdn'
-                C: US
-                ST: Utah
-                L: Salt Lake City
-                emailAddress:
-                  pillar: 'x509:Email'
-                  default: 'ca@example.com'
-              extensions:
-                - basicConstraints:
-                    value: "CA:false"
-                    critical: True
-                - keyUsage:
-                    value: "cRLSign, keyCertSign"
-                    critical: True
-                - subjectKeyIdentifier:
-                    value: hash
-                - authorityKeyIdentifier:
-                    value: keyid,issuer:always
-              days_valid: 90
-              version: 3
+        For example ``pillar:x509_signing_policy``. An example of a signing policy is included below
+        in the full example.
 
     public_key:
         The public key to be signed by the CA. Either ``public_key`` or ``csr`` must be spcified.
@@ -1153,6 +1122,162 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
 
     pillar:
         Pillar values from the minion that may be used in the signing policy.
+
+    Full example of an automatic signing CA:
+
+    /srv/salt/top.sls
+
+    .. code-block:: yaml
+        
+        base:
+          'ca':
+            - ca
+          'www':
+            - www
+
+    /srv/salt/ca.sls
+
+    .. code-block:: yaml
+
+        /etc/pki:
+          file.directory:
+        
+        /etc/pki/ca.key:
+          x509.private_key_managed:
+            - bits: 4096
+
+        /etc/pki/ca.crt:
+          x509.certificate_managed:
+            - signing_private_key: /etc/pki/ca.key
+            - subject:
+              - CN: ca.example.com
+              - C: US
+              - ST: Utah
+              - L: Salt Lake City
+            - extensions:
+              - basicConstraints: 
+                - value: "CA:true"
+                - critical: True
+              - keyUsage: 
+                - value: "cRLSign, keyCertSign"
+                - critical: True
+              - subjectKeyIdentifier:
+                - value: hash
+              - authorityKeyIdentifier:
+                - value: keyid,issuer:always
+            - days_valid: 3650
+            - days_remaining: 0
+            - backup: True
+            - require:
+              - x509: /etc/pki/ca.key
+
+        /etc/pki/signing_policy.yml
+          file.managed:
+            - source: salt://signing_policy.yml
+
+        mine.send:
+          module.run:
+            - func: ca_crt
+            - mine_function: x509.get_pem_entry /etc/pki/ca.crt
+
+
+    .. code-block:: yaml
+
+        'www*':         # The first line of a signing policy is a target of allowed minions
+          www:
+            signing_private_key: /etc/pki/ca.key
+            signing_cert: /etc/pki/ca.crt
+            csr: False
+            subject:
+              CN:
+                grain: 'fqdn'
+              C: US
+              ST: Utah
+              L: Salt Lake City
+              emailAddress:
+                pillar: 'x509:Email'
+                default: 'nobody@saltstack.com'
+            extensions:
+              - basicConstraints: 
+                  value: "CA:false"
+                  critical: True
+              - keyUsage: 
+                  value: 'serverAuth'
+                  critical: True
+              - subjectKeyIdentifier:
+                  value: hash
+              - authorityKeyIdentifier:
+                  value: keyid,issuer:always
+            days_valid: 360
+            version: 3
+
+
+    /srv/salt/www.sls
+
+    .. code-block:: yaml
+
+        /etc/ssl:
+          file.directory:
+
+        /etc/ssl/ca.crt:
+          x509.pem_managed:
+            - text: {{ __salt__['mine.get']('ca', 'ca_crt') }}
+        
+        /etc/ssl/www.key:
+          x509.private_key_managed:
+            - bits: 4096
+
+        /etc/ssl/www.crt:
+          x509.request_certificate_managed:
+            - ca_server: ca
+            - signing_policy: www
+            - signing_cert: /etc/ssl/ca.crt
+            - public_key: /etc/ssl/www.key
+            - with_grains:
+              - fqdn
+            - days_remaining: 90
+
+
+    /etc/salt/master.d/reactor.conf
+
+    .. code-block:: yaml
+
+        reactor:
+          - '/salt/x509/request_certificate':
+              - /srv/salt/_reactor/sign_x509_request.sls
+
+
+    /srv/salt/_reactor/sign_x509_request.sls
+
+    .. code-block:: yaml
+
+        sign_request:
+          runner.x509.request_and_sign:
+            - requestor: {{ data['id'] }}
+            - path: {{ data['data']['path'] }}
+            - ca_server: {{ data['data']['ca_server'] }}
+            - signing_policy: {{ data['data']['signing_policy'] }}
+            - signing_policy_def: /etc/pki/signing_policy.yml
+            {% if 'public_key' in data['data'] -%}
+            - public_key: {{ data['data']['public_key'] }}
+            {% endif -%}
+            {% if 'csr' in data['data'] -%}
+            - csr: {{ data['data']['csr'] }}
+            {% endif -%}
+            {% if 'grains' in data['data'] -%}
+            - grains: {{ data['data']['grains'] }}
+            {% endif -%}
+            {% if 'pillar' in data['data'] -%}
+            - pillar: {{ data['data']['pillar'] }}
+            {% endif -%}
+
+    
+    With the above configuration, ca will create it's own private key and CA certificate, then publish
+    it's CA certificate to the mine. The minion www will generate its own private key, then the
+    ``request_certificate_managed`` will fire the ``/salt/x509/request_certificate`` event to the master.
+    The reactor on the master will run the ``x509.sign_request`` module on the CA to sign the certificate
+    according to the signing policy, then run ``x509.save_pem`` on the minion to save the resulting signed
+    certificate.
     '''
     if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
