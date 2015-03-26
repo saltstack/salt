@@ -231,9 +231,42 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     if has_powershell():
+        if 'salt-minion' in name:
+            create_win_salt_restart_task()
+            return execute_salt_restart_task()
         cmd = 'Restart-Service {0}'.format(_cmd_quote(name))
         return not __salt__['cmd.retcode'](cmd, shell='powershell', python_shell=True)
     return stop(name) and start(name)
+
+
+def create_win_salt_restart_task():
+    '''
+
+    Create a task in Windows task scheduler to enable restarting the salt-minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.create_win_salt_restart_task()
+    '''
+    cmd = 'schtasks /RU "System" /Create /TN restart-salt-minion /TR "powershell Restart-Service salt-minion" /sc ONCE /sd 01/15/1975 /st 01:00 /F'
+
+    return __salt__['cmd.run'](cmd)
+
+
+def execute_salt_restart_task():
+    '''
+    Run the Windows Salt restart task
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.execute_salt_restart_task()
+    '''
+    cmd = 'schtasks /Run /TN restart-salt-minion'
+    return __salt__['cmd.run'](cmd)
 
 
 def status(name, sig=None):
