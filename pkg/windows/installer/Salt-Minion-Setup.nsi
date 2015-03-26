@@ -237,10 +237,10 @@ Function .onInit
   Pop $R1
   Pop $R0
 
-  ReadRegStr $R0 HKLM \
+  ReadRegStr $R4 HKLM \
     "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" \
     "UninstallString"
-  StrCmp $R0 "" done
+  StrCmp $R4 "" done
 
   IfSilent lblManualRemove
 
@@ -260,7 +260,7 @@ Function .onInit
 
     ExecWait "net stop salt-minion"
     ExecWait "sc delete salt-minion"
-    ExecWait '$R0 /S _?=$INSTDIR' ;Do not copy the uninstaller to a temp file
+    ExecWait '$R4 /S _?=$INSTDIR' ;Do not copy the uninstaller to a temp file
 
     IfErrors no_remove_uninstaller done
       ;You can either use Delete /REBOOTOK in the uninstaller or add some code
