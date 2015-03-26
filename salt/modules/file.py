@@ -1359,7 +1359,7 @@ def line(path, content, match=None, mode=None, location=None,
 
             a_idx = b_idx = -1
             idx = 0
-            body = body.splitlines()
+            body = body.split(os.linesep)
             for _line in body:
                 idx += 1
                 if _line.find(before) > -1 and b_idx < 0:
@@ -1380,7 +1380,7 @@ def line(path, content, match=None, mode=None, location=None,
 
         elif before and not after:
             _assert_occurrence(body, before, 'before')
-            body = body.splitlines()
+            body = body.split(os.linesep)
             out = []
             idx = 0
             for _line in range(len(body)):
@@ -1395,7 +1395,7 @@ def line(path, content, match=None, mode=None, location=None,
 
         elif not before and after:
             _assert_occurrence(body, after, 'after')
-            body = body.splitlines()
+            body = body.split(os.linesep)
             skip = None
             out = []
             for idx in range(len(body)):
