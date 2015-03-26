@@ -50,7 +50,7 @@ def _default_logfile(exe_name):
 @decorators.which('chef-client')
 def client(whyrun=False,
            localmode=False,
-           logfile=_default_logfile('chef-client'),
+           logfile=None,
            **kwargs):
     '''
     Execute a chef client run and return a dict with the stderr, stdout,
@@ -119,6 +119,8 @@ def client(whyrun=False,
         Enable whyrun mode when set to True
 
     '''
+    if logfile is None:
+        logfile = _default_logfile('chef-client'),
     args = ['chef-client',
             '--no-color',
             '--once',
@@ -136,7 +138,7 @@ def client(whyrun=False,
 
 @decorators.which('chef-solo')
 def solo(whyrun=False,
-         logfile=_default_logfile('chef-solo'),
+         logfile=None,
          **kwargs):
     '''
     Execute a chef solo run and return a dict with the stderr, stdout,
@@ -186,6 +188,8 @@ def solo(whyrun=False,
     whyrun
         Enable whyrun mode when set to True
     '''
+    if logfile is None:
+        logfile = _default_logfile('chef-client'),
     args = ['chef-solo',
             '--no-color',
             '--logfile "{0}"'.format(logfile),
