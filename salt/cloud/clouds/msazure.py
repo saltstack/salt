@@ -2403,8 +2403,6 @@ def make_blob_url(kwargs=None, storage_conn=None, call=None):
     host_base:
         Live host base URL.  If not specified, derives the host base from the
         provider configuration.
-
-        when BlobService was initialized.
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3127,7 +3125,8 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
 
     CLI Example::
 
-        salt-cloud -f get_blob my-azure
+        salt-cloud -f get_blob my-azure container=base name=top.sls local_path=/srv/salt/top.sls
+        salt-cloud -f get_blob my-azure container=base name=content.txt return_content=True
 
     container:
         Name of existing container.
