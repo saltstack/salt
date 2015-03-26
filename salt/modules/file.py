@@ -1162,7 +1162,11 @@ def _regex_to_static(src, regex):
     if not src or not regex:
         return None
 
-    src = re.search(regex, src)
+    try:
+        src = re.search(regex, src)
+    except Exception as ex:
+        raise CommandExecutionError("{0}: '{1}'".format(ex.message, regex))
+
     return src and src.group() or regex
 
 
