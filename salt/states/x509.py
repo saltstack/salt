@@ -500,7 +500,7 @@ def request_certificate_managed(name,
     Manage a remotely signed Certificate
 
     This requires that the request_certificate reactor be configured on the master to
-    pass signing requests to the CA server. See runners/x509 for an example.
+    pass signing requests to the CA server. See the full example below.
 
     name:
         Path to the certificate on the minion
@@ -551,7 +551,164 @@ def request_certificate_managed(name,
         days until the crl expires. Set to 0 to disable automatic renewal. Default is 30.
 
     backup:
-        When replacing an existing file, backup the old file onthe minion. Default is False.
+        When replacing an existing file, backup the old file on the minion. Default is False.
+
+
+    Full example of an automatic signing CA:
+
+    /srv/salt/top.sls
+
+    .. code-block:: yaml
+        
+        base:
+          'ca':
+            - ca
+          'www':
+            - www
+
+    /srv/salt/ca.sls
+
+    .. code-block:: yaml
+
+        /etc/pki:
+          file.directory:
+        
+        /etc/pki/ca.key:
+          x509.private_key_managed:
+            - bits: 4096
+
+        /etc/pki/ca.crt:
+          x509.certificate_managed:
+            - signing_private_key: /etc/pki/ca.key
+            - subject:
+              - CN: ca.example.com
+              - C: US
+              - ST: Utah
+              - L: Salt Lake City
+            - extensions:
+              - basicConstraints: 
+                - value: "CA:true"
+                - critical: True
+              - keyUsage: 
+                - value: "cRLSign, keyCertSign"
+                - critical: True
+              - subjectKeyIdentifier:
+                - value: hash
+              - authorityKeyIdentifier:
+                - value: keyid,issuer:always
+            - days_valid: 3650
+            - days_remaining: 0
+            - backup: True
+            - require:
+              - x509: /etc/pki/ca.key
+
+        /etc/pki/signing_policy.yml
+          file.managed:
+            - source: salt://signing_policy.yml
+
+        mine.send:
+          module.run:
+            - func: ca_crt
+            - mine_function: x509.get_pem_entry /etc/pki/ca.crt
+
+
+    .. code-block:: yaml
+
+        'www*':         # The first line of a signing policy is a target of allowed minions
+          www:
+            signing_private_key: /etc/pki/ca.key
+            signing_cert: /etc/pki/ca.crt
+            csr: False
+            subject:
+              CN:
+                grain: 'fqdn'
+              C: US
+              ST: Utah
+              L: Salt Lake City
+              emailAddress:
+                pillar: 'x509:Email'
+                default: 'nobody@saltstack.com'
+            extensions:
+              - basicConstraints: 
+                  value: "CA:false"
+                  critical: True
+              - keyUsage: 
+                  value: 'serverAuth'
+                  critical: True
+              - subjectKeyIdentifier:
+                  value: hash
+              - authorityKeyIdentifier:
+                  value: keyid,issuer:always
+            days_valid: 360
+            version: 3
+
+
+    /srv/salt/www.sls
+
+    .. code-block:: yaml
+
+        /etc/ssl:
+          file.directory:
+
+        /etc/ssl/ca.crt:
+          x509.pem_managed:
+            - text: {{ __salt__['mine.get']('ca', 'ca_crt') }}
+        
+        /etc/ssl/www.key:
+          x509.private_key_managed:
+            - bits: 4096
+
+        /etc/ssl/www.crt:
+          x509.request_certificate_managed:
+            - ca_server: ca
+            - signing_policy: www
+            - signing_cert: /etc/ssl/ca.crt
+            - public_key: /etc/ssl/www.key
+            - with_grains:
+              - fqdn
+            - days_remaining: 90
+
+
+    /etc/salt/master.d/reactor.conf
+
+    .. code-block:: yaml
+
+        reactor:
+          - '/salt/x509/request_certificate':
+              - /srv/salt/_reactor/sign_x509_request.sls
+
+
+    /srv/salt/_reactor/sign_x509_request.sls
+
+    .. code-block:: yaml
+
+        sign_request:
+          runner.x509.request_and_sign:
+            - requestor: {{ data['id'] }}
+            - path: {{ data['data']['path'] }}
+            - ca_server: {{ data['data']['ca_server'] }}
+            - signing_policy: {{ data['data']['signing_policy'] }}
+            - signing_policy_def: /etc/pki/signing_policy.yml
+            {% if 'public_key' in data['data'] -%}
+            - public_key: {{ data['data']['public_key'] }}
+            {% endif -%}
+            {% if 'csr' in data['data'] -%}
+            - csr: {{ data['data']['csr'] }}
+            {% endif -%}
+            {% if 'grains' in data['data'] -%}
+            - grains: {{ data['data']['grains'] }}
+            {% endif -%}
+            {% if 'pillar' in data['data'] -%}
+            - pillar: {{ data['data']['pillar'] }}
+            {% endif -%}
+
+    
+    With the above configuration, ca will create it's own private key and CA certificate, then publish
+    it's CA certificate to the mine. The minion www will generate its own private key, then the
+    ``request_certificate_managed`` will fire the ``/salt/x509/request_certificate`` event to the master.
+    The reactor on the master will run the ``x509.sign_request`` module on the CA to sign the certificate
+    according to the signing policy, then run ``x509.save_pem`` on the minion to save the resulting signed
+    certificate.
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
