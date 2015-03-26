@@ -1318,8 +1318,8 @@ def line(path, content, match=None, mode=None, location=None,
                 for idx in range(len(lines)):
                     _line = lines[idx]
                     if _line.find(before) > -1 and idx <= len(lines) and lines[idx - 1].find(after) > -1:
+                        out.append(_get_line_indent(_line, content, indent))
                         out.append(_line)
-                        out.append(content)
                     else:
                         out.append(_line)
                 body = os.linesep.join(out)
