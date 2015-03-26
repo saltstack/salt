@@ -7,6 +7,8 @@ etcd Database Module
 :depends:       python-etcd
 :platform:      all
 
+.. versionadded:: 2015.2
+
 This module allows access to the etcd database using an ``sdb://`` URI. This
 package is located at ``https://pypi.python.org/pypi/python-etcd``.
 
@@ -26,7 +28,7 @@ is hosting the etcd database and ``etcd.port`` refers to the port on that host.
 
 .. code-block:: yaml
 
-    password: sdb://etcd/mypassword
+    password: sdb://myetcd/mypassword
 
 .. versionadded:: 2014.1.4 (Hydrogen)
 '''
