@@ -1014,13 +1014,18 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
         raise salt.exceptions.SaltInvocationError('public_key or csr must be included')
 
     data = {'ca_server': ca_server,
-            'signing_policy': signing_policy}
+            'signing_policy': signing_policy,
+            'path': path}
 
+    # Intentionally stripping new lines from returned PEM data, because they will be
+    # inserted into user-created YAML reactors, and dealing with multi-line strings
+    # in yaml is a pain. And they'll get nicely formatted on the way back into the x509
+    # module anyway.
     if public_key:
-        data['public_key'] = get_public_key(public_key)
+        data['public_key'] = get_public_key(public_key).replace('\n', '')
 
     if csr:
-        data['csr'] = get_pem_entry(csr, pem_type='CERTIFICATE REQUEST')
+        data['csr'] = get_pem_entry(csr, pem_type='CERTIFICATE REQUEST').replace('\n', '')
 
     return __salt__['event.send'](tag='/salt/x509/request_certificate', data=data,
             with_grains=with_grains, with_pillar=with_pillar)
@@ -1171,6 +1176,9 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None, sig
                     ext_props['value'] = val
 
                     extensions.append(ext_props)
+
+    if not signing_private_key or not signing_cert:
+        return "Invalid signing policy"
 
     return create_certificate(path=path, text=text, subject=subject,
             signing_private_key=signing_private_key, signing_cert=signing_cert,

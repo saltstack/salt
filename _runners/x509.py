@@ -10,7 +10,7 @@ import salt.client
 
 log = logging.getLogger(__name__)
 
-def request_certificate(path, ca_server, requestor, signing_policy, signing_policy_def,
+def request_and_sign(path, ca_server, requestor, signing_policy, signing_policy_def,
         public_key=None, csr=None, grains={}, pillar={}, output=True):
     '''
     Request a certificate to be signed by a particular CA. Ideal for calling from a reactor
