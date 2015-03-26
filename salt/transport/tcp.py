@@ -485,6 +485,8 @@ class SaltMessageClient(object):
             self._on_recv = wrap_recv
 
     def remove_message_timeout(self, message_id):
+        if message_id not in self.send_timeout_map:
+            return
         timeout = self.send_timeout_map.pop(message_id)
         self.io_loop.remove_timeout(timeout)
 
