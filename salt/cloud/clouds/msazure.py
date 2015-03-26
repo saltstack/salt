@@ -49,7 +49,6 @@ import time
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
-import salt.ext.six as six
 
 # Import 3rd-party libs
 import yaml
@@ -59,7 +58,6 @@ HAS_LIBS = False
 try:
     import azure
     import azure.servicemanagement
-    from azure.storage import BlobService
     from azure import (WindowsAzureConflictError,
                        WindowsAzureMissingResourceError,
                        WindowsAzureError)
@@ -3105,7 +3103,7 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('The blob name must be specified as "name"')
 
-    if not 'blob_path' in kwargs and not 'blob_content' in kwargs:
+    if 'blob_path' not in kwargs and 'blob_content' not in kwargs:
         raise SaltCloudSystemExit(
             'Either a path to a file needs to be passed in as "blob_path" or '
             'the contents of a blob as "blob_content."'
@@ -3170,7 +3168,7 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('The blob name must be specified as "name"')
 
-    if not 'local_path' in kwargs and not 'return_content' in kwargs:
+    if 'local_path' not in kwargs and 'return_content' not in kwargs:
         raise SaltCloudSystemExit(
             'Either a local path needs to be passed in as "local_path" or '
             '"return_content" to return the blob contents directly'

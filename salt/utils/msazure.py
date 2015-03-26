@@ -13,7 +13,6 @@ import logging
 HAS_LIBS = False
 try:
     import azure
-    from azure.storage import BlobService
     HAS_LIBS = True
 except ImportError:
     pass
@@ -87,7 +86,7 @@ def put_blob(storage_conn=None, **kwargs):
     if 'name' not in kwargs:
         raise SaltSystemExit(code=42, msg='The blob name must be specified as "name"')
 
-    if not 'blob_path' in kwargs and not 'blob_content' in kwargs:
+    if 'blob_path' not in kwargs and 'blob_content' not in kwargs:
         raise SaltSystemExit(
             code=42,
             msg='Either a path to a file needs to be passed in as "blob_path" '
@@ -137,7 +136,7 @@ def get_blob(storage_conn=None, **kwargs):
     if 'name' not in kwargs:
         raise SaltSystemExit(code=42, msg='The blob name must be specified as "name"')
 
-    if not 'local_path' in kwargs and not 'return_content' in kwargs:
+    if 'local_path' not in kwargs and 'return_content' not in kwargs:
         raise SaltSystemExit(
             code=42,
             msg='Either a local path needs to be passed in as "local_path", '

@@ -30,7 +30,6 @@ salt instrastructure.
 import os
 import os.path
 import logging
-import json
 import time
 
 try:
@@ -60,7 +59,7 @@ def __virtual__():
     '''
     Only load if file_recv is enabled
     '''
-    if not __virtualname__ in __opts__['fileserver_backend']:
+    if __virtualname__ not in __opts__['fileserver_backend']:
         return False
 
     if not HAS_AZURE:
@@ -256,7 +255,7 @@ def file_hash(load, fnd):
                     ret['hsum'] = hsum
                     return ret
         except os.error:
-        # Can't use Python select() because we need Windows support
+            # Can't use Python select() because we need Windows support
             log.debug(
                 'Fileserver encountered lock'
                 'when reading cache file. Retrying.'
@@ -310,10 +309,10 @@ def dir_list(load):
         container=load['saltenv'],
     )
     for blob in result:
-        if not '/' in blob:
+        if '/' not in blob:
             continue
         comps = blob.split('/')
         path = '/'.join(comps[:-1])
-        if not path in ret:
+        if path not in ret:
             ret.append(path)
     return ret
