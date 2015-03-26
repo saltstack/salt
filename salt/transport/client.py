@@ -5,34 +5,8 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 '''
 import time
-import tornado.ioloop
 
-
-# TODO: singletons?
-class SyncReqChannelWrapper(object):
-    '''
-    A wrapper to make AsyncReqChannels synchronous
-    '''
-    def __init__(self, async_channel):
-        self.async_channel = async_channel
-        self.io_loop = tornado.ioloop.IOLoop()
-
-    def _block_future(self, future):
-        start = time.time()
-        self.io_loop.add_future(future, lambda future: self.io_loop.stop())
-        self.io_loop.start()
-        return future.result()
-
-    def send(self, load, tries=3, timeout=60):
-        future = self.async_channel.send(load, tries=tries, timeout=timeout)
-        return self._block_future(future)
-
-    def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
-        future = self.async_channel.crypted_transfer_decode_dictentry(load,
-                                                                      dictkey=dictkey,
-                                                                      tries=tries,
-                                                                      timeout=timeout)
-        return self._block_future(future)
+from salt.utils.async import SyncWrapper
 
 
 class ReqChannel(object):
@@ -56,7 +30,7 @@ class ReqChannel(object):
         else:
             # TODO: switch everything to this
             async = AsyncReqChannel.factory(opts, **kwargs)
-            return SyncReqChannelWrapper(async)
+            return SyncWrapper(async)
 
     def send(self, load, tries=3, timeout=60):
         '''
