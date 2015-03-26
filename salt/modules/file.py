@@ -1256,7 +1256,7 @@ def line(path, content, match=None, mode=None, location=None,
     if not os.path.exists(path):
         if not quiet:
             raise CommandExecutionError('File "{0}" does not exists.'.format(path))
-        return False # No changes had happened
+        return False  # No changes had happened
 
     mode = mode and mode.lower() or mode
     if mode not in ['insert', 'ensure', 'delete', 'replace']:
