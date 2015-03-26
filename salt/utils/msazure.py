@@ -12,6 +12,7 @@ import logging
 # Import azure libs
 HAS_LIBS = False
 try:
+    import azure
     from azure.storage import BlobService
     HAS_LIBS = True
 except ImportError:
@@ -34,9 +35,9 @@ def get_storage_conn(storage_account=None, storage_key=None, opts=None):
         opts = {}
 
     if not storage_account:
-        storage_account = opts.get(storage_account, None)
+        storage_account = opts.get('storage_account', None)
     if not storage_key:
-        storage_key = opts.get(storage_key, None)
+        storage_key = opts.get('storage_key', None)
 
     return azure.storage.BlobService(storage_account, storage_key)
 
