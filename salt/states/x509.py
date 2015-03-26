@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+'''
+Manage X509 Certificates
+
+.. versionadded:: TBD
+'''
+
 import salt.exceptions
 import salt.utils
 import datetime
@@ -62,16 +68,16 @@ def private_key_managed(name,
     '''
     Manage a private key's existance.
 
-    name
+    name:
         Path to the private key
 
-    bits
+    bits:
         Key length in bits. Default 2048.
 
-    new
+    new:
         Always create a new key. Defaults to False.
 
-    backup
+    backup:
         When replacing an existing file, backup the old file onthe minion.
         Default is False.
     '''
@@ -119,19 +125,19 @@ def csr_managed(name,
     '''
     Manage a Certificate Signing Request
 
-    name
+    name:
         Path to the CSR
 
-    public_key
+    public_key:
         The public key to be added to the certificate request.
 
-    subject
+    subject:
         The subject data to be added to the certificate request.
 
-    extensions
+    extensions:
         The X509v3 Extensions to be added to the certificate request.
 
-    version
+    version:
         When replacing an existing file, backup the old file onthe minion.
         Default is False.
 
@@ -213,58 +219,58 @@ def certificate_managed(name,
     '''
     Manage a Certificate
 
-    name
+    name:
         Path to the certificate
 
-    signing_private_key
+    signing_private_key:
         The private key that will be used to sign this certificate. This is
         usually your CA's private key.
 
-    subject
+    subject:
         The subject data to be added to the certificate. If both subject
         and a CSR are included, the subject properties override any individual
         properties set in the CSR.
 
-    signing_cert
+    signing_cert:
         The certificate of the authority that will be used to sign this certificate.
         This is usually your CA's certificate. Do not include this value when creating
         a self-signed certificate.
 
-    public_key
+    public_key:
         The public key that will be in this certificate. This could be the path to an
         existing certificate, private key, or csr. If you include a CSR this property
         is not required. If you include the path to a CSR in this section, only the
         public key will be imported from the CSR, all other data like subject and extensions
         will not be included from the CSR.
 
-    csr
+    csr:
         A certificate signing request used to generate the certificate.
 
-    extensions
+    extensions:
         X509v3 Extensions to be added to the certificate request. Extensions specified here
         will take precidence over any extensions included in the CSR.
 
-    days_valid
+    days_valid:
         The number of days the certificate should be valid for. Default is 365.
 
-    days_remaining
+    days_remaining:
         The certificate should be automatically renewed if there are less than ``days_remaining``
         days until the certificate expires. Set to 0 to disable automatic renewal. Default is 90.
 
-    version
+    version:
         The X509 certificate version. Defaults to 3.
 
-    serial_number
+    serial_number:
         The serial number to assign to the certificate. If omitted, a random serial number
         will be generated for the certificate.
 
-    serial_bits
+    serial_bits:
         The size of the random serial number to generate, in bits. Default is 64.
 
-    algorithm
+    algorithm:
         The algorithm to be used to sign the certificate. Default is 'sha256'.
 
-    backup
+    backup:
         When replacing an existing file, backup the old file onthe minion. Default is False.
 
     Example:
@@ -372,36 +378,36 @@ def crl_managed(name,
     '''
     Manage a Certificate Revocation List
 
-    name
+    name:
         Path to the certificate
 
-    signing_private_key
+    signing_private_key:
         The private key that will be used to sign this crl. This is
         usually your CA's private key.
 
-    signing_cert
+    signing_cert:
         The certificate of the authority that will be used to sign this crl.
         This is usually your CA's certificate.
 
-    revoked
+    revoked:
         A list of certificates to revoke. Must include either a serial number or a
         the certificate itself. Can optionally include the revocation date and
         notAfter date from the certificate. See example below for details.
 
-    days_valid
+    days_valid:
         The number of days the certificate should be valid for. Default is 100.
 
-    days_remaining
+    days_remaining:
         The crl should be automatically recreated if there are less than ``days_remaining``
         days until the crl expires. Set to 0 to disable automatic renewal. Default is 30.
 
-    include_expired
+    include_expired:
         Include expired certificates in the CRL. Default is ``False``.
 
-    algorithm
+    algorithm:
         The algorithm to be used to sign the certificate. Default is 'sha256'.
 
-    backup
+    backup:
         When replacing an existing file, backup the old file onthe minion. Default is False.
 
     Example:
@@ -497,53 +503,55 @@ def request_certificate_managed(name,
     This requires that the request_certificate reactor be configured on the master to
     pass signing requests to the CA server. See runners/x509 for an example.
 
-    name
+    name:
         Path to the certificate on the minion
 
-    ca_server
+    ca_server:
         The CA server (minion_id) that should sign this certificate.
 
-    signing_policy
+    signing_policy:
         The signing policy the CA should use to sign this certificate. See modules/sign_certificate
         for an example of how to configure CA signing policies.
 
-    newer_than
+    newer_than:
         Ensure that the certificate is newer than this date. This is useful if you know the signing
         policy on the CA has changed and you want to force certificates to be renewed with this
         new information.
 
-    signing_cert
+    signing_cert:
         The certificate corresponding to the private key that will sign this certificate. Typically
         your CA cert.
 
-    public_key
+    public_key:
         The public key that will be in this certificate. This could be the path to an
         existing certificate, private key, or csr. If you include a CSR this property
         is not required. If you include the path to a CSR in this section, only the
         public key will be imported from the CSR, all other data like subject and extensions
         will not be included from the CSR.
 
-    csr
+    csr:
         A certificate signing request used to generate the certificate.
 
-    with_grains: Include grains from the current minion. The signing policy
+    with_grains:
+        Include grains from the current minion. The signing policy
         on the CA may use grains to populate subject fields. If so, this parameter
         must include the grains that are required by the CA.
         Specify ``True`` to include all grains, or specify a
         list of strings of grain names to include.
 
-    with_pillar: Include Pillar values from the current minion.
+    with_pillar:
+        Include Pillar values from the current minion.
         The signing policy on the CA may use pillars to populate subject fields.
         If so, this parameter must include the pillars that are required by
         the CA. Specify ``True`` to include all Pillar values, or
         specify a list of strings of Pillar keys to include. It is a
         best-practice to only specify a relevant subset of Pillar data.
 
-    days_remaining
+    days_remaining:
         The certificate should be automatically recreated if there are less than ``days_remaining``
         days until the crl expires. Set to 0 to disable automatic renewal. Default is 30.
 
-    backup
+    backup:
         When replacing an existing file, backup the old file onthe minion. Default is False.
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}

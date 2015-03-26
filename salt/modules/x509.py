@@ -3,8 +3,6 @@
 Manage X509 certificates
 
 .. versionadded:: TBD
-
-:depends:   - M2Crypto Python module
 '''
 
 from __future__ import absolute_import
@@ -343,8 +341,12 @@ def get_pem_entry(text, pem_type=None):
     Returns a properly formatted PEM string from the input text fixing
     any whitespace or line-break issues
 
-    If pem_type is specified, will return only the string of that type,
-    possibly from a string containing multiple entries.
+    text:
+        Text containing the X509 PEM entry to be returned
+
+    pem_type:
+        If specified, this function will only return a pem of a certain type, for example
+        'CERTIFICATE' or 'CERTIFICATE REQUEST'.
 
     CLI Example:
 
@@ -387,6 +389,10 @@ def get_pem_entry(text, pem_type=None):
 def read_certificate(certificate):
     '''
     Returns a dict containing details of a certificate. Input can be a PEM string or file path.
+
+    certificate:
+        The certificate to be read. Can be a path to a certificate file, or a string containing
+        the PEM formatted text of the certificate.
 
     CLI Example:
 
@@ -435,6 +441,9 @@ def read_certificates(glob_path):
     '''
     Returns a dict containing details of a all certificates matching a glob
 
+    glob_path:
+        A path to certificates to be read and returned.
+
     CLI Example:
 
     .. code-block:: bash
@@ -455,7 +464,12 @@ def read_certificates(glob_path):
 
 def read_csr(csr):
     '''
-    Returns a dict containing details of a certificate request. Input can be a PEM string or file path.
+    Returns a dict containing details of a certificate request.
+
+    :depends    - openssl command line tool
+
+    param: csr:
+        A path or PEM encoded string containing the CSR to read.
 
     CLI Example:
 
@@ -483,6 +497,11 @@ def read_crl(crl):
     '''
     Returns a dict containing details of a certificate revocation list. Input can be a PEM string or file path.
 
+    :depends    - openssl command line tool
+
+    param: csl:
+        A path or PEM encoded string containing the CSL to read.
+
     CLI Example:
 
     .. code-block:: bash
@@ -505,7 +524,9 @@ def get_public_key(key):
     '''
     Returns a string containing the public key in PEM format.
 
-    Input can be either a path or string containing a private key, certificate or certificate request.
+    param: key:
+        A path or PEM encoded string containing a CSR, Certificate or Private Key from which
+        a public key can be retrieved.
 
     CLI Example:
 
@@ -539,7 +560,8 @@ def get_private_key_size(private_key):
     '''
     Returns the bit length of a private key in PEM format.
 
-    Input can be either a path or string.
+    param: private_key:
+        A path or PEM encoded string containing a private key.
 
     CLI Example:
 
@@ -554,10 +576,13 @@ def write_pem(text, path, pem_type=None):
     '''
     Writes out a PEM string fixing any formatting or whitespace issues before writing.
 
-    text
+    text:
         PEM string input to be written out.
 
-    pem_type
+    path:
+        Path of the file to write the pem out to.
+
+    pem_type:
         The PEM type to be saved, for example ``CERTIFICATE`` or ``PUBLIC KEY``. Adding this
         will allow the function to take input that may contain multiple pem types.
 
@@ -565,7 +590,7 @@ def write_pem(text, path, pem_type=None):
 
     .. code-block:: bash
 
-        salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..."
+        salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     '''
     text = get_pem_entry(text, pem_type=pem_type)
     salt.utils.fopen(path, 'w').write(text)
@@ -576,13 +601,13 @@ def create_private_key(path=None, text=False, bits=2048):
     '''
     Creates a private key in PEM format.
 
-    path
+    path:
         The path to write the file to, either ``path`` or ``text`` are required.
 
-    text
+    text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    bits
+    bits:
         Lenth of the private key in bits. Default 2048
 
     CLI Example:
@@ -612,23 +637,24 @@ def create_crl(path=None, text=False, signing_private_key=None,
         days_valid=100):
     '''
     Create a CRL
-    This function requires pyOpenSSL
 
-    path
+    :depends:   - PyOpenSSL Python module
+
+    path:
         Path to write the crl to.
 
-    text
+    text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    signing_private_key
+    signing_private_key:
         A path or string of the private key in PEM format that will be used to sign this crl.
         This is required.
 
-    signing_cert
+    signing_cert:
         A certificate matching the private key that will be used to sign this crl. This is
         required.
 
-    revoked
+    revoked:
         A list of dicts containing all the certificates to revoke. Each dict represents one
         certificate. A dict must contain either the key ``serial_number`` with the value of
         the serial number to revoke, or ``certificate`` with either the PEM encoded text of
@@ -646,10 +672,10 @@ def create_crl(path=None, text=False, signing_private_key=None,
         revocation. Available choices are ``unspecified``, ``keyCompromise``, ``CACompromise``,
         ``affiliationChanged``, ``superseded``, ``cessationOfOperation`` and ``certificateHold``.
 
-    include_expired
+    include_expired:
         Include expired certificates in the CRL. Default is ``False``.
 
-    days_valid
+    days_valid:
         The number of days that the CRL should be valid. This sets the Next Update field in the CRL.
 
     .. note
@@ -720,27 +746,27 @@ def create_certificate(path=None, text=False, subject=None,
     '''
     Create an X509 certificate.
 
-    path
+    path:
         Path to write the certificate to.
 
-    text
+    text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    subject
+    subject:
         A dict containing subject values. Some acceptable keys are: ``C``, ``CN``, ``Email``,
         ``GN``, ``L``, ``O``, ``OU``, ``SN``, ``SP`` and ``ST``. Any subject value accepted by
         OpenSSL should work.
 
-    signing_private_key
+    signing_private_key:
         A path or string of the private key in PEM format that will be used to sign this certificate.
         This is required.
 
-    signing_cert
+    signing_cert:
         A certificate matching the private key that will be used to sign this certificate. This is used
         to populate the issuer values in the resulting certificate. Do not include this value for
         self-signed certificateds.
 
-    public_key
+    public_key:
         The public key to be included in this certificate. This can be sourced from a public key,
         certificate, csr or private key. If neither ``public_key`` or ``csr`` are
         specified, it will be assumed that this is a self-signed certificate, and the public key
@@ -749,14 +775,14 @@ def create_certificate(path=None, text=False, subject=None,
         the difference. If you import a CSR as a public key, only the public key will be added
         to the certificate, subject or extension information in the CSR will be lost.
 
-    csr
+    csr:
         A file or PEM string containing a certificate signing request. This will be used to supply the
         subject, extensions and public key of a certificate. Any subject or extensions specified
         explicitly will overwrite any in the CSR. If neither ``public_key`` or ``csr`` are specified,
         it will be assumed that this is a self-signed certificate, and the public key derived from
         ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``, not both.
 
-    extensions
+    extensions:
         An ordered list of dicts containing values for X509v3 Extensions. Each dict must contain the
         keys ``name`` and ``value`` and may optionally contain the boolean ``critical``.
 
@@ -771,22 +797,22 @@ def create_certificate(path=None, text=False, subject=None,
         automatically populate ``authorityKeyIdentifier`` with the ``subjectKeyIdentifier`` of
         ``signing_cert``. If this is a self-signed cert these values will be the same.
 
-    days_valid
+    days_valid:
         The number of days this certificate should be valid. This sets the ``notAfter`` property
         of the certificate. Defaults to 365.
 
-    version
+    version:
         The version of the X509 certificate. Defaults to 3. This is automatically converted to the
         version value, so ``version=3`` sets the certificate version field to 0x2.
 
-    serial_number
+    serial_number:
         The serial number to assign to this certificate. If ommited a random serial number of size
         ``serial_bits`` is generated.
 
-    serial_bits
+    serial_bits:
         The number of bits to use when randomly generating a serial number. Defaults to 64.
 
-    algorithm
+    algorithm:
         The hashing algorithm to be used for signing this certificate. Defaults to sha256.
 
     CLI Example:
@@ -916,29 +942,29 @@ def create_csr(path=None, text=False, subject=None, public_key=None,
     '''
     Create a certificate signing request.
 
-    path
+    path:
         Path to write the certificate to.
 
-    text
+    text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    subject
+    subject:
         A dict containing subject values. Some acceptable keys are: ``C``, ``CN``, ``Email``,
         ``GN``, ``L``, ``O``, ``OU``, ``SN``, ``SP`` and ``ST``. Any subject value accepted by
         OpenSSL should work.
 
-    public_key
+    public_key:
         The public key to be included in this certificate. This can be sourced from a csr,
         certificate or private key.
 
-    extensions
+    extensions:
         An ordered list of dicts containing values for X509v3 Extensions. Each dict must contain the
         keys ``name`` and ``value`` and may optionally contain the boolean ``critical``.
 
         ``subjectKeyIdentifier`` and ``authorityKeyIdentifier`` are not valid extensions to add
         to a CSR, because they are designed to be assigned by the signing authority.
 
-    version
+    version:
         The version of the X509 certificate. Defaults to 3. This is automatically converted to the
         version value, so ``version=3`` sets the certificate version field to 0x2.
 
@@ -997,32 +1023,32 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
     Request a signed certificate from a remote CA server.
     Requires the reactor /salt/x509/request_certificate to be configured.
 
-    :param path: The path to save the signed certificate.
+    path: The path to save the signed certificate.
 
-    :param ca_server: The minion ID of the remote server that needs to sign the request.
+    ca_server: The minion ID of the remote server that needs to sign the request.
 
-    :param signing_policy: The signing policy on the remote server to be used for
+    signing_policy: The signing policy on the remote server to be used for
         signing this request.
 
-    :param public_key: The public key to be included in the signed certificate. If a CSR
+    public_key: The public key to be included in the signed certificate. If a CSR
         is used, this is not required. If ``public_key`` is used only the public
         key will be submitted to the CA, the subject and extensions in the certificate will
         be entirely determined by the CA. This can also be the path to the private key.
         This argument will always be converted into a public key PEM before being transmitted
         to the event, so your private key will never leave the minion.
 
-    :param csr: The CSR to be submitted. Using a csr rather than ``public_key`` allows
+    csr: The CSR to be submitted. Using a csr rather than ``public_key`` allows
         submitting subject and extension values that the CA may honor. If the CA
         signing policy is not configured to allow csr's, only the public key included
         in the CSR will be used, all other values will be discarded.
 
-    :param with_grains: Include grains from the current minion. The signing policy
+    with_grains: Include grains from the current minion. The signing policy
         on the CA may use grains to populate subject fields. If so, this parameter
         must include the grains that are required by the CA.
     :type with_grains: Specify ``True`` to include all grains, or specify a
         list of strings of grain names to include.
 
-    :param with_pillar: Include Pillar values from the current minion.
+    with_pillar: Include Pillar values from the current minion.
         The signing policy on the CA may use pillars to populate subject fields.
         If so, this parameter must include the pillars that are required by
         the CA.
@@ -1057,13 +1083,20 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
     Sign and return a remotely requested certificate based on the a signing policy in signing_policy_def
 
 
-    path
+    path:
         Path to write the certificate to.
 
-    text
+    text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    :param signing_policy_def: The signing policies for this CA. Top level key will be
+    requestor:
+        The minion id of the client making this request.
+
+    signing_policy:
+        The name of the signing policy to be used to sign this request, must be defined in
+        signing_policy_def
+
+    signing_policy_def: The signing policies for this CA. Top level key will be
         used to match the minion. A match value can be included to determine how the minion is matched
         according to the :doc:`match module </ref/modules/salt.modules.match>`. This can parameter can
         be either a dict, a string containing a yaml definiton of the signing policy, a string
@@ -1103,6 +1136,23 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
                     value: keyid,issuer:always
               days_valid: 90
               version: 3
+
+    public_key:
+        The public key to be signed by the CA. Either ``public_key`` or ``csr`` must be spcified.
+        ``public_key`` can be the path to a file, or a string containing a CSR. If so, the other
+        properties in the CSR, like subject and extensions are not included in the signed
+        certificate.
+
+    csr:
+        A certificate signing request to use to generate the certificate. Any values specified in
+        the CSR for subject or extensions will be overwritten by values explicitly configured in the
+        signing policy.
+
+    grains:
+        Grains from the minion that may be used in the signing policy.
+
+    pillar:
+        Pillar values from the minion that may be used in the signing policy.
     '''
     if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
