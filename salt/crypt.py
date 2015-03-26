@@ -823,7 +823,7 @@ class SAuth(AsyncAuth):
     Set up an object to maintain authentication with the salt master
     '''
     # This class is only a singleton per minion/master pair
-    instances = {}
+    instances = weakref.WeakValueDictionary()
 
     def __new__(cls, opts):
         '''
@@ -832,8 +832,9 @@ class SAuth(AsyncAuth):
         key = cls.__key(opts)
         if key not in SAuth.instances:
             log.debug('Initializing new SAuth for {0}'.format(key))
-            SAuth.instances[key] = object.__new__(cls)
-            SAuth.instances[key].__singleton_init__(opts)
+            new_auth = object.__new__(cls)
+            new_auth.__singleton_init__(opts)
+            SAuth.instances[key] = new_auth
         else:
             log.debug('Re-using SAuth for {0}'.format(key))
         return SAuth.instances[key]
