@@ -2365,7 +2365,7 @@ def recurse(name,
 
 def line(name, content, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
-         quiet=False):
+         quiet=False, indent=True):
     '''
     Line-based editing of a file.
 
@@ -2391,7 +2391,7 @@ def line(name, content, match=None, mode=None, location=None,
 
     changes = __salt__['file.line'](name, content, match=match, mode=mode, location=location,
                                     before=before, after=after, show_changes=show_changes,
-                                    backup=backup, quiet=quiet)
+                                    backup=backup, quiet=quiet, indent=indent)
     if changes:
         if __opts__['test']:
             ret['result'] = None
