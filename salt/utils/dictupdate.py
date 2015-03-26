@@ -29,6 +29,7 @@ def update(dest, upd):
             dest_subkey = dest.get(key, klass())
         except AttributeError:
             dest_subkey = None
+
         if isinstance(dest_subkey, collections.Mapping) \
                 and isinstance(val, collections.Mapping):
             ret = update(dest_subkey, val)

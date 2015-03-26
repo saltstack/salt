@@ -20,6 +20,12 @@ import salt.minion
 import salt.ext.six as six
 from salt.exceptions import SaltClientError
 
+try:
+    import dateutil.parser as dateutil_parser
+    DATEUTIL_SUPPORT = True
+except ImportError:
+    DATEUTIL_SUPPORT = False
+
 log = logging.getLogger(__name__)
 
 
@@ -191,15 +197,47 @@ def list_jobs(ext_source=None,
               search_metadata=None,
               search_function=None,
               search_target=None,
+              start_time=None,
+              end_time=None,
               display_progress=False):
     '''
     List all detectable jobs and associated functions
+
+    ext_source
+        The external job cache to use. Default: `None`.
+
+    search_metadata
+        Search the metadata of a job for the provided string of dictionary.
+        Default: 'None'.
+
+    search_function
+        Search the function of a job for the provided string.
+        Default: 'None'.
+
+    search_target
+        Search the target of a job for the provided minion name.
+        Default: 'None'.
+
+    start_time
+        Search for jobs where the start time of the job is greater than
+        or equal to the provided time stamp.  Any timestamp supported
+        by the Dateutil (required) module can be used.
+        Default: 'None'.
+
+    end_time
+        Search for jobs where the start time of the job is less than
+        or equal to the provided time stamp.  Any timestamp supported
+        by the Dateutil (required) module can be used.
+        Default: 'None'.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-run jobs.list_jobs
+        salt-run jobs.list_jobs search_function='test.*' search_target='localhost' search_metadata='{"bar": "foo"}'
+        salt-run jobs.list_jobs start_time='2015, Mar 16 19:00' end_time='2015, Mar 18 22:00'
+
     '''
     returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
     if display_progress:
@@ -208,46 +246,64 @@ def list_jobs(ext_source=None,
 
     ret = mminion.returners['{0}.get_jids'.format(returner)]()
 
-    if search_metadata:
-        mret = {}
-        for item in ret:
+    mret = {}
+    for item in ret:
+        _match = True
+        if search_metadata:
+            _match = False
             if 'Metadata' in ret[item]:
                 if isinstance(search_metadata, dict):
                     for key in search_metadata:
                         if key in ret[item]['Metadata']:
                             if ret[item]['Metadata'][key] == search_metadata[key]:
-                                mret[item] = ret[item]
+                                _match = True
                 else:
                     log.info('The search_metadata parameter must be specified'
                              ' as a dictionary.  Ignoring.')
-    else:
-        mret = ret.copy()
-
-    if search_target:
-        _mret = {}
-        for item in mret:
+        if search_target and _match:
+            _match = False
             if 'Target' in ret[item]:
                 if isinstance(search_target, list):
                     for key in search_target:
                         if fnmatch.fnmatch(ret[item]['Target'], key):
-                            _mret[item] = ret[item]
+                            _match = True
                 elif isinstance(search_target, six.string_types):
                     if fnmatch.fnmatch(ret[item]['Target'], search_target):
-                        _mret[item] = ret[item]
-        mret = _mret.copy()
+                        _match = True
 
-    if search_function:
-        _mret = {}
-        for item in mret:
+        if search_function and _match:
+            _match = False
             if 'Function' in ret[item]:
                 if isinstance(search_function, list):
                     for key in search_function:
                         if fnmatch.fnmatch(ret[item]['Function'], key):
-                            _mret[item] = ret[item]
+                            _match = True
                 elif isinstance(search_function, six.string_types):
                     if fnmatch.fnmatch(ret[item]['Function'], search_function):
-                        _mret[item] = ret[item]
-        mret = _mret.copy()
+                        _match = True
+
+        if start_time and _match:
+            _match = False
+            if DATEUTIL_SUPPORT:
+                parsed_start_time = dateutil_parser.parse(start_time)
+                _start_time = dateutil_parser.parse(ret[item]['StartTime'])
+                if _start_time >= parsed_start_time:
+                    _match = True
+            else:
+                log.error('"dateutil" library not available, skipping start_time comparision.')
+
+        if end_time and _match:
+            _match = False
+            if DATEUTIL_SUPPORT:
+                parsed_end_time = dateutil_parser.parse(end_time)
+                _start_time = dateutil_parser.parse(ret[item]['StartTime'])
+                if _start_time <= parsed_end_time:
+                    _match = True
+            else:
+                log.error('"dateutil" library not available, skipping start_time comparision.')
+
+        if _match:
+            mret[item] = ret[item]
 
     if outputter:
         return {'outputter': outputter, 'data': mret}

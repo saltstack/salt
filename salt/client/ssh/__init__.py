@@ -126,7 +126,7 @@ fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
-do if "$py_cmd" -c "import sys; sys.exit(not (sys.hexversion >= 0x02060000 and sys.version_info.major is {{HOST_PY_MAJOR}}));" >/dev/null 2>&1
+do if "$py_cmd" -c "import sys; sys.exit(not (sys.hexversion >= 0x02060000 and sys.version_info[0] == {{HOST_PY_MAJOR}}));" >/dev/null 2>&1
 then py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function; import sys; print(sys.executable);'`
 exec $SUDO "$py_cmd_path" -c 'import base64; exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
 exit 0
@@ -877,7 +877,7 @@ ARGS = {9}\n'''.format(self.minion_config,
             DEBUG=debug,
             SUDO=sudo,
             SSH_PY_CODE=py_code_enc,
-            HOST_PY_MAJOR=sys.version_info.major,
+            HOST_PY_MAJOR=sys.version_info[0],
         )
 
         return cmd

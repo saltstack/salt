@@ -2363,6 +2363,48 @@ def recurse(name,
     return ret
 
 
+def line(name, content, match=None, mode=None, location=None,
+         before=None, after=None, show_changes=True, backup=False):
+    '''
+    Line-based editing of a file.
+
+    Params are identical to the remote execution function
+    :mod:`file.line <salt.modules.file.line>`.
+
+    .. code-block: yaml
+
+       /etc/myconfig.conf
+         file.line:
+           - mode: ensure
+           - content: my key = my value
+           - before: somekey.*?
+    '''
+    name = os.path.expanduser(name)
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.line')
+
+    check_res, check_msg = _check_file(name)
+    if not check_res:
+        return _error(ret, check_msg)
+
+    changes = __salt__['file.line'](name, content, match=match, mode=mode, location=location,
+                                    before=before, after=after, show_changes=show_changes, backup=backup)
+    if changes:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Changes would have been made:\ndiff:\n{0}'.format(changes)
+        else:
+            ret['result'] = True
+            ret['comment'] = 'Changes were made'
+            ret['changes'] = {'diff': changes}
+    else:
+        ret['result'] = True
+        ret['comment'] = 'No changes needed to be made'
+
+    return ret
+
+
 def replace(name,
             pattern,
             repl,

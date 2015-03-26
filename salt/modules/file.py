@@ -28,6 +28,7 @@ import sys
 import tempfile
 import time
 import glob
+import hashlib
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -1113,6 +1114,296 @@ def _mkstemp_copy(path,
                 )
 
     return temp_file
+
+
+def _starts_till(src, probe, strip_comments=True):
+    '''
+    Returns True if src and probe at least begins till some point.
+    '''
+    def _strip_comments(txt):
+        '''
+        Strip possible comments.
+        Usually commends are one or two symbols
+        '''
+        buff = txt.split(" ", 1)
+        return len(buff) == 2 and len(buff[0]) < 2 and buff[1] or txt
+
+    def _to_words(txt):
+        '''
+        Split by words
+        '''
+        return txt and [w for w in txt.strip().split(" ") if w.strip()] or txt
+
+    no_match = -1
+    equal = 0
+    if not src or not probe:
+        return no_match
+
+    if src == probe:
+        return equal
+
+    src = _to_words(strip_comments and _strip_comments(src) or src)
+    probe = _to_words(strip_comments and _strip_comments(probe) or probe)
+
+    a_buff, b_buff = len(src) < len(probe) and (src, probe) or (probe, src)
+    b_buff = ' '.join(b_buff)
+    for idx in range(len(a_buff)):
+        prb = ' '.join(a_buff[:-(idx + 1)])
+        if prb and b_buff.startswith(prb):
+            return idx
+
+    return no_match
+
+
+def _regex_to_static(src, regex):
+    '''
+    Expand regular expression to static match.
+    '''
+    if not src or not regex:
+        return None
+
+    src = re.search(regex, src)
+    return src and src.group() or regex
+
+
+def _assert_occurrence(src, probe, target, amount=1):
+    '''
+    Raise an exception, if there are different amount of specified occurrences in src.
+    '''
+    occ = src.count(probe)
+    if occ > amount:
+        msg = 'more than'
+    elif occ < amount:
+        msg = 'less than'
+    elif not occ:
+        msg = 'no'
+    else:
+        msg = None
+
+    if msg:
+        raise Exception('Found {0} expected occurrences in "{1}" expression'.format(msg, target))
+
+
+def line(path, content, match=None, mode=None, location=None,
+         before=None, after=None, show_changes=True, backup=False):
+    '''
+    Edit a line in the configuration file.
+
+    :param path:
+        Filesystem path to the file to be edited
+
+    :param content:
+        Content of the line
+
+    :param mode:
+        Ensure
+            If line does not exist, it will be added
+
+        Replace
+            If line already exist, it will be replaced
+
+        Delete
+            Delete the line, once found.
+
+        Insert
+            Insert a line.
+
+    :param location:
+        start
+            Place the content at the beginning of the file
+
+        end
+            Place the content at the end of the file
+
+    :param before:
+        Regular expression or an exact case-sensitive fragment of the string
+
+    :param after:
+        Regular expression or an exact case-sensitive fragment of the string
+
+    :param show_changes
+        Output a unified diff of the old file and the new file.
+        If ``False`` return a boolean if any changes were made.
+        Default is ``True``
+
+        .. note::
+
+            Using this option will store two copies of the file in-memory
+            (the original version and the edited version) in order to generate the diff.
+
+    :param backup
+         Create a backup of the original file with the extension:
+         "Year-Month-Day-Hour-Minutes-Seconds".
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' file.line /etc/nsswitch.conf "networks:\tfiles dns", after="hosts:.*?", mode='ensure'
+    '''
+    mode = mode and mode.lower() or mode
+    if mode not in ['insert', 'ensure', 'delete', 'replace']:
+        if mode is None:
+            raise Exception('Mode was not defined. How to process the file?')
+        else:
+            raise Exception('Unknown mode: "{0}"'.format(mode))
+
+    # Before/after has privilege. If nothing defined, match is used by content.
+    if before is None and after is None and not match:
+        match = content
+
+    if match != content:  # Escape content
+        content = content.replace('\1', '\\1') \
+                         .replace('\2', '\\2')
+
+    path = os.path.realpath(os.path.expanduser(path))
+    body = salt.utils.fopen(path, mode='rb').read()
+    body_before = hashlib.sha256(body).hexdigest()
+    after = _regex_to_static(body, after)
+    before = _regex_to_static(body, before)
+
+    if mode == 'delete':
+        content = _regex_to_static(body, content)
+        out = []
+        for line in body.splitlines():
+            if _starts_till(line, content) < 0:
+                out.append(line)
+        body = os.linesep.join(out)
+
+    elif mode == 'replace':
+        if body.find(match) > -1:
+            body = body.replace(match, content)
+        elif re.search(match, body):
+            body = re.sub(match, content, body)
+    elif mode == 'insert':
+        if not location and not before and not after:
+            raise Exception('On insert must be defined either "location" or "before/after" conditions.')
+
+        if not location:
+            if before and after:
+                _assert_occurrence(body, before, 'before')
+                _assert_occurrence(body, after, 'after')
+                out = []
+                lines = body.splitlines()
+                for idx in range(len(lines)):
+                    _line = lines[idx]
+                    if _line.find(before) > -1 and idx <= len(lines) and lines[idx + 1].find(after) > -1:
+                        out.append(_line)
+                        out.append(content)
+                    else:
+                        out.append(_line)
+                body = os.linesep.join(out)
+
+            if before and not after:
+                _assert_occurrence(body, before, 'before')
+                out = []
+                for _line in body.splitlines():
+                    if _line.find(before) > -1:
+                        out.append(content.strip())
+                    out.append(_line)
+                body = os.linesep.join(out)
+
+            elif after and not before:
+                _assert_occurrence(body, after, 'after')
+                out = []
+                for _line in body.splitlines():
+                    out.append(_line)
+                    if _line.find(after) > -1:
+                        out.append(content.strip())
+                body = os.linesep.join(out)
+        else:
+            if location == 'start':
+                body = ''.join([content, body])
+            elif location == 'end':
+                body = ''.join([body, content])
+
+    elif mode == 'ensure':
+        after = after and after.strip()
+        before = before and before.strip()
+        content = content and content.strip()
+
+        if before and after:
+            _assert_occurrence(body, before, 'before')
+            _assert_occurrence(body, after, 'after')
+
+            a_idx = b_idx = -1
+            idx = 0
+            body = body.splitlines()
+            for _line in body:
+                idx += 1
+                if _line.find(before) > -1 and b_idx < 0:
+                    b_idx = idx
+                if _line.find(after) > -1 and a_idx < 0:
+                    a_idx = idx
+
+            # Add
+            if not b_idx - a_idx - 1:
+                body = body[:a_idx] + [content] + body[b_idx - 1:]
+            elif b_idx - a_idx - 1 == 1:
+                if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
+                    body[a_idx] = content
+                # if force...
+            else:
+                raise Exception('Found more than one line between boundaries "before" and "after".')
+            body = os.linesep.join(body)
+
+        elif before and not after:
+            _assert_occurrence(body, before, 'before')
+            body = body.splitlines()
+            out = []
+            idx = 0
+            for _line in range(len(body)):
+                if body[_line].find(before) > -1:
+                    out.append(content)
+                    prev = (idx > 0 and idx or 1) - 1
+                    if _starts_till(out[prev], content) > -1:
+                        del out[prev]
+                out.append(body[_line])
+                idx += 1
+            body = os.linesep.join(out)
+
+        elif not before and after:
+            _assert_occurrence(body, after, 'after')
+            body = body.splitlines()
+            skip = None
+            out = []
+            for _line in range(len(body)):
+                if skip != body[_line]:
+                    out.append(body[_line])
+
+                if body[_line].find(after) > -1:
+                    next_line = _line + 1 < len(body) and body[_line + 1] or None
+                    if next_line is not None and _starts_till(next_line, content) > -1:
+                        skip = next_line
+                    out.append(content)
+            body = os.linesep.join(out)
+
+        else:
+            raise Exception("Wrong conditions? "
+                            "Unable to ensure line without knowing "
+                            "where to put it before and/or after.")
+
+    changed = body_before != hashlib.sha256(body).hexdigest()
+
+    if backup and changed:
+        try:
+            temp_file = _mkstemp_copy(path=path, preserve_inode=True)
+            shutil.move(temp_file, '{0}.{1}'.format(path, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())))
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError("Unable to create the backup file of {0}. Exception: {1}".format(path, exc))
+
+    changes_diff = None
+
+    if changed:
+        if show_changes:
+            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'rb').readlines(), body.splitlines()))
+        try:
+            fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
+            fh_.write(body)
+        finally:
+            fh_.close()
+
+    return show_changes and changes_diff or changed
 
 
 def replace(path,

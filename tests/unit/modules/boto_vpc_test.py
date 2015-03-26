@@ -62,6 +62,8 @@ dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': 
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
+boto_vpc.__context__ = {}
+
 
 def _has_required_boto():
     '''
@@ -679,7 +681,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         '''
         Tests checking subnet existence without any filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: subnet id, name or tags.'):
+        with self.assertRaisesRegexp(SaltInvocationError,
+                                     'At least on of the following must be specified: subnet id, cidr, name, tags, or zones.'):
             boto_vpc.subnet_exists(**conn_parameters)
 
 

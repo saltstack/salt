@@ -28,9 +28,9 @@ from __future__ import absolute_import
 from numbers import Number
 
 # Import salt libs
+from salt.utils import get_colors, sdecode
 import salt.output
 from salt.ext.six import string_types
-from salt.utils import get_colors, sdecode
 
 
 class NestDisplay(object):
@@ -38,10 +38,10 @@ class NestDisplay(object):
     Manage the nested display contents
     '''
     def __init__(self):
-        self.colors = salt.utils.get_colors(
+        self.__dict__.update(
+            get_colors(
                 __opts__.get('color'),
                 __opts__.get('color_theme'))
-        self.__dict__.update(self.colors)
         self.strip_colors = __opts__.get('strip_colors', True)
 
     def ustring(self,
@@ -70,7 +70,7 @@ class NestDisplay(object):
             out.append(
                 self.ustring(
                     indent,
-                    self.YELLOW,
+                    self.LIGHT_YELLOW,
                     ret,
                     prefix=prefix
                 )
@@ -81,7 +81,7 @@ class NestDisplay(object):
             out.append(
                 self.ustring(
                     indent,
-                    self.YELLOW,
+                    self.LIGHT_YELLOW,
                     ret,
                     prefix=prefix
                 )

@@ -593,6 +593,8 @@ class Client(object):
             query = salt.utils.http.query(
                 fixed_url,
                 stream=True,
+                username=url_data.username,
+                password=url_data.password
                 **get_kwargs
             )
             response = query['handle']

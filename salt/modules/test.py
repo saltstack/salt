@@ -110,7 +110,7 @@ def version():
 
 def versions_information():
     '''
-    Returns versions of components used by salt as a dict
+    Report the versions of dependent and system software
 
     CLI Example:
 
@@ -118,7 +118,7 @@ def versions_information():
 
         salt '*' test.versions_information
     '''
-    return dict(salt.version.versions_information())
+    return salt.version.versions_information()
 
 
 def versions_report():
@@ -132,6 +132,9 @@ def versions_report():
         salt '*' test.versions_report
     '''
     return '\n'.join(salt.version.versions_report())
+
+
+versions = versions_report
 
 
 def conf_test():

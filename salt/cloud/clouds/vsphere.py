@@ -81,7 +81,7 @@ import salt.config as config
 # Attempt to import pysphere lib
 HAS_LIBS = False
 try:
-    from pysphere import VIServer, MORTypes
+    from pysphere import VIServer, MORTypes, VIException
     HAS_LIBS = True
 except Exception:  # pylint: disable=W0703
     pass
@@ -824,3 +824,113 @@ def reset(name, call=None):
         log.error('Could not reset VM {0}: {1}'.format(name, exc))
         return 'failed to reset'
     return 'reset'
+
+
+def snapshot_list(kwargs=None, call=None):
+    '''
+    List virtual machines with snapshots
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f snapshot_list
+    '''
+    ret = {}
+    vms = []
+
+    conn = get_conn()
+
+    qry = conn._retrieve_properties_traversal(
+        property_names=['name', 'rootSnapshot'],
+        obj_type="VirtualMachine"
+    )
+
+    for prop in qry:
+        has_snapshots = False
+        name = ""
+
+        for i in prop.PropSet:
+            if i.Name == 'rootSnapshot' and i.Val.ManagedObjectReference:
+                has_snapshots = True
+            if i.Name == 'name':
+                name = i.Val
+        if has_snapshots:
+            vms.append(name)
+
+    for vm in vms:
+        _vm = conn.get_vm_by_name(vm)
+
+        ret[vm] = {'snapshots': []}
+
+        for snap in _vm.get_snapshots():
+            ret[vm]['snapshots'] = {
+                'name': snap.get_name(),
+                'description': snap.get_description(),
+                'created': time.strftime("%Y-%m-%d %H:%M:%S", snap.get_create_time()),
+                'state': snap.get_state(),
+                'path': snap.get_path()
+            }
+
+    return ret
+
+
+def create_snapshot(kwargs=None, call=None):
+    '''
+    Create a snapshot
+
+    @name: Name of the virtual machine to snapshot
+    @snapshot: Name of the snapshot
+    @description: Description of the snapshot (optional)
+    @memory: Dump of the internal state of the virtual machine (optional)
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt-cloud -f create_snapshot [PROVIDER] name=myvm.example.com snapshot=mysnapshot
+       salt-cloud -f create_snapshot [PROVIDER] name=myvm.example.com snapshot=mysnapshot description='My Snapshot' memory=True
+    '''
+    if call != 'function':
+        log.error(
+            'The show_keypair function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'name' not in kwargs or 'snapshot' not in kwargs:
+        log.error('name and snapshot are required arguments')
+        return False
+
+    ret = {}
+    conn = get_conn()
+
+    vm = conn.get_vm_by_name(kwargs['name'])
+
+    try:
+        log.info('Creating snapshot')
+        vm.create_snapshot(
+            kwargs['snapshot'],
+            kwargs.get('description', None),
+            kwargs.get('memory', False)
+        )
+
+        ret['name'] = kwargs['name']
+        ret['snapshot'] = kwargs['snapshot']
+        ret['comment'] = 'Snapshot created'
+        ret['result'] = True
+    except VIException:
+        log.error('Unable to create snapshot')
+
+        ret['name'] = kwargs['name']
+        ret['snapshot'] = kwargs['snapshot']
+        ret['comment'] = 'Failed to create snapshot'
+        ret['result'] = False
+
+    return ret

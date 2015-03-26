@@ -775,12 +775,16 @@ def stop(container, timeout=10):
     return status
 
 
-def kill(container):
+def kill(container, signal=None):
     '''
     Kill a running container
 
     container
         container id
+    signal
+        signal to send
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -793,16 +797,23 @@ def kill(container):
     try:
         dcontainer = _get_container_infos(container)['Id']
         if is_running(dcontainer):
-            client.kill(dcontainer)
-            if not is_running(dcontainer):
+            client.kill(dcontainer, signal=signal)
+            if signal:
+                # no need to check if container is running
+                # because some signals might not stop the container.
                 _valid(status,
-                       comment='Container {0} was killed'.format(
-                           container),
+                       comment='Kill signal {0!r} successfully'
+                       ' sent to the container {1!r}'.format(signal, container),
                        id_=container)
             else:
-                _invalid(status,
-                         comment='Container {0} was not killed'.format(
-                             container))
+                if not is_running(dcontainer):
+                    _valid(status,
+                           comment='Container {0} was killed'.format(container),
+                           id_=container)
+                else:
+                    _invalid(status,
+                             comment='Container {0} was not killed'.format(
+                                 container))
         else:
             _valid(status,
                    comment='Container {0} was already stopped'.format(
