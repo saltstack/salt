@@ -49,7 +49,11 @@ The below code deletes a key pair:
         - keyid: GKTADJGHEIQSXMKKRBJ08H
         - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+
+# Import Python Libs
+from __future__ import absolute_import
 import logging
+
 log = logging.getLogger(__name__)
 
 
