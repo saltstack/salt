@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
     MagicMock,
+    mock_open,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
