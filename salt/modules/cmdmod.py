@@ -611,6 +611,9 @@ def run(cmd,
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
     try:
+        if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
+                                 and python_shell is None:
+            python_shell = True
         if __opts__.get('cmd_safe', True) is False and python_shell is None:
             # Override-switch for python_shell
             python_shell = True
@@ -805,6 +808,9 @@ def run_stdout(cmd,
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
+                                 and python_shell is None:
+            python_shell = True
         if __opts__.get('cmd_safe', True) is False and python_shell is None:
             # Override-switch for python_shell
             python_shell = True
@@ -893,6 +899,9 @@ def run_stderr(cmd,
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
+                                 and python_shell is None:
+            python_shell = True
         if __opts__.get('cmd_safe', True) is False and python_shell is None:
             # Override-switch for python_shell
             python_shell = True
@@ -981,6 +990,9 @@ def run_all(cmd,
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
+                                 and python_shell is None:
+            python_shell = True
         if __opts__.get('cmd_safe', True) is False and python_shell is None:
             # Override-switch for python_shell
             python_shell = True
@@ -1188,6 +1200,9 @@ def script(source,
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
+                                 and python_shell is None:
+            python_shell = True
         if __opts__.get('cmd_safe', True) is False and python_shell is None:
             # Override-switch for python_shell
             python_shell = True
@@ -1301,6 +1316,9 @@ def script_retcode(source,
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
+                                 and python_shell is None:
+            python_shell = True
         if __opts__.get('cmd_safe', True) is False and python_shell is None:
             # Override-switch for python_shell
             python_shell = True
