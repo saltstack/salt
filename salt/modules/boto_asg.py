@@ -562,13 +562,13 @@ def _get_conn(region, key, keyid, profile):
     '''
     return __salt__['boto_common.get_connection']('asg',
                                                   module='ec2.autoscale',
-                                                  region=region, keyid=keyid,
-                                                  profile=profile)
+                                                  region=region, key=key,
+                                                  keyid=keyid, profile=profile)
 
 
 def _get_ec2_conn(region, key, keyid, profile):
     '''
     Get a boto connection to ec2. Needed for get_instances
     '''
-    return __salt__['boto_common.get_connection']('ec2', region=region,
+    return __salt__['boto_common.get_connection']('ec2', region=region, key=key,
                                                   keyid=keyid, profile=profile)

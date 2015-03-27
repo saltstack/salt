@@ -315,5 +315,5 @@ def _get_conn(region, key, keyid, profile):
     '''
     return __salt__['boto_common.get_connection']('cloudwatch_alarm',
                                                   module='ec2.cloudwatch',
-                                                  region=region,
+                                                  region=region, key=key,
                                                   keyid=keyid, profile=profile)
