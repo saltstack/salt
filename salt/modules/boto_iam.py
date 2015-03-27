@@ -153,6 +153,295 @@ def role_exists(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
+def describe_role(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get information for a role
+
+    CLI example::
+
+        salt myminion boto_iam.describe_role myirole
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_role(name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get {0} information.'
+        log.error(msg.format(name))
+        return False
+
+
+def create_user(user_name, path=None, region=None, key=None, keyid=None,
+                profile=None):
+    '''
+    Create a user
+
+    CLI example::
+
+        salt myminion boto_iam.create_user myuser
+    '''
+    if not path:
+        path = '/'
+    if __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile):
+        return True
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        conn.create_user(user_name, path)
+        log.info('Created user : {0}.'.format(user_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create user {0}.'
+        log.error(msg.format(user_name))
+        return False
+
+
+def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get user information
+
+    CLI example::
+
+        salt myminion boto_iam.get_user myuser
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_user(user_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get user {0} info.'
+        log.error(msg.format(user_name))
+        return False
+
+
+def create_group(group_name, path=None, region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Create a group
+
+    CLI example::
+
+        salt myminion boto_iam.create_group group
+    '''
+    if not path:
+        path = '/'
+    if __salt__['boto_iam.get_group'](group_name=group_name, region=region, key=key, keyid=keyid, profile=profile):
+        return True
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        conn.create_group(group_name, path)
+        log.info('Created group : {0}.'.format(group_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create group {0}.'
+        log.error(msg.format(group_name))
+        return False
+
+
+def get_group(group_name, marker=None, max_items=None, region=None, key=None,
+              keyid=None, profile=None):
+    '''
+    Get group information
+
+    CLI example::
+
+        salt myminion boto_iam.get_group mygroup
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_group(group_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get group {0} info.'
+        log.error(msg.format(group_name))
+        return False
+
+
+def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
+                      profile=None):
+    '''
+    Add user to group
+
+    CLI example::
+
+        salt myminion boto_iam.add_user_to_group myuser mygroup
+    '''
+    group = __salt__['boto_iam.get_group'](group_name=group_name,
+                                           region=region, key=key,
+                                           keyid=keyid, profile=profile)
+    if group:
+        for _users in group['get_group_response']['get_group_result']['users']:
+            if user_name == _users['user_name']:
+                msg = 'Username : {0} is already in group {1}.'
+                log.info(msg.format(user_name, group_name))
+                return 'Exists'
+    user = __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile)
+    if not group or not user:
+        msg = 'Username : {0} or group {1} do not exist.'
+        log.error(msg.format(user_name, group_name))
+        return False
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.add_user_to_group(group_name, user_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to add user {0} to group {1}.'
+        log.error(msg.format(user_name, group_name))
+        return False
+
+
+def put_group_policy(group_name, policy_name, policy_json, region=None, key=None,
+                     keyid=None, profile=None):
+    '''
+    Adds or updates the specified policy document for the specified group.
+
+    CLI example::
+
+        salt myminion boto_iam.put_group_policy mygroup policyname policyrules
+    '''
+    group = __salt__['boto_iam.get_group'](group_name=group_name, region=region,
+                                           key=key, keyid=keyid, profile=profile)
+    if group:
+        conn = _get_conn(region, key, keyid, profile)
+        try:
+            created = conn.put_group_policy(group_name, policy_name,
+                                            policy_json)
+            if created:
+                log.info('Created policy for group {0}.'.format(group_name))
+                return True
+            msg = 'Could not create policy for group {0}'
+            log.error(msg.format(group_name))
+        except boto.exception.BotoServerError as e:
+            log.debug(e)
+            msg = 'Failed to create policy for group {0}'
+            log.error(msg.format(group_name))
+    else:
+        log.error('Group {0} does not exist'.format(group_name))
+    return False
+
+
+def get_group_policy(group_name, policy_name, region=None, key=None,
+                     keyid=None, profile=None):
+    '''
+    Retrieves the specified policy document for the specified group.
+
+    CLI example::
+
+        salt myminion boto_iam.get_group_policy mygroup policyname
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_group_policy(group_name, policy_name)
+        log.debug('info for group policy is : {0}'.format(info))
+        if not info:
+            return False
+        info = info.get_group_policy_response.get_group_policy_result.policy_document
+        info = _unquote(info)
+        info = json.loads(info, object_pairs_hook=odict.OrderedDict)
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get group {0} info.'
+        log.error(msg.format(group_name))
+        return False
+
+
+def create_login_profile(user_name, password, region=None, key=None,
+                         keyid=None, profile=None):
+    '''
+    Creates a login profile for the specified user, give the user the
+    ability to access AWS services and the AWS Management Console.
+
+    CLI example::
+
+        salt myminion boto_iam.create_login_profile user_name password
+    '''
+    user = __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username {0} does not exist'
+        log.error(msg.format(user_name))
+        return False
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.create_login_profile(user_name, password)
+        log.info('Created profile for user {0}.'.format(user_name))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        if 'Conflict' in e:
+            log.info('Profile already exists for user {0}.'.format(user_name))
+            return 'Conflict'
+        msg = 'Failed to update profile for user {0}.'
+        log.error(msg.format(user_name))
+        return False
+
+
+def update_account_password_policy(allow_users_to_change_password=None,
+                                   hard_expiry=None, max_password_age=None,
+                                   minimum_password_length=None,
+                                   password_reuse_prevention=None,
+                                   require_lowercase_characters=None,
+                                   require_numbers=None, require_symbols=None,
+                                   require_uppercase_characters=None,
+                                   region=None, key=None, keyid=None,
+                                   profile=None):
+    '''
+    Update the password policy for the AWS account.
+
+    CLI example::
+
+        salt myminion boto_iam.update_account_password_policy True
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        conn.update_account_password_policy(allow_users_to_change_password,
+                                            hard_expiry, max_password_age,
+                                            minimum_password_length,
+                                            password_reuse_prevention,
+                                            require_lowercase_characters,
+                                            require_numbers, require_symbols,
+                                            require_uppercase_characters)
+        log.info('The password policy has been updated.')
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to update the password policy'
+        log.error(msg)
+        return False
+
+
+def get_account_policy(region=None, key=None, keyid=None, profile=None):
+    '''
+    Get account policy for the AWS account.
+
+    CLI example::
+
+    salt myminion boto_iam.get_account_policy
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_account_password_policy()
+        return info.get_account_password_policy_response.get_account_password_policy_result.password_policy
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to update the password policy.'
+        log.error(msg)
+        return False
+
+
 def create_role(name, policy_document=None, path=None, region=None, key=None,
                 keyid=None, profile=None):
     '''
@@ -450,6 +739,82 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
                           ' boto_iam.get_account_id.')
         __context__[cache_key] = arn.split(':')[4]
     return __context__[cache_key]
+
+
+def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=None,
+                       region=None, key=None, keyid=None, profile=None):
+    '''
+    Upload a certificate to Amazon
+
+    CLI example::
+
+        salt myminion boto_iam.upload_server_cert mycert_name crt priv_key
+
+    :param cert_name: The name for the server certificate. Do not include the path in this value.
+    :param cert_body: The contents of the public key certificate in PEM-encoded format.
+    :param private_key: The contents of the private key in PEM-encoded format.
+    :param cert_chain:  The contents of the certificate chain. This is typically a
+    concatenation of the PEM-encoded public key certificates of the chain.
+    :param path: The path for the server certificate.
+    :param region: The name of the region to connect to.
+    :param key: The key to be used in order to connect
+    :param keyid: The keyid to be used in order to connect
+    :param profile: The profile that contains a dict of region, key, keyid
+    :return: True / False
+    '''
+
+    exists = __salt__['boto_iam.get_server_certificate'](cert_name, region, key, keyid, profile)
+    if exists:
+        return True
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.upload_server_cert(cert_name, cert_body, private_key, cert_chain)
+        log.info('Created certificate {0}.'.format(cert_name))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to failed to create certificate {0}.'
+        log.error(msg.format(cert_name))
+        return False
+
+
+def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns certificate information from Amazon
+
+    CLI example::
+
+        salt myminion boto_iam.upload_server_cert mycert_name
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        info = conn.get_server_certificate(cert_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get certificate {0} information.'
+        log.error(msg.format(cert_name))
+        return False
+
+
+def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a certificate from Amazon
+
+    CLI example::
+
+        salt myminion boto_iam.upload_server_cert mycert_name
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        return conn.delete_server_cert(cert_name)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete certificate {0}.'
+        log.error(msg.format(cert_name))
+        return False
 
 
 def _get_conn(region, key, keyid, profile):
