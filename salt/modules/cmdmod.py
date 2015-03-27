@@ -611,6 +611,8 @@ def run(cmd,
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
     try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
         if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
                                  and python_shell is None:
             python_shell = True
@@ -808,6 +810,8 @@ def run_stdout(cmd,
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
         if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
                                  and python_shell is None:
             python_shell = True
@@ -899,6 +903,8 @@ def run_stderr(cmd,
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
         if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
                                  and python_shell is None:
             python_shell = True
@@ -990,6 +996,8 @@ def run_all(cmd,
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
         if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
                                  and python_shell is None:
             python_shell = True
@@ -1200,6 +1208,8 @@ def script(source,
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
         if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
                                  and python_shell is None:
             python_shell = True
@@ -1316,6 +1326,8 @@ def script_retcode(source,
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
     try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
         if '__pub_jid' in kwargs and kwargs['__pub_jid'] \
                                  and python_shell is None:
             python_shell = True
