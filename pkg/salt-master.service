@@ -3,6 +3,10 @@ Description=The Salt Master Server
 After=syslog.target network.target
 
 [Service]
+# see system.directives(7)
+# The following is required for increasing open file limits on hosts managed by systemd
+#LimitNOFILE=16384
+
 Type=notify
 ExecStart=/usr/bin/salt-master
 
