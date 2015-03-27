@@ -64,7 +64,7 @@ Certificate Properties:
     serial_number:
         The serial number to assign to this certificate. If ommited a random serial number of size
         ``serial_bits`` is generated.
-    
+
     serial_bits:
         The number of bits to use when randomly generating a serial number. Defaults to 64.
 
@@ -898,7 +898,7 @@ def create_certificate(path=None, text=False, properties=None,):
 
     cert_props['public_key'] = get_public_key(cert_props['public_key'])
 
-    if (cert_props['public_key'] == get_public_key(cert_props['signing_private_key']) and
+    if not (cert_props['public_key'] == get_public_key(cert_props['signing_private_key']) and
             'signing_cert' not in cert_props):
         raise salt.exceptions.SaltInvocationError('this is not a self-signed certificate.'
                 'signing_cert is required.')
@@ -936,19 +936,28 @@ def create_certificate(path=None, text=False, properties=None,):
     # Process key identifier extensions
     for idx, ext in enumerate(cert_props['extensions']):
         print ext
-        if (ext['name'] == 'subjectKeyIdentifier' and
-                'hash' in ext['value']):
-            hash_ = _get_pubkey_hash(cert)
-            cert_props['extensions'][idx]['value'] = ext['value'].replace('hash', hash_)
+        ext_parsed = {}
+        for ext_name, ext_props in ext.iteritems():
+            ext_parsed['name'] = ext_name
+            ext_parsed['value'] = ext_props['value']
+            if 'critical' in ext_props:
+                ext_parsed['critical'] = ext_props['critical']
 
-        if ext['name'] == 'authorityKeyIdentifier':
-            # Part of the ugly hack for the authorityKeyIdentifier bug in M2Crypto
-            if ext['value'] != 'keyid,issuer:always':
-                raise salt.exceptions.SaltInvocationError('authorityKeyIdentifier must be keyid,issuer:always')
-            if signing_cert_obj:
-                cert_props['extensions'][idx]['value'] = signing_cert_obj
-            else:
-                cert_props['extensions'][idx]['value'] = 'self'
+            if (ext_name == 'subjectKeyIdentifier' and
+                    'hash' in ext_parsed['value']):
+                ext_parsed['value'] = ext_props['value'].replace('hash', _get_pubkey_hash(cert))
+
+            if ext_name == 'authorityKeyIdentifier':
+                # Part of the ugly hack for the authorityKeyIdentifier bug in M2Crypto
+                if ext_props['value'] != 'keyid,issuer:always':
+                    raise salt.exceptions.SaltInvocationError('authorityKeyIdentifier must be keyid,issuer:always')
+                try:
+                    ext_parsed['value'] = signing_cert_obj
+                except UnboundLocalError:
+                    ext_parsed['value'] = 'self'
+
+        cert_props['extensions'][idx] = ext_parsed
+
     print 'finished ext loop'
 
     # Process extensions list into ext objects
@@ -1215,7 +1224,6 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
         # Extensions are a list of dicts, because order matters.
         if 'extensions' in signing_policy:
             for idx, extension in enumerate(signing_policy['extensions']):
-                ext_parsed = {}
                 for ext_name, ext_props in extension.iteritems():
 
                     # If an extension is in signing policy, remove it from cert_props
@@ -1231,10 +1239,7 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
                         idx = idx - 1
                         continue
 
-                    ext_parsed['name'] = ext_name
-
                     val = ext_props['value']
-                    ext_parsed['value'] = val
                     if not isinstance(val, dict):
                         continue
 
@@ -1242,15 +1247,13 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
                         if src not in val:
                             continue
                         try:
-                            ext_parsed['value'] = src_dict[val[src]]
+                            signing_policy['extensions'][idx]['value'] = src_dict[val[src]]
                         except KeyError:
                             try:
-                                ext_parsed['value'] = val['default']
+                                signing_policy['extensions'][idx]['value'] = val['default']
                             except KeyError:
                                 raise salt.exceptions.SaltInvocationError('{0}: {1} not found '
                                 'and no default included for {2}.'.format(src, val[src], ext_name))
-
-                signing_policy['extensions'][idx] = ext_parsed
 
         print 'after extensions signing_policy='+str(signing_policy)
 
@@ -1261,7 +1264,7 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
     merged_props.update(signing_policy)
     merged_props['subject'].update(cert_props['subject'])
     merged_props['subject'].update(signing_policy['subject'])
-    merged_props['extensions'] + cert_props['extensions']
+    merged_props['extensions'] += cert_props['extensions']
 
     return create_certificate(path=path, text=text, properties=merged_props)
 
