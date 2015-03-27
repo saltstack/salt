@@ -144,3 +144,12 @@ class FunctionWrapper(object):
         # We save it as an alias and then can return it when referenced
         # later in __getitem__
         self.aliases[cmd] = value
+
+    def get(self, cmd, default):
+        '''
+        Mirrors behavior of dict.get
+        '''
+        if cmd in self:
+            return self[cmd]
+        else:
+            return default
