@@ -2,7 +2,7 @@
 '''
 Common functionality for boto modules
 
-.. versionadded:: Baryllium
+.. versionadded:: Beryllium
 
 :depends: boto
 '''
