@@ -77,10 +77,85 @@ def __virtual__():
         return True
 
 
+def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
+    '''
+    Check whether a VPC with the given name or id exists and log
+    an appropriate message. Returns the vpc_id or None.
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    if vpc_name:
+        vpc_id = get_id(name=vpc_name, region=region, key=key, keyid=keyid,
+                        profile=profile)
+        if not vpc_id:
+            log.info('VPC {0} does not exist.'.format(vpc_name))
+            return None
+    elif not vpc_id:
+        log.warning('Either vpc_id or vpc_name must be provided.')
+        return None
+    else:
+        if not exists(vpc_id=vpc_id, region=region, key=key, keyid=keyid,
+                      profile=profile):
+            log.info('VPC {0} does not exist.'.format(vpc_id))
+            return None
+    return vpc_id
+
+
+def _create_resource(resource, name, tags, region, key, keyid,
+                     profile, **kwargs):
+    '''
+    Create a VPC resource. Returns the resource id if created, or False
+    if not created.
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        create_resource = getattr(conn, 'create_' + resource)
+    except AttributeError:
+        log.error('Function {0} does not exist for boto VPC '
+                  'connection.'.format('create_' + resource))
+
+    try:
+        if name and resource_exists(resource, name, region=region, key=key,
+                                    keyid=keyid, profile=profile):
+            log.warning('A {0} named {1} already exists.'.format(
+                resource, name))
+            return False
+
+        r = create_resource(**kwargs)
+        if r:
+            log.info('A {0} with id {1} was created'.format(resource, r.id))
+            _maybe_set_name_tag(name, r)
+            _maybe_set_tags(tags, r)
+
+            if name:
+                __salt__['boto_common.cache_id']('vpc', name,
+                                                 sub_resource=resource,
+                                                 resource_id=r.id,
+                                                 region=region,
+                                                 key=key, keyid=keyid,
+                                                 profile=profile)
+            return r
+        else:
+            if name:
+                log.warning('{0} {1} was not created.'.format(resource, name))
+            else:
+                log.warning('{0} was not created.'.format(resource))
+            return False
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
 def _get_resource(resource, name, conn):
     try:
-        f = getattr(conn, 'get_all_{0}s'.format(resource))
-        r = f(filters={'tag:Name': name})
+        get_resources = getattr(conn, 'get_all_{0}s'.format(resource))
+        r = get_resources(filters={'tag:Name': name})
 
         if r:
             if len(r) == 1:
@@ -257,7 +332,8 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
         return False
 
 
-def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None,
+           profile=None):
     '''
     Given a VPC properties, return VPC ID if exist.
 
@@ -293,7 +369,8 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None, p
         return None
 
 
-def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
+           keyid=None, profile=None):
     '''
     Given a VPC ID, check to see if the given VPC ID exists.
 
@@ -468,30 +545,21 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     if not conn:
         return False
 
-    if not vpc_id and vpc_name:
-        vpc_id = get_id(name=vpc_name, tags=tags, region=region, key=key,
-                        keyid=keyid, profile=profile)
-
+    vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     if not vpc_id:
-        log.warning('No matching VPC found.')
+        log.warning('Refusing to create subnet for non-existent VPC')
         return False
 
-    try:
-        vpc_subnet = conn.create_subnet(vpc_id, cidr_block, availability_zone=availability_zone)
-        if vpc_subnet:
-            log.info('A VPC subnet {0} with {1} available ips on VPC {2}'.format(vpc_subnet.id,
-                                                                                 vpc_subnet.available_ip_address_count,
-                                                                                 vpc_id))
-
-            _maybe_set_name_tag(subnet_name, vpc_subnet)
-            _maybe_set_tags(tags, vpc_subnet)
-
-            return vpc_subnet.id
-        else:
-            log.warning('A VPC subnet was not created.')
-    except boto.exception.BotoServerError as exc:
-        log.error(exc)
-        return False
+    vpc_subnet = _create_resource('subnet', subnet_name, tags=tags,
+                                  vpc_id=vpc_id, cidr_block=cidr_block,
+                                  region=region, key=key, keyid=keyid,
+                                  profile=profile)
+    if vpc_subnet:
+        log.info('Subnet {0} has {1} available ips on VPC {2}'.format(vpc_subnet.id,
+                                                                      vpc_subnet.available_ip_address_count,
+                                                                      vpc_id))
+        return vpc_subnet.id
+    return False
 
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
@@ -588,11 +656,9 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
         log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
         if subnets:
             log.info('Subnet {0} exists.'.format(subnet_id))
-
             return True
         else:
-            log.warning('Subnet {0} does not exist.'.format(subnet_id))
-
+            log.info('Subnet {0} does not exist.'.format(subnet_id))
             return False
     except boto.exception.BotoServerError as exc:
         log.error(exc)
@@ -617,54 +683,28 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
         salt myminion boto_vpc.create_internet_gateway myigw vpc_name=myvpc
 
     '''
-
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
-    try:
-        if vpc_name:
-            vpc_id = get_id(name=vpc_name, region=region, key=key,
-                            keyid=keyid, profile=profile)
-            if not vpc_id:
-                log.warning('Refusing to create internet gateway for '
-                            'non-existent VPC "{0}".'.format(vpc_name))
-                return False
-        else:
-            if not exists(vpc_id):
-                log.warning('Refusing to create internet gateway for '
-                            'non-existent VPC "{0}".'.format(vpc_id))
-                return False
-        if internet_gateway_name and resource_exists('internet_gateway',
-                                                     internet_gateway_name,
-                                                     region=region, key=key,
-                                                     keyid=keyid,
-                                                     profile=profile):
-            log.warning('An internet gateway named {0} already exists.'.format(
-                internet_gateway_name))
-            return False
+    vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+    if not vpc_id:
+        log.warning('Refusing to create internet for non-existent VPC')
+        return False
 
-        igw = conn.create_internet_gateway()
-        if igw:
-            log.info('An internet gateway with id {0} was created'.format(igw.id))
-            _maybe_set_name_tag(internet_gateway_name, igw)
-            _maybe_set_tags(tags, igw)
-
-            if vpc_id:
+    igw = _create_resource('internet_gateway', internet_gateway_name,
+                           tags, region, key, keyid, profile)
+    if igw:
+        if vpc_id:
+            try:
                 conn.attach_internet_gateway(igw.id, vpc_id)
                 log.info('Attached internet gateway {0} to '
                          'VPC {1}'.format(igw.id, (vpc_name or vpc_id)))
-            if internet_gateway_name:
-                __salt__['boto_common.cache_id']('vpc', internet_gateway_name,
-                                                 sub_resource='internet_gateway',
-                                                 resource_id=igw.id,
-                                                 region=region,
-                                                 key=key, keyid=keyid,
-                                                 profile=profile)
-            return igw.id
-    except boto.exception.BotoServerError as exc:
-        log.error(exc)
-        return False
+            except boto.exception.BotoServerError as exc:
+                log.error(exc)
+                return False
+        return igw.id
+    return False
 
 
 def delete_internet_gateway(internet_gateway_id=None,
