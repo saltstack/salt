@@ -14,17 +14,25 @@ config, these are the defaults:
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
+
+.. code-block:: yaml
 
     alternative.redis.db: '0'
     alternative.redis.host: 'salt'
     alternative.redis.port: 6379
 
-  To use the redis returner, append '--return redis' to the salt command. ex:
+To use the redis returner, append '--return redis' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return redis
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.2.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return redis --return_config alternative
 '''

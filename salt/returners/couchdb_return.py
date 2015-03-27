@@ -23,7 +23,9 @@ To use the couchdb returner, append ``--return couchdb`` to the salt command. Ex
 
     salt '*' test.ping --return couchdb
 
-To use the alternative configuration, append ``--return_config alternative`` to the salt command. Example:
+To use the alternative configuration, append ``--return_config alternative`` to the salt command.
+
+.. versionadded:: 2015.2.0
 
 .. code-block:: bash
 

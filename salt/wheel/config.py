@@ -22,8 +22,6 @@ def values():
     Return the raw values of the config file
     '''
     data = salt.config.master_config(__opts__['conf_file'])
-    data.pop('aes')
-    data.pop('token_dir')
     return data
 
 

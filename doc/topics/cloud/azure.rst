@@ -883,3 +883,570 @@ Delete a specific affinity group associated with the account
 .. code-block:: bash
 
     salt-cloud -f delete_affinity_group my-azure name=my_affinity_group
+
+
+Managing Blob Storage
+=====================
+.. versionadded:: Beryllium
+
+Azure storage containers and their contents can be managed with Salt Cloud. This
+is not as elegant as using one of the other available clients in Windows, but it
+benefits Linux and Unix users, as there are fewer options available on those
+platforms.
+
+Blob Storage Configuration
+--------------------------
+Blob storage must be configured differently than the standard Azure
+configuration. Both a ``storage_account`` and a ``storage_key`` must be
+specified either through the Azure provider configuration (in addition to the
+other Azure configuration) or via the command line.
+
+.. code-block:: yaml
+
+    storage_account: mystorage
+    storage_key: ffhj334fDSGFEGDFGFDewr34fwfsFSDFwe==
+
+storage_account
+~~~~~~~~~~~~~~~
+This is one of the storage accounts that is available via the ``list_storage``
+function.
+
+storage_key
+~~~~~~~~~~~
+Both a primary and a secondary ``storage_key`` can be obtained by running the
+``show_storage_keys`` function. Either key may be used.
+
+
+Blob Functions
+--------------
+The following functions are made available through Salt Cloud for managing
+blog storage.
+
+make_blob_url
+~~~~~~~~~~~~~
+Creates the URL to access a blob
+
+.. code-block:: bash
+
+    salt-cloud -f make_blob_url my-azure container=mycontainer blob=myblob
+
+container
+`````````
+Name of the container.
+
+blob
+````
+Name of the blob.
+
+account
+```````
+Name of the storage account. If not specified, derives the host base
+from the provider configuration.
+
+protocol
+````````
+Protocol to use: 'http' or 'https'. If not specified, derives the host
+base from the provider configuration.
+
+host_base
+`````````
+Live host base URL.  If not specified, derives the host base from the
+provider configuration.
+
+
+list_storage_containers
+~~~~~~~~~~~~~~~~~~~~~~~
+List containers associated with the storage account
+
+.. code-block:: bash
+
+    salt-cloud -f list_storage_containers my-azure
+
+
+create_storage_container
+~~~~~~~~~~~~~~~~~~~~~~~~
+Create a storage container
+
+.. code-block:: bash
+
+    salt-cloud -f create_storage_container my-azure name=mycontainer
+
+name
+````
+Name of container to create.
+
+meta_name_values
+````````````````
+Optional. A dict with name_value pairs to associate with the
+container as metadata. Example:{'Category':'test'}
+
+blob_public_access
+``````````````````
+Optional. Possible values include: container, blob
+
+fail_on_exist
+`````````````
+Specify whether to throw an exception when the container exists.
+
+
+show_storage_container
+~~~~~~~~~~~~~~~~~~~~~~
+Show a container associated with the storage account
+
+.. code-block:: bash
+
+    salt-cloud -f show_storage_container my-azure name=myservice
+
+name
+````
+Name of container to show.
+
+
+show_storage_container_metadata
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Show a storage container's metadata
+
+.. code-block:: bash
+
+    salt-cloud -f show_storage_container_metadata my-azure name=myservice
+
+name
+````
+Name of container to show.
+
+lease_id
+````````
+If specified, show_storage_container_metadata only succeeds if the
+container's lease is active and matches this ID.
+
+
+set_storage_container_metadata
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Set a storage container's metadata
+
+.. code-block:: bash
+
+    salt-cloud -f set_storage_container my-azure name=mycontainer \
+        x_ms_meta_name_values='{"my_name": "my_value"}'
+
+name
+````
+Name of existing container.
+meta_name_values
+````````````````
+A dict containing name, value for metadata.
+Example: {'category':'test'}
+lease_id
+````````
+If specified, set_storage_container_metadata only succeeds if the
+container's lease is active and matches this ID.
+
+
+show_storage_container_acl
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+Show a storage container's acl
+
+.. code-block:: bash
+
+    salt-cloud -f show_storage_container_acl my-azure name=myservice
+
+name
+````
+Name of existing container.
+
+lease_id
+````````
+If specified, show_storage_container_acl only succeeds if the
+container's lease is active and matches this ID.
+
+
+set_storage_container_acl
+~~~~~~~~~~~~~~~~~~~~~~~~~
+Set a storage container's acl
+
+.. code-block:: bash
+
+    salt-cloud -f set_storage_container my-azure name=mycontainer
+
+name
+````
+Name of existing container.
+
+signed_identifiers
+``````````````````
+SignedIdentifers instance
+
+blob_public_access
+``````````````````
+Optional. Possible values include: container, blob
+
+lease_id
+````````
+If specified, set_storage_container_acl only succeeds if the
+container's lease is active and matches this ID.
+
+
+delete_storage_container
+~~~~~~~~~~~~~~~~~~~~~~~~
+Delete a container associated with the storage account
+
+.. code-block:: bash
+
+    salt-cloud -f delete_storage_container my-azure name=mycontainer
+
+name
+````
+Name of container to create.
+
+fail_not_exist
+``````````````
+Specify whether to throw an exception when the container exists.
+
+lease_id
+````````
+If specified, delete_storage_container only succeeds if the
+container's lease is active and matches this ID.
+
+
+lease_storage_container
+~~~~~~~~~~~~~~~~~~~~~~~
+Lease a container associated with the storage account
+
+.. code-block:: bash
+
+    salt-cloud -f lease_storage_container my-azure name=mycontainer
+
+name
+````
+Name of container to create.
+
+lease_action
+````````````
+Required. Possible values: acquire|renew|release|break|change
+
+lease_id
+````````
+Required if the container has an active lease.
+
+lease_duration
+``````````````
+Specifies the duration of the lease, in seconds, or negative one
+(-1) for a lease that never expires. A non-infinite lease can be
+between 15 and 60 seconds. A lease duration cannot be changed
+using renew or change. For backwards compatibility, the default is
+60, and the value is only used on an acquire operation.
+
+lease_break_period
+``````````````````
+Optional. For a break operation, this is the proposed duration of
+seconds that the lease should continue before it is broken, between
+0 and 60 seconds. This break period is only used if it is shorter
+than the time remaining on the lease. If longer, the time remaining
+on the lease is used. A new lease will not be available before the
+break period has expired, but the lease may be held for longer than
+the break period. If this header does not appear with a break
+operation, a fixed-duration lease breaks after the remaining lease
+period elapses, and an infinite lease breaks immediately.
+
+proposed_lease_id
+`````````````````
+Optional for acquire, required for change. Proposed lease ID, in a
+GUID string format.
+
+
+list_blobs
+~~~~~~~~~~
+List blobs associated with the container
+
+.. code-block:: bash
+
+    salt-cloud -f list_blobs my-azure container=mycontainer
+
+container
+`````````
+The name of the storage container
+
+prefix
+``````
+Optional. Filters the results to return only blobs whose names
+begin with the specified prefix.
+
+marker
+``````
+Optional. A string value that identifies the portion of the list
+to be returned with the next list operation. The operation returns
+a marker value within the response body if the list returned was
+not complete. The marker value may then be used in a subsequent
+call to request the next set of list items. The marker value is
+opaque to the client.
+
+maxresults
+``````````
+Optional. Specifies the maximum number of blobs to return,
+including all BlobPrefix elements. If the request does not specify
+maxresults or specifies a value greater than 5,000, the server will
+return up to 5,000 items. Setting maxresults to a value less than
+or equal to zero results in error response code 400 (Bad Request).
+
+include
+```````
+Optional. Specifies one or more datasets to include in the
+response. To specify more than one of these options on the URI,
+you must separate each option with a comma. Valid values are:
+    snapshots:
+        Specifies that snapshots should be included in the
+        enumeration. Snapshots are listed from oldest to newest in
+        the response.
+    metadata:
+        Specifies that blob metadata be returned in the response.
+    uncommittedblobs:
+        Specifies that blobs for which blocks have been uploaded,
+        but which have not been committed using Put Block List
+        (REST API), be included in the response.
+    copy:
+        Version 2012-02-12 and newer. Specifies that metadata
+        related to any current or previous Copy Blob operation
+        should be included in the response.
+
+delimiter
+`````````
+Optional. When the request includes this parameter, the operation
+returns a BlobPrefix element in the response body that acts as a
+placeholder for all blobs whose names begin with the same
+substring up to the appearance of the delimiter character. The
+delimiter may be a single character or a string.
+
+
+show_blob_service_properties
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Show a blob's service properties
+
+.. code-block:: bash
+
+    salt-cloud -f show_blob_service_properties my-azure
+
+
+set_blob_service_properties
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Sets the properties of a storage account's Blob service, including
+Windows Azure Storage Analytics. You can also use this operation to
+set the default request version for all incoming requests that do not
+have a version specified.
+
+.. code-block:: bash
+
+    salt-cloud -f set_blob_service_properties my-azure
+
+properties
+``````````
+a StorageServiceProperties object.
+
+timeout
+```````
+Optional. The timeout parameter is expressed in seconds.
+
+
+show_blob_properties
+~~~~~~~~~~~~~~~~~~~~
+Returns all user-defined metadata, standard HTTP properties, and
+system properties for the blob.
+
+.. code-block:: bash
+
+    salt-cloud -f show_blob_properties my-azure container=mycontainer blob=myblob
+
+container
+`````````
+Name of existing container.
+
+blob
+````
+Name of existing blob.
+
+lease_id
+````````
+Required if the blob has an active lease.
+
+
+set_blob_properties
+~~~~~~~~~~~~~~~~~~~
+Set a blob's properties
+
+.. code-block:: bash
+
+    salt-cloud -f set_blob_properties my-azure
+
+container
+`````````
+Name of existing container.
+
+blob
+````
+Name of existing blob.
+
+blob_cache_control
+``````````````````
+Optional. Modifies the cache control string for the blob.
+
+blob_content_type
+`````````````````
+Optional. Sets the blob's content type.
+
+blob_content_md5
+````````````````
+Optional. Sets the blob's MD5 hash.
+
+blob_content_encoding
+`````````````````````
+Optional. Sets the blob's content encoding.
+
+blob_content_language
+`````````````````````
+Optional. Sets the blob's content language.
+
+lease_id
+````````
+Required if the blob has an active lease.
+
+blob_content_disposition
+````````````````````````
+Optional. Sets the blob's Content-Disposition header.
+The Content-Disposition response header field conveys additional
+information about how to process the response payload, and also can
+be used to attach additional metadata. For example, if set to
+attachment, it indicates that the user-agent should not display the
+response, but instead show a Save As dialog with a filename other
+than the blob name specified.
+
+
+put_blob
+~~~~~~~~
+Upload a blob
+
+.. code-block:: bash
+
+    salt-cloud -f put_blob my-azure container=base name=top.sls blob_path=/srv/salt/top.sls
+    salt-cloud -f put_blob my-azure container=base name=content.txt blob_content='Some content'
+
+container
+`````````
+Name of existing container.
+
+name
+````
+Name of existing blob.
+
+blob_path
+`````````
+The path on the local machine of the file to upload as a blob. Either
+this or blob_content must be specified.
+
+blob_content
+````````````
+The actual content to be uploaded as a blob. Either this or blob_path
+must me specified.
+
+cache_control
+`````````````
+Optional. The Blob service stores this value but does not use or
+modify it.
+
+content_language
+````````````````
+Optional. Specifies the natural languages used by this resource.
+
+content_md5
+```````````
+Optional. An MD5 hash of the blob content. This hash is used to
+verify the integrity of the blob during transport. When this header
+is specified, the storage service checks the hash that has arrived
+with the one that was sent. If the two hashes do not match, the
+operation will fail with error code 400 (Bad Request).
+
+blob_content_type
+`````````````````
+Optional. Set the blob's content type.
+
+blob_content_encoding
+`````````````````````
+Optional. Set the blob's content encoding.
+
+blob_content_language
+`````````````````````
+Optional. Set the blob's content language.
+
+blob_content_md5
+````````````````
+Optional. Set the blob's MD5 hash.
+
+blob_cache_control
+``````````````````
+Optional. Sets the blob's cache control.
+
+meta_name_values
+````````````````
+A dict containing name, value for metadata.
+
+lease_id
+````````
+Required if the blob has an active lease.
+
+
+get_blob
+~~~~~~~~
+Download a blob
+
+.. code-block:: bash
+
+    salt-cloud -f get_blob my-azure container=base name=top.sls local_path=/srv/salt/top.sls
+    salt-cloud -f get_blob my-azure container=base name=content.txt return_content=True
+
+container
+`````````
+Name of existing container.
+
+name
+````
+Name of existing blob.
+
+local_path
+``````````
+The path on the local machine to download the blob to. Either this or
+return_content must be specified.
+
+return_content
+``````````````
+Whether or not to return the content directly from the blob. If
+specified, must be True or False. Either this or the local_path must
+be specified.
+
+snapshot
+````````
+Optional. The snapshot parameter is an opaque DateTime value that,
+when present, specifies the blob snapshot to retrieve.
+
+lease_id
+````````
+Required if the blob has an active lease.
+
+progress_callback
+`````````````````
+callback for progress with signature function(current, total) where
+current is the number of bytes transfered so far, and total is the
+size of the blob.
+
+max_connections
+```````````````
+Maximum number of parallel connections to use when the blob size
+exceeds 64MB.
+Set to 1 to download the blob chunks sequentially.
+Set to 2 or more to download the blob chunks in parallel. This uses
+more system resources but will download faster.
+
+max_retries
+```````````
+Number of times to retry download of blob chunk if an error occurs.
+
+retry_wait
+``````````
+Sleep time in secs between retries.
