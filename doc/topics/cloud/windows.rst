@@ -88,6 +88,7 @@ Setting the installer in ``/etc/salt/cloud.providers``:
       win_installer: /root/Salt-Minion-2014.7.0-AMD64-Setup.exe
       win_username: Administrator
       win_password: letmein
+      smb_port: 445
 
 The default Windows user is `Administrator`, and the default Windows password
 is blank.

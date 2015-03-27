@@ -2,44 +2,60 @@
 '''
 Take data from salt and "return" it into a carbon receiver
 
-Add the following configuration to the minion configuration files::
+Add the following configuration to the minion configuration file:
+
+.. code-block:: yaml
 
     carbon.host: <server ip address>
     carbon.port: 2003
 
 Errors when trying to convert data to numbers may be ignored by setting
-``carbon.skip_on_error`` to `True`::
+``carbon.skip_on_error`` to `True`:
+
+.. code-block:: yaml
 
     carbon.skip_on_error: True
 
 By default, data will be sent to carbon using the plaintext protocol. To use
-the pickle protocol, set ``carbon.mode`` to ``pickle``::
+the pickle protocol, set ``carbon.mode`` to ``pickle``:
+
+.. code-block:: yaml
 
     carbon.mode: pickle
 
-Carbon settings may also be configured as::
+Carbon settings may also be configured as:
+
+.. code-block:: yaml
 
     carbon:
-        host: <server IP or hostname>
-        port: <carbon port>
-        skip_on_error: True
-        mode: (pickle|text)
+      host: <server IP or hostname>
+      port: <carbon port>
+      skip_on_error: True
+      mode: (pickle|text)
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
+
+.. code-block:: yaml
 
     alternative.carbon:
-        host: <server IP or hostname>
-        port: <carbon port>
-        skip_on_error: True
-        mode: (pickle|text)
+      host: <server IP or hostname>
+      port: <carbon port>
+      skip_on_error: True
+      mode: (pickle|text)
 
-  To use the carbon returner, append '--return carbon' to the salt command. ex:
+To use the carbon returner, append '--return carbon' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return carbon
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.2.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return carbon --return_config alternative
 '''

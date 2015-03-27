@@ -14,6 +14,15 @@ changes, creation, deletion etc.
 This allows for the changes to be sent up to the master where the
 reactor can respond to changes.
 
+Lazy Loader
+========
+
+The Lazy Loader is a significant overhaul of Salt's module loader system. The
+Lazy Loader will lazily load modules on access, instead of all on start. In
+addition to major performance improvement this "sandboxes" modules-- meaning a
+bad/broken import of a single module will only effect jobs that require accessing
+the broken module. (:pull: `20274`)
+
 Salt SSH
 ========
 
@@ -39,6 +48,9 @@ Misc Fixes/Additions
 - LocalClient may now optionally raise SaltClientError exceptions. If using
   this class directly, checking for and handling this exception is recommended.
   (:issue: `21501`)
+- The SAuth object is now a singleton, meaning authentication state is
+  global (per master) on each minion. This reduces sign-ins of minions from 3->1
+  per startup.
 
 Deprecations
 ============
@@ -65,3 +77,11 @@ Deprecations
   This alteration can be accomplished as follows:
 
     ``ALTER TABLE salt_events ADD master_id VARCHAR(255) NOT NULL;``
+
+Known Issues
+===========
+
+- In multimaster mode, a minion may become temporarily unresponsive
+  if modules or pillars are refreshed at the same time that one
+  or more masters are down. This can be worked around by setting
+  'auth_timeout' and 'auth_tries' down to shorter periods.  
