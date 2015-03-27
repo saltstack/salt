@@ -3,6 +3,73 @@
 Manage X509 certificates
 
 .. versionadded:: TBD
+
+Certificate Properties:
+    Many modules take a dict called ``properties``. This defines many ``properties`` of a certificate.
+    That dict can contain one or more of the following keys.
+
+    subject:
+        A dict containing subject values. Some acceptable keys are: ``C``, ``CN``, ``Email``,
+        ``GN``, ``L``, ``O``, ``OU``, ``SN``, ``SP`` and ``ST``. Any subject value accepted by
+        OpenSSL should work.
+
+    signing_private_key:
+        A path or string of the private key in PEM format that will be used to sign this certificate.
+        This is required.
+
+    signing_cert:
+        A certificate matching the private key that will be used to sign this certificate. This is used
+        to populate the issuer values in the resulting certificate. Do not include this value for
+        self-signed certificateds.
+
+    public_key:
+        The public key to be included in this certificate. This can be sourced from a public key,
+        certificate, csr or private key. If neither ``public_key`` or ``csr`` are
+        specified, it will be assumed that this is a self-signed certificate, and the public key
+        derived from ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``,
+        not both. Because you can input a CSR as a public key or as a CSR, it is important to understand
+        the difference. If you import a CSR as a public key, only the public key will be added
+        to the certificate, subject or extension information in the CSR will be lost.
+
+    csr:
+        A file or PEM string containing a certificate signing request. This will be used to supply the
+        subject, extensions and public key of a certificate. Any subject or extensions specified
+        explicitly will overwrite any in the CSR. If neither ``public_key`` or ``csr`` are specified,
+        it will be assumed that this is a self-signed certificate, and the public key derived from
+        ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``, not both.
+
+    extensions:
+        An ordered list of dicts containing values for X509v3 Extensions. Each dict must contain the
+        keys ``name`` and ``value`` and may optionally contain the boolean ``critical``.
+
+        Some special extensions are ``subjectKeyIdentifier`` and ``authorityKeyIdentifier``.
+
+        ``subjectKeyIdentifier`` can be an explicit value or it can be the special string ``hash``.
+        ``hash`` will set the subjectKeyIdentifier equal to the SHA1 hash of the modulus of the
+        public key in this certificate. Note that this is not the exact same hashing method used by
+        OpenSSL when using the hash value.
+
+        ``authorityKeyIdentifier`` only supports the value ``keyid,issuer:always``. This value will
+        automatically populate ``authorityKeyIdentifier`` with the ``subjectKeyIdentifier`` of
+        ``signing_cert``. If this is a self-signed cert these values will be the same.
+
+    days_valid:
+        The number of days this certificate should be valid. This sets the ``notAfter`` property
+        of the certificate. Defaults to 365.
+
+    version:
+        The version of the X509 certificate. Defaults to 3. This is automatically converted to the
+        version value, so ``version=3`` sets the certificate version field to 0x2.
+
+    serial_number:
+        The serial number to assign to this certificate. If ommited a random serial number of size
+        ``serial_bits`` is generated.
+    
+    serial_bits:
+        The number of bits to use when randomly generating a serial number. Defaults to 64.
+
+    algorithm:
+        The hashing algorithm to be used for signing this certificate. Defaults to sha256.
 '''
 
 from __future__ import absolute_import
@@ -20,6 +87,7 @@ import yaml
 import subprocess
 import re
 import datetime
+import copy
 
 # Import salt libs
 import salt.utils
@@ -31,8 +99,22 @@ EXT_NAME_MAPPINGS = {'subjectKeyIdentifier': 'X509v3 Subject Key Identifier',
                      'authorityKeyIdentifier': 'X509v3 Authority Key Identifier',
                      'basicConstraints': 'X509v3 Basic Constraints',
                      'keyUsage': 'X509v3 Key Usage',
+                     'extendedKeyUsage': 'X509v3 Extended Key Usage',
                      'nsComment': 'Netscape Comment',
-                     'subjectAltName': 'X509v3 Subject Alternative Name',}
+                     'subjectAltName': 'X509v3 Subject Alternative Name',
+                     'issuserAltName': 'X509v3 Issuer Alternative Name',
+                     'authorityInfoAccess': 'X509v3 Authority Info Access',
+                     'crlDistributionPoints': 'X509v3 CRL distribution points',
+                     'issuingDistributionPoint': 'X509v3 Issuing Distribution Point',
+                     'certificatePolicies': 'X509v3 Certificate Policies',
+                     'policyConstraints': 'X509v3 Policy Constraints',
+                     'inhibitAnyPolicy': 'X509v3 Inhibit Any Policy',
+                     'nameConstraints': 'X509v3 Name Constraints',
+                     'noCheck': 'X509v3 OCSP No Check'}
+
+CERT_DEFAULTS = {'subject': {}, 'extensions': [], 'days_valid': 365, 'version': 3,
+                 'serial_bits': 64, 'algorithm': 'sha256'}
+
 
 
 # Everything in this section is an ugly hack to fix an ancient bug in M2Crypto
@@ -279,7 +361,7 @@ def _get_request_obj(csr):
 
 def _parse_subject_in(subject_dict):
     '''
-    parses a dict of subject entries
+    parses a dict of subject entries and returns a subject object
     '''
     subject = M2Crypto.X509.X509_Name()
 
@@ -764,11 +846,7 @@ def create_crl(path=None, text=False, signing_private_key=None,
                 pem_type='X509 CRL')
 
 
-def create_certificate(path=None, text=False, subject=None,
-        signing_private_key=None, signing_cert=None, public_key=None,
-        csr=None, extensions=None, days_valid=365, version=3,
-        serial_number=None, serial_bits=64,
-        algorithm='sha256',):
+def create_certificate(path=None, text=False, properties=None,):
     '''
     Create an X509 certificate.
 
@@ -778,183 +856,112 @@ def create_certificate(path=None, text=False, subject=None,
     text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    subject:
-        A dict containing subject values. Some acceptable keys are: ``C``, ``CN``, ``Email``,
-        ``GN``, ``L``, ``O``, ``OU``, ``SN``, ``SP`` and ``ST``. Any subject value accepted by
-        OpenSSL should work.
-
-    signing_private_key:
-        A path or string of the private key in PEM format that will be used to sign this certificate.
-        This is required.
-
-    signing_cert:
-        A certificate matching the private key that will be used to sign this certificate. This is used
-        to populate the issuer values in the resulting certificate. Do not include this value for
-        self-signed certificateds.
-
-    public_key:
-        The public key to be included in this certificate. This can be sourced from a public key,
-        certificate, csr or private key. If neither ``public_key`` or ``csr`` are
-        specified, it will be assumed that this is a self-signed certificate, and the public key
-        derived from ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``,
-        not both. Because you can input a CSR as a public key or as a CSR, it is important to understand
-        the difference. If you import a CSR as a public key, only the public key will be added
-        to the certificate, subject or extension information in the CSR will be lost.
-
-    csr:
-        A file or PEM string containing a certificate signing request. This will be used to supply the
-        subject, extensions and public key of a certificate. Any subject or extensions specified
-        explicitly will overwrite any in the CSR. If neither ``public_key`` or ``csr`` are specified,
-        it will be assumed that this is a self-signed certificate, and the public key derived from
-        ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``, not both.
-
-    extensions:
-        An ordered list of dicts containing values for X509v3 Extensions. Each dict must contain the
-        keys ``name`` and ``value`` and may optionally contain the boolean ``critical``.
-
-        Some special extensions are ``subjectKeyIdentifier`` and ``authorityKeyIdentifier``.
-
-        ``subjectKeyIdentifier`` can be an explicit value or it can be the special string ``hash``.
-        ``hash`` will set the subjectKeyIdentifier equal to the SHA1 hash of the modulus of the
-        public key in this certificate. Note that this is not the exact same hashing method used by
-        OpenSSL when using the hash value.
-
-        ``authorityKeyIdentifier`` only supports the value ``keyid,issuer:always``. This value will
-        automatically populate ``authorityKeyIdentifier`` with the ``subjectKeyIdentifier`` of
-        ``signing_cert``. If this is a self-signed cert these values will be the same.
-
-    days_valid:
-        The number of days this certificate should be valid. This sets the ``notAfter`` property
-        of the certificate. Defaults to 365.
-
-    version:
-        The version of the X509 certificate. Defaults to 3. This is automatically converted to the
-        version value, so ``version=3`` sets the certificate version field to 0x2.
-
-    serial_number:
-        The serial number to assign to this certificate. If ommited a random serial number of size
-        ``serial_bits`` is generated.
-
-    serial_bits:
-        The number of bits to use when randomly generating a serial number. Defaults to 64.
-
-    algorithm:
-        The hashing algorithm to be used for signing this certificate. Defaults to sha256.
+    properties:
+        The properties to set on the certificate. See certificate properties section for available values.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' x509.create_certificate path=/etc/pki/myca.crt signing_private_key=/etc/pki/myca.key csr=/etc/pki/myca.csr
+        salt '*' x509.create_certificate path=/etc/pki/myca.crt properties="{'signing_private_key': '/etc/pki/myca.key', 'csr': '/etc/pki/myca.csr'}
     '''
     if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
-    if subject is None:
-        subject = {}
+    cert_props = copy.deepcopy(CERT_DEFAULTS)
+    cert_props.update(properties)
 
-    if extensions is None:
-        extensions = []
-
-    if not signing_private_key:
+    if 'signing_private_key' not in cert_props:
         raise salt.exceptions.SaltInvocationError('signing_private_key must be specified')
 
-    if public_key and csr:
-        raise salt.exceptions.SaltInvocationError('Include either public_key or csr, not both.')
+    if 'csr' in cert_props:
+        cert_props['public_key'] = cert_props['csr']
+        csr_subject = read_csr(cert_props['csr'])['Subject']
+        csr_subject.update(cert_props['subject'])
+        cert_props['subject'].update(csr_subject)
 
-    if not (public_key or csr):
-        public_key = get_public_key(signing_private_key)
-    elif csr:
-        public_key = get_public_key(csr)
-
-    if (get_public_key(signing_private_key) == get_public_key(public_key) and
-            signing_cert):
-        raise salt.exceptions.SaltInvocationError('signing_private_key equals public_key,'
-                'this is a self-signed certificate.'
-                'Do not include signing_cert')
-
-    if (get_public_key(signing_private_key) != get_public_key(public_key) and
-            not signing_cert):
-        raise salt.exceptions.SaltInvocationError('this is not a self-signed certificate.'
-                'signing_cert is required.')
-
-    if csr:
-        # Reading csr
-        csrsubject = read_csr(csr)['Subject']
-        # Update will add entries from subject, overwriting any in the csr
-        csrsubject.update(subject)
-        subject = csrsubject
-
-    subject = _parse_subject_in(subject)
-    signing_private_key = _get_private_key_obj(signing_private_key)
-    public_key = _get_public_key_obj(public_key)
-
-    if signing_cert:
-        signing_cert = _get_certificate_obj(signing_cert)
-        signing_cert_subject = signing_cert.get_subject()
-    else:
-        signing_cert_subject = subject
-
-    if not serial_number:
-        serial_number = _dec2hex(random.getrandbits(serial_bits))
-
-    serial_number = int(serial_number.replace(':', ''), 16)
-
-    cert = M2Crypto.X509.X509()
-    cert.set_serial_number(serial_number)
-    # X509 Verison 3 has a value of 2 in the field.
-    # Version 2 has a value of 1.
-    # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
-    cert.set_version(version - 1)
-    cert.set_subject(subject)
-    cert.set_issuer(signing_cert_subject)
-    cert.set_pubkey(public_key)
-
-    not_before = M2Crypto.m2.x509_get_not_before(cert.x509)
-    not_after = M2Crypto.m2.x509_get_not_after(cert.x509)
-    M2Crypto.m2.x509_gmtime_adj(not_before, 0)
-    M2Crypto.m2.x509_gmtime_adj(not_after, 60*60*24*days_valid)
-
-    # Preprocess key identifier extensions
-    tmpext = []
-    for ext in extensions:
-        if (ext['name'] == 'subjectKeyIdentifier' and
-                'hash' in ext['value']):
-            hash_ = _get_pubkey_hash(cert)
-            ext['value'] = ext['value'].replace('hash', hash_)
-
-        if ext['name'] == 'authorityKeyIdentifier':
-            # Part of the ugly hack for the authorityKeyIdentifier bug in M2Crypto
-            if ext['value'] != 'keyid,issuer:always':
-                raise salt.exceptions.SaltInvocationError('authorityKeyIdentifier must be keyid,issuer:always')
-            if signing_cert:
-                ext['value'] = signing_cert
-            else:
-                ext['value'] = 'self'
-        tmpext.append(ext)
-
-    # Add CSR extensions that don't already exist
-    if csr:
-        for csrext in _get_csr_extensions(_get_request_obj(csr)):
+        # Add CSR extensions that don't already exist
+        for csrext in _get_csr_extensions(_get_request_obj(cert_props['csr'])):
             superseded = False
-            for ext in extensions:
+            for ext in cert_props['extensions']:
                 if ext['name'] == csrext['name']:
                     superseded = True
                     break
             if superseded:
                 continue
-            tmpext.append(csrext)
+            cert_props['extensions'].append(csrext)
 
-    extensions = tmpext
+    if 'public_key' not in cert_props:
+        cert_props['public_key'] = cert_props['signing_private_key']
+
+    cert_props['public_key'] = get_public_key(cert_props['public_key'])
+
+    if (cert_props['public_key'] == get_public_key(cert_props['signing_private_key']) and
+            'signing_cert' not in cert_props):
+        raise salt.exceptions.SaltInvocationError('this is not a self-signed certificate.'
+                'signing_cert is required.')
+
+    subject_obj = _parse_subject_in(cert_props['subject'])
+    signing_private_key_obj = _get_private_key_obj(cert_props['signing_private_key'])
+    public_key_obj = _get_public_key_obj(cert_props['public_key'])
+
+    if 'signing_cert' in cert_props:
+        signing_cert_obj = _get_certificate_obj(cert_props['signing_cert'])
+        signing_cert_subject_obj = signing_cert_obj.get_subject()
+    else:
+        signing_cert_subject_obj = subject_obj
+
+    if not 'serial_number' in cert_props:
+        cert_props['serial_number'] = _dec2hex(random.getrandbits(cert_props['serial_bits']))
+
+    serial_number_int = int(cert_props['serial_number'].replace(':', ''), 16)
+
+    cert = M2Crypto.X509.X509()
+    cert.set_serial_number(serial_number_int)
+    # X509 Verison 3 has a value of 2 in the field.
+    # Version 2 has a value of 1.
+    # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
+    cert.set_version(cert_props['version'] - 1)
+    cert.set_subject(subject_obj)
+    cert.set_issuer(signing_cert_subject_obj)
+    cert.set_pubkey(public_key_obj)
+
+    not_before = M2Crypto.m2.x509_get_not_before(cert.x509)
+    not_after = M2Crypto.m2.x509_get_not_after(cert.x509)
+    M2Crypto.m2.x509_gmtime_adj(not_before, 0)
+    M2Crypto.m2.x509_gmtime_adj(not_after, 60*60*24*cert_props['days_valid'])
+
+    # Process key identifier extensions
+    for idx, ext in enumerate(cert_props['extensions']):
+        print ext
+        if (ext['name'] == 'subjectKeyIdentifier' and
+                'hash' in ext['value']):
+            hash_ = _get_pubkey_hash(cert)
+            cert_props['extensions'][idx]['value'] = ext['value'].replace('hash', hash_)
+
+        if ext['name'] == 'authorityKeyIdentifier':
+            # Part of the ugly hack for the authorityKeyIdentifier bug in M2Crypto
+            if ext['value'] != 'keyid,issuer:always':
+                raise salt.exceptions.SaltInvocationError('authorityKeyIdentifier must be keyid,issuer:always')
+            if signing_cert_obj:
+                cert_props['extensions'][idx]['value'] = signing_cert_obj
+            else:
+                cert_props['extensions'][idx]['value'] = 'self'
+    print 'finished ext loop'
 
     # Process extensions list into ext objects
-    extensions = _parse_extensions_in(extensions)
-    for ext in extensions:
+    for ext in _parse_extensions_in(cert_props['extensions']):
+        print 'adding ext'
+        print ext.get_name()
+        print ext.get_value()
+        print ext.get_critical()
         cert.add_ext(ext)
 
-    cert.sign(signing_private_key, algorithm)
+    print 'about to sign'
+    cert.sign(signing_private_key_obj, cert_props['algorithm'])
+    print 'signed'
 
     if path:
         return write_pem(text=cert.as_pem(), path=path,
@@ -963,8 +970,7 @@ def create_certificate(path=None, text=False, subject=None,
         return cert.as_pem()
 
 
-def create_csr(path=None, text=False, subject=None, public_key=None,
-        extensions=None, version=3,):
+def create_csr(path=None, text=False, properties=None):
     '''
     Create a certificate signing request.
 
@@ -974,65 +980,35 @@ def create_csr(path=None, text=False, subject=None, public_key=None,
     text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    subject:
-        A dict containing subject values. Some acceptable keys are: ``C``, ``CN``, ``Email``,
-        ``GN``, ``L``, ``O``, ``OU``, ``SN``, ``SP`` and ``ST``. Any subject value accepted by
-        OpenSSL should work.
-
-    public_key:
-        The public key to be included in this certificate. This can be sourced from a csr,
-        certificate or private key.
-
-    extensions:
-        An ordered list of dicts containing values for X509v3 Extensions. Each dict must contain the
-        keys ``name`` and ``value`` and may optionally contain the boolean ``critical``.
-
-        ``subjectKeyIdentifier`` and ``authorityKeyIdentifier`` are not valid extensions to add
-        to a CSR, because they are designed to be assigned by the signing authority.
-
-    version:
-        The version of the X509 certificate. Defaults to 3. This is automatically converted to the
-        version value, so ``version=3`` sets the certificate version field to 0x2.
+    properties:
+        The properties to set on the csr. See certificate properties section for available values.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' x509.create_csr path=/etc/pki/myca.csr public_key=/etc/pki/myca.key subject={'CN': 'My Cert'}
+        salt '*' x509.create_csr path=/etc/pki/myca.csr properties="{'public_key': '/etc/pki/myca.key', 'subject': ""{'CN': 'My Cert'}""}"
     '''
+
     if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
-    if subject is None:
-        subject = {}
+    csr_props = copy.deepcopy(CERT_DEFAULTS)
+    csr_props.update(properties)
 
-    if extensions is None:
-        extensions = []
-
-    subject = _parse_subject_in(subject)
-    public_key = _get_public_key_obj(public_key)
+    subject_obj = _parse_subject_in(csr_props['subject'])
+    public_key_obj = _get_public_key_obj(csr_props['public_key'])
 
     csr = M2Crypto.X509.Request()
-    csr.set_version(version - 1)
-    csr.set_subject(subject)
-    csr.set_pubkey(public_key)
+    csr.set_version(csr_props['version'] - 1)
+    csr.set_subject(subject_obj)
+    csr.set_pubkey(public_key_obj)
 
-    # subjectkeyidentifier and authoritykeyidentifier should not be in CSRs
-    for ext in extensions:
-        if ext['name'] == 'subjectKeyIdentifier':
-            raise salt.exceptions.SaltInvocationError('subjectKeyIdentifier should be added by the CA,'
-                'not include in the CSR')
-        if ext['name'] == 'authorityKeyIdentifier':
-            raise salt.exceptions.SaltInvocationError('authorityKeyIdentifier should be added by the CA,'
-                'not include in the CSR')
-        if ext['name'] not in EXT_NAME_MAPPINGS:
-            raise salt.exceptions.SaltInvocationError('Unknown Extension {0}'.format(ext['name']))
-
-    extensions = _parse_extensions_in(extensions)
+    extensions_list = _parse_extensions_in(csr_props['extensions'])
     extstack = M2Crypto.X509.X509_Extension_Stack()
-    for ext in extensions:
+    for ext in extensions_list:
         extstack.push(ext)
     csr.add_extensions(extstack)
 
@@ -1043,7 +1019,7 @@ def create_csr(path=None, text=False, subject=None, public_key=None,
         return csr.as_pem()
 
 
-def request_certificate(path, ca_server, signing_policy, public_key=None, csr=None,
+def request_certificate(path, ca_server, signing_policy, properties=None,
         with_grains=False, with_pillar=False):
     '''
     Request a signed certificate from a remote CA server.
@@ -1056,17 +1032,8 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
     signing_policy: The signing policy on the remote server to be used for
         signing this request.
 
-    public_key: The public key to be included in the signed certificate. If a CSR
-        is used, this is not required. If ``public_key`` is used only the public
-        key will be submitted to the CA, the subject and extensions in the certificate will
-        be entirely determined by the CA. This can also be the path to the private key.
-        This argument will always be converted into a public key PEM before being transmitted
-        to the event, so your private key will never leave the minion.
-
-    csr: The CSR to be submitted. Using a csr rather than ``public_key`` allows
-        submitting subject and extension values that the CA may honor. If the CA
-        signing policy is not configured to allow csr's, only the public key included
-        in the CSR will be used, all other values will be discarded.
+    properties:
+        The properties to set on the csr. See certificate properties section for available values.
 
     with_grains: Include grains from the current minion. The signing policy
         on the CA may use grains to populate subject fields. If so, this parameter
@@ -1082,29 +1049,39 @@ def request_certificate(path, ca_server, signing_policy, public_key=None, csr=No
         specify a list of strings of Pillar keys to include. It is a
         best-practice to only specify a relevant subset of Pillar data.
     '''
-    if not public_key and not csr:
-        raise salt.exceptions.SaltInvocationError('public_key or csr must be included')
 
-    data = {'ca_server': ca_server,
-            'signing_policy': signing_policy,
-            'path': path}
+    cert_props = copy.deepcopy(CERT_DEFAULTS)
+    cert_props.update(properties)
+
+    if with_pillar is None:
+        with_pillar = []
+    if with_grains is None:
+        with_grains = []
+
+    if 'public_key' not in cert_props and 'csr' not in cert_props:
+        raise salt.exceptions.SaltInvocationError('public_key or csr must be included')
 
     # Intentionally stripping new lines from returned PEM data, because they will be
     # inserted into user-created YAML reactors, and dealing with multi-line strings
     # in yaml is a pain. And they'll get nicely formatted on the way back into the x509
     # module anyway.
-    if public_key:
-        data['public_key'] = get_public_key(public_key).replace('\n', '')
+    if 'public_key' in cert_props:
+        cert_props['public_key'] = get_public_key(cert_props['public_key']).replace('\n', '')
 
-    if csr:
-        data['csr'] = get_pem_entry(csr, pem_type='CERTIFICATE REQUEST').replace('\n', '')
+    if 'csr' in cert_props:
+        cert_props['csr'] = get_pem_entry(cert_props['csr'], pem_type='CERTIFICATE REQUEST').replace('\n', '')
+
+    data = {'ca_server': ca_server,
+            'signing_policy': signing_policy,
+            'path': path,
+            'properties': cert_props}
 
     return __salt__['event.send'](tag='/salt/x509/request_certificate', data=data,
             with_grains=with_grains, with_pillar=with_pillar)
 
 
 def sign_request(path=None, text=False, requestor=None, signing_policy=None,
-        signing_policy_def=None, public_key=None, csr=None, grains=None, pillar=None):
+        signing_policy_def=None, properties=None, grains=None, pillar=None):
     '''
     Sign and return a remotely requested certificate based on the a signing policy in signing_policy_def
     This function is most useful when paired with a reactor. See a full example below.
@@ -1149,6 +1126,14 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
         Pillar values from the minion that may be used in the signing policy.
 
     '''
+
+    cert_props = copy.deepcopy(CERT_DEFAULTS)
+
+    print cert_props
+    print properties
+
+    cert_props.update(properties)
+
     if not path and not text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if path and text:
@@ -1160,16 +1145,12 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
     if pillar is None:
         pillar = {}
 
-    if public_key and csr:
-        raise salt.exceptions.SaltInvocationError('Include either public_key or csr, not both.')
-
     if not signing_policy_def:
         raise salt.exceptions.SaltInvocationError('signing_policy_def is required.')
 
     if not signing_policy:
         raise salt.exceptions.SaltInvocationError('signing_policy is required.')
 
-    print "signing_policy_def="+str(signing_policy_def)
     if not isinstance(signing_policy_def, dict):
         if signing_policy_def.startswith('pillar:'):
             signing_policy_def = signing_policy_def.replace('pillar:', '')
@@ -1177,74 +1158,55 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
         else:
             signing_policy_def = yaml.safe_load(_text_or_file(signing_policy_def))
 
-    print "signing_policy_def="+str(signing_policy_def)
-
+    signing_policy_dict = copy.deepcopy(CERT_DEFAULTS)
     for target, policy in signing_policy_def.iteritems():
-        print "target="+str(target)
-        print "policy="+str(policy)
         if 'match' not in policy:
             policy['match'] = 'glob'
 
         if not __salt__['match.' + policy['match']](target, requestor):
             continue
 
-        print 'signing_policy='+str(signing_policy)
-        print "policy="+str(policy)
-        print 'signing_policy in policy='+str(bool(signing_policy in policy))
         if not signing_policy in policy:
             continue
 
-        signing_policy = policy[signing_policy]
-        print 'signing_policy='+str(signing_policy)
+        signing_policy_dict.update(policy[signing_policy])
+        signing_policy = signing_policy_dict
 
-        if csr and 'csr' in signing_policy and signing_policy['csr'] == True:
-            continue
-        elif csr:
-            public_key = csr
-            csr = None
+        if 'csr' in cert_props:
+            cert_props['public_key'] = cert_props['csr']
 
-        print 'after csr signing_policy='+str(signing_policy)
+            if 'csr' not in signing_policy or not signing_policy['csr']:
+                del cert_props['csr']
 
-        if not public_key:
+        # After enforcing csr policy, remove it so it doesn't overwrite later
+        if 'csr' in signing_policy:
+            del signing_policy['csr']
+
+        if 'public_key' not in cert_props:
             raise salt.exceptions.SaltInvocationError('public_key is required')
-
-        # default values from signing_policy:
-        defaults = {'subject': {}, 'extensions': [],
-                'days_valid': 365, 'version': 3, 'serial_number': None,
-                'serial_bits': 64, 'algorithm': 'sha256'}
-
-        # Set initial simple values form signing_policy where they exist
-        for prop, val in defaults.iteritems():
-            if prop not in signing_policy:
-                signing_policy[prop] = val
 
         print 'after defaults signing_policy='+str(signing_policy)
 
         # Subject is a dict, because order is irrelevant
         if 'subject' in signing_policy:
             for entry, val in signing_policy['subject'].iteritems():
+                if val is False:
+                    del cert_props['subject'][val]
+                    del signing_policy['subject'][val]
+                    continue
                 if not isinstance(val, dict):
                     continue
-
-                if 'grain' in val:
+                for src, src_dict in {'grain': grains, 'pillar': pillar}.iteritems():
+                    if src not in val:
+                        continue
                     try:
-                        val = grains[val['grain']]
+                        val = src_dict[val[src]]
                     except KeyError:
                         try:
                             val = val['default']
                         except KeyError:
-                            raise salt.exceptions.SaltInvocationError('grain {0} not found '
-                            'and no default included for {1}.'.format(val['grain'], entry))
-
-                if 'pillar' in val:
-                    try:
-                        val = pillar[val['pillar']]
-                    except KeyError:
-                        try:
-                            val = val['default']
-                        except KeyError:
-                            raise salt.exceptions.SaltInvocationError('pillar {0} not found '
-                            'and no default included for {1}.'.format(val['pillar'], entry))
+                            raise salt.exceptions.SaltInvocationError('{0}: {1} not found '
+                            'and no default included for {2}.'.format(src, val[src], entry))
 
                 signing_policy['subject'][entry] = val
 
@@ -1253,49 +1215,55 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
         # Extensions are a list of dicts, because order matters.
         if 'extensions' in signing_policy:
             for idx, extension in enumerate(signing_policy['extensions']):
+                ext_parsed = {}
                 for ext_name, ext_props in extension.iteritems():
-                    ext_props['name'] = ext_name
+
+                    # If an extension is in signing policy, remove it from cert_props
+                    for cert_ext in cert_props['extensions']:
+                        for cert_ext_name, cert_ext_val in cert_ext.iteritems():
+                            if cert_ext_name == ext_name:
+                                cert_props['extensions'].remove(cert_ext)
+
+                    # Allow definining an ext as false in signing policy to simply block
+                    # From being added from the cert
+                    if ext_props is False:
+                        del signing_policy['extensions'][idx]
+                        idx = idx - 1
+                        continue
+
+                    ext_parsed['name'] = ext_name
 
                     val = ext_props['value']
+                    ext_parsed['value'] = val
+                    if not isinstance(val, dict):
+                        continue
 
-                    if 'grain' in val:
+                    for src, src_dict in {'grain': grains, 'pillar': pillar}.iteritems():
+                        if src not in val:
+                            continue
                         try:
-                            val = grains[val['grain']]
+                            ext_parsed['value'] = src_dict[val[src]]
                         except KeyError:
                             try:
-                                val = val['default']
+                                ext_parsed['value'] = val['default']
                             except KeyError:
-                                raise salt.exceptions.SaltInvocationError('grain {0} not found '
-                                'and no default included for {1}.'.format(val['grain'], ext_name))
+                                raise salt.exceptions.SaltInvocationError('{0}: {1} not found '
+                                'and no default included for {2}.'.format(src, val[src], ext_name))
 
-                    if 'pillar' in val:
-                        try:
-                            val = pillar[val['pillar']]
-                        except KeyError:
-                            try:
-                                val = val['default']
-                            except KeyError:
-                                raise salt.exceptions.SaltInvocationError('pillar {0} not found '
-                                'and no default included for {1}.'.format(val['pillar'], ext_name))
-
-                    ext_props['value'] = val
-                    signing_policy['extensions'][idx] = ext_props
+                signing_policy['extensions'][idx] = ext_parsed
 
         print 'after extensions signing_policy='+str(signing_policy)
 
     if 'signing_private_key' not in signing_policy or 'signing_cert' not in signing_policy:
         return "Invalid signing policy"
 
-    return create_certificate(path=path, text=text, public_key=public_key, csr=csr,
-            subject=signing_policy['subject'],
-            signing_private_key=signing_policy['signing_private_key'],
-            signing_cert=signing_policy['signing_cert'],
-            extensions=signing_policy['extensions'],
-            days_valid=signing_policy['days_valid'],
-            version=signing_policy['version'],
-            serial_number=signing_policy['serial_number'],
-            serial_bits=signing_policy['serial_bits'],
-            algorithm=signing_policy['algorithm'],)
+    merged_props = copy.deepcopy(cert_props)
+    merged_props.update(signing_policy)
+    merged_props['subject'].update(cert_props['subject'])
+    merged_props['subject'].update(signing_policy['subject'])
+    merged_props['extensions'] + cert_props['extensions']
+
+    return create_certificate(path=path, text=text, properties=merged_props)
 
 
 def verify_private_key(private_key, public_key):

@@ -3,6 +3,62 @@
 Manage X509 Certificates
 
 .. versionadded:: TBD
+
+Certificate Properties:
+    Many of the states below take a properties value. This can contain any number of properties to be
+    added to a certificate. Below are values that can be specified. These values should be specified as an
+    unordered dictionary, do not include a ``-`` in yaml.
+
+    signing_private_key:
+        The private key that will be used to sign this certificate. This is
+        usually your CA's private key.
+
+    subject:
+        The subject data to be added to the certificate. If both subject
+        and a CSR are included, the subject properties override any individual
+        properties set in the CSR. The subject is itself an unordered list containing subject entries
+        like ``CN``, ``C`` ect...
+
+    signing_cert:
+        The certificate of the authority that will be used to sign this certificate.
+        This is usually your CA's certificate. Do not include this value when creating
+        a self-signed certificate.
+
+    public_key:
+        The public key that will be in this certificate. This could be the path to an
+        existing certificate, private key, or csr. If you include a CSR this property
+        is not required. If you include the path to a CSR in this section, only the
+        public key will be imported from the CSR, all other data like subject and extensions
+        will not be included from the CSR.
+
+    csr:
+        A certificate signing request used to generate the certificate.
+
+    extensions:
+        X509v3 Extensions to be added to the certificate request. Extensions specified here
+        will take precidence over any extensions included in the CSR. Extensions are and ordered
+        list, so include ``-`` in yaml. See examples below.
+
+    days_valid:
+        The number of days the certificate should be valid for. Default is 365.
+
+    days_remaining:
+        The certificate should be automatically renewed if there are less than ``days_remaining``
+        days until the certificate expires. Set to 0 to disable automatic renewal. Default is 90.
+
+    version:
+        The X509 certificate version. Defaults to 3.
+
+    serial_number:
+        The serial number to assign to the certificate. If omitted, a random serial number
+        will be generated for the certificate.
+
+    serial_bits:
+        The size of the random serial number to generate, in bits. Default is 64.
+
+    algorithm:
+        The algorithm to be used to sign the certificate. Default is 'sha256'.
+
 '''
 
 import salt.exceptions
@@ -117,10 +173,7 @@ def private_key_managed(name,
 
 
 def csr_managed(name,
-                public_key,
-                subject=None,
-                extensions=None,
-                version=3,
+                properties,
                 backup=False):
     '''
     Manage a Certificate Signing Request
@@ -128,18 +181,9 @@ def csr_managed(name,
     name:
         Path to the CSR
 
-    public_key:
-        The public key to be added to the certificate request.
-
-    subject:
-        The subject data to be added to the certificate request.
-
-    extensions:
-        The X509v3 Extensions to be added to the certificate request.
-
-    version:
-        When replacing an existing file, backup the old file onthe minion.
-        Default is False.
+    properties:
+        The properties to be added to the certificate request, including items like subject, extensions
+        and public key. See above for valid properties.
 
     Example:
 
@@ -147,27 +191,20 @@ def csr_managed(name,
 
         /etc/pki/mycert.csr:
           x509.csr_managed:
-            - public_key: /etc/pki/mycert.key
-            - subject:
-              - CN: www.example.com
-              - C: US
-              - ST: Utah
-              - L: Salt Lake City
-            - extensions:
-              - keyUsage:
-                - value: serverAuth
-                - critical: True
+            - properties:
+                public_key: /etc/pki/mycert.key
+                subject:
+                  CN: www.example.com
+                  C: US
+                  ST: Utah
+                  L: Salt Lake City
+                extensions:
+                  - keyUsage:
+                      value: 'serverAuth, dataEncipherment'
+                      critical: True
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    if subject is None:
-        subject = []
-
-    if extensions is None:
-        subject = []
-
-    subject = _subject_to_dict(subject)
-    extensions = _exts_to_list(extensions)
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_csr'](csr=name)
@@ -176,8 +213,7 @@ def csr_managed(name,
     else:
         current = '{0} does not exist.'.format(name)
 
-    new_csr = __salt__['x509.create_csr'](text=True, subject=subject,
-            public_key=public_key, extensions=extensions, version=version)
+    new_csr = __salt__['x509.create_csr'](text=True, properties=properties)
     new = __salt__['x509.read_csr'](csr=new_csr)
 
     if current == new:
@@ -203,17 +239,8 @@ def csr_managed(name,
 
 
 def certificate_managed(name,
-                        signing_private_key,
-                        subject=None,
-                        signing_cert=None,
-                        public_key=None,
-                        csr=None,
-                        extensions=None,
-                        days_valid=365,
+                        properties,
                         days_remaining=90,
-                        version=3,
-                        serial_number=None,
-                        serial_bits=64, algorithm='sha256',
                         backup=False,):
     '''
     Manage a Certificate
@@ -221,53 +248,13 @@ def certificate_managed(name,
     name:
         Path to the certificate
 
-    signing_private_key:
-        The private key that will be used to sign this certificate. This is
-        usually your CA's private key.
-
-    subject:
-        The subject data to be added to the certificate. If both subject
-        and a CSR are included, the subject properties override any individual
-        properties set in the CSR.
-
-    signing_cert:
-        The certificate of the authority that will be used to sign this certificate.
-        This is usually your CA's certificate. Do not include this value when creating
-        a self-signed certificate.
-
-    public_key:
-        The public key that will be in this certificate. This could be the path to an
-        existing certificate, private key, or csr. If you include a CSR this property
-        is not required. If you include the path to a CSR in this section, only the
-        public key will be imported from the CSR, all other data like subject and extensions
-        will not be included from the CSR.
-
-    csr:
-        A certificate signing request used to generate the certificate.
-
-    extensions:
-        X509v3 Extensions to be added to the certificate request. Extensions specified here
-        will take precidence over any extensions included in the CSR.
-
-    days_valid:
-        The number of days the certificate should be valid for. Default is 365.
+    properties:
+        The properties to be added to the certificate request, including items like subject, extensions
+        and public key. See above for valid properties.
 
     days_remaining:
-        The certificate should be automatically renewed if there are less than ``days_remaining``
-        days until the certificate expires. Set to 0 to disable automatic renewal. Default is 90.
-
-    version:
-        The X509 certificate version. Defaults to 3.
-
-    serial_number:
-        The serial number to assign to the certificate. If omitted, a random serial number
-        will be generated for the certificate.
-
-    serial_bits:
-        The size of the random serial number to generate, in bits. Default is 64.
-
-    algorithm:
-        The algorithm to be used to sign the certificate. Default is 'sha256'.
+        The minimum number of days remaining when the certificate should be recreted. Default is 90. A
+        value of 0 disables automatic renewal.
 
     backup:
         When replacing an existing file, backup the old file onthe minion. Default is False.
@@ -278,28 +265,22 @@ def certificate_managed(name,
 
         /etc/pki/mycert.crt:
           x509.certificate_managed:
-            - csr: /etc/pki/mycert.csr
-            - signing_private_key: /etc/pki/myca.key
-            - signing_cert: /etc/pki/myca.crt
-            - extensions:
-              - basicConstraints:
-                - value: CA:FALSE
-                - critical: True
-              - subjectKeyIdentifier:
-                - value: hash
-              - authorityKeyIdentifier:
-                - value: keyid,issuer:always
+            - properties:
+                csr: /etc/pki/mycert.csr
+                subject:
+                  CN: ca.example.com
+                signing_private_key: /etc/pki/myca.key
+                signing_cert: /etc/pki/myca.crt
+                extensions:
+                  - basicConstraints:
+                      value: CA:FALSE
+                      critical: True
+                  - subjectKeyIdentifier:
+                      value: hash
+                  - authorityKeyIdentifier:
+                      value: keyid,issuer:always
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
-    if subject is None:
-        subject = []
-
-    if extensions is None:
-        subject = []
-
-    subject = _subject_to_dict(subject)
-    extensions = _exts_to_list(extensions)
 
     current_days_remaining = 0
     current_comp = {}
@@ -308,7 +289,7 @@ def certificate_managed(name,
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
             current_comp = current.copy()
-            if not serial_number:
+            if 'serial_number' not in properties:
                 current_comp.pop('Serial Number')
             current_comp.pop('Not Before')
             current_comp.pop('MD5 Finger Print')
@@ -325,16 +306,11 @@ def certificate_managed(name,
     else:
         current = '{0} does not exist.'.format(name)
 
-    new_cert = __salt__['x509.create_certificate'](text=True, subject=subject,
-            signing_private_key=signing_private_key, signing_cert=signing_cert,
-            public_key=public_key, csr=csr, extensions=extensions,
-            days_valid=days_valid, version=version,
-            serial_number=serial_number, serial_bits=serial_bits,
-            algorithm=algorithm)
+    new_cert = __salt__['x509.create_certificate'](text=True, properties=properties)
 
     new = __salt__['x509.read_certificate'](certificate=new_cert)
     new_comp = new.copy()
-    if not serial_number:
+    if 'serial_number' not in properties:
         new_comp.pop('Serial Number')
     new_comp.pop('Not Before')
     new_comp.pop('Not After')
@@ -401,9 +377,6 @@ def crl_managed(name,
 
     include_expired:
         Include expired certificates in the CRL. Default is ``False``.
-
-    algorithm:
-        The algorithm to be used to sign the certificate. Default is 'sha256'.
 
     backup:
         When replacing an existing file, backup the old file onthe minion. Default is False.
@@ -486,10 +459,9 @@ def crl_managed(name,
 def request_certificate_managed(name,
                                 ca_server,
                                 signing_policy,
+                                properties,
+                                signing_cert,
                                 newer_than='2000-01-01 00:00:00',
-                                signing_cert=None,
-                                public_key=None,
-                                csr=None,
                                 with_grains=False,
                                 with_pillar=False,
                                 days_remaining=90,
@@ -510,24 +482,18 @@ def request_certificate_managed(name,
         The signing policy the CA should use to sign this certificate. See modules/sign_certificate
         for an example of how to configure CA signing policies.
 
+    properties:
+        The properties to be added to the certificate request, including items like subject, extensions
+        and public key. See above for valid properties.
+
+    signing_cert:
+        Used by the state to determine if the existing file is properly signed.
+        Should be the path to your CA's certificate.
+
     newer_than:
         Ensure that the certificate is newer than this date. This is useful if you know the signing
         policy on the CA has changed and you want to force certificates to be renewed with this
         new information.
-
-    signing_cert:
-        The certificate corresponding to the private key that will sign this certificate. Typically
-        your CA cert.
-
-    public_key:
-        The public key that will be in this certificate. This could be the path to an
-        existing certificate, private key, or csr. If you include a CSR this property
-        is not required. If you include the path to a CSR in this section, only the
-        public key will be imported from the CSR, all other data like subject and extensions
-        will not be included from the CSR.
-
-    csr:
-        A certificate signing request used to generate the certificate.
 
     with_grains:
         Include grains from the current minion. The signing policy
@@ -557,7 +523,7 @@ def request_certificate_managed(name,
     /srv/salt/top.sls
 
     .. code-block:: yaml
-        
+
         base:
           'ca':
             - ca
@@ -570,29 +536,30 @@ def request_certificate_managed(name,
 
         /etc/pki:
           file.directory:
-        
+
         /etc/pki/ca.key:
           x509.private_key_managed:
             - bits: 4096
 
         /etc/pki/ca.crt:
           x509.certificate_managed:
-            - signing_private_key: /etc/pki/ca.key
-            - subject:
-              - CN: ca.example.com
-              - C: US
-              - ST: Utah
-              - L: Salt Lake City
-            - extensions:
-              - basicConstraints: 
-                - value: "CA:true"
-                - critical: True
-              - keyUsage: 
-                - value: "cRLSign, keyCertSign"
-                - critical: True - subjectKeyIdentifier:
-                - value: hash
-              - authorityKeyIdentifier:
-                - value: keyid,issuer:always
+            - properties:
+                signing_private_key: /etc/pki/ca.key
+                subject:
+                  CN: ca.example.com
+                  C: US
+                  ST: Utah
+                  L: Salt Lake City
+                extensions:
+                  - basicConstraints:
+                      value: "CA:true"
+                      critical: True
+                  - keyUsage:
+                      value: "cRLSign, keyCertSign"
+                      critical: True - subjectKeyIdentifier:
+                      value: hash
+                  - authorityKeyIdentifier:
+                      value: keyid,issuer:always
             - days_valid: 3650
             - days_remaining: 0
             - backup: True
@@ -631,10 +598,10 @@ def request_certificate_managed(name,
                 pillar: 'x509:Email'
                 default: 'nobody@saltstack.com'
             extensions:
-              - basicConstraints: 
+              - basicConstraints:
                   value: "CA:false"
                   critical: True
-              - keyUsage: 
+              - keyUsage:
                   value: 'serverAuth'
                   critical: True
               - subjectKeyIdentifier:
@@ -656,7 +623,7 @@ def request_certificate_managed(name,
           x509.pem_managed:
             - text: |
                 {{ salt['mine.get']('ca', 'x509.get_pem_entries')['/etc/pki/ca.crt'] }}
-        
+
         /etc/ssl/www.key:
           x509.private_key_managed:
             - bits: 4096
@@ -666,7 +633,8 @@ def request_certificate_managed(name,
             - ca_server: ca
             - signing_policy: www
             - signing_cert: /etc/ssl/ca.crt
-            - public_key: /etc/ssl/www.key
+            - properties:
+                public_key: /etc/ssl/www.key
             - with_grains:
               - fqdn
             - days_remaining: 90
@@ -692,20 +660,11 @@ def request_certificate_managed(name,
             - ca_server: {{ data['data']['ca_server'] }}
             - signing_policy: {{ data['data']['signing_policy'] }}
             - signing_policy_def: /etc/pki/signing_policy.yml
-            {% if 'public_key' in data['data'] -%}
-            - public_key: {{ data['data']['public_key'] }}
-            {% endif -%}
-            {% if 'csr' in data['data'] -%}
-            - csr: {{ data['data']['csr'] }}
-            {% endif -%}
-            {% if 'grains' in data['data'] -%}
+            - properties: {{ data['data']['properties'] }}
             - grains: {{ data['data']['grains'] }}
-            {% endif -%}
-            {% if 'pillar' in data['data'] -%}
             - pillar: {{ data['data']['pillar'] }}
-            {% endif -%}
 
-    
+
     With the above configuration, ca will create it's own private key and CA certificate, then publish
     it's CA certificate to the mine. The minion www will generate its own private key, then the
     ``request_certificate_managed`` will fire the ``/salt/x509/request_certificate`` event to the master.
@@ -737,7 +696,9 @@ def request_certificate_managed(name,
                 changes_needed = True
             if not __salt__['x509.verify_signature'](certificate=name, signing_pub_key=signing_cert):
                 changes_needed = True
-            if not __salt__['x509.get_public_key'](public_key) == __salt__['x509.get_public_key'](name):
+            if not __salt__['x509.get_public_key'](properties['public_key']) == __salt__['x509.get_public_key'](name):
+                changes_needed = True
+            if not current['Issuer Hash'] == __salt__['x509.read_certificate'](signing_cert)['Subject Hash']:
                 changes_needed = True
         except salt.exceptions.SaltInvocationError:
             current = '{0} is not a valid Certificate.'.format(name)
@@ -762,7 +723,7 @@ def request_certificate_managed(name,
         salt.utils.backup_minion(name, bkroot)
 
     __salt__['x509.request_certificate'](path=name, ca_server=ca_server, signing_policy=signing_policy,
-            public_key=public_key, csr=csr, with_grains=with_grains, with_pillar=with_pillar)
+            properties=properties, with_grains=with_grains, with_pillar=with_pillar)
 
     ret['comment'] = 'A new certificate request has been submitted to {0}'.format(ca_server)
     ret['result'] = True
@@ -785,7 +746,7 @@ def pem_managed(name,
         When replacing an existing file, backup the old file on the minion. Default is False.
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    
+
     new = __salt__['x509.get_pem_entry'](text=text)
 
     if os.path.isfile(name):
