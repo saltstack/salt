@@ -79,5 +79,79 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'vmware',
-        ('user',)
+        ('host', 'user', 'password',)
     )
+
+
+def _get_inv():
+    '''
+    Authenticate with vCenter server and return its inventory.
+    '''
+    try:
+        si = SmartConnect(
+                 host = config.get_cloud_config_value(
+                            'host', get_configured_provider(), __opts__, search_global=False
+                        ),
+                 user = config.get_cloud_config_value(
+                            'user', get_configured_provider(), __opts__, search_global=False
+                        ),
+                 pwd = config.get_cloud_config_value(
+                           'password', get_configured_provider(), __opts__, search_global=False
+                       ),
+             )
+    except:
+        raise SaltCloudSystemExit(
+            '\nCould not connect to the host using the specified username and password'
+        )
+
+    return si.RetrieveContent()
+
+
+def get_vcenter_version(kwargs=None, call=None):
+    '''
+    Show the vCenter Server version with build number.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_vcenter_version my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The get_vcenter_version function must be called with -f or --function.'
+        )
+
+    # Get the inventory
+    inv = _get_inv()
+
+    return inv.about.fullName
+
+
+def list_datacenters(kwargs=None, call=None):
+    '''
+    List the data centers for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datacenters my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_datacenters function must be called with -f or --function.'
+        )
+        return False
+
+    data_centers = []
+
+    # Get the inventory
+    inv = _get_inv()
+
+    for object in inv.rootFolder.childEntity:
+        if hasattr(object, 'vmFolder'):
+          # This is a datacenter
+          data_centers.append(object.name)
+
+    return data_centers
