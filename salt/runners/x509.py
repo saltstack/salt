@@ -46,10 +46,13 @@ def request_and_sign(path, ca_server, requestor, signing_policy, signing_policy_
     ca_server = ca_server.replace('*', '').replace('?', '')
     requestor = requestor.replace('*', '').replace('?', '')
 
-    print 'grains:'
-    print grains
-    print 'pillar:'
-    print pillar
+    print client.cmd(ca_server, 'x509.sign_request', kwarg={
+            'text': True, 'requestor': requestor, 'signing_policy': signing_policy,
+            'signing_policy_def': signing_policy_def, 'public_key': public_key,
+            'csr': csr, 'grains': grains, 'pillar': pillar})
+
+    print 'text="'+str(True)+'" requestor="'+str(requestor)+'" signing_policy="'+str(signing_policy,)+'" signing_policy_def="'+str(signing_policy_def)+'" public_key="'+str(public_key)+'" csr="'+str(csr)+'" grains="'+str(grains)+'" pillar="'+str(pillar)+'"'
+
 
     signed_cert = client.cmd(ca_server, 'x509.sign_request', kwarg={
             'text': True, 'requestor': requestor, 'signing_policy': signing_policy,

@@ -372,7 +372,6 @@ def crl_managed(name,
                 days_valid=100,
                 days_remaining=30,
                 include_expired=False,
-                algorithm='sha256',
                 backup=False,):
     '''
     Manage a Certificate Revocation List
@@ -455,8 +454,7 @@ def crl_managed(name,
         current = '{0} does not exist.'.format(name)
 
     new_crl = __salt__['x509.create_crl'](text=True, signing_private_key=signing_private_key,
-            signing_cert=signing_cert, revoked=revoked, days_valid=days_valid,
-            algorithm=algorithm, include_expired=include_expired)
+            signing_cert=signing_cert, revoked=revoked, days_valid=days_valid, include_expired=include_expired)
 
     new = __salt__['x509.read_crl'](crl=new_crl)
     new_comp = new.copy()
@@ -591,8 +589,7 @@ def request_certificate_managed(name,
                 - critical: True
               - keyUsage: 
                 - value: "cRLSign, keyCertSign"
-                - critical: True
-              - subjectKeyIdentifier:
+                - critical: True - subjectKeyIdentifier:
                 - value: hash
               - authorityKeyIdentifier:
                 - value: keyid,issuer:always
@@ -602,15 +599,20 @@ def request_certificate_managed(name,
             - require:
               - x509: /etc/pki/ca.key
 
-        /etc/pki/signing_policy.yml
+        /etc/pki/signing_policy.yml:
           file.managed:
             - source: salt://signing_policy.yml
 
         mine.send:
           module.run:
-            - func: ca_crt
-            - mine_function: x509.get_pem_entry /etc/pki/ca.crt
+            - func: x509.get_pem_entries
+            - kwargs:
+                glob_path: /etc/pki/ca.crt
+            - onchanges:
+              - x509: /etc/pki/ca.crt
 
+
+    /srv/salt/signing_policy.yml
 
     .. code-block:: yaml
 
@@ -652,7 +654,8 @@ def request_certificate_managed(name,
 
         /etc/ssl/ca.crt:
           x509.pem_managed:
-            - text: {{ __salt__['mine.get']('ca', 'ca_crt') }}
+            - text: |
+                {{ salt['mine.get']('ca', 'x509.get_pem_entries')['/etc/pki/ca.crt'] }}
         
         /etc/ssl/www.key:
           x509.private_key_managed:
@@ -714,32 +717,33 @@ def request_certificate_managed(name,
 
     current_days_remaining = 0
     current_notbefore = datetime.datetime.strptime('2000-01-01 00:00:00', '%Y-%m-%d %H:%M:%S')
+    newer_than = datetime.datetime.strptime(newer_than, '%Y-%m-%d %H:%M:%S')
+
+    changes_needed = False
 
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
             current_notbefore = datetime.datetime.strptime(current['Not Before'],
                     '%Y-%m-%d %H:%M:%S')
-            current_notafter = current['Not After']
-            current_days_remaining = (
-                    datetime.datetime.strptime(current_notafter, '%Y-%m-%d %H:%M:%S') -
-                    datetime.datetime.now()).days
+            current_notafter = datetime.datetime.strptime(current['Not After'],
+                    '%Y-%m-%d %H:%M:%S')
+            current_days_remaining = (current_notafter - datetime.datetime.now()).days
             if days_remaining == 0:
                 days_remaining = current_days_remaining - 1
+            if current_days_remaining < days_remaining:
+                changes_needed = True
+            if current_notbefore < newer_than:
+                changes_needed = True
+            if not __salt__['x509.verify_signature'](certificate=name, signing_pub_key=signing_cert):
+                changes_needed = True
+            if not __salt__['x509.get_public_key'](public_key) == __salt__['x509.get_public_key'](name):
+                changes_needed = True
         except salt.exceptions.SaltInvocationError:
             current = '{0} is not a valid Certificate.'.format(name)
+            changes_needed = True
     else:
         current = '{0} does not exist.'.format(name)
-
-    changes_needed = False
-
-    if current_days_remaining < days_remaining:
-        changes_needed = True
-    if current_notbefore < newer_than:
-        changes_needed = True
-    if not __salt__['x509.verify_signature'](certificate=name, signing_pub_key=signing_cert):
-        changes_needed = True
-    if not __salt__['x509.get_public_key'](public_key) == __salt__['x509.get_public_key'](name):
         changes_needed = True
 
     if not changes_needed:
@@ -757,16 +761,17 @@ def request_certificate_managed(name,
         bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
         salt.utils.backup_minion(name, bkroot)
 
-    __salt__['x509.request_certificate'](ca_server=ca_server, requestor=__salt__['grains.get']('id'),
-            signing_policy=signing_policy, public_key=public_key, csr=csr,
-            with_grains=with_grains, with_pillar=with_pillar)
+    __salt__['x509.request_certificate'](path=name, ca_server=ca_server, signing_policy=signing_policy,
+            public_key=public_key, csr=csr, with_grains=with_grains, with_pillar=with_pillar)
 
     ret['comment'] = 'A new certificate request has been submitted to {0}'.format(ca_server)
     ret['result'] = True
 
     return ret
 
-def pem_managed(name, text):
+def pem_managed(name,
+                text,
+                backup=False):
     '''
     Manage the contents of a PEM file directly with the content in text, ensuring correct formatting.
 
@@ -775,12 +780,20 @@ def pem_managed(name, text):
 
     text:
         The PEM formatted text to write.
+
+    backup:
+        When replacing an existing file, backup the old file on the minion. Default is False.
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
     
-    new = __salt__['get_pem_entry'](text=text)
+    new = __salt__['x509.get_pem_entry'](text=text)
 
-    if new == salt.utils.fopen(name).read():
+    if os.path.isfile(name):
+        current = salt.utils.fopen(name).read()
+    else:
+        current = '{0} does not exist.'.format(name)
+
+    if new == current:
         ret['result'] = True
         ret['comment'] = 'The file is already in the correct state'
         return ret
@@ -788,6 +801,10 @@ def pem_managed(name, text):
     if __opts__['test'] == True:
         ret['comment'] = 'The file {0} will be updated.'.format(name)
         return ret
+
+    if os.path.isfile(name) and backup:
+        bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
+        salt.utils.backup_minion(name, bkroot)
 
     ret['comment'] = __salt__['x509.write_pem'](text=text, path=name)
     ret['result'] = True

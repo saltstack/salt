@@ -387,6 +387,31 @@ def get_pem_entry(text, pem_type=None):
     return ret
 
 
+def get_pem_entries(glob_path):
+    '''
+    Returns a dict containing PEM entries in files matching a glob
+
+    glob_path:
+        A path to certificates to be read and returned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' x509.read_pem_entries "/etc/pki/*.crt"
+    '''
+    ret = {}
+
+    for path in glob.glob(glob_path):
+        if os.path.isfile(path):
+            try:
+                ret[path] = get_pem_entry(text=path)
+            except ValueError:
+                pass
+
+    return ret
+
+
 def read_certificate(certificate):
     '''
     Returns a dict containing details of a certificate. Input can be a PEM string or file path.
@@ -1144,30 +1169,41 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
     if not signing_policy:
         raise salt.exceptions.SaltInvocationError('signing_policy is required.')
 
+    print "signing_policy_def="+str(signing_policy_def)
     if not isinstance(signing_policy_def, dict):
         if signing_policy_def.startswith('pillar:'):
             signing_policy_def = signing_policy_def.replace('pillar:', '')
             signing_policy_def = __salt__['pillar.get'](signing_policy_def)
         else:
-            signing_policy_def = _text_or_file(signing_policy_def)
+            signing_policy_def = yaml.safe_load(_text_or_file(signing_policy_def))
+
+    print "signing_policy_def="+str(signing_policy_def)
 
     for target, policy in signing_policy_def.iteritems():
+        print "target="+str(target)
+        print "policy="+str(policy)
         if 'match' not in policy:
             policy['match'] = 'glob'
 
         if not __salt__['match.' + policy['match']](target, requestor):
             continue
 
+        print 'signing_policy='+str(signing_policy)
+        print "policy="+str(policy)
+        print 'signing_policy in policy='+str(bool(signing_policy in policy))
         if not signing_policy in policy:
             continue
 
         signing_policy = policy[signing_policy]
+        print 'signing_policy='+str(signing_policy)
 
         if csr and 'csr' in signing_policy and signing_policy['csr'] == True:
             continue
         elif csr:
             public_key = csr
             csr = None
+
+        print 'after csr signing_policy='+str(signing_policy)
 
         if not public_key:
             raise salt.exceptions.SaltInvocationError('public_key is required')
@@ -1181,6 +1217,8 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
         for prop, val in defaults.iteritems():
             if prop not in signing_policy:
                 signing_policy[prop] = val
+
+        print 'after defaults signing_policy='+str(signing_policy)
 
         # Subject is a dict, because order is irrelevant
         if 'subject' in signing_policy:
@@ -1209,6 +1247,8 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
                             'and no default included for {1}.'.format(val['pillar'], entry))
 
                 signing_policy['subject'][entry] = val
+
+        print 'after subject signing_policy='+str(signing_policy)
 
         # Extensions are a list of dicts, because order matters.
         if 'extensions' in signing_policy:
@@ -1240,6 +1280,8 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
 
                     ext_props['value'] = val
                     signing_policy['extensions'][idx] = ext_props
+
+        print 'after extensions signing_policy='+str(signing_policy)
 
     if 'signing_private_key' not in signing_policy or 'signing_cert' not in signing_policy:
         return "Invalid signing policy"
