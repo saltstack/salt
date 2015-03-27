@@ -1805,5 +1805,5 @@ def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to vpc.
     '''
-    return __salt__['boto_common.get_connection']('vpc', region=region,
+    return __salt__['boto_common.get_connection']('vpc', region=region, key=key,
                                                   keyid=keyid, profile=profile)

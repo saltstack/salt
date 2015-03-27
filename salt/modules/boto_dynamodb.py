@@ -68,7 +68,7 @@ def _get_conn(region=None, key=None, keyid=None, profile=None):
     '''
     return __salt__['boto_common.get_connection']('dynamodb',
                                                   module='dynamodb2',
-                                                  region=region,
+                                                  region=region, key=key,
                                                   keyid=keyid, profile=profile)
 
 
