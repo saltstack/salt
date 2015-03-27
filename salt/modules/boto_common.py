@@ -2,7 +2,7 @@
 '''
 Common functionality for boto modules
 
-.. versionadded:: TBD
+.. versionadded:: Baryllium
 
 :depends: boto
 '''
@@ -37,18 +37,7 @@ def __virtual__():
     return True
 
 
-def get_connection(service, module=None, region=None, key=None, keyid=None, profile=None):
-    '''
-    Return a boto connection for the service. Not intended for CLI usage.
-
-    .. code-block:: python
-
-        conn = __salt__['boto_common.get_connection']('ec2', profile='custom_profile')
-    '''
-
-    module = module or service
-    svc_mod = __import__('boto.' + module, fromlist=[module])
-
+def _get_profile(service, region, key, keyid, profile):
     if profile:
         if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
@@ -69,12 +58,62 @@ def get_connection(service, module=None, region=None, key=None, keyid=None, prof
     if not keyid and __salt__['config.option'](service + '.keyid'):
         keyid = __salt__['config.option'](service + '.keyid')
 
-    # avoid repeatedly creating new connections
     label = 'boto_{0}:'.format(service)
     if keyid:
         cxkey = label + hashlib.md5(region + keyid + key).hexdigest()
     else:
         cxkey = label + region
+
+    return (cxkey, region, key, keyid)
+
+
+def cache_id(service, name, sub_resource=None, resource_id=None,
+             invalidate=False, region=None, key=None, keyid=None,
+             profile=None):
+    '''
+    Cache, invalidate, or retrieve an AWS resource id keyed by name.
+
+    .. code-block:: python
+
+        conn = __salt__['boto_common.cache_id']('ec2', 'myinstance', \
+                    i-a1b2c3', profile='custom_profile')
+    '''
+
+    cxkey, _, _, _ = _get_profile(service, region, key,
+                                  keyid, profile)
+    if sub_resource:
+        cxkey = '{0}:{1}:{2}:id'.format(cxkey, sub_resource, name)
+    else:
+        cxkey = '{0}:{1}:id'.format(cxkey, name)
+
+    if invalidate:
+        if cxkey in __context__:
+            del __context__[cxkey]
+            return True
+        else:
+            return False
+    if resource_id:
+        __context__[cxkey] = resource_id
+        return True
+
+    return __context__.get(cxkey)
+
+
+def get_connection(service, module=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a boto connection for the service. Not intended for CLI usage.
+
+    .. code-block:: python
+
+        conn = __salt__['boto_common.get_connection']('ec2', profile='custom_profile')
+    '''
+
+    module = module or service
+    svc_mod = __import__('boto.' + module, fromlist=[module])
+
+    cxkey, region, key, keyid = _get_profile(service, region, key,
+                                             keyid, profile)
+    cxkey = cxkey + ':conn'
 
     if cxkey in __context__:
         return __context__[cxkey]
