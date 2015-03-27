@@ -343,8 +343,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         Handle incoming messages from underylying tcp streams
         '''
-        payload = self.serial.loads(payload[0])
         try:
+            payload = self.serial.loads(payload[0])
             payload = self._decode_payload(payload)
         except Exception as e:
             stream.send(self.serial.dumps('bad load'))
