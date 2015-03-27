@@ -797,7 +797,7 @@ def mod_hostname(hostname):
     if hostname is None:
         return False
 
-    hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname') 
+    hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname')
 
     if hostname_cmd.endswith('hostnamectl'):
         __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
