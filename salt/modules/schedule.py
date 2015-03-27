@@ -79,6 +79,7 @@ def list_(show_all=False, return_yaml=True):
         for item in schedule[job]:
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
+                continue
             if schedule[job][item] == 'true':
                 schedule[job][item] = True
             if schedule[job][item] == 'false':
