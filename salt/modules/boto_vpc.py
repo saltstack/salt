@@ -428,6 +428,72 @@ def subnet_exists(subnet_id=None, name=None, cidr=None, tags=None, zones=None,
         return False
 
 
+def create_internet_gateway(internet_gateway_name=None, tags=None, region=None, key=None,
+                            keyid=None, profile=None):
+    '''
+    Create an internet gateway.
+
+    Returns True if the internet gateway was created and returns False if the internet gateway was not created.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.create_internet_gateway
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        internet_gateway = conn.create_internet_gateway()
+        if not internet_gateway:
+            log.warning('An internet gateway was not created.')
+            return False
+
+        log.info('An internet gateway with id {0} was created.'.format(internet_gateway.id))
+        _maybe_set_name_tag(internet_gateway_name, internet_gateway)
+        _maybe_set_tags(tags, internet_gateway)
+        return internet_gateway.id
+
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
+def delete_internet_gateway(internet_gateway_id, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given an internet gateway ID, delete the internet gateway.
+
+    Returns True if the internet gateway was deleted and returns False if the internet gateway was not deleted.
+
+    CLI example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.delete_internet_gateway 'igw-b974bbdc'
+
+    '''
+
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        if not conn.delete_internet_gateway(internet_gateway_id):
+            log.warning('Internet gateway {0} was not deleted.'.format(internet_gateway_id))
+            return False
+
+        log.info('Internet gateway {0} was deleted.'.format(internet_gateway_id))
+        return True
+
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
 def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_gateway_name=None, tags=None,
                             region=None, key=None, keyid=None, profile=None):
     '''
