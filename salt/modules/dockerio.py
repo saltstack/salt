@@ -1011,7 +1011,7 @@ def remove_container(container, force=False, v=False):
         remove a running container, Default is ``False``
 
     v
-        verbose mode, Default is ``False``
+        remove the volumes associated to the container, Default is ``False``
 
     CLI Example:
 
