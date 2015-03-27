@@ -389,8 +389,12 @@ class AsyncAuth(object):
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
+        creds = None
         while True:
-            creds = yield self.sign_in()
+            try:
+                creds = yield self.sign_in()
+            except SaltClientError:
+                break
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
@@ -404,7 +408,7 @@ class AsyncAuth(object):
                     log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
                 continue
             break
-        if not isinstance(creds, dict) and 'auth' not in creds:
+        if not isinstance(creds, dict) or 'auth' not in creds:
             self._authenticate_future.set_exception(
                 SaltClientError('Attempt to authenticate with the salt master failed')
             )
