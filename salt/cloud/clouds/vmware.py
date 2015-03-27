@@ -18,9 +18,9 @@ The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
        python -c "import pyVmomi" ; echo $?
 
-Use of this module requires the vCenter Host URL, username and password to set
-up authentication. The cloud configuration can be set up at
-``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
+To use this module, set up the vCenter Host URL, username and password in the
+cloud configuration at
+ ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
 .. code-block:: yaml
 
