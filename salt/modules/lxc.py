@@ -3742,12 +3742,15 @@ def reconfigure(name,
         make_kw = salt.utils.odict.OrderedDict([
             ('autostart', autostart),
             ('cpu', cpu),
+            ('gateway', gateway),
             ('cpuset', cpuset),
             ('cpushare', cpushare),
             ('network_profile', network_profile),
             ('nic_opts', nic_opts),
-            ('bridge', bridge),
-            ('memory', memory)])
+            ('bridge', bridge)])
+        # match 0 and none as memory = 0 in lxc config is harmful
+        if memory:
+            make_kw['memory'] = memory
         kw = salt.utils.odict.OrderedDict()
         for key, val in six.iteritems(make_kw):
             if val is not None:
