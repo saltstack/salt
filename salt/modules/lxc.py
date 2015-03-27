@@ -3742,6 +3742,7 @@ def reconfigure(name,
         make_kw = salt.utils.odict.OrderedDict([
             ('autostart', autostart),
             ('cpu', cpu),
+            ('gateway', gateway),
             ('cpuset', cpuset),
             ('cpushare', cpushare),
             ('network_profile', network_profile),
