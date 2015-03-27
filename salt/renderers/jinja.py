@@ -291,6 +291,11 @@ def _split_module_dicts():
     if not isinstance(__salt__, dict):
         return __salt__
     mod_dict = dict(__salt__)
+
+    # Alias cmd.run to cmd.shell to make python_shell=True the default for
+    # jinja calls
+    mod_dict['cmd.run'] = mod_dict['cmd.shell']
+
     for module_func_name, mod_fun in mod_dict.items():
         mod, fun = module_func_name.split('.', 1)
         if mod not in mod_dict:
