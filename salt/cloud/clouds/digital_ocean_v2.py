@@ -200,7 +200,10 @@ def list_nodes_full(call=None, forOutput=True):
                     value = str(value)
                 ret[node['name']][item] = value
         page += 1
-        fetch = 'next' in items['links']['pages']
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
     return ret
 
 
