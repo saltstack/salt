@@ -1085,7 +1085,7 @@ def request_certificate(path, ca_server, signing_policy, properties=None,
             'path': path,
             'properties': cert_props}
 
-    return __salt__['event.send'](tag='/salt/x509/request_certificate', data=data,
+    return __salt__['event.send'](tag='salt/x509/request_certificate', data=data,
             with_grains=with_grains, with_pillar=with_pillar)
 
 
@@ -1255,7 +1255,7 @@ def sign_request(path=None, text=False, requestor=None, signing_policy=None,
                                 raise salt.exceptions.SaltInvocationError('{0}: {1} not found '
                                 'and no default included for {2}.'.format(src, val[src], ext_name))
 
-        print 'after extensions signing_policy='+str(signing_policy)
+        print 'After eXtensions signing_policy='+str(signing_policy)
 
     if 'signing_private_key' not in signing_policy or 'signing_cert' not in signing_policy:
         return "Invalid signing policy"
