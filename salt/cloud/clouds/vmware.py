@@ -230,6 +230,44 @@ def list_datastore_clusters(kwargs=None, call=None):
     return {'Datastore Clusters': datastore_clusters}
 
 
+def list_datastores(kwargs=None, call=None):
+    '''
+    List all the datastores for this VMware environment
+
+    .. note::
+
+        If you have a lot of datastores in your environment, this may some time to return.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastores my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_datastores function must be called with -f or --function.'
+        )
+        return False
+
+    datastores = []
+
+    # Get the inventory
+    inv = _get_inv()
+
+    # Create a object view
+    obj_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
+    for datastore in obj_view.view:
+        if isinstance(datastore, vim.Datastore):
+            # This is a datastore
+            datastores.append(datastore.name)
+
+    # Destroy the object view
+    obj_view.Destroy()
+
+    return {'Datastores': datastores}
+
+
 def list_hosts(kwargs=None, call=None):
     '''
     List all the hosts for this VMware environment
