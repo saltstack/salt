@@ -587,7 +587,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
             'An error occurred while querying DigitalOcean. HTTP Code: {0}  '
             'Error: {1!r}'.format(
                 request.status_code,
-                #request.read()
+                # request.read()
                 request.text
             )
         )
