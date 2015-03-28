@@ -294,6 +294,9 @@ def dashboard_present(
     update_rows = []
     _ids = []
     _data = {}
+    # Set the 'rows' key in _dashboard if user forgets to set it in the state file
+    if not _dashboard.get('rows', None):
+        _dashboard.update({'rows': []})
     for _n, _row in enumerate(_dashboard['rows']):
         # Collect the unique ids
         for _panel in _row['panels']:
