@@ -272,6 +272,10 @@ def list_hosts(kwargs=None, call=None):
     '''
     List all the hosts for this VMware environment
 
+    .. note::
+
+        If you have a lot of hosts in your environment, this may some time to return.
+
     CLI Example:
 
     .. code-block:: bash
