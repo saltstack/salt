@@ -130,7 +130,7 @@ def get_vcenter_version(kwargs=None, call=None):
 
 def list_datacenters(kwargs=None, call=None):
     '''
-    List the data centers for this VMware environment
+    List all the data centers for this VMware environment
 
     CLI Example:
 
@@ -159,7 +159,7 @@ def list_datacenters(kwargs=None, call=None):
 
 def list_clusters(kwargs=None, call=None):
     '''
-    List the clusters for this VMware environment
+    List all the clusters for each datacenter in this VMware environment
 
     CLI Example:
 
@@ -182,18 +182,25 @@ def list_clusters(kwargs=None, call=None):
         if isinstance(datacenter, vim.Datacenter):
             # This is a datacenter
             clusters = []
-            for cluster in datacenter.hostFolder.childEntity:
+
+            # Create a new view for each datacenter
+            obj_view = inv.viewManager.CreateContainerView(datacenter, [], True)
+            for cluster in obj_view.view:
                 if isinstance(cluster, vim.ClusterComputeResource):
                     # This is a cluster
                     clusters.append(cluster.name)
-            datacenters[datacenter.name] = { 'Clusters': clusters}
+
+            # Destroy the view after use for each datacenter
+            obj_view.Destroy()
+
+            datacenters[datacenter.name] = clusters
   
     return {'Datacenters': datacenters}
 
 
 def list_datastore_clusters(kwargs=None, call=None):
     '''
-    List the datastore clusters for this VMware environment
+    List all the datastore clusters for this VMware environment
 
     CLI Example:
 
@@ -225,7 +232,7 @@ def list_datastore_clusters(kwargs=None, call=None):
 
 def list_hosts(kwargs=None, call=None):
     '''
-    List the hosts for this VMware environment
+    List all the hosts for this VMware environment
 
     CLI Example:
 
@@ -245,13 +252,13 @@ def list_hosts(kwargs=None, call=None):
     inv = _get_inv()
 
     # Create a object view
-    object_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
-    for host in object_view.view:
+    obj_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
+    for host in obj_view.view:
         if isinstance(host, vim.HostSystem):
             # This is a host
             hosts.append(host.name)
 
     # Destroy the object view
-    object_view.Destroy()
+    obj_view.Destroy()
 
     return {'Hosts': hosts}
