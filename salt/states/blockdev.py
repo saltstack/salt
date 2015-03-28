@@ -108,18 +108,18 @@ def tuned(name, **kwargs):
     return ret
 
 
-def formatted(name, fs_type='ext4', **kwargs):
+def formatted(name, fstype='ext4', **kwargs):
     '''
     Manage filesystems of partitions.
 
     name
         The name of the block device
 
-    fs_type
+    fstype
         The filesystem it should be formatted as
     '''
     ret = {'changes': {},
-           'comment': '{0} already formatted with {1}'.format(name, fs_type),
+           'comment': '{0} already formatted with {1}'.format(name, fstype),
            'name': name,
            'result': False}
 
@@ -134,11 +134,11 @@ def formatted(name, fs_type='ext4', **kwargs):
     else:
         current_fs = blk[1]
 
-    if current_fs == fs_type:
+    if current_fs == fstype:
         ret['result'] = True
         return ret
-    elif not salt.utils.which('mkfs.{0}'.format(fs_type)):
-        ret['comment'] = 'Invalid fs_type: {0}'.format(fs_type)
+    elif not salt.utils.which('mkfs.{0}'.format(fstype)):
+        ret['comment'] = 'Invalid fstype: {0}'.format(fstype)
         ret['result'] = False
         return ret
     elif __opts__['test']:
@@ -146,14 +146,14 @@ def formatted(name, fs_type='ext4', **kwargs):
         ret['result'] = None
         return ret
 
-    cmd = 'mkfs -t {0} '.format(fs_type)
+    cmd = 'mkfs -t {0} '.format(fstype)
     if 'inode_size' in kwargs:
-        if fs_type[:3] == 'ext':
+        if fstype[:3] == 'ext':
             cmd += '-i {0} '.format(kwargs['inode_size'])
-        elif fs_type == 'xfs':
+        elif fstype == 'xfs':
             cmd += '-i size={0} '.format(kwargs['inode_size'])
     if 'lazy_itable_init' in kwargs:
-        if fs_type[:3] == 'ext':
+        if fstype[:3] == 'ext':
             cmd += '-E lazy_itable_init={0} '.format(kwargs['lazy_itable_init'])
 
     cmd += name
@@ -166,10 +166,10 @@ def formatted(name, fs_type='ext4', **kwargs):
     else:
         current_fs = blk[1]
 
-    if current_fs == fs_type:
+    if current_fs == fstype:
         ret['comment'] = ('{0} has been formatted '
-                          'with {1}').format(name, fs_type)
-        ret['changes'] = {'new': fs_type, 'old': current_fs}
+                          'with {1}').format(name, fstype)
+        ret['changes'] = {'new': fstype, 'old': current_fs}
         ret['result'] = True
     else:
         ret['comment'] = 'Failed to format {0}'.format(name)
