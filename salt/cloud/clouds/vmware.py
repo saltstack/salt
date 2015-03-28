@@ -437,3 +437,40 @@ def list_nodes_min(kwargs=None, call=None):
             ret[vm.name] = True
 
     return ret
+
+
+def list_nodes(kwargs=None, call=None):
+    '''
+    Return a list of the VMs that are on the provider, with basic fields
+
+    .. note::
+
+        The list returned does not include templates.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_nodes function must be called with -f or --function.'
+        )
+        return False
+
+    ret = {}
+    vm_list = _get_vm_list()
+
+    for vm in vm_list:
+        if not vm.summary.config.template:
+            # It is not a template
+            vm_info = {
+                'id': vm.name,
+                'ip_address': vm.summary.guest.ipAddress,
+                'cpus': vm.summary.config.numCpu,
+                'ram': vm.summary.config.memorySizeMB,
+            }
+            ret[vm_info['id']] = vm_info
+
+    return ret
