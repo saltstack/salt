@@ -156,8 +156,8 @@ def list_nodes(call=None):
     while fetch:
         items = query(method='droplets', command='?page=' + str(page))
         for node in items['droplets']:
-            ret[node['name']] = {
-                'id': node['id'],
+            ret[node['id']] = {
+                'name': node['name'],
                 'image': node['image']['name'],
                 'networks': str(node['networks']),
                 'size': node['size_slug'],
@@ -184,12 +184,12 @@ def list_nodes_full(call=None, forOutput=True):
     while fetch:
         items = query(method='droplets', command='?page=' + str(page))
         for node in items['droplets']:
-            ret[node['name']] = {}
+            ret[node['id']] = {}
             for item in six.iterkeys(node):
                 value = node[item]
                 if value is not None and forOutput:
                     value = str(value)
-                ret[node['name']][item] = value
+                ret[node['id']][item] = value
         page += 1
         fetch = 'next' in items['links']['pages']
     return ret
@@ -615,7 +615,7 @@ def script(vm_):
     return deploy_script
 
 
-def show_instance(name, call=None):
+def show_instance(droplet_id, call=None):
     '''
     Show the details from DigitalOcean concerning a droplet
     '''
@@ -623,16 +623,16 @@ def show_instance(name, call=None):
         raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-    node = _get_node(name)
+    node = _get_node(droplet_id)
     salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
     return node
 
 
-def _get_node(name):
+def _get_node(droplet_id):
     attempts = 10
     while attempts >= 0:
         try:
-            return list_nodes_full(forOutput=False)[name]
+            return list_nodes_full(forOutput=False)[droplet_id]
         except KeyError:
             attempts -= 1
             log.debug(
