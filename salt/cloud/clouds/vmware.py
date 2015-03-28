@@ -144,17 +144,17 @@ def list_datacenters(kwargs=None, call=None):
         )
         return False
 
-    data_centers = []
+    datacenters = []
 
     # Get the inventory
     inv = _get_inv()
 
-    for object in inv.rootFolder.childEntity:
-        if hasattr(object, 'vmFolder'):
-          # This is a datacenter
-          data_centers.append(object.name)
+    for datacenter in inv.rootFolder.childEntity:
+        if isinstance(datacenter, vim.Datacenter):
+            # This is a datacenter
+            datacenters.append(datacenter.name)
 
-    return data_centers
+    return {'Datacenters': datacenters}
 
 
 def list_clusters(kwargs=None, call=None):
@@ -173,20 +173,51 @@ def list_clusters(kwargs=None, call=None):
         )
         return False
 
-    data_centers = {}
+    datacenters = {}
 
     # Get the inventory
     inv = _get_inv()
 
-    for object in inv.rootFolder.childEntity:
-        if hasattr(object, 'vmFolder'):
+    for datacenter in inv.rootFolder.childEntity:
+        if isinstance(datacenter, vim.Datacenter):
             # This is a datacenter
-            datacenter = object.name
             clusters = []
-            for cluster in object.hostFolder.childEntity:
-                clusters.append(cluster.name)
-            #data_centers.append(object.name)
-            log.info(clusters)
-            data_centers[datacenter] = clusters
+            for cluster in datacenter.hostFolder.childEntity:
+                if isinstance(cluster, vim.ClusterComputeResource):
+                    # This is a cluster
+                    clusters.append(cluster.name)
+            datacenters[datacenter.name] = { 'Clusters': clusters}
   
-    return data_centers
+    return {'Datacenters': datacenters}
+
+
+def list_datastore_clusters(kwargs=None, call=None):
+    '''
+    List the datastore clusters for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastore_clusters my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_datastore_clusters function must be called with -f or --function.'
+        )
+        return False
+
+    datastore_clusters = []
+
+    # Get the inventory
+    inv = _get_inv()
+
+    for datacenter in inv.rootFolder.childEntity:
+        if isinstance(datacenter, vim.Datacenter):
+            # This is a datacenter
+            for datastore_cluster in datacenter.datastoreFolder.childEntity:
+                if isinstance(datastore_cluster, vim.StoragePod):
+                    # This is a datastore cluster
+                    datastore_clusters.append(datastore_cluster.name)
+  
+    return {'Datastore Clusters': datastore_clusters}
