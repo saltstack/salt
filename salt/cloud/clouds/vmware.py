@@ -221,3 +221,37 @@ def list_datastore_clusters(kwargs=None, call=None):
                     datastore_clusters.append(datastore_cluster.name)
   
     return {'Datastore Clusters': datastore_clusters}
+
+
+def list_hosts(kwargs=None, call=None):
+    '''
+    List the hosts for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_hosts function must be called with -f or --function.'
+        )
+        return False
+
+    hosts = []
+
+    # Get the inventory
+    inv = _get_inv()
+
+    # Create a object view
+    object_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
+    for host in object_view.view:
+        if isinstance(host, vim.HostSystem):
+            # This is a host
+            hosts.append(host.name)
+
+    # Destroy the object view
+    object_view.Destroy()
+
+    return {'Hosts': hosts}
