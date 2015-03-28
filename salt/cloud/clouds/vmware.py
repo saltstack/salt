@@ -20,7 +20,7 @@ The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
 To use this module, set up the vCenter Host URL, username and password in the
 cloud configuration at
- ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
+``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
 .. code-block:: yaml
 
@@ -309,6 +309,10 @@ def list_hosts(kwargs=None, call=None):
 def list_resourcepools(kwargs=None, call=None):
     '''
     List all the resource pools for this VMware environment
+
+    .. note::
+
+        If you have a lot of resource pools in your environment, this may some time to return.
 
     CLI Example:
 
