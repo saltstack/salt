@@ -155,3 +155,38 @@ def list_datacenters(kwargs=None, call=None):
           data_centers.append(object.name)
 
     return data_centers
+
+
+def list_clusters(kwargs=None, call=None):
+    '''
+    List the clusters for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_clusters my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_clusters function must be called with -f or --function.'
+        )
+        return False
+
+    data_centers = {}
+
+    # Get the inventory
+    inv = _get_inv()
+
+    for object in inv.rootFolder.childEntity:
+        if hasattr(object, 'vmFolder'):
+            # This is a datacenter
+            datacenter = object.name
+            clusters = []
+            for cluster in object.hostFolder.childEntity:
+                clusters.append(cluster.name)
+            #data_centers.append(object.name)
+            log.info(clusters)
+            data_centers[datacenter] = clusters
+  
+    return data_centers
