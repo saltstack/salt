@@ -169,7 +169,11 @@ def list_nodes(call=None):
                 'state': str(node['status']),
             }
         page += 1
-        fetch = 'next' in items['links']['pages']
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
     return ret
 
 
