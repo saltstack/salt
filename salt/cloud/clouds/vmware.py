@@ -304,3 +304,37 @@ def list_hosts(kwargs=None, call=None):
     obj_view.Destroy()
 
     return {'Hosts': hosts}
+
+
+def list_resourcepools(kwargs=None, call=None):
+    '''
+    List all the resource pools for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_resourcepools my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_resourcepools function must be called with -f or --function.'
+        )
+        return False
+
+    resource_pools = []
+
+    # Get the inventory
+    inv = _get_inv()
+
+    # Create a object view
+    obj_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
+    for resource_pool in obj_view.view:
+        if isinstance(resource_pool, vim.ResourcePool):
+            # This is a Resource Pool
+            resource_pools.append(resource_pool.name)
+
+    # Destroy the object view
+    obj_view.Destroy()
+
+    return {'Resource Pools': resource_pools}
