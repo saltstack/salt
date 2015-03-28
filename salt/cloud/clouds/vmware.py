@@ -83,9 +83,9 @@ def get_configured_provider():
     )
 
 
-def _get_inv():
+def _get_si():
     '''
-    Authenticate with vCenter server and return its inventory.
+    Authenticate with vCenter server and return service instance object.
     '''
     try:
         si = SmartConnect(
@@ -104,7 +104,33 @@ def _get_inv():
             '\nCould not connect to the host using the specified username and password'
         )
 
+    return si
+
+
+def _get_inv():
+    '''
+    Return the inventory.
+    '''
+    si = _get_si()
     return si.RetrieveContent()
+
+
+def _get_vm_list():
+    '''
+    Returns a list of all vms in the VMware environment
+    '''
+    # Get service instance object
+    si = _get_si()
+
+    # Create a object view
+    obj_view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [vim.VirtualMachine], True)
+
+    vm_list = obj_view.view
+
+    # Destroy the object view
+    obj_view.Destroy()
+
+    return vm_list
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -380,3 +406,34 @@ def list_networks(kwargs=None, call=None):
     obj_view.Destroy()
 
     return {'Networks': networks}
+
+
+def list_nodes_min(kwargs=None, call=None):
+    '''
+    Return a list of the VMs that are on the provider, with no details
+
+    .. note::
+
+        The list returned does not include templates.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_min my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_nodes_min function must be called with -f or --function.'
+        )
+        return False
+
+    ret = {}
+    vm_list = _get_vm_list()
+
+    for vm in vm_list:
+        if not vm.summary.config.template:
+            # It is not a template
+            ret[vm.name] = True
+
+    return ret
