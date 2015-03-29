@@ -37,7 +37,6 @@ import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,no-name-in-module
-from salt.modules.container_resource import PATH
 
 # Set up logging
 log = logging.getLogger(__name__)
