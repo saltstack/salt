@@ -33,7 +33,7 @@ def _validate(wrapped):
     Decorator for common function argument validation
     '''
     @functools.wraps(wrapped)
-    def check_valid_input(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         container_type = kwargs.get('container_type')
         exec_method = kwargs.get('exec_method')
         valid_method = {
@@ -52,7 +52,7 @@ def _validate(wrapped):
                 .format(', '.join(valid_method[container_type]))
             )
         return wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
-    return check_valid_input
+    return wrapper
 
 
 def _nsenter(pid):
@@ -79,6 +79,32 @@ def _get_md5(name, path, run_func):
         return None
 
 
+def cache_file(source):
+    '''
+    Wrapper for cp.cache_file which raises an error if the file was unable to
+    be cached.
+
+    CLI Example:
+
+    .. code-block::
+
+        salt myminion container_resource.cache_file salt://foo/bar/baz.txt
+    '''
+    try:
+        # Don't just use cp.cache_file for this. Docker has its own code to
+        # pull down images from the web.
+        if source.startswith('salt://'):
+            cached_source = __salt__['cp.cache_file'](source)
+            if not cached_source:
+                raise CommandExecutionError(
+                    'Unable to cache {0}'.format(source)
+                )
+            return cached_source
+    except AttributeError:
+        raise SaltInvocationError('Invalid source file {0}'.format(source))
+    return source
+
+
 @_validate
 def run(name,
         cmd,
@@ -94,6 +120,12 @@ def run(name,
         keep_env=None):
     '''
     Common logic for running shell commands in containers
+
+    CLI Example:
+
+    .. code-block::
+
+        salt myminion container_resource.run mycontainer 'ps aux' container_type=docker exec_method=nsenter output=stdout
     '''
     valid_output = ('stdout', 'stderr', 'retcode', 'all')
     if output is None:
@@ -211,6 +243,12 @@ def copy_to(name,
             makedirs=False):
     '''
     Common logic for copying files to containers
+
+    CLI Example:
+
+    .. code-block::
+
+        salt myminion container_resource.copy_to mycontainer /local/file/path /container/file/path container_type=docker exec_method=nsenter
     '''
     # Get the appropriate functions
     state = __salt__['{0}.state'.format(container_type)]
@@ -222,16 +260,17 @@ def copy_to(name,
             'Container \'{0}\' is not running'.format(name)
         )
 
-    source_dir, source_name = os.path.split(source)
+    local_file = cache_file(source)
+    source_dir, source_name = os.path.split(local_file)
 
     # Source file sanity checks
-    if not os.path.isabs(source):
+    if not os.path.isabs(local_file):
         raise SaltInvocationError('Source path must be absolute')
-    elif not os.path.exists(source):
+    elif not os.path.exists(local_file):
         raise SaltInvocationError(
-            'Source file {0} does not exist'.format(source)
+            'Source file {0} does not exist'.format(local_file)
         )
-    elif not os.path.isfile(source):
+    elif not os.path.isfile(local_file):
         raise SaltInvocationError('Source must be a regular file')
 
     # Destination file sanity checks
@@ -274,7 +313,7 @@ def copy_to(name,
         )
 
     # Before we try to replace the file, compare checksums.
-    source_md5 = __salt__['file.get_sum'](source, 'md5')
+    source_md5 = __salt__['file.get_sum'](local_file, 'md5')
     if source_md5 == _get_md5(name, dest, run_all):
         log.debug('{0} and {1}:{2} are the same file, skipping copy'
                   .format(source, name, dest))
@@ -289,14 +328,14 @@ def copy_to(name,
     if exec_method == 'lxc-attach':
         __salt__['cmd.run_stdout'](
             'cat "{0}" | lxc-attach --clear-env --set-var {1} -n {2} -- '
-            'tee "{3}"'.format(source, PATH, name, dest),
+            'tee "{3}"'.format(local_file, PATH, name, dest),
             python_shell=True
         )
     elif exec_method == 'nsenter':
         pid = __salt__['{0}.pid'.format(container_type)](name)
         __salt__['cmd.run_stdout'](
             'cat "{0}" | {1} env -i {2} tee "{3}"'
-            .format(source, _nsenter(pid), PATH, dest),
+            .format(local_file, _nsenter(pid), PATH, dest),
             python_shell=True
         )
     return source_md5 == _get_md5(name, dest, run_all)
