@@ -199,6 +199,28 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
         return False
 
 
+def delete_user(user_name, region=None, key=None, keyid=None,
+                profile=None):
+    '''
+    Delete a user
+
+    CLI example::
+
+        salt myminion boto_iam.delete_user myuser
+    '''
+    if not __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile):
+        return True
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        conn.delete_user(user_name)
+        log.info('Deleted user : {0} .'.format(user_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        log.error('Failed to delete user {0}'.format(user_name))
+        return False
+
+
 def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
     '''
     Get user information
