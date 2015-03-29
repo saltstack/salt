@@ -150,15 +150,37 @@ Functions
     - :py:func:`docker-ng.stale <salt.modules.dockerng.stale>`
     - :py:func:`docker-ng.tag <salt.modules.dockerng.tag>`
 
+.. _docker-execution-driver:
+
 Executing Commands Within a Running Container
 ---------------------------------------------
 
-Salt will detect the execution driver for the given container, and use the
-appropriate interface (either nsenter_ or lxc-attach_) to run a command within
-the container.
+Multiple methods exist for executing commands within Docker containers:
 
-.. _nsenter: http://man7.org/linux/man-pages/man1/nsenter.1.html
+- lxc-attach_: Default for older versions of docker
+- nsenter_: Enters container namespace to run command
+- docker-exec_: Native support for executing commands in Docker containers
+  (added in Docker 1.3)
+
+Adding a configuration option (see :py:func:`config.get
+<salt.modules.config.get>`) called ``docker.exec_driver`` will tell Salt which
+execution driver to use:
+
+.. code-block:: yaml
+
+    docker.exec_driver: docker-exec
+
+If this configuration option is not found, Salt will check the current Docker
+version and use ``docker-exec`` for Docker 1.3 and newer. For Docker 1.2 and
+older, the appropriate interface (either nsenter_ or lxc-attach_) will be
+chosen based on the ``Execution Driver`` value returned from ``docker info``.
+
+If possible, try to manually specify the execution driver, as it will save Salt
+a little work.
+
 .. _lxc-attach: https://linuxcontainers.org/lxc/manpages/man1/lxc-attach.1.html
+.. _nsenter: http://man7.org/linux/man-pages/man1/nsenter.1.html
+.. _docker-exec: http://docs.docker.com/reference/commandline/cli/#exec
 
 This execution module provides functions that shadow those from the :mod:`cmd
 <salt.modules.cmdmod>` module. They are as follows:
@@ -185,6 +207,7 @@ __docformat__ = 'restructuredtext en'
 import bz2
 import copy
 import datetime
+import distutils.version  # pylint: disable=E0611
 import fnmatch
 import functools
 import gzip
@@ -306,25 +329,6 @@ def _ensure_exists(wrapped):
 
 
 # Helper functions
-def _cache_file(source):
-    '''
-    Grab a file from the Salt fileserver
-    '''
-    try:
-        # Don't just use cp.cache_file for this. Docker has its own code to
-        # pull down images from the web.
-        if source.startswith('salt://'):
-            cached_source = __salt__['cp.cache_file'](source)
-            if not cached_source:
-                raise CommandExecutionError(
-                    'Unable to cache {0}'.format(source)
-                )
-            return cached_source
-    except AttributeError:
-        raise SaltInvocationError('Invalid source file {0}'.format(source))
-    return source
-
-
 def _change_state(name, action, expected, *args, **kwargs):
     '''
     Change the state of a container
@@ -356,9 +360,10 @@ def _clear_context():
     # Can't use 'for key in __context__' or six.iterkeys(__context__) because
     # an exception will be raised if the size of the dict is modified during
     # iteration.
+    keep_context = ('docker.client', 'docker.exec_driver')
     for key in __context__.keys():
         try:
-            if key.startswith('docker.') and key != 'docker.client':
+            if key.startswith('docker.') and key not in keep_context:
                 __context__.pop(key)
         except AttributeError:
             pass
@@ -411,21 +416,34 @@ def _get_md5(name, path):
         return None
 
 
-def _get_method():
+def _get_exec_driver():
     '''
     Get the method to be used in shell commands
     '''
-    # For old version of docker. lxc was the only supported driver.
-    # This is a sane default.
-    driver = info().get('ExecutionDriver', 'lxc-')
-    if driver.startswith('lxc-'):
-        return 'lxc-attach'
-    elif driver.startswith('native-') and HAS_NSENTER:
-        return 'nsenter'
+    contextkey = 'docker.exec_driver'
+    if contextkey in __context__:
+        return __context__[contextkey]
+
+    from_config = __salt__['config.get'](contextkey, None)
+    if from_config is not None:
+        __context__[contextkey] = from_config
+    elif distutils.version.LooseVersion(version()['Version']) \
+            >= distutils.version.LooseVersion('1.3'):
+        __context__[contextkey] = 'docker-exec'
     else:
-        raise NotImplementedError(
-            'Unknown docker ExecutionDriver \'{0}\', or didn\'t find command '
-            'to attach to the container'.format(driver))
+        # For old versions of docker, lxc was the only supported driver.
+        # This is a sane default.
+        driver = info().get('ExecutionDriver', 'lxc-')
+        if driver.startswith('lxc-'):
+            __context__[contextkey] = 'lxc-attach'
+        elif driver.startswith('native-') and HAS_NSENTER:
+            __context__[contextkey] = 'nsenter'
+        else:
+            raise NotImplementedError(
+                'Unknown docker ExecutionDriver \'{0}\', or didn\'t find '
+                'command to attach to the container'.format(driver)
+            )
+    return __context__[contextkey]
 
 
 def _get_repo_tag(tag, default_tag='latest'):
@@ -1636,7 +1654,12 @@ cp = copy_from
 
 
 @_ensure_exists
-def copy_to(name, source, dest, overwrite=False, makedirs=False):
+def copy_to(name,
+            source,
+            dest,
+            exec_driver=None,
+            overwrite=False,
+            makedirs=False):
     '''
     Copy a file from the host into a container
 
@@ -1644,12 +1667,17 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
         Container name
 
     source
-        File to be copied to the container
+        File to be copied to the container. Can be a local path on the Minion
+        or a remote file from the Salt fileserver.
 
     dest
         Destination on the container. Must be an absolute path. If the
         destination is a directory, the file will be copied into that
         directory.
+
+    exec_driver : None
+        If not passed, the execution driver will be detected as described
+        :ref:`above <docker-execution-driver>`.
 
     overwrite : False
         Unless this option is set to ``True``, then if a file exists at the
@@ -1673,10 +1701,11 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
     '''
     return __salt__['container_resource.copy_to'](
         name,
-        _cache_file(source),
+        __salt__['container_resource.cache_file'](source),
         dest,
         container_type=__virtualname__,
-        exec_method=_get_method(),
+        exec_driver=exec_driver,
+        overwrite=overwrite,
         makedirs=makedirs)
 
 
@@ -2116,7 +2145,7 @@ def import_(source,
         salt myminion docker-ng.import salt://dockerimages/cent7-minimal.tar.xz myuser/centos:7
     '''
     repo_name, repo_tag = _get_repo_tag(tag)
-    path = _cache_file(source)
+    path = __salt__['container_resource.cache_file'](source)
 
     time_started = time.time()
     response = _image_wrapper('import_image',
@@ -2200,7 +2229,7 @@ def load(path, tag=None):
         salt myminion docker-ng.load /path/to/image.tar
         salt myminion docker-ng.load salt://path/to/docker/saved/image.tar tag=myuser/myimage:mytag
     '''
-    local_path = _cache_file(path)
+    local_path = __salt__['container_resource.cache_file'](path)
     if not os.path.isfile(local_path):
         raise CommandExecutionError(
             'Source file {0} does not exist'.format(local_path)
@@ -3108,6 +3137,7 @@ def wait(name):
 @_ensure_exists
 def _run(name,
          cmd,
+         exec_driver=None,
          output=None,
          stdin=None,
          python_shell=True,
@@ -3118,11 +3148,13 @@ def _run(name,
     '''
     Common logic for docker.run functions
     '''
+    if exec_driver is None:
+        exec_driver = _get_exec_driver()
     ret = __salt__['container_resource.run'](
         name,
         cmd,
         container_type=__virtualname__,
-        exec_method=_get_method(),
+        exec_driver=exec_driver,
         output=output,
         stdin=stdin,
         python_shell=python_shell,
@@ -3142,6 +3174,7 @@ def _script(name,
             saltenv='base',
             args=None,
             template=None,
+            exec_driver=None,
             stdin=None,
             python_shell=True,
             output_loglevel='debug',
@@ -3181,11 +3214,16 @@ def _script(name,
                     'cache_error': True}
         shutil.copyfile(fn_, path)
 
-    copy_to(name, path, path)
+    if exec_driver is None:
+        exec_driver = _get_exec_driver()
+
+    copy_to(name, path, path, exec_driver=exec_driver)
     run(name, 'chmod 700 ' + path)
+
     ret = run_all(
         name,
         path + ' ' + str(args) if args else path,
+        exec_driver=exec_driver,
         stdin=stdin,
         python_shell=python_shell,
         output_loglevel=output_loglevel,
@@ -3199,6 +3237,7 @@ def _script(name,
 
 def retcode(name,
             cmd,
+            exec_driver=None,
             stdin=None,
             python_shell=True,
             output_loglevel='debug',
@@ -3213,6 +3252,10 @@ def retcode(name,
 
     cmd
         Command to run
+
+    exec_driver : None
+        If not passed, the execution driver will be detected as described
+        :ref:`above <docker-execution-driver>`.
 
     stdin : None
         Standard input to be used for the command
@@ -3239,6 +3282,7 @@ def retcode(name,
     '''
     return _run(name,
                 cmd,
+                exec_driver=exec_driver,
                 output='retcode',
                 stdin=stdin,
                 python_shell=python_shell,
@@ -3250,6 +3294,7 @@ def retcode(name,
 
 def run(name,
         cmd,
+        exec_driver=None,
         stdin=None,
         python_shell=True,
         output_loglevel='debug',
@@ -3264,6 +3309,10 @@ def run(name,
 
     cmd
         Command to run
+
+    exec_driver : None
+        If not passed, the execution driver will be detected as described
+        :ref:`above <docker-execution-driver>`.
 
     stdin : None
         Standard input to be used for the command
@@ -3290,6 +3339,7 @@ def run(name,
     '''
     return _run(name,
                 cmd,
+                exec_driver=exec_driver,
                 output=None,
                 stdin=stdin,
                 python_shell=python_shell,
@@ -3301,6 +3351,7 @@ def run(name,
 
 def run_all(name,
             cmd,
+            exec_driver=None,
             stdin=None,
             python_shell=True,
             output_loglevel='debug',
@@ -3315,6 +3366,10 @@ def run_all(name,
 
     cmd
         Command to run
+
+    exec_driver : None
+        If not passed, the execution driver will be detected as described
+        :ref:`above <docker-execution-driver>`.
 
     stdin : None
         Standard input to be used for the command
@@ -3341,6 +3396,7 @@ def run_all(name,
     '''
     return _run(name,
                 cmd,
+                exec_driver=exec_driver,
                 output='all',
                 stdin=stdin,
                 python_shell=python_shell,
@@ -3352,6 +3408,7 @@ def run_all(name,
 
 def run_stderr(name,
                cmd,
+               exec_driver=None,
                stdin=None,
                python_shell=True,
                output_loglevel='debug',
@@ -3367,6 +3424,10 @@ def run_stderr(name,
 
     cmd
         Command to run
+
+    exec_driver : None
+        If not passed, the execution driver will be detected as described
+        :ref:`above <docker-execution-driver>`.
 
     stdin : None
         Standard input to be used for the command
@@ -3393,6 +3454,7 @@ def run_stderr(name,
     '''
     return _run(name,
                 cmd,
+                exec_driver=exec_driver,
                 output='stderr',
                 stdin=stdin,
                 python_shell=python_shell,
@@ -3404,6 +3466,7 @@ def run_stderr(name,
 
 def run_stdout(name,
                cmd,
+               exec_driver=None,
                stdin=None,
                python_shell=True,
                output_loglevel='debug',
@@ -3419,6 +3482,10 @@ def run_stdout(name,
 
     cmd
         Command to run
+
+    exec_driver : None
+        If not passed, the execution driver will be detected as described
+        :ref:`above <docker-execution-driver>`.
 
     stdin : None
         Standard input to be used for the command
@@ -3445,6 +3512,7 @@ def run_stdout(name,
     '''
     return _run(name,
                 cmd,
+                exec_driver=exec_driver,
                 output='stdout',
                 stdin=stdin,
                 python_shell=python_shell,
@@ -3459,6 +3527,7 @@ def script(name,
            saltenv='base',
            args=None,
            template=None,
+           exec_driver=None,
            stdin=None,
            python_shell=True,
            output_loglevel='debug',
@@ -3481,6 +3550,10 @@ def script(name,
 
     template : None
         Templating engine to use on the script before running.
+
+    exec_driver : None
+        If not passed, the execution driver will be detected as described
+        :ref:`above <docker-execution-driver>`.
 
     stdin : None
         Standard input to be used for the script
@@ -3512,6 +3585,7 @@ def script(name,
                    saltenv=saltenv,
                    args=args,
                    template=template,
+                   exec_driver=exec_driver,
                    stdin=stdin,
                    python_shell=python_shell,
                    output_loglevel=output_loglevel,
@@ -3525,6 +3599,7 @@ def script_retcode(name,
                    saltenv='base',
                    args=None,
                    template=None,
+                   exec_driver=None,
                    stdin=None,
                    python_shell=True,
                    output_loglevel='debug',
@@ -3548,6 +3623,10 @@ def script_retcode(name,
 
     template : None
         Templating engine to use on the script before running.
+
+    exec_driver : None
+        If not passed, the execution driver will be detected as described
+        :ref:`above <docker-execution-driver>`.
 
     stdin : None
         Standard input to be used for the script
@@ -3579,6 +3658,7 @@ def script_retcode(name,
                    saltenv=saltenv,
                    args=args,
                    template=template,
+                   exec_driver=exec_driver,
                    stdin=stdin,
                    python_shell=python_shell,
                    output_loglevel=output_loglevel,
