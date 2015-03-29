@@ -196,6 +196,41 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
         log.error(msg.format(user_name))
         return False
 
+def get_all_access_keys(user_name, marker=None, max_items=None,
+                        region=None, key=None, keyid=None, profile=None):
+    '''
+    Get all access keys from a user
+
+    CLI example::
+
+        salt myminion boto_iam.get_all_access_keys myuser
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        return conn.get_all_access_keys(user_name, marker, max_items)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        log.error('Failed to get user {0} access keys.'.format(user_name))
+        return str(e)
+
+
+def delete_access_key(access_key_id, user_name=None, region=None, key=None,
+                      keyid=None, profile=None):
+    '''
+    Delete access key id from a user
+
+    CLI example::
+
+        salt myminion boto_iam.delete_access_key myuser
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        return conn.delete_access_key(access_key_id, user_name)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        log.error('Failed to delete access key id {0}.'.format(access_key_id))
+        return str(e)
+
 
 def delete_user(user_name, region=None, key=None, keyid=None,
                 profile=None):
