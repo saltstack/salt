@@ -15,15 +15,6 @@ class ReqChannel(object):
     '''
     @staticmethod
     def factory(opts, **kwargs):
-        # Default to ZeroMQ for now
-        ttype = 'zeromq'
-
-        # determine the ttype
-        if 'transport' in opts:
-            ttype = opts['transport']
-        elif 'transport' in opts.get('pillar', {}).get('master', {}):
-            ttype = opts['pillar']['master']['transport']
-
         # TODO: change wrapper syntax? Probably need to pass in ioloop
         # All Sync interfaces are just wrappers around the Async ones
         async = AsyncReqChannel.factory(opts, **kwargs)
@@ -41,6 +32,7 @@ class ReqChannel(object):
         the minion and the master (not other minions etc.)
         '''
         raise NotImplementedError()
+
 
 # TODO: better doc strings
 class AsyncReqChannel(object):

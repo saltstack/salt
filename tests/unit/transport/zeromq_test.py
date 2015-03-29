@@ -160,7 +160,7 @@ class BaseZMQPubCase(AsyncTestCase):
         cls.req_server_channel.close()
 
 
-class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin, TestCase):
+class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     '''
     Tests around the publish system
     '''

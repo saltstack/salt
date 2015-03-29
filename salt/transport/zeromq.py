@@ -59,10 +59,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             self.opts['master_uri'] = kwargs['master_uri']
 
         self._io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
-
         self.message_client = AsyncReqMessageClient(self.opts,
                                                     self.master_uri,
                                                     io_loop=self._io_loop,
@@ -147,7 +147,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
 
-        self.auth = salt.crypt.SAuth(self.opts)
+        self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 
         self.serial = salt.payload.Serial(self.opts)
 
@@ -208,11 +208,12 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
-        self.publish_port = self.auth.creds['publish_port']
-
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
     def connect(self):
+        if not self.auth.authenticated:
+            yield self.auth.authenticate()
+        self.publish_port = self.auth.creds['publish_port']
         self._socket.connect(self.master_pub)
 
     @property
@@ -378,6 +379,9 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+
+    def connect(self):
+        return tornado.gen.sleep(5)
 
     def _publish_daemon(self):
         '''
