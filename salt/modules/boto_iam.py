@@ -196,6 +196,7 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
         log.error(msg.format(user_name))
         return False
 
+
 def get_all_access_keys(user_name, marker=None, max_items=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
@@ -210,7 +211,7 @@ def get_all_access_keys(user_name, marker=None, max_items=None,
         return conn.get_all_access_keys(user_name, marker, max_items)
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        log.error('Failed to get user {0} access keys.'.format(user_name))
+        log.error('Failed to get user\'s {0} access keys.'.format(user_name))
         return str(e)
 
 
