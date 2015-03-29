@@ -34,7 +34,6 @@ import tempfile
 
 # Import Salt libs
 import salt.defaults.exitcodes
-import salt.ext.six as six
 import salt.utils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, SaltInvocationError

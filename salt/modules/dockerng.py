@@ -206,7 +206,6 @@ __docformat__ = 'restructuredtext en'
 # Import Python libs
 import bz2
 import copy
-import datetime
 import distutils.version  # pylint: disable=E0611
 import fnmatch
 import functools
@@ -220,9 +219,6 @@ import shutil
 import string
 import sys
 import time
-import traceback
-import types
-import warnings
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -232,9 +228,8 @@ import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
-# pylint: disable=import-error
-from salt.ext.six.moves import range  # pylint: disable=no-name-in-module,redefined-builtin
 
+# pylint: disable=import-error
 try:
     import docker
     HAS_DOCKER = True
@@ -399,7 +394,7 @@ def _get_client(timeout=None):
 
     # Set a new timeout if one was passed
     if timeout is not None and __context__['docker.client'].timeout != timeout:
-        __context__['docker.client'].timeout == timeout
+        __context__['docker.client'].timeout = timeout
 
 
 def _get_md5(name, path):
@@ -1182,10 +1177,10 @@ def port(name, private_port=None):
                 protocol = protocol.lower()
                 if not all(x in string.digits for x in port_num) \
                         or protocol not in ('tcp', 'udp'):
-                    raise SaltInvocatonError(err)
+                    raise SaltInvocationError(err)
                 pattern = port_num + '/' + protocol
             except AttributeError:
-                raise SaltInvocatonError(err)
+                raise SaltInvocationError(err)
 
     return dict((x, mappings[x]) for x in fnmatch.filter(mappings, pattern))
 
@@ -1602,11 +1597,11 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
         if not os.path.isdir(dest_dir):
             if makedirs:
                 try:
-                    os.makedirs(parent_dir)
+                    os.makedirs(dest_dir)
                 except OSError as exc:
                     raise CommandExecutionError(
                         'Unable to make destination directory {0}: {1}'
-                        .format(parent_dir, exc)
+                        .format(dest_dir, exc)
                     )
             else:
                 raise SaltInvocationError(
@@ -2185,7 +2180,7 @@ def import_(source,
     return ret
 
 
-def load(path, tag=None):
+def load(path, tag_as=None):
     '''
     Load a tar archive that was created using :py:func:`docker-ng.save
     <salt.modules.dockerng.save>` (or via the Docker CLI using ``docker
@@ -2198,7 +2193,7 @@ def load(path, tag=None):
         saltenv other than ``base`` (e.g. ``dev``), pass it at the end of the
         URL (ex. ``salt://path/to/rootfs/tarball.tar.xz?saltenv=dev``).
 
-    tag : None
+    tag_as : None
         If specified, the topmost layer of the newly-loaded image will be
         tagged with the specified repo and tag using :py:func:`docker-ng.tag
         <salt.modules.dockerng.tag_>`.
@@ -2251,7 +2246,7 @@ def load(path, tag=None):
 
     new_layers = [x for x in post if x not in pre]
     ret['Layers'] = [x[:12] for x in new_layers]
-    top_level_images = _get_top_level_images(all_images, subset=new_layers)
+    top_level_images = _get_top_level_images(post, subset=new_layers)
     if len(top_level_images) > 1:
         ret['Warning'] = ('More than one top-level image layer was loaded '
                           '({0}), no image was tagged'
@@ -2259,7 +2254,7 @@ def load(path, tag=None):
     else:
         try:
             result = tag_(top_level_images[0], tag=tag_as)
-            ret['Tag'] = tag
+            ret['Tag'] = tag_as
         except IndexError:
             ret['Warning'] = ('No top-level image layers were loaded, no '
                               'image was tagged')
@@ -2669,7 +2664,7 @@ def save(image_id,
     else:
         saved_path = path
 
-    cmd = ['docker', 'save', '-o', saved_path, inspect_image(name)['Id']]
+    cmd = ['docker', 'save', '-o', saved_path, inspect_image(image_id)['Id']]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:

@@ -18,7 +18,6 @@ import traceback
 
 # Import salt libs
 import salt.utils
-import salt.ext.six as six
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils import vt
 
