@@ -11,7 +11,6 @@ lxc >= 1.0 (even beta alpha) is required
 # Import python libs
 from __future__ import absolute_import, print_function
 import datetime
-import pipes
 import copy
 import difflib
 import logging
@@ -38,6 +37,7 @@ import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,no-name-in-module
+from salt.modules.container_resource import PATH
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -48,16 +48,16 @@ __func_alias__ = {
     'ls_': 'ls'
 }
 
+__virtualname__ = 'lxc'
 DEFAULT_NIC = 'eth0'
 SEED_MARKER = '/lxc.initial_seed'
-PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
-       '/usr/local/bin:/usr/local/sbin'
+EXEC_METHOD = 'lxc-attach'
 _marker = object()
 
 
 def __virtual__():
     if salt.utils.which('lxc-start'):
-        return True
+        return __virtualname__
     # To speed up the whole thing, we decided to not use the
     # subshell way and assume things are in place for lxc
     # Discussion made by @kiorky and @thatch45
@@ -1976,11 +1976,15 @@ def _ensure_running(name, no_start=False):
         return start(name)
     elif pre == 'stopped':
         if no_start:
-            return False
+            raise CommandExecutionError(
+                'Container \'{0}\' is not running'.format(name)
+            )
         return start(name)
     elif pre == 'frozen':
         if no_start:
-            return False
+            raise CommandExecutionError(
+                'Container \'{0}\' is not running'.format(name)
+            )
         return unfreeze(name)
 
 
@@ -2740,15 +2744,15 @@ def bootstrap(name,
                             ('tmpdir {0} creation'
                              ' failed ({1}').format(dest_dir, cmd))
                         return False
-                cp(name,
-                   bs_,
-                   '{0}/bootstrap.sh'.format(dest_dir))
-                cp(name, cfg_files['config'],
-                   os.path.join(configdir, 'minion'))
-                cp(name, cfg_files['privkey'],
-                   os.path.join(configdir, 'minion.pem'))
-                cp(name, cfg_files['pubkey'],
-                   os.path.join(configdir, 'minion.pub'))
+                copy_to(name,
+                        bs_,
+                        '{0}/bootstrap.sh'.format(dest_dir))
+                copy_to(name, cfg_files['config'],
+                        os.path.join(configdir, 'minion'))
+                copy_to(name, cfg_files['privkey'],
+                        os.path.join(configdir, 'minion.pem'))
+                copy_to(name, cfg_files['pubkey'],
+                        os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
                 cmd = ('{0} {2}/bootstrap.sh {1}'
                        .format(bootstrap_shell,
@@ -2765,9 +2769,13 @@ def bootstrap(name,
         else:
             minion_config = salt.config.minion_config(cfg_files['config'])
             pki_dir = minion_config['pki_dir']
-            cp(name, cfg_files['config'], '/etc/salt/minion')
-            cp(name, cfg_files['privkey'], os.path.join(pki_dir, 'minion.pem'))
-            cp(name, cfg_files['pubkey'], os.path.join(pki_dir, 'minion.pub'))
+            copy_to(name, cfg_files['config'], '/etc/salt/minion')
+            copy_to(name,
+                    cfg_files['privkey'],
+                    os.path.join(pki_dir, 'minion.pem'))
+            copy_to(name,
+                    cfg_files['pubkey'],
+                    os.path.join(pki_dir, 'minion.pub'))
             run(name,
                 'salt-call --local service.enable salt-minion',
                 python_shell=False)
@@ -2825,33 +2833,19 @@ def _run(name,
     orig_state = state(name)
     try:
         if attachable(name):
-            if isinstance(keep_env, salt._compat.string_types):
-                keep_env = keep_env.split(',')
-            env = ' '.join(
-                ['--set-var {0}={1}'.format(x, pipes.quote(os.environ[x]))
-                 for x in keep_env
-                 if x in os.environ]
-            )
-            if 'PATH' not in keep_env:
-                # --clear-env results in a very restrictive PATH (/bin:/usr/bin),
-                # use the below path instead to prevent
-                env += ' --set-var {0}'.format(PATH)
-
-            full_cmd = (
-                'lxc-attach --clear-env {0} -n {1} -- {2}'
-                .format(env, pipes.quote(name), cmd)
-            )
-
             ret = __salt__['container_resource.run'](
                 name,
-                full_cmd,
+                cmd,
+                container_type=__virtualname__,
+                exec_method=EXEC_METHOD,
                 output=output,
                 no_start=no_start,
                 stdin=stdin,
                 python_shell=python_shell,
                 output_loglevel=output_loglevel,
                 ignore_retcode=ignore_retcode,
-                use_vt=use_vt)
+                use_vt=use_vt,
+                keep_env=keep_env)
         else:
             rootfs = info(name).get('rootfs')
             # Set context var to make cmd.run_chroot run cmd.run instead of
@@ -3306,9 +3300,14 @@ def _get_md5(name, path):
         return None
 
 
-def cp(name, source, dest, makedirs=False):
+def copy_to(name, source, dest, overwrite=False, makedirs=False):
     '''
-    Copy a file or directory from the host into a container.
+    .. versionchanged:: Beryllium
+        Function renamed from ``lxc.cp`` to ``lxc.copy_to`` for consistency
+        with other container types. ``lxc.cp`` will continue to work, however.
+        For versions 2015.2.x and earlier, use ``lxc.cp``.
+
+    Copy a file or directory from the host into a container
 
     name
         Container name
@@ -3323,6 +3322,12 @@ def cp(name, source, dest, makedirs=False):
             If the destination is a directory, the file will be copied into
             that directory.
 
+    overwrite : False
+        Unless this option is set to ``True``, then if a file exists at the
+        location specified by the ``dest`` argument, an error will be raised.
+
+        .. versionadded:: Beryllium
+
     makedirs : False
 
         Create the parent directory on the container if it does not already
@@ -3334,78 +3339,20 @@ def cp(name, source, dest, makedirs=False):
 
     .. code-block:: bash
 
+        salt 'minion' lxc.copy_to /tmp/foo /root/foo
         salt 'minion' lxc.cp /tmp/foo /root/foo
     '''
-    c_state = state(name)
-    if c_state != 'running':
-        raise CommandExecutionError(
-            'Container \'{0}\' {1}'.format(
-                name,
-                'is {0}'.format(c_state)
-                    if c_state is not None
-                    else 'does not exist'
-            )
-        )
+    _ensure_running(name, no_start=True)
+    return __salt__['container_resource.copy_to'](
+        name,
+        source,
+        dest,
+        container_type=__virtualname__,
+        exec_method=EXEC_METHOD,
+        overwrite=overwrite,
+        makedirs=makedirs)
 
-    log.debug('Copying {0} to container \'{1}\' as {2}'
-              .format(source, name, dest))
-
-    # Source file sanity checks
-    if not os.path.isabs(source):
-        raise SaltInvocationError('Source path must be absolute')
-    elif not os.path.exists(source):
-        raise SaltInvocationError(
-            'Source file {0} does not exist'.format(source)
-        )
-    elif not os.path.isfile(source):
-        raise SaltInvocationError('Source must be a regular file')
-    source_dir, source_name = os.path.split(source)
-
-    # Destination file sanity checks
-    if not os.path.isabs(dest):
-        raise SaltInvocationError('Destination path must be absolute')
-    if retcode(name,
-                   'test -d \'{0}\''.format(dest),
-                   ignore_retcode=True) == 0:
-        # Destination is a directory, full path to dest file will include the
-        # basename of the source file.
-        dest = os.path.join(dest, source_name)
-    else:
-        # Destination was not a directory. We will check to see if the parent
-        # dir is a directory, and then (if makedirs=True) attempt to create the
-        # parent directory.
-        dest_dir, dest_name = os.path.split(dest)
-        if retcode(name,
-                       'test -d \'{0}\''.format(dest_dir),
-                       ignore_retcode=True) != 0:
-            if makedirs:
-                result = run_all(name, 'mkdir -p \'{0}\''.format(dest_dir))
-                if result['retcode'] != 0:
-                    error = ('Unable to create destination directory {0} in '
-                             'container \'{1}\''.format(dest_dir, name))
-                    if result['stderr']:
-                        error += ': {0}'.format(result['stderr'])
-                    raise CommandExecutionError(error)
-            else:
-                raise SaltInvocationError(
-                    'Directory {0} does not exist on container \'{1}\''
-                    .format(dest_dir, name)
-                )
-
-    # Before we try to replace the file, compare checksums.
-    source_md5 = __salt__['file.get_sum'](source, 'md5')
-    if source_md5 != _get_md5(name, dest):
-        # Using cat here instead of opening the file, reading it into memory,
-        # and passing it as stdin to run(). This will keep down memory
-        # usage for the minion and make the operation run quicker.
-        __salt__['cmd.run_stdout'](
-            'cat "{0}" | lxc-attach --clear-env --set-var {1} -n {2} -- '
-            'tee "{3}"'.format(source, PATH, name, dest),
-            python_shell=True
-        )
-        return source_md5 == _get_md5(name, dest)
-    # Checksums matched, no need to copy, just return True
-    return True
+cp = copy_to
 
 
 def read_conf(conf_file, out_format='simple'):
