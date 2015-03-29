@@ -35,21 +35,26 @@ def _validate(wrapped):
     @functools.wraps(wrapped)
     def wrapper(*args, **kwargs):
         container_type = kwargs.get('container_type')
-        exec_method = kwargs.get('exec_method')
-        valid_method = {
+        exec_driver = kwargs.get('exec_driver')
+        valid_driver = {
             'docker-ng': ('lxc-attach', 'nsenter', 'docker-exec'),
             'lxc': ('lxc-attach',),
             'nspawn': ('nsenter',),
         }
-        if container_type not in valid_method:
+        if container_type not in valid_driver:
             raise SaltInvocationError(
                 'Invalid container type \'{0}\'. Valid types are: {1}'
-                .format(container_type, ', '.join(sorted(valid_method)))
+                .format(container_type, ', '.join(sorted(valid_driver)))
             )
-        if exec_method not in valid_method[container_type]:
+        if exec_driver not in valid_driver[container_type]:
             raise SaltInvocationError(
-                'Invalid command execution method. Valid methods are: {0}'
-                .format(', '.join(valid_method[container_type]))
+                'Invalid command execution driver. Valid drivers are: {0}'
+                .format(', '.join(valid_driver[container_type]))
+            )
+        if exec_driver == 'lxc-attach' and not salt.utils.which('lxc-attach'):
+            raise SaltInvocationError(
+                'The \'lxc-attach\' execution driver has been chosen, but '
+                'lxc-attach is not available. LXC may not be installed.'
             )
         return wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
     return wrapper
@@ -109,7 +114,7 @@ def cache_file(source):
 def run(name,
         cmd,
         container_type=None,
-        exec_method=None,
+        exec_driver=None,
         output=None,
         no_start=False,
         stdin=None,
@@ -125,7 +130,7 @@ def run(name,
 
     .. code-block::
 
-        salt myminion container_resource.run mycontainer 'ps aux' container_type=docker exec_method=nsenter output=stdout
+        salt myminion container_resource.run mycontainer 'ps aux' container_type=docker exec_driver=nsenter output=stdout
     '''
     valid_output = ('stdout', 'stderr', 'retcode', 'all')
     if output is None:
@@ -149,7 +154,7 @@ def run(name,
     else:
         to_keep = keep_env
 
-    if exec_method == 'lxc-attach':
+    if exec_driver == 'lxc-attach':
         full_cmd = 'lxc-attach '
         if keep_env is not True:
             full_cmd += '--clear-env '
@@ -163,7 +168,7 @@ def run(name,
                 if x in os.environ]
         )
         full_cmd += ' -n {0} -- {1}'.format(pipes.quote(name), cmd)
-    elif exec_method == 'nsenter':
+    elif exec_driver == 'nsenter':
         pid = __salt__['{0}.pid'.format(container_type)](name)
         full_cmd = (
             'nsenter --target {0} --mount --uts --ipc --net --pid -- '
@@ -179,7 +184,9 @@ def run(name,
                 if x in os.environ]
         )
         full_cmd += ' {0}'.format(cmd)
-    elif exec_method == 'docker-exec':
+    elif exec_driver == 'docker-exec':
+        # We're using docker exec on the CLI as opposed to via docker-py, since
+        # the Docker API doesn't return stdout and stderr separately.
         full_cmd = 'docker exec '
         if stdin:
             full_cmd += '-i '
@@ -253,7 +260,7 @@ def copy_to(name,
             source,
             dest,
             container_type=None,
-            exec_method=None,
+            exec_driver=None,
             overwrite=False,
             makedirs=False):
     '''
@@ -263,7 +270,7 @@ def copy_to(name,
 
     .. code-block::
 
-        salt myminion container_resource.copy_to mycontainer /local/file/path /container/file/path container_type=docker exec_method=nsenter
+        salt myminion container_resource.copy_to mycontainer /local/file/path /container/file/path container_type=docker exec_driver=nsenter
     '''
     # Get the appropriate functions
     state = __salt__['{0}.state'.format(container_type)]
@@ -340,17 +347,21 @@ def copy_to(name,
     # Using cat here instead of opening the file, reading it into memory,
     # and passing it as stdin to run(). This will keep down memory
     # usage for the minion and make the operation run quicker.
-    if exec_method == 'lxc-attach':
-        __salt__['cmd.run_stdout'](
+    if exec_driver == 'lxc-attach':
+        copy_cmd = (
             'cat "{0}" | lxc-attach --clear-env --set-var {1} -n {2} -- '
-            'tee "{3}"'.format(local_file, PATH, name, dest),
-            python_shell=True
+            'tee "{3}"'.format(local_file, PATH, name, dest)
         )
-    elif exec_method == 'nsenter':
+    elif exec_driver == 'nsenter':
         pid = __salt__['{0}.pid'.format(container_type)](name)
-        __salt__['cmd.run_stdout'](
+        copy_cmd = (
             'cat "{0}" | {1} env -i {2} tee "{3}"'
-            .format(local_file, _nsenter(pid), PATH, dest),
-            python_shell=True
+            .format(local_file, _nsenter(pid), PATH, dest)
         )
+    elif exec_driver == 'docker-exec':
+        copy_cmd = (
+            'cat "{0}" | docker exec -i {1} env -i {2} tee "{3}"'
+            .format(local_file, name, PATH, dest)
+        )
+    __salt__['cmd.run'](copy_cmd, python_shell=True, output_loglevel='quiet')
     return source_md5 == _get_md5(name, dest, run_all)
