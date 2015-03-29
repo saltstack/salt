@@ -18,6 +18,12 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 .. code-block:: yaml
 
+    delete-user:
+      boto_iam.user_absent:
+        - name: myuser
+
+.. code-block:: yaml
+
     create-user:
       boto_iam.user_present:
         - name: myuser
@@ -85,6 +91,38 @@ def __virtual__():
     Only load if boto is available.
     '''
     return 'boto_iam.get_user' in __salt__
+
+
+def user_absent(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the IAM user is absent
+
+    name (string) – The name of the new user.
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
+        ret['comment'] = 'IAM User {0} does not exist.'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'IAM user {0} is set to be deleted.'.format(name)
+        ret['result'] = None
+        return ret
+    if __salt__['boto_iam.delete_user'](name, region, key, keyid, profile):
+        ret['comment'] = 'IAM user {0} is deleted.'.format(name)
+        ret['changes']['deleted'] = name
+        return ret
+    ret['comment'] = 'IAM user {0} could not be deleted.'.format(name)
+    ret['result'] = False
+    return ret
 
 
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
