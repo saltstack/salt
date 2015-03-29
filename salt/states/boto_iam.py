@@ -129,7 +129,7 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
     if 'true' == str(delete_keys).lower:
         keys = __salt__['boto_iam.get_all_access_keys'](user_name=name, region=region, key=key,
                                                         keyid=keyid, profile=profile)
-        log.debug('keys are {0}'.format(keys))
+        log.debug('Keys for user {0} are {1}.'.format(name ,keys))
         if isinstance(keys, dict):
             keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
             for k in keys:
@@ -189,14 +189,13 @@ def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profi
 def _delete_key(access_key_id, user_name, region=None, key=None, keyid=None, profile=None):
     keys = __salt__['boto_iam.get_all_access_keys'](user_name=user_name, region=region, key=key,
                                                     keyid=keyid, profile=profile)
-    log.debug('keys are : {0}'.format(keys))
+    log.debug('Keys for user {1} are : {0}'.format(keys, user_name))
     if isinstance(keys, str):
-        log.debug('keys are : false {0}'.format(keys))
+        log.debug('Keys {0} are a string. Something went wrong.'.format(keys))
         return False
     keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
-    log.debug('keys are : {0}'.format(keys))
     for k in keys:
-        log.debug('key is : {0} and is compared with {1}'.format(k['access_key_id'], access_key_id))
+        log.debug('Key is: {0} and is compared with: {1}'.format(k['access_key_id'], access_key_id))
         if str(k['access_key_id']) == str(access_key_id):
             deleted = __salt__['boto_iam.delete_access_key'](access_key_id, user_name, region, key,
                                                              keyid, profile)
@@ -257,7 +256,7 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
         ret['result'] = None
         return ret
     login = __salt__['boto_iam.create_login_profile'](name, password, region, key, keyid, profile)
-    log.debug('login is : {0}'.format(login))
+    log.debug('Login is : {0}.'.format(login))
     if login:
         if 'Conflict' in login:
             ret['comment'] = os.linesep.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
@@ -332,9 +331,9 @@ def group_present(name, policy_name=None, policy=None, users=None, region=None, 
         if policy_name and policy:
             ret = _case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
         if users:
-            log.debug('users are : {0}'.format(users))
+            log.debug('Users are : {0}.'.format(users))
             for user in users:
-                log.debug('user is : {0}'.format(user))
+                log.debug('User is : {0}.'.format(user))
                 ret = _case_group(ret, user, name, region, key, keyid, profile)
     return ret
 
@@ -342,10 +341,10 @@ def group_present(name, policy_name=None, policy=None, users=None, region=None, 
 def _case_policy(ret, group_name, policy_name, policy, region=None, key=None, keyid=None, profile=None):
     exists = __salt__['boto_iam.get_group_policy'](group_name, policy_name, region, key, keyid, profile)
     if exists:
-        log.debug('exists is : {0}'.format(exists))
+        log.debug('Policy exists is : {0}.'.format(exists))
         if not isinstance(policy, str):
             policy = json.loads(policy, object_pairs_hook=odict.OrderedDict)
-        log.debug('policy is  : {0}'.format(policy))
+            log.debug('Policy in Json is : {0}.'.format(policy))
         if exists == policy:
             ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is present.'.format(group_name)])
         else:
@@ -443,7 +442,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
                                                            require_uppercase_characters,
                                                            region, key, keyid, profile):
         return ret
-    ret['comment'] = 'Account policy is not changed'
+    ret['comment'] = 'Account policy is not changed.'
     ret['changes'] = None
     ret['result'] = False
     return ret
@@ -506,7 +505,7 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_iam.get_server_certificate'](name, region, key, keyid, profile)
-    log.debug('variables are : {0}'.format(locals()))
+    log.debug('Variables are : {0}.'.format(locals()))
     if exists:
         ret['comment'] = 'Certificate {0} exists.'.format(name)
         return ret

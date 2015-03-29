@@ -252,7 +252,7 @@ def delete_user(user_name, region=None, key=None, keyid=None,
     except boto.exception.BotoServerError as e:
         log.debug(e)
         log.error('Failed to delete user {0}'.format(user_name))
-        return e
+        return str(e)
 
 
 def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
