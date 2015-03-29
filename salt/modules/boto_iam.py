@@ -95,8 +95,7 @@ def create_instance_profile(name, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if __salt__['boto_iam.instance_profile_exists'](name, region, key, keyid,
-                                                    profile):
+    if instance_profile_exists(name, region, key, keyid, profile):
         return True
     try:
         # This call returns an instance profile if successful and an exception
@@ -123,8 +122,7 @@ def delete_instance_profile(name, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if not __salt__['boto_iam.instance_profile_exists'](name, region, key,
-                                                        keyid, profile):
+    if not instance_profile_exists(name, region, key, keyid, profile):
         return True
     try:
         conn.delete_instance_profile(name)
@@ -185,7 +183,7 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
     '''
     if not path:
         path = '/'
-    if __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile):
+    if get_user(user_name, region, key, keyid, profile):
         return True
     conn = _get_conn(region, key, keyid, profile)
     try:
@@ -199,7 +197,7 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
         return False
 
 
-def delete_user(user_name, region=None, key=None, keyid=None,
+def delete_user(user_name, path=None, region=None, key=None, keyid=None,
                 profile=None):
     '''
     Delete a user
@@ -208,7 +206,7 @@ def delete_user(user_name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.delete_user myuser
     '''
-    if not __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile):
+    if not get_user(user_name, region, key, keyid, profile):
         return True
     conn = _get_conn(region, key, keyid, profile)
     try:
@@ -253,7 +251,7 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
     '''
     if not path:
         path = '/'
-    if __salt__['boto_iam.get_group'](group_name=group_name, region=region, key=key, keyid=keyid, profile=profile):
+    if get_group(group_name, region, key, keyid, profile):
         return True
     conn = _get_conn(region, key, keyid, profile)
     try:
@@ -298,16 +296,14 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.add_user_to_group myuser mygroup
     '''
-    group = __salt__['boto_iam.get_group'](group_name=group_name,
-                                           region=region, key=key,
-                                           keyid=keyid, profile=profile)
+    group = get_group(group_name=group_name, region=region, key=key, keyid=keyid, profile=profile)
     if group:
         for _users in group['get_group_response']['get_group_result']['users']:
             if user_name == _users['user_name']:
                 msg = 'Username : {0} is already in group {1}.'
                 log.info(msg.format(user_name, group_name))
                 return 'Exists'
-    user = __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile)
+    user = get_user(user_name, region, key, keyid, profile)
     if not group or not user:
         msg = 'Username : {0} or group {1} do not exist.'
         log.error(msg.format(user_name, group_name))
@@ -334,8 +330,7 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
 
         salt myminion boto_iam.put_group_policy mygroup policyname policyrules
     '''
-    group = __salt__['boto_iam.get_group'](group_name=group_name, region=region,
-                                           key=key, keyid=keyid, profile=profile)
+    group = get_group(group_name, region, key, keyid, profile)
     if group:
         conn = _get_conn(region, key, keyid, profile)
         try:
@@ -391,7 +386,7 @@ def create_login_profile(user_name, password, region=None, key=None,
 
         salt myminion boto_iam.create_login_profile user_name password
     '''
-    user = __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile)
+    user = get_user(user_name, region, key, keyid, profile)
     if not user:
         msg = 'Username {0} does not exist'
         log.error(msg.format(user_name))
@@ -476,7 +471,7 @@ def create_role(name, policy_document=None, path=None, region=None, key=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if __salt__['boto_iam.role_exists'](name, region, key, keyid, profile):
+    if role_exists(name, region, key, keyid, profile):
         return True
     try:
         conn.create_role(name, assume_role_policy_document=policy_document,
@@ -501,7 +496,7 @@ def delete_role(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if not __salt__['boto_iam.role_exists'](name, region, key, keyid, profile):
+    if not role_exists(name, region, key, keyid, profile):
         return True
     try:
         conn.delete_role(name)
@@ -553,17 +548,13 @@ def associate_profile_to_role(profile_name, role_name, region=None, key=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if not __salt__['boto_iam.role_exists'](role_name, region, key, keyid,
-                                            profile):
+    if not role_exists(role_name, region, key, keyid, profile):
         log.error('IAM role {0} does not exist.'.format(role_name))
         return False
-    if not __salt__['boto_iam.instance_profile_exists'](profile_name, region,
-                                                        key, keyid, profile):
+    if not instance_profile_exists(profile_name, region, key, keyid, profile):
         log.error('Instance profile {0} does not exist.'.format(profile_name))
         return False
-    associated = __salt__['boto_iam.profile_associated'](role_name,
-                                                         profile_name, region,
-                                                         key, keyid, profile)
+    associated = profile_associated(role_name, profile_name, region, key, keyid, profile)
     if associated:
         return True
     else:
@@ -591,17 +582,13 @@ def disassociate_profile_from_role(profile_name, role_name, region=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if not __salt__['boto_iam.role_exists'](role_name, region, key, keyid,
-                                            profile):
+    if not role_exists(role_name, region, key, keyid, profile):
         log.error('IAM role {0} does not exist.'.format(role_name))
         return False
-    if not __salt__['boto_iam.instance_profile_exists'](profile_name, region,
-                                                        key, keyid, profile):
+    if not instance_profile_exists(profile_name, region, key, keyid, profile):
         log.error('Instance profile {0} does not exist.'.format(profile_name))
         return False
-    associated = __salt__['boto_iam.profile_associated'](role_name,
-                                                         profile_name, region,
-                                                         key, keyid, profile)
+    associated = profile_associated(role_name, profile_name, region, key, keyid, profile)
     if not associated:
         return True
     else:
@@ -674,8 +661,7 @@ def create_role_policy(role_name, policy_name, policy, region=None, key=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    _policy = __salt__['boto_iam.get_role_policy'](role_name, policy_name,
-                                                   region, key, keyid, profile)
+    _policy = get_role_policy(role_name, policy_name, region, key, keyid, profile)
     mode = 'create'
     if _policy:
         if _policy == policy:
@@ -711,8 +697,7 @@ def delete_role_policy(role_name, policy_name, region=None, key=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    _policy = __salt__['boto_iam.get_role_policy'](role_name, policy_name,
-                                                   region, key, keyid, profile)
+    _policy = get_role_policy(role_name, policy_name, region, key, keyid, profile)
     if not _policy:
         return True
     try:
@@ -785,7 +770,7 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
     :return: True / False
     '''
 
-    exists = __salt__['boto_iam.get_server_certificate'](cert_name, region, key, keyid, profile)
+    exists = get_server_certificate(cert_name, region, key, keyid, profile)
     if exists:
         return True
     conn = _get_conn(region, key, keyid, profile)
