@@ -37,7 +37,7 @@ def _validate(wrapped):
         container_type = kwargs.get('container_type')
         exec_method = kwargs.get('exec_method')
         valid_method = {
-            'docker-ng': ('lxc-attach', 'nsenter'),
+            'docker-ng': ('lxc-attach', 'nsenter', 'docker-exec'),
             'lxc': ('lxc-attach',),
             'nspawn': ('nsenter',),
         }
@@ -169,6 +169,21 @@ def run(name,
             'nsenter --target {0} --mount --uts --ipc --net --pid -- '
             .format(pid)
         )
+        if keep_env is not True:
+            full_cmd += 'env -i '
+            if 'PATH' not in to_keep:
+                full_cmd += '{0} '.format(PATH)
+        full_cmd += ' '.join(
+            ['{0}={1}'.format(x, pipes.quote(os.environ[x]))
+                for x in to_keep
+                if x in os.environ]
+        )
+        full_cmd += ' {0}'.format(cmd)
+    elif exec_method == 'docker-exec':
+        full_cmd = 'docker exec '
+        if stdin:
+            full_cmd += '-i '
+        full_cmd += '{0} '.format(name)
         if keep_env is not True:
             full_cmd += 'env -i '
             if 'PATH' not in to_keep:
