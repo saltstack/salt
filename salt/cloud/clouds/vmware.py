@@ -284,10 +284,6 @@ def list_datastores(kwargs=None, call=None):
     '''
     List all the datastores for this VMware environment
 
-    .. note::
-
-        If you have a lot of datastores in your environment, this may some time to return.
-
     CLI Example:
 
     .. code-block:: bash
@@ -316,10 +312,6 @@ def list_datastores(kwargs=None, call=None):
 def list_hosts(kwargs=None, call=None):
     '''
     List all the hosts for this VMware environment
-
-    .. note::
-
-        If you have a lot of hosts in your environment, this may some time to return.
 
     CLI Example:
 
@@ -350,10 +342,6 @@ def list_resourcepools(kwargs=None, call=None):
     '''
     List all the resource pools for this VMware environment
 
-    .. note::
-
-        If you have a lot of resource pools in your environment, this may some time to return.
-
     CLI Example:
 
     .. code-block:: bash
@@ -382,10 +370,6 @@ def list_resourcepools(kwargs=None, call=None):
 def list_networks(kwargs=None, call=None):
     '''
     List all the standard networks for this VMware environment
-
-    .. note::
-
-        If you have a lot of networks in your environment, this may some time to return.
 
     CLI Example:
 
@@ -469,3 +453,26 @@ def list_nodes(kwargs=None, call=None):
         ret[vm_info['id']] = vm_info
 
     return ret
+
+
+def list_folders(kwargs=None, call=None):
+    '''
+    List all the folders for this VMware environment
+    '''
+    if call != 'function':
+        log.error(
+            'The list_folders function must be called with -f or --function.'
+        )
+        return False
+
+    folders = []
+    folder_properties = [
+                            "name"
+                        ]
+
+    folder_list = _get_object_property_list(vim.Folder, folder_properties)
+
+    for folder in folder_list:
+        folders.append(folder["name"])
+
+    return {'Folders': folders}
