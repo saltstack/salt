@@ -51,7 +51,7 @@ __func_alias__ = {
 __virtualname__ = 'lxc'
 DEFAULT_NIC = 'eth0'
 SEED_MARKER = '/lxc.initial_seed'
-EXEC_METHOD = 'lxc-attach'
+EXEC_DRIVER = 'lxc-attach'
 _marker = object()
 
 
@@ -2837,7 +2837,7 @@ def _run(name,
                 name,
                 cmd,
                 container_type=__virtualname__,
-                exec_method=EXEC_METHOD,
+                exec_driver=EXEC_DRIVER,
                 output=output,
                 no_start=no_start,
                 stdin=stdin,
@@ -3348,7 +3348,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
         source,
         dest,
         container_type=__virtualname__,
-        exec_method=EXEC_METHOD,
+        exec_driver=EXEC_DRIVER,
         overwrite=overwrite,
         makedirs=makedirs)
 

@@ -48,7 +48,7 @@ __func_alias__ = {
 __virtualname__ = 'nspawn'
 SEED_MARKER = '/nspawn.initial_seed'
 WANT = '/etc/systemd/system/multi-user.target.wants/systemd-nspawn@{0}.service'
-EXEC_METHOD = 'nsenter'
+EXEC_DRIVER = 'nsenter'
 
 
 def __virtual__():
@@ -269,7 +269,7 @@ def _run(name,
             name,
             cmd,
             container_type=__virtualname__,
-            exec_method=EXEC_METHOD,
+            exec_driver=EXEC_DRIVER,
             output=output,
             no_start=no_start,
             stdin=stdin,
@@ -1283,7 +1283,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
         path,
         dest,
         container_type=__virtualname__,
-        exec_method=EXEC_METHOD,
+        exec_driver=EXEC_DRIVER,
         overwrite=overwrite,
         makedirs=makedirs)
 
