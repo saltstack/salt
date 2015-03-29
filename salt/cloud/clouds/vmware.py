@@ -122,6 +122,8 @@ def _get_object_property_list(obj_type, property_list=None):
     # Get service instance object
     si = _get_si()
 
+    # Refer to http://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch5_PropertyCollector.7.6.html for more information.
+
     content = si.content
 
     # Create a object view
@@ -208,21 +210,21 @@ def list_datacenters(kwargs=None, call=None):
         return False
 
     datacenters = []
+    datacenter_properties = [
+                                "name"
+                            ]
 
-    # Get the inventory
-    inv = _get_inv()
+    datacenter_list = _get_object_property_list(vim.Datacenter, datacenter_properties)
 
-    for datacenter in inv.rootFolder.childEntity:
-        if isinstance(datacenter, vim.Datacenter):
-            # This is a datacenter
-            datacenters.append(datacenter.name)
+    for datacenter in datacenter_list:
+        datacenters.append(datacenter["name"])
 
     return {'Datacenters': datacenters}
 
 
 def list_clusters(kwargs=None, call=None):
     '''
-    List all the clusters for each datacenter in this VMware environment
+    List all the clusters for this VMware environment
 
     CLI Example:
 
@@ -236,29 +238,17 @@ def list_clusters(kwargs=None, call=None):
         )
         return False
 
-    datacenters = {}
+    clusters = []
+    cluster_properties = [
+                             "name"
+                         ]
 
-    # Get the inventory
-    inv = _get_inv()
+    cluster_list = _get_object_property_list(vim.ClusterComputeResource, cluster_properties)
 
-    for datacenter in inv.rootFolder.childEntity:
-        if isinstance(datacenter, vim.Datacenter):
-            # This is a datacenter
-            clusters = []
+    for cluster in cluster_list:
+        clusters.append(cluster["name"])
 
-            # Create a new view for each datacenter
-            obj_view = inv.viewManager.CreateContainerView(datacenter, [], True)
-            for cluster in obj_view.view:
-                if isinstance(cluster, vim.ClusterComputeResource):
-                    # This is a cluster
-                    clusters.append(cluster.name)
-
-            # Destroy the view after use for each datacenter
-            obj_view.Destroy()
-
-            datacenters[datacenter.name] = clusters
-  
-    return {'Datacenters': datacenters}
+    return {'Clusters': clusters}
 
 
 def list_datastore_clusters(kwargs=None, call=None):
@@ -278,18 +268,15 @@ def list_datastore_clusters(kwargs=None, call=None):
         return False
 
     datastore_clusters = []
+    datastore_cluster_properties = [
+                                       "name"
+                                   ]
 
-    # Get the inventory
-    inv = _get_inv()
+    datastore_cluster_list = _get_object_property_list(vim.StoragePod, datastore_cluster_properties)
 
-    for datacenter in inv.rootFolder.childEntity:
-        if isinstance(datacenter, vim.Datacenter):
-            # This is a datacenter
-            for datastore_cluster in datacenter.datastoreFolder.childEntity:
-                if isinstance(datastore_cluster, vim.StoragePod):
-                    # This is a datastore cluster
-                    datastore_clusters.append(datastore_cluster.name)
-  
+    for datastore_cluster in datastore_cluster_list:
+        datastore_clusters.append(datastore_cluster["name"])
+
     return {'Datastore Clusters': datastore_clusters}
 
 
@@ -314,19 +301,14 @@ def list_datastores(kwargs=None, call=None):
         return False
 
     datastores = []
+    datastore_properties = [
+                               "name"
+                           ]
 
-    # Get the inventory
-    inv = _get_inv()
+    datastore_list = _get_object_property_list(vim.Datastore, datastore_properties)
 
-    # Create a object view
-    obj_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
-    for datastore in obj_view.view:
-        if isinstance(datastore, vim.Datastore):
-            # This is a datastore
-            datastores.append(datastore.name)
-
-    # Destroy the object view
-    obj_view.Destroy()
+    for datastore in datastore_list:
+        datastores.append(datastore["name"])
 
     return {'Datastores': datastores}
 
@@ -352,19 +334,14 @@ def list_hosts(kwargs=None, call=None):
         return False
 
     hosts = []
+    host_properties = [
+                          "name"
+                      ]
 
-    # Get the inventory
-    inv = _get_inv()
+    host_list = _get_object_property_list(vim.HostSystem, host_properties)
 
-    # Create a object view
-    obj_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
-    for host in obj_view.view:
-        if isinstance(host, vim.HostSystem):
-            # This is a host
-            hosts.append(host.name)
-
-    # Destroy the object view
-    obj_view.Destroy()
+    for host in host_list:
+        hosts.append(host["name"])
 
     return {'Hosts': hosts}
 
@@ -390,19 +367,14 @@ def list_resourcepools(kwargs=None, call=None):
         return False
 
     resource_pools = []
+    resource_pool_properties = [
+                                   "name"
+                               ]
 
-    # Get the inventory
-    inv = _get_inv()
+    resource_pool_list = _get_object_property_list(vim.ResourcePool, resource_pool_properties)
 
-    # Create a object view
-    obj_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
-    for resource_pool in obj_view.view:
-        if isinstance(resource_pool, vim.ResourcePool):
-            # This is a Resource Pool
-            resource_pools.append(resource_pool.name)
-
-    # Destroy the object view
-    obj_view.Destroy()
+    for resource_pool in resource_pool_list:
+        resource_pools.append(resource_pool["name"])
 
     return {'Resource Pools': resource_pools}
 
@@ -428,19 +400,14 @@ def list_networks(kwargs=None, call=None):
         return False
 
     networks = []
+    network_properties = [
+                             "name"
+                         ]
 
-    # Get the inventory
-    inv = _get_inv()
+    network_list = _get_object_property_list(vim.Network, network_properties)
 
-    # Create a object view
-    obj_view = inv.viewManager.CreateContainerView(inv.rootFolder, [], True)
-    for network in obj_view.view:
-        if isinstance(network, vim.Network):
-            # This is a network
-            networks.append(network.name)
-
-    # Destroy the object view
-    obj_view.Destroy()
+    for network in network_list:
+        networks.append(network["name"])
 
     return {'Networks': networks}
 
