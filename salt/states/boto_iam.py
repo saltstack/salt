@@ -21,6 +21,17 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     delete-user:
       boto_iam.user_absent:
         - name: myuser
+        - delete_keys: true
+
+
+.. code-block:: yaml
+
+    delete-keys:
+      boto_iam.keys_absent:
+        - access_keys:
+          - 'AKIAJHTMIQ2ASDFLASDF'
+          - 'PQIAJHTMIQ2ASRTLASFR'
+        - user_name: myuser
 
 .. code-block:: yaml
 
@@ -146,8 +157,7 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
 
 def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profile=None):
     '''
-    Ensure the IAM user access_key_id is absent. If the user_name is not specified,
-    it is determined implicitly based on the AWS Access Key ID used to sign the request.
+    Ensure the IAM user access_key_id is absent.
 
     access_key_id (list) – A list of access key ids
 
