@@ -93,6 +93,7 @@ def socket_frame_recv(s, recv_size=4096):
 
 
 # TODO: make singleton
+# TODO: move serial down into message library
 class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to tcp.
@@ -122,15 +123,13 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             'load': load,
         })
 
+    @tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
-        # send msg
-        ret = self._send_recv(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
-        # wait for response
-        ret = self.serial.loads(ret)
+        ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), tries, timeout)
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        return pcrypt.loads(ret[dictkey])
+        raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
 
     @tornado.gen.coroutine
     def _crypted_transfer(self, load, tries=3, timeout=60):

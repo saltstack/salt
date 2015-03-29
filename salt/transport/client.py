@@ -24,13 +24,10 @@ class ReqChannel(object):
         elif 'transport' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport']
 
-        if ttype == 'zeromq':
-            import salt.transport.zeromq
-            return salt.transport.zeromq.ZeroMQReqChannel(opts, **kwargs)
-        else:
-            # TODO: switch everything to this
-            async = AsyncReqChannel.factory(opts, **kwargs)
-            return SyncWrapper(async)
+        # TODO: change wrapper syntax? Probably need to pass in ioloop
+        # All Sync interfaces are just wrappers around the Async ones
+        async = AsyncReqChannel.factory(opts, **kwargs)
+        return SyncWrapper(async)
 
     def send(self, load, tries=3, timeout=60):
         '''

@@ -274,12 +274,12 @@ class AsyncAuth(object):
     # mapping of io_loop -> {key -> auth}
     instance_map = weakref.WeakKeyDictionary()
 
-    def __new__(cls, opts):
+    def __new__(cls, opts, io_loop=None):
         '''
         Only create one instance of SAuth per __key()
         '''
         # do we have any mapping for this io_loop
-        io_loop = tornado.ioloop.IOLoop.current()
+        io_loop = io_loop or tornado.ioloop.IOLoop.current()
         if io_loop not in AsyncAuth.instance_map:
             AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = AsyncAuth.instance_map[io_loop]
@@ -298,18 +298,18 @@ class AsyncAuth(object):
         return loop_instance_map[key]
 
     @classmethod
-    def __key(cls, opts):
+    def __key(cls, opts, io_loop=None):
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
                 opts['master_uri'],  # master ID
                 )
 
     # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts):
+    def __init__(self, opts, io_loop=None):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts):
+    def __singleton_init__(self, opts, io_loop=None):
         '''
         Init an Auth instance
 
@@ -331,7 +331,7 @@ class AsyncAuth(object):
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        self.io_loop = tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
         self.authenticate()
         self.authenticated = False
@@ -408,7 +408,7 @@ class AsyncAuth(object):
                     log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
                 continue
             break
-        if not isinstance(creds, dict) or 'auth' not in creds:
+        if not isinstance(creds, dict) or 'aes' not in creds:
             self._authenticate_future.set_exception(
                 SaltClientError('Attempt to authenticate with the salt master failed')
             )
@@ -454,7 +454,7 @@ class AsyncAuth(object):
 
         try:
             payload = yield channel.send(
-                self.minion_sign_in_payload()['load'],  # TODO: change func to retur load instead of payload
+                self.minion_sign_in_payload()['load'],  # TODO: change func to return load instead of payload
                 tries=tries,
                 timeout=timeout
             )

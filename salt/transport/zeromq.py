@@ -25,6 +25,7 @@ from collections import defaultdict
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
+from salt.exceptions import SaltReqTimeoutError, SaltClientError
 
 import zmq
 import zmq.eventloop.ioloop
@@ -40,52 +41,12 @@ import tornado.tcpclient
 log = logging.getLogger(__name__)
 
 
-class ZeroMQReqChannel(salt.transport.client.ReqChannel):
+class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to ZeroMQ.
 
     ZMQ Channels default to 'crypt=aes'
     '''
-    # the sreq is the zmq connection, since those are relatively expensive to
-    # set up, we are going to reuse them as much as possible.
-    sreq_cache = defaultdict(dict)
-
-    @property
-    def sreq_key(self):
-        '''
-        Return a tuple which uniquely defines this channel (for caching)
-        '''
-        return (self.master_uri,                  # which master you want to talk to
-                os.getpid(),                      # per process
-                threading.current_thread().name,  # per per-thread
-                )
-
-    @property
-    def sreq(self):
-        # When using threading, like on Windows, don't cache.
-        # The following block prevents thread leaks.
-        if not self.opts.get('multiprocessing'):
-            return salt.payload.SREQ(self.master_uri)
-
-        key = self.sreq_key
-
-        if not self.opts['cache_sreqs']:
-            return salt.payload.SREQ(self.master_uri)
-        else:
-            if key not in ZeroMQReqChannel.sreq_cache:
-                master_type = self.opts.get('master_type', None)
-                if master_type == 'failover':
-                    # remove all cached sreqs to the old master to prevent
-                    # zeromq from reconnecting to old masters automagically
-                    for check_key in self.sreq_cache.keys():
-                        if self.opts['master_uri'] != check_key[0]:
-                            del self.sreq_cache[check_key]
-                            log.debug('Removed obsolete sreq-object from '
-                                      'sreq_cache for master {0}'.format(check_key[0]))
-
-                ZeroMQReqChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
-
-            return ZeroMQReqChannel.sreq_cache[key]
 
     def __init__(self, opts, **kwargs):
         self.opts = dict(opts)
@@ -97,21 +58,35 @@ class ZeroMQReqChannel(salt.transport.client.ReqChannel):
         if 'master_uri' in kwargs:
             self.opts['master_uri'] = kwargs['master_uri']
 
+        self._io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
-            self.auth = salt.crypt.SAuth(self.opts)
+            self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
+
+        self.message_client = AsyncReqMessageClient(self.opts,
+                                                    self.master_uri,
+                                                    io_loop=self._io_loop,
+                                                    )
 
     @property
     def master_uri(self):
         return self.opts['master_uri']
 
+    def _package_load(self, load):
+        return {
+            'enc': self.crypt,
+            'load': load,
+        }
+
+    @tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
-        ret = self.sreq.send('aes', self.auth.crypticle.dumps(load), tries, timeout)
+        ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), tries, timeout)
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        return pcrypt.loads(ret[dictkey])
+        raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
 
+    @tornado.gen.coroutine
     def _crypted_transfer(self, load, tries=3, timeout=60):
         '''
         In case of authentication errors, try to renegotiate authentication
@@ -119,33 +94,43 @@ class ZeroMQReqChannel(salt.transport.client.ReqChannel):
         Indeed, we can fail too early in case of a master restart during a
         minion state execution call
         '''
+        @tornado.gen.coroutine
         def _do_transfer():
-            data = self.sreq.send(
-                self.crypt,
-                self.auth.crypticle.dumps(load),
-                tries,
-                timeout)
+            data = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)),
+                                      tries,
+                                      timeout,
+                                      )
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
                 data = self.auth.crypticle.loads(data)
-            return data
+            raise tornado.gen.Return(data)
+        if not self.auth.authenticated:
+            yield self.auth.authenticate()
         try:
-            return _do_transfer()
+            ret = yield _do_transfer()
         except salt.crypt.AuthenticationError:
-            self.auth.authenticate()
-            return _do_transfer()
+            yield self.auth.authenticate()
+            ret = yield _do_transfer()
+        raise tornado.gen.Return(ret)
 
+    @tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
-        return self.sreq.send(self.crypt, load, tries, timeout)
+        ret = yield self.message_client.send(self._package_load(load), timeout=timeout)
+        raise tornado.gen.Return(ret)
 
-    def send(self, load, tries=3, timeout=60):
-        if self.crypt == 'clear':  # for sign-in requests
-            return self._uncrypted_transfer(load, tries, timeout)
-        else:  # for just about everything else
-            return self._crypted_transfer(load, tries, timeout)
+    @tornado.gen.coroutine
+    def send(self, load, tries=3, timeout=60, callback=None):
+        '''
+        Send a request, return a future which will complete when we send the message
+        '''
+        if self.crypt == 'clear':
+            ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
+        else:
+            ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
+        raise tornado.gen.Return(ret)
 
 
 class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
@@ -347,11 +332,13 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             payload = self.serial.loads(payload[0])
             payload = self._decode_payload(payload)
         except Exception as e:
+            log.error('Bad load from minion')
             stream.send(self.serial.dumps('bad load'))
             raise tornado.gen.Return()
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
+            log.error('payload and load must be a dict')
             stream.send(self.serial.dumps('payload and load must be a dict'))
             raise tornado.gen.Return()
 
@@ -504,3 +491,131 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             int_payload['topic_lst'] = load['tgt']
 
         pub_sock.send(self.serial.dumps(int_payload))
+
+
+# TODO: unit tests!
+class AsyncReqMessageClient(object):
+    '''
+    This class wraps the underylying zeromq REQ socket and gives a future-based
+    interface to sending and recieving messages. This works around the primary
+    limitation of serialized send/recv on the underlying socket by queueing the
+    message sends in this class. In the future if we decide to attempt to multiplex
+    we can manage a pool of REQ/REP sockets-- but for now we'll just do them in serial
+    '''
+    def __init__(self, opts, addr, linger=0, io_loop=None):
+        self.opts = opts
+        self.addr = addr
+        self.linger = linger
+        self.io_loop = io_loop or zmq.eventloop.ioloop.ZMQIOLoop.current()
+
+        self.serial = salt.payload.Serial(self.opts)
+
+        self.context = zmq.Context()
+
+        # wire up sockets
+        self._init_socket()
+
+        self.send_queue = []
+        # mapping of message -> future
+        self.send_future_map = {}
+
+        self.send_timeout_map = {}  # message -> timeout
+
+    def _init_socket(self):
+        if hasattr(self, 'stream'):
+            self.stream.close()
+            self.socket.close()
+            del self.stream
+            del self.socket
+
+        self.socket = self.context.socket(zmq.REQ)
+
+        # socket options
+        if hasattr(zmq, 'RECONNECT_IVL_MAX'):
+            self.socket.setsockopt(
+                zmq.RECONNECT_IVL_MAX, 5000
+            )
+
+        self._set_tcp_keepalive()
+        if self.addr.startswith('tcp://['):
+            # Hint PF type if bracket enclosed IPv6 address
+            if hasattr(zmq, 'IPV6'):
+                self.socket.setsockopt(zmq.IPV6, 1)
+            elif hasattr(zmq, 'IPV4ONLY'):
+                self.socket.setsockopt(zmq.IPV4ONLY, 0)
+        self.socket.linger = self.linger
+        self.socket.connect(self.addr)
+        self.stream = zmq.eventloop.zmqstream.ZMQStream(self.socket, io_loop=self.io_loop)
+
+    def _set_tcp_keepalive(self):
+        if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
+            if 'tcp_keepalive' in self.opts:
+                self.socket.setsockopt(
+                    zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+                )
+            if 'tcp_keepalive_idle' in self.opts:
+                self.socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+                )
+            if 'tcp_keepalive_cnt' in self.opts:
+                self.socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+                )
+            if 'tcp_keepalive_intvl' in self.opts:
+                self.socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+                )
+
+    @tornado.gen.coroutine
+    def _internal_send_recv(self):
+        while len(self.send_queue) > 0:
+            message = self.send_queue.pop(0)
+            future = self.send_future_map[message]
+            # send
+            def mark_future(msg):
+                if not future.done():
+                    future.set_result(self.serial.loads(msg[0]))
+            self.stream.on_recv(mark_future)
+            self.stream.send(message)
+
+            try:
+                ret = yield future
+            except:
+                self._init_socket()  # re-init the zmq socket (no other way in zmq)
+                continue
+            self.remove_message_timeout(message)
+
+    def remove_message_timeout(self, message):
+        if message not in self.send_timeout_map:
+            return
+        timeout = self.send_timeout_map.pop(message)
+        self.io_loop.remove_timeout(timeout)
+
+    def timeout_message(self, message):
+        del self.send_timeout_map[message]
+        self.send_future_map.pop(message).set_exception(SaltReqTimeoutError('Message timed out'))
+
+    def send(self, message, timeout=None, callback=None):
+        '''
+        Return a future which will be completed when the message has a response
+        '''
+        message = self.serial.dumps(message)
+        future = tornado.concurrent.Future()
+        if callback is not None:
+            def handle_future(future):
+                response = future.result()
+                self.io_loop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+        # Add this future to the mapping
+        self.send_future_map[message] = future
+
+        if timeout is not None:
+            send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)
+            self.send_timeout_map[message] = send_timeout
+
+        if len(self.send_queue) == 0:
+            self.io_loop.spawn_callback(self._internal_send_recv)
+
+        self.send_queue.append(message)
+
+        return future
