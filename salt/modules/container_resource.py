@@ -295,11 +295,8 @@ def copy_to(name,
     elif exec_method == 'nsenter':
         pid = __salt__['{0}.pid'.format(container_type)](name)
         __salt__['cmd.run_stdout'](
-            'cat {0} | {1} env -i {2} tee {3}'
-            .format(pipes.quote(source),
-                    _nsenter(pid),
-                    PATH,
-                    pipes.quote(dest)),
+            'cat "{0}" | {1} env -i {2} tee "{3}"'
+            .format(source, _nsenter(pid), PATH, dest),
             python_shell=True
         )
     return source_md5 == _get_md5(name, dest, run_all)
