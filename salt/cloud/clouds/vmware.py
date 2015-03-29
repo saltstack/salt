@@ -29,6 +29,18 @@ cloud configuration at
       user: myuser
       password: verybadpass
       host: 'vcenter01.domain.com'
+
+    vmware-vcenter02:
+      provider: vmware
+      user: myuser
+      password: verybadpass
+      host: 'vcenter02.domain.com'
+
+    vmware-vcenter03:
+      provider: vmware
+      user: myuser
+      password: verybadpass
+      host: 'vcenter03.domain.com'
 '''
 from __future__ import absolute_import
 
@@ -458,6 +470,12 @@ def list_nodes(kwargs=None, call=None):
 def list_folders(kwargs=None, call=None):
     '''
     List all the folders for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_folders my-vmware-config
     '''
     if call != 'function':
         log.error(
