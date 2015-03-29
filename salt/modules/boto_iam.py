@@ -197,7 +197,7 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
         return False
 
 
-def delete_user(user_name, path=None, region=None, key=None, keyid=None,
+def delete_user(user_name, region=None, key=None, keyid=None,
                 profile=None):
     '''
     Delete a user
@@ -216,7 +216,7 @@ def delete_user(user_name, path=None, region=None, key=None, keyid=None,
     except boto.exception.BotoServerError as e:
         log.debug(e)
         log.error('Failed to delete user {0}'.format(user_name))
-        return False
+        return e
 
 
 def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):

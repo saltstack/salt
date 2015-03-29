@@ -110,17 +110,20 @@ def user_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
+        ret['result'] = True
         ret['comment'] = 'IAM User {0} does not exist.'.format(name)
         return ret
     if __opts__['test']:
         ret['comment'] = 'IAM user {0} is set to be deleted.'.format(name)
         ret['result'] = None
         return ret
-    if __salt__['boto_iam.delete_user'](name, region, key, keyid, profile):
+    deleted = __salt__['boto_iam.delete_user'](name, region, key, keyid, profile)
+    if deleted is True:
         ret['comment'] = 'IAM user {0} is deleted.'.format(name)
+        ret['result'] = True
         ret['changes']['deleted'] = name
         return ret
-    ret['comment'] = 'IAM user {0} could not be deleted.'.format(name)
+    ret['comment'] = 'IAM user {0} could not be deleted.\n {1}'.format(name, deleted)
     ret['result'] = False
     return ret
 
