@@ -2240,6 +2240,31 @@ def load(path, tag=None):
     return ret
 
 
+def layers(name):
+    '''
+    Returns a list of the IDs of layers belonging to the specified image, with
+    the top-most layer (the one correspnding to the passed name) appearing
+    last.
+
+    name
+        Image name or ID
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker-ng.layers centos:7
+    '''
+    ret = []
+    cmd = ['docker', 'history', '-q', name]
+    for line in reversed(
+            __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines()):
+        ret.append(line)
+    if not ret:
+        raise CommandExecutionError('Image \'{0}\' not found'.format(name))
+    return ret
+
+
 def pull(tag,
          insecure_registry=False,
          api_response=False,
