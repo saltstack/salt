@@ -638,7 +638,7 @@ def _get_node(droplet_id):
             log.debug(
                 'Failed to get the data for the node {0!r}. Remaining '
                 'attempts {1}'.format(
-                    name, attempts
+                    droplet_id, attempts
                 )
             )
             # Just a little delay between attempts...
