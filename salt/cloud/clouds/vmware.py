@@ -49,7 +49,7 @@ import salt.config as config
 HAS_LIBS = False
 try:
     from pyVim.connect import SmartConnect
-    from pyVmomi import vim
+    from pyVmomi import vim, vmodl
     HAS_LIBS = True
 except Exception:
     pass
@@ -115,22 +115,59 @@ def _get_inv():
     return si.RetrieveContent()
 
 
-def _get_vm_list():
+def _get_object_property_list(obj_type, property_list=None):
     '''
-    Returns a list of all vms in the VMware environment
+    Returns a list of properties for the managed object in the VMware environment
     '''
     # Get service instance object
     si = _get_si()
 
-    # Create a object view
-    obj_view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [vim.VirtualMachine], True)
+    content = si.content
 
-    vm_list = obj_view.view
+    # Create a object view
+    obj_view = content.viewManager.CreateContainerView(content.rootFolder, [obj_type], True)
+
+    # Create object spec to navigate content
+    obj_spec = vmodl.query.PropertyCollector.ObjectSpec()
+    obj_spec.obj = obj_view
+    obj_spec.skip = True
+
+    # Create property spec to determine properties to be retrieved
+    property_spec = vmodl.query.PropertyCollector.PropertySpec()
+    property_spec.type = obj_type
+    if not property_list:
+        property_spec.all = True
+    else:
+        property_spec.pathSet = property_list
+
+    # Create a filter spec and specify object, property spec in it
+    filter_spec = vmodl.query.PropertyCollector.FilterSpec()
+    filter_spec.objectSet = [obj_spec]
+    filter_spec.propSet = [property_spec]
+
+    # Create traversal spec to determine the path for collection
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec()
+    traversal_spec.name = 'traverseEntities'
+    traversal_spec.path = 'view'
+    traversal_spec.skip = False
+    traversal_spec.type = obj_view.__class__
+    obj_spec.selectSet = [traversal_spec]
+
+    # Retrieve the content
+    content = content.propertyCollector.RetrieveContents([filter_spec])
 
     # Destroy the object view
     obj_view.Destroy()
 
-    return vm_list
+    obj_list = []
+    for object in content:
+        properties = {}
+        for property in object.propSet:
+            properties[property.name] = property.val
+            properties['object'] = object.obj
+        obj_list.append(properties)
+
+    return obj_list
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -412,29 +449,22 @@ def list_nodes_min(kwargs=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with no details
 
-    .. note::
-
-        The list returned does not include templates.
-
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f list_nodes_min my-vmware-config
     '''
-    if call != 'function':
-        log.error(
-            'The list_nodes_min function must be called with -f or --function.'
-        )
-        return False
 
     ret = {}
-    vm_list = _get_vm_list()
+    vm_properties = [
+                        "name"
+                    ]
+
+    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        if not vm.summary.config.template:
-            # It is not a template
-            ret[vm.name] = True
+        ret[vm["name"]] = True
 
     return ret
 
@@ -443,34 +473,32 @@ def list_nodes(kwargs=None, call=None):
     '''
     Return a list of the VMs that are on the provider, with basic fields
 
-    .. note::
-
-        The list returned does not include templates.
-
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f list_nodes my-vmware-config
     '''
-    if call != 'function':
-        log.error(
-            'The list_nodes function must be called with -f or --function.'
-        )
-        return False
 
     ret = {}
-    vm_list = _get_vm_list()
+    vm_properties = [
+                        "name",
+                        "guest.ipAddress",
+                        "config.guestFullName",
+                        "config.hardware.numCPU",
+                        "config.hardware.memoryMB"
+                    ]
+
+    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        if not vm.summary.config.template:
-            # It is not a template
-            vm_info = {
-                'id': vm.name,
-                'ip_address': vm.summary.guest.ipAddress,
-                'cpus': vm.summary.config.numCpu,
-                'ram': vm.summary.config.memorySizeMB,
-            }
-            ret[vm_info['id']] = vm_info
+        vm_info = {
+            'id': vm["name"],
+            'ip_address': vm["guest.ipAddress"] if "guest.ipAddress" in vm else None,
+            'guest_fullname': vm["config.guestFullName"],
+            'cpus': vm["config.hardware.numCPU"],
+            'ram': vm["config.hardware.memoryMB"],
+        }
+        ret[vm_info['id']] = vm_info
 
     return ret
