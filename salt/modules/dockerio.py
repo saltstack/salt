@@ -1932,7 +1932,7 @@ def get_container_root(container):
         'containers',
         _get_container_infos(container)['Id'],
     )
-    default_rootfs = os.path.join(default_path, 'roofs')
+    default_rootfs = os.path.join(default_path, 'rootfs')
     rootfs_re = re.compile(r'^lxc.rootfs\s*=\s*(.*)\s*$', re.U)
     try:
         lxcconfig = os.path.join(default_path, 'config.lxc')
