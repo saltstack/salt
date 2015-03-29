@@ -3361,6 +3361,12 @@ def run_all(name,
     '''
     Run :py:func:`cmd.run_all <salt.modules.cmdmod.run_all>` within a container
 
+    .. note::
+
+        While the command is run within the container, it is initiated from the
+        host. Therefore, the PID in the return dict is from the host, not from
+        the container.
+
     name
         Container name or ID in which to run the command
 
@@ -3536,6 +3542,12 @@ def script(name,
            keep_env=None):
     '''
     Run :py:func:`cmd.script <salt.modules.cmdmod.script>` within a container
+
+    .. note::
+
+        While the command is run within the container, it is initiated from the
+        host. Therefore, the PID in the return dict is from the host, not from
+        the container.
 
     name
         Container name or ID

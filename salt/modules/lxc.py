@@ -3230,6 +3230,12 @@ def run_all(name,
 
     Run :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` within a container
 
+    .. note::
+
+        While the command is run within the container, it is initiated from the
+        host. Therefore, the PID in the return dict is from the host, not from
+        the container.
+
     .. warning::
 
         Many shell builtins do not work, failing with stderr similar to the
