@@ -93,11 +93,13 @@ def __virtual__():
     return 'boto_iam.get_user' in __salt__
 
 
-def user_absent(name, region=None, key=None, keyid=None, profile=None):
+def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Ensure the IAM user is absent
+    Ensure the IAM user is absent. User cannot be deleted if it has keys.
 
     name (string) – The name of the new user.
+
+    delete_keys (bool) - Delete all keys from user.
 
     region (string) - Region to connect to.
 
@@ -113,19 +115,84 @@ def user_absent(name, region=None, key=None, keyid=None, profile=None):
         ret['result'] = True
         ret['comment'] = 'IAM User {0} does not exist.'.format(name)
         return ret
+    if 'true' == str(delete_keys).lower:
+        keys = __salt__['boto_iam.get_all_access_keys'](user_name=name, region=region, key=key,
+                                                        keyid=keyid, profile=profile)
+        log.debug('keys are {0}'.format(keys))
+        if isinstance(keys, dict):
+            keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
+            for k in keys:
+                if __opts__['test']:
+                    ret['comment'] = 'Access key {0} is set to be deleted.'.format(k['access_key_id'])
+                    ret['result'] = None
+                    return ret
+                if _delete_key(k['access_key_id'], name, region, key, keyid, profile):
+                    ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k['access_key_id'])])
+                    ret['changes'][k['access_key_id']] = 'deleted'
     if __opts__['test']:
         ret['comment'] = 'IAM user {0} is set to be deleted.'.format(name)
         ret['result'] = None
         return ret
     deleted = __salt__['boto_iam.delete_user'](name, region, key, keyid, profile)
     if deleted is True:
-        ret['comment'] = 'IAM user {0} is deleted.'.format(name)
+        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} is deleted.'.format(name)])
         ret['result'] = True
         ret['changes']['deleted'] = name
         return ret
     ret['comment'] = 'IAM user {0} could not be deleted.\n {1}'.format(name, deleted)
     ret['result'] = False
     return ret
+
+
+def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the IAM user access_key_id is absent. If the user_name is not specified,
+    it is determined implicitly based on the AWS Access Key ID used to sign the request.
+
+    access_key_id (list) – A list of access key ids
+
+    user_name (string) - The username of the user
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': access_keys, 'result': True, 'comment': '', 'changes': {}}
+    if not __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile):
+        ret['result'] = False
+        ret['comment'] = 'IAM User {0} does not exist.'.format(user_name)
+        return ret
+    for k in access_keys:
+        if _delete_key(k, user_name, region, key, keyid, profile):
+            ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k)])
+            ret['changes'][k] = 'deleted'
+        else:
+            ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} does not exist.'.format(k)])
+    return ret
+
+
+def _delete_key(access_key_id, user_name, region=None, key=None, keyid=None, profile=None):
+    keys = __salt__['boto_iam.get_all_access_keys'](user_name=user_name, region=region, key=key,
+                                                    keyid=keyid, profile=profile)
+    log.debug('keys are : {0}'.format(keys))
+    if isinstance(keys, str):
+        log.debug('keys are : false {0}'.format(keys))
+        return False
+    keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
+    log.debug('keys are : {0}'.format(keys))
+    for k in keys:
+        log.debug('key is : {0} and is compared with {1}'.format(k['access_key_id'], access_key_id))
+        if str(k['access_key_id']) == str(access_key_id):
+            deleted = __salt__['boto_iam.delete_access_key'](access_key_id, user_name, region, key,
+                                                             keyid, profile)
+            if deleted:
+                return True
+            return False
 
 
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
