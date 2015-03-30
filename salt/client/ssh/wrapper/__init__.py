@@ -31,6 +31,7 @@ class FunctionWrapper(object):
             mods=None,
             fsclient=None,
             cmd_prefix=None,
+            aliases=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
         self.cmd_prefix = cmd_prefix
@@ -41,6 +42,9 @@ class FunctionWrapper(object):
                        'host': host}
         self.fsclient = fsclient
         self.kwargs.update(kwargs)
+        self.aliases = aliases
+        if self.aliases is None:
+            self.aliases = {}
 
     def __contains__(self, key):
         '''
@@ -73,6 +77,7 @@ class FunctionWrapper(object):
                                    mods=self.mods,
                                    fsclient=self.fsclient,
                                    cmd_prefix=cmd,
+                                   aliases=self.aliases,
                                    **kwargs)
 
         if self.cmd_prefix:
@@ -83,6 +88,9 @@ class FunctionWrapper(object):
 
         if cmd in self.wfuncs:
             return self.wfuncs[cmd]
+
+        if cmd in self.aliases:
+            return self.aliases[cmd]
 
         def caller(*args, **kwargs):
             '''
@@ -115,3 +123,37 @@ class FunctionWrapper(object):
                        'stdout': stdout}
             return ret
         return caller
+
+    def __setitem__(self, cmd, value):
+        '''
+        Set aliases for functions
+        '''
+        if '.' not in cmd and not self.cmd_prefix:
+            # Form of salt.cmd.run in Jinja -- it's expecting a subdictionary
+            # containing only 'cmd' module calls, in that case. We don't
+            # support assigning directly to prefixes in this way
+            raise KeyError('Cannot assign to module key {0} in the '
+                           'FunctionWrapper'.format(cmd))
+
+        if self.cmd_prefix:
+            # We're in an inner FunctionWrapper as created by the first code
+            # block in __getitem__. Reconstruct the original cmd in the form
+            # 'cmd.run' and then evaluate as normal
+            cmd = '{0}.{1}'.format(self.cmd_prefix, cmd)
+
+        if cmd in self.wfuncs:
+            self.wfuncs[cmd] = value
+
+        # Here was assume `value` is a `caller` function from __getitem__.
+        # We save it as an alias and then can return it when referenced
+        # later in __getitem__
+        self.aliases[cmd] = value
+
+    def get(self, cmd, default):
+        '''
+        Mirrors behavior of dict.get
+        '''
+        if cmd in self:
+            return self[cmd]
+        else:
+            return default

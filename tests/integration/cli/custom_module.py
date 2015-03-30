@@ -69,7 +69,10 @@ class SSHCustomModuleTest(integration.SSHCase):
             "module_|-custom-module_|-test.recho_|-run": 'olleh'}
         cmd = self.run_function('state.sls', arg=['custom_module'])
         for key in cmd:
-            if not cmd[key]['result']:
+            if not isinstance(cmd, dict) or not isinstance(cmd[key], dict):
+                raise AssertionError('{0} is not a proper state return'
+                                     .format(cmd))
+            elif not cmd[key]['result']:
                 raise AssertionError(cmd[key]['comment'])
             cmd_ret = cmd[key]['changes'].get('ret', None)
             self.assertEqual(cmd_ret, expected[key])

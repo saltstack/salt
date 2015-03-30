@@ -750,6 +750,10 @@ def shell(cmd,
 
         salt '*' cmd.shell cmd='sed -e s/=/:/g'
     '''
+    if 'python_shell' in kwargs:
+        python_shell = kwargs.pop('python_shell')
+    else:
+        python_shell = True
     return run(cmd,
         cwd=cwd,
         stdin=stdin,
@@ -767,7 +771,7 @@ def shell(cmd,
         ignore_retcode=ignore_retcode,
         saltenv=saltenv,
         use_vt=use_vt,
-        python_shell=True,
+        python_shell=python_shell,
         **kwargs)
 
 
