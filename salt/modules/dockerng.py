@@ -725,7 +725,7 @@ def depends(name):
 def diff(name):
     '''
     Get information on changes made to container's filesystem since it was
-    created. This is equivalent to running ``docker diff``.
+    created. Equivalent to running the ``docker diff`` Docker CLI command.
 
     name
         Container name or ID
@@ -797,7 +797,8 @@ def exists(name):
 
 def history(name, quiet=False):
     '''
-    Return the history for an image. Equivalent to running ``docker history``.
+    Return the history for an image. Equivalent to running the ``docker
+    history`` Docker CLI command.
 
     name
         Container name or ID
@@ -870,8 +871,8 @@ def history(name, quiet=False):
 
 def images(verbose=False, **kwargs):
     '''
-    Returns information about the Docker images on the Minion. Similar to
-    running ``docker images``.
+    Returns information about the Docker images on the Minion. Equivalent to
+    running the ``docker images`` Docker CLI command.
 
     all : False
         If ``True``, untagged images will also be returned
@@ -939,7 +940,7 @@ def images(verbose=False, **kwargs):
 def info():
     '''
     Returns a dictionary of system-wide information. Equivalent to running
-    ``docker info``.
+    the ``docker info`` Docker CLI command.
 
     CLI Example:
 
@@ -995,8 +996,8 @@ def inspect(name):
 @_ensure_exists
 def inspect_container(name):
     '''
-    Retrieves container information. This is equivalent to running ``docker
-    inspect``, but will only look for container information.
+    Retrieves container information. Equivalent to running the ``docker
+    inspect`` Docker CLI command, but will only look for container information.
 
     name
         Container name or ID
@@ -1019,8 +1020,8 @@ def inspect_container(name):
 
 def inspect_image(name):
     '''
-    Retrieves image information. This is equivalent to running ``docker
-    inspect``, but will only look for image information.
+    Retrieves image information. Equivalent to running the ``docker inspect``
+    Docker CLI command, but will only look for image information.
 
     name
         Image name or ID
@@ -1088,8 +1089,8 @@ def list_tags():
 
 def logs(name):
     '''
-    Returns the logs for the container. This is equivalent to running ``docker
-    logs``.
+    Returns the logs for the container. Equivalent to running the ``docker
+    logs`` Docker CLI command.
 
     name
         Container name or ID
@@ -1124,8 +1125,8 @@ def pid(name):
 @_ensure_exists
 def port(name, private_port=None):
     '''
-    Returns port mapping information for a given container. This is eqivalent
-    to running ``docker port``.
+    Returns port mapping information for a given container. Equivalent to
+    running the ``docker port`` Docker CLI command.
 
     name
         Container name or ID
@@ -1188,7 +1189,7 @@ def port(name, private_port=None):
 def ps_(**kwargs):
     '''
     Returns information about the Docker containers on the Minion. Equivalent
-    to running ``docker ps``.
+    to running the ``docker ps`` Docker CLI command.
 
     all : False
         If ``True``, stopped containers will also be returned
@@ -1396,7 +1397,7 @@ def top(name):
 def version():
     '''
     Returns a dictionary of Docker version information. Equivlent to running
-    ``docker version``.
+    the ``docker version`` Docker CLI command.
 
     CLI Example:
 
@@ -2040,8 +2041,8 @@ def commit(name,
            message=None,
            author=None):
     '''
-    Commits a container, thereby promoting it to an image. This is equivalent
-    to running a ``docker commit``.
+    Commits a container, thereby promoting it to an image. Equivalent to
+    running the ``docker commit`` Docker CLI command.
 
     name
         Container name or ID to commit
@@ -2537,19 +2538,20 @@ def rmi(name, force=False, prune=True):
             'Tags': [x for x in pre_tags if x not in list_tags()]}
 
 
-def save(image_id,
+def save(name,
          path,
          overwrite=False,
          makedirs=False,
          compression=None,
          **kwargs):
     '''
-    Saves an image and to a file on the minion using
-    ``docker save``. More than one image can be specified, space-delimited,
-    followed by the destination file. Additional options are as follows:
+    Saves an image and to a file on the minion. Equivalent to running the
+    ``docker save`` Docker CLI command, but unlike ``docker save`` this will
+    also work on named images instead of just images IDs.
 
-    image_id
-        Image ID
+    name
+        Name or ID of image. Specify a specific tag by using the ``repo:tag``
+        notation.
 
     path
         Absolute path on the Minion where the image will be exported
@@ -2665,7 +2667,7 @@ def save(image_id,
     else:
         saved_path = path
 
-    cmd = ['docker', 'save', '-o', saved_path, inspect_image(image_id)['Id']]
+    cmd = ['docker', 'save', '-o', saved_path, inspect_image(name)['Id']]
     time_started = time.time()
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     if result['retcode'] != 0:
