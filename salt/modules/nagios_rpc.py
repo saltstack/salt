@@ -9,13 +9,14 @@ Check Host & Service status from Nagios via JSON RPC.
 # Import python libs
 from __future__ import absolute_import
 import logging
-import httplib
 
-# Import 3rd-party libs
+# Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
+# Import Third Party Libs
 try:
     import requests
     from requests.exceptions import ConnectionError
@@ -84,11 +85,11 @@ def _status_query(query, hostname, retcode=True, service=None, method='GET', **k
                                   data=data,
                                   verify=True,
                                   auth=auth)
-        if result.status_code == httplib.OK:
+        if result.status_code == salt.ext.six.moves.http_client.OK:
             data = result.json()
-        elif result.status_code == httplib.UNAUTHORIZED:
+        elif result.status_code == salt.ext.six.moves.http_client.UNAUTHORIZED:
             log.error('Nagios authentication failed. Please check the configuration.')
-        elif result.status_code == httplib.NOT_FOUND:
+        elif result.status_code == salt.ext.six.moves.http_client.NOT_FOUND:
             log.error('URL {0} for Nagios was not found.'.format(url))
         else:
             log.debug('Results: {0}'.format(result.text))
