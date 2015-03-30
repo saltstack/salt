@@ -241,14 +241,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print_cli('-------------------------------------------')
         print_cli('Summary')
         print_cli('-------------------------------------------')
-        print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
-        print_cli('# of Minions Returned: {0}'.format(return_counter))
-        print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
+        print_cli('# of minions targeted: {0}'.format(return_counter + not_return_counter))
+        print_cli('# of minions returned: {0}'.format(return_counter))
+        print_cli('# of minions that did not return: {0}'.format(not_return_counter))
         if self.options.verbose:
             if not_connected_minions:
-                print_cli('Minions Which Did Not Connected: {0}'.format(" ".join(not_connected_minions)))
+                print_cli('Minions not connected: {0}'.format(" ".join(not_connected_minions)))
             if not_response_minions:
-                print_cli('Minions Which Did Not Response: {0}'.format(" ".join(not_response_minions)))
+                print_cli('Minions not responding: {0}'.format(" ".join(not_response_minions)))
         print_cli('-------------------------------------------')
 
     def _progress_end(self, out):
