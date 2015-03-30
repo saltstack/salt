@@ -43,7 +43,7 @@ class FunctionWrapper(object):
         self.fsclient = fsclient
         self.kwargs.update(kwargs)
         self.aliases = aliases
-        if self.alises is None:
+        if self.aliases is None:
             self.aliases = {}
 
     def __contains__(self, key):
