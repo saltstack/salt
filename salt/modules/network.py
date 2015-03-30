@@ -14,6 +14,7 @@ import socket
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 import salt.utils.network
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
@@ -589,6 +590,7 @@ def dig(host):
     return __salt__['cmd.run'](cmd)
 
 
+@decorators.which('arp')
 def arp():
     '''
     Return the arp table from the minion

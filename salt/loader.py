@@ -90,7 +90,14 @@ def _module_dirs(
     return cli_module_dirs + ext_type_types + [ext_types, sys_types]
 
 
-def minion_mods(opts, context=None, whitelist=None, include_errors=False, initial_load=False, notify=False):
+def minion_mods(
+        opts,
+        context=None,
+        whitelist=None,
+        include_errors=False,
+        initial_load=False,
+        loaded_base_name=None,
+        notify=False):
     '''
     Load execution modules
 
@@ -116,7 +123,8 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
                      opts,
                      tag='module',
                      pack={'__context__': context},
-                     whitelist=whitelist)
+                     whitelist=whitelist,
+                     loaded_base_name=loaded_base_name)
     ret.pack['__salt__'] = ret
     if notify:
         evt = salt.utils.event.get_event('minion', opts=opts)
@@ -699,11 +707,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             return '{0!r} is not available.'.format(function_name)
         else:
             if self.missing_modules.get(mod_name) is not None:
-                return '{0!r}\' __virtual__ returned False: {1}'.format(mod_name, self.missing_modules[mod_name])
+                return '\'{0}\' __virtual__ returned False: {1}'.format(mod_name, self.missing_modules[mod_name])
             elif self.missing_modules.get(mod_name) is None:
-                return '{0!r}\' __virtual__ returned False'.format(mod_name)
+                return '\'{0}\' __virtual__ returned False'.format(mod_name)
             else:
-                return '{0!r} is not available.'.format(function_name)
+                return '\'{0}\' is not available.'.format(function_name)
 
     def refresh_file_mapping(self):
         '''
