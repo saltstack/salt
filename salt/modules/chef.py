@@ -189,13 +189,11 @@ def solo(whyrun=False,
         Enable whyrun mode when set to True
     '''
     if logfile is None:
-        logfile = _default_logfile('chef-client'),
+        logfile = _default_logfile('chef-solo'),
     args = ['chef-solo',
             '--no-color',
             '--logfile "{0}"'.format(logfile),
             '--format doc']
-
-    args = ['chef-solo', '--no-color', '--logfile {0}'.format(logfile)]
 
     if whyrun:
         args.append('--why-run')
