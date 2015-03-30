@@ -2,9 +2,12 @@
 '''
 Common resources for LXC and systemd-nspawn containers
 
+.. versionadded:: Beryllium
+
 These functions are not designed to be called directly, but instead from the
-:mod:`lxc <salt.modules.lxc>` and the (future) :mod:`nspawn
-<salt.modules.nspawn>` execution modules.
+:mod:`lxc <salt.modules.lxc>`, :mod:`nspawn <salt.modules.nspawn>`, and
+:mod:`docker-ng <salt.modules.dockerng>` execution modules. They provide for
+common logic to be re-used for common actions.
 '''
 
 # Import python libs
