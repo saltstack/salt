@@ -449,7 +449,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         setattr(mod, kwarg, kwargs[kwarg])
 
     try:
-        data = mod.run()str0ng
+        data = mod.run()
         if string:
             return {'result': True,
                     'data': data}
