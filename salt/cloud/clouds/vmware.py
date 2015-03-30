@@ -568,3 +568,81 @@ def stop(name, call=None):
                 log.error('Could not power off VM {0}: {1}'.format(name, exc))
                 return 'failed to power off'
     return 'powered off'
+
+
+def suspend(name, call=None):
+    '''
+    To suspend a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a suspend vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The suspend action must be called with -a or --action.'
+        )
+
+    vm_properties = [
+                        "name",
+                        "summary.runtime.powerState"
+                    ]
+
+    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["name"] == name:
+            if vm["summary.runtime.powerState"] == "poweredOff":
+                ret = 'cannot suspend in powered off state'
+                log.info('VM {0} {1}'.format(name, ret))
+                return ret
+            elif vm["summary.runtime.powerState"] == "suspended":
+                ret = 'already suspended'
+                log.info('VM {0} {1}'.format(name, ret))
+                return ret
+            try:
+                log.info('Suspending VM {0}'.format(name))
+                vm["object"].Suspend()
+            except Exception as exc:
+                log.error('Could not suspend VM {0}: {1}'.format(name, exc))
+                return 'failed to suspend'
+    return 'suspended'
+
+
+def reset(name, call=None):
+    '''
+    To reset a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reset vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The reset action must be called with -a or --action.'
+        )
+
+    vm_properties = [
+                        "name",
+                        "summary.runtime.powerState"
+                    ]
+
+    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["name"] == name:
+            if vm["summary.runtime.powerState"] == "suspended" or vm["summary.runtime.powerState"] == "poweredOff":
+                ret = 'cannot reset in suspended/powered off state'
+                log.info('VM {0} {1}'.format(name, ret))
+                return ret
+            try:
+                log.info('Resetting VM {0}'.format(name))
+                vm["object"].Reset()
+            except Exception as exc:
+                log.error('Could not reset VM {0}: {1}'.format(name, exc))
+                return 'failed to reset'
+    return 'reset'
