@@ -378,6 +378,8 @@ def absent(name,
         in standard "authorized_keys" format. If this is set, comment, enc and
         options will be ignored.
 
+        .. versionadded:: Beryllium
+
     config
         The location of the authorized keys file relative to the user's home
         directory, defaults to ".ssh/authorized_keys"
