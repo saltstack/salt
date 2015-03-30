@@ -24,6 +24,7 @@ Minions running systemd >= 219 will place new containers in
 # Import python libs
 from __future__ import absolute_import
 import errno
+import functools
 import logging
 import os
 import re
@@ -33,7 +34,6 @@ import tempfile
 
 # Import Salt libs
 import salt.defaults.exitcodes
-import salt.ext.six as six
 import salt.utils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -47,8 +47,7 @@ __func_alias__ = {
 __virtualname__ = 'nspawn'
 SEED_MARKER = '/nspawn.initial_seed'
 WANT = '/etc/systemd/system/multi-user.target.wants/systemd-nspawn@{0}.service'
-PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
-       '/usr/local/bin:/usr/local/sbin'
+EXEC_DRIVER = 'nsenter'
 
 
 def __virtual__():
@@ -71,6 +70,20 @@ def _sd_version():
     var in the future
     '''
     return salt.utils.systemd.version(__context__)
+
+
+def _ensure_exists(wrapped):
+    '''
+    Decorator to ensure that the named container exists.
+    '''
+    @functools.wraps(wrapped)
+    def check_exists(name, *args, **kwargs):
+        if not exists(name):
+            raise CommandExecutionError(
+                'Container \'{0}\' does not exist'.format(name)
+            )
+        return wrapped(name, *args, **salt.utils.clean_kwargs(**kwargs))
+    return check_exists
 
 
 def _root(name='', all_roots=False):
@@ -196,25 +209,6 @@ def _ensure_running(name):
         return start(name)
 
 
-def _ensure_exists(name):
-    '''
-    Raise an exception if the container does not exist
-    '''
-    contextkey = 'nspawn.exists.{0}'.format(name)
-    if contextkey in __context__:
-        # No need to return a value, this function is only here to raise an
-        # exception if the container doesn't exist, and just dropping a key
-        # into __context__ and returning early here will keep us from checking
-        # if the container exists multiple times.
-        return
-    if exists(name):
-        __context__[contextkey] = True
-    else:
-        raise CommandExecutionError(
-            'Container \'{0}\' does not exist'.format(name)
-        )
-
-
 def _ensure_systemd(version):
     '''
     Raises an exception if the systemd version is not greater than the
@@ -238,38 +232,21 @@ def _ensure_systemd(version):
         )
 
 
-def _machinectl(cmd, output_loglevel='debug', use_vt=False):
+def _machinectl(cmd,
+                output_loglevel='debug',
+                ignore_retcode=False,
+                use_vt=False):
     '''
     Helper function to run machinectl
     '''
     prefix = 'machinectl --no-legend --no-pager'
     return __salt__['cmd.run_all']('{0} {1}'.format(prefix, cmd),
                                    output_loglevel=output_loglevel,
+                                   ignore_retcode=ignore_retcode,
                                    use_vt=use_vt)
 
 
-def _pid(name):
-    '''
-    Return container pid
-    '''
-    try:
-        return int(info(name).get('PID'))
-    except (TypeError, ValueError) as exc:
-        raise CommandExecutionError(
-            'Unable to get PID for container \'{0}\': {1}'.format(name, exc)
-        )
-
-
-def _nsenter(name):
-    '''
-    Return the nsenter command to attach to the named container
-    '''
-    return (
-        'nsenter --target {0} --mount --uts --ipc --net --pid'
-        .format(_pid(name))
-    )
-
-
+@_ensure_exists
 def _run(name,
          cmd,
          output=None,
@@ -284,32 +261,23 @@ def _run(name,
     '''
     Common logic for nspawn.run functions
     '''
-    # No need to call _ensure_exists(), it will be called via _nsenter()
-    full_cmd = _nsenter(name)
-    if keep_env is not True:
-        full_cmd += ' env -i'
-    if keep_env is None:
-        full_cmd += ' {0}'.format(PATH)
-    elif isinstance(keep_env, six.string_types):
-        for var in keep_env.split(','):
-            if var in os.environ:
-                full_cmd += ' {0}="{1}"'.format(var, os.environ[var])
-    full_cmd += ' {0}'.format(cmd)
-
     orig_state = state(name)
     exc = None
     try:
         ret = __salt__['container_resource.run'](
             name,
-            full_cmd,
+            cmd,
+            container_type=__virtualname__,
+            exec_driver=EXEC_DRIVER,
             output=output,
             no_start=no_start,
             stdin=stdin,
             python_shell=python_shell,
             output_loglevel=output_loglevel,
             ignore_retcode=ignore_retcode,
-            use_vt=use_vt)
-    except Exception as exc:
+            use_vt=use_vt,
+            keep_env=keep_env)
+    except Exception:
         raise
     finally:
         # Make sure we stop the container if necessary, even if an exception
@@ -334,6 +302,28 @@ def _invalid_kwargs(*args, **kwargs):
         .format(', '.join(['{0}={1}'.format(x, kwargs[x])
                             for x in args]))
     )
+
+
+@_ensure_exists
+def pid(name):
+    '''
+    Returns the PID of a container
+
+    name
+        Container name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion nspawn.pid arch1
+    '''
+    try:
+        return int(info(name).get('PID'))
+    except (TypeError, ValueError) as exc:
+        raise CommandExecutionError(
+            'Unable to get PID for container \'{0}\': {1}'.format(name, exc)
+        )
 
 
 def run(name,
@@ -369,8 +359,7 @@ def run(name,
         suppress logging.
 
     use_vt : False
-        Use SaltStack's utils.vt to stream output to console. Assumes
-        ``output=all``.
+        Use SaltStack's utils.vt to stream output to console.
 
     keep_env : None
         If not passed, only a sane default PATH environment variable will be
@@ -378,7 +367,6 @@ def run(name,
         will be kept. Otherwise, a comma-separated list (or Python list) of
         environment variable names can be passed, and those environment
         variables will be kept.
-
 
     CLI Example:
 
@@ -601,6 +589,12 @@ def run_all(name,
     '''
     Run :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` within a container
 
+    .. note::
+
+        While the command is run within the container, it is initiated from the
+        host. Therefore, the PID in the return dict is from the host, not from
+        the container.
+
     name
         Name of the container in which to run the command
 
@@ -771,15 +765,15 @@ def bootstrap_salt(name,
                             ('tmpdir {0} creation'
                              ' failed ({1}').format(dest_dir, cmd))
                         return False
-                cp(name,
+                copy_to(name,
                    bs_,
                    '{0}/bootstrap.sh'.format(dest_dir),
                    makedirs=True)
-                cp(name, cfg_files['config'],
+                copy_to(name, cfg_files['config'],
                    os.path.join(configdir, 'minion'))
-                cp(name, cfg_files['privkey'],
+                copy_to(name, cfg_files['privkey'],
                    os.path.join(configdir, 'minion.pem'))
-                cp(name, cfg_files['pubkey'],
+                copy_to(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
                 cmd = ('{0} {2}/bootstrap.sh {1}'
@@ -797,9 +791,9 @@ def bootstrap_salt(name,
         else:
             minion_config = salt.config.minion_config(cfg_files['config'])
             pki_dir = minion_config['pki_dir']
-            cp(name, cfg_files['config'], '/etc/salt/minion')
-            cp(name, cfg_files['privkey'], os.path.join(pki_dir, 'minion.pem'))
-            cp(name, cfg_files['pubkey'], os.path.join(pki_dir, 'minion.pub'))
+            copy_to(name, cfg_files['config'], '/etc/salt/minion')
+            copy_to(name, cfg_files['privkey'], os.path.join(pki_dir, 'minion.pem'))
+            copy_to(name, cfg_files['pubkey'], os.path.join(pki_dir, 'minion.pub'))
             run(name,
                 'salt-call --local service.enable salt-minion',
                 python_shell=False)
@@ -894,17 +888,14 @@ def exists(name):
 
         salt myminion nspawn.exists <name>
     '''
-    return name in list_all()
+    contextkey = 'nspawn.exists.{0}'.format(name)
+    if contextkey in __context__:
+        return __context__[contextkey]
+    __context__[contextkey] = name in list_all()
+    return __context__[contextkey]
 
 
-def _get_state(name):
-    try:
-        cmd = 'show {0} --property=State'.format(name)
-        return _machinectl(cmd)['stdout'].split('=')[1]
-    except IndexError:
-        return 'stopped'
-
-
+@_ensure_exists
 def state(name):
     '''
     Return state of container (running or stopped)
@@ -915,8 +906,11 @@ def state(name):
 
         salt myminion nspawn.state <name>
     '''
-    _ensure_exists(name)
-    return _get_state(name)
+    try:
+        cmd = 'show {0} --property=State'.format(name)
+        return _machinectl(cmd, ignore_retcode=True)['stdout'].split('=')[-1]
+    except IndexError:
+        return 'stopped'
 
 
 def info(name, **kwargs):
@@ -1003,6 +997,7 @@ def info(name, **kwargs):
     return ret
 
 
+@_ensure_exists
 def enable(name):
     '''
     Set the named container to be launched at boot
@@ -1013,7 +1008,6 @@ def enable(name):
 
         salt myminion nspawn.enable <name>
     '''
-    _ensure_exists(name)
     cmd = 'systemctl enable systemd-nspawn@{0}'.format(name)
     if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
         __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
@@ -1021,6 +1015,7 @@ def enable(name):
     return True
 
 
+@_ensure_exists
 def disable(name):
     '''
     Set the named container to *not* be launched at boot
@@ -1031,7 +1026,6 @@ def disable(name):
 
         salt myminion nspawn.enable <name>
     '''
-    _ensure_exists(name)
     cmd = 'systemctl disable systemd-nspawn@{0}'.format(name)
     if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
         __context__['retcode'] = salt.defaults.exitcodes.EX_UNAVAILABLE
@@ -1039,6 +1033,7 @@ def disable(name):
     return True
 
 
+@_ensure_exists
 def start(name):
     '''
     Start the named container
@@ -1049,7 +1044,6 @@ def start(name):
 
         salt myminion nspawn.start <name>
     '''
-    _ensure_exists(name)
     if _sd_version() >= 219:
         ret = _machinectl('start {0}'.format(name))
     else:
@@ -1063,12 +1057,12 @@ def start(name):
 
 
 # This function is hidden from sphinx docs
+@_ensure_exists
 def stop(name, kill=False):
     '''
     This is a compatibility function which provides the logic for
     nspawn.poweroff and nspawn.terminate.
     '''
-    _ensure_exists(name)
     if _sd_version() >= 219:
         if kill:
             action = 'terminate'
@@ -1142,6 +1136,7 @@ def restart(name):
     return reboot(name)
 
 
+@_ensure_exists
 def reboot(name, kill=False):
     '''
     Reboot the container by sending a SIGINT to its init process. Equivalent
@@ -1163,7 +1158,6 @@ def reboot(name, kill=False):
         salt myminion nspawn.reboot arch1
         salt myminion nspawn.restart arch1
     '''
-    _ensure_exists(name)
     if _sd_version() >= 219:
         if state(name) == 'running':
             ret = _machinectl('reboot {0}'.format(name))
@@ -1193,6 +1187,7 @@ def reboot(name, kill=False):
     return True
 
 
+@_ensure_exists
 def remove(name, stop=False):
     '''
     Remove the named container
@@ -1217,7 +1212,6 @@ def remove(name, stop=False):
         salt '*' nspawn.remove foo
         salt '*' nspawn.remove foo stop=True
     '''
-    _ensure_exists(name)
     if not stop and state(name) != 'stopped':
         raise CommandExecutionError(
             'Container \'{0}\' is not stopped'.format(name)
@@ -1245,21 +1239,10 @@ def remove(name, stop=False):
 destroy = remove
 
 
-def _get_md5(name, path):
+@_ensure_exists
+def copy_to(name, source, dest, overwrite=False, makedirs=False):
     '''
-    Get the MD5 checksum of a file from a container
-    '''
-    output = run_stdout(name, 'md5sum "{0}"'.format(path), ignore_retcode=True)
-    try:
-        return output.split()[0]
-    except IndexError:
-        # Destination file does not exist or could not be accessed
-        return None
-
-
-def cp(name, source, dest, makedirs=False):
-    '''
-    Copy a file or directory from the host into a container.
+    Copy a file from the host into a container
 
     name
         Container name
@@ -1270,96 +1253,46 @@ def cp(name, source, dest, makedirs=False):
     dest
         Destination on the container. Must be an absolute path.
 
-        .. versionchanged:: 2015.2.0
-            If the destination is a directory, the file will be copied into
-            that directory.
+    overwrite : False
+        Unless this option is set to ``True``, then if a file exists at the
+        location specified by the ``dest`` argument, an error will be raised.
 
     makedirs : False
 
         Create the parent directory on the container if it does not already
         exist.
 
-        .. versionadded:: 2015.2.0
-
     CLI Example:
 
     .. code-block:: bash
 
-        salt 'minion' lxc.cp /tmp/foo /root/foo
+        salt 'minion' nspawn.copy_to /tmp/foo /root/foo
     '''
-    if _sd_version() >= 219:
-        pass
-
-    c_state = state(name)
-    if c_state != 'running':
-        raise CommandExecutionError(
-            'Container \'{0}\' {1}'.format(
-                name,
-                'is {0}'.format(c_state)
-                    if c_state is not None
-                    else 'does not exist'
-            )
-        )
-
-    log.debug('Copying {0} to container \'{1}\' as {2}'
-              .format(source, name, dest))
-
-    # Source file sanity checks
-    if not os.path.isabs(source):
-        raise SaltInvocationError('Source path must be absolute')
-    elif not os.path.exists(source):
-        raise SaltInvocationError(
-            'Source file {0} does not exist'.format(source)
-        )
-    elif not os.path.isfile(source):
-        raise SaltInvocationError('Source must be a regular file')
-    source_dir, source_name = os.path.split(source)
-
-    # Destination file sanity checks
-    if not os.path.isabs(dest):
-        raise SaltInvocationError('Destination path must be absolute')
-    if retcode(name,
-                   'test -d \'{0}\''.format(dest),
-                   ignore_retcode=True) == 0:
-        # Destination is a directory, full path to dest file will include the
-        # basename of the source file.
-        dest = os.path.join(dest, source_name)
-    else:
-        # Destination was not a directory. We will check to see if the parent
-        # dir is a directory, and then (if makedirs=True) attempt to create the
-        # parent directory.
-        dest_dir, dest_name = os.path.split(dest)
-        if retcode(name,
-                   'test -d \'{0}\''.format(dest_dir),
-                   ignore_retcode=True) != 0:
-            if makedirs:
-                result = run_all(name, 'mkdir -p \'{0}\''.format(dest_dir))
-                if result['retcode'] != 0:
-                    error = ('Unable to create destination directory {0} in '
-                             'container \'{1}\''.format(dest_dir, name))
-                    if result['stderr']:
-                        error += ': {0}'.format(result['stderr'])
-                    raise CommandExecutionError(error)
-            else:
-                raise SaltInvocationError(
-                    'Directory {0} does not exist on container \'{1}\''
-                    .format(dest_dir, name)
+    path = source
+    try:
+        if source.startswith('salt://'):
+            cached_source = __salt__['cp.cache_file'](source)
+            if not cached_source:
+                raise CommandExecutionError(
+                    'Unable to cache {0}'.format(source)
                 )
+            path = cached_source
+    except AttributeError:
+        raise SaltInvocationError('Invalid source file {0}'.format(source))
 
-    # Before we try to replace the file, compare checksums.
-    source_md5 = __salt__['file.get_sum'](source, 'md5')
-    if source_md5 != _get_md5(name, dest):
-        # Using cat here instead of opening the file, reading it into memory,
-        # and passing it as stdin to run(). This will keep down memory
-        # usage for the minion and make the operation run quicker.
-        __salt__['cmd.run_stdout'](
-            'cat "{0}" | {1} env -i {2} tee "{3}"'
-            .format(source, _nsenter(name), PATH, dest),
-            python_shell=True
-        )
-        return source_md5 == _get_md5(name, dest)
-    # Checksums matched, no need to copy, just return True
-    return True
+    if _sd_version() >= 219:
+        # TODO: Use machinectl copy-to
+        pass
+    return __salt__['container_resource.copy_to'](
+        name,
+        path,
+        dest,
+        container_type=__virtualname__,
+        exec_driver=EXEC_DRIVER,
+        overwrite=overwrite,
+        makedirs=makedirs)
+
+cp = copy_to
 
 
 # Everything below requres systemd >= 219
