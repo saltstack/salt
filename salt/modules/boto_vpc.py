@@ -152,6 +152,48 @@ def _create_resource(resource, name, tags, region, key, keyid,
         return False
 
 
+def _delete_resource(resource, name, resource_id, region,
+                     key, keyid, profile, **kwargs):
+    '''
+    Delete a VPC resource. Returns True if succesful, otherwise False.
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    try:
+        delete_resource = getattr(conn, 'delete_' + resource)
+    except AttributeError:
+        log.error('Function {0} does not exist for boto VPC '
+                  'connection.'.format('delete_' + resource))
+    if name:
+        resource_id = get_resource_id(resource, name,
+                                      region=region, key=key,
+                                      keyid=keyid, profile=profile)
+    if not resource_id:
+        return False
+
+    try:
+        if delete_resource(**kwargs):
+            __salt__['boto_common.cache_id']('vpc', name,
+                                             sub_resource=resource,
+                                             resource_id=resource_id,
+                                             invalidate=True,
+                                             region=region,
+                                             key=key, keyid=keyid,
+                                             profile=profile)
+            return True
+        else:
+            if name:
+                log.warning('{0} {1} was not deleted.'.format(resource, name))
+            else:
+                log.warning('{0} was not deleted.'.format(resource))
+            return False
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
 def _get_resource(resource, name, conn):
     try:
         get_resources = getattr(conn, 'get_all_{0}s'.format(resource))
@@ -361,7 +403,12 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None,
     if vpcs_id:
         log.info("Matching VPC: {0}".format(" ".join(vpcs_id)))
         if len(vpcs_id) == 1:
-            return vpcs_id[0]
+            vpc_id = vpcs_id[0]
+            if name:
+                __salt__['boto_common.cache_id']('vpc', name, vpc_id,
+                                                 region=region, key=key,
+                                                 keyid=keyid, profile=profile)
+            return vpc_id
         else:
             raise CommandExecutionError('Found more than one VPC matching the criteria.')
     else:
@@ -469,7 +516,12 @@ def delete(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
 
         if conn.delete_vpc(vpc_id):
             log.info('VPC {0} was deleted.'.format(vpc_id))
-
+            __salt__['boto_common.cache_id']('vpc', name,
+                                             resource_id=vpc_id,
+                                             invalidate=True,
+                                             region=region,
+                                             key=key, keyid=keyid,
+                                             profile=profile)
             return True
         else:
             log.warning('VPC {0} was not deleted.'.format(vpc_id))
@@ -530,6 +582,9 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
 
     Returns True if the VPC subnet was created and returns False if the VPC subnet was not created.
 
+    .. versionchanged Beryllium
+        Added vpc_name argument
+
     CLI examples::
 
     .. code-block:: bash
@@ -538,7 +593,6 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
                 subnet_name='mysubnet' cidr_block='10.0.0.0/25'
         salt myminion boto_vpc.create_subnet vpc_name='myvpc' \
                 subnet_name='mysubnet', cidr_block='10.0.0.0/25'
-
     '''
 
     conn = _get_conn(region, key, keyid, profile)
@@ -568,6 +622,9 @@ def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
     Given a subnet ID, delete the subnet.
 
     Returns True if the subnet was deleted and returns False if the subnet was not deleted.
+
+    .. versionchanged Beryllium
+        Added subnet_name argument
 
     CLI example::
 
@@ -611,6 +668,10 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
     Check if a subnet exists.
 
     Returns True if the subnet exists, otherwise returns False.
+
+    .. versionchanged Beryllium
+        Added added subnet_name argument
+        Deprecated name argument
 
     CLI Example::
 
@@ -748,7 +809,9 @@ def delete_internet_gateway(internet_gateway_id=None,
             if igw.attachments:
                 conn.detach_internet_gateway(internet_gateway_id,
                                              igw.attachments[0].vpc_id)
-        if conn.delete_internet_gateway(internet_gateway_id):
+        if _delete_resource('internet_gateway', None,
+                            internet_gateway_id, region, key,
+                            keyid, profile):
             return True
     except boto.exception.BotoServerError as exc:
         log.error(exc)
@@ -1295,34 +1358,38 @@ def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=No
         return False
 
 
-def create_route_table(vpc_id, route_table_name=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def create_route_table(vpc_id=None, vpc_name=None, route_table_name=None,
+                       tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Creates a route table.
+
+    .. versionchanged Beryllium
+        Added vpc_name argument
 
     CLI Example::
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.create_route_table 'vpc-6b1fe402'
-
+        salt myminion boto_vpc.create_route_table vpc_id='vpc-6b1fe402' \
+                route_table_name='myroutetable'
+        salt myminion boto_vpc.create_route_table vpc_name='myvpc' \
+                route_table_name='myroutetable'
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
 
-    try:
-        route_table = conn.create_route_table(vpc_id)
-        if route_table:
-            log.info('Route table with id {0} was created'.format(route_table.id))
-            _maybe_set_name_tag(route_table_name, route_table)
-            _maybe_set_tags(tags, route_table)
-            return route_table.id
-        else:
-            log.warning('Route table ACL was not created')
-            return False
-    except boto.exception.BotoServerError as exc:
-        log.error(exc)
+    vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+    if not vpc_id:
+        log.warning('Refusing to create route table for non-existent VPC')
         return False
+
+    rtbl = _create_resource('route_table', route_table_name, tags=tags,
+                            vpc_id=vpc_id, region=region, key=key,
+                            keyid=keyid, profile=profile)
+    if rtbl:
+        return rtbl.id
+    return False
 
 
 def delete_route_table(route_table_id, region=None, key=None, keyid=None, profile=None):
