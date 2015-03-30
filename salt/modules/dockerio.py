@@ -4,6 +4,11 @@ Management of Docker Containers
 
 .. versionadded:: 2014.1.0
 
+.. deprecated:: Beryllium
+    Future feature development will be done only in :mod:`docker-ng
+    <salt.modules.dockerng>`. See the documentation for this module for
+    information on the deprecation path.
+
 .. note::
 
     The DockerIO integration is still in beta; the API is subject to change
