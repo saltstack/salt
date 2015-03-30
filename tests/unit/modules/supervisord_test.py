@@ -31,16 +31,28 @@ class SupervisordTestCase(TestCase):
     '''
     TestCase for salt.modules.supervisord
     '''
+    @staticmethod
+    def _m_all(stdout=True):
+        '''
+        Return value for cmd.run_all.
+        '''
+        return MagicMock(return_value={'retcode': 0, 'stdout': stdout})
+
+    @staticmethod
+    def _m_bin():
+        '''
+        Return value for cmd.which_bin.
+        '''
+        return MagicMock(return_value='/tmp/bin_env')
+
     # 'start' function tests: 1
 
     def test_start(self):
         '''
         Tests if it start the named service.
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.start())
 
     # 'restart' function tests: 1
@@ -49,10 +61,8 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it restart the named service.
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.restart())
 
     # 'stop' function tests: 1
@@ -61,10 +71,8 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it stop the named service.
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.stop())
 
     # 'add' function tests: 1
@@ -73,10 +81,8 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it activates any updates in config for process/group.
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.add('salt'))
 
     # 'remove' function tests: 1
@@ -85,10 +91,8 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it removes process/group from active config
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.remove('salt'))
 
     # 'reread' function tests: 1
@@ -97,10 +101,8 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it reload the daemon's configuration files
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.reread())
 
     # 'update' function tests: 1
@@ -109,10 +111,8 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it reload config and add/remove as necessary
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.update())
 
     # 'status' function tests: 1
@@ -121,11 +121,9 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it list programs and its state
         '''
-        mock_all = MagicMock(return_value={'retcode': 0,
-                                           'stdout': 'salt running '})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all
+                                               ('salt running'),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertDictEqual(supervisord.status(),
                                  {'salt': {'state': 'running', 'reason': ''}})
 
@@ -135,10 +133,8 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it display the raw output of status
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.status_raw())
 
     # 'custom' function tests: 1
@@ -147,10 +143,8 @@ class SupervisordTestCase(TestCase):
         '''
         Tests if it run any custom supervisord command
         '''
-        mock_all = MagicMock(return_value={'retcode': 0, 'stdout': True})
-        mock_bin = MagicMock(return_value='/tmp/bin_env')
-        with patch.dict(supervisord.__salt__, {'cmd.run_all': mock_all,
-                                               'cmd.which_bin': mock_bin}):
+        with patch.dict(supervisord.__salt__, {'cmd.run_all': self._m_all(),
+                                               'cmd.which_bin': self._m_bin()}):
             self.assertTrue(supervisord.custom("mstop '*gunicorn*'"))
 
     # 'options' function tests: 1
