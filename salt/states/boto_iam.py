@@ -129,7 +129,7 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
     if 'true' == str(delete_keys).lower:
         keys = __salt__['boto_iam.get_all_access_keys'](user_name=name, region=region, key=key,
                                                         keyid=keyid, profile=profile)
-        log.debug('Keys for user {0} are {1}.'.format(name ,keys))
+        log.debug('Keys for user {0} are {1}.'.format(name, keys))
         if isinstance(keys, dict):
             keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
             for k in keys:
