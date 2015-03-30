@@ -2740,10 +2740,15 @@ def save(image_id,
 
 def stale(prune=False, force=False):
     '''
-    Return images which were once tagged but were later untagged, such as those
-    superseded by committing a new copy of an existing tagged image. These are
-    the images that show up as ``<none>:<none>`` in the output from ``docker
-    images`` without the ``-a`` argument.
+    Return top-level images (those on which no other images depend) which do
+    not have a tag assigned to them. These include:
+
+    - Images which were once tagged but were later untagged, such as those
+      which were superseded by committing a new copy of an existing tagged
+      image.
+    - Images which were loaded using :py:func:`docker.load
+      <salt.modules.dockerng.load>` (or the ``docker load`` command), but not
+      tagged.
 
     prune : False
         Remove these images
@@ -2753,17 +2758,16 @@ def stale(prune=False, force=False):
 
     **RETURN DATA**
 
-    A dictionary with each key being the ID of the stale image, and the
-    following information for each image:
+    If ``prune=False``, the return data will be a list of stale image IDs.
+
+    If ``prune=True``, the return data will be a dictionary with each key being
+    the ID of the stale image, and the following information for each image:
 
     - ``Comment`` - Any error encountered when trying to prune a stale image
 
-      *(Only present if prune=True and prune failed)*
-    - ``Image`` - Name of the stale image
+      *(Only present if prune failed)*
     - ``Removed`` - A boolean (``True`` if prune was successful, ``False`` if
       not)
-
-      *(Only present if prune=True)*
 
 
     CLI Example:
@@ -2776,18 +2780,18 @@ def stale(prune=False, force=False):
     all_images = images(all=True)
     stale_images = [x[:12] for x in _get_top_level_images(all_images)
                     if '<none>:<none>' in all_images[x]['RepoTags']]
+    if not prune:
+        return stale_images
+
     ret = {}
     for image in stale_images:
-        old_image = inspect_image(image)['ContainerConfig']['Image']
-        ret.setdefault(image, {})['Image'] = old_image
-        if prune:
-            try:
-                ret[image]['Removed'] = rmi(image, force=force)
-            except Exception as exc:
-                err = '{0}'.format(exc)
-                log.error(err)
-                ret[image]['Comment'] = err
-                ret[image]['Removed'] = False
+        try:
+            ret.setdefault(image, {})['Removed'] = rmi(image, force=force)
+        except Exception as exc:
+            err = '{0}'.format(exc)
+            log.error(err)
+            ret.setdefault(image, {})['Comment'] = err
+            ret[image]['Removed'] = False
     return ret
 
 
