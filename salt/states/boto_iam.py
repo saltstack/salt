@@ -432,7 +432,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
         ret['comment'] = 'Account policy is not Enabled.'
         ret['result'] = False
         return ret
-    for key, value in config.iteritems():
+    for key, value in config.items():
         if key == 'region' or key == 'key' or key == 'keyid' or key == 'profile':
             continue
         if value is not None and str(info[key]) != str(value).lower():

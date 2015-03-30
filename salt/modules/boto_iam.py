@@ -326,7 +326,7 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
     '''
     conn = _get_conn(region, key, keyid, profile)
     try:
-        info = conn.get_group(group_name)
+        info = conn.get_group(group_name, marker, max_items)
         if not info:
             return False
         return info
