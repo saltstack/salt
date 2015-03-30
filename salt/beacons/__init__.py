@@ -12,6 +12,7 @@ import salt.loader
 
 log = logging.getLogger(__name__)
 
+
 class Beacon(object):
     '''
     This class is used to eveluate and execute on the beacon system
@@ -73,5 +74,4 @@ class Beacon(object):
             log.trace('Interval process inserting mod: {0}'.format(mod))
             self.interval_map[mod] = 1
         return False
-
 
