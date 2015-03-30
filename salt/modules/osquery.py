@@ -232,7 +232,7 @@ def apt_sources(attrs=None, where=None):
     return False
 
 
-def deb_packages(attrs=None, where={}):
+def deb_packages(attrs=None, where=None):
     '''
     Return deb_packages information from osquery
 
