@@ -4,60 +4,121 @@ Manage X509 Certificates
 
 .. versionadded:: TBD
 
-Certificate Properties:
-    Many of the states below take a properties value. This can contain any number of properties to be
-    added to a certificate. Below are values that can be specified. These values should be specified as an
-    unordered dictionary, do not include a ``-`` in yaml.
+This module can enable managing a complete PKI infrastructure. Here is an example scenario. In this example
+``salt`` is the salt master, ``ca`` is the ca server, and ``www`` is a web server that needs a certificate
+signed by ``ca``.
 
-    signing_private_key:
-        The private key that will be used to sign this certificate. This is
-        usually your CA's private key.
+For remote signing, peers must be permitted to remotely call the ``sign_remote_certificate`` function.
 
-    subject:
-        The subject data to be added to the certificate. If both subject
-        and a CSR are included, the subject properties override any individual
-        properties set in the CSR. The subject is itself an unordered list containing subject entries
-        like ``CN``, ``C`` ect...
+/srv/salt/master.d/peer.sls
+.. code-block:: yaml
+    
+    peer:
+      .*:
+        - x509.sign_remote_certificate
 
-    signing_cert:
-        The certificate of the authority that will be used to sign this certificate.
-        This is usually your CA's certificate. Do not include this value when creating
-        a self-signed certificate.
 
-    public_key:
-        The public key that will be in this certificate. This could be the path to an
-        existing certificate, private key, or csr. If you include a CSR this property
-        is not required. If you include the path to a CSR in this section, only the
-        public key will be imported from the CSR, all other data like subject and extensions
-        will not be included from the CSR.
+/srv/salt/top.sls
+.. code-block:: yaml
 
-    csr:
-        A certificate signing request used to generate the certificate.
+    base:
+      'ca':
+        - ca
+      'www':
+        - www
 
-    extensions:
-        X509v3 Extensions to be added to the certificate request. Extensions specified here
-        will take precidence over any extensions included in the CSR. Extensions are and ordered
-        list, so include ``-`` in yaml. See examples below.
 
-    days_valid:
-        The number of days the certificate should be valid for. Default is 365.
+This state creates the CA key, certificate and signing policy. It also publishes the certificate to
+the mine where it can be easily retrieved by other minions.
 
-    days_remaining:
-        The certificate should be automatically renewed if there are less than ``days_remaining``
-        days until the certificate expires. Set to 0 to disable automatic renewal. Default is 90.
+/srv/salt/ca.sls
+.. code-block:: yaml
+    
+    salt-minion:
+      service.running:
+        - enabled
+        - listen:
+          - file: /etc/salt/minion.d/signing_policies.conf
 
-    version:
-        The X509 certificate version. Defaults to 3.
+    /etc/salt/minion.d/signing_policies.conf:
+      file.managed:
+        - source: salt://signing_policies.conf
 
-    serial_number:
-        The serial number to assign to the certificate. If omitted, a random serial number
-        will be generated for the certificate.
+    /etc/pki:
+      file.directory:
 
-    serial_bits:
-        The size of the random serial number to generate, in bits. Default is 64.
+    /etc/pki/ca.key:
+      x509.private_key_managed:
+        - bits: 4096
+        - backup: True
+        - require:
+          - file: /etc/pki
 
-    algorithm:
-        The algorithm to be used to sign the certificate. Default is 'sha256'.
+    /etc/pki/ca.crt:
+      x509.certificate_managed:
+        - signing_private_key: /etc/pki/ca.key
+        - CN: ca.example.com
+        - C: US
+        - ST: Utah
+        - L: Salt Lake City
+        - basicConstraints: "critical CA:true"
+        - keyUsage: "critical cRLSign, keyCertSign"
+        - subjectKeyIdentifier: hash
+        - authorityKeyIdentifier: keyid,issuer:always
+        - days_valid: 3650
+        - days_remaining: 0
+        - backup: True
+        - require:
+          - x509: /etc/pki/ca.key
+
+    mine.send:
+      module.run: 
+        - func: x509.get_pem_entries
+        - kwargs:
+            glob_path: /etc/pki/ca.crt
+        - onchanges:
+          - x509: /etc/pki/ca.crt
+
+
+The signing policy defines properties that override any property requested or included in a CRL. It also
+can define a restricted list of minons which are allowed to remotely invoke this signing policy.
+
+/srv/salt/signing_policies.conf
+.. code-block:: yaml
+
+    x509_signing_policies:
+      www:
+        - minions: 'www'
+        - signing_private_key: /etc/pki/ca.key
+        - signing_cert: /etc/pki/ca.crt
+        - C: US
+        - ST: Utah
+        - L: Salt Lake City
+        - basicConstraints: "critical CA:false"
+        - keyUsage: "critical cRLSign, keyCertSign"
+        - subjectKeyIdentifier: hash
+        - authorityKeyIdentifier: keyid,issuer:always
+        - days_valid: 90
+        - copypath: /etc/pki/issued_certs/
+
+
+This state creates a private key then requests a certificate signed by ``ca`` according to the www policy.
+
+/srv/salt/www.sls
+.. code-block:: yaml
+
+    /etc/pki/www.key:
+      x509.private_key_managed:
+        - bits: 4096
+
+    /etc/pki/www.crt:
+      x509.certificate_managed:
+        - ca_server: ca
+        - signing_policy: www
+        - public_key: /etc/pki/www.key
+        - CN: www.example.com
+        - days_remaining: 30
+        - backup: True
 
 '''
 
@@ -213,10 +274,6 @@ def certificate_managed(name,
     name:
         Path to the certificate
 
-    properties:
-        The properties to be added to the certificate request, including items like subject, extensions
-        and public key. See above for valid properties.
-
     days_remaining:
         The minimum number of days remaining when the certificate should be recreted. Default is 90. A
         value of 0 disables automatic renewal.
@@ -224,26 +281,41 @@ def certificate_managed(name,
     backup:
         When replacing an existing file, backup the old file onthe minion. Default is False.
 
+    kwargs:
+        Any arguments supported by the ``x509.create_certificate`` module are supported.
+
     Example:
 
     .. code-block:: yaml
 
-        /etc/pki/mycert.crt:
+        /etc/pki/ca.crt:
           x509.certificate_managed:
-            - properties:
-                csr: /etc/pki/mycert.csr
-                subject:
-                  CN: ca.example.com
-                signing_private_key: /etc/pki/myca.key
-                signing_cert: /etc/pki/myca.crt
-                extensions:
-                  - basicConstraints:
-                      value: CA:FALSE
-                      critical: True
-                  - subjectKeyIdentifier:
-                      value: hash
-                  - authorityKeyIdentifier:
-                      value: keyid,issuer:always
+            - signing_private_key: /etc/pki/ca.key
+            - CN: ca.example.com
+            - C: US
+            - ST: Utah
+            - L: Salt Lake City
+            - basicConstraints: "critical CA:true"
+            - keyUsage: "critical cRLSign, keyCertSign"
+            - subjectKeyIdentifier: hash
+            - authorityKeyIdentifier: keyid,issuer:always
+            - days_valid: 3650
+            - days_remaining: 0
+            - backup: True
+
+
+    .. code-block:: yaml
+
+        /etc/ssl/www.crt:
+          x509.certificate_managed:
+            - ca_server: pki
+            - signing_policy: www
+            - public_key: /etc/ssl/www.key
+            - CN: www.example.com
+            - days_valid: 90
+            - days_remaining: 30
+            - backup: True
+
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 

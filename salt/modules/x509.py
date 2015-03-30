@@ -4,72 +4,6 @@ Manage X509 certificates
 
 .. versionadded:: TBD
 
-Certificate Properties:
-    Many modules take a dict called ``properties``. This defines many ``properties`` of a certificate.
-    That dict can contain one or more of the following keys.
-
-    subject:
-        A dict containing subject values. Some acceptable keys are: ``C``, ``CN``, ``Email``,
-        ``GN``, ``L``, ``O``, ``OU``, ``SN``, ``SP`` and ``ST``. Any subject value accepted by
-        OpenSSL should work.
-
-    signing_private_key:
-        A path or string of the private key in PEM format that will be used to sign this certificate.
-        This is required.
-
-    signing_cert:
-        A certificate matching the private key that will be used to sign this certificate. This is used
-        to populate the issuer values in the resulting certificate. Do not include this value for
-        self-signed certificateds.
-
-    public_key:
-        The public key to be included in this certificate. This can be sourced from a public key,
-        certificate, csr or private key. If neither ``public_key`` or ``csr`` are
-        specified, it will be assumed that this is a self-signed certificate, and the public key
-        derived from ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``,
-        not both. Because you can input a CSR as a public key or as a CSR, it is important to understand
-        the difference. If you import a CSR as a public key, only the public key will be added
-        to the certificate, subject or extension information in the CSR will be lost.
-
-    csr:
-        A file or PEM string containing a certificate signing request. This will be used to supply the
-        subject, extensions and public key of a certificate. Any subject or extensions specified
-        explicitly will overwrite any in the CSR. If neither ``public_key`` or ``csr`` are specified,
-        it will be assumed that this is a self-signed certificate, and the public key derived from
-        ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``, not both.
-
-    extensions:
-        An ordered list of dicts containing values for X509v3 Extensions. Each dict must contain the
-        keys ``name`` and ``value`` and may optionally contain the boolean ``critical``.
-
-        Some special extensions are ``subjectKeyIdentifier`` and ``authorityKeyIdentifier``.
-
-        ``subjectKeyIdentifier`` can be an explicit value or it can be the special string ``hash``.
-        ``hash`` will set the subjectKeyIdentifier equal to the SHA1 hash of the modulus of the
-        public key in this certificate. Note that this is not the exact same hashing method used by
-        OpenSSL when using the hash value.
-
-        ``authorityKeyIdentifier`` only supports the value ``keyid,issuer:always``. This value will
-        automatically populate ``authorityKeyIdentifier`` with the ``subjectKeyIdentifier`` of
-        ``signing_cert``. If this is a self-signed cert these values will be the same.
-
-    days_valid:
-        The number of days this certificate should be valid. This sets the ``notAfter`` property
-        of the certificate. Defaults to 365.
-
-    version:
-        The version of the X509 certificate. Defaults to 3. This is automatically converted to the
-        version value, so ``version=3`` sets the certificate version field to 0x2.
-
-    serial_number:
-        The serial number to assign to this certificate. If ommited a random serial number of size
-        ``serial_bits`` is generated.
-
-    serial_bits:
-        The number of bits to use when randomly generating a serial number. Defaults to 64.
-
-    algorithm:
-        The hashing algorithm to be used for signing this certificate. Defaults to sha256.
 '''
 
 from __future__ import absolute_import
@@ -106,7 +40,7 @@ EXT_NAME_MAPPINGS = OrderedDict([
                          ('issuserAltName', 'X509v3 Issuer Alternative Name'),
                          ('authorityInfoAccess', 'X509v3 Authority Info Access'),
                          ('subjectAltName', 'X509v3 Subject Alternative Name'),
-                         ('crlDistributionPoints', 'X509v3 CRL distribution points'),
+                         ('crlDistributionPoints', 'X509v3 CRL Distribution Points'),
                          ('issuingDistributionPoint', 'X509v3 Issuing Distribution Point'),
                          ('certificatePolicies', 'X509v3 Certificate Policies'),
                          ('policyConstraints', 'X509v3 Policy Constraints'),
@@ -803,7 +737,12 @@ def sign_remote_certificate(argdic, **kwargs):
     '''
     Request a certificate to be remotely signed according to a signing policy.
 
-    Takes a dict input containing all the expected argdicuments for create_certificate
+    argdic:
+        A dict containing all the arguments to be passed into the create_certificate function.
+        This will become kwargs when passed to create_certificate.
+
+    kwargs:
+        kwargs delivered from publish.publish
     '''
     if 'signing_policy' not in argdic:
         return 'signing_policy must be specified'
@@ -868,14 +807,197 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    properties:
-        The properties to set on the certificate. See certificate properties section for available values.
+    kwargs:
+        Any of the properties below can be included as additional keyword arguments.
+
+    ca_server:
+        Request a remotely signed certificate from ca_server. For this to work, a ``signing_policy`` must
+        be specified, and that same policy must be configured on the ca_server. See ``signing_policy`` for
+        details. Also the salt master must permit peers to call the ``sign_remote_certificate`` function.
+
+        Example:
+
+        /etc/salt/master.d/peer.conf
+        .. code-block:: yaml
+
+            peer:
+              .*:
+                - x509.sign_remote_certificate
+
+    subject properties:
+        Any of the values below can be incldued to set subject properties
+        Any other subject properties supported by OpenSSL should also work.
+
+        C:
+            2 letter Country code
+
+        CN:
+            Certificate common name, typically the FQDN.
+
+        Email:
+            Email address
+
+        GN:
+            Given Name
+
+        L:
+            Locality
+
+        O:
+            Organization
+
+        OU:
+            Organization Unit
+
+        SN:
+            SurName
+
+        ST:
+            State or Province
+
+    signing_private_key:
+        A path or string of the private key in PEM format that will be used to sign this certificate.
+        If neither ``signing_cert``, ``public_key``, or ``csr`` are included, it will be assumed that
+        this is a self-signed certificate, and the public key matching ``signing_private_key`` will
+        be used to create the certificate.
+
+    signing_cert:
+        A certificate matching the private key that will be used to sign this certificate. This is used
+        to populate the issuer values in the resulting certificate. Do not include this value for
+        self-signed certificateds.
+
+    public_key:
+        The public key to be included in this certificate. This can be sourced from a public key,
+        certificate, csr or private key. If neither ``public_key`` or ``csr`` are
+        specified, it will be assumed that this is a self-signed certificate, and the public key
+        derived from ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``,
+        not both. Because you can input a CSR as a public key or as a CSR, it is important to understand
+        the difference. If you import a CSR as a public key, only the public key will be added
+        to the certificate, subject or extension information in the CSR will be lost.
+
+    csr:
+        A file or PEM string containing a certificate signing request. This will be used to supply the
+        subject, extensions and public key of a certificate. Any subject or extensions specified
+        explicitly will overwrite any in the CSR. 
+
+    basicConstraints:
+        X509v3 Basic Constraints extension.
+
+    extensions:
+        The following arguments set X509v3 Extension values. If the value starts with ``critical ``,
+        the extension will be marked as critical
+
+        Some special extensions are ``subjectKeyIdentifier`` and ``authorityKeyIdentifier``.
+
+        ``subjectKeyIdentifier`` can be an explicit value or it can be the special string ``hash``.
+        ``hash`` will set the subjectKeyIdentifier equal to the SHA1 hash of the modulus of the
+        public key in this certificate. Note that this is not the exact same hashing method used by
+        OpenSSL when using the hash value.
+
+        ``authorityKeyIdentifier`` only supports the value ``keyid,issuer:always``. This value will
+        automatically populate ``authorityKeyIdentifier`` with the ``subjectKeyIdentifier`` of
+        ``signing_cert``. If this is a self-signed cert these values will be the same.
+
+        basicConstraints:
+            X509v3 Basic Constraints
+
+        keyUsage:
+            X509v3 Key Usage
+
+        extendedKeyUsage:
+            X509v3 Extended Key Usage
+
+        subjectKeyIdentifier:
+            X509v3 Subject Key Identifier
+
+        issuerAltName:
+            X509v3 Issuer Alternative Name
+
+        subjectAltName:
+            X509v3 Subject Alternative Name
+
+        crlDistributionPoints:
+            X509v3 CRL distribution points
+
+        issuingDistributionPoint:
+            X509v3 Issuing Distribution Point
+
+        certificatePolicies:
+            X509v3 Certificate Policies
+
+        policyConstraints:
+            X509v3 Policy Constraints
+
+        inhibitAnyPolicy:
+            X509v3 Inhibit Any Policy
+
+        nameConstraints:
+            X509v3 Name Constraints
+
+        noCheck:
+            X509v3 OCSP No Check
+
+        nsComment:
+            Netscape Comment
+
+        nsCertType:
+            Netscape Certificate Type
+
+    days_valid:
+        The number of days this certificate should be valid. This sets the ``notAfter`` property
+        of the certificate. Defaults to 365.
+
+    version:
+        The version of the X509 certificate. Defaults to 3. This is automatically converted to the
+        version value, so ``version=3`` sets the certificate version field to 0x2.
+
+    serial_number:
+        The serial number to assign to this certificate. If ommited a random serial number of size
+        ``serial_bits`` is generated.
+
+    serial_bits:
+        The number of bits to use when randomly generating a serial number. Defaults to 64.
+
+    algorithm:
+        The hashing algorithm to be used for signing this certificate. Defaults to sha256.
+
+    copypath:
+        An additional path to copy the resulting certificate to. Can be used to maintain a copy
+        of all certificates issued for revocation purposes.
+
+    signing_policy:
+        A signing policy that should be used to create this certificate. Signing policies should be defined
+        in the minion configuration, or in a minion pillar. It should be a yaml formatted list of argumnets
+        which will override any arguments passed to this function. If the ``minions`` key is included in
+        the signing policy, only minions matching that patter will be permitted to remotely request certificates
+        from that policy.
+
+        Example:
+
+        .. code-block:: yaml
+
+            x509_signing_policies:
+              www:
+                - minions: 'www*'
+                - signing_private_key: /etc/pki/ca.key
+                - signing_cert: /etc/pki/ca.crt
+                - C: US
+                - ST: Utah
+                - L: Salt Lake City
+                - basicConstraints: "critical CA:false"
+                - keyUsage: "critical cRLSign, keyCertSign"
+                - subjectKeyIdentifier: hash
+                - authorityKeyIdentifier: keyid,issuer:always
+                - days_valid: 90
+                - copypath: /etc/pki/issued_certs/
+
+        The above signing policy can be invoked with ``signing_policy=www``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' x509.create_certificate path=/etc/pki/myca.crt properties="{'signing_private_key': '/etc/pki/myca.key', 'csr': '/etc/pki/myca.csr'}
+        salt '*' x509.create_certificate path=/etc/pki/myca.crt signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
     '''
 
     if not path and not text and ('testrun' not in kwargs or kwargs['testrun'] == False):
@@ -1024,14 +1146,14 @@ def create_csr(path=None, text=False, **kwargs):
     text:
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
-    properties:
-        The properties to set on the csr. See certificate properties section for available values.
+    kwargs:
+        The subject, extension and verison arguments from ``create_certificate`` can be used.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' x509.create_csr path=/etc/pki/myca.csr properties="{'public_key': '/etc/pki/myca.key', 'subject': ""{'CN': 'My Cert'}""}"
+        salt '*' x509.create_csr path=/etc/pki/myca.csr public_key='/etc/pki/myca.key' CN='My Cert
     '''
 
     if not path and not text:
