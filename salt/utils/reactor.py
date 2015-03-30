@@ -10,6 +10,7 @@ import multiprocessing
 import yaml
 
 # Import salt libs
+import salt.runner
 import salt.state
 import salt.utils
 import salt.utils.cache
