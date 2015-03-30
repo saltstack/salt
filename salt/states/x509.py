@@ -67,35 +67,6 @@ import datetime
 import os
 
 
-def _subject_to_dict(subject):
-    '''
-    Turn the list of ordereddicts returned by states to a dict suitable
-    for the x509 execution module.
-    '''
-    _dict = {}
-    for item in subject:
-        for name, val in item.iteritems():
-            _dict[name] = val
-
-    return _dict
-
-
-def _exts_to_list(exts):
-    '''
-    Turn the list of lists of ordered dicts returned by states into a
-    list of dicts suitable for the x509 execution module.
-    '''
-    _list = []
-    for item in exts:
-        for name, data in item.iteritems():
-            ext = {'name': name}
-            for vals in data:
-                for val_name, value in vals.iteritems():
-                    ext[val_name] = value
-        _list.append(ext)
-    return _list
-
-
 def _revoked_to_list(revs):
     '''
     Turn the mess of OrderedDicts and Lists into a list of dicts for
@@ -114,7 +85,6 @@ def _revoked_to_list(revs):
             list_.append(dict_)
 
     return list_
-
 
 
 def private_key_managed(name,
@@ -173,8 +143,8 @@ def private_key_managed(name,
 
 
 def csr_managed(name,
-                properties,
-                backup=False):
+                backup=False,
+                **kwargs):
     '''
     Manage a Certificate Signing Request
 
@@ -191,17 +161,12 @@ def csr_managed(name,
 
         /etc/pki/mycert.csr:
           x509.csr_managed:
-            - properties:
-                public_key: /etc/pki/mycert.key
-                subject:
-                  CN: www.example.com
-                  C: US
-                  ST: Utah
-                  L: Salt Lake City
-                extensions:
-                  - keyUsage:
-                      value: 'serverAuth, dataEncipherment'
-                      critical: True
+             - public_key: /etc/pki/mycert.key
+             - CN: www.example.com
+             - C: US
+             - ST: Utah
+             - L: Salt Lake City
+             - keyUsage: 'critical dataEncipherment'
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
@@ -213,7 +178,7 @@ def csr_managed(name,
     else:
         current = '{0} does not exist.'.format(name)
 
-    new_csr = __salt__['x509.create_csr'](text=True, properties=properties)
+    new_csr = __salt__['x509.create_csr'](text=True, **kwargs)
     new = __salt__['x509.read_csr'](csr=new_csr)
 
     if current == new:
@@ -239,9 +204,9 @@ def csr_managed(name,
 
 
 def certificate_managed(name,
-                        properties,
                         days_remaining=90,
-                        backup=False,):
+                        backup=False,
+                        **kwargs):
     '''
     Manage a Certificate
 
@@ -289,7 +254,7 @@ def certificate_managed(name,
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
             current_comp = current.copy()
-            if 'serial_number' not in properties:
+            if 'serial_number' not in kwargs:
                 current_comp.pop('Serial Number')
             current_comp.pop('Not Before')
             current_comp.pop('MD5 Finger Print')
@@ -306,11 +271,11 @@ def certificate_managed(name,
     else:
         current = '{0} does not exist.'.format(name)
 
-    new_cert = __salt__['x509.create_certificate'](text=True, properties=properties)
+    new_cert = __salt__['x509.create_certificate'](text=True, **kwargs)
 
     new = __salt__['x509.read_certificate'](certificate=new_cert)
     new_comp = new.copy()
-    if 'serial_number' not in properties:
+    if 'serial_number' not in kwargs:
         new_comp.pop('Serial Number')
     new_comp.pop('Not Before')
     new_comp.pop('Not After')
@@ -456,279 +421,6 @@ def crl_managed(name,
 
     return ret
 
-def request_certificate_managed(name,
-                                ca_server,
-                                signing_policy,
-                                properties,
-                                signing_cert,
-                                newer_than='2000-01-01 00:00:00',
-                                with_grains=False,
-                                with_pillar=False,
-                                days_remaining=90,
-                                backup=False,):
-    '''
-    Manage a remotely signed Certificate
-
-    This requires that the request_certificate reactor be configured on the master to
-    pass signing requests to the CA server. See the full example below.
-
-    name:
-        Path to the certificate on the minion
-
-    ca_server:
-        The CA server (minion_id) that should sign this certificate.
-
-    signing_policy:
-        The signing policy the CA should use to sign this certificate. See modules/sign_certificate
-        for an example of how to configure CA signing policies.
-
-    properties:
-        The properties to be added to the certificate request, including items like subject, extensions
-        and public key. See above for valid properties.
-
-    signing_cert:
-        Used by the state to determine if the existing file is properly signed.
-        Should be the path to your CA's certificate.
-
-    newer_than:
-        Ensure that the certificate is newer than this date. This is useful if you know the signing
-        policy on the CA has changed and you want to force certificates to be renewed with this
-        new information.
-
-    with_grains:
-        Include grains from the current minion. The signing policy
-        on the CA may use grains to populate subject fields. If so, this parameter
-        must include the grains that are required by the CA.
-        Specify ``True`` to include all grains, or specify a
-        list of strings of grain names to include.
-
-    with_pillar:
-        Include Pillar values from the current minion.
-        The signing policy on the CA may use pillars to populate subject fields.
-        If so, this parameter must include the pillars that are required by
-        the CA. Specify ``True`` to include all Pillar values, or
-        specify a list of strings of Pillar keys to include. It is a
-        best-practice to only specify a relevant subset of Pillar data.
-
-    days_remaining:
-        The certificate should be automatically recreated if there are less than ``days_remaining``
-        days until the crl expires. Set to 0 to disable automatic renewal. Default is 30.
-
-    backup:
-        When replacing an existing file, backup the old file on the minion. Default is False.
-
-
-    Full example of an automatic signing CA:
-
-    /srv/salt/top.sls
-
-    .. code-block:: yaml
-
-        base:
-          'ca':
-            - ca
-          'www':
-            - www
-
-    /srv/salt/ca.sls
-
-    .. code-block:: yaml
-
-        /etc/pki:
-          file.directory:
-
-        /etc/pki/ca.key:
-          x509.private_key_managed:
-            - bits: 4096
-
-        /etc/pki/ca.crt:
-          x509.certificate_managed:
-            - properties:
-                signing_private_key: /etc/pki/ca.key
-                subject:
-                  CN: ca.example.com
-                  C: US
-                  ST: Utah
-                  L: Salt Lake City
-                extensions:
-                  - basicConstraints:
-                      value: "CA:true"
-                      critical: True
-                  - keyUsage:
-                      value: "cRLSign, keyCertSign"
-                      critical: True - subjectKeyIdentifier:
-                      value: hash
-                  - authorityKeyIdentifier:
-                      value: keyid,issuer:always
-            - days_valid: 3650
-            - days_remaining: 0
-            - backup: True
-            - require:
-              - x509: /etc/pki/ca.key
-
-        /etc/pki/signing_policy.yml:
-          file.managed:
-            - source: salt://signing_policy.yml
-
-        mine.send:
-          module.run:
-            - func: x509.get_pem_entries
-            - kwargs:
-                glob_path: /etc/pki/ca.crt
-            - onchanges:
-              - x509: /etc/pki/ca.crt
-
-
-    /srv/salt/signing_policy.yml
-
-    .. code-block:: yaml
-
-        'www*':         # The first line of a signing policy is a target of allowed minions
-          www:
-            signing_private_key: /etc/pki/ca.key
-            signing_cert: /etc/pki/ca.crt
-            csr: False
-            subject:
-              CN:
-                grain: 'fqdn'
-              C: US
-              ST: Utah
-              L: Salt Lake City
-              emailAddress:
-                pillar: 'x509:Email'
-                default: 'nobody@saltstack.com'
-            extensions:
-              - basicConstraints:
-                  value: "CA:false"
-                  critical: True
-              - keyUsage:
-                  value: 'serverAuth'
-                  critical: True
-              - subjectKeyIdentifier:
-                  value: hash
-              - authorityKeyIdentifier:
-                  value: keyid,issuer:always
-            days_valid: 360
-            version: 3
-
-
-    /srv/salt/www.sls
-
-    .. code-block:: yaml
-
-        /etc/ssl:
-          file.directory:
-
-        /etc/ssl/ca.crt:
-          x509.pem_managed:
-            - text: |
-                {{ salt['mine.get']('ca', 'x509.get_pem_entries')['/etc/pki/ca.crt'] }}
-
-        /etc/ssl/www.key:
-          x509.private_key_managed:
-            - bits: 4096
-
-        /etc/ssl/www.crt:
-          x509.request_certificate_managed:
-            - ca_server: ca
-            - signing_policy: www
-            - signing_cert: /etc/ssl/ca.crt
-            - properties:
-                public_key: /etc/ssl/www.key
-            - with_grains:
-              - fqdn
-            - days_remaining: 90
-
-
-    /etc/salt/master.d/reactor.conf
-
-    .. code-block:: yaml
-
-        reactor:
-          - '/salt/x509/request_certificate':
-              - /srv/salt/_reactor/sign_x509_request.sls
-
-
-    /srv/salt/_reactor/sign_x509_request.sls
-
-    .. code-block:: yaml
-
-        sign_request:
-          runner.x509.request_and_sign:
-            - requestor: {{ data['id'] }}
-            - path: {{ data['data']['path'] }}
-            - ca_server: {{ data['data']['ca_server'] }}
-            - signing_policy: {{ data['data']['signing_policy'] }}
-            - signing_policy_def: /etc/pki/signing_policy.yml
-            - properties: {{ data['data']['properties'] }}
-            - grains: {{ data['data']['grains'] }}
-            - pillar: {{ data['data']['pillar'] }}
-
-
-    With the above configuration, ca will create it's own private key and CA certificate, then publish
-    it's CA certificate to the mine. The minion www will generate its own private key, then the
-    ``request_certificate_managed`` will fire the ``/salt/x509/request_certificate`` event to the master.
-    The reactor on the master will run the ``x509.sign_request`` module on the CA to sign the certificate
-    according to the signing policy, then run ``x509.save_pem`` on the minion to save the resulting signed
-    certificate.
-    '''
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-
-    current_days_remaining = 0
-    current_notbefore = datetime.datetime.strptime('2000-01-01 00:00:00', '%Y-%m-%d %H:%M:%S')
-    newer_than = datetime.datetime.strptime(newer_than, '%Y-%m-%d %H:%M:%S')
-
-    changes_needed = False
-
-    if os.path.isfile(name):
-        try:
-            current = __salt__['x509.read_certificate'](certificate=name)
-            current_notbefore = datetime.datetime.strptime(current['Not Before'],
-                    '%Y-%m-%d %H:%M:%S')
-            current_notafter = datetime.datetime.strptime(current['Not After'],
-                    '%Y-%m-%d %H:%M:%S')
-            current_days_remaining = (current_notafter - datetime.datetime.now()).days
-            if days_remaining == 0:
-                days_remaining = current_days_remaining - 1
-            if current_days_remaining < days_remaining:
-                changes_needed = True
-            if current_notbefore < newer_than:
-                changes_needed = True
-            if not __salt__['x509.verify_signature'](certificate=name, signing_pub_key=signing_cert):
-                changes_needed = True
-            if not __salt__['x509.get_public_key'](properties['public_key']) == __salt__['x509.get_public_key'](name):
-                changes_needed = True
-            if not current['Issuer Hash'] == __salt__['x509.read_certificate'](signing_cert)['Subject Hash']:
-                changes_needed = True
-        except salt.exceptions.SaltInvocationError:
-            current = '{0} is not a valid Certificate.'.format(name)
-            changes_needed = True
-    else:
-        current = '{0} does not exist.'.format(name)
-        changes_needed = True
-
-    if not changes_needed:
-        ret['result'] = True
-        ret['comment'] = 'The certificate is already in the correct state'
-        return ret
-
-    ret['changes'] = {'old': current}
-
-    if __opts__['test'] == True:
-        ret['comment'] = 'The certificate {0} will be updated.'.format(name)
-        return ret
-
-    if os.path.isfile(name) and backup:
-        bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
-        salt.utils.backup_minion(name, bkroot)
-
-    __salt__['x509.request_certificate'](path=name, ca_server=ca_server, signing_policy=signing_policy,
-            properties=properties, with_grains=with_grains, with_pillar=with_pillar)
-
-    ret['comment'] = 'A new certificate request has been submitted to {0}'.format(ca_server)
-    ret['result'] = True
-
-    return ret
 
 def pem_managed(name,
                 text,
