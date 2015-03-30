@@ -494,3 +494,77 @@ def list_folders(kwargs=None, call=None):
         folders.append(folder["name"])
 
     return {'Folders': folders}
+
+
+def start(name, call=None):
+    '''
+    To start/power on a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    vm_properties = [
+                        "name",
+                        "summary.runtime.powerState"
+                    ]
+
+    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["name"] == name:
+            if vm["summary.runtime.powerState"] == "poweredOn":
+                ret = 'already powered on'
+                log.info('VM {0} {1}'.format(name, ret))
+                return ret
+            try:
+                log.info('Starting VM {0}'.format(name))
+                vm["object"].PowerOn()
+            except Exception as exc:
+                log.error('Could not power on VM {0}: {1}'.format(name, exc))
+                return 'failed to power on'
+    return 'powered on'
+
+
+def stop(name, call=None):
+    '''
+    To stop/power off a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+
+    vm_properties = [
+                        "name",
+                        "summary.runtime.powerState"
+                    ]
+
+    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["name"] == name:
+            if vm["summary.runtime.powerState"] == "poweredOff":
+                ret = 'already powered off'
+                log.info('VM {0} {1}'.format(name, ret))
+                return ret
+            try:
+                log.info('Stopping VM {0}'.format(name))
+                vm["object"].PowerOff()
+            except Exception as exc:
+                log.error('Could not power off VM {0}: {1}'.format(name, exc))
+                return 'failed to power off'
+    return 'powered off'
