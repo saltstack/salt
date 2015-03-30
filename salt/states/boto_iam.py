@@ -18,6 +18,23 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 
 .. code-block:: yaml
 
+    delete-user:
+      boto_iam.user_absent:
+        - name: myuser
+        - delete_keys: true
+
+
+.. code-block:: yaml
+
+    delete-keys:
+      boto_iam.keys_absent:
+        - access_keys:
+          - 'AKIAJHTMIQ2ASDFLASDF'
+          - 'PQIAJHTMIQ2ASRTLASFR'
+        - user_name: myuser
+
+.. code-block:: yaml
+
     create-user:
       boto_iam.user_present:
         - name: myuser
@@ -87,8 +104,117 @@ def __virtual__():
     return 'boto_iam.get_user' in __salt__
 
 
+def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded:: Beryllium
+
+    Ensure the IAM user is absent. User cannot be deleted if it has keys.
+
+    name (string) – The name of the new user.
+
+    delete_keys (bool) - Delete all keys from user.
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
+        ret['result'] = True
+        ret['comment'] = 'IAM User {0} does not exist.'.format(name)
+        return ret
+    if 'true' == str(delete_keys).lower:
+        keys = __salt__['boto_iam.get_all_access_keys'](user_name=name, region=region, key=key,
+                                                        keyid=keyid, profile=profile)
+        log.debug('Keys for user {0} are {1}.'.format(name, keys))
+        if isinstance(keys, dict):
+            keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
+            for k in keys:
+                if __opts__['test']:
+                    ret['comment'] = 'Access key {0} is set to be deleted.'.format(k['access_key_id'])
+                    ret['result'] = None
+                    return ret
+                if _delete_key(k['access_key_id'], name, region, key, keyid, profile):
+                    ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k['access_key_id'])])
+                    ret['changes'][k['access_key_id']] = 'deleted'
+    if __opts__['test']:
+        ret['comment'] = 'IAM user {0} is set to be deleted.'.format(name)
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_iam.delete_user'](name, region, key, keyid, profile)
+    if deleted is True:
+        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} is deleted.'.format(name)])
+        ret['result'] = True
+        ret['changes']['deleted'] = name
+        return ret
+    ret['comment'] = 'IAM user {0} could not be deleted.\n {1}'.format(name, deleted)
+    ret['result'] = False
+    return ret
+
+
+def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded:: Beryllium
+
+    Ensure the IAM user access_key_id is absent.
+
+    access_key_id (list) – A list of access key ids
+
+    user_name (string) - The username of the user
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': access_keys, 'result': True, 'comment': '', 'changes': {}}
+    if not __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile):
+        ret['result'] = False
+        ret['comment'] = 'IAM User {0} does not exist.'.format(user_name)
+        return ret
+    for k in access_keys:
+        if _delete_key(k, user_name, region, key, keyid, profile):
+            ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k)])
+            ret['changes'][k] = 'deleted'
+        else:
+            ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} does not exist.'.format(k)])
+    return ret
+
+
+def _delete_key(access_key_id, user_name, region=None, key=None, keyid=None, profile=None):
+    keys = __salt__['boto_iam.get_all_access_keys'](user_name=user_name, region=region, key=key,
+                                                    keyid=keyid, profile=profile)
+    log.debug('Keys for user {1} are : {0}'.format(keys, user_name))
+    if isinstance(keys, str):
+        log.debug('Keys {0} are a string. Something went wrong.'.format(keys))
+        return False
+    keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
+    for k in keys:
+        log.debug('Key is: {0} and is compared with: {1}'.format(k['access_key_id'], access_key_id))
+        if str(k['access_key_id']) == str(access_key_id):
+            deleted = __salt__['boto_iam.delete_access_key'](access_key_id, user_name, region, key,
+                                                             keyid, profile)
+            if deleted:
+                return True
+            return False
+
+
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: Beryllium
+
     Ensure the IAM user is present
 
     name (string) – The name of the new user.
@@ -139,7 +265,7 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
         ret['result'] = None
         return ret
     login = __salt__['boto_iam.create_login_profile'](name, password, region, key, keyid, profile)
-    log.debug('login is : {0}'.format(login))
+    log.debug('Login is : {0}.'.format(login))
     if login:
         if 'Conflict' in login:
             ret['comment'] = os.linesep.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
@@ -174,6 +300,9 @@ def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=Non
 
 def group_present(name, policy_name=None, policy=None, users=None, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: Beryllium
+
     Ensure the IAM group is present
 
     name (string) – The name of the new group.
@@ -214,9 +343,9 @@ def group_present(name, policy_name=None, policy=None, users=None, region=None, 
         if policy_name and policy:
             ret = _case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
         if users:
-            log.debug('users are : {0}'.format(users))
+            log.debug('Users are : {0}.'.format(users))
             for user in users:
-                log.debug('user is : {0}'.format(user))
+                log.debug('User is : {0}.'.format(user))
                 ret = _case_group(ret, user, name, region, key, keyid, profile)
     return ret
 
@@ -224,10 +353,10 @@ def group_present(name, policy_name=None, policy=None, users=None, region=None, 
 def _case_policy(ret, group_name, policy_name, policy, region=None, key=None, keyid=None, profile=None):
     exists = __salt__['boto_iam.get_group_policy'](group_name, policy_name, region, key, keyid, profile)
     if exists:
-        log.debug('exists is : {0}'.format(exists))
+        log.debug('Policy exists is : {0}.'.format(exists))
         if not isinstance(policy, str):
             policy = json.loads(policy, object_pairs_hook=odict.OrderedDict)
-        log.debug('policy is  : {0}'.format(policy))
+            log.debug('Policy in Json is : {0}.'.format(policy))
         if exists == policy:
             ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is present.'.format(group_name)])
         else:
@@ -259,6 +388,8 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
                    profile=None):
     '''
     Change account policy
+
+    .. versionadded:: Beryllium
 
     allow_users_to_change_password (bool) – Allows all IAM users in your account to
     use the AWS Management Console to change their own passwords.
@@ -301,7 +432,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
         ret['comment'] = 'Account policy is not Enabled.'
         ret['result'] = False
         return ret
-    for key, value in config.iteritems():
+    for key, value in config.items():
         if key == 'region' or key == 'key' or key == 'keyid' or key == 'profile':
             continue
         if value is not None and str(info[key]) != str(value).lower():
@@ -325,7 +456,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
                                                            require_uppercase_characters,
                                                            region, key, keyid, profile):
         return ret
-    ret['comment'] = 'Account policy is not changed'
+    ret['comment'] = 'Account policy is not changed.'
     ret['changes'] = None
     ret['result'] = False
     return ret
@@ -334,6 +465,8 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
 def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes a server certificate
+
+    .. versionadded:: Beryllium
 
     name (string) - The name for the server certificate. Do not include the path in this value.
 
@@ -367,6 +500,10 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
 def server_cert_present(name, public_key, private_key, cert_chain=None, path=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
+    Crete server certificate.
+
+    .. versionadded:: Beryllium
+
     name (string) - The name for the server certificate. Do not include the path in this value.
 
     public_key (string) -  The contents of the public key certificate in PEM-encoded format.
@@ -388,7 +525,7 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_iam.get_server_certificate'](name, region, key, keyid, profile)
-    log.debug('variables are : {0}'.format(locals()))
+    log.debug('Variables are : {0}.'.format(locals()))
     if exists:
         ret['comment'] = 'Certificate {0} exists.'.format(name)
         return ret
