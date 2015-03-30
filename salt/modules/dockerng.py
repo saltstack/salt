@@ -625,12 +625,12 @@ def _pull_status(data, item):
     status = item['status']
     if status == 'Already exists':
         # Layer already exists
-        already_pulled = data.setdefault('Layers', {}).setdefault(
+        already_pulled = data.setdefault('Images', {}).setdefault(
             'Already_Pulled', [])
         already_pulled.append(item['id'])
     elif status == 'Pull complete':
         # Pulled a new layer
-        pulled = data.setdefault('Layers', {}).setdefault(
+        pulled = data.setdefault('Images', {}).setdefault(
             'Pulled', [])
         pulled.append(item['id'])
     elif status.startswith('Status: '):
@@ -645,12 +645,12 @@ def _push_status(data, item):
     if 'id' in item:
         if 'already pushed' in status:
             # Layer already exists
-            already_pushed = data.setdefault('Layers', {}).setdefault(
+            already_pushed = data.setdefault('Images', {}).setdefault(
                 'Already_Pushed', [])
             already_pushed.append(item['id'])
         elif 'successfully pushed' in status:
             # Pushed a new layer
-            pushed = data.setdefault('Layers', {}).setdefault(
+            pushed = data.setdefault('Images', {}).setdefault(
                 'Pushed', [])
             pushed.append(item['id'])
     else:
@@ -1970,7 +1970,7 @@ def build(path=None,
       of the build process
 
       *(Only present if rm=False)*
-    - ``Layers`` - A dictionary containing one or more of the following keys:
+    - ``Images`` - A dictionary containing one or more of the following keys:
         - ``Already_Pulled`` - Layers that that were already present on the
           Minion
         - ``Pulled`` - Layers that that were pulled
@@ -2204,7 +2204,7 @@ def load(path, tag_as=None):
     A dictionary will be returned, containing the following keys:
 
     - ``Path`` - Path of the file that was saved
-    - ``Layers`` - A list containing the IDs of the layers which were loaded.
+    - ``Images`` - A list containing the IDs of the layers which were loaded.
       Any layers in the file that was loaded, which were already present on the
       Minion, will not be included.
     - ``Tag`` - Name of tag applied to topmost layer
@@ -2245,22 +2245,23 @@ def load(path, tag_as=None):
     ret['Path'] = path
 
     new_layers = [x for x in post if x not in pre]
-    ret['Layers'] = [x[:12] for x in new_layers]
+    ret['Images'] = [x[:12] for x in new_layers]
     top_level_images = _get_top_level_images(post, subset=new_layers)
-    if len(top_level_images) > 1:
-        ret['Warning'] = ('More than one top-level image layer was loaded '
-                          '({0}), no image was tagged'
-                          .format(', '.join(top_level_images)))
-    else:
-        try:
-            result = tag_(top_level_images[0], tag=tag_as)
-            ret['Tag'] = tag_as
-        except IndexError:
-            ret['Warning'] = ('No top-level image layers were loaded, no '
-                              'image was tagged')
-        except Exception as exc:
-            ret['Warning'] = ('Failed to tag {0} as {1}: {2}'
-                              .format(top_level_images[0], tag_as, exc))
+    if tag_as:
+        if len(top_level_images) > 1:
+            ret['Warning'] = ('More than one top-level image layer was loaded '
+                            '({0}), no image was tagged'
+                            .format(', '.join(top_level_images)))
+        else:
+            try:
+                result = tag_(top_level_images[0], tag=tag_as)
+                ret['Tag'] = tag_as
+            except IndexError:
+                ret['Warning'] = ('No top-level image layers were loaded, no '
+                                'image was tagged')
+            except Exception as exc:
+                ret['Warning'] = ('Failed to tag {0} as {1}: {2}'
+                                .format(top_level_images[0], tag_as, exc))
     return ret
 
 
@@ -2323,7 +2324,7 @@ def pull(tag,
 
     A dictionary will be returned, containing the following keys:
 
-    - ``Layers`` - A dictionary containing one or more of the following keys:
+    - ``Images`` - A dictionary containing one or more of the following keys:
         - ``Already_Pulled`` - Layers that that were already present on the
           Minion
         - ``Pulled`` - Layers that that were pulled
@@ -2414,7 +2415,7 @@ def push(tag,
 
     - ``Id`` - ID of the image that was pushed
     - ``Image`` - Name of the image that was pushed
-    - ``Layers`` - A dictionary containing one or more of the following keys:
+    - ``Images`` - A dictionary containing one or more of the following keys:
         - ``Already_Pushed`` - Layers that that were already present on the
           Minion
         - ``Pushed`` - Layers that that were pushed
