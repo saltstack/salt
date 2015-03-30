@@ -48,9 +48,9 @@ class Beacon(object):
                     if not self._process_interval(mod, interval):
                         log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
                         continue
-                tag = 'salt/beacon/{0}/{1}/'.format(self.opts['id'], mod)
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:
+                    tag = 'salt/beacon/{0}/{1}/'.format(self.opts['id'], mod)
                     if 'tag' in data:
                         tag += data.pop('tag')
                     if 'id' not in data:
