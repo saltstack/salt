@@ -48,11 +48,13 @@ __virtualname__ = 'cassandra_cql'
 
 HAS_DRIVER = False
 try:
-    from .cassandra.cluster import Cluster
-    from .cassandra.cluster import NoHostAvailable
-    from .cassandra.connection import ConnectionException, ConnectionShutdown
-    from .cassandra.auth import PlainTextAuthProvider
-    from .cassandra.query import dict_factory
+    # pylint: disable=import-error,no-name-in-module
+    from cassandra.cluster import Cluster
+    from cassandra.cluster import NoHostAvailable
+    from cassandra.connection import ConnectionException, ConnectionShutdown
+    from cassandra.auth import PlainTextAuthProvider
+    from cassandra.query import dict_factory
+    # pylint: enable=import-error,no-name-in-module
     HAS_DRIVER = True
 except ImportError:
     pass
@@ -454,7 +456,7 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
                 try:
                     replication_datacenter_map = json.loads(replication_datacenters)
                     replication_map.update(**replication_datacenter_map)
-                except BaseException:
+                except BaseException:  # pylint: disable=W0703
                     log.error("Could not load json replication_datacenters.")
                     return False
             else:
