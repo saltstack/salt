@@ -2747,8 +2747,8 @@ def stale(prune=False, force=False):
       which were superseded by committing a new copy of an existing tagged
       image.
     - Images which were loaded using :py:func:`docker.load
-      <salt.modules.dockerng.load>` (or the ``docker load`` command), but not
-      tagged.
+      <salt.modules.dockerng.load>` (or the ``docker load`` Docker CLI
+      command), but not tagged.
 
     prune : False
         Remove these images
