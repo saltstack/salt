@@ -2812,7 +2812,7 @@ def tag_(name, tag, force=False):
         salt myminion docker-ng.tag 0123456789ab myrepo/mycontainer
         salt myminion docker-ng.tag 0123456789ab myrepo/mycontainer:mytag
     '''
-    image_id = inspect_image(image)['Id']
+    image_id = inspect_image(name)['Id']
     repo_name, repo_tag = _get_repo_tag(tag)
     response = _client_wrapper('tag',
                                image_id,
