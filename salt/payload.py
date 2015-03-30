@@ -147,8 +147,8 @@ class Serial(object):
             # This is msgpack Extended types numbered 78
             def default(obj):
                 return msgpack.ExtType(78, obj)
-        
-            def dt_encode(obj):   
+
+            def dt_encode(obj):
                 datetime_str = obj.strftime("%Y%m%dT%H:%M:%S.%f")
                 return msgpack.packb(datetime_str, default=default)
 
