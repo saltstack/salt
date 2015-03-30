@@ -326,8 +326,8 @@ def _deploy(vm_):
         'template_password', vm_, __opts__
     )
 
-    #new_instance = conn.get_vm_by_name(vm_['name'])
-    #ret = new_instance.get_properties()
+    # new_instance = conn.get_vm_by_name(vm_['name'])
+    # ret = new_instance.get_properties()
     ret = show_instance(name=vm_['name'], call='action')
 
     ret['ip_address'] = ip_address
@@ -431,8 +431,8 @@ def _get_instance_properties(instance, from_cache=True):
     ret = {}
     properties = instance.get_properties(from_cache)
     for prop in ('guest_full_name', 'guest_id', 'memory_mb', 'name',
-                    'num_cpu', 'path', 'devices', 'disks', 'files',
-                    'net', 'ip_address', 'mac_address', 'hostname'):
+                 'num_cpu', 'path', 'devices', 'disks', 'files',
+                 'net', 'ip_address', 'mac_address', 'hostname'):
         if prop in properties:
             ret[prop] = properties[prop]
         else:
@@ -934,3 +934,43 @@ def create_snapshot(kwargs=None, call=None):
         ret['result'] = False
 
     return ret
+
+
+def delete_snapshot(kwargs=None, call=None):
+    '''
+    Delete snapshot
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f delete_snapshot [PROVIDER] name=myvm.example.com snapshot=mysnapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The show_keypair function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'name' not in kwargs or 'snapshot' not in kwargs:
+        log.error('name and snapshot are required arguments')
+        return False
+
+    conn = get_conn()
+
+    vm = conn.get_vm_by_name(kwargs['name'])
+
+    try:
+        log.info('Deleting snapshot')
+        vm.delete_named_snapshot(kwargs['snapshot'], remove_children=True)
+        log.info('Snapshot deleted')
+    except VIException:
+        log.error('Unable to delete snapshot')
+        return False
+
+    return True
