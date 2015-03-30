@@ -664,3 +664,58 @@ def reset(name, call=None):
                 log.error('Could not reset VM {0}: {1}'.format(name, exc))
                 return 'failed to reset'
     return 'reset'
+
+
+def destroy(name, call=None):
+    '''
+    To destroy a VM from the VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --destroy vmname
+        salt-cloud -a destroy vmname
+    '''
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        {'name': name},
+        transport=__opts__['transport']
+    )
+
+    vm_properties = [
+                        "name",
+                        "summary.runtime.powerState"
+                    ]
+
+    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["name"] == name:
+            if vm["summary.runtime.powerState"] != "poweredOff":
+                #Power off the vm first
+                try:
+                    log.info('Powering Off VM {0}'.format(name))
+                    task = vm["object"].PowerOff()
+                    while (task.info.state != 'success'):
+                        log.debug("Waiting for Power off task to finish")
+                    log.debug(task.info.state)
+                    task = vm["object"].Destroy_Task()
+                    while (task.info.state != 'success'):
+                        log.debug("Waiting for destroy task to finish")
+                except Exception as exc:
+                    log.error('Could not destroy VM {0}: {1}'.format(name, exc))
+                    return 'failed to destroy'
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        {'name': name},
+        transport=__opts__['transport']
+    )
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+    return 'True'
