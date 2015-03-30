@@ -120,7 +120,10 @@ def avail_images(call=None):
                 ret[image['id']][item] = str(image[item])
 
         page += 1
-        fetch = 'next' in items['links']['pages']
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
 
     return ret
 
