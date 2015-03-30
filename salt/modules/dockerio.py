@@ -1841,6 +1841,8 @@ def load(imagepath):
 
 def save(image, filename):
     '''
+    .. versionadded:: 2015.2.0
+
     Save the specified image to filename from docker
     e.g. `docker save image > filename`
 
@@ -1868,7 +1870,7 @@ def save(image, filename):
 
     if ok:
         try:
-            dockercmd = ['docker', '-o', filename, 'save', image]
+            dockercmd = ['docker', 'save', '-o', filename, image]
             ret = __salt__['cmd.run'](dockercmd)
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
