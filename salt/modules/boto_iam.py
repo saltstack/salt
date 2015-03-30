@@ -177,6 +177,8 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
     '''
     Create a user
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.create_user myuser
@@ -202,6 +204,8 @@ def get_all_access_keys(user_name, marker=None, max_items=None,
     '''
     Get all access keys from a user
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.get_all_access_keys myuser
@@ -220,6 +224,8 @@ def delete_access_key(access_key_id, user_name=None, region=None, key=None,
     '''
     Delete access key id from a user
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.delete_access_key myuser
@@ -237,6 +243,8 @@ def delete_user(user_name, region=None, key=None, keyid=None,
                 profile=None):
     '''
     Delete a user
+
+    .. versionadded:: Beryllium
 
     CLI example::
 
@@ -259,6 +267,8 @@ def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
     '''
     Get user information
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.get_user myuser
@@ -280,6 +290,8 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
                  profile=None):
     '''
     Create a group
+
+    .. versionadded:: Beryllium
 
     CLI example::
 
@@ -306,6 +318,8 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
     '''
     Get group information
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.get_group mygroup
@@ -327,6 +341,8 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
                       profile=None):
     '''
     Add user to group
+
+    .. versionadded:: Beryllium
 
     CLI example::
 
@@ -362,6 +378,8 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
     '''
     Adds or updates the specified policy document for the specified group.
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.put_group_policy mygroup policyname policyrules
@@ -391,6 +409,8 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
     '''
     Retrieves the specified policy document for the specified group.
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.get_group_policy mygroup policyname
@@ -417,6 +437,8 @@ def create_login_profile(user_name, password, region=None, key=None,
     '''
     Creates a login profile for the specified user, give the user the
     ability to access AWS services and the AWS Management Console.
+
+    .. versionadded:: Beryllium
 
     CLI example::
 
@@ -454,6 +476,8 @@ def update_account_password_policy(allow_users_to_change_password=None,
     '''
     Update the password policy for the AWS account.
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.update_account_password_policy True
@@ -479,6 +503,8 @@ def update_account_password_policy(allow_users_to_change_password=None,
 def get_account_policy(region=None, key=None, keyid=None, profile=None):
     '''
     Get account policy for the AWS account.
+
+    .. versionadded:: Beryllium
 
     CLI example::
 
@@ -789,6 +815,8 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
     '''
     Upload a certificate to Amazon
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.upload_server_cert mycert_name crt priv_key
@@ -825,9 +853,11 @@ def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile
     '''
     Returns certificate information from Amazon
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
-        salt myminion boto_iam.upload_server_cert mycert_name
+        salt myminion boto_iam.get_server_certificate mycert_name
     '''
     conn = _get_conn(region, key, keyid, profile)
     try:
@@ -846,9 +876,11 @@ def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=Non
     '''
     Deletes a certificate from Amazon
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
-        salt myminion boto_iam.upload_server_cert mycert_name
+        salt myminion boto_iam.delete_server_cert mycert_name
     '''
     conn = _get_conn(region, key, keyid, profile)
     try:

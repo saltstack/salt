@@ -106,6 +106,9 @@ def __virtual__():
 
 def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: Beryllium
+
     Ensure the IAM user is absent. User cannot be deleted if it has keys.
 
     name (string) – The name of the new user.
@@ -157,6 +160,9 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
 
 def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: Beryllium
+
     Ensure the IAM user access_key_id is absent.
 
     access_key_id (list) – A list of access key ids
@@ -206,6 +212,9 @@ def _delete_key(access_key_id, user_name, region=None, key=None, keyid=None, pro
 
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: Beryllium
+
     Ensure the IAM user is present
 
     name (string) – The name of the new user.
@@ -291,6 +300,9 @@ def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=Non
 
 def group_present(name, policy_name=None, policy=None, users=None, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: Beryllium
+
     Ensure the IAM group is present
 
     name (string) – The name of the new group.
@@ -377,6 +389,8 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
     '''
     Change account policy
 
+    .. versionadded:: Beryllium
+
     allow_users_to_change_password (bool) – Allows all IAM users in your account to
     use the AWS Management Console to change their own passwords.
 
@@ -452,6 +466,8 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes a server certificate
 
+    .. versionadded:: Beryllium
+
     name (string) - The name for the server certificate. Do not include the path in this value.
 
     region (string) - The name of the region to connect to.
@@ -484,6 +500,10 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
 def server_cert_present(name, public_key, private_key, cert_chain=None, path=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
+    Crete server certificate.
+
+    .. versionadded:: Beryllium
+
     name (string) - The name for the server certificate. Do not include the path in this value.
 
     public_key (string) -  The contents of the public key certificate in PEM-encoded format.
