@@ -737,7 +737,7 @@ def shell(cmd,
 
         salt '*' cmd.shell cmd='sed -e s/=/:/g'
     '''
-    if python_shell in kwargs:
+    if 'python_shell' in kwargs:
         python_shell = kwargs.pop('python_shell')
     else:
         python_shell = True
