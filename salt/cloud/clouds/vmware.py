@@ -95,6 +95,24 @@ def get_configured_provider():
     )
 
 
+def script(vm_):
+    '''
+    Return the script deployment object
+    '''
+    script_name = config.get_cloud_config_value('script', vm_, __opts__)
+    if not script_name:
+        script_name = 'bootstrap-salt'
+
+    return salt.utils.cloud.os_script(
+        script_name,
+        vm_,
+        __opts__,
+        salt.utils.cloud.salt_config_to_yaml(
+            salt.utils.cloud.minion_config(__opts__, vm_)
+        )
+    )
+
+
 def _get_si():
     '''
     Authenticate with vCenter server and return service instance object.
