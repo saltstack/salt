@@ -5,6 +5,7 @@ Cassandra Database Module
 :depends: DataStax Python Driver for Apache Cassandra
           https://github.com/datastax/python-driver
           pip install cassandra-driver
+:referenced by: Salt's cassandra_cql returner
 :configuration:
     The Cassandra cluster members and connection port can either be specified
     in the master or minion config, the minion's pillar or be passed to the module.
@@ -34,7 +35,7 @@ import json
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
-__virtualname__ = 'cassandra'
+__virtualname__ = 'cassandra_cql'
 
 HAS_DRIVER = False
 try:
@@ -55,9 +56,6 @@ def __virtual__():
     :return: The virtual name of the module.
     :rtype:  str
     '''
-    if not HAS_DRIVER:
-        return False
-
     if HAS_DRIVER:
         return __virtualname__
     return False
@@ -80,16 +78,20 @@ def _loadproperties(property_name, config_option, set_default=False, default=Non
     '''
     if not property_name:
         log.debug("No property specified in function, trying to load from salt configuration")
-        options = __salt__['config.option']('cassandra')
+        try:
+            options = __salt__['config.option']('cassandra')
+	except BaseException as e:
+	    log.error("Failed to get cassandra config options. Reason: {0}".format(str(e)))
+            raise
+
         loaded_property = options.get(config_option)
         if not loaded_property:
             if set_default:
-                log.debug('Setting default Cassandra %s to %s', config_option, default)
+                log.debug('Setting default Cassandra {0} to {1}'.format(config_option, default))
                 loaded_property = default
             else:
-                log.error('No cassandra %s specified in the configuration or passed to the module.', config_option)
-                msg = "ERROR: Cassandra %s cannot be empty." % config_option
-                raise CommandExecutionError(msg)
+                log.error('No cassandra {0} specified in the configuration or passed to the module.'.format(config_option))
+                raise CommandExecutionError("ERROR: Cassandra {0} cannot be empty.".format(config_option))
         return loaded_property
     return property_name
 
@@ -120,14 +122,14 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
         auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
         cluster = Cluster(contact_points, port=port, auth_provider=auth_provider)
         session = cluster.connect()
-        log.debug('Successfully connected to Cassandra cluster at %s', contact_points)
+        log.debug('Successfully connected to Cassandra cluster at {0}'.format(contact_points))
         return cluster, session
     except (ConnectionException, ConnectionShutdown, NoHostAvailable):
-        log.error('Could not connect to Cassandra cluster at %s', contact_points)
+        log.error('Could not connect to Cassandra cluster at %s'.format(contact_points))
         raise CommandExecutionError('ERROR: Could not connect to Cassandra cluster.')
 
 
-def _query(query, contact_points=None, port=None, cql_user=None, cql_pass=None):
+def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=None):
     '''
     Run a query on a Cassandra cluster and return a dictionary.
 
@@ -146,7 +148,14 @@ def _query(query, contact_points=None, port=None, cql_user=None, cql_pass=None):
     :return:               A dictionary from the return values of the query
     :rtype:                list[dict]
     '''
-    cluster, session = _connect(contact_points=contact_points, port=port, cql_user=cql_user, cql_pass=cql_pass)
+    try:
+        cluster, session = _connect(contact_points=contact_points, port=port, cql_user=cql_user, cql_pass=cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not get Cassandra cluster session.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while getting Cassandra cluster session: {0}'.format(str(e)))
+        raise
 
     session.row_factory = dict_factory
     ret = []
@@ -154,21 +163,22 @@ def _query(query, contact_points=None, port=None, cql_user=None, cql_pass=None):
     try:
         results = session.execute(query)
     except BaseException as e:
-        log.error('Something went wrong when executing the following query: %s', query)
-        msg = "ERROR: Cassandra query failed: %s" % query
-        raise CommandExecutionError(msg, e)
+        log.error('Failed to execute query: {0}\n reason: {1}'.format(query, str(e)))
+        msg = "ERROR: Cassandra query failed: {0} reason: {1}".format(query, str(e))
+        raise CommandExecutionError(msg)
 
     if results:
-        for index in range(0, len(results)):
-            result = results[index]
-            values = {}
-            for key, value in result.iteritems():
-                # Salt won't return dictionaries with odd types like uuid.UUID
-                if not isinstance(value, unicode):
-                    value = str(value)
-                values[key] = value
-            ret.append(values)
+      for result in results:
+          values = {}
+          for key, value in result.iteritems():
+              # Salt won't return dictionaries with odd types like uuid.UUID
+              if not isinstance(value, unicode):
+                  value = str(value)
+              values[key] = value
+          ret.append(values)
+
     cluster.shutdown()
+
     return ret
 
 
@@ -195,12 +205,20 @@ def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
 
         salt 'minion1' cassandra.version contact_points=minion1
     '''
-    query = 'select release_version from system.local limit 1'
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
-    if ret:
-        return ret[0].get('release_version')
-    else:
-        return False
+    query = '''select release_version 
+                 from system.local 
+                limit 1;'''
+
+    try:
+        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not get Cassandra version.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while getting Cassandra version: {0}'.format(str(e)))
+        raise
+
+    return ret[0].get('release_version')
 
 
 def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -227,18 +245,30 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
         salt 'minion1' cassandra.info contact_points=minion1
     '''
 
-    query = 'select cluster_name, \
-             data_center, \
-             partitioner, \
-             host_id, \
-             rack, \
-             release_version, \
-             cql_version, \
-             schema_version, \
-             thrift_version from system.local limit 1'
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
-    if ret:
-        return ret[0]
+    query = '''select cluster_name,
+                      data_center,
+                      partitioner,
+                      host_id,
+                      rack,
+                      release_version,
+                      cql_version,
+                      schema_version,
+                      thrift_version 
+                 from system.local 
+                limit 1;'''
+
+    ret = {}
+
+    try:
+        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not list Cassandra info.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while listing Cassandra info: {0}'.format(str(e)))
+        raise
+
+    return ret
 
 
 def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -264,12 +294,21 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
 
         salt 'minion1' cassandra.list_keyspaces contact_points=minion1 port=9000
     '''
-    query = 'select keyspace_name from system.schema_keyspaces'
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
-    if ret:
-        return ret
-    else:
-        return False
+    query = '''select keyspace_name 
+                 from system.schema_keyspaces;'''
+
+    ret = {}
+
+    try:
+        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not list keyspaces.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while listing keyspaces: {0}'.format(str(e)))
+        raise
+   
+    return ret
 
 
 def list_column_families(keyspace=None, contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -299,15 +338,24 @@ def list_column_families(keyspace=None, contact_points=None, port=None, cql_user
 
         salt 'minion1' cassandra.list_column_families keyspace=system
     '''
-    query = 'select columnfamily_name from system.schema_columnfamilies'
-    if keyspace:
-        where_clause = 'where keyspace_name = \'%s\'' % keyspace
-        query = query + ' ' + where_clause
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
-    if ret:
-        return ret
-    else:
-        return False
+    where_clause = "where keyspace_name = '{0}'".format(keyspace) if keyspace else ""
+
+    query = '''select columnfamily_name 
+                 from system.schema_columnfamilies 
+                {0};'''.format(where_clause)
+
+    ret = {}
+
+    try:
+        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not list column families.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while listing column families: {0}'.format(str(e)))
+        raise
+
+    return ret
 
 
 def keyspace_exists(keyspace, contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -335,12 +383,22 @@ def keyspace_exists(keyspace, contact_points=None, port=None, cql_user=None, cql
 
         salt 'minion1' cassandra.list_keyspaces keyspace=system contact_points=minion1
     '''
-    query = 'select * from system.schema_keyspaces where keyspace_name = \'%s\'' % keyspace
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
-    if ret:
-        return ret[0]
-    else:
-        return False
+    # Only project the keyspace_name to make the query efficien.
+    # Like an echo
+    query = '''select keyspace_name
+                 from system.schema_keyspaces 
+                where keyspace_name = '{0}';'''.format(keyspace)
+
+    try:
+        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not determine if keyspace exists.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while determining if keyspace exists: {0}'.format(str(e)))
+        raise
+
+    return True if ret else False
 
 
 def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication_factor=1, replication_datacenters=None,
@@ -381,6 +439,7 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
         replication_map = {
             'class': replication_strategy
         }
+
         if replication_datacenters:
             if isinstance(replication_datacenters, basestring):
                 try:
@@ -393,11 +452,19 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
                 replication_map.update(**replication_datacenters)
         else:
             replication_map['replication_factor'] = replication_factor
-        query = "create keyspace %s with replication = %s and durable_writes = true;" % (keyspace, replication_map)
-        _query(query, contact_points, cql_user, cql_pass, port)
-        return keyspace_exists(keyspace, contact_points, port, cql_user, cql_pass)
-    else:
-        return existing_keyspace
+
+        query = '''create keyspace {0} 
+                     with replication = {1} 
+                      and durable_writes = true;'''.format(keyspace, replication_map)
+
+        try:
+            cql_query(query, contact_points, port, cql_user, cql_pass)
+        except CommandExecutionError:
+            log.critical('Could not create keyspace.')
+            raise
+        except BaseException as e:
+            log.critical('Unexpected error while creating keyspace: {0}'.format(str(e)))
+            raise
 
 
 def drop_keyspace(keyspace, contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -427,13 +494,17 @@ def drop_keyspace(keyspace, contact_points=None, port=None, cql_user=None, cql_p
     '''
     existing_keyspace = keyspace_exists(keyspace, contact_points, port)
     if existing_keyspace:
-        query = 'drop keyspace %s' % keyspace
-        ret = _query(query, contact_points, port, cql_user, cql_pass)
-        # The drop keyspace query doesn't actually return anything if the query succeeds.
-        # So if ret is empty, then the drop worked. Hence returning True for the function.
-        return True if not ret else ret
-    else:
-        return True
+        query = '''drop keyspace {0};'''.format(keyspace)
+        try:
+            cql_query(query, contact_points, port, cql_user, cql_pass)
+        except CommandExecutionError:
+            log.critical('Could not drop keyspace.')
+            raise
+        except BaseException as e:
+            log.critical('Unexpected error while dropping keyspace: {0}'.format(str(e)))
+            raise
+
+    return True
 
 
 def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -458,8 +529,19 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
         salt 'minion1' cassandra.list_users contact_points=minion1
     '''
     query = "list users;"
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
-    return ret if ret else False
+
+    ret = {}
+
+    try:
+        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not list users.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while listing users: {0}'.format(str(e)))
+        raise
+
+    return ret
 
 
 def create_user(username, password, superuser=False, contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -492,12 +574,21 @@ def create_user(username, password, superuser=False, contact_points=None, port=N
         salt 'minion1' cassandra.create_user username=joe password=secret superuser=True contact_points=minion1
     '''
     superuser_cql = 'superuser' if superuser else 'nosuperuser'
-    query = "create user if not exists %s with password '%s' %s;" % (username, password, superuser_cql)
-    log.debug('Attempting to create a new user with username=%s superuser=%s', username, superuser_cql)
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
+    query = '''create user if not exists {0} with password '{1}' {2};'''.format(username, password, superuser_cql)
+    log.debug("Attempting to create a new user with username={0} superuser={1}".format(username, superuser_cql))
+
     # The create user query doesn't actually return anything if the query succeeds.
-    # So if ret is empty, then the user creation worked. Hence returning True for the function.
-    return True if not ret else ret
+    # If the query fails, catch the exception, log a messange and raise it again.
+    try:
+        cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not create user.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while creating user: {0}'.format(str(e)))
+        raise
+
+    return True
 
 
 def list_permissions(username=None, resource=None, resource_type='keyspace', permission=None, contact_points=None,
@@ -532,17 +623,27 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
         salt 'minion1' cassandra.list_permissions username=joe resource=test_table resource_type=table \
         permission=select contact_points=minion1
     '''
-    cql_template = "list %s on %s"
+    keyspace_cql = "{0} {1}".format(resource_type, resource) if resource else "all keyspaces"
+    permission_cql = "{0} permission".format(permission) if permission else "all permissions"
+    query = "list {0} on {1}".format(permission_cql, keyspace_cql)
 
-    keyspace_cql = "%s %s" % (resource_type, resource) if resource else "all keyspaces"
-    permission_cql = "%s permission" % permission if permission else "all permissions"
-
-    query = cql_template % (permission_cql, keyspace_cql)
     if username:
-        query = "%s of %s" % (query, username)
-    log.debug('Attempting to list permissions with query "%s"', query)
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
-    return ret if ret else False
+        query = "{0} of {1}".format(query, username)
+
+    log.debug("Attempting to list permissions with query '{0}'".format(query))
+
+    ret = {}
+
+    try:
+        ret = cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not list permissions.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while listing permissions: {0}'.format(str(e)))
+        raise
+
+    return ret
 
 def grant_permission(username, resource=None, resource_type='keyspace', permission=None, contact_points=None, port=None,
                      cql_user=None, cql_pass=None):
@@ -576,10 +677,18 @@ def grant_permission(username, resource=None, resource_type='keyspace', permissi
         salt 'minion1' cassandra.grant_permission username=joe resource=test_table resource_type=table \
         permission=select contact_points=minion1
     '''
-    permission_cql = "grant %s" % permission if permission else "grant all permissions"
-    resource_cql = "on %s %s" % (resource_type, resource) if resource else "on all keyspaces"
+    permission_cql = "grant {0}".format(permission) if permission else "grant all permissions"
+    resource_cql = "on {0} {1}".format(resource_type, resource) if resource else "on all keyspaces"
+    query = "{0} {1} to {2}".format(permission_cql, resource_cql, username)
+    log.debug("Attempting to grant permissions with query '{0}'".format(query))
 
-    query = "%s %s to %s" % (permission_cql, resource_cql, username)
-    log.debug('Attempting to grant permissions with query "%s"', query)
-    ret = _query(query, contact_points, port, cql_user, cql_pass)
-    return True if not ret else ret
+    try:
+        cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not grant permissions.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while granting permissions: {0}'.format(str(e)))
+        raise
+
+    return True
