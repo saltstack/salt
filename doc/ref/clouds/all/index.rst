@@ -34,4 +34,5 @@ Full list of Salt Cloud modules
     saltify
     softlayer
     softlayer_hw
+    vmware
     vsphere
