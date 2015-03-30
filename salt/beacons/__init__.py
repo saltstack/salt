@@ -2,33 +2,39 @@
 '''
 This package contains the loader modules for the salt streams system
 '''
-# Import salt libs
+# Import Python libs
+from __future__ import absolute_import
+import logging
+import copy
+
+# Import Salt libs
 import salt.loader
 
+log = logging.getLogger(__name__)
 
 class Beacon(object):
     '''
     This class is used to eveluate and execute on the beacon system
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, functions):
         self.opts = opts
-        self.beacons = salt.loader.beacons(opts)
+        self.beacons = salt.loader.beacons(opts, functions)
+        self.interval_map = dict()
 
     def process(self, config):
         '''
         Process the configured beacons
-
         The config must be a dict and looks like this in yaml
-
         code_block:: yaml
-
             beacons:
                 inotify:
                     - /etc/fstab
                     - /var/cache/foo/*
         '''
         ret = []
+        b_config = copy.deepcopy(config)
         for mod in config:
+            log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
                 interval = [arg for arg in config[mod] if 'interval' in arg]
@@ -46,3 +52,26 @@ class Beacon(object):
                         data['id'] = self.opts['id']
                     ret.append({'tag': tag, 'data': data})
         return ret
+
+    def _process_interval(self, mod, interval):
+        '''
+        Process beacons with intervals
+        Return True if a beacon should be run on this loop
+        '''
+        log.trace('Processing interval {0} for beacon mod {1}'.format(interval, mod))
+        loop_interval = self.opts['loop_interval']
+        if mod in self.interval_map:
+            log.trace('Processing interval in map')
+            counter = self.interval_map[mod]
+            log.trace('Interval counter: {0}'.format(counter))
+            if counter * loop_interval >= interval[0]['interval']:
+                self.interval_map[mod] = 1
+                return True
+            else:
+                self.interval_map[mod] += 1
+        else:
+            log.trace('Interval process inserting mod: {0}'.format(mod))
+            self.interval_map[mod] = 1
+        return False
+
+
