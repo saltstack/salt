@@ -1454,11 +1454,15 @@ def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
                      profile=None):
     '''
     Given a VPC ID or subnet CIDR, returns a list of associated subnets and
-    their details.
+    their details. Return all subnets if VPC ID or CIDR are not provided.
     If a subnet CIDR is provided, only it's associated subnet details will be
     returned.
 
     CLI Examples::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets
 
     .. code-block:: bash
 
@@ -1472,10 +1476,6 @@ def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-
-    if not vpc_id and not cidr:
-        raise SaltInvocationError('At least on of the following must be '
-                                  'specified: vpc_id or cidr.')
 
     try:
         filter_parameters = {'filters': {}}
