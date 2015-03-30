@@ -1450,7 +1450,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
         return False
 
 
-def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
+def describe_subnets(subnet_ids=None, vpc_id=None, cidr=None, region=None, key=None, keyid=None,
                      profile=None):
     '''
     Given a VPC ID or subnet CIDR, returns a list of associated subnets and
@@ -1463,6 +1463,10 @@ def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
     .. code-block:: bash
 
         salt myminion boto_vpc.describe_subnets
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets subnet_ids=['subnet-ba1987ab', 'subnet-ba1987cd']
 
     .. code-block:: bash
 
@@ -1486,7 +1490,7 @@ def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
         if cidr:
             filter_parameters['filters']['cidrBlock'] = [cidr]
 
-        subnets = conn.get_all_subnets(**filter_parameters)
+        subnets = conn.get_all_subnets(subnet_ids=subnet_ids, **filter_parameters)
         log.debug('The filters criteria {0} matched the following subnets: '
                   '{1}'.format(filter_parameters, subnets))
 
