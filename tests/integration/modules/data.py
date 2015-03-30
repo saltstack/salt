@@ -87,7 +87,7 @@ class DataModuleTest(integration.ModuleCase):
                     'data.getval',
                     ['spam']
                     ),
-                ['green']
+                'green'
                 )
 
 if __name__ == '__main__':
