@@ -89,6 +89,7 @@ import re
 import datetime
 import copy
 from collections import OrderedDict
+import ast
 
 # Import salt libs
 import salt.utils
@@ -458,7 +459,10 @@ def read_certificate(certificate):
 
         salt '*' x509.read_certificate /etc/pki/mycert.crt
     '''
-    cert = _get_certificate_obj(certificate)
+    if isinstance(certificate, M2Crypto.X509.X509):
+        cert = certificate
+    else:
+        cert = _get_certificate_obj(certificate)
 
     ret = {
         # X509 Verison 3 has a value of 2 in the field.
@@ -795,6 +799,65 @@ def create_crl(path=None, text=False, signing_private_key=None,
                 pem_type='X509 CRL')
 
 
+def sign_remote_certificate(argdic, **kwargs):
+    '''
+    Request a certificate to be remotely signed according to a signing policy.
+
+    Takes a dict input containing all the expected argdicuments for create_certificate
+    '''
+    if 'signing_policy' not in argdic:
+        return 'signing_policy must be specified'
+
+    if not isinstance(argdic, dict):
+        argdic = ast.literal_eval(argdic)
+
+    signing_policy = {}
+    if 'signing_policy' in argdic:
+        if argdic['signing_policy'] not in __salt__['config.get']('x509_signing_policies'):
+            return 'Signing policy {0} does not exist.'.format(argdic['signing_policy'])
+
+        signing_policy = __salt__['config.get']('x509_signing_policies')[argdic['signing_policy']]
+        if isinstance(signing_policy, list):
+            d = {}
+            for item in signing_policy:
+                d.update(item)
+            signing_policy = d
+
+    if 'minions' in signing_policy:
+        if '__pub_id' not in kwargs:
+            return 'minion sending this request could not be identified'
+        if not __salt__['match.glob'](signing_policy['minions'], kwargs['__pub_id']):
+            return '{0} not permitted to use signing policy {1}'.format(kwargs['__pub_id'], argdic['signing_policy'])
+
+    try:
+        return create_certificate(path=None, text=True, **argdic)
+    except Exception as e:
+        return str(e)
+
+
+def get_signing_policy(signing_policy):
+    if signing_policy not in __salt__['config.get']('x509_signing_policies'):
+        return 'Signing policy {0} does not exist.'.format(signing_policy)
+    signing_policy = __salt__['config.get']('x509_signing_policies')[signing_policy]
+    if isinstance(signing_policy, list):
+        d = {}
+        for item in signing_policy:
+            d.update(item)
+        signing_policy = d
+
+    try:
+        del signing_policy['signing_private_key']
+    except KeyError:
+        pass
+
+    try:
+        signing_policy['signing_cert'] = get_pem_entry(signing_policy['signing_cert'], 'CERTIFICATE')
+    except KeyError:
+        pass
+    
+    return signing_policy
+
+
 def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     '''
     Create an X509 certificate.
@@ -815,16 +878,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         salt '*' x509.create_certificate path=/etc/pki/myca.crt properties="{'signing_private_key': '/etc/pki/myca.key', 'csr': '/etc/pki/myca.csr'}
     '''
 
-    # This shouldn't be necessary, but my testing shows that passing args as indicated in the
-    # docs doesn't actually work.
-    return **kwargs
-    if '__pub_arg' in kwargs:
-        for i in kwargs['__pub_arg']:
-            kwargs.update(dict((k, v) for k, v in i.iteritems()))
-
-    print 'begin'
-    print kwargs
-    if not path and not text:
+    if not path and not text and ('testrun' not in kwargs or kwargs['testrun'] == False):
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
@@ -840,15 +894,15 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
             kwargs['public_key'] = get_public_key(kwargs['public_key']).replace('\n', '')
         # Remove system entries in kwargs
         kwargs = dict((k, v) for k, v in kwargs.iteritems() if not k.startswith('__'))
-        print str(kwargs)
-        cert_txt = __salt__['publish.publish'](tgt=ca_server, fun='x509.create_certificate', arg=str(kwargs))
+        cert_txt = __salt__['publish.publish'](tgt=ca_server,
+                                               fun='x509.sign_remote_certificate',
+                                               arg=str(kwargs))[ca_server]
         if path:
             return write_pem(text=cert_txt, path=path,
                     pem_type='CERTIFICATE')
         else:
             return cert_txt
 
-    print 'signing policy'
     signing_policy = {}
     if 'signing_policy' in kwargs:
         signing_policy = __salt__['config.get']('x509_signing_policies')[kwargs['signing_policy']]
@@ -859,15 +913,12 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
             signing_policy = d
 
     # Overwrite any arguments in kwargs with signing_policy
-    print 'kwargs update'
     kwargs.update(signing_policy)
 
-    print 'default'
     for prop, default in CERT_DEFAULTS.iteritems():
         if prop not in kwargs:
             kwargs[prop] = default
 
-    print 'create cert'
     cert = M2Crypto.X509.X509()
     subject = cert.get_subject()
 
@@ -877,13 +928,11 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     cert.set_version(kwargs['version'] - 1)
 
     # Random serial number if not specified
-    print 'serial_number'
     if 'serial_number' not in kwargs:
         kwargs['serial_number'] = _dec2hex(random.getrandbits(kwargs['serial_bits']))
     cert.set_serial_number(int(kwargs['serial_number'].replace(':', ''), 16))
 
     # Set validity dates
-    print 'dates'
     not_before = M2Crypto.m2.x509_get_not_before(cert.x509)
     not_after = M2Crypto.m2.x509_get_not_after(cert.x509)
     M2Crypto.m2.x509_gmtime_adj(not_before, 0)
@@ -893,7 +942,6 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     if 'public_key' not in kwargs and 'csr' not in kwargs:
         kwargs['public_key'] = kwargs['signing_private_key']
 
-    print 'csrexts'
     csrexts = {}
     if 'csr' in kwargs:
         kwargs['public_key'] = kwargs['csr']
@@ -903,7 +951,6 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     cert.set_pubkey(_get_public_key_obj(kwargs['public_key']))
 
-    print 'subject'
     for entry, num in subject.nid.iteritems():
         if entry in kwargs:
            setattr(subject, entry, kwargs[entry])
@@ -914,7 +961,6 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         signing_cert = cert
     cert.set_issuer(signing_cert.get_subject())
 
-    print 'extensions'
     for extname, extlongname in EXT_NAME_MAPPINGS.iteritems():
         if extname not in kwargs or extlongname not in kwargs or extname not in csrexts or extlongname not in csrexts:
             continue
@@ -944,17 +990,22 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
         cert.add_ext(ext)
 
-    print 'verify'
+    if 'testrun' in kwargs and kwargs['testrun'] == True:
+        return read_certificate(cert)
+
     if not verify_private_key(kwargs['signing_private_key'], signing_cert.as_pem()):
         raise salt.exceptions.SaltInvocationError('signing_private_key: {0}'
                 'does no match signing_cert: {1}'.format(kwargs['signing_private_key'],
                                                          kwargs['signing_cert']))
 
-    print 'sign'
     cert.sign(_get_private_key_obj(kwargs['signing_private_key']), kwargs['algorithm'])
 
     if not verify_signature(cert.as_pem(), signing_pub_key=signing_cert.as_pem()):
         raise salt.exceptions.SaltInvocationError('failed to verify certificate signature')
+
+    if 'copypath' in kwargs:
+        write_pem(text=cert.as_pem(), path=os.path.join(kwargs['copypath'], kwargs['serial_number']+'.crt'),
+                pem_type='CERTIFICATE')
 
     if path:
         return write_pem(text=cert.as_pem(), path=path,

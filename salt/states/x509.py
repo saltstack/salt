@@ -250,6 +250,7 @@ def certificate_managed(name,
     current_days_remaining = 0
     current_comp = {}
 
+    changes_needed = False
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
@@ -270,18 +271,24 @@ def certificate_managed(name,
             current = '{0} is not a valid Certificate.'.format(name)
     else:
         current = '{0} does not exist.'.format(name)
+        changes_needed = True
 
-    new_cert = __salt__['x509.create_certificate'](text=True, **kwargs)
+    if 'ca_server' in kwargs and 'signing_policy' not in kwargs:
+        raise salt.exceptions.SaltInvocationError('signing_policy must be specified if ca_server is.')
 
-    new = __salt__['x509.read_certificate'](certificate=new_cert)
-    new_comp = new.copy()
-    if 'serial_number' not in kwargs:
-        new_comp.pop('Serial Number')
-    new_comp.pop('Not Before')
-    new_comp.pop('Not After')
-    new_comp.pop('MD5 Finger Print')
-    new_comp.pop('SHA1 Finger Print')
-    new_comp.pop('SHA-256 Finger Print')
+    new = __salt__['x509.create_certificate'](testrun=True, **kwargs)
+
+    if isinstance(new, dict):
+        new_comp = new.copy()
+        if 'serial_number' not in kwargs:
+            new_comp.pop('Serial Number')
+        new_comp.pop('Not Before')
+        new_comp.pop('Not After')
+        new_comp.pop('MD5 Finger Print')
+        new_comp.pop('SHA1 Finger Print')
+        new_comp.pop('SHA-256 Finger Print')
+    else:
+        new_comp = new
 
     if current_comp == new_comp and current_days_remaining > days_remaining:
         ret['result'] = True
@@ -300,7 +307,7 @@ def certificate_managed(name,
         bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
         salt.utils.backup_minion(name, bkroot)
 
-    ret['comment'] = __salt__['x509.write_pem'](text=new_cert, path=name, pem_type="CERTIFICATE")
+    ret['comment'] = __salt__['x509.create_certificate'](path=name, **kwargs)
     ret['result'] = True
 
     return ret
