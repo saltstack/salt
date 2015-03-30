@@ -9,7 +9,6 @@ Check Host & Service status from Nagios via JSON RPC.
 # Import python libs
 from __future__ import absolute_import
 import logging
-import httplib
 
 # Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
