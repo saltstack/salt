@@ -63,6 +63,32 @@ class DataModuleTest(integration.ModuleCase):
                 )
         self._clear_db()
 
+    def test_cas_update(self):
+        '''
+        data.update
+        data.cas
+        data.getval
+        '''
+        self._clear_db()
+        self.assertTrue(
+                self.run_function(
+                    'data.update',
+                    ['spam', 'eggs']
+                    )
+                )
+        self.assertTrue(
+                self.run_function(
+                    'data.cas',
+                    ['spam', 'green', 'eggs']
+                    )
+                )
+        self.assertEqual(
+                self.run_function(
+                    'data.getval',
+                    ['spam']
+                    ),
+                'green'
+                )
 
 if __name__ == '__main__':
     from integration import run_tests
