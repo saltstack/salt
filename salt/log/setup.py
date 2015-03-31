@@ -130,35 +130,32 @@ LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
 class SaltLogRecord(logging.LogRecord):
     def __init__(self, *args, **kwargs):
         logging.LogRecord.__init__(self, *args, **kwargs)
-        self.bracketname = '[{name:17}]'.format(name=self.name)
-        self.bracketlevel = '[{levelname:8}]'.format(levelname=self.levelname)
-        self.bracketprocess = '[{process}]'.format(process=self.process)
+        # pylint: disable=E1321
+        self.bracketname = '[%-17s]' % self.name
+        self.bracketlevel = '[%-8s]' % self.levelname
+        self.bracketprocess = '[%5s]' % self.process
+        # pylint: enable=E1321
 
 
 class SaltColorLogRecord(logging.LogRecord):
     def __init__(self, *args, **kwargs):
         logging.LogRecord.__init__(self, *args, **kwargs)
+        reset = TextFormat('reset')
 
-        self.colorname = '{tf}[{name:17}]{end}'.format(
-                tf=LOG_COLORS['name'],
-                name=self.name,
-                end=TextFormat('reset')
-            )
-        self.colorlevel = '{tf}[{levelname:8}]{end}'.format(
-                tf=LOG_COLORS['levels'][self.levelname],
-                levelname=self.levelname,
-                end=TextFormat('reset')
-            )
-        self.colorprocess = '{tf}[{process}]{end}'.format(
-                tf=LOG_COLORS['process'],
-                process=self.process,
-                end=TextFormat('reset')
-            )
-        self.colormsg = u'{tf}{msg}{end}'.format(
-                tf=LOG_COLORS['msgs'][self.levelname],
-                msg=self.msg,
-                end=TextFormat('reset')
-            )
+        # pylint: disable=E1321
+        self.colorname = '%s[%-17s]%s' % (LOG_COLORS['name'],
+                                          self.name,
+                                          reset)
+        self.colorlevel = '%s[%-8s]%s' % (LOG_COLORS['levels'][self.levelname],
+                                          self.levelname,
+                                          TextFormat('reset'))
+        self.colorprocess = '%s[%5s]%s' % (LOG_COLORS['process'],
+                                           self.process,
+                                           reset)
+        self.colormsg = '%s%s%s' % (LOG_COLORS['msgs'][self.levelname],
+                                    self.msg,
+                                    reset)
+        # pylint: enable=E1321
 
 
 _log_record_factory = SaltLogRecord

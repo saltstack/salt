@@ -28,6 +28,7 @@ Full list of runner modules
     pagerduty
     pillar
     queue
+    sdb
     search
     state
     survey

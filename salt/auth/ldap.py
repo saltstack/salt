@@ -32,7 +32,11 @@ __defopts__ = {'auth.ldap.uri': '',
                'auth.ldap.no_verify': False,
                'auth.ldap.anonymous': False,
                'auth.ldap.scope': 2,
-               'auth.ldap.groupou': 'Groups'
+               'auth.ldap.groupou': 'Groups',
+               'auth.ldap.accountattributename': 'memberUid',
+               'auth.ldap.persontype': 'person',
+               'auth.ldap.groupclass': 'posixGroup',
+               'auth.ldap.activedirectory': False,
                }
 
 
@@ -69,7 +73,7 @@ class _LDAPConnection(object):
     '''
 
     def __init__(self, uri, server, port, tls, no_verify, binddn, bindpw,
-                 anonymous):
+                 anonymous, accountattributename, activedirectory=False):
         '''
         Bind to an LDAP directory using passed credentials.
         '''
@@ -117,8 +121,8 @@ def _bind(username, password):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous'],
-        'additional': ['binddn', 'bindpw', 'filter'],
+        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous', 'accountattributename', 'activedirectory'],
+        'additional': ['binddn', 'bindpw', 'filter', 'groupclass'],
     }
 
     paramvalues = {}
@@ -172,8 +176,25 @@ def _bind(username, password):
                 log.warn('Unable to find user {0}'.format(username))
                 return False
             elif len(result) > 1:
-                log.warn('Found multiple results for user {0}'.format(username))
-                return False
+                # Active Directory returns something odd.  Though we do not
+                # chase referrals (ldap.set_option(ldap.OPT_REFERRALS, 0) above)
+                # it still appears to return several entries for other potential
+                # sources for a match.  All these sources have None for the
+                # CN (ldap array return items are tuples: (cn, ldap entry))
+                # But the actual CNs are at the front of the list.
+                # So with some list comprehension magic, extract the first tuple
+                # entry from all the results, create a list from those,
+                # and count the ones that are not None.  If that total is more than one
+                # we need to error out because the ldap filter isn't narrow enough.
+                cns = [tup[0] for tup in result]
+                total_not_none = sum(1 for c in cns if c is not None)
+                if total_not_none > 1:
+                    log.error('LDAP lookup found multiple results for user {0}'.format(username))
+                    return False
+                elif total_not_none == 0:
+                    log.error('LDAP lookup--unable to find CN matching user {0}'.format(username))
+                    return False
+
             connargs['binddn'] = result[0][0]
         if paramvalues['binddn'] and not paramvalues['bindpw']:
             connargs['binddn'] = paramvalues['binddn']
@@ -188,7 +209,7 @@ def _bind(username, password):
         ldap_conn = _LDAPConnection(**connargs).ldap
     except Exception:
         connargs.pop('bindpw', None)  # Don't log the password
-        log.warn('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
+        log.error('Failed to authenticate user dn via LDAP: {0}'.format(connargs))
         log.debug('Error authenticating user dn via LDAP:', exc_info=True)
         return False
     log.debug(
@@ -203,10 +224,12 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
+
     if _bind(username, password):
         log.debug('LDAP authentication successful')
         return True
     else:
+        log.error('LDAP _bind authentication FAILED')
         return False
 
 
@@ -214,20 +237,64 @@ def groups(username, **kwargs):
     '''
     Authenticate against an LDAP group
 
-    Uses groupou and basedn specified in group to filter
-    group search
+    Behavior is highly dependent on if Active Directory is in use.
+
+    AD handles group membership very differently than OpenLDAP.
+    See the :ref:`External Authentication <acl-eauth>` documentation for a thorough
+    discussion of available parameters for customizing the search.
+
+    OpenLDAP allows you to search for all groups in the directory
+    and returns members of those groups.  Then we check against
+    the username entered.
+
     '''
     group_list = []
+
     bind = _bind(username, kwargs['password'])
     if bind:
-        search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')),
-                                       ldap.SCOPE_SUBTREE,
-                                       '(&(memberUid={0})(objectClass=posixGroup))'.format(username),
-                                       ['memberUid', 'cn'])
+        log.debug('ldap bind to determine group membership succeeded!')
+
+        if _config('activedirectory'):
+            try:
+                get_user_dn_search = '(&({0}={1})(objectClass={2}))'.format(_config('accountattributename'),
+                                                                            username,
+                                                                            _config('persontype'))
+                user_dn_results = bind.search_s(_config('basedn'),
+                                                ldap.SCOPE_SUBTREE,
+                                                get_user_dn_search, ['distinguishedName'])
+            except Exception as e:
+                log.error('Exception thrown while looking up user DN in AD: {0}'.format(e))
+                return group_list
+            if not user_dn_results:
+                log.error('Could not get distinguished name for user {0}'.format(username))
+                return group_list
+            # LDAP results are always tuples.  First entry in the tuple is the DN
+            dn = user_dn_results[0][0]
+            ldap_search_string = '(&(member={0})(objectClass={1}))'.format(dn, _config('groupclass'))
+            try:
+                search_results = bind.search_s(_config('basedn'),
+                                               ldap.SCOPE_SUBTREE,
+                                               ldap_search_string,
+                                               [_config('accountattributename'), 'cn'])
+            except Exception as e:
+                log.error('Exception thrown while retrieving group membership in AD: {0}'.format(e))
+                return group_list
+            for _, entry in search_results:
+                if 'cn' in entry:
+                    group_list.append(entry['cn'][0])
+            log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+        else:
+            search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')),
+                                           ldap.SCOPE_SUBTREE,
+                                           '(&({0}={1})(objectClass={2}))'.format(_config('accountattributename'),
+                                                                                  username, _config('groupclass')),
+                                           [_config('accountattributename'), 'cn'])
+            for _, entry in search_results:
+                if username in entry[_config('accountattributename')]:
+                    group_list.append(entry['cn'][0])
+            log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
     else:
-        return False
-    for _, entry in search_results:
-        if username in entry['memberUid']:
-            group_list.append(entry['cn'][0])
-    log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+        log.error('ldap bind to determine group membership FAILED!')
+        return group_list
+
     return group_list

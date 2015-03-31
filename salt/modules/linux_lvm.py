@@ -10,6 +10,7 @@ import os.path
 # Import salt libs
 import salt.utils
 import salt.ext.six as six
+from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'lvm'
@@ -185,9 +186,12 @@ def lvdisplay(lvname=''):
     return ret
 
 
-def pvcreate(devices, **kwargs):
+def pvcreate(devices, override=True, **kwargs):
     '''
     Set a physical device to be used as an LVM physical volume
+
+    override
+        Skip devices, if they are already an LVM physical volumes
 
     CLI Examples:
 
@@ -202,8 +206,17 @@ def pvcreate(devices, **kwargs):
     cmd = ['pvcreate']
     for device in devices.split(','):
         if not os.path.exists(device):
-            return '{0} does not exist'.format(device)
-        cmd.append(device)
+            raise CommandExecutionError('{0} does not exist'.format(device))
+        # Verify pvcreate was successful
+        if not pvdisplay(device):
+            cmd.append(device)
+        elif not override:
+            raise CommandExecutionError('Device "{0}" is already an LVM physical volume.'.format(device))
+
+    if not cmd[1:]:
+        # All specified devices are already LVM volumes
+        return True
+
     valid = ('metadatasize', 'dataalignment', 'dataalignmentoffset',
              'pvmetadatacopies', 'metadatacopies', 'metadataignore',
              'restorefile', 'norestorefile', 'labelsector',
@@ -212,13 +225,24 @@ def pvcreate(devices, **kwargs):
         if kwargs[var] and var in valid:
             cmd.append('--{0}'.format(var))
             cmd.append(kwargs[var])
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    return out[0]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if out.get('retcode'):
+        raise CommandExecutionError(out.get('stderr'))
+
+    # Verify pvcreate was successful
+    for device in devices.split(','):
+        if not pvdisplay(device):
+            raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
+
+    return True
 
 
-def pvremove(devices):
+def pvremove(devices, override=True):
     '''
     Remove a physical device being used as an LVM physical volume
+
+    override
+        Skip devices, if they are already not used as an LVM physical volumes
 
     CLI Examples:
 
@@ -228,11 +252,25 @@ def pvremove(devices):
     '''
     cmd = ['pvremove', '-y']
     for device in devices.split(','):
-        if not __salt__['lvm.pvdisplay'](device):
-            return '{0} is not a physical volume'.format(device)
-        cmd.append(device)
-    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    return out[0]
+        if pvdisplay(device):
+            cmd.append(device)
+        elif not override:
+            raise CommandExecutionError('{0} is not a physical volume'.format(device))
+
+    if not cmd[2:]:
+        # Nothing to do
+        return True
+
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if out.get('retcode'):
+        raise CommandExecutionError(out.get('stderr'))
+
+    # Verify pvcremove was successful
+    for device in devices.split(','):
+        if pvdisplay(device):
+            raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
+
+    return True
 
 
 def vgcreate(vgname, devices, **kwargs):

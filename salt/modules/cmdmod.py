@@ -54,6 +54,23 @@ def __virtual__():
     return __virtualname__
 
 
+def _python_shell_default(python_shell, __pub_jid):
+    '''
+    Set python_shell default based on remote execution and __opts__['cmd_safe']
+    '''
+    try:
+        # Default to python_shell=True when run directly from remote execution
+        # system. Cross-module calls won't have a jid.
+        if __pub_jid and python_shell is None:
+            return True
+        elif __opts__.get('cmd_safe', True) is False and python_shell is None:
+            # Override-switch for python_shell
+            return True
+    except NameError:
+        pass
+    return python_shell
+
+
 def _chroot_pids(chroot):
     pids = []
     for root in glob.glob('/proc/[0-9]*/root'):
@@ -614,12 +631,8 @@ def run(cmd,
 
         salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
-    try:
-        if __opts__.get('cmd_safe', True) is False and python_shell is None:
-            # Override-switch for python_shell
-            python_shell = True
-    except NameError:
-        pass
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
                shell=shell,
@@ -808,12 +821,8 @@ def run_stdout(cmd,
 
         salt '*' cmd.run_stdout "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    try:
-        if __opts__.get('cmd_safe', True) is False and python_shell is None:
-            # Override-switch for python_shell
-            python_shell = True
-    except NameError:
-        pass
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -896,12 +905,8 @@ def run_stderr(cmd,
 
         salt '*' cmd.run_stderr "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    try:
-        if __opts__.get('cmd_safe', True) is False and python_shell is None:
-            # Override-switch for python_shell
-            python_shell = True
-    except NameError:
-        pass
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -984,12 +989,8 @@ def run_all(cmd,
 
         salt '*' cmd.run_all "grep f" stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    try:
-        if __opts__.get('cmd_safe', True) is False and python_shell is None:
-            # Override-switch for python_shell
-            python_shell = True
-    except NameError:
-        pass
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
@@ -1191,12 +1192,8 @@ def script(source,
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    try:
-        if __opts__.get('cmd_safe', True) is False and python_shell is None:
-            # Override-switch for python_shell
-            python_shell = True
-    except NameError:
-        pass
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
 
     def _cleanup_tempfile(path):
         try:
@@ -1304,12 +1301,8 @@ def script_retcode(source,
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    try:
-        if __opts__.get('cmd_safe', True) is False and python_shell is None:
-            # Override-switch for python_shell
-            python_shell = True
-    except NameError:
-        pass
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
             'Boron',

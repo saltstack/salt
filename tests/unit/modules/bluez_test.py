@@ -138,7 +138,7 @@ class BluezTestCase(TestCase):
         '''
             Test of blocking specific bluetooth device
         '''
-        mock = MagicMock(side_effect={False, True})
+        mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, 'mac', mock):
             self.assertRaises(CommandExecutionError,
                               bluez.block, "DE:AD:BE:EF:CA:ZE")
@@ -151,7 +151,7 @@ class BluezTestCase(TestCase):
         '''
             Test to unblock specific bluetooth device
         '''
-        mock = MagicMock(side_effect={False, True})
+        mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, 'mac', mock):
             self.assertRaises(CommandExecutionError,
                               bluez.block, "DE:AD:BE:EF:CA:ZE")
@@ -184,7 +184,7 @@ class BluezTestCase(TestCase):
         '''
             Test to unpair bluetooth adaptor with a device
         '''
-        mock = MagicMock(side_effect={False, True})
+        mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, 'mac', mock):
             self.assertRaises(CommandExecutionError,
                               bluez.unpair, "DE:AD:BE:EF:CA:FE")
