@@ -52,6 +52,7 @@ disable=W0142,
   C0330,
   I0011,
   I0012,
+  W1202,
   E8402,
   E8731
 #  E8121,
@@ -66,6 +67,7 @@ disable=W0142,
 # Disabled Checks
 #
 # W0142 (star-args)
+# W1202 (logging-format-interpolation) Use % formatting in logging functions but pass the % parameters as arguments
 # E812* All PEP8 E12*
 # E8402 module level import not at top of file
 # E8501 PEP8 line too long
