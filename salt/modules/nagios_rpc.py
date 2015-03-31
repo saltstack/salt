@@ -68,17 +68,6 @@ def _status_query(query, hostname, retcode=True, service=None, method='GET', **k
     if service:
         req_params['servicedescription'] = service
 
-    url = kwargs.get('url')
-    username = kwargs.get('username')
-    password = kwargs.get('password')
-
-    # Make sure "cgi-bin/" in the URL
-    if not url.endswith(('cgi-bin', 'cgi-bin/')):
-        url += 'cgi-bin/'
-
-    if not url.endswith('/'):
-        url += '/'
-    url = _urljoin(url, 'statusjson.cgi')
 
     try:
         if username and password:
