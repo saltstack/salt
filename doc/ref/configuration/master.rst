@@ -1809,6 +1809,8 @@ configuration is the same as :conf_master:`file_roots`:
 ``ext_pillar``
 --------------
 
+.. _master-configuration-ext-pillar:
+
 The ext_pillar option allows for any number of external pillar interfaces to be
 called when populating pillar data. The configuration is based on ext_pillar
 functions. The available ext_pillar functions can be found herein:

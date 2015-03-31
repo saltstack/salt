@@ -1450,15 +1450,23 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
         return False
 
 
-def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
+def describe_subnets(subnet_ids=None, vpc_id=None, cidr=None, region=None, key=None, keyid=None,
                      profile=None):
     '''
     Given a VPC ID or subnet CIDR, returns a list of associated subnets and
-    their details.
+    their details. Return all subnets if VPC ID or CIDR are not provided.
     If a subnet CIDR is provided, only it's associated subnet details will be
     returned.
 
     CLI Examples::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_subnets subnet_ids=['subnet-ba1987ab', 'subnet-ba1987cd']
 
     .. code-block:: bash
 
@@ -1473,10 +1481,6 @@ def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
     if not conn:
         return False
 
-    if not vpc_id and not cidr:
-        raise SaltInvocationError('At least on of the following must be '
-                                  'specified: vpc_id or cidr.')
-
     try:
         filter_parameters = {'filters': {}}
 
@@ -1486,7 +1490,7 @@ def describe_subnets(vpc_id=None, cidr=None, region=None, key=None, keyid=None,
         if cidr:
             filter_parameters['filters']['cidrBlock'] = [cidr]
 
-        subnets = conn.get_all_subnets(**filter_parameters)
+        subnets = conn.get_all_subnets(subnet_ids=subnet_ids, **filter_parameters)
         log.debug('The filters criteria {0} matched the following subnets: '
                   '{1}'.format(filter_parameters, subnets))
 

@@ -9,13 +9,14 @@ Check Host & Service status from Nagios via JSON RPC.
 # Import python libs
 from __future__ import absolute_import
 import logging
-import httplib
 
-# Import 3rd-party libs
+# Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
+# Import Third Party Libs
 try:
     import requests
     from requests.exceptions import ConnectionError
@@ -58,6 +59,10 @@ def _status_query(query, hostname, retcode=True, service=None, method='GET', **k
         'query': query,
     }
 
+    ret = {
+        'result': True
+    }
+
     if not retcode:
         req_params['formatoptions'] = 'enumerate'
     if service:
@@ -67,8 +72,10 @@ def _status_query(query, hostname, retcode=True, service=None, method='GET', **k
     username = kwargs.get('username')
     password = kwargs.get('password')
 
-    # Make sure "cgi-bin/statusjson.cgi" in the URL
-    url = url.split("cgi-bin")[0]
+    # Make sure "cgi-bin/" in the URL
+    if not url.endswith(('cgi-bin', 'cgi-bin/')):
+        url += 'cgi-bin/'
+
     if not url.endswith('/'):
         url += '/'
     url = _urljoin(url, 'statusjson.cgi')
@@ -84,25 +91,80 @@ def _status_query(query, hostname, retcode=True, service=None, method='GET', **k
                                   data=data,
                                   verify=True,
                                   auth=auth)
-        if result.status_code == httplib.OK:
-            data = result.json()
-        elif result.status_code == httplib.UNAUTHORIZED:
-            log.error('Nagios authentication failed. Please check the configuration.')
-        elif result.status_code == httplib.NOT_FOUND:
-            log.error('URL {0} for Nagios was not found.'.format(url))
+        if result.status_code == salt.ext.six.moves.http_client.OK:
+            try:
+                data = result.json()
+                ret['json_data'] = result.json()
+            except ValueError:
+                ret['error'] = 'Please ensure Nagios is running.'
+                ret['result'] = False
+        elif result.status_code == salt.ext.six.moves.http_client.UNAUTHORIZED:
+            ret['error'] = 'Nagios authentication failed. Please check the configuration.'
+            ret['result'] = False
+        elif result.status_code == salt.ext.six.moves.http_client.NOT_FOUND:
+            ret['error'] = 'URL {0} for Nagios was not found.'.format(url)
+            ret['result'] = False
         else:
-            log.debug('Results: {0}'.format(result.text))
+            ret['error'] = 'Results: {0}'.format(result.text)
+            ret['result'] = False
     except ConnectionError as conn_err:
-        log.error('Error {0}'.format(conn_err))
+        ret['error'] = 'Error {0}'.format(conn_err)
+        ret['result'] = False
+    return ret
 
-    return data
 
-
-def status(hostname, service=None, **kwargs):
+def host_status(hostname=None, **kwargs):
     '''
-    Check status of a particular host or particular service on it in Nagios.
-    If service parameter is omitted, then check host itself. By default
+    Check status of a particular host By default
     statuses are returned in a numeric format.
+
+    Parameters:
+
+    hostname
+        The hostname to check the status of the service in Nagios.
+
+    numeric
+        Turn to false in order to return status in text format
+        ('OK' instead of 0, 'Warning' instead of 1 etc)
+
+    :return: status:     'OK', 'Warning', 'Critical' or 'Unknown'
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nagios_rpc.host_status hostname=webserver.domain.com
+        salt '*' nagios_rpc.host_status hostname=webserver.domain.com numeric=False
+    '''
+
+    ret = {'result': True}
+    config = _config()
+
+    if not config['url']:
+        return {'result': False, 'error': 'Missing Nagios URL in the configuration {0}'.format(config)}
+
+    if not hostname:
+        return {'result': False, 'error': 'Missing hostname parameter'}
+
+    numeric = kwargs.get('numeric') is True
+    target = 'host'
+    results = _status_query('host',
+                            hostname,
+                            retcode=numeric,
+                            url=config['url'],
+                            username=config['username'],
+                            password=config['password'])
+
+    if not results['result']:
+        return {'result': False, 'error': results['error']}
+    ret['status'] = results.get('json_data', {}).get('data', {}).get(target, {}).get('status', not numeric and 'Unknown' or 2)
+    return ret
+
+
+def service_status(hostname=None, service=None, **kwargs):
+    '''
+    Check status of a particular service on a host on it in Nagios.
+    By default statuses are returned in a numeric format.
 
     Parameters:
 
@@ -122,19 +184,30 @@ def status(hostname, service=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' nagios_rpc.service_status hostname=webserver.domain.com
         salt '*' nagios_rpc.service_status hostname=webserver.domain.com service='HTTP'
-        salt '*' nagios_rpc.service_status hostname=webserver.domain.com numeric=False
+        salt '*' nagios_rpc.service_status hostname=webserver.domain.com service='HTTP' numeric=False
     '''
 
+    ret = {'result': True}
     config = _config()
 
+    if not hostname:
+        ret['error'] = 'Missing hostname parameter'
+        ret['status'] = False
+        return ret
+
+    if not service:
+        ret['error'] = 'Missing service parameter'
+        ret['status'] = False
+        return ret
+
     if not config['url']:
-        log.error('Missing Nagios URL in the configuration')
-        return False
+        ret['error'] = 'Missing Nagios URL in the configuration {0}'.format(config)
+        ret['status'] = False
+        return ret
 
     numeric = kwargs.get('numeric') is True
-    target = service and 'service' or 'host'
+    target = 'service'
     results = _status_query(target,
                             hostname,
                             retcode=numeric,
@@ -143,4 +216,7 @@ def status(hostname, service=None, **kwargs):
                             username=config['username'],
                             password=config['password'])
 
-    return results.get('data', {}).get(target, {}).get('status', not numeric and 'Unknown' or 0)
+    if not results['result']:
+        return {'result': False, 'error': results['error']}
+    ret['status'] = results.get('json_data', {}).get('data', {}).get(target, {}).get('status', not numeric and 'Unknown' or 2)
+    return ret

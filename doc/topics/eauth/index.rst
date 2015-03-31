@@ -103,12 +103,12 @@ User authentication does not need to be entered again until the token expires.
 Token expiration time can be set in the Salt master config file.
 
 
-LDAP
-----
+LDAP and Active Directory
+-------------------------
+
 .. note::
 
     LDAP usage requires that you have installed python-ldap.
-
 
 Salt supports both user and group authentication for LDAP (and Active Directory
 accessed via its LDAP interface)

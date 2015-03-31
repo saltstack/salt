@@ -41,7 +41,8 @@ class NestDisplay(object):
         self.__dict__.update(
             get_colors(
                 __opts__.get('color'),
-                __opts__.get('color_theme'))
+                __opts__.get('color_theme')
+            )
         )
         self.strip_colors = __opts__.get('strip_colors', True)
 

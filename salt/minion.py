@@ -937,8 +937,7 @@ class Minion(MinionBase):
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
         if self.opts.get('multimaster', False):
             s_opts = copy.deepcopy(self.opts)
-            functions = salt.loader.minion_mods(
-                s_opts, notify=notify, loaded_base_name=self.loaded_base_name)
+            functions = salt.loader.minion_mods(s_opts, loaded_base_name=self.loaded_base_name, notify=notify)
         else:
             functions = salt.loader.minion_mods(self.opts, notify=notify)
         returners = salt.loader.returners(self.opts, functions)
