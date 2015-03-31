@@ -339,9 +339,9 @@ def create_subnet(vpc_id, cidr_block, availability_zone=None, subnet_name=None, 
         return False
 
 
-def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
+def delete_subnet(name=None, subnet_id=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Given a subnet ID, delete the subnet.
+    Given a subnet ID or name, delete the subnet.
 
     Returns True if the subnet was deleted and returns False if the subnet was not deleted.
 
@@ -356,6 +356,16 @@ def delete_subnet(subnet_id, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
+
+    if not any((name, subnet_id)):
+        raise SaltInvocationError("Either name or subnet ID needs to be specified.")
+
+    if name:
+        subnets = describe_subnets(region=region, key=key, keyid=keyid, profile=profile)
+        for subnet in subnets:
+            if 'Name' in subnet['tags']:
+                if subnet['tags']['Name'] == name:
+                    subnet_id = subnet['id']
 
     try:
         if conn.delete_subnet(subnet_id):
