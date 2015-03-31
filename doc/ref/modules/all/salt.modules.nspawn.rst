@@ -4,4 +4,4 @@ salt.modules.nspawn
 
 .. automodule:: salt.modules.nspawn
     :members:
-    :exclude-members: list_, stop, restart, destroy, pull_docker
+    :exclude-members: cp, destroy, list_, pull_docker, restart, stop

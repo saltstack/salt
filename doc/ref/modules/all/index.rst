@@ -75,6 +75,7 @@ Full list of builtin execution modules
     dnsmasq
     dnsutil
     dockerio
+    dockerng
     dpkg
     drac
     drbd

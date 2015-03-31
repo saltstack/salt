@@ -14,6 +14,7 @@ import socket
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 import salt.utils.network
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
@@ -589,6 +590,7 @@ def dig(host):
     return __salt__['cmd.run'](cmd)
 
 
+@decorators.which('arp')
 def arp():
     '''
     Return the arp table from the minion
@@ -792,12 +794,17 @@ def mod_hostname(hostname):
 
     .. code-block:: bash
 
-        salt '*' network.mod_hostname   master.saltstack.com
+        salt '*' network.mod_hostname master.saltstack.com
     '''
     if hostname is None:
         return False
 
-    hostname_cmd = salt.utils.which('hostname')
+    hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname')
+
+    if hostname_cmd.endswith('hostnamectl'):
+        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+        return True
+
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))

@@ -378,12 +378,22 @@ class Unauthorized(Exception):
         self.msg = message
 
 
+class AuthorizationFailure(Exception):
+    '''
+    Additional exception class to Unauthorized.
+    '''
+    def __init__(self, message='Test'):
+        super(AuthorizationFailure, self).__init__(message)
+        self.msg = message
+
+
 class MockExceptions(object):
     """
     Mock of exceptions class
     """
     def __init__(self):
         self.Unauthorized = Unauthorized
+        self.AuthorizationFailure = AuthorizationFailure
 
 
 class MockKeystoneClient(object):

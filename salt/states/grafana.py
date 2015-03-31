@@ -190,6 +190,8 @@ def _parse_profile(profile):
         if not _profile:
             msg = 'Pillar key for profile {0} not found.'.format(profile)
             raise SaltInvocationError(msg)
+    else:
+        _profile = profile
     hosts = _profile.get('hosts')
     index = _profile.get('index')
     return (hosts, index)

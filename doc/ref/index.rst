@@ -32,3 +32,4 @@ Reference
     wheel/all/index
     beacons/all/index
     engines/all/index
+    sdb/all/index

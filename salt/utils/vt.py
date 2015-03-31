@@ -523,13 +523,15 @@ class Terminal(object):
                     os.close(tty_fd)
 
                 # Verify we now have a controlling tty.
-                tty_fd = os.open('/dev/tty', os.O_WRONLY)
-                if tty_fd < 0:
-                    raise TerminalException(
-                        'Could not open controlling tty, /dev/tty'
-                    )
-                else:
-                    os.close(tty_fd)
+                if os.name != 'posix':
+                    # Only do this check in not BSD-like operating systems. BSD-like operating systems breaks at this point
+                    tty_fd = os.open('/dev/tty', os.O_WRONLY)
+                    if tty_fd < 0:
+                        raise TerminalException(
+                            'Could not open controlling tty, /dev/tty'
+                        )
+                    else:
+                        os.close(tty_fd)
                 # <---- Make STDOUT the controlling PTY ----------------------
 
                 # ----- Duplicate Descriptors ------------------------------->
