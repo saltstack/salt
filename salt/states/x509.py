@@ -234,7 +234,7 @@ def private_key_managed(name,
             'old': current,
             'new': "{0} bit private key".format(bits)}
 
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'The Private Key "{0}" will be updated.'.format(name)
         return ret
@@ -295,9 +295,9 @@ def csr_managed(name,
 
     ret['changes'] = {
             'old': current,
-            'new': new,}
+            'new': new, }
 
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'The CSR {0} will be updated.'.format(name)
 
@@ -415,10 +415,9 @@ def certificate_managed(name,
 
     ret['changes'] = {
             'old': current,
-            'new': new,}
+            'new': new, }
 
-    if __opts__['test'] == True:
-        print ret['changes']
+    if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'The certificate {0} will be updated.'.format(name)
         return ret
@@ -533,9 +532,9 @@ def crl_managed(name,
 
     ret['changes'] = {
             'old': current,
-            'new': new,}
+            'new': new, }
 
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'The crl {0} will be updated.'.format(name)
         return ret
@@ -579,7 +578,7 @@ def pem_managed(name,
         ret['comment'] = 'The file is already in the correct state'
         return ret
 
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'The file {0} will be updated.'.format(name)
         return ret

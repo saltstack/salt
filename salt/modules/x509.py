@@ -68,6 +68,7 @@ class _Ctx(ctypes.Structure):
                 ('db', ctypes.c_void_p),
                 ]
 
+
 def _fix_ctx(m2_ctx, issuer=None):
     '''
     This is part of an ugly hack to fix an ancient bug in M2Crypto
@@ -95,13 +96,12 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
         value.strip('0123456789abcdefABCDEF:') is not '':
         raise salt.exceptions.SaltInvocationError('value must be precomputed hash')
 
-
-    lhash = M2Crypto.m2.x509v3_lhash()                      #pylint: disable=no-member
-    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)          #pylint: disable=no-member
+    lhash = M2Crypto.m2.x509v3_lhash()                      # pylint: disable=no-member
+    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)          # pylint: disable=no-member
     #ctx not zeroed
     _fix_ctx(ctx, issuer)
 
-    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value) #pylint: disable=no-member
+    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value) # pylint: disable=no-member
     #ctx,lhash freed
 
     if x509_ext_ptr is None:
@@ -200,7 +200,7 @@ def _parse_openssl_crl(crl_filename):
         rev_sn = revoked.split('\n')[0].strip()
         revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
         rev_yaml = yaml.safe_load(revoked)
-        for rev_item, rev_values in rev_yaml.iteritems():               #pylint: disable=unused-variable
+        for rev_item, rev_values in rev_yaml.iteritems():               # pylint: disable=unused-variable
             if 'Revocation Date' in rev_values:
                 rev_date = datetime.datetime.strptime(
                         rev_values['Revocation Date'], "%b %d %H:%M:%S %Y %Z")
@@ -623,7 +623,7 @@ def create_private_key(path=None, text=False, bits=2048):
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
-    rsa = M2Crypto.RSA.gen_key(bits, M2Crypto.m2.RSA_F4)            #pylint: disable=no-member
+    rsa = M2Crypto.RSA.gen_key(bits, M2Crypto.m2.RSA_F4)            # pylint: disable=no-member
     bio = M2Crypto.BIO.MemoryBuffer()
     rsa.save_key_bio(bio, cipher=None)
 
@@ -684,6 +684,15 @@ def create_crl(path=None, text=False, signing_private_key=None,
 
         At this time the pyOpenSSL library does not allow choosing a signing algorithm for CRLs
         See https://github.com/pyca/pyopenssl/issues/159
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' x509.create_crl path=/etc/pki/mykey.key signing_private_key=/etc/pki/ca.key \\
+                signing_cert=/etc/pki/ca.crt \\
+                revoked="{'compromized-web-key': {'certificate': '/etc/pki/certs/www1.crt', \\
+                'revocation_date': '2015-03-01 00:00:00'}}"
     '''
     # pyOpenSSL is required for dealing with CSLs. Importing inside these functions because
     # Client operations like creating CRLs shouldn't require pyOpenSSL
@@ -709,7 +718,7 @@ def create_crl(path=None, text=False, signing_private_key=None,
             if datetime.datetime.now() > not_after:
                 continue
 
-        if not 'revocation_date' in rev_item:
+        if 'revocation_date' not in rev_item:
             rev_item['revocation_date'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         rev_date = datetime.datetime.strptime(rev_item['revocation_date'], '%Y-%m-%d %H:%M:%S')
@@ -750,6 +759,11 @@ def sign_remote_certificate(argdic, **kwargs):
 
     kwargs:
         kwargs delivered from publish.publish
+
+    .. code-block:: bash
+
+        salt '*' x509.sign_remote_certificate argdic="{'public_key': '/etc/pki/www.key', \\
+                'signing_policy': 'www'}" __pub_id='www1'
     '''
     if 'signing_policy' not in argdic:
         return 'signing_policy must be specified'
@@ -777,7 +791,7 @@ def sign_remote_certificate(argdic, **kwargs):
 
     try:
         return create_certificate(path=None, text=True, **argdic)
-    except Exception as except_:                                       #pylint: disable=broad-except
+    except Exception as except_:                                       # pylint: disable=broad-except
         return str(except_)
 
 
@@ -785,6 +799,12 @@ def get_signing_policy(signing_policy):
     '''
     Returns the details of a names signing policy, including the text of the public key that will be used
     to sign it. Does not return the private key.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' x509.get_signing_policy www
     '''
     if signing_policy not in __salt__['config.get']('x509_signing_policies'):
         return 'Signing policy {0} does not exist.'.format(signing_policy)
@@ -1016,7 +1036,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
     '''
 
-    if not path and not text and ('testrun' not in kwargs or kwargs['testrun'] == False):
+    if not path and not text and ('testrun' not in kwargs or kwargs['testrun'] is False):
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified.')
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
@@ -1130,7 +1150,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
         cert.add_ext(ext)
 
-    if 'testrun' in kwargs and kwargs['testrun'] == True:
+    if 'testrun' in kwargs and kwargs['testrun'] is True:
         return read_certificate(cert)
 
     if not verify_private_key(kwargs['signing_private_key'], signing_cert.as_pem()):
