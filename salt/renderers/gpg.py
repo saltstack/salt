@@ -129,7 +129,7 @@ def decrypt_object(o, gpg):
         return o
 
 
-def render(data, saltenv='base', sls='', argline='', **kwargs):
+def render(gpg_data, saltenv='base', sls='', argline='', **kwargs):
     '''
     Create a gpg object given a gpg_keydir, and then use it to try to decrypt
     the data to be rendered.
@@ -141,5 +141,8 @@ def render(data, saltenv='base', sls='', argline='', **kwargs):
     else:
         homedir = __opts__.get('gpg_keydir', DEFAULT_GPG_KEYDIR)
     log.debug('Reading GPG keys from: {0}'.format(homedir))
-    gpg = gnupg.GPG(gnupghome=homedir)
-    return decrypt_object(data, gpg)
+    try:
+        gpg = gnupg.GPG(gnupghome=homedir)
+    except OSError:
+        raise SaltRenderError('Cannot initialize gnupg')
+    return decrypt_object(gpg_data, gpg)
