@@ -147,4 +147,5 @@ def cas(key, value, old_value):
         return False
 
     store[key] = value
+    dump(store)
     return True
