@@ -13,9 +13,9 @@ Return data to a cassandra server
 :configuration:
     To enable this returner, the minion will need the DataStax Python Driver
     for Apache Cassandra ( https://github.com/datastax/python-driver ) 
-    installed and the following values configured in the minion or master 
-    config. The list of cluster IPs must include at least one cassandra node 
-    IP address. No assumption or default will be used for the cluster IPs. 
+    installed and the following values configured in the minion or master
+    config. The list of cluster IPs must include at least one cassandra node
+    IP address. No assumption or default will be used for the cluster IPs.
     The cluster IPs will be tried in the order listed. The port, username,
     and password values shown below will be the assumed defaults if you do
     not provide values.::
@@ -31,17 +31,17 @@ Return data to a cassandra server
 
 Use the following cassandra database schema::
 
-    CREATE KEYSPACE IF NOT EXISTS salt 
+    CREATE KEYSPACE IF NOT EXISTS salt
                WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};
-    
+
     CREATE USER IF NOT EXISTS salt WITH PASSWORD 'salt' NOSUPERUSER;
-    
+
     GRANT ALL ON KEYSPACE salt TO salt;
-    
+
     USE salt;
-    
+
     CREATE KEYSPACE IF NOT EXISTS salt WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'};
-    
+
     CREATE TABLE IF NOT EXISTS salt.salt_returns (
         jid text PRIMARY KEY,
         alter_time timestamp,
@@ -58,7 +58,7 @@ Use the following cassandra database schema::
         id text PRIMARY KEY,
         last_fun text
     );
-    
+
     CREATE TABLE IF NOT EXISTS salt.jids (
         jid text PRIMARY KEY,
         load text
@@ -74,7 +74,7 @@ Use the following cassandra database schema::
     CREATE INDEX IF NOT EXISTS tag ON salt.salt_events (tag);
 
 
-Required python modules: cassandra-driver 
+Required python modules: cassandra-driver
 
   To use the cassandra returner, append '--return cassandra' to the salt command. ex:
 
@@ -85,7 +85,6 @@ from __future__ import absolute_import
 # pylint: disable=W1321,E1321
 
 # Import python libs
-import sys
 import json
 import logging
 import uuid
@@ -103,7 +102,7 @@ try:
     # they are required by the modules/cassandra_cql execution module, on which
     # this module depends.
     #
-    # This returner cross-calls the cassandra_cql execution module using the __salt__ dunder. 
+    # This returner cross-calls the cassandra_cql execution module using the __salt__ dunder.
     #
     # The modules/cassandra_cql execution module will not load if the DataStax Python Driver
     # for Apache Cassandra is not installed.
@@ -114,11 +113,13 @@ try:
     # Effectively, if the DataStax Python Driver for Apache Cassandra is not
     # installed, both the modules/cassandra_cql execution module and this returner module
     # will not be loaded by Salt's loader system.
+    # pylint: disable=unused-import
     from cassandra.cluster import Cluster
     from cassandra.cluster import NoHostAvailable
     from cassandra.connection import ConnectionException, ConnectionShutdown
     from cassandra.auth import PlainTextAuthProvider
     from cassandra.query import dict_factory
+    # pylint: enable=unused-import
     HAS_CASSANDRA_DRIVER = True
 except ImportError as e:
     HAS_CASSANDRA_DRIVER = False
@@ -127,11 +128,11 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 #
-# The 'cassandra' __virtualname__ is already taken by the 
-# returners/cassandra_return module, which utilizes nodetool. This module 
+# The 'cassandra' __virtualname__ is already taken by the
+# returners/cassandra_return module, which utilizes nodetool. This module
 # cross-calls the modules/cassandra_cql execution module, which uses the 
-# DataStax Python Driver for Apache Cassandra. Namespacing allows both the 
-# modules/cassandra_cql and returners/cassandra_cql modules to use the 
+# DataStax Python Driver for Apache Cassandra. Namespacing allows both the
+# modules/cassandra_cql and returners/cassandra_cql modules to use the
 # virtualname 'cassandra_cql'.
 __virtualname__ = 'cassandra_cql'
 
@@ -142,6 +143,7 @@ def __virtual__():
 
     return True
 
+
 def returner(ret):
     '''
     Return data to one of potentially many clustered cassandra nodes
@@ -151,13 +153,13 @@ def returner(ret):
                ) VALUES (
                  '{0}', '{1}', '{2}', '{3}', '{4}', '{5}', {6}
                );'''.format(
-                 ret['jid'], 
+                 ret['jid'],
                  int(time.time() * 1000),
-                 json.dumps(ret), 
-                 ret['fun'], 
-                 ret['id'], 
-                 json.dumps(ret['return']), 
-                 ret.get('success', False), 
+                 json.dumps(ret),
+                 ret['fun'],
+                 ret['id'],
+                 json.dumps(ret['return']),
+                 ret.get('success', False),
                )
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
@@ -210,8 +212,8 @@ def event_return(events):
                      {0}, {1}, '{2}', '{3}', '{4}'
                    );'''.format(str(uuid.uuid1()),
                                 int(time.time() * 1000),
-                                json.dumps(data), 
-                                __opts__['id'], 
+                                json.dumps(data),
+                                __opts__['id'],
                                 tag)
 
         # cassandra_cql.cql_query may raise a CommandExecutionError
@@ -272,7 +274,7 @@ def get_load(jid):
     return ret
 
 
-# salt-call ret.get_jid cassandra_cql 20150327234537907315 PASSED 
+# salt-call ret.get_jid cassandra_cql 20150327234537907315 PASSED
 def get_jid(jid):
     '''
     Return the information returned when the specified job id was executed
