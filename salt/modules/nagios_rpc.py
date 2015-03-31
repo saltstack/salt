@@ -29,6 +29,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 STATUS_URI = "/cgi-bin/statusjson.cgi"
 
+
 def __virtual__():
     '''
     Only load if requests is successfully imported
