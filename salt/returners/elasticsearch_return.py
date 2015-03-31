@@ -149,7 +149,7 @@ def returner(ret):
              )
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
