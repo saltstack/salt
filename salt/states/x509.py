@@ -5,10 +5,10 @@ Manage X509 Certificates
 .. versionadded:: TBD
 
 This module can enable managing a complete PKI infrastructure. Here is an example scenario. In this example
-``salt`` is the salt master, ``ca`` is the ca server, and ``www`` is a web server that needs a certificate
-signed by ``ca``.
+``ca`` is the ca server, and ``www`` is a web server that needs a certificate signed by ``ca``.
 
-For remote signing, peers must be permitted to remotely call the ``sign_remote_certificate`` function.
+For remote signing, peers must be permitted to remotely call the :mod:`pem_managed <salt.states.x509.pem_managed>` function.
+ 
 
 /etc/salt/master.d/peer.sls
 
@@ -50,7 +50,7 @@ the mine where it can be easily retrieved by other minions.
         - source: salt://signing_policies.conf
 
     /etc/pki:
-      file.directory:
+      file.directory: []
 
     /etc/pki/ca.key:
       x509.private_key_managed:
