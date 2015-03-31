@@ -22,6 +22,8 @@ For remote signing, peers must be permitted to remotely call the ``sign_remote_c
 .. code-block:: yaml
 
     base:
+      '*':
+        - cert
       'ca':
         - ca
       'www':
@@ -100,6 +102,16 @@ can define a restricted list of minons which are allowed to remotely invoke this
         - authorityKeyIdentifier: keyid,issuer:always
         - days_valid: 90
         - copypath: /etc/pki/issued_certs/
+
+
+This state will instruct all minions to trust certificates signed by our new CA. I'm intentionally stripping newlines from the text because dealing with newlines in yaml can be painful, and the pem_managed state will properly format the string before writing it out.
+
+/srv/salt/cert.sls
+.. code-block:: yaml
+
+    /usr/local/share/ca-certificates/intca.crt
+      x509.pem_managed:
+        - text: {{ salt['mine.get']('pki', 'x509.get_pem_entries')['pki']['/etc/pki/ca.crt']|replace('\n', '') }}
 
 
 This state creates a private key then requests a certificate signed by ``ca`` according to the www policy.
