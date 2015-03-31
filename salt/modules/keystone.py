@@ -52,17 +52,19 @@ Module for handling openstack keystone calls.
 # Import Python libs
 from __future__ import absolute_import
 
-# Import third party libs
+# Import Salt Libs
 import salt.ext.six as six
-# pylint: disable=import-error
+
+# Import third party libs
 HAS_KEYSTONE = False
 try:
+    # pylint: disable=import-error
     from keystoneclient.v2_0 import client
     import keystoneclient.exceptions
+    # pylint: enable=import-error
     HAS_KEYSTONE = True
 except ImportError:
     pass
-# pylint: enable=import-error
 
 
 def __virtual__():
@@ -830,7 +832,8 @@ def user_verify_password(user_id=None, name=None, password=None,
               'auth_url': auth_url}
     try:
         userauth = client.Client(**kwargs)
-    except keystoneclient.exceptions.Unauthorized:
+    except (keystoneclient.exceptions.Unauthorized,
+            keystoneclient.exceptions.AuthorizationFailure):
         return False
     return True
 
