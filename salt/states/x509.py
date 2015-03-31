@@ -188,6 +188,8 @@ def private_key_managed(name,
 
     new:
         Always create a new key. Defaults to False.
+        Combining new with :mod:`prereq <salt.states.requsities.preqreq>` can allow key rotation
+        whenever a new certificiate is generated.
 
     backup:
         When replacing an existing file, backup the old file onthe minion.
