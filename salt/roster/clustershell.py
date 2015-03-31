@@ -1,7 +1,13 @@
+# -*- coding: utf-8 -*-
+'''
+Resolve hostname pdsh/clustershell style
+'''
+
 # Import python libs
 from __future__ import absolute_import
-
 import socket
+
+from salt.ext.six.moves import map # pylint: disable=import-error,redefined-builtin
 from ClusterShell.NodeSet import NodeSet
 
 def targets(tgt, tgt_type='glob', **kwargs):
