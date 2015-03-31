@@ -144,6 +144,7 @@ def update_stack(name, template_body=None, template_url=None, parameters=None, n
             return str(e)
     return False
 
+
 def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a CFN stack.
@@ -175,14 +176,14 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
-        return {}
+        return False
     try:
         template = conn.get_template(name)
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Template {0} does not exist'.format(name)
         log.error(msg)
-        return {}
+        return str(e)
     log.info('Retrieved template for stack {0}'.format(name))
     return template
 
