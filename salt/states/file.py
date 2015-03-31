@@ -313,7 +313,10 @@ def _gen_keep_files(name, require):
     Generate the list of files that need to be kept when a dir based function
     like directory or recurse has a clean.
     '''
-    def _is_subdir(path, directory):
+    def _is_child(path, directory):
+        '''
+        Check whether ``path`` is child of ``directory``
+        '''
         path = os.path.realpath(path)
         directory = os.path.realpath(directory)
 
@@ -339,7 +342,7 @@ def _gen_keep_files(name, require):
                 if low['__id__'] == comp['file']:
                     fn = low['name']
                     if os.path.isdir(comp['file']):
-                        if _is_subdir(comp['file'], name):
+                        if _is_child(comp['file'], name):
                             keep.update(_process(fn))
                     else:
                         keep.add(fn)
