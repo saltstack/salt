@@ -130,18 +130,14 @@ def host_status(hostname=None, **kwargs):
     if not hostname:
         raise CommandExecutionError('Missing hostname parameter')
 
-    numeric = kwargs.get('numeric') is True
     target = 'host'
-    results = _status_query('host',
-                            hostname,
-                            retcode=numeric,
-                            url=config['url'],
-                            username=config['username'],
-                            password=config['password'])
+    numeric = kwargs.get('numeric')
+    data = _status_query(target, hostname, enumerate=numeric)
 
-    if not results['result']:
-        return {'result': False, 'error': results['error']}
-    ret['status'] = results.get('json_data', {}).get('data', {}).get(target, {}).get('status', not numeric and 'Unknown' or 2)
+    ret = {'result': data['result']}
+    if ret['result']:
+        ret['status'] = data.get('json_data', {}).get('data', {}).get(target, {}).get('status',
+                                                                                      not numeric and 'Unknown' or 2)
     return ret
 
 
