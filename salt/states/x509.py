@@ -11,6 +11,7 @@ signed by ``ca``.
 For remote signing, peers must be permitted to remotely call the ``sign_remote_certificate`` function.
 
 /srv/salt/master.d/peer.sls
+
 .. code-block:: yaml
     
     peer:
@@ -19,6 +20,7 @@ For remote signing, peers must be permitted to remotely call the ``sign_remote_c
 
 
 /srv/salt/top.sls
+
 .. code-block:: yaml
 
     base:
@@ -34,6 +36,7 @@ This state creates the CA key, certificate and signing policy. It also publishes
 the mine where it can be easily retrieved by other minions.
 
 /srv/salt/ca.sls
+
 .. code-block:: yaml
     
     salt-minion:
@@ -86,6 +89,7 @@ The signing policy defines properties that override any property requested or in
 can define a restricted list of minons which are allowed to remotely invoke this signing policy.
 
 /srv/salt/signing_policies.conf
+
 .. code-block:: yaml
 
     x509_signing_policies:
@@ -107,6 +111,7 @@ can define a restricted list of minons which are allowed to remotely invoke this
 This state will instruct all minions to trust certificates signed by our new CA. I'm intentionally stripping newlines from the text because dealing with newlines in yaml can be painful, and the pem_managed state will properly format the string before writing it out.
 
 /srv/salt/cert.sls
+
 .. code-block:: yaml
 
     /usr/local/share/ca-certificates/intca.crt
@@ -117,6 +122,7 @@ This state will instruct all minions to trust certificates signed by our new CA.
 This state creates a private key then requests a certificate signed by ``ca`` according to the www policy.
 
 /srv/salt/www.sls
+
 .. code-block:: yaml
 
     /etc/pki/www.key:
@@ -296,7 +302,7 @@ def certificate_managed(name,
     kwargs:
         Any arguments supported by the ``x509.create_certificate`` module are supported.
 
-    Example:
+    Examples:
 
     .. code-block:: yaml
 

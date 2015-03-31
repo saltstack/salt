@@ -461,9 +461,9 @@ def read_csr(csr):
     '''
     Returns a dict containing details of a certificate request.
 
-    :depends    - openssl command line tool
+    :depends:   - OpenSSL command line tool
 
-    param: csr:
+    csr:
         A path or PEM encoded string containing the CSR to read.
 
     CLI Example:
@@ -492,9 +492,9 @@ def read_crl(crl):
     '''
     Returns a dict containing details of a certificate revocation list. Input can be a PEM string or file path.
 
-    :depends    - openssl command line tool
+    :depends:   - OpenSSL command line tool
 
-    param: csl:
+    csl:
         A path or PEM encoded string containing the CSL to read.
 
     CLI Example:
@@ -519,7 +519,7 @@ def get_public_key(key):
     '''
     Returns a string containing the public key in PEM format.
 
-    param: key:
+    key:
         A path or PEM encoded string containing a CSR, Certificate or Private Key from which
         a public key can be retrieved.
 
@@ -555,7 +555,7 @@ def get_private_key_size(private_key):
     '''
     Returns the bit length of a private key in PEM format.
 
-    param: private_key:
+    private_key:
         A path or PEM encoded string containing a private key.
 
     CLI Example:
@@ -775,6 +775,10 @@ def sign_remote_certificate(argdic, **kwargs):
 
 
 def get_signing_policy(signing_policy):
+    '''
+    Returns the details of a names signing policy, including the text of the public key that will be used
+    to sign it. Does not return the private key.
+    '''
     if signing_policy not in __salt__['config.get']('x509_signing_policies'):
         return 'Signing policy {0} does not exist.'.format(signing_policy)
     signing_policy = __salt__['config.get']('x509_signing_policies')[signing_policy]
