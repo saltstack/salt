@@ -78,7 +78,7 @@ def save_load(jid, load):
                   'which responded with {1}'.format(signal[0], signal[1]))
 
 
-def prep_jid(nocache, passed_jid=None):
+def prep_jid(nocache=False, passed_jid=None):
     '''
     Do any work necessary to prepare a JID, including sending a custom ID
     '''
