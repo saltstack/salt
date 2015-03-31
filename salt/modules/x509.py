@@ -101,7 +101,7 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
     #ctx not zeroed
     _fix_ctx(ctx, issuer)
 
-    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value) # pylint: disable=no-member
+    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)  # pylint: disable=no-member
     #ctx,lhash freed
 
     if x509_ext_ptr is None:
