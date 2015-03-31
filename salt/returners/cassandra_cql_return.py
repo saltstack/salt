@@ -12,7 +12,7 @@ Return data to a cassandra server
 
 :configuration:
     To enable this returner, the minion will need the DataStax Python Driver
-    for Apache Cassandra ( https://github.com/datastax/python-driver ) 
+    for Apache Cassandra ( https://github.com/datastax/python-driver )
     installed and the following values configured in the minion or master
     config. The list of cluster IPs must include at least one cassandra node
     IP address. No assumption or default will be used for the cluster IPs.
@@ -130,7 +130,7 @@ log = logging.getLogger(__name__)
 #
 # The 'cassandra' __virtualname__ is already taken by the
 # returners/cassandra_return module, which utilizes nodetool. This module
-# cross-calls the modules/cassandra_cql execution module, which uses the 
+# cross-calls the modules/cassandra_cql execution module, which uses the
 # DataStax Python Driver for Apache Cassandra. Namespacing allows both the
 # modules/cassandra_cql and returners/cassandra_cql modules to use the
 # virtualname 'cassandra_cql'.
