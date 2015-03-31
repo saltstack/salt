@@ -9,6 +9,7 @@ header is a msgpack'd dict which includes (at least) msgLen
 '''
 
 import socket
+import sys
 import os
 import urlparse  # TODO: remove
 
@@ -365,6 +366,7 @@ class SaltMessageClient(object):
         self._tcp_client = tornado.tcpclient.TCPClient(io_loop=self.io_loop)
 
         self._mid = 1
+        self._max_messages = sys.maxint - 1  # number of IDs before we wrap
 
         # TODO: max queue size
         self.send_queue = []  # queue of messages to be sent
@@ -465,11 +467,19 @@ class SaltMessageClient(object):
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()
 
-    # TODO: wrap? or use UUID?
     def _message_id(self):
-        ret = self._mid
-        self._mid += 1
-        return ret
+        wrap = False
+        while self._mid in self.send_future_map:
+            if self._mid >= self._max_messages:
+                if wrap:
+                    # this shouldn't ever happen, but just in case
+                    raise Exception('Unable to find available messageid')
+                self._mid = 1
+                wrap = True
+            else:
+                self._mid += 1
+
+        return self._mid
 
     # TODO: return a message object which takes care of multiplexing?
     def on_recv(self, callback):
