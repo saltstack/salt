@@ -110,7 +110,7 @@ can define a restricted list of minons which are allowed to remotely invoke this
 
 This state will instruct all minions to trust certificates signed by our new CA.
 Using jinja to strip newlines from the text avoids dealing with newlines in the rendered yaml,
-and the  :mod:`pem_managed <salt.states.x509.pem_managed>` state will handle properly formatting the text before writing the output.
+and the  :mod:`sign_remote_certificate <salt.states.x509.sign_remote_certificate>` state will handle properly formatting the text before writing the output.
 
 /srv/salt/cert.sls
 
