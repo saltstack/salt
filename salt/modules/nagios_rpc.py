@@ -176,14 +176,10 @@ def service_status(hostname=None, service=None, **kwargs):
     config = _config()
 
     if not hostname:
-        ret['error'] = 'Missing hostname parameter'
-        ret['status'] = False
-        return ret
+        raise CommandExecutionError('Missing hostname parameter')
 
     if not service:
-        ret['error'] = 'Missing service parameter'
-        ret['status'] = False
-        return ret
+        raise CommandExecutionError('Missing service parameter')
 
     numeric = kwargs.get('numeric') is True
     target = 'service'
