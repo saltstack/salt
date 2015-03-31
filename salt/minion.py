@@ -2929,4 +2929,4 @@ class ProxyMinion(Minion):
         Return the functions and the returners loaded up from the loader
         module
         '''
-        return super(ProxyMinion, self)._load_modules(force_refresh=force_refresh)
+        return super(ProxyMinion, self)._load_modules(force_refresh=force_refresh, notify=notify)

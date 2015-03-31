@@ -28,4 +28,10 @@ def beacon(config):
     The config above sets up beacons to check for
     the salt-master and mysql services.
     '''
-    return [{srvc: __salt__['service.status'](srvc)} for srvc in config]
+    ret = []
+    for service in config:
+        ret_dict = {}
+        ret_dict[service] = __salt__['service.status'](service)
+        ret.append(ret_dict)
+
+    return ret

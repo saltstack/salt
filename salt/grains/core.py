@@ -962,9 +962,12 @@ def _linux_bin_exists(binary):
     '''
     Does a binary exist in linux (depends on which)
     '''
-    return __salt__['cmd.retcode'](
-        'which {0}'.format(binary)
-    ) == 0
+    try:
+        return __salt__['cmd.retcode'](
+            'which {0}'.format(binary)
+        ) == 0
+    except salt.exceptions.CommandExecutionError:
+        return False
 
 
 def _get_interfaces():
