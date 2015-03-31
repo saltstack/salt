@@ -35,6 +35,7 @@ import logging
 from salt.utils.decorators import depends
 import salt.ext.six as six
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +59,31 @@ def __virtual__():
     '''
     return (salt.utils.is_linux() or salt.utils.is_sunos()) and __virtualname__
 
+
+def _get_oratab():
+    '''
+    File oratab is used for SQL*Net V1 and also listing the databases.
+    :return: parsed oratab
+    '''
+    ORATAB = ["/etc/oratab", "/var/opt/oracle/oratab"]
+    data = {}
+    found = False
+    for oratab in ORATAB:
+        if os.path.exists(oratab):
+            found = True
+            for tabline in filter(None, [line.strip() for line in open(oratab).readlines()]):
+                sid, home, default_start = tabline.split(":")
+                if sid != '*':  # Ignore NULL SID
+                    data[sid] = {
+                        'home': home,
+                        'default_start': default_start,
+                    }
+            break
+
+    if not found:
+        raise CommandExecutionError('The ORATAB was not found nor in "{0}" neither in "{1}".'.format(*ORATAB))
+
+    return data
 
 def _cx_oracle_req():
     '''
