@@ -128,7 +128,7 @@ def host_status(hostname=None, **kwargs):
     '''
 
     if not hostname:
-        return {'result': False, 'error': 'Missing hostname parameter'}
+        raise CommandExecutionError('Missing hostname parameter')
 
     numeric = kwargs.get('numeric') is True
     target = 'host'
