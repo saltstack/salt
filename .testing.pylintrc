@@ -81,7 +81,8 @@ disable=R,
   E8129,
   E8131,
   E8265,
-  E8402
+  E8402,
+  E8731
 
 # Disabled:
 # R* [refactoring suggestions & reports]
@@ -119,6 +120,7 @@ disable=R,
 # E8265 PEP8 E265 - block comment should start with "# "
 # E8501 PEP8 line too long
 # E8402 module level import not at top of file
+# E8731 do not assign a lambda expression, use a def
 
 [REPORTS]
 
