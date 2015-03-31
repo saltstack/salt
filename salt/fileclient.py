@@ -594,7 +594,7 @@ class Client(object):
                 fixed_url,
                 stream=True,
                 username=url_data.username,
-                password=url_data.password
+                password=url_data.password,
                 **get_kwargs
             )
             response = query['handle']
