@@ -171,7 +171,13 @@ def save_load(jid, load):
                (`jid`, `load`)
                 VALUES (%s, %s)'''
 
-        cur.execute(sql, (jid, json.dumps(load)))
+        try:
+            cur.execute(sql, (jid, json.dumps(load)))
+        except MySQLdb.IntegrityError:
+            # https://github.com/saltstack/salt/issues/22171
+            # Without this try:except: we get tons of duplicate entry errors
+            # which result in job returns not being stored properly
+            pass
 
 
 def get_load(jid):
