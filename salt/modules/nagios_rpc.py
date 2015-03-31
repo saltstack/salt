@@ -55,12 +55,14 @@ def _config():
     }
 
 
-def _status_query(query, hostname, retcode=True, service=None, method='GET', **kwargs):
+def _status_query(query, hostname, enumerate=None, service=None):
     '''
     Send query along to Nagios.
     '''
+    config = _config()
+
     data = {}
-    req_params = {
+    params = {
         'hostname': hostname,
         'query': query,
     }
@@ -69,15 +71,14 @@ def _status_query(query, hostname, retcode=True, service=None, method='GET', **k
         'result': False
     }
 
-    if not retcode:
-        req_params['formatoptions'] = 'enumerate'
+    if enumerate:
+        params['formatoptions'] = 'enumerate'
     if service:
-        req_params['servicedescription'] = service
-
+        params['servicedescription'] = service
 
     try:
-        if username and password:
-            auth = (username, password,)
+        if config['username'] and config['password'] is not None:
+            auth = (config['username'], config['password'],)
         else:
             auth = None
         result = requests.request(method='GET', url=config['url'], params=params, data=data, verify=True, auth=auth)
