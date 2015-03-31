@@ -10,7 +10,7 @@ signed by ``ca``.
 
 For remote signing, peers must be permitted to remotely call the ``sign_remote_certificate`` function.
 
-/srv/salt/master.d/peer.sls
+/etc/salt/master.d/peer.sls
 
 .. code-block:: yaml
 
