@@ -78,12 +78,7 @@ def _status_query(query, hostname, retcode=True, service=None, method='GET', **k
             auth = (username, password,)
         else:
             auth = None
-        result = requests.request(method=method,
-                                  url=url,
-                                  params=req_params,
-                                  data=data,
-                                  verify=True,
-                                  auth=auth)
+        result = requests.request(method='GET', url=config['url'], params=params, data=data, verify=True, auth=auth)
         if result.status_code == salt.ext.six.moves.http_client.OK:
             try:
                 data = result.json()
