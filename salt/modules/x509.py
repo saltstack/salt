@@ -21,7 +21,6 @@ import yaml
 import subprocess
 import re
 import datetime
-import copy
 from collections import OrderedDict
 import ast
 
@@ -54,9 +53,12 @@ EXT_NAME_MAPPINGS = OrderedDict([
 CERT_DEFAULTS = {'days_valid': 365, 'version': 3, 'serial_bits': 64, 'algorithm': 'sha256'}
 
 
-# Everything in this section is an ugly hack to fix an ancient bug in M2Crypto
-# https://bugzilla.osafoundation.org/show_bug.cgi?id=7530#c13
 class _Ctx(ctypes.Structure):
+    '''
+    This is part of an ugly hack to fix an ancient bug in M2Crypto
+    https://bugzilla.osafoundation.org/show_bug.cgi?id=7530#c13
+    '''
+    # pylint: disable=too-few-public-methods
     _fields_ = [('flags', ctypes.c_int),
                 ('issuer_cert', ctypes.c_void_p),
                 ('subject_cert', ctypes.c_void_p),
@@ -67,7 +69,11 @@ class _Ctx(ctypes.Structure):
                 ]
 
 def _fix_ctx(m2_ctx, issuer=None):
-    ctx = _Ctx.from_address(int(m2_ctx))
+    '''
+    This is part of an ugly hack to fix an ancient bug in M2Crypto
+    https://bugzilla.osafoundation.org/show_bug.cgi?id=7530#c13
+    '''
+    ctx = _Ctx.from_address(int(m2_ctx))  # pylint: disable=no-member
 
     ctx.flags = 0
     ctx.subject_cert = None
@@ -81,19 +87,21 @@ def _fix_ctx(m2_ctx, issuer=None):
 
 def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
     '''
-    Create new X509_Extension, explicitly for authorityKeyIdentifier bugs.
+    Create new X509_Extension, This is required because M2Crypto doesn't support
+    getting the publickeyidentifier from the issuer to create the authoritykeyidentifier
+    extension.
     '''
     if name == 'subjectKeyIdentifier' and \
         value.strip('0123456789abcdefABCDEF:') is not '':
         raise salt.exceptions.SaltInvocationError('value must be precomputed hash')
 
 
-    lhash = M2Crypto.m2.x509v3_lhash()
-    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)
+    lhash = M2Crypto.m2.x509v3_lhash()                      #pylint: disable=no-member
+    ctx = M2Crypto.m2.x509v3_set_conf_lhash(lhash)          #pylint: disable=no-member
     #ctx not zeroed
     _fix_ctx(ctx, issuer)
 
-    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value)
+    x509_ext_ptr = M2Crypto.m2.x509v3_ext_conf(lhash, ctx, name, value) #pylint: disable=no-member
     #ctx,lhash freed
 
     if x509_ext_ptr is None:
@@ -101,7 +109,6 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
     x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
     x509_ext.set_critical(critical)
     return x509_ext
-# End of ugly hacks
 
 
 # The next four functions are more hacks because M2Crypto doesn't support getting
@@ -193,7 +200,7 @@ def _parse_openssl_crl(crl_filename):
         rev_sn = revoked.split('\n')[0].strip()
         revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
         rev_yaml = yaml.safe_load(revoked)
-        for rev_item, rev_values in rev_yaml.iteritems():
+        for rev_item, rev_values in rev_yaml.iteritems():               #pylint: disable=unused-variable
             if 'Revocation Date' in rev_values:
                 rev_date = datetime.datetime.strptime(
                         rev_values['Revocation Date'], "%b %d %H:%M:%S %Y %Z")
@@ -616,7 +623,7 @@ def create_private_key(path=None, text=False, bits=2048):
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
-    rsa = M2Crypto.RSA.gen_key(bits, M2Crypto.m2.RSA_F4)
+    rsa = M2Crypto.RSA.gen_key(bits, M2Crypto.m2.RSA_F4)            #pylint: disable=no-member
     bio = M2Crypto.BIO.MemoryBuffer()
     rsa.save_key_bio(bio, cipher=None)
 
@@ -757,10 +764,10 @@ def sign_remote_certificate(argdic, **kwargs):
 
         signing_policy = __salt__['config.get']('x509_signing_policies')[argdic['signing_policy']]
         if isinstance(signing_policy, list):
-            d = {}
+            dict_ = {}
             for item in signing_policy:
-                d.update(item)
-            signing_policy = d
+                dict_.update(item)
+            signing_policy = dict_
 
     if 'minions' in signing_policy:
         if '__pub_id' not in kwargs:
@@ -770,8 +777,8 @@ def sign_remote_certificate(argdic, **kwargs):
 
     try:
         return create_certificate(path=None, text=True, **argdic)
-    except Exception as e:
-        return str(e)
+    except Exception as except_:                                       #pylint: disable=broad-except
+        return str(except_)
 
 
 def get_signing_policy(signing_policy):
@@ -783,10 +790,10 @@ def get_signing_policy(signing_policy):
         return 'Signing policy {0} does not exist.'.format(signing_policy)
     signing_policy = __salt__['config.get']('x509_signing_policies')[signing_policy]
     if isinstance(signing_policy, list):
-        d = {}
+        dict_ = {}
         for item in signing_policy:
-            d.update(item)
-        signing_policy = d
+            dict_.update(item)
+        signing_policy = dict_
 
     try:
         del signing_policy['signing_private_key']
@@ -797,7 +804,7 @@ def get_signing_policy(signing_policy):
         signing_policy['signing_cert'] = get_pem_entry(signing_policy['signing_cert'], 'CERTIFICATE')
     except KeyError:
         pass
-    
+
     return signing_policy
 
 
@@ -883,7 +890,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     csr:
         A file or PEM string containing a certificate signing request. This will be used to supply the
         subject, extensions and public key of a certificate. Any subject or extensions specified
-        explicitly will overwrite any in the CSR. 
+        explicitly will overwrite any in the CSR.
 
     basicConstraints:
         X509v3 Basic Constraints extension.
@@ -1002,7 +1009,8 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' x509.create_certificate path=/etc/pki/myca.crt signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
+        salt '*' x509.create_certificate path=/etc/pki/myca.crt
+        signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
     '''
 
     if not path and not text and ('testrun' not in kwargs or kwargs['testrun'] == False):
@@ -1034,10 +1042,10 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     if 'signing_policy' in kwargs:
         signing_policy = __salt__['config.get']('x509_signing_policies')[kwargs['signing_policy']]
         if isinstance(signing_policy, list):
-            d = {}
+            dict_ = {}
             for item in signing_policy:
-                d.update(item)
-            signing_policy = d
+                dict_.update(item)
+            signing_policy = dict_
 
     # Overwrite any arguments in kwargs with signing_policy
     kwargs.update(signing_policy)
@@ -1060,10 +1068,12 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     cert.set_serial_number(int(kwargs['serial_number'].replace(':', ''), 16))
 
     # Set validity dates
+    # pylint: disable=no-member
     not_before = M2Crypto.m2.x509_get_not_before(cert.x509)
     not_after = M2Crypto.m2.x509_get_not_after(cert.x509)
     M2Crypto.m2.x509_gmtime_adj(not_before, 0)
     M2Crypto.m2.x509_gmtime_adj(not_after, 60*60*24*kwargs['days_valid'])
+    # pylint: enable=no-member
 
     # If neither public_key or csr are included, this cert is self-signed
     if 'public_key' not in kwargs and 'csr' not in kwargs:
@@ -1078,9 +1088,9 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     cert.set_pubkey(_get_public_key_obj(kwargs['public_key']))
 
-    for entry, num in subject.nid.iteritems():
+    for entry, num in subject.nid.iteritems():                  # pylint: disable=unused-variable
         if entry in kwargs:
-           setattr(subject, entry, kwargs[entry])
+            setattr(subject, entry, kwargs[entry])
 
     if 'signing_cert' in kwargs:
         signing_cert = _get_certificate_obj(kwargs['signing_cert'])
@@ -1152,7 +1162,8 @@ def create_csr(path=None, text=False, **kwargs):
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
     kwargs:
-        The subject, extension and verison arguments from :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` can be used.
+        The subject, extension and verison arguments from
+        :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` can be used.
 
     CLI Example:
 
@@ -1172,11 +1183,11 @@ def create_csr(path=None, text=False, **kwargs):
 
     if 'public_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('public_key is required')
-    cert.set_pubkey(_get_public_key_obj(kwargs['public_key']))
+    csr.set_pubkey(_get_public_key_obj(kwargs['public_key']))
 
-    for entry, num in subject.nid.iteritems():
+    for entry, num in subject.nid.iteritems():                  # pylint: disable=unused-variable
         if entry in kwargs:
-           setattr(subject, entry, kwargs[entry])
+            setattr(subject, entry, kwargs[entry])
 
     extstack = M2Crypto.X509.X509_Extension_Stack()
     for extname, extlongname in EXT_NAME_MAPPINGS.iteritems():

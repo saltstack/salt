@@ -13,7 +13,7 @@ For remote signing, peers must be permitted to remotely call the ``sign_remote_c
 /srv/salt/master.d/peer.sls
 
 .. code-block:: yaml
-    
+
     peer:
       .*:
         - x509.sign_remote_certificate
@@ -38,7 +38,7 @@ the mine where it can be easily retrieved by other minions.
 /srv/salt/ca.sls
 
 .. code-block:: yaml
-    
+
     salt-minion:
       service.running:
         - enabled
@@ -77,7 +77,7 @@ the mine where it can be easily retrieved by other minions.
           - x509: /etc/pki/ca.key
 
     mine.send:
-      module.run: 
+      module.run:
         - func: x509.get_pem_entries
         - kwargs:
             glob_path: /etc/pki/ca.crt
@@ -156,7 +156,7 @@ def _revoked_to_list(revs):
     list_ = []
 
     for rev in revs:
-        for rev_name, props in rev.iteritems():
+        for rev_name, props in rev.iteritems():             # pylint: disable=unused-variable
             dict_ = {}
             for prop in props:
                 for propname, val in prop.iteritems():
@@ -343,7 +343,6 @@ def certificate_managed(name,
     current_days_remaining = 0
     current_comp = {}
 
-    changes_needed = False
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
@@ -364,7 +363,6 @@ def certificate_managed(name,
             current = '{0} is not a valid Certificate.'.format(name)
     else:
         current = '{0} does not exist.'.format(name)
-        changes_needed = True
 
     if 'ca_server' in kwargs and 'signing_policy' not in kwargs:
         raise salt.exceptions.SaltInvocationError('signing_policy must be specified if ca_server is.')
