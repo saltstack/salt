@@ -979,9 +979,9 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     signing_policy:
         A signing policy that should be used to create this certificate. Signing policies should be defined
-        in the minion configuration, or in a minion pillar. It should be a yaml formatted list of argumnets
+        in the minion configuration, or in a minion pillar. It should be a yaml formatted list of arguments
         which will override any arguments passed to this function. If the ``minions`` key is included in
-        the signing policy, only minions matching that patter will be permitted to remotely request certificates
+        the signing policy, only minions matching that pattern will be permitted to remotely request certificates
         from that policy.
 
         Example:
