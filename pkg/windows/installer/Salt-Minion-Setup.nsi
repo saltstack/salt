@@ -12,7 +12,10 @@
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
+!include "StrFunc.nsh"
 !include "x64.nsh"
+${StrLoc}
+${StrStrAdv}
 
 !if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
   !define CPUARCH "AMD64"
@@ -53,6 +56,14 @@ Page custom nsDialogsPage nsDialogsPageLeave
 
 ; Language files
 !insertmacro MUI_LANGUAGE "English"
+
+; Part of the Trim function for Strings
+!define Trim "!insertmacro Trim"
+!macro Trim ResultVar String
+  Push "${String}"
+  Call Trim
+  Pop "${ResultVar}"
+!macroend
 
 ; MUI end ------
 
@@ -217,25 +228,118 @@ Function un.onInit
 FunctionEnd
 
 Function .onInit
-  Push $R0
-  Push $R1
-  Push $R2
-  ${GetParameters} $R0
-  ${GetOptions} $R0 "/master=" $R1
-  ${GetOptions} $R0 "/minion-name=" $R2
-  ${If} $R1 == ""
-    StrCpy $MasterHost_State "salt"
-  ${Else}
-    StrCpy $MasterHost_State $R1
-  ${EndIf}
-  ${If} $R2 == ""
-    StrCpy $MinionName_State "hostname"
-  ${Else}
-    StrCpy $MinionName_State $R2
-  ${EndIf}
-  Pop $R2
-  Pop $R1
-  Pop $R0
+
+  IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
+
+  confFound:
+    FileOpen $0 "$INSTDIR\conf\minion" r
+
+    confLoop:
+      FileRead $0 $1
+      IfErrors EndOfFile
+      ${StrLoc} $2 $1 "master:" ">"
+      ${If} $2 == 0
+        ${StrStrAdv} $2 $1 "master: " ">" ">" "0" "0" "0"
+        ${Trim} $2 $2
+          StrCpy $MasterHost_State $2
+      ${EndIf}
+
+      ${StrLoc} $2 $1 "id:" ">"
+      ${If} $2 == 0
+        ${StrStrAdv} $2 $1 "id: " ">" ">" "0" "0" "0"
+        ${Trim} $2 $2
+        StrCpy $MinionName_State $2
+      ${EndIf}
+
+      Goto confLoop
+
+    EndOfFile:
+      FileClose $0
+
+  confNotFound:
+    Push $R0
+    Push $R1
+    Push $R2
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "/master=" $R1
+    ${GetOptions} $R0 "/minion-name=" $R2
+    ${IfNot} $R1 == ""
+      StrCpy $MasterHost_State $R1
+    ${ElseIf} $MasterHost_State == ""
+      StrCpy $MasterHost_State "salt"
+    ${EndIf}
+    ${IfNot} $R2 == ""
+      StrCpy $MinionName_State $R2
+    ${ElseIf} $MinionName_State == ""
+      StrCpy $MinionName_State "hostname"
+    ${EndIf}
+    Pop $R2
+    Pop $R1
+    Pop $R0
+
+  ; Remove previous version of salt, but don't remove conf and key
+  ExecWait "net stop salt-minion"
+  ExecWait "sc delete salt-minion"
+
+  ; Delete everything except conf and var
+  ClearErrors
+  FindFirst $0 $1 $INSTDIR\*
+
+  loop:
+    IfFileExists "$INSTDIR\$1\*.*" IsDir IsFile
+
+    IsDir:
+      ${IfNot} $1 == "."
+      ${AndIfNot} $1 == ".."
+      ${AndIfNot} $1 == "conf"
+      ${AndIfNot} $1 == "var"
+        RMDir /r "$INSTDIR\$1"
+      ${EndIf}
+
+    IsFile:
+      DELETE "$INSTDIR\$1"
+
+    FindNext $0 $1
+    IfErrors done
+
+    Goto loop
+
+  done:
+    FindClose $0
+
+FunctionEnd
+
+Function Trim
+
+    Exch $R1 ; Original string
+    Push $R2
+
+  Loop:
+    StrCpy $R2 "$R1" 1
+    StrCmp "$R2" " " TrimLeft
+    StrCmp "$R2" "$\r" TrimLeft
+    StrCmp "$R2" "$\n" TrimLeft
+    StrCmp "$R2" "$\t" TrimLeft
+    GoTo Loop2
+  TrimLeft:
+    StrCpy $R1 "$R1" "" 1
+    Goto Loop
+
+  Loop2:
+    StrCpy $R2 "$R1" 1 -1
+    StrCmp "$R2" " " TrimRight
+    StrCmp "$R2" "$\r" TrimRight
+    StrCmp "$R2" "$\n" TrimRight
+    StrCmp "$R2" "$\t" TrimRight
+    GoTo Done
+  TrimRight:
+    StrCpy $R1 "$R1" -1
+    Goto Loop2
+
+  Done:
+    Pop $R2
+    Exch $R1
+
 FunctionEnd
 
 Section Uninstall

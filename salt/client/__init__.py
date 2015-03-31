@@ -139,8 +139,8 @@ class LocalClient(object):
                 self.opts['transport'],
                 opts=self.opts,
                 listen=not self.opts.get('__worker', False))
-
-        self.returners = salt.loader.returners(self.opts, {})
+        self.functions = salt.loader.minion_mods(self.opts)
+        self.returners = salt.loader.returners(self.opts, self.functions)
 
     def __read_master_key(self):
         '''

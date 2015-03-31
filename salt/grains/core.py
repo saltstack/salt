@@ -19,6 +19,7 @@ import re
 import platform
 import logging
 import locale
+import salt.exceptions
 
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
@@ -999,8 +1000,10 @@ def os_data():
     # pylint: enable=unpacking-non-sequence
 
     if salt.utils.is_windows():
-        grains['osrelease'] = grains['kernelrelease']
-        grains['osversion'] = grains['kernelrelease'] = version
+        with salt.utils.winapi.Com():
+            wmi_c = wmi.WMI()
+            grains['osrelease'] = grains['kernelrelease']
+            grains['osversion'] = grains['kernelrelease'] = wmi_c.Win32_OperatingSystem()[0].Version
         grains['os'] = 'Windows'
         grains['os_family'] = 'Windows'
         grains.update(_memdata(grains))
@@ -1631,11 +1634,17 @@ def _dmidecode_data(regex_dict):
         return {}
 
     # No use running if dmidecode/smbios isn't in the path
-    if salt.utils.which('dmidecode'):
-        out = __salt__['cmd.run']('dmidecode')
-    elif salt.utils.which('smbios'):
-        out = __salt__['cmd.run']('smbios')
-    else:
+    no_dmidecode = False
+    try:
+        if salt.utils.which('dmidecode'):
+            out = __salt__['cmd.run']('dmidecode')
+        elif salt.utils.which('smbios'):
+            out = __salt__['cmd.run']('smbios')
+        else:
+            no_dmidecode = True
+    except (salt.exceptions.CommandExecutionError,) as exc:
+        no_dmidecode = True
+    if no_dmidecode:
         log.debug(
             'The `dmidecode` binary is not available on the system. GPU '
             'grains will not be available.'
