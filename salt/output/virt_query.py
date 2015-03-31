@@ -13,9 +13,9 @@ def output(data):
     Display output for the salt-run virt.query function
     '''
     out = ''
-    for id_ in data:
+    for id_ in data['data']:
         out += '{0}\n'.format(id_)
-        for vm_ in data[id_]['vm_info']:
+        for vm_ in data['data'][id_]['vm_info']:
             out += '  {0}\n'.format(vm_)
             vm_data = data[id_]['vm_info'][vm_]
             if 'cpu' in vm_data:
