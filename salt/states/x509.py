@@ -302,7 +302,7 @@ def certificate_managed(name,
         When replacing an existing file, backup the old file onthe minion. Default is False.
 
     kwargs:
-        Any arguments supported by the :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`
+        Any arguments supported by :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`
         are supported.
 
     Examples:
