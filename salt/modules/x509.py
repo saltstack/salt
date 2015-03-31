@@ -841,8 +841,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         Any other subject properties supported by OpenSSL should also work.
 
         C:
-            2 letter Country code
-
+            2 letter Country code 
         CN:
             Certificate common name, typically the FQDN.
 
@@ -880,7 +879,11 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     public_key:
         The public key to be included in this certificate. This can be sourced from a public key,
-        certificate, csr or private key. If neither ``public_key`` or ``csr`` are
+        certificate, csr or private key. If a private key is used, the matching public key from
+        the private key will be generated before any processing is done. This means you can request a
+        certificate from a remote CA using a private key file as your public_key and only the
+        public key will be sent across the network to the CA.
+        If neither ``public_key`` or ``csr`` are
         specified, it will be assumed that this is a self-signed certificate, and the public key
         derived from ``signing_private_key`` will be used. Specify either ``public_key`` or ``csr``,
         not both. Because you can input a CSR as a public key or as a CSR, it is important to understand

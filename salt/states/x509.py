@@ -4,8 +4,13 @@ Manage X509 Certificates
 
 .. versionadded:: TBD
 
-This module can enable managing a complete PKI infrastructure. Here is an example scenario. In this example
-``ca`` is the ca server, and ``www`` is a web server that needs a certificate signed by ``ca``.
+This module can enable managing a complete PKI infrastructure including creating private keys, CA's, 
+certificates and CRLs. It includes the ability to generate a private key on a server, and have the
+corresponding public key sent to a remote CA to create a CA signed certificate. This can be done in
+a secure manner, where private keys are always generated locally and never moved across the network.
+
+Here is a simple example scenario. In this example ``ca`` is the ca server, 
+and ``www`` is a web server that needs a certificate signed by ``ca``.
 
 For remote signing, peers must be permitted to remotely call the :mod:`pem_managed <salt.states.x509.pem_managed>` function.
  
