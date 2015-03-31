@@ -129,7 +129,7 @@ def subnet_present(name, vpc_id, cidr_block, availability_zone=None, tags=None, 
                    key=None, keyid=None, profile=None):
     '''
     Ensure subnet exists.
-    .. versionadded:: 2014.7.3
+    .. versionadded:: Beryllium
 
     name
         Name of the subnet.
@@ -246,7 +246,7 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
 def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure subnet with passed properties is absent.
-    .. versionadded:: 2014.7.3
+    .. versionadded:: Beryllium
 
     name
         Name of the subnet.

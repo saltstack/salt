@@ -586,7 +586,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        subnet_deletion_result = boto_vpc.delete_subnet(subnet.id, **conn_parameters)
+        subnet_deletion_result = boto_vpc.delete_subnet(subnet_id=subnet.id, **conn_parameters)
 
         self.assertTrue(subnet_deletion_result)
 
