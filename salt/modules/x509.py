@@ -818,6 +818,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         Example:
 
         /etc/salt/master.d/peer.conf
+
         .. code-block:: yaml
 
             peer:
