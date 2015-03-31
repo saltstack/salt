@@ -35,5 +35,4 @@ Full list of runner modules
     test
     thin
     virt
-    x509
     winrepo
