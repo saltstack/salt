@@ -108,7 +108,9 @@ can define a restricted list of minons which are allowed to remotely invoke this
         - copypath: /etc/pki/issued_certs/
 
 
-This state will instruct all minions to trust certificates signed by our new CA. I'm intentionally stripping newlines from the text because dealing with newlines in yaml can be painful, and the pem_managed state will properly format the string before writing it out.
+This state will instruct all minions to trust certificates signed by our new CA.
+Using jinja to strip newlines from the text avoids dealing with newlines in the rendered yaml,
+and the ``pem_managed`` state will handle properly formatting the text before writing the output.
 
 /srv/salt/cert.sls
 
@@ -116,7 +118,7 @@ This state will instruct all minions to trust certificates signed by our new CA.
 
     /usr/local/share/ca-certificates/intca.crt
       x509.pem_managed:
-        - text: {{ salt['mine.get']('pki', 'x509.get_pem_entries')['pki']['/etc/pki/ca.crt']|replace('\n', '') }}
+        - text: {{ salt['mine.get']('pki', 'x509.get_pem_entries')['pki']['/etc/pki/ca.crt']|replace('\\n', '') }}
 
 
 This state creates a private key then requests a certificate signed by ``ca`` according to the www policy.
