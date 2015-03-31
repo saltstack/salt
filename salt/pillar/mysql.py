@@ -29,7 +29,7 @@ For each of those items we process, it depends on the object type:
 - A list has the first entry used as the query, the second as the pillar depth.
 - A mapping uses the keys "query" and "depth" as the tuple
 
-You can retrieve as many fields as you like, how the get used depends on the
+You can retrieve as many fields as you like, how they get used depends on the
 exact settings.
 
 Configuring the mysql ext_pillar
