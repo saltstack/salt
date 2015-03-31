@@ -31,8 +31,10 @@ from __future__ import absolute_import
 
 import os
 import logging
+
 from salt.utils.decorators import depends
 import salt.ext.six as six
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -52,9 +54,9 @@ __virtualname__ = 'oracle'
 
 def __virtual__():
     '''
-    Load module only if cx_Oracle installed
+    Load module only on Linux and Slowlaris.
     '''
-    return __virtualname__ if HAS_CX_ORACLE else False
+    return (salt.utils.is_linux() or salt.utils.is_sunos()) and __virtualname__
 
 
 def _cx_oracle_req():
