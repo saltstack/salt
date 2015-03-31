@@ -1009,7 +1009,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' x509.create_certificate path=/etc/pki/myca.crt
+        salt '*' x509.create_certificate path=/etc/pki/myca.crt \\
         signing_private_key='/etc/pki/myca.key' csr='/etc/pki/myca.csr'}
     '''
 
