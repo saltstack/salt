@@ -5,6 +5,8 @@ Send a message to Hipchat
 
 This state is useful for sending messages to Hipchat during state runs.
 
+.. versionadded:: 2015.2.0
+
 .. code-block:: yaml
 
     hipchat-message:
