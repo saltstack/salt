@@ -760,6 +760,8 @@ def sign_remote_certificate(argdic, **kwargs):
     kwargs:
         kwargs delivered from publish.publish
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' x509.sign_remote_certificate argdic="{'public_key': '/etc/pki/www.key', \\
