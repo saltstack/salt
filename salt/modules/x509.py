@@ -1152,7 +1152,7 @@ def create_csr(path=None, text=False, **kwargs):
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
     kwargs:
-        The subject, extension and verison arguments from ``create_certificate`` can be used.
+        The subject, extension and verison arguments from :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` can be used.
 
     CLI Example:
 
