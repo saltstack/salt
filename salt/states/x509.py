@@ -121,7 +121,7 @@ and the ``pem_managed`` state will handle properly formatting the text before wr
         - text: {{ salt['mine.get']('pki', 'x509.get_pem_entries')['pki']['/etc/pki/ca.crt']|replace('\\n', '') }}
 
 
-This state creates a private key then requests a certificate signed by ``ca`` according to the www policy.
+This state creates a private key then requests a certificate signed by ca according to the www policy.
 
 /srv/salt/www.sls
 
@@ -302,7 +302,8 @@ def certificate_managed(name,
         When replacing an existing file, backup the old file onthe minion. Default is False.
 
     kwargs:
-        Any arguments supported by the ``x509.create_certificate`` module are supported.
+        Any arguments supported by the :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`
+        are supported.
 
     Examples:
 
