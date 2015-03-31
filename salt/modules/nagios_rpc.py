@@ -169,8 +169,6 @@ def service_status(hostname=None, service=None, **kwargs):
     '''
 
     ret = {'result': True}
-    config = _config()
-
     if not hostname:
         raise CommandExecutionError('Missing hostname parameter')
 
