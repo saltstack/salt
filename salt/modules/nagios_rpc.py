@@ -25,7 +25,7 @@ except ImportError:
     REQUESTS_AVAILABLE = False
 
 log = logging.getLogger(__name__)
-
+STATUS_URI = "/cgi-bin/statusjson.cgi"
 
 def __virtual__():
     '''
@@ -42,8 +42,12 @@ def _config():
     '''
     Get configuration items for URL, Username and Password
     '''
+    url = __salt__['config.get']('nagios:url', '')
+    if not url:
+        raise CommandExecutionError('Missing Nagios URL in the configuration.')
+
     return {
-        'url': __salt__['config.get']('nagios:url', ''),
+        'url': _urljoin(url.split("cgi-bin")[0], STATUS_URI),
         'username': __salt__['config.get']('nagios:username', ''),
         'password': __salt__['config.get']('nagios:password', ''),
     }
