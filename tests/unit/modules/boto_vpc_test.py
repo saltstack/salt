@@ -586,7 +586,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        subnet_deletion_result = boto_vpc.delete_subnet(subnet.id, **conn_parameters)
+        subnet_deletion_result = boto_vpc.delete_subnet(subnet_id=subnet.id, **conn_parameters)
 
         self.assertTrue(subnet_deletion_result)
 
@@ -595,7 +595,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         '''
         Tests deleting a subnet that doesn't exist
         '''
-        subnet_deletion_result = boto_vpc.delete_subnet('1234', **conn_parameters)
+        subnet_deletion_result = boto_vpc.delete_subnet(subnet_id='1234', **conn_parameters)
 
         self.assertFalse(subnet_deletion_result)
 
