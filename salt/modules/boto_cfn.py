@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Connection module for Amazon Cloud Formation
+    Connection module for Amazon Cloud Formation
 
-:configuration: This module accepts explicit AWS credentials but can also utilize
+    .. versionadded:: Beryllium
+
+    :configuration: This module accepts explicit AWS credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at::
@@ -18,16 +20,6 @@ Connection module for Amazon Cloud Formation
     A region may also be specified in the configuration::
 
         cfn.region: us-east-1
-
-    If a region is not specified, the default is us-east-1.
-
-    It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
 
 :depends: boto
 '''
@@ -71,14 +63,13 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_cfn.exists mystack region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
     try:
-        conn.describe_stacks(name)
+        return conn.describe_stacks(name)
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        return False
-    return True
+        msg = 'Failed to check if stack exists {0}'.format(name)
+        log.error(msg)
+        return str(e)
 
 
 def create(name, template_body=None, template_url=None, parameters=None, notification_arns=None, disable_rollback=None,
@@ -154,16 +145,15 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_cfn.delete mystack region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
     if not exists(name):
         return False
-    deleted_stack = conn.delete_stack(name)
-    if not deleted_stack:
-        msg = 'Failed to delete stack {0}'.format(name)
+    try:
+        return conn.delete_stack(name)
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to create stack {0}'.format(name)
+        log.debug(e)
         log.error(msg)
-        return False
-    return True
+        return str(e)
 
 
 def get_template(name, region=None, key=None, keyid=None, profile=None):
@@ -179,13 +169,31 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
         return False
     try:
         template = conn.get_template(name)
+        log.info('Retrieved template for stack {0}'.format(name))
+        return template
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Template {0} does not exist'.format(name)
         log.error(msg)
         return str(e)
-    log.info('Retrieved template for stack {0}'.format(name))
-    return template
+
+
+def validate_template(template_body=None, template_url=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Validate cloudformation template
+
+    CLI example::
+
+        salt myminion boto_cfn.validate_template mystack-template
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        return conn.validate_template(template_body, template_url)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Template {0} does not exist'.format(template_body)
+        log.error(msg)
+        return str(e)
 
 
 def _get_conn(region, key, keyid, profile):
