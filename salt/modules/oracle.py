@@ -85,6 +85,20 @@ def _get_oratab():
 
     return data
 
+
+def databases():
+    '''
+    List available databases.
+
+    CLI example:
+
+       salt 'host' oracle.databases
+
+    :return:
+    '''
+    return sorted(_get_oratab().keys())
+
+
 def _cx_oracle_req():
     '''
     Fallback function stub
