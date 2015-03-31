@@ -194,6 +194,22 @@ def private_key_managed(name,
     backup:
         When replacing an existing file, backup the old file onthe minion.
         Default is False.
+
+    Example:
+
+    The jinja templating in this example ensures a private key is generated if the file doesn't exist
+    and that a new private key is generated whenever the certificate that uses it is to be renewed.
+
+    .. code-block:: yaml
+
+        /etc/pki/www.key:
+          x509.private_key_managed:
+            - bits: 4096
+            - new: True
+            {% if salt['file.file_exists']('/etc/pki/ca.key') -%}
+            - prereq:
+              - x509: /etc/pki/www.crt
+            {%- endif %}
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
@@ -217,7 +233,7 @@ def private_key_managed(name,
             'new': "{0} bit private key".format(bits)}
 
     if __opts__['test'] == True:
-        ret['result'] = True
+        ret['result'] = None
         ret['comment'] = 'The Private Key "{0}" will be updated.'.format(name)
         return ret
 
@@ -280,7 +296,7 @@ def csr_managed(name,
             'new': new,}
 
     if __opts__['test'] == True:
-        ret['result'] = True
+        ret['result'] = None
         ret['comment'] = 'The CSR {0} will be updated.'.format(name)
 
     if os.path.isfile(name) and backup:
@@ -400,7 +416,8 @@ def certificate_managed(name,
             'new': new,}
 
     if __opts__['test'] == True:
-        ret['result'] = True
+        print ret['changes']
+        ret['result'] = None
         ret['comment'] = 'The certificate {0} will be updated.'.format(name)
         return ret
 
@@ -517,7 +534,7 @@ def crl_managed(name,
             'new': new,}
 
     if __opts__['test'] == True:
-        ret['result'] = True
+        ret['result'] = None
         ret['comment'] = 'The crl {0} will be updated.'.format(name)
         return ret
 
@@ -561,6 +578,7 @@ def pem_managed(name,
         return ret
 
     if __opts__['test'] == True:
+        ret['result'] = None
         ret['comment'] = 'The file {0} will be updated.'.format(name)
         return ret
 
