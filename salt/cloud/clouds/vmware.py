@@ -145,61 +145,83 @@ def _get_inv():
     return si.RetrieveContent()
 
 
-def _get_object_property_list(obj_type, property_list=None):
-    '''
-    Returns a list of properties for the managed object in the VMware environment
-    '''
+def _get_content(obj_type, property_list=None):
     # Get service instance object
     si = _get_si()
 
     # Refer to http://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch5_PropertyCollector.7.6.html for more information.
 
-    content = si.content
-
-    # Create a object view
-    obj_view = content.viewManager.CreateContainerView(content.rootFolder, [obj_type], True)
-
-    # Create object spec to navigate content
-    obj_spec = vmodl.query.PropertyCollector.ObjectSpec()
-    obj_spec.obj = obj_view
-    obj_spec.skip = True
-
-    # Create property spec to determine properties to be retrieved
-    property_spec = vmodl.query.PropertyCollector.PropertySpec()
-    property_spec.type = obj_type
-    if not property_list:
-        property_spec.all = True
-    else:
-        property_spec.pathSet = property_list
-
-    # Create a filter spec and specify object, property spec in it
-    filter_spec = vmodl.query.PropertyCollector.FilterSpec()
-    filter_spec.objectSet = [obj_spec]
-    filter_spec.propSet = [property_spec]
+    # Create an object view
+    obj_view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [obj_type], True)
 
     # Create traversal spec to determine the path for collection
-    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec()
-    traversal_spec.name = 'traverseEntities'
-    traversal_spec.path = 'view'
-    traversal_spec.skip = False
-    traversal_spec.type = obj_view.__class__
-    obj_spec.selectSet = [traversal_spec]
+    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
+        name = 'traverseEntities',
+        path = 'view',
+        skip = False,
+        type = vim.view.ContainerView
+    )
 
-    # Retrieve the content
-    content = content.propertyCollector.RetrieveContents([filter_spec])
+    # Create property spec to determine properties to be retrieved
+    property_spec = vmodl.query.PropertyCollector.PropertySpec(
+        type = obj_type,
+        all = True if not property_list else False,
+        pathSet = property_list
+    )
+
+    # Create object spec to navigate content
+    obj_spec = vmodl.query.PropertyCollector.ObjectSpec(
+        obj = obj_view,
+        skip = True,
+        selectSet = [traversal_spec]
+    )
+
+    # Create a filter spec and specify object, property spec in it
+    filter_spec = vmodl.query.PropertyCollector.FilterSpec(
+        objectSet = [obj_spec],
+        propSet = [property_spec],
+        reportMissingObjectsInResults = False
+    )
+
+    # Retrieve the contents 
+    content = si.content.propertyCollector.RetrieveContents([filter_spec])
 
     # Destroy the object view
     obj_view.Destroy()
 
-    obj_list = []
+    return content
+
+
+def _get_mors_with_properties(obj_type, property_list=None):
+    '''
+    Returns list containing properties and managed object references for the managed object
+    '''
+    # Get all the content
+    content = _get_content(obj_type, property_list)
+
+    object_list = []
     for object in content:
         properties = {}
         for property in object.propSet:
             properties[property.name] = property.val
             properties['object'] = object.obj
-        obj_list.append(properties)
+        object_list.append(properties)
 
-    return obj_list
+    return object_list
+
+
+def _get_mor_by_property(obj_type, property_value, property_name='name'):
+    '''
+    Returns the first managed object reference having the specified property value
+    '''
+    # Get list of all managed object references with specified property
+    object_list = _get_mors_with_properties(obj_type, [property_name])
+
+    for object in object_list:
+        if object[property_name] == property_value:
+            return object['object']
+
+    return None
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -244,7 +266,7 @@ def list_datacenters(kwargs=None, call=None):
                                 "name"
                             ]
 
-    datacenter_list = _get_object_property_list(vim.Datacenter, datacenter_properties)
+    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
 
     for datacenter in datacenter_list:
         datacenters.append(datacenter["name"])
@@ -273,7 +295,7 @@ def list_clusters(kwargs=None, call=None):
                              "name"
                          ]
 
-    cluster_list = _get_object_property_list(vim.ClusterComputeResource, cluster_properties)
+    cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
 
     for cluster in cluster_list:
         clusters.append(cluster["name"])
@@ -302,7 +324,7 @@ def list_datastore_clusters(kwargs=None, call=None):
                                        "name"
                                    ]
 
-    datastore_cluster_list = _get_object_property_list(vim.StoragePod, datastore_cluster_properties)
+    datastore_cluster_list = _get_mors_with_properties(vim.StoragePod, datastore_cluster_properties)
 
     for datastore_cluster in datastore_cluster_list:
         datastore_clusters.append(datastore_cluster["name"])
@@ -331,7 +353,7 @@ def list_datastores(kwargs=None, call=None):
                                "name"
                            ]
 
-    datastore_list = _get_object_property_list(vim.Datastore, datastore_properties)
+    datastore_list = _get_mors_with_properties(vim.Datastore, datastore_properties)
 
     for datastore in datastore_list:
         datastores.append(datastore["name"])
@@ -360,7 +382,7 @@ def list_hosts(kwargs=None, call=None):
                           "name"
                       ]
 
-    host_list = _get_object_property_list(vim.HostSystem, host_properties)
+    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
 
     for host in host_list:
         hosts.append(host["name"])
@@ -389,7 +411,7 @@ def list_resourcepools(kwargs=None, call=None):
                                    "name"
                                ]
 
-    resource_pool_list = _get_object_property_list(vim.ResourcePool, resource_pool_properties)
+    resource_pool_list = _get_mors_with_properties(vim.ResourcePool, resource_pool_properties)
 
     for resource_pool in resource_pool_list:
         resource_pools.append(resource_pool["name"])
@@ -418,7 +440,7 @@ def list_networks(kwargs=None, call=None):
                              "name"
                          ]
 
-    network_list = _get_object_property_list(vim.Network, network_properties)
+    network_list = _get_mors_with_properties(vim.Network, network_properties)
 
     for network in network_list:
         networks.append(network["name"])
@@ -434,6 +456,7 @@ def list_nodes_min(kwargs=None, call=None):
 
     .. code-block:: bash
 
+        salt-cloud -Q
         salt-cloud -f list_nodes_min my-vmware-config
     '''
 
@@ -442,7 +465,7 @@ def list_nodes_min(kwargs=None, call=None):
                         "name"
                     ]
 
-    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         ret[vm["name"]] = True
@@ -470,7 +493,7 @@ def list_nodes(kwargs=None, call=None):
                         "config.hardware.memoryMB"
                     ]
 
-    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         vm_info = {
@@ -506,7 +529,7 @@ def list_folders(kwargs=None, call=None):
                             "name"
                         ]
 
-    folder_list = _get_object_property_list(vim.Folder, folder_properties)
+    folder_list = _get_mors_with_properties(vim.Folder, folder_properties)
 
     for folder in folder_list:
         folders.append(folder["name"])
@@ -534,7 +557,7 @@ def start(name, call=None):
                         "summary.runtime.powerState"
                     ]
 
-    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -571,7 +594,7 @@ def stop(name, call=None):
                         "summary.runtime.powerState"
                     ]
 
-    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -608,7 +631,7 @@ def suspend(name, call=None):
                         "summary.runtime.powerState"
                     ]
 
-    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -649,7 +672,7 @@ def reset(name, call=None):
                         "summary.runtime.powerState"
                     ]
 
-    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -674,6 +697,7 @@ def destroy(name, call=None):
 
     .. code-block:: bash
 
+        salt-cloud -d vmname
         salt-cloud --destroy vmname
         salt-cloud -a destroy vmname
     '''
@@ -690,7 +714,7 @@ def destroy(name, call=None):
                         "summary.runtime.powerState"
                     ]
 
-    vm_list = _get_object_property_list(vim.VirtualMachine, vm_properties)
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -701,13 +725,12 @@ def destroy(name, call=None):
                     task = vm["object"].PowerOff()
                     while (task.info.state != 'success'):
                         log.debug("Waiting for Power off task to finish")
-                    log.debug(task.info.state)
-                    task = vm["object"].Destroy_Task()
-                    while (task.info.state != 'success'):
-                        log.debug("Waiting for destroy task to finish")
                 except Exception as exc:
                     log.error('Could not destroy VM {0}: {1}'.format(name, exc))
                     return 'failed to destroy'
+            task = vm["object"].Destroy_Task()
+            while (task.info.state != 'success'):
+                log.debug("Waiting for destroy task to finish")
 
     salt.utils.cloud.fire_event(
         'event',
@@ -719,3 +742,124 @@ def destroy(name, call=None):
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
     return 'True'
+
+
+def create(vm_):
+    '''
+    To create a single VM in the VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -p profilename vmname
+    '''
+    salt.utils.cloud.fire_event(
+        'event',
+        'starting create',
+        'salt/cloud/{0}/creating'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+        transport=__opts__['transport']
+    )
+
+    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        {'kwargs': vm_},
+        transport=__opts__['transport']
+    )
+
+    show_deploy_args = config.get_cloud_config_value(
+        'show_deploy_args', vm_, __opts__, default=False
+    )
+    if show_deploy_args:
+        ret['deploy_kwargs'] = deploy_kwargs
+
+    vm_name = config.get_cloud_config_value(
+        'name', vm_, __opts__, default=None
+    )
+    folder = config.get_cloud_config_value(
+        'folder', vm_, __opts__, default=None
+    )
+    resourcepool = config.get_cloud_config_value(
+        'resourcepool', vm_, __opts__, default=None
+    )
+    datastore = config.get_cloud_config_value(
+        'datastore', vm_, __opts__, default=None
+    )
+    host = config.get_cloud_config_value(
+        'host', vm_, __opts__, default=None
+    )
+    template = config.get_cloud_config_value(
+        'template', vm_, __opts__, default=False
+    )
+    power = config.get_cloud_config_value(
+        'power_on', vm_, __opts__, default=False
+    )
+
+    if 'clonefrom' in vm_:
+        # Clone VM from specified VM
+        log.debug("Cloning from VM: {0}".format(vm_['clonefrom']))
+        object_ref = _get_mor_by_property(vim.VirtualMachine, vm_['clonefrom'])
+
+        reloc_spec = vim.vm.RelocateSpec()
+
+        if resourcepool:
+            resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
+            reloc_spec.pool = resourcepool_ref
+        if datastore:
+            datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+            reloc_spec.datastore = datastore_ref
+        if host:
+            host_ref = _get_mor_by_property(vim.HostSystem, host)
+            reloc_spec.host = host_ref
+
+        clone_spec = vim.vm.CloneSpec(
+            template = template,
+            powerOn = power,
+            location = reloc_spec
+        )
+
+        log.debug('clone_spec set to {0}'.format(
+            pprint.pformat(clone_spec))
+        )
+
+        try:
+            folder_ref = _get_mor_by_property(vim.Folder, folder)
+            task = object_ref.Clone(folder_ref, vm_name, clone_spec)
+            time_counter = 0
+            while (task.info.state != 'success'):
+                log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
+                time.sleep(5)
+                time_counter += 5
+        except Exception as exc:
+            log.error(
+                'Error creating {0}: {1}'.format(
+                    vm_['name'],
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'created instance',
+        'salt/cloud/{0}/created'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['provider'],
+        },
+        transport=__opts__['transport']
+    )
+
+    return True
