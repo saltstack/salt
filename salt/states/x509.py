@@ -217,6 +217,7 @@ def private_key_managed(name,
             'new': "{0} bit private key".format(bits)}
 
     if __opts__['test'] == True:
+        ret['result'] = True
         ret['comment'] = 'The Private Key "{0}" will be updated.'.format(name)
         return ret
 
@@ -279,6 +280,7 @@ def csr_managed(name,
             'new': new,}
 
     if __opts__['test'] == True:
+        ret['result'] = True
         ret['comment'] = 'The CSR {0} will be updated.'.format(name)
 
     if os.path.isfile(name) and backup:
@@ -398,6 +400,7 @@ def certificate_managed(name,
             'new': new,}
 
     if __opts__['test'] == True:
+        ret['result'] = True
         ret['comment'] = 'The certificate {0} will be updated.'.format(name)
         return ret
 
@@ -514,6 +517,7 @@ def crl_managed(name,
             'new': new,}
 
     if __opts__['test'] == True:
+        ret['result'] = True
         ret['comment'] = 'The crl {0} will be updated.'.format(name)
         return ret
 
