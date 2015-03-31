@@ -31,7 +31,9 @@ minion exe>` should match the contents of the corresponding md5 file.
     * 2014.7.0
     * Salt-Minion-2014.7.0-1-win32-Setup.exe | md5
     * Salt-Minion-2014.7.0-AMD64-Setup.exe | md5
+
     .. note::
+
         The 2014.7.0 installers have been removed because of a regression. Please use the 2014.7.1 release instead.
 
     * 2014.1.13

@@ -15,7 +15,7 @@ This allows for the changes to be sent up to the master where the
 reactor can respond to changes.
 
 Lazy Loader
-========
+===========
 
 The Lazy Loader is a significant overhaul of Salt's module loader system. The
 Lazy Loader will lazily load modules on access, instead of all on start. In
@@ -79,7 +79,7 @@ Deprecations
     ``ALTER TABLE salt_events ADD master_id VARCHAR(255) NOT NULL;``
 
 Known Issues
-===========
+============
 
 - In multimaster mode, a minion may become temporarily unresponsive
   if modules or pillars are refreshed at the same time that one

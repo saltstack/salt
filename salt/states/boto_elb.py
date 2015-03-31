@@ -234,7 +234,8 @@ def present(
         A list of availability zones for this ELB.
 
     listeners
-        A list of listener lists; example:
+        A list of listener lists; example::
+
             [
                 ['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'],
                 ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']
@@ -344,7 +345,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     Add instance/s to load balancer
 
-    .. versionsadded:: Beryllium
+    .. versionadded:: Beryllium
 
     .. code-block:: yaml
 
