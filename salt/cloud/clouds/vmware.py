@@ -18,7 +18,7 @@ The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
        python -c "import pyVmomi" ; echo $?
 
-To use this module, set up the vCenter Host URL, username and password in the
+To use this module, set up the vCenter URL, username and password in the
 cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
@@ -26,21 +26,21 @@ cloud configuration at
 
     my-vmware-config:
       provider: vmware
-      user: myuser
+      user: DOMAIN\user
       password: verybadpass
-      host: 'vcenter01.domain.com'
+      url: vcenter01.domain.com
 
     vmware-vcenter02:
       provider: vmware
-      user: myuser
+      user: DOMAIN\user
       password: verybadpass
-      host: 'vcenter02.domain.com'
+      url: vcenter02.domain.com
 
     vmware-vcenter03:
       provider: vmware
-      user: myuser
+      user: DOMAIN\user
       password: verybadpass
-      host: 'vcenter03.domain.com'
+      url: vcenter03.domain.com
 '''
 from __future__ import absolute_import
 
@@ -91,7 +91,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'vmware',
-        ('host', 'user', 'password',)
+        ('url', 'user', 'password',)
     )
 
 
@@ -120,7 +120,7 @@ def _get_si():
     try:
         si = SmartConnect(
                  host = config.get_cloud_config_value(
-                            'host', get_configured_provider(), __opts__, search_global=False
+                            'url', get_configured_provider(), __opts__, search_global=False
                         ),
                  user = config.get_cloud_config_value(
                             'user', get_configured_provider(), __opts__, search_global=False
@@ -131,7 +131,7 @@ def _get_si():
              )
     except:
         raise SaltCloudSystemExit(
-            '\nCould not connect to the host using the specified username and password'
+            '\nCould not connect to the vCenter server using the specified username and password'
         )
 
     return si
