@@ -125,14 +125,81 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
     return ret
 
 
+def subnet_present(name, vpc_id, cidr_block, availability_zone=None, tags=None, region=None,
+                   key=None, keyid=None, profile=None):
+    '''
+    Ensure subnet exists.
+    .. versionadded:: 2014.7.3
+
+    name
+        Name of the subnet.
+
+    vpc_id
+        The ID of the VPC where you want to create the subnet.
+
+    cidr_block
+        The range of IPs in CIDR format, for example: 10.0.0.0/24. Block
+        size must be between /16 and /28 netmask.
+
+
+    availability_zone
+        The AZ you want the subnet in.
+
+    tags
+        A list of tags.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    exists = __salt__['boto_vpc.subnet_exists'](name=name, cidr=cidr_block, zones=availability_zone,
+                                                tags=tags, region=region, key=key, keyid=keyid, profile=profile)
+    if not exists:
+        if __opts__['test']:
+            ret['comment'] = 'Subnet {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        created = __salt__['boto_vpc.create_subnet'](vpc_id, cidr_block, availability_zone, name,
+                                                     tags, region, key, keyid, profile)
+        if not created:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} subnet.'.format(name)
+            return ret
+        _describe = __salt__['boto_vpc.describe_subnets'](subnet_ids=[created], region=region, key=key, keyid=keyid,
+                                                          profile=profile)
+        ret['changes']['old'] = {'subnet': None}
+        ret['changes']['new'] = {'subnet': _describe}
+        ret['comment'] = 'Subnet {0} created.'.format(name)
+        return ret
+    ret['comment'] = 'Subnet present.'
+    return ret
+
+
 def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure VPC with passed properties is absent.
 
     name
         Name of the VPC.
+
     tags
         A list of tags. All tags must match.
+
     region
         Region to connect to.
 
@@ -173,4 +240,54 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
     ret['changes']['old'] = {'vpc': name}
     ret['changes']['new'] = {'vpc': None}
     ret['comment'] = 'VPC {0} deleted.'.format(name)
+    return ret
+
+
+def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure subnet with passed properties is absent.
+    .. versionadded:: 2014.7.3
+
+    name
+        Name of the subnet.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    exists = __salt__['boto_vpc.subnet_exists'](name=name, region=region, key=key, keyid=keyid, profile=profile)
+    if not exists:
+        ret['comment'] = '{0} subnet does not exist.'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Subnet {0} is set to be removed.'.format(name)
+        ret['result'] = None
+        return ret
+
+    deleted = __salt__['boto_vpc.delete_subnet'](name=name, subnet_id=subnet_id, region=region, key=key, keyid=keyid,
+                                                 profile=profile)
+    if not deleted:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete {0} subnet.'.format(name)
+        return ret
+    ret['changes']['old'] = {'subnet': name}
+    ret['changes']['new'] = {'subnet': None}
+    ret['comment'] = 'Subnet {0} deleted.'.format(name)
     return ret
