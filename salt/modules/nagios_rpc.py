@@ -168,24 +168,18 @@ def service_status(hostname=None, service=None, **kwargs):
         salt '*' nagios_rpc.service_status hostname=webserver.domain.com service='HTTP' numeric=False
     '''
 
-    ret = {'result': True}
     if not hostname:
         raise CommandExecutionError('Missing hostname parameter')
 
     if not service:
         raise CommandExecutionError('Missing service parameter')
 
-    numeric = kwargs.get('numeric') is True
     target = 'service'
-    results = _status_query(target,
-                            hostname,
-                            retcode=numeric,
-                            service=service,
-                            url=config['url'],
-                            username=config['username'],
-                            password=config['password'])
+    numeric = kwargs.get('numeric')
+    data = _status_query(target, hostname, service=service, enumerate=numeric)
 
-    if not results['result']:
-        return {'result': False, 'error': results['error']}
-    ret['status'] = results.get('json_data', {}).get('data', {}).get(target, {}).get('status', not numeric and 'Unknown' or 2)
+    ret = {'result': data['result']}
+    if ret['result']:
+        ret['status'] = data.get('json_data', {}).get('data', {}).get(target, {}).get('status',
+                                                                                      not numeric and 'Unknown' or 2)
     return ret
