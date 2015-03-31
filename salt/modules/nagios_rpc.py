@@ -125,12 +125,6 @@ def host_status(hostname=None, **kwargs):
         salt '*' nagios_rpc.host_status hostname=webserver.domain.com numeric=False
     '''
 
-    ret = {'result': True}
-    config = _config()
-
-    if not config['url']:
-        return {'result': False, 'error': 'Missing Nagios URL in the configuration {0}'.format(config)}
-
     if not hostname:
         return {'result': False, 'error': 'Missing hostname parameter'}
 
@@ -186,11 +180,6 @@ def service_status(hostname=None, service=None, **kwargs):
 
     if not service:
         ret['error'] = 'Missing service parameter'
-        ret['status'] = False
-        return ret
-
-    if not config['url']:
-        ret['error'] = 'Missing Nagios URL in the configuration {0}'.format(config)
         ret['status'] = False
         return ret
 
