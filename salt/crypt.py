@@ -291,7 +291,7 @@ class AsyncAuth(object):
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
             new_auth = object.__new__(cls)
-            new_auth.__singleton_init__(opts)
+            new_auth.__singleton_init__(opts, io_loop=io_loop)
             loop_instance_map[key] = new_auth
         else:
             log.debug('Re-using SAuth for {0}'.format(key))
@@ -334,7 +334,6 @@ class AsyncAuth(object):
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
         self.authenticate()
-        self.authenticated = False
 
     @property
     def creds(self):
@@ -343,6 +342,10 @@ class AsyncAuth(object):
     @property
     def crypticle(self):
         return self._crypticle
+
+    @property
+    def authenticated(self):
+        return hasattr(self, '_authenticate_future') and self._authenticate_future.done()
 
     def authenticate(self, callback=None):
         '''
@@ -355,10 +358,8 @@ class AsyncAuth(object):
         if hasattr(self, '_authenticate_future') and not self._authenticate_future.done():
             future = self._authenticate_future
         else:
-            self.authenticated = False
             future = tornado.concurrent.Future()
             self._authenticate_future = future
-
             self.io_loop.add_callback(self._authenticate)
 
         if callback is not None:
@@ -366,11 +367,6 @@ class AsyncAuth(object):
                 response = future.result()
                 self.io_loop.add_callback(callback, response)
             future.add_done_callback(handle_future)
-
-        def mark_authenitcated(future):
-            self.authenticated = True
-
-        future.add_done_callback(mark_authenitcated)
 
         return future
 
@@ -450,7 +446,9 @@ class AsyncAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts, crypt='clear')
+        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                                crypt='clear',
+                                                                io_loop=self.io_loop)
 
         try:
             payload = yield channel.send(
