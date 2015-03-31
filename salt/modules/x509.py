@@ -841,7 +841,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         Any other subject properties supported by OpenSSL should also work.
 
         C:
-            2 letter Country code 
+            2 letter Country code
         CN:
             Certificate common name, typically the FQDN.
 

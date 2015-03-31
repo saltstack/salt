@@ -4,16 +4,17 @@ Manage X509 Certificates
 
 .. versionadded:: TBD
 
-This module can enable managing a complete PKI infrastructure including creating private keys, CA's, 
+This module can enable managing a complete PKI infrastructure including creating private keys, CA's,
 certificates and CRLs. It includes the ability to generate a private key on a server, and have the
 corresponding public key sent to a remote CA to create a CA signed certificate. This can be done in
 a secure manner, where private keys are always generated locally and never moved across the network.
 
-Here is a simple example scenario. In this example ``ca`` is the ca server, 
+Here is a simple example scenario. In this example ``ca`` is the ca server,
 and ``www`` is a web server that needs a certificate signed by ``ca``.
 
-For remote signing, peers must be permitted to remotely call the :mod:`pem_managed <salt.states.x509.pem_managed>` function.
- 
+For remote signing, peers must be permitted to remotely call the
+:mod:`pem_managed <salt.states.x509.pem_managed>` function.
+
 
 /etc/salt/master.d/peer.sls
 
@@ -115,7 +116,8 @@ can define a restricted list of minons which are allowed to remotely invoke this
 
 This state will instruct all minions to trust certificates signed by our new CA.
 Using jinja to strip newlines from the text avoids dealing with newlines in the rendered yaml,
-and the  :mod:`sign_remote_certificate <salt.states.x509.sign_remote_certificate>` state will handle properly formatting the text before writing the output.
+and the  :mod:`sign_remote_certificate <salt.states.x509.sign_remote_certificate>` state will
+handle properly formatting the text before writing the output.
 
 /srv/salt/cert.sls
 
