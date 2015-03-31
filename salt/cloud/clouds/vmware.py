@@ -850,6 +850,10 @@ def create(vm_):
             )
             return False
 
+    else:
+        log.error("Currently only clone from vm/template is supported.")
+        return False
+
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
@@ -862,4 +866,4 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    return True
+    return { vm_name: True}
