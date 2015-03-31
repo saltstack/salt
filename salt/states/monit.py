@@ -7,7 +7,7 @@ Manage monit states
 
 .. code-block:: yaml
 
-monitr_-enabler_-service_monitoring:
+monit_enable_service_monitoring:
   monit.monitor:
     - name: service
 

@@ -64,6 +64,7 @@ def post_message(name,
         The message that is to be sent to the Slack channel.
 
     The following parameters are optional:
+
     api_key
         The api key for Slack to use for authentication,
         if not specified in the configuration options of master or minion.

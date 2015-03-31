@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Send a message to PushOver
-=========================
+==========================
 
 This state is useful for sending messages to PushOver during state runs.
 
@@ -75,6 +75,7 @@ def post_message(name,
         The message that is to be sent to the PushOver channel.
 
     The following parameters are optional:
+
     title
         The title to use for the message.
 
