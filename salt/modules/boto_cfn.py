@@ -119,6 +119,8 @@ def update_stack(name, template_body=None, template_url=None, parameters=None, n
     '''
     Create a CFN stack.
 
+    .. versionadded:: Beryllium
+
     CLI example to create a stack::
 
         salt myminion boto_cfn.update_stack mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
