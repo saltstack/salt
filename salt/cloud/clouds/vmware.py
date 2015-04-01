@@ -746,13 +746,82 @@ def destroy(name, call=None):
 
 def create(vm_):
     '''
-    To create a single VM in the VMware environment
+    To create a single VM in the VMware environment.
+
+    Create a profile at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/vmware.conf``
+
+    .. code-block:: yaml
+
+        vmware-centos6.5:
+          provider: vmware-vcenter01
+          clonefrom: test-vm
+          ## Optional arguments
+          num_cpus: 4
+          memory: 8192
+          datastore: datastorename
+          resourcepool: resourcepool
+          folder: Development
+          host: c4212n-002.domain.com
+          template: False
+          power_on: True
+
+
+    provider
+        Enter the name that was specified when the cloud provider config was created.
+
+    clonefrom
+        Enter the name of the VM/template to clone from. 
+
+    num_cpus
+        Enter the number of vCPUS you want the VM to have. If not specified, the current
+        VM/template's vCPU count is used.
+
+    memory
+        Enter memory (in MB) you want the VM to have. If not specified, the current
+        VM/template's memory size is used.
+
+    datastore
+        Enter the name of the datastore where the virtual machine should be located. If
+        not specified, the current datastore is used.
+
+    resourcepool
+        Enter the name of the resourcepool to which the new virtual machine should be
+        attached. If not specified, it will use the same resourcepool as the original vm.
+        For a clone operation to a template, this argument is ignored. For a clone operation
+        from a template to a virtual machine, this argument is required.
+
+    folder
+        Enter the name of the folder that will contain the new virtual machine. If not
+        specified, the new VM will be added to the folder that the original VM belongs to.
+
+    host
+        Enter the name of the target host where the virtual machine should be registered. 
+        If not specified:
+
+        .. code-block:: text
+
+            - if resource pool is not specified, current host is used.
+            - if resource pool is specified, and the target pool represents a stand-alone
+              host, the host is used.
+            - if resource pool is specified, and the target pool represents a DRS-enabled
+              cluster, a host selected by DRS is used.
+            - if resource pool is specified and the target pool represents a cluster without
+              DRS enabled, an InvalidArgument exception be thrown.
+
+    template
+        Specifies whether the new virtual machine should be marked as a template or not.
+        Default is ``False``.
+
+    power_on
+        Specifies whether the new virtual machine should be powered on or not. Default is
+        ``True``.
+
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -p profilename vmname
+        salt-cloud -p vmware-centos6.5 vmname
     '''
     salt.utils.cloud.fire_event(
         'event',
@@ -800,15 +869,39 @@ def create(vm_):
     template = config.get_cloud_config_value(
         'template', vm_, __opts__, default=False
     )
+    num_cpus = config.get_cloud_config_value(
+        'cpus', vm_, __opts__, default=None
+    )
+    memory = config.get_cloud_config_value(
+        'memory', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
     )
 
     if 'clonefrom' in vm_:
         # Clone VM from specified VM
-        log.debug("Cloning from VM: {0}".format(vm_['clonefrom']))
         object_ref = _get_mor_by_property(vim.VirtualMachine, vm_['clonefrom'])
+        if object_ref.config.template:
+            clone_type = "template"
+        else:
+            clone_type = "vm"
+        log.debug("Cloning from {0}: {1}\n".format(clone_type, vm_['clonefrom']))
 
+        # Create the config specs
+        config_spec = vim.vm.ConfigSpec()
+
+        if num_cpus:
+            config_spec.numCPUs = num_cpus
+
+        if memory:
+            config_spec.memoryMB = memory
+
+        log.debug('config_spec set to {0}\n'.format(
+            pprint.pformat(config_spec))
+        )
+
+        # Create the relocation specs
         reloc_spec = vim.vm.RelocateSpec()
 
         if resourcepool:
@@ -821,13 +914,19 @@ def create(vm_):
             host_ref = _get_mor_by_property(vim.HostSystem, host)
             reloc_spec.host = host_ref
 
+        log.debug('reloc_spec set to {0}\n'.format(
+            pprint.pformat(reloc_spec))
+        )
+
+        # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
             template = template,
             powerOn = power,
-            location = reloc_spec
+            location = reloc_spec,
+            config = config_spec
         )
 
-        log.debug('clone_spec set to {0}'.format(
+        log.debug('clone_spec set to {0}\n'.format(
             pprint.pformat(clone_spec))
         )
 
