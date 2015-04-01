@@ -1659,8 +1659,9 @@ def _hw_data(osdata):
             if serial is not None:
                 grains['serial'] = serial
                 break
-
     elif osdata['kernel'] == 'FreeBSD':
+        # On FreeBSD /bin/kenv (already in base system)
+        # can be used instead of dmidecode
         kenv = salt.utils.which('kenv')
         if kenv:
             # In theory, it will be easier to add new fields to this later
