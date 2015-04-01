@@ -287,7 +287,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
         # TODO: test
         try:
-            ret, req_opts = self.payload_handler(payload)  # TODO: check if a future
+            ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:
             # always attempt to return an error to the minion
             stream.write('Some exception handling minion payload')

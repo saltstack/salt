@@ -8,10 +8,10 @@ from __future__ import absolute_import
 import os
 import threading
 
+import tornado.gen
 import tornado.ioloop
 from tornado.testing import AsyncTestCase
 
-import salt.crypt
 import salt.config
 import salt.utils
 import salt.transport.server
@@ -79,11 +79,12 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
 
     @classmethod
+    @tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        return payload, {'fun': 'send_clear'}
+        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
 class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
@@ -91,11 +92,12 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
 
     @classmethod
+    @tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        return payload, {'fun': 'send'}
+        raise tornado.gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels

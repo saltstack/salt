@@ -681,6 +681,7 @@ class MWorker(multiprocessing.Process):
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
         self.io_loop.start()
 
+    @tornado.gen.coroutine
     def _handle_payload(self, payload):
         '''
         The _handle_payload method is the key method used to figure out what
@@ -704,8 +705,9 @@ class MWorker(multiprocessing.Process):
         '''
         key = payload['enc']
         load = payload['load']
-        return {'aes': self._handle_aes,
-                'clear': self._handle_clear}[key](load)
+        ret = {'aes': self._handle_aes,
+               'clear': self._handle_clear}[key](load)
+        raise tornado.gen.Return(ret)
 
     def _handle_clear(self, load):
         '''

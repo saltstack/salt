@@ -11,6 +11,8 @@ import threading
 import zmq.eventloop.ioloop
 from tornado.testing import AsyncTestCase
 
+import tornado.gen
+
 import salt.config
 import salt.utils
 import salt.transport.server
@@ -81,11 +83,12 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         self.channel = channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
 
     @classmethod
+    @tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        return payload, {'fun': 'send_clear'}
+        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
@@ -93,11 +96,12 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         self.channel = channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
 
     @classmethod
+    @tornado.gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        return payload, {'fun': 'send'}
+        raise tornado.gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
