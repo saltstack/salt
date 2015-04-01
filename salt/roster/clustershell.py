@@ -1,14 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-Resolve hostname pdsh/clustershell style
+:requires: clustershell
+https://github.com/cea-hpc/clustershell
+
+This roster resolves hostname in a pdsh/clustershell style.
+
+When you want to use host globs for target matching, use --roster clustershell.
+
+Example:
+    salt-ssh --roster clustershell 'server_[1-10,21-30],test_server[5,7,9]' test.ping
 '''
 
 # Import python libs
 from __future__ import absolute_import
 import socket
 
-from salt.ext.six.moves import map # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map  #pylint: disable=import-error,redefined-builtin
 from ClusterShell.NodeSet import NodeSet
+
 
 def targets(tgt, tgt_type='glob', **kwargs):
     '''
