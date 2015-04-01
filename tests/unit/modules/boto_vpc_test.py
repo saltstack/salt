@@ -13,6 +13,7 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import boto_vpc
+from salt.modules import boto_common
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
@@ -62,7 +63,9 @@ dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': 
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
-boto_vpc.__context__ = {}
+boto_common.__context__ = {}
+boto_vpc.__salt__ = {'boto_common.get_connection': boto_common.get_connection,
+                     'boto_common.cache_id': boto_common.cache_id}
 
 
 def _has_required_boto():
@@ -288,7 +291,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         '''
         Tests checking vpc existence when no filters are provided
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name, cidr or tags.'):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least one of the following must be specified: vpc id, name, cidr or tags.'):
             boto_vpc.exists(**conn_parameters)
 
     @mock_ec2
@@ -362,7 +365,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         '''
         Tests getting vpc id but providing no filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: vpc id, name, cidr or tags.'):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least one of the following must be specified: vpc id, name, cidr or tags.'):
             boto_vpc.get_id(**conn_parameters)
 
     @mock_ec2
@@ -682,7 +685,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         Tests checking subnet existence without any filters
         '''
         with self.assertRaisesRegexp(SaltInvocationError,
-                                     'At least on of the following must be specified: subnet id, cidr, name, tags, or zones.'):
+                                     'At least one of the following must be specified: subnet id, cidr, name, tags, or zones.'):
             boto_vpc.subnet_exists(**conn_parameters)
 
 
@@ -855,7 +858,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         '''
         Tests checking dhcp option existence with no filters
         '''
-        with self.assertRaisesRegexp(SaltInvocationError, 'At least on of the following must be specified: dhcp options id, name or tags.'):
+        with self.assertRaisesRegexp(SaltInvocationError, 'At least one of the following must be specified: dhcp options id, name or tags.'):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
 
@@ -981,7 +984,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase):
         '''
         with self.assertRaisesRegexp(
                 SaltInvocationError,
-                'At least on of the following must be specified: dhcp options id, name or tags.'
+                'At least one of the following must be specified: dhcp options id, name or tags.'
         ):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
@@ -1314,7 +1317,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
         '''
         with self.assertRaisesRegexp(
                 SaltInvocationError,
-                'At least on of the following must be specified: dhcp options id, name or tags.'
+                'At least one of the following must be specified: dhcp options id, name or tags.'
         ):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 

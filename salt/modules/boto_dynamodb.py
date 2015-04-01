@@ -45,16 +45,12 @@ logging.getLogger('boto').setLevel(logging.INFO)
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
-    import boto
-    import boto.dynamodb2
     from boto.dynamodb2.fields import HashKey, RangeKey
     from boto.dynamodb2.fields import AllIndex, GlobalAllIndex
     from boto.dynamodb2.table import Table
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-from salt._compat import string_types
 
 
 def __virtual__():
@@ -66,41 +62,14 @@ def __virtual__():
     return True
 
 
-def _create_connection(region=None, key=None, keyid=None, profile=None):
+def _get_conn(region=None, key=None, keyid=None, profile=None):
     '''
     Get a boto connection to DynamoDB.
     '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('dynamodb.region'):
-        region = __salt__['config.option']('dynamodb.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('dynamodb.key'):
-        key = __salt__['config.option']('dynamodb.key')
-    if not keyid and __salt__['config.option']('dynamodb.keyid'):
-        keyid = __salt__['config.option']('dynamodb.keyid')
-
-    try:
-        conn = boto.dynamodb2.connect_to_region(
-            region,
-            aws_access_key_id=keyid,
-            aws_secret_access_key=key
-        )
-    except boto.exception.NoAuthHandlerFound:
-        logger.error('No authentication credentials found when attempting to'
-                     ' make boto dynamodb connection.')
-        return None
-    return conn
+    return __salt__['boto_common.get_connection']('dynamodb',
+                                                  module='dynamodb2',
+                                                  region=region, key=key,
+                                                  keyid=keyid, profile=profile)
 
 
 def create_table(table_name, region=None, key=None, keyid=None, profile=None,
@@ -156,7 +125,7 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
                 _extract_index(index, global_index=True)
             )
 
-    conn = _create_connection(region, key, keyid, profile)
+    conn = _get_conn(region, key, keyid, profile)
     Table.create(
         table_name,
         schema=schema,
@@ -191,7 +160,7 @@ def exists(table_name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_dynamodb.exists table_name region=us-east-1
     '''
-    conn = _create_connection(region, key, keyid, profile)
+    conn = _get_conn(region, key, keyid, profile)
     tables = conn.list_tables()
     return tables and table_name in tables['TableNames']
 
@@ -204,7 +173,7 @@ def delete(table_name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_dynamodb.delete table_name region=us-east-1
     '''
-    conn = _create_connection(region, key, keyid, profile)
+    conn = _get_conn(region, key, keyid, profile)
     table = Table(table_name, connection=conn)
     table.delete()
 
