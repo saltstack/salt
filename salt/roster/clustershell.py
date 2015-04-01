@@ -15,7 +15,7 @@ Example:
 from __future__ import absolute_import
 import socket
 
-from salt.ext.six.moves import map  #pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 from ClusterShell.NodeSet import NodeSet
 
 
