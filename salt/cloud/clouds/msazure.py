@@ -57,6 +57,7 @@ import yaml
 HAS_LIBS = False
 try:
     import azure
+    import azure.storage
     import azure.servicemanagement
     from azure import (WindowsAzureConflictError,
                        WindowsAzureMissingResourceError,
