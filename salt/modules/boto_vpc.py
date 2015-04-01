@@ -1143,6 +1143,73 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
         return False
 
 
+def route_exists(destination_cidr_block, route_table_name=None, route_table_id=None, gateway_id=None, instance_id=None,
+                 interface_id=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Checks if a route exists.
+    .. versionadded:: Beryllium
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.route_exists destination_cidr_block='10.0.0.0/20' gateway_id='local' route_table_name='test'
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    if not any((route_table_name, route_table_id)):
+        raise SaltInvocationError('At least on of the following must be specified: route table name or route table id.')
+
+    if not any((gateway_id, instance_id, interface_id)):
+        raise SaltInvocationError('At least on of the following must be specified: gateway id, instance id'
+                                  ' or interface id.')
+
+    try:
+        filter_parameters = {'filters': {}}
+
+        if route_table_id:
+            filter_parameters['route_table_ids'] = [route_table_id]
+
+        if route_table_name:
+            filter_parameters['filters']['tag:Name'] = route_table_name
+
+        if tags:
+            for tag_name, tag_value in six.iteritems(tags):
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        route_tables = conn.get_all_route_tables(**filter_parameters)
+
+        if len(route_tables) != 1:
+            raise SaltInvocationError('Found more than one route table.')
+
+        route_check = {'destination_cidr_block': destination_cidr_block,
+                      'gateway_id': gateway_id,
+                      'instance_id': instance_id,
+                      'interface_id': interface_id
+                      }
+
+        for route_match in route_tables[0].routes:
+
+            route_dict = {'destination_cidr_block': route_match.destination_cidr_block,
+                          'gateway_id': route_match.gateway_id,
+                          'instance_id': route_match.instance_id,
+                          'interface_id': route_match.interface_id
+                          }
+            route_comp = set(route_dict.items()) ^ set(route_check.items())
+            if len(route_comp) == 0:
+                log.info('Route {0} exists.'.format(destination_cidr_block))
+                return True
+
+        log.warning('Route {0} does not exist.'.format(destination_cidr_block))
+        return False
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
 def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyid=None, profile=None):
     '''
     Given a route table ID and a subnet ID, associates the route table with the subnet.
