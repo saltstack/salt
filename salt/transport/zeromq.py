@@ -226,6 +226,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
                                           port=self.publish_port)
 
+    @tornado.gen.coroutine
     def _decode_messages(self, messages):
         '''
         Take the zmq messages, decrypt/decode them into a payload
@@ -240,7 +241,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         else:
             raise Exception(('Invalid number of messages ({0}) in zeromq pub'
                              'message from master').format(len(messages_len)))
-        return self._decode_payload(payload)
+        ret = yield self._decode_payload(payload)
+        raise tornado.gen.Return(ret)
 
     @property
     def stream(self):
@@ -254,9 +256,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         '''
         if callback is None:
             return self.stream.on_recv(None)
-
+        @tornado.gen.coroutine
         def wrap_callback(messages):
-            payload = self._decode_messages(messages)
+            payload = yield self._decode_messages(messages)
             callback(payload)
         return self.stream.on_recv(wrap_callback)
 

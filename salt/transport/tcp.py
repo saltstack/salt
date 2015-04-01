@@ -220,8 +220,10 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         if callback is None:
             return self.message_client.on_recv(callback)
 
+        @tornado.gen.coroutine
         def wrap_callback(body):
-            callback(self._decode_payload(self.serial.loads(body)))
+            ret = yield self._decode_payload(self.serial.loads(body))
+            callback(ret)
         return self.message_client.on_recv(wrap_callback)
 
 

@@ -4,6 +4,8 @@ import logging
 import os
 import hashlib
 
+import tornado.gen
+
 from M2Crypto import RSA
 
 # salt libs
@@ -24,6 +26,7 @@ class AESPubClientMixin(object):
             if not salt.crypt.verify_signature(master_pubkey_path, load, payload.get('sig')):
                 raise salt.crypt.AuthenticationError('Message signature failed to validate.')
 
+    @tornado.gen.coroutine
     def _decode_payload(self, payload):
         # we need to decrypt it
         if payload['enc'] == 'aes':
@@ -31,10 +34,10 @@ class AESPubClientMixin(object):
             try:
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
             except salt.crypt.AuthenticationError:
-                self.auth.authenticate()
+                yield self.auth.authenticate()
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
 
-        return payload
+        raise tornado.gen.Return(payload)
 
 # TODO: rename?
 class AESReqServerMixin(object):

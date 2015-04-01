@@ -266,7 +266,6 @@ class MasterKeys(dict):
         return self.pub_signature
 
 
-# TODO: share "creds" between auth and asyncauth-- to reduce sign-ins
 class AsyncAuth(object):
     '''
     Set up an Async object to maintain authentication with the salt master
@@ -274,6 +273,9 @@ class AsyncAuth(object):
     # This class is only a singleton per minion/master pair
     # mapping of io_loop -> {key -> auth}
     instance_map = weakref.WeakKeyDictionary()
+
+    # mapping of key -> creds
+    creds_map = {}
 
     def __new__(cls, opts, io_loop=None):
         '''
@@ -334,7 +336,16 @@ class AsyncAuth(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        self.authenticate()
+        key = self.__key(self.opts)
+        # TODO: if we already have creds for this key, lets just re-use
+        if key in AsyncAuth.creds_map:
+            creds = AsyncAuth.creds_map[key]
+            self._creds = creds
+            self._crypticle = Crypticle(self.opts, creds['aes'])
+            self._authenticate_future = tornado.concurrent.Future()
+            self._authenticate_future.set_result(True)
+        else:
+            self.authenticate()
 
     @property
     def creds(self):
@@ -408,10 +419,12 @@ class AsyncAuth(object):
                 continue
             break
         if not isinstance(creds, dict) or 'aes' not in creds:
+            del AsyncAuth.creds_map[self.__key(self.opts)]
             self._authenticate_future.set_exception(
                 SaltClientError('Attempt to authenticate with the salt master failed')
             )
         else:
+            AsyncAuth.creds_map[self.__key(self.opts)] = creds
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds['aes'])
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
