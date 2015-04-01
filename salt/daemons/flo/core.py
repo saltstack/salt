@@ -618,6 +618,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
+               'utils': '.salt.loader.utils',
                'modules': '.salt.loader.modules',
                'grain_time': '.salt.var.grain_time',
                'module_refresh': '.salt.var.module_refresh',
@@ -660,9 +661,11 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
             self.opts.value['grains'] = salt.loader.grains(self.opts.value)
             self.grain_time.value = time.time()
             self.grains.value = self.opts.value['grains']
-        self.modules.value = salt.loader.minion_mods(self.opts.value)
+        self.utils.value = salt.loader.utils(self.opts.value)
+        self.modules.value = salt.loader.minion_mods(self.opts.value, utils=self.utils.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
 
+        self.utils.value.clear()
         self.modules.value.clear()
         self.returners.value.clear()
 
@@ -739,6 +742,7 @@ class SaltSchedule(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
+               'utils': '.salt.loader.utils',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
 
@@ -746,7 +750,8 @@ class SaltSchedule(ioflo.base.deeding.Deed):
         '''
         Map opts and make the schedule object
         '''
-        self.modules.value = salt.loader.minion_mods(self.opts.value)
+        self.utils.value = salt.loader.utils(self.opts.value)
+        self.modules.value = salt.loader.minion_mods(self.opts.value, utils=self.utils.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
         self.schedule = salt.utils.schedule.Schedule(
                 self.opts.value,

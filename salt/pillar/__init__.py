@@ -110,10 +110,11 @@ class Pillar(object):
 
         # if we didn't pass in functions, lets load them
         if functions is None:
+            utils = salt.loader.utils(opts)
             if opts.get('file_client', '') == 'local':
-                self.functions = salt.loader.minion_mods(opts)
+                self.functions = salt.loader.minion_mods(opts, utils=utils)
             else:
-                self.functions = salt.loader.minion_mods(self.opts)
+                self.functions = salt.loader.minion_mods(self.opts, utils=utils)
         else:
             self.functions = functions
 

@@ -20,7 +20,8 @@ def start_engines(opts, proc_mgr):
         runners = salt.loader.runner(opts)
     else:
         runners = []
-    funcs = salt.loader.minion_mods(opts)
+    utils = salt.loader.utils(opts)
+    funcs = salt.loader.minion_mods(opts, utils=utils)
     engines = salt.loader.engines(opts, funcs, runners)
 
     engines_opt = opts.get('engines', [])
