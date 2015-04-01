@@ -543,7 +543,7 @@ def crl_managed(name,
         bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
         salt.utils.backup_minion(name, bkroot)
 
-    ret['comment'] = __salt__['x509.write_pem'](text=new_crl, path=name, pem_type="X509 CRL")
+    ret['comment'] = __salt__['x509.write_pem'](text=new_crl, path=name, pem_type='X509 CRL')
     ret['result'] = True
 
     return ret
