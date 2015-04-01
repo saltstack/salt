@@ -45,6 +45,29 @@ def version():
     return ret[-1]
 
 
+def build_info():
+    '''
+    Return server and build arguments
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nginx.build_info
+    '''
+    ret = {'info': []}
+    out = __salt__['cmd.run']('{0} -V'.format(__detect_os()))
+
+    for i in out.splitlines():
+        if i.startswith('configure argument'):
+            ret['build arguments'] = i.split()[2:]
+            continue
+
+        ret['info'].append(i)
+
+    return ret
+
+
 def configtest():
     '''
     test configuration and exit
