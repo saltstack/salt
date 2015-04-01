@@ -758,9 +758,11 @@ def create(vm_):
           ## Optional arguments
           num_cpus: 4
           memory: 8192
-          datastore: datastorename
-          resourcepool: resourcepool
+          datastore: na-001-004
+          resourcepool: Resources
+          cluster: Prod
           folder: Development
+          datacenter: DC1
           host: c4212n-002.domain.com
           template: False
           power_on: True
@@ -773,26 +775,51 @@ def create(vm_):
         Enter the name of the VM/template to clone from. 
 
     num_cpus
-        Enter the number of vCPUS you want the VM to have. If not specified, the current
+        Enter the number of vCPUS you want the VM/template to have. If not specified, the current
         VM/template's vCPU count is used.
 
     memory
-        Enter memory (in MB) you want the VM to have. If not specified, the current
+        Enter memory (in MB) you want the VM/template to have. If not specified, the current
         VM/template's memory size is used.
 
     datastore
-        Enter the name of the datastore where the virtual machine should be located. If
-        not specified, the current datastore is used.
+        Enter the name of the datastore or the datastore cluster where the virtual machine should
+        be located on physical storage. If not specified, the current datastore is used.
+        - If you specify a datastore cluster name, DRS Storage recommendation is automatically
+          applied.
+        - If you specify a datastore name, DRS Storage recommendations is disabled.
 
     resourcepool
         Enter the name of the resourcepool to which the new virtual machine should be
-        attached. If not specified, it will use the same resourcepool as the original vm.
-        For a clone operation to a template, this argument is ignored. For a clone operation
-        from a template to a virtual machine, this argument is required.
+        attached. This determines what compute resources will be available to the clone. 
+        - For a clone operation from a virtual machine, it will use the same resourcepool as
+          the original virtual machine unless specified.
+        - For a clone operation from a template to a virtual machine, specifying either this
+          or cluster is required. If both are specified, the resourcepool value will be used.
+        - For a clone operation to a template, this argument is ignored.
+
+    cluster
+        Enter the name of the cluster whose resource pool the new virtual machine should be
+        attached to. 
+        - For a clone operation from a virtual machine, it will use the same clusters resourcepool
+          as the original virtual machine unless specified.
+        - For a clone operation from a template to a virtual machine, specifying either this
+          or resourcepool is required. If both are specified, the resourcepool value will be used.
+        - For a clone operation to a template, this argument is ignored.
 
     folder
-        Enter the name of the folder that will contain the new virtual machine. If not
-        specified, the new VM will be added to the folder that the original VM belongs to.
+        Enter the name of the folder that will contain the new virtual machine.
+        - For a clone operation from a virtual machine, the new VM will be added to the same folder
+          that the original VM belongs to unless specified.
+        - For a clone operation from a template to a virtual machine, specifying either this
+          or datacenter is required. If both are specified, the folder value will be used.
+
+    datacenter
+        Enter the name of the datacenter that will contain the new virtual machine.
+        - For a clone operation from a virtual machine, the new VM will be added to the same folder
+          that the original VM belongs to unless specified.
+        - For a clone operation from a template to a virtual machine, specifying either this
+          or folder is required. If both are specified, the folder value will be used.
 
     host
         Enter the name of the target host where the virtual machine should be registered. 
@@ -815,7 +842,6 @@ def create(vm_):
     power_on
         Specifies whether the new virtual machine should be powered on or not. Default is
         ``True``.
-
 
     CLI Example:
 
@@ -857,8 +883,14 @@ def create(vm_):
     folder = config.get_cloud_config_value(
         'folder', vm_, __opts__, default=None
     )
+    datacenter = config.get_cloud_config_value(
+        'datacenter', vm_, __opts__, default=None
+    )
     resourcepool = config.get_cloud_config_value(
         'resourcepool', vm_, __opts__, default=None
+    )
+    cluster = config.get_cloud_config_value(
+        'cluster', vm_, __opts__, default=None
     )
     datastore = config.get_cloud_config_value(
         'datastore', vm_, __opts__, default=None
@@ -888,6 +920,44 @@ def create(vm_):
             clone_type = "vm"
         log.debug("Cloning from {0}: {1}\n".format(clone_type, vm_['clonefrom']))
 
+        # Either a cluster, host or a resource pool must be specified when cloning from template.
+        if resourcepool:
+            resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
+        elif cluster:
+            cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
+            resourcepool_ref = cluster_ref.resourcePool
+        elif clone_type == "template":
+            log.error('You must either specify a cluster, a host or a resource pool')
+            return False
+
+        # Either a datacenter or a VM folder must be specified
+        if folder:
+            folder_ref = _get_mor_by_property(vim.Folder, folder)
+        elif datacenter:
+            datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
+            folder_ref = datacenter_ref.vmFolder
+        else:
+            log.error('You must either specify a datacenter or a VM folder')
+            return False
+
+        # Create the relocation specs
+        reloc_spec = vim.vm.RelocateSpec()
+        reloc_spec.pool = resourcepool_ref if resourcepool or cluster else None
+
+        # Either a datastore/datastore cluster can be optionally specified.
+        # If not specified, the current datastore is used.
+        if datastore:
+            datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+            reloc_spec.datastore = datastore_ref
+
+        if host:
+            host_ref = _get_mor_by_property(vim.HostSystem, host)
+            reloc_spec.host = host_ref
+
+        log.debug('reloc_spec set to {0}\n'.format(
+            pprint.pformat(reloc_spec))
+        )
+
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
 
@@ -901,37 +971,21 @@ def create(vm_):
             pprint.pformat(config_spec))
         )
 
-        # Create the relocation specs
-        reloc_spec = vim.vm.RelocateSpec()
-
-        if resourcepool:
-            resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
-            reloc_spec.pool = resourcepool_ref
-        if datastore:
-            datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
-            reloc_spec.datastore = datastore_ref
-        if host:
-            host_ref = _get_mor_by_property(vim.HostSystem, host)
-            reloc_spec.host = host_ref
-
-        log.debug('reloc_spec set to {0}\n'.format(
-            pprint.pformat(reloc_spec))
-        )
-
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
             template = template,
-            powerOn = power,
             location = reloc_spec,
             config = config_spec
         )
+
+        if not template:
+            clone_spec.powerOn = power
 
         log.debug('clone_spec set to {0}\n'.format(
             pprint.pformat(clone_spec))
         )
 
         try:
-            folder_ref = _get_mor_by_property(vim.Folder, folder)
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
             while (task.info.state != 'success'):

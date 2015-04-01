@@ -61,9 +61,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       ## Optional arguments
       num_cpus: 4
       memory: 8192
-      datastore: datastorename
-      resourcepool: resourcepool
+      datastore: na-001-004
+      resourcepool: Resources
+      cluster: Prod
       folder: Development
+      datacenter: DC1
       host: c4212n-002.domain.com
       template: False
       power_on: True
@@ -76,26 +78,51 @@ clonefrom
     Enter the name of the VM/template to clone from. 
 
 num_cpus
-    Enter the number of vCPUS you want the VM to have. If not specified, the current
+    Enter the number of vCPUS you want the VM/template to have. If not specified, the current
     VM/template's vCPU count is used.
 
 memory
-    Enter memory (in MB) you want the VM to have. If not specified, the current
+    Enter memory (in MB) you want the VM/template to have. If not specified, the current
     VM/template's memory size is used.
 
 datastore
-    Enter the name of the datastore where the virtual machine should be located. If
-    not specified, the current datastore is used.
+    Enter the name of the datastore or the datastore cluster where the virtual machine should
+    be located on physical storage. If not specified, the current datastore is used.
+    - If you specify a datastore cluster name, DRS Storage recommendation is automatically
+      applied.
+    - If you specify a datastore name, DRS Storage recommendations is disabled.
 
 resourcepool
     Enter the name of the resourcepool to which the new virtual machine should be
-    attached. If not specified, it will use the same resourcepool as the original vm.
-    For a clone operation to a template, this argument is ignored. For a clone operation
-    from a template to a virtual machine, this argument is required.
+    attached. This determines what compute resources will be available to the clone. 
+    - For a clone operation from a virtual machine, it will use the same resourcepool as
+      the original virtual machine unless specified.
+    - For a clone operation from a template to a virtual machine, specifying either this
+      or cluster is required. If both are specified, the resourcepool value will be used.
+    - For a clone operation to a template, this argument is ignored.
+
+cluster
+    Enter the name of the cluster whose resource pool the new virtual machine should be
+    attached to. 
+    - For a clone operation from a virtual machine, it will use the same clusters resourcepool
+      as the original virtual machine unless specified.
+    - For a clone operation from a template to a virtual machine, specifying either this
+      or resourcepool is required. If both are specified, the resourcepool value will be used.
+    - For a clone operation to a template, this argument is ignored.
 
 folder
-    Enter the name of the folder that will contain the new virtual machine. If not
-    specified, the new VM will be added to the folder that the original VM belongs to.
+    Enter the name of the folder that will contain the new virtual machine.
+    - For a clone operation from a virtual machine, the new VM will be added to the same folder
+      that the original VM belongs to unless specified.
+    - For a clone operation from a template to a virtual machine, specifying either this
+      or datacenter is required. If both are specified, the folder value will be used.
+
+datacenter
+    Enter the name of the datacenter that will contain the new virtual machine.
+    - For a clone operation from a virtual machine, the new VM will be added to the same folder
+      that the original VM belongs to unless specified.
+    - For a clone operation from a template to a virtual machine, specifying either this
+      or folder is required. If both are specified, the folder value will be used.
 
 host
     Enter the name of the target host where the virtual machine should be registered. 
