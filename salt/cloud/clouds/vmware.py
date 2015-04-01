@@ -119,15 +119,15 @@ def _get_si():
     '''
     try:
         si = SmartConnect(
-                 host = config.get_cloud_config_value(
-                            'url', get_configured_provider(), __opts__, search_global=False
-                        ),
-                 user = config.get_cloud_config_value(
-                            'user', get_configured_provider(), __opts__, search_global=False
-                        ),
-                 pwd = config.get_cloud_config_value(
-                           'password', get_configured_provider(), __opts__, search_global=False
-                       ),
+                 host=config.get_cloud_config_value(
+                          'url', get_configured_provider(), __opts__, search_global=False
+                      ),
+                 user=config.get_cloud_config_value(
+                          'user', get_configured_provider(), __opts__, search_global=False
+                      ),
+                 pwd=config.get_cloud_config_value(
+                         'password', get_configured_provider(), __opts__, search_global=False
+                     ),
              )
     except:
         raise SaltCloudSystemExit(
@@ -156,34 +156,34 @@ def _get_content(obj_type, property_list=None):
 
     # Create traversal spec to determine the path for collection
     traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
-        name = 'traverseEntities',
-        path = 'view',
-        skip = False,
-        type = vim.view.ContainerView
+        name='traverseEntities',
+        path='view',
+        skip=False,
+        type=vim.view.ContainerView
     )
 
     # Create property spec to determine properties to be retrieved
     property_spec = vmodl.query.PropertyCollector.PropertySpec(
-        type = obj_type,
-        all = True if not property_list else False,
-        pathSet = property_list
+        type=obj_type,
+        all=True if not property_list else False,
+        pathSet=property_list
     )
 
     # Create object spec to navigate content
     obj_spec = vmodl.query.PropertyCollector.ObjectSpec(
-        obj = obj_view,
-        skip = True,
-        selectSet = [traversal_spec]
+        obj=obj_view,
+        skip=True,
+        selectSet=[traversal_spec]
     )
 
     # Create a filter spec and specify object, property spec in it
     filter_spec = vmodl.query.PropertyCollector.FilterSpec(
-        objectSet = [obj_spec],
-        propSet = [property_spec],
-        reportMissingObjectsInResults = False
+        objectSet=[obj_spec],
+        propSet=[property_spec],
+        reportMissingObjectsInResults=False
     )
 
-    # Retrieve the contents 
+    # Retrieve the contents
     content = si.content.propertyCollector.RetrieveContents([filter_spec])
 
     # Destroy the object view
@@ -723,13 +723,13 @@ def destroy(name, call=None):
                 try:
                     log.info('Powering Off VM {0}'.format(name))
                     task = vm["object"].PowerOff()
-                    while (task.info.state != 'success'):
+                    while task.info.state != 'success':
                         log.debug("Waiting for Power off task to finish")
                 except Exception as exc:
                     log.error('Could not destroy VM {0}: {1}'.format(name, exc))
                     return 'failed to destroy'
             task = vm["object"].Destroy_Task()
-            while (task.info.state != 'success'):
+            while task.info.state != 'success':
                 log.debug("Waiting for destroy task to finish")
 
     salt.utils.cloud.fire_event(
@@ -772,7 +772,7 @@ def create(vm_):
         Enter the name that was specified when the cloud provider config was created.
 
     clonefrom
-        Enter the name of the VM/template to clone from. 
+        Enter the name of the VM/template to clone from.
 
     num_cpus
         Enter the number of vCPUS you want the VM/template to have. If not specified, the current
@@ -791,7 +791,7 @@ def create(vm_):
 
     resourcepool
         Enter the name of the resourcepool to which the new virtual machine should be
-        attached. This determines what compute resources will be available to the clone. 
+        attached. This determines what compute resources will be available to the clone.
         - For a clone operation from a virtual machine, it will use the same resourcepool as
           the original virtual machine unless specified.
         - For a clone operation from a template to a virtual machine, specifying either this
@@ -800,7 +800,7 @@ def create(vm_):
 
     cluster
         Enter the name of the cluster whose resource pool the new virtual machine should be
-        attached to. 
+        attached to.
         - For a clone operation from a virtual machine, it will use the same clusters resourcepool
           as the original virtual machine unless specified.
         - For a clone operation from a template to a virtual machine, specifying either this
@@ -822,7 +822,7 @@ def create(vm_):
           or folder is required. If both are specified, the folder value will be used.
 
     host
-        Enter the name of the target host where the virtual machine should be registered. 
+        Enter the name of the target host where the virtual machine should be registered.
         If not specified:
 
         .. code-block:: text
@@ -870,12 +870,6 @@ def create(vm_):
         {'kwargs': vm_},
         transport=__opts__['transport']
     )
-
-    show_deploy_args = config.get_cloud_config_value(
-        'show_deploy_args', vm_, __opts__, default=False
-    )
-    if show_deploy_args:
-        ret['deploy_kwargs'] = deploy_kwargs
 
     vm_name = config.get_cloud_config_value(
         'name', vm_, __opts__, default=None
@@ -973,9 +967,9 @@ def create(vm_):
 
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
-            template = template,
-            location = reloc_spec,
-            config = config_spec
+            template=template,
+            location=reloc_spec,
+            config=config_spec
         )
 
         if not template:
@@ -988,7 +982,7 @@ def create(vm_):
         try:
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
-            while (task.info.state != 'success'):
+            while task.info.state != 'success'):
                 log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
                 time.sleep(5)
                 time_counter += 5
@@ -1019,4 +1013,4 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-    return { vm_name: True}
+    return {vm_name: True}
