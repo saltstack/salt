@@ -28,6 +28,42 @@ rh_service.__salt__ = {}
 RET = ['hostname', 'mountall', 'network-interface', 'network-manager',
        'salt-api', 'salt-master', 'salt-minion']
 
+FLAG = None
+
+
+def _m_disable():
+    '''
+    Mock _upstart_disable method.
+    '''
+    if FLAG:
+        return MagicMock(return_value=True)
+    else:
+        return MagicMock(return_value=False)
+
+
+def _m_enable():
+    '''
+    Mock _upstart_enable method.
+    '''
+    if FLAG:
+        return MagicMock(return_value=True)
+    else:
+        return MagicMock(return_value=False)
+
+
+def _m_isenabled():
+    '''
+    Mock _upstart_is_enabled method.
+    '''
+    if FLAG:
+        return MagicMock(return_value=True)
+    else:
+        return MagicMock(return_value=False)
+
+rh_service._upstart_disable = _m_disable()
+rh_service._upstart_enable = _m_enable()
+rh_service._upstart_is_enabled = _m_isenabled()
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class RhServiceTestCase(TestCase):
@@ -63,9 +99,9 @@ class RhServiceTestCase(TestCase):
         param to restrict results to services of that type.
         '''
         with patch.object(rh_service, '_upstart_services', self._m_ret()):
-            with patch.object(rh_service, '_upstart_is_enabled',
-                              self._m_bool()):
-                self.assertListEqual(rh_service.get_enabled('upstart'), RET)
+            global FLAG
+            FLAG = True
+            self.assertListEqual(rh_service.get_enabled('upstart'), [])
 
         mock_run = MagicMock(return_value='salt stack')
         with patch.dict(rh_service.__salt__, {'cmd.run': mock_run}):
@@ -77,9 +113,8 @@ class RhServiceTestCase(TestCase):
 
                     with patch.object(rh_service, '_upstart_services',
                                       self._m_lst()):
-                        with patch.object(rh_service, '_upstart_is_enabled',
-                                          self._m_bool()):
-                            self.assertListEqual(rh_service.get_enabled(), RET)
+                        FLAG = True
+                        self.assertListEqual(rh_service.get_enabled(), RET)
 
     # 'get_disabled' function tests: 1
 
@@ -89,9 +124,9 @@ class RhServiceTestCase(TestCase):
         param to restrict results to services of that type.
         '''
         with patch.object(rh_service, '_upstart_services', self._m_ret()):
-            with patch.object(rh_service, '_upstart_is_enabled',
-                              self._m_bool(False)):
-                self.assertListEqual(rh_service.get_disabled('upstart'), RET)
+            global FLAG
+            FLAG = False
+            self.assertListEqual(rh_service.get_disabled('upstart'), RET)
 
         mock_run = MagicMock(return_value='salt stack')
         with patch.dict(rh_service.__salt__, {'cmd.run': mock_run}):
@@ -103,9 +138,8 @@ class RhServiceTestCase(TestCase):
 
                     with patch.object(rh_service, '_upstart_services',
                                       self._m_lst()):
-                        with patch.object(rh_service, '_upstart_is_enabled',
-                                          self._m_bool(False)):
-                            self.assertListEqual(rh_service.get_disabled(), RET)
+                        FLAG = False
+                        self.assertListEqual(rh_service.get_disabled(), RET)
 
     # 'get_all' function tests: 1
 
@@ -234,8 +268,9 @@ class RhServiceTestCase(TestCase):
         '''
         mock_bool = MagicMock(side_effect=[True, False])
         with patch.object(rh_service, '_service_is_upstart', mock_bool):
-            with patch.object(rh_service, '_upstart_enable', self._m_bool()):
-                self.assertTrue(rh_service.enable('salt-api'))
+            global FLAG
+            FLAG = True
+            self.assertFalse(rh_service.enable('salt-api'))
 
             with patch.object(rh_service, '_sysv_enable', self._m_bool()):
                 self.assertTrue(rh_service.enable('salt-api'))
@@ -248,8 +283,9 @@ class RhServiceTestCase(TestCase):
         '''
         mock_bool = MagicMock(side_effect=[True, False])
         with patch.object(rh_service, '_service_is_upstart', mock_bool):
-            with patch.object(rh_service, '_upstart_disable', self._m_bool()):
-                self.assertTrue(rh_service.disable('salt-api'))
+            global FLAG
+            FLAG = True
+            self.assertFalse(rh_service.disable('salt-api'))
 
             with patch.object(rh_service, '_sysv_disable', self._m_bool()):
                 self.assertTrue(rh_service.disable('salt-api'))
@@ -263,9 +299,9 @@ class RhServiceTestCase(TestCase):
         '''
         mock_bool = MagicMock(side_effect=[True, False])
         with patch.object(rh_service, '_service_is_upstart', mock_bool):
-            with patch.object(rh_service, '_upstart_is_enabled',
-                              self._m_bool()):
-                self.assertTrue(rh_service.enabled('salt-api'))
+            global FLAG
+            FLAG = True
+            self.assertFalse(rh_service.enabled('salt-api'))
 
             with patch.object(rh_service, '_sysv_is_enabled', self._m_bool()):
                 self.assertTrue(rh_service.enabled('salt-api'))
@@ -279,9 +315,9 @@ class RhServiceTestCase(TestCase):
         '''
         mock_bool = MagicMock(side_effect=[True, False])
         with patch.object(rh_service, '_service_is_upstart', mock_bool):
-            with patch.object(rh_service, '_upstart_is_enabled',
-                              self._m_bool(False)):
-                self.assertTrue(rh_service.disabled('salt-api'))
+            global FLAG
+            FLAG = False
+            self.assertTrue(rh_service.disabled('salt-api'))
 
             with patch.object(rh_service, '_sysv_is_enabled',
                               self._m_bool(False)):
