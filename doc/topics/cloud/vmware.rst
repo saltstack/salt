@@ -59,6 +59,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       provider: vmware-vcenter01
       clonefrom: test-vm
       ## Optional arguments
+      num_cpus: 4
+      memory: 8192
       datastore: datastorename
       resourcepool: resourcepool
       folder: Development
@@ -72,6 +74,14 @@ provider
 
 clonefrom
     Enter the name of the VM/template to clone from. 
+
+num_cpus
+    Enter the number of vCPUS you want the VM to have. If not specified, the current
+    VM/template's vCPU count is used.
+
+memory
+    Enter memory (in MB) you want the VM to have. If not specified, the current
+    VM/template's memory size is used.
 
 datastore
     Enter the name of the datastore where the virtual machine should be located. If
