@@ -163,5 +163,6 @@ Full list of builtin state modules
     win_update
     winrepo
     xmpp
+    x509
     zcbuildout
     zk_concurrency
