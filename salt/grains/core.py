@@ -1655,7 +1655,7 @@ def _hw_data(osdata):
         if uuid is not None:
             grains['uuid'] = uuid.lower()
         for serial in ('system-serial-number', 'chassis-serial-number', 'baseboard-serial-number'):
-            serial =  __salt__['smbios.get'](serial)
+            serial = __salt__['smbios.get'](serial)
             if serial is not None:
                 grains['serial'] = serial
                 break
@@ -1681,8 +1681,7 @@ def _hw_data(osdata):
                   'manufacturer': 'hw.vendor',
                   'productname': 'hw.product',
                   'serialnumber': 'hw.serialno',
-                  'uuid': 'hw.uuid'
-        }
+                  'uuid': 'hw.uuid'}
         for key, oid in six.iteritems(hwdata):
             value = __salt__['cmd.run']('{0} -n {1}'.format(sysctl, oid))
             if not value.endswith(' value is not available'):
