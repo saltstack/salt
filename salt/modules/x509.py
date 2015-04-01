@@ -20,12 +20,12 @@ import yaml
 import subprocess
 import re
 import datetime
-from collections import OrderedDict
 import ast
 
 # Import salt libs
 import salt.utils
 import salt.exceptions
+from salt.utils.odict import OrderedDict
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
