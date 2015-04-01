@@ -2,13 +2,12 @@
 '''
 Manage X509 certificates
 
-.. versionadded:: TBD
+.. versionadded:: Beryllium
 
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import hashlib
@@ -27,6 +26,7 @@ import ast
 # Import salt libs
 import salt.utils
 import salt.exceptions
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
