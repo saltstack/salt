@@ -2,7 +2,7 @@
 '''
 Manage X509 Certificates
 
-.. versionadded:: TBD
+.. versionadded:: Beryllium
 
 This module can enable managing a complete PKI infrastructure including creating private keys, CA's,
 certificates and CRLs. It includes the ability to generate a private key on a server, and have the
@@ -149,10 +149,14 @@ This state creates a private key then requests a certificate signed by ca accord
 
 '''
 
-import salt.exceptions
-import salt.utils
+# Import Python Libs
+from __future__ import absolute_import
 import datetime
 import os
+
+# Import Salt Libs
+import salt.exceptions
+import salt.utils
 
 
 def _revoked_to_list(revs):
