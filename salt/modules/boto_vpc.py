@@ -1589,6 +1589,66 @@ def describe_subnets(subnet_ids=None, vpc_id=None, cidr=None, region=None, key=N
         return False
 
 
+def describe_route_table(route_table_id=None, route_table_name=None, tags=None, region=None, key=None, keyid=None,
+                         profile=None):
+    '''
+    Given route table properties, return route table details if exists.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.describe_route_table route_table_id='rtb-1f382e7d'
+
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+
+    if not route_table_id and not route_table_name and not tags:
+        raise SaltInvocationError('At least on of the following must be specified: route table id, route table name or tags.')
+
+    try:
+        filter_parameters = {'filters': {}}
+
+        if route_table_id:
+            filter_parameters['route_table_ids'] = [route_table_id]
+
+        if route_table_name:
+            filter_parameters['filters']['tag:Name'] = route_table_name
+
+        if tags:
+            for tag_name, tag_value in six.iteritems(tags):
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        route_tables = conn.get_all_route_tables(**filter_parameters)
+
+        if not route_tables:
+            return False
+
+        route_table = {}
+        keys = ['id', 'vpc_id', 'tags', 'routes']
+        route_keys = ['destination_cidr_block', 'gateway_id', 'instance_id', 'interface_id']
+        for item in route_tables:
+            routes_list = []
+            for key in keys:
+                if hasattr(item, key):
+                    route_table[key] = getattr(item, key)
+                    if key == 'routes':
+                        for r_item in item.routes:
+                            route = {}
+                            for r_key in route_keys:
+                                if hasattr(r_item, r_key):
+                                    route[r_key] = getattr(r_item, r_key)
+                            routes_list.append(route)
+                        route_table[key] = routes_list
+        return route_table
+
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
 def _create_dhcp_options(conn, domain_name=None, domain_name_servers=None, ntp_servers=None, netbios_name_servers=None,
                          netbios_node_type=None):
     return conn.create_dhcp_options(domain_name=domain_name, domain_name_servers=domain_name_servers,
