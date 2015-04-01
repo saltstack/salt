@@ -125,8 +125,7 @@ def minion_mods(opts, context=None, whitelist=None, include_errors=False, initia
     return ret
 
 
-# TODO: fix this silly unused positional argument
-def raw_mod(opts, _, functions, mod='modules'):
+def raw_mod(opts, module_name, functions, mod='modules'):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
 
@@ -139,11 +138,18 @@ def raw_mod(opts, _, functions, mod='modules'):
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
-    return LazyLoader(_module_dirs(opts, mod, 'rawmodule'),
+    loader = LazyLoader(_module_dirs(opts, mod, 'rawmodule'),
                       opts,
                       tag='rawmodule',
                       virtual_enable=False,
                       pack={'__salt__': functions})
+
+    raw_module = {}
+    for function_name in loader.keys():
+        if function_name.split('.')[0] == module_name:
+            raw_module[function_name] = loader.get(function_name)
+
+    return raw_module
 
 
 def engines(opts, functions, runners):
