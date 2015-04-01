@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Return salt data via hipchat
+Return salt data via hipchat.
+
+.. versionadded:: 2015.2.0
 
 The following fields can be set in the minion conf file::
 

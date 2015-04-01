@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Module for sending messages to hipchat
+Module for sending messages to hipchat.
+
+.. versionadded:: 2015.2.0
 
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt

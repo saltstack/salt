@@ -6,6 +6,8 @@ The Salt Master maintains a job cache of all job executions which can be
 queried via the jobs runner. The way this job cache is managed is very
 pluggable via Salt's underlying returner interface.
 
+.. _default_job_cache:
+
 Default Job Cache
 =================
 
@@ -34,6 +36,8 @@ register of executed jobs. Salt comes with two main mechanisms to do this, the
 master job cache and the external job cache. The difference is how the external
 data store is accessed.
 
+.. _master_job_cache:
+
 Master Job Cache
 ================
 
@@ -48,6 +52,8 @@ add the following configuration to the master configuration file:
 .. code-block:: yaml
 
     master_job_cache: mysql
+
+.. _external_job_cache:
 
 External Job Cache
 ==================
