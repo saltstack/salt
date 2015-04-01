@@ -51,6 +51,7 @@ Use the following mysql database schema:
       `load` mediumtext NOT NULL,
       UNIQUE KEY `jid` (`jid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    CREATE INDEX jid ON jids(jid) USING BTREE;
 
     --
     -- Table structure for table `salt_returns`
@@ -341,7 +342,7 @@ def get_minions():
         return ret
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
