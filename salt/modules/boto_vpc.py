@@ -728,7 +728,7 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
     Returns True if the subnet exists, otherwise returns False.
 
     .. versionchanged Beryllium
-        Added added subnet_name argument
+        Added subnet_name argument
         Deprecated name argument
 
     CLI Example::
