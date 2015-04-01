@@ -469,6 +469,11 @@ class Schedule(object):
             jobcount = 0
             for basefilename in os.listdir(salt.minion.get_proc_dir(self.opts['cachedir'])):
                 fn_ = os.path.join(salt.minion.get_proc_dir(self.opts['cachedir']), basefilename)
+                if not os.path.exists(fn_):
+                    log.debug('schedule.handle_func: {0} was processed '
+                              'in another thread, skipping.'.format(
+                                  basefilename))
+                    continue
                 with salt.utils.fopen(fn_, 'r') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
                     if job:
