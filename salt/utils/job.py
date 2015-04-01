@@ -67,6 +67,7 @@ def store_job(opts, load, event=None, mminion=None):
 
     # otherwise, write to the master cache
     savefstr = '{0}.save_load'.format(job_cache)
+    getfstr = '{0}.get_load'.format(job_cache)
     fstr = '{0}.returner'.format(job_cache)
     if 'fun' not in load and load.get('return', {}):
         ret_ = load.get('return', {})
@@ -75,7 +76,7 @@ def store_job(opts, load, event=None, mminion=None):
         if 'user' in ret_:
             load.update({'user': ret_['user']})
     try:
-        if 'jid' in load:
+        if 'jid' in load and not mminion.returners[getfstr](load.get('jid', '')):
             mminion.returners[savefstr](load['jid'], load)
         mminion.returners[fstr](load)
     except KeyError:
