@@ -15,10 +15,9 @@ class ReqChannel(object):
     '''
     @staticmethod
     def factory(opts, **kwargs):
-        # TODO: change wrapper syntax? Probably need to pass in ioloop
         # All Sync interfaces are just wrappers around the Async ones
-        async = AsyncReqChannel.factory(opts, **kwargs)
-        return SyncWrapper(async)
+        sync = SyncWrapper(AsyncReqChannel.factory, (opts,), kwargs)
+        return sync
 
     def send(self, load, tries=3, timeout=60):
         '''

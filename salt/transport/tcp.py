@@ -107,16 +107,16 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
+        self.io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+
         if self.crypt != 'clear':
-            self.auth = salt.crypt.AsyncAuth(self.opts)
+            self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 
         parse = urlparse.urlparse(self.opts['master_uri'])
         host, port = parse.netloc.rsplit(':', 1)
         self.master_addr = (host, int(port))
 
-        self._io_loop = tornado.ioloop.IOLoop.current()
-
-        self.message_client = SaltMessageClient(host, int(port), io_loop=self._io_loop)
+        self.message_client = SaltMessageClient(host, int(port), io_loop=self.io_loop)
 
     def _package_load(self, load):
         return self.serial.dumps({
@@ -126,7 +126,11 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     @tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
-        ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), tries, timeout)
+        if not self.auth.authenticated:
+            yield self.auth.authenticate()
+        self._package_load(self.auth.crypticle.dumps(load))
+        ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
+        ret = self.serial.loads(ret)
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
@@ -151,8 +155,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                    data = self.auth.crypticle.loads(data)
+                data = self.auth.crypticle.loads(data)
             raise tornado.gen.Return(data)
+
         if not self.auth.authenticated:
             yield self.auth.authenticate()
         try:

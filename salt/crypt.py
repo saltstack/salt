@@ -266,6 +266,7 @@ class MasterKeys(dict):
         return self.pub_signature
 
 
+# TODO: share "creds" between auth and asyncauth-- to reduce sign-ins
 class AsyncAuth(object):
     '''
     Set up an Async object to maintain authentication with the salt master
@@ -345,7 +346,9 @@ class AsyncAuth(object):
 
     @property
     def authenticated(self):
-        return hasattr(self, '_authenticate_future') and self._authenticate_future.done()
+        return hasattr(self, '_authenticate_future') and \
+               self._authenticate_future.done() and \
+               self._authenticate_future.exception() is None
 
     def authenticate(self, callback=None):
         '''
