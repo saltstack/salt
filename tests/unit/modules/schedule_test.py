@@ -237,13 +237,12 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it reload saved scheduled jobs on the minion.
         '''
-        comm1 = ['Reloaded schedule on minion from schedule.conf.']
         mock = MagicMock(return_value=True)
         with patch.dict(schedule.__opts__, {'config_dir': '',
                                             'default_include': '/tmp'}):
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 self.assertDictEqual(schedule.reload_(),
-                                     {'comment': comm1, 'result': True})
+                                     {'comment': [], 'result': True})
 
     # 'move' function tests: 1
 
