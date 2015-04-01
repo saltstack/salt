@@ -11,6 +11,8 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 import salt.utils
 import salt.utils.decorators as decorators
 
+import re
+
 
 # Cache the output of running which('nginx') so this module
 # doesn't needlessly walk $PATH looking for the same binary
@@ -60,7 +62,7 @@ def build_info():
 
     for i in out.splitlines():
         if i.startswith('configure argument'):
-            ret['build arguments'] = i.split()[2:]
+            ret['build arguments'] = re.findall(r"(?:[^\s]*'.*')|(?:[^\s]+)", i)[2:]
             continue
 
         ret['info'].append(i)
