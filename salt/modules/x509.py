@@ -189,6 +189,10 @@ def _parse_openssl_crl(crl_filename):
         if line.startswith('Revoked Certificates:'):
             break
 
+    if 'No Revoked Certificates.' in output:
+        crl['Revoked Certificates'] = []
+        return crl
+
     output = output.split('Revoked Certificates:')[1]
     output = output.split('Signature Algorithm:')[0]
 
@@ -422,6 +426,7 @@ def read_certificate(certificate):
         'Issuer Hash': _dec2hex(cert.get_issuer().as_hash()),
         'Not Before': cert.get_not_before().get_datetime().strftime('%Y-%m-%d %H:%M:%S'),
         'Not After': cert.get_not_after().get_datetime().strftime('%Y-%m-%d %H:%M:%S'),
+        'Public Key': get_public_key(cert.as_pem())
     }
 
     exts = OrderedDict()
@@ -1153,7 +1158,9 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         cert.add_ext(ext)
 
     if 'testrun' in kwargs and kwargs['testrun'] is True:
-        return read_certificate(cert)
+        cert_props = read_certificate(cert)
+        cert_props['Issuer Public Key'] = get_public_key(kwargs['signing_private_key'])
+        return cert_props
 
     if not verify_private_key(kwargs['signing_private_key'], signing_cert.as_pem()):
         raise salt.exceptions.SaltInvocationError('signing_private_key: {0}'
@@ -1286,3 +1293,47 @@ def verify_signature(certificate, signing_pub_key=None):
         signing_pub_key = _get_public_key_obj(signing_pub_key)
 
     return bool(cert.verify(pkey=signing_pub_key) == 1)
+
+
+def verify_crl(crl, cert):
+    '''
+    Validate a CRL against a certificate.
+    Parses openssl command line output, this is a workaround for M2Crypto's
+    inability to get them from CSR objects.
+
+    crl:
+        The CRL to verify
+
+    cert:
+        The certificate to verify the CRL against
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' x509.verify_crl crl=/etc/pki/myca.crl cert=/etc/pki/myca.crt
+    '''
+    crltext = _text_or_file(crl)
+    crltext = get_pem_entry(crltext, pem_type='X509 CRL')
+    crltempfile = tempfile.NamedTemporaryFile()
+    crltempfile.write(crltext)
+    crltempfile.flush()
+
+    certtext = _text_or_file(cert)
+    certtext = get_pem_entry(certtext, pem_type='CERTIFICATE')
+    certtempfile = tempfile.NamedTemporaryFile()
+    certtempfile.write(certtext)
+    certtempfile.flush()
+
+    cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(crltempfile.name, certtempfile.name))
+
+    output = subprocess.check_output(cmd.split(),
+        stderr=subprocess.STDOUT)
+
+    crltempfile.close()
+    certtempfile.close()
+
+    if 'verify OK' in output:
+        return True
+    else:
+        return False

@@ -398,6 +398,7 @@ def certificate_managed(name,
 
     if isinstance(new, dict):
         new_comp = new.copy()
+        new.pop('Issuer Public Key')
         if 'serial_number' not in kwargs:
             new_comp.pop('Serial Number')
         new_comp.pop('Not Before')
@@ -405,10 +406,13 @@ def certificate_managed(name,
         new_comp.pop('MD5 Finger Print')
         new_comp.pop('SHA1 Finger Print')
         new_comp.pop('SHA-256 Finger Print')
+        new_issuer_public_key = new_comp.pop('Issuer Public Key')
     else:
         new_comp = new
 
-    if current_comp == new_comp and current_days_remaining > days_remaining:
+    if (current_comp == new_comp and
+            current_days_remaining > days_remaining and
+            __salt__['x509.verify_signature'](name, new_issuer_public_key)):
         ret['result'] = True
         ret['comment'] = 'The certificate is already in the correct state'
         return ret
@@ -525,7 +529,10 @@ def crl_managed(name,
     new_comp.pop('Last Update')
     new_comp.pop('Next Update')
 
-    if current_comp == new_comp and current_days_remaining > days_remaining:
+    if (current_comp == new_comp and
+            current_days_remaining > days_remaining and
+            __salt__['x509.verify_crl'](name, signing_cert)):
+
         ret['result'] = True
         ret['comment'] = 'The crl is already in the correct state'
         return ret
