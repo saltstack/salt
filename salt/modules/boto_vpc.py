@@ -37,7 +37,6 @@ Connection module for Amazon VPC
 
 # Import Python libs
 from __future__ import absolute_import
-import hashlib
 import logging
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
@@ -136,7 +135,7 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
         return False
 
     if not vpc_id and not name and not tags and not cidr:
-        raise SaltInvocationError('At least on of the following must be specified: vpc id, name, cidr or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: vpc id, name, cidr or tags.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -400,7 +399,7 @@ def subnet_exists(subnet_id=None, name=None, cidr=None, tags=None, zones=None,
         return False
 
     if not any((subnet_id, name, cidr, tags, zones)):
-        raise SaltInvocationError('At least on of the following must be '
+        raise SaltInvocationError('At least one of the following must be '
                                   'specified: subnet id, cidr, name, tags, '
                                   'or zones.')
 
@@ -718,7 +717,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
         return False
 
     if not dhcp_options_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: dhcp options id, name or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: dhcp options id, name or tags.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -826,7 +825,7 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
         return False
 
     if not network_acl_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: network ACL id, name or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: network ACL id, name or tags.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -1114,7 +1113,7 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
         return False
 
     if not route_table_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: route table id, name or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: route table id, name or tags.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -1386,51 +1385,6 @@ def replace_route(route_table_id, destination_cidr_block, gateway_id=None, insta
         return False
 
 
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to vpc.
-    '''
-    if profile:
-        if isinstance(profile, six.string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('vpc.region'):
-        region = __salt__['config.option']('vpc.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('vpc.key'):
-        key = __salt__['config.option']('vpc.key')
-    if not keyid and __salt__['config.option']('vpc.keyid'):
-        keyid = __salt__['config.option']('vpc.keyid')
-
-    # avoid repeatedly creating new connections
-    if keyid:
-        cxkey = 'boto_vpc:' + hashlib.md5(region + keyid + key).hexdigest()
-    else:
-        cxkey = 'boto_vpc:' + region
-
-    if cxkey in __context__:
-        return __context__[cxkey]
-
-    try:
-        conn = boto.vpc.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto VPC connection.')
-        return None
-    __context__[cxkey] = conn
-
-    return conn
-
-
 def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
     '''
     Given a VPC ID describe it's properties.
@@ -1617,3 +1571,11 @@ def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: {0} on vpc {1}'.format(dns_hostnames, vpcid))
+
+
+def _get_conn(region, key, keyid, profile):
+    '''
+    Get a boto connection to vpc.
+    '''
+    return __salt__['boto_common.get_connection']('vpc', region=region, key=key,
+                                                  keyid=keyid, profile=profile)

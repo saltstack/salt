@@ -50,8 +50,6 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
-
 
 def __virtual__():
     '''
@@ -152,31 +150,7 @@ def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to CFN.
     '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('cfn.region'):
-        region = __salt__['config.option']('cfn.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('cfn.key'):
-        key = __salt__['config.option']('cfn.key')
-    if not keyid and __salt__['config.option']('cfn.keyid'):
-        keyid = __salt__['config.option']('cfn.keyid')
-
-    try:
-        conn = boto.cloudformation.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto cfn connection.')
-        return None
-    return conn
+    return __salt__['boto_common.get_connection']('cfn',
+                                                  module='cloudformation',
+                                                  region=region, key=key,
+                                                  keyid=keyid, profile=profile)

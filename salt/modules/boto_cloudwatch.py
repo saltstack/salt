@@ -313,32 +313,7 @@ def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to cloudwatch.
     '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('cloudwatch_alarm.region'):
-        region = __salt__['config.option']('cloudwatch_alarm.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('cloudwatch_alarm.key'):
-        key = __salt__['config.option']('cloudwatch_alarm.key')
-    if not keyid and __salt__['config.option']('cloudwatch_alarm.keyid'):
-        keyid = __salt__['config.option']('cloudwatch_alarm.keyid')
-
-    try:
-        conn = boto.ec2.cloudwatch.connect_to_region(
-            region, aws_access_key_id=keyid, aws_secret_access_key=key
-        )
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto cloudwatch_alarm connection.')
-        return None
-    return conn
+    return __salt__['boto_common.get_connection']('cloudwatch_alarm',
+                                                  module='ec2.cloudwatch',
+                                                  region=region, key=key,
+                                                  keyid=keyid, profile=profile)
