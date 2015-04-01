@@ -129,6 +129,8 @@ class DataTestCase(TestCase):
 
     @patch('salt.modules.data.load',
            MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'}))
+    @patch('salt.modules.data.dump',
+           MagicMock(return_value=True))
     def test_cas(self):
         '''
         Test if it check and set a value in the minion datastore
