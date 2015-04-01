@@ -52,7 +52,9 @@ disable=W0142,
   C0330,
   I0011,
   I0012,
-  E8402
+  W1202,
+  E8402,
+  E8731
 #  E8121,
 #  E8122,
 #  E8123,
@@ -65,9 +67,11 @@ disable=W0142,
 # Disabled Checks
 #
 # W0142 (star-args)
+# W1202 (logging-format-interpolation) Use % formatting in logging functions but pass the % parameters as arguments
 # E812* All PEP8 E12*
 # E8402 module level import not at top of file
 # E8501 PEP8 line too long
+# E8731 do not assign a lambda expression, use a def
 # C0330 (bad-continuation)
 # I0011 (locally-disabling)
 # I0012 (locally-enabling)
