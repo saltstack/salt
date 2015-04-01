@@ -214,27 +214,30 @@ open source and can be found here: :blob:`tests/jenkins.py`
 Writing Tests
 =============
 
-Salt uses a test platform to verify functionality of components in a simple
-way. Two testing systems exist to enable testing salt functions in somewhat
-real environments. The two subsystems available are integration tests and
-unit tests.
+The salt testing infrastructure is divided into two classes of tests,
+integration tests and unit tests.  These terms may be defined differently in
+other contexts, but for salt they are defined this way:
 
-Salt uses the python standard library unittest2 system for testing.
+- Unit Test: Tests which validate isolated code blocks and do not require
+  external interfaces such as ``salt-call`` or any of the salt daemons.
+
+- Integration Test: Tests which validate externally accessible features.
+
+Salt testing uses unittest2 from the python standard library and MagicMock.
 
 Naming Conventions
 ==================
 
-Any function in either integration test files or unit test files that is
-doing the actual testing, such as functions containing assertions, must
-start with ``test_``:
+Any function in either integration test files or unit test files that is doing
+the actual testing, such as functions containing assertions, must start with
+``test_``:
 
 .. code-block:: python
 
     def test_user_present(self):
 
-When functions in test files are not prepended with ``test_``,
-the function acts as a normal, helper function and is not run as a test
-by the test suite.
+When functions in test files are not prepended with ``test_``, the function
+acts as a normal, helper function and is not run as a test by the test suite.
 
 Integration Tests
 =================
@@ -242,8 +245,8 @@ Integration Tests
 The integration tests start up a number of salt daemons to test functionality
 in a live environment. These daemons include 2 salt masters, 1 syndic, and 2
 minions. This allows the syndic interface to be tested and master/minion
-communication to be verified. All of the integration tests are executed as
-live salt commands sent through the started daemons.
+communication to be verified. All of the integration tests are executed as live
+salt commands sent through the started daemons.
 
 Integration tests are particularly good at testing modules, states, and shell
 commands.
@@ -253,8 +256,18 @@ commands.
 Unit Tests
 ==========
 
-Direct unit tests are also available. These tests are good for testing internal
-functions.
+Unit tests are good for ensuring consistent results for functions that do not
+require more than a few mocks.
+
+Mocking all external dependencies for unit tests is encouraged but not required
+as sometimes the isolation provided by completely mocking the external
+dependencies is not worth the effort of mocking those dependencies.
+
+Overly detailed mocking can also result in decreased test readability and
+brittleness as the tests are more likely to fail when the code or its
+dependencies legitimately change.  In these cases, it is better to add
+dependencies to the test runner dependency state,
+https://github.com/saltstack/salt-jenkins/blob/master/git/salt.sls.
 
 * :doc:`Writing unit tests <unit>`
 

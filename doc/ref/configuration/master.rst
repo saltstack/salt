@@ -1858,7 +1858,7 @@ Default: ``False``
 Default: ``smart``
 
 The pillar_source_merging_strategy option allows you to configure merging
-strategy between different sources. It accepts 3 values:
+strategy between different sources. It accepts 4 values:
 
 * recurse:
 
@@ -1924,37 +1924,37 @@ strategy between different sources. It accepts 3 values:
 
 * overwrite:
 
-    Will use the behaviour of the 2014.1 branch and earlier.
+  Will use the behaviour of the 2014.1 branch and earlier.
 
-    Overwrites elements according the order in which they are processed.
+  Overwrites elements according the order in which they are processed.
 
-    First pillar processed:
+  First pillar processed:
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-        A:
-          first_key: blah
-          second_key: blah
+      A:
+        first_key: blah
+        second_key: blah
 
-    Second pillar processed:
+  Second pillar processed:
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-        A:
-          third_key: blah
-          fourth_key: blah
+      A:
+        third_key: blah
+        fourth_key: blah
 
-    will be merged as:
+  will be merged as:
 
-    .. code-block:: yaml
+  .. code-block:: yaml
 
-        A:
-          third_key: blah
-          fourth_key: blah
+      A:
+        third_key: blah
+        fourth_key: blah
 
 * smart (default):
 
-    Guesses the best strategy based on the "renderer" setting.
+  Guesses the best strategy based on the "renderer" setting.
 
 
 Syndic Server Settings
