@@ -82,7 +82,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-        ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), tries, timeout)
+        ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
@@ -99,8 +99,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         @tornado.gen.coroutine
         def _do_transfer():
             data = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)),
-                                      tries,
-                                      timeout,
+                                      timeout=timeout,
                                       )
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
