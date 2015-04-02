@@ -686,7 +686,7 @@ def find(path, *args, **kwargs):
     except ValueError as ex:
         return 'error: {0}'.format(ex)
 
-    ret = [p for p in finder.find(os.path.expanduser(path))]
+    ret = [item for i in [finder.find(p) for p in glob.glob(os.path.expanduser(path))] for item in i]
     ret.sort()
     return ret
 
