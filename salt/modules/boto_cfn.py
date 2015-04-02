@@ -58,6 +58,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a stack exists.
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_cfn.exists mystack region=us-east-1
@@ -77,6 +79,8 @@ def create(name, template_body=None, template_url=None, parameters=None, notific
            stack_policy_url=None, region=None, key=None, keyid=None, profile=None):
     '''
     Create a CFN stack.
+
+    .. versionadded:: Beryllium
 
     CLI example to create a stack::
 
@@ -140,6 +144,8 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a CFN stack.
 
+    .. versionadded:: Beryllium
+
     CLI example to delete a stack::
 
         salt myminion boto_cfn.delete mystack region=us-east-1
@@ -159,6 +165,8 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 def get_template(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if attributes are set on a CFN stack.
+
+    .. versionadded:: Beryllium
 
     CLI example::
 
@@ -181,6 +189,8 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
 def validate_template(template_body=None, template_url=None, region=None, key=None, keyid=None, profile=None):
     '''
     Validate cloudformation template
+
+    .. versionadded:: Beryllium
 
     CLI example::
 
@@ -208,7 +218,6 @@ def _get_conn(region, key, keyid, profile):
         key = _profile.get('key', None)
         keyid = _profile.get('keyid', None)
         region = _profile.get('region', None)
-
     if not region and __salt__['config.option']('cfn.region'):
         region = __salt__['config.option']('cfn.region')
 
