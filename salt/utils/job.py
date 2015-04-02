@@ -81,7 +81,7 @@ def store_job(opts, load, event=None, mminion=None):
         if 'user' in ret_:
             load.update({'user': ret_['user']})
     try:
-        if 'jid' in load and not mminion.returners[getfstr](load.get('jid', '')):
+        if 'jid' in load and 'get_load' in mminion.returners and not mminion.returners[getfstr](load.get('jid', '')):
             mminion.returners[savefstr](load['jid'], load)
         mminion.returners[fstr](load)
     except KeyError:
