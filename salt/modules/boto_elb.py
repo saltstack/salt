@@ -37,6 +37,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
 import salt.ext.six as six
 
@@ -45,10 +46,18 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import boto
+    # connection settings were added in 2.33.0
+    required_boto_version = '2.33.0'
+    if (_LooseVersion(boto.__version__) <
+            _LooseVersion(required_boto_version)):
+        msg = 'boto_elb requires boto {0}.'.format(required_boto_version)
+        logging.debug(msg)
+        raise ImportError()
     import boto.ec2
     from boto.ec2.elb import HealthCheck
     from boto.ec2.elb.attributes import AccessLogAttribute
     from boto.ec2.elb.attributes import ConnectionDrainingAttribute
+    from boto.ec2.elb.attributes import ConnectionSettingAttribute
     from boto.ec2.elb.attributes import CrossZoneLoadBalancingAttribute
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -420,9 +429,11 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         ret['access_log'] = odict.OrderedDict()
         ret['cross_zone_load_balancing'] = odict.OrderedDict()
         ret['connection_draining'] = odict.OrderedDict()
+        ret['connecting_settings'] = odict.OrderedDict()
         al = lbattrs.access_log
         czlb = lbattrs.cross_zone_load_balancing
         cd = lbattrs.connection_draining
+        cs = lbattrs.connecting_settings
         ret['access_log']['enabled'] = al.enabled
         ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
         ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
@@ -430,6 +441,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
         ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
         ret['connection_draining']['enabled'] = cd.enabled
         ret['connection_draining']['timeout'] = cd.timeout
+        ret['connecting_settings']['idle_timeout'] = cs.idle_timeout
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -452,7 +464,8 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
     al = attributes.get('access_log', {})
     czlb = attributes.get('cross_zone_load_balancing', {})
     cd = attributes.get('connection_draining', {})
-    if not al and not czlb and not cd:
+    cs = attributes.get('connecting_settings', {})
+    if not al and not czlb and not cd and not cs:
         log.error('No supported attributes for ELB.')
         return False
     if al:
@@ -493,6 +506,16 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
             log.info(msg.format(name))
         else:
             log.error('Failed to add connection_draining attribute.')
+            return False
+    if cs:
+        _cs = ConnectionSettingAttribute()
+        _cs.idle_timeout = cs.get('idle_timeout', 60)
+        added_attr = conn.modify_lb_attribute(name, 'connectingSettings', _cs)
+        if added_attr:
+            msg = 'Added connecting_settings attribute to {0} elb.'
+            log.info(msg.format(name))
+        else:
+            log.error('Failed to add connecting_settings attribute.')
             return False
     return True
 
