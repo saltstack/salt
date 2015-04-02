@@ -11,6 +11,9 @@ import os
 # Import Salt libs
 import salt.utils
 
+# Import Py3 compat
+from salt.ext.six.moves import zip
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'load'
