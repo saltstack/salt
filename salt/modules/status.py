@@ -13,8 +13,15 @@ import fnmatch
 import collections
 
 # Import 3rd-party libs
-import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+try:
+    import salt.ext.six as six
+except ImportError:
+    import six
+
+try:
+    from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+except ImportError:
+    from six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.config
@@ -22,7 +29,10 @@ import salt.utils
 import salt.utils.event
 from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
-from salt.ext.six.moves import zip
+try:
+    from salt.ext.six.moves import zip
+except ImportError:
+    from six.moves import zip
 
 
 __opts__ = {}
@@ -215,6 +225,7 @@ def cpustats():
     get_version = {
         'Linux': linux_cpustats,
         'FreeBSD': freebsd_cpustats,
+        'Isilon OneFS': freebsd_cpustats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -274,6 +285,7 @@ def meminfo():
     get_version = {
         'Linux': linux_meminfo,
         'FreeBSD': freebsd_meminfo,
+        'Isilon OneFS': freebsd_meminfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -328,6 +340,7 @@ def cpuinfo():
     get_version = {
         'Linux': linux_cpuinfo,
         'FreeBSD': freebsd_cpuinfo,
+        'Isilon OneFS': freebsd_cpuinfo,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -391,6 +404,7 @@ def diskstats():
     get_version = {
         'Linux': linux_diskstats,
         'FreeBSD': freebsd_diskstats,
+        'Isilon OneFS': freebsd_diskstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -441,7 +455,7 @@ def diskusage(*args):
             if not os.path.isfile(procf):
                 return {}
             ifile = salt.utils.fopen(procf, 'r').readlines()
-        elif __grains__['kernel'] == 'FreeBSD':
+        elif __grains__['kernel'] in ['FreeBSD', 'Isilon OneFS']:
             ifile = __salt__['cmd.run']('mount -p').splitlines()
 
         for line in ifile:
@@ -503,6 +517,7 @@ def vmstats():
     get_version = {
         'Linux': linux_vmstats,
         'FreeBSD': freebsd_vmstats,
+        'Isilon OneFS': freebsd_vmstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -537,7 +552,7 @@ def netstats():
     '''
     def linux_netstats():
         '''
-        freebsd specific netstats implementation
+        linux specific netstats implementation
         '''
         procf = '/proc/net/netstat'
         if not os.path.isfile(procf):
@@ -584,6 +599,7 @@ def netstats():
     get_version = {
         'Linux': linux_netstats,
         'FreeBSD': freebsd_netstats,
+        'Isilon OneFS': freebsd_netstats,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -638,14 +654,28 @@ def netdev():
                              'tx_packets': _number(comps[10])}
         return ret
 
-    def freebsd_netdev():
+    def onefs_netdev():
+        '''
+        onefs specific implementation of netdev
+        '''
+        netstat = __salt__['cmd.run']('netstat -i -n -b -d').splitlines()
+        return _onefs_freebsd_netdev(netstat)
+
+    def bsd_netdev():
         '''
         freebsd specific implementation of netdev
         '''
-        _dict_tree = lambda: collections.defaultdict(_dict_tree)
-        ret = _dict_tree()
         netstat = __salt__['cmd.run']('netstat -i -n -4 -b -d').splitlines()
         netstat += __salt__['cmd.run']('netstat -i -n -6 -b -d').splitlines()[1:]
+        return _onefs_freebsd_netdev(netstat)
+
+    def _onefs_freebsd_netdev(netstat):
+        '''
+        onefs/freebsd common netdev functionality
+        '''
+        _dict_tree = lambda: collections.defaultdict(_dict_tree)
+        ret = _dict_tree()
+
         header = netstat[0].split()
         for line in netstat[1:]:
             comps = line.split()
@@ -656,6 +686,7 @@ def netdev():
     get_version = {
         'Linux': linux_netdev,
         'FreeBSD': freebsd_netdev,
+        'Isilon OneFS': freebsd_netdev,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'
@@ -761,10 +792,17 @@ def version():
             return {}
         return salt.utils.fopen(procf, 'r').read().strip()
 
+    def freebsd_version():
+        '''
+        freebsd specific implementation of verison
+        '''
+        return __salt__['cmd.run']('sysctl -n kern.version').strip()
+
     # dict that returns a function that does the right thing per platform
     get_version = {
         'Linux': linux_version,
-        'FreeBSD': lambda: __salt__['cmd.run']('sysctl -n kern.version'),
+        'FreeBSD': freebsd_version,
+        'Isilon OneFS': freebsd_version,
     }
 
     errmsg = 'This method is unsupported on the current operating system!'

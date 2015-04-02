@@ -25,11 +25,17 @@ from salt.utils import vt
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
-from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
-import salt.ext.six as six
-from salt.ext.six.moves import range
+
+try:
+    from salt.ext.six import string_types
+    import salt.ext.six as six
+    from salt.ext.six.moves import range
+except ImportError:
+    from six import string_types
+    import six
+    from six.moves import range
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -260,7 +266,7 @@ def _run(cmd,
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
                            sys.executable)
-            elif __grains__['os'] in ['FreeBSD']:
+            elif __grains__['os'] in ['FreeBSD','Isilon OneFS']:
                 env_cmd = ('su', '-', runas, '-c',
                            "{0} -c {1}".format(shell, sys.executable))
             elif __grains__['os_family'] in ['Solaris']:

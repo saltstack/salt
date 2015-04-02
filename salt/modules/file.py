@@ -31,10 +31,17 @@ import glob
 import hashlib
 from functools import reduce  # pylint: disable=redefined-builtin
 
+try:
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
-from salt.ext.six.moves import range, zip
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+    import salt.ext.six as six
+    from salt.ext.six.moves import range, zip
+    from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
+except ImportError:
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+    import six
+    from six.moves import range, zip
+    from six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 try:
@@ -2033,7 +2040,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
     '''
     if dry_run:
-        if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
+        if __grains__['kernel'] in ('FreeBSD', 'OpenBSD', 'Isilon OneFS'):
             dry_run_opt = ' -C'
         else:
             dry_run_opt = ' --dry-run'
