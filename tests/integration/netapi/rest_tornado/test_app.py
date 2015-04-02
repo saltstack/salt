@@ -414,13 +414,17 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                                )
         response = self.wait(timeout=10)
         response_obj = json.loads(response.body)['return'][0]
-        for jid, ret in response_obj.iteritems():
-            self.assertIn('Function', ret)
-            self.assertIn('Target', ret)
-            self.assertIn('Target-type', ret)
-            self.assertIn('User', ret)
-            self.assertIn('StartTime', ret)
-            self.assertIn('Arguments', ret)
+        try:
+            for jid, ret in response_obj.iteritems():
+                self.assertIn('Function', ret)
+                self.assertIn('Target', ret)
+                self.assertIn('Target-type', ret)
+                self.assertIn('User', ret)
+                self.assertIn('StartTime', ret)
+                self.assertIn('Arguments', ret)
+        except AttributeError as attribute_error:
+            print json.loads(response.body)
+            raise
 
         # test with a specific JID passed in
         jid = response_obj.iterkeys().next()
