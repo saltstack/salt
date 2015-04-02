@@ -1465,9 +1465,9 @@ def delete_route_table(route_table_id=None, route_table_name=None,
 
     '''
     try:
-        if _delete_resource('route_table', route_table_name,
-                            route_table_id, region, key,
-                            keyid, profile):
+        if _delete_resource(resource='route_table', name=route_table_name,
+                            resource_id=route_table_id, region=region, key=key,
+                            keyid=keyid, profile=profile):
             return True
     except boto.exception.BotoServerError as exc:
         log.error(exc)
@@ -1685,8 +1685,8 @@ def create_route(route_table_id, destination_cidr_block, gateway_id=None, instan
         return False
 
     try:
-        if conn.create_route(route_table_id, destination_cidr_block, gateway_id=gateway_id, instance_id=instance_id,
-                             interface_id=interface_id):
+        if conn.create_route(route_table_id=route_table_id, destination_cidr_block=destination_cidr_block,
+                             gateway_id=gateway_id, instance_id=instance_id, interface_id=interface_id):
             log.info('Route with cider block {0} on route table {1} was created'.format(route_table_id,
                                                                                         destination_cidr_block))
 
