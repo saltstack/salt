@@ -2369,6 +2369,8 @@ def line(name, content, match=None, mode=None, location=None,
     '''
     Line-based editing of a file.
 
+    .. versionadded:: Beryllium
+
     Params are identical to the remote execution function
     :mod:`file.line <salt.modules.file.line>`.
 
