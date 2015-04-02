@@ -31,7 +31,7 @@ Connection module for Amazon ELB
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-:depends: boto
+:depends: boto >= 2.33.0
 '''
 from __future__ import absolute_import
 
