@@ -773,7 +773,7 @@ def create(vm_):
         Enter the name that was specified when the cloud provider config was created.
 
     clonefrom
-        Enter the name of the VM/template to clone from. 
+        Enter the name of the VM/template to clone from.
 
     num_cpus
         Enter the number of vCPUS you want the VM/template to have. If not specified, the current
@@ -795,7 +795,7 @@ def create(vm_):
 
     resourcepool
         Enter the name of the resourcepool to which the new virtual machine should be
-        attached. This determines what compute resources will be available to the clone. 
+        attached. This determines what compute resources will be available to the clone.
 
         .. note::
 
@@ -807,7 +807,7 @@ def create(vm_):
 
     cluster
         Enter the name of the cluster whose resource pool the new virtual machine should be
-        attached to. 
+        attached to.
 
         .. note::
 
@@ -837,7 +837,7 @@ def create(vm_):
             - If both folder and datacenter are specified, the folder value will be used.
 
     host
-        Enter the name of the target host where the virtual machine should be registered. 
+        Enter the name of the target host where the virtual machine should be registered.
 
         If not specified:
 
