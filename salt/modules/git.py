@@ -203,7 +203,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None,
 
     if not opts:
         opts = ''
-    if salt.utils.is_windows():
+    if utils.is_windows():
         cmd = 'git clone {0} {1} {2}'.format(repository, cwd, opts)
     else:
         cmd = 'git clone {0} {1!r} {2}'.format(repository, cwd, opts)
