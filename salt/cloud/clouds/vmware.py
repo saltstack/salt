@@ -982,7 +982,7 @@ def create(vm_):
         try:
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
-            while task.info.state != 'success'):
+            while task.info.state != 'success':
                 log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
                 time.sleep(5)
                 time_counter += 5
