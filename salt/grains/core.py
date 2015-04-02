@@ -35,6 +35,7 @@ import salt.utils.network
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+import salt.modules.smbios
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -42,7 +43,9 @@ import salt.ext.six as six
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet,
     'cmd.retcode': salt.modules.cmdmod._retcode_quiet,
-    'cmd.run_all': salt.modules.cmdmod._run_all_quiet
+    'cmd.run_all': salt.modules.cmdmod._run_all_quiet,
+    'smbios.records': salt.modules.smbios.records,
+    'smbios.get': salt.modules.smbios.get,
 }
 log = logging.getLogger(__name__)
 
@@ -1631,71 +1634,6 @@ def saltversioninfo():
     return {'saltversioninfo': __version_info__}
 
 
-# Relatively complex mini-algorithm to iterate over the various
-# sections of dmidecode output and return matches for  specific
-# lines containing data we want, but only in the right section.
-def _dmidecode_data(regex_dict):
-    '''
-    Parse the output of dmidecode in a generic fashion that can
-    be used for the multiple system types which have dmidecode.
-    '''
-    ret = {}
-
-    if 'proxyminion' in __opts__:
-        return {}
-
-    # No use running if dmidecode/smbios isn't in the path
-    no_dmidecode = False
-    try:
-        if salt.utils.which('dmidecode'):
-            out = __salt__['cmd.run']('dmidecode')
-        elif salt.utils.which('smbios'):
-            out = __salt__['cmd.run']('smbios')
-        else:
-            no_dmidecode = True
-    except (salt.exceptions.CommandExecutionError,) as exc:
-        no_dmidecode = True
-    if no_dmidecode:
-        log.debug(
-            'The `dmidecode` binary is not available on the system. GPU '
-            'grains will not be available.'
-        )
-        return ret
-
-    for section in regex_dict:
-        section_found = False
-
-        # Look at every line for the right section
-        for line in out.splitlines():
-            if not line:
-                continue
-            # We've found it, woohoo!
-            if re.match(section, line):
-                section_found = True
-                continue
-            if not section_found:
-                continue
-
-            # Now that a section has been found, find the data
-            for item in regex_dict[section]:
-                # Examples:
-                #    Product Name: 64639SU
-                #    Version: 7LETC1WW (2.21 )
-                regex = re.compile(r'\s+{0}\s+(.*)$'.format(item))
-                grain = regex_dict[section][item]
-                # Skip to the next iteration if this grain
-                # has been found in the dmidecode output.
-                if grain in ret:
-                    continue
-
-                match = regex.match(line)
-
-                # Finally, add the matched data to the grains returned
-                if match:
-                    ret[grain] = match.group(1).strip()
-    return ret
-
-
 def _hw_data(osdata):
     '''
     Get system specific hardware data from dmidecode
@@ -1706,6 +1644,7 @@ def _hw_data(osdata):
         manufacturer
         serialnumber
         biosreleasedate
+        uuid
 
     .. versionadded:: 0.9.5
     '''
@@ -1714,36 +1653,26 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
-    # TODO: *BSD dmidecode output
-    if osdata['kernel'] == 'Linux':
-        linux_dmi_regex = {
-            'BIOS [Ii]nformation': {
-                '[Vv]ersion:': 'biosversion',
-                '[Rr]elease [Dd]ate:': 'biosreleasedate',
-            },
-            '[Ss]ystem [Ii]nformation': {
-                'Manufacturer:': 'manufacturer',
-                'Product(?: Name)?:': 'productname',
-                'Serial Number:': 'serialnumber',
-            },
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None:
+        grains = {
+            'biosversion': __salt__['smbios.get']('bios-version'),
+            'productname': __salt__['smbios.get']('system-product-name'),
+            'manufacturer': __salt__['smbios.get']('system-manufacturer'),
+            'biosreleasedate': __salt__['smbios.get']('bios-release-date'),
+            'uuid': __salt__['smbios.get']('system-uuid')
         }
-        grains.update(_dmidecode_data(linux_dmi_regex))
-    elif osdata['kernel'] == 'SunOS':
-        sunos_dmi_regex = {
-            r'(.+)SMB_TYPE_BIOS\s\(BIOS [Ii]nformation\)': {
-                '[Vv]ersion [Ss]tring:': 'biosversion',
-                '[Rr]elease [Dd]ate:': 'biosreleasedate',
-            },
-            r'(.+)SMB_TYPE_SYSTEM\s\([Ss]ystem [Ii]nformation\)': {
-                'Manufacturer:': 'manufacturer',
-                'Product(?: Name)?:': 'productname',
-                'Serial Number:': 'serialnumber',
-            },
-        }
-        grains.update(_dmidecode_data(sunos_dmi_regex))
-    # On FreeBSD /bin/kenv (already in base system)
-    # can be used instead of dmidecode
+        grains = {key: val for key, val in grains.items() if val is not None}
+        uuid = __salt__['smbios.get']('system-uuid')
+        if uuid is not None:
+            grains['uuid'] = uuid.lower()
+        for serial in ('system-serial-number', 'chassis-serial-number', 'baseboard-serial-number'):
+            serial = __salt__['smbios.get'](serial)
+            if serial is not None:
+                grains['serial'] = serial
+                break
     elif osdata['kernel'] == 'FreeBSD':
+        # On FreeBSD /bin/kenv (already in base system)
+        # can be used instead of dmidecode
         kenv = salt.utils.which('kenv')
         if kenv:
             # In theory, it will be easier to add new fields to this later
@@ -1753,6 +1682,7 @@ def _hw_data(osdata):
                 'serialnumber': 'smbios.system.serial',
                 'productname': 'smbios.system.product',
                 'biosreleasedate': 'smbios.bios.reldate',
+                'uuid': 'smbios.system.uuid',
             }
             for key, val in six.iteritems(fbsd_hwdata):
                 grains[key] = __salt__['cmd.run']('{0} {1}'.format(kenv, val))
@@ -1761,7 +1691,8 @@ def _hw_data(osdata):
         hwdata = {'biosversion': 'hw.version',
                   'manufacturer': 'hw.vendor',
                   'productname': 'hw.product',
-                  'serialnumber': 'hw.serialno'}
+                  'serialnumber': 'hw.serialno',
+                  'uuid': 'hw.uuid'}
         for key, oid in six.iteritems(hwdata):
             value = __salt__['cmd.run']('{0} -n {1}'.format(sysctl, oid))
             if not value.endswith(' value is not available'):
@@ -1774,6 +1705,7 @@ def _hw_data(osdata):
             'serialnumber': 'machdep.dmi.system-serial',
             'productname': 'machdep.dmi.system-product',
             'biosreleasedate': 'machdep.dmi.bios-date',
+            'uuid': 'machdep.dmi.system-uuid',
         }
         for key, oid in six.iteritems(nbsd_hwdata):
             result = __salt__['cmd.run_all']('{0} -n {1}'.format(sysctl, oid))
