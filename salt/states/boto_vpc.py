@@ -529,10 +529,10 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
     route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region,
                                                             key=key, keyid=keyid, profile=profile)
     if not route_table:
-            msg = 'Could not retrieve configuration for route table {0}.'.format(route_table_name)
-            ret['comment'] = msg
-            ret['result'] = False
-            return ret
+        msg = 'Could not retrieve configuration for route table {0}.'.format(route_table_name)
+        ret['comment'] = msg
+        ret['result'] = False
+        return ret
     if not routes:
         routes = []
     else:
