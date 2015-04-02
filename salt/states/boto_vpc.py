@@ -425,11 +425,11 @@ def internet_gateway_absent(name, detach=False, region=None,
     return ret
 
 
-def route_table_present(name, vpc_name=None, vpc_id=None,
-                        tags=None, region=None, key=None,
+def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, tags=None, region=None, key=None,
                         keyid=None, profile=None):
     '''
-    Ensure the named route table exists.
+    Ensure route table with routes exists and is associated to a VPC.
+    .. versionadded:: Beryllium
 
     name
         Name of the route table.
@@ -440,6 +440,13 @@ def route_table_present(name, vpc_name=None, vpc_id=None,
     vpc_id
         Id of the VPC with which the route table should be associated.
         Either vpc_name or vpc_id must be provided.
+
+    routes
+        A list of route lists; example:
+            [
+                ['172.31.0.0/16', 'local', 'None', 'None'],
+                ['0.0.0.0/0', 'igw-0add326b', 'None', 'None']
+            ]
 
     tags
         A list of tags.
@@ -457,26 +464,48 @@ def route_table_present(name, vpc_name=None, vpc_id=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
     '''
-
     ret = {'name': name,
            'result': True,
            'comment': '',
            'changes': {}
            }
 
-    exists = __salt__['boto_vpc.resource_exists']('route_table', name=name,
-                                                  region=region, key=key,
-                                                  keyid=keyid, profile=profile)
+    _ret = _route_table_present(name=name, vpc_id=vpc_id, tags=tags, region=region, key=key,
+                                keyid=keyid, profile=profile)
+    ret['changes'] = _ret['changes']
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _routes_present(route_table_name=name, routes=routes, tags=tags, region=region, key=key,
+                           keyid=keyid, profile=profile)
+    ret['changes'] = _ret['changes']
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    return ret
+
+
+def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=None, key=None, keyid=None, profile=None):
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    exists = __salt__['boto_vpc.resource_exists'](resource='route_table', name=name, region=region, key=key, keyid=keyid,
+                                                  profile=profile)
     if not exists:
         if __opts__['test']:
-            ret['comment'] = 'Route table {0} is set to be created.'.format(name)
+            msg = 'Route table {0} is set to be created.'.format(name)
+            ret['comment'] = msg
             ret['result'] = None
             return ret
-        created = __salt__['boto_vpc.create_route_table'](route_table_name=name,
-                                                          vpc_name=vpc_name, vpc_id=vpc_id,
-                                                          tags=tags, region=region,
-                                                          key=key, keyid=keyid,
-                                                          profile=profile)
+        created = __salt__['boto_vpc.create_route_table'](route_table_name=name, vpc_name=vpc_name, vpc_id=vpc_id, tags=tags,
+                                                          region=region, key=key, keyid=keyid, profile=profile)
         if not created:
             ret['result'] = False
             ret['comment'] = 'Failed to create route table {0}.'.format(name)
@@ -487,6 +516,68 @@ def route_table_present(name, vpc_name=None, vpc_id=None,
         ret['comment'] = 'Route table {0} created.'.format(name)
         return ret
     ret['comment'] = 'Route table {0} present.'.format(name)
+    return ret
+
+
+def _routes_present(route_table_name, routes, tags=None, region=None, key=None, keyid=None, profile=None):
+    ret = {'name': route_table_name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region,
+                                                            key=key, keyid=keyid, profile=profile)
+    if not route_table:
+            msg = 'Could not retrieve configuration for route table {0}.'.format(route_table_name)
+            ret['comment'] = msg
+            ret['result'] = False
+            return ret
+    if not routes:
+        routes = []
+    else:
+        route_keys = ['gateway_id', 'instance_id', 'destination_cidr_block', 'interface_id']
+        for route in routes:
+            for r_key in route_keys:
+                route.setdefault(r_key, None)
+    to_delete = []
+    to_create = []
+    for route in routes:
+        if dict(route) not in route_table['routes']:
+            to_create.append(dict(route))
+    for route in route_table['routes']:
+        if route not in routes:
+            if route['gateway_id'] != 'local':
+                to_delete.append(route)
+    if to_create or to_delete:
+        if __opts__['test']:
+            msg = 'Route table {0} set to have routes modified.'.format(route_table_name)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        if to_delete:
+            for r in to_delete:
+                deleted = __salt__['boto_vpc.delete_route'](route_table['id'], r['destination_cidr_block'], region, key, keyid,
+                                                            profile)
+                if not deleted:
+                    msg = 'Failed to delete route {0} from route table {1}.'.format(r['destination_cidr_block'],
+                                                                                    route_table_name)
+                    ret['comment'] = msg
+                    ret['result'] = False
+                ret['comment'] = 'Deleted route {0} from route table {1}.'.format(r['destination_cidr_block'], route_table_name)
+        if to_create:
+            for r in to_create:
+                created = __salt__['boto_vpc.create_route'](route_table_id=route_table['id'], region=region, key=key,
+                                                            keyid=keyid, profile=profile, **r)
+                if not created:
+                    msg = 'Failed to create route {0} in route table {1}.'.format(r['destination_cidr_block'], route_table_name)
+                    ret['comment'] = msg
+                    ret['result'] = False
+                ret['comment'] = 'Created route {0} in route table {1}.'.format(r['destination_cidr_block'], route_table_name)
+        ret['changes']['old'] = {'routes': route_table['routes']}
+        route = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region, key=key,
+                                                          keyid=keyid, profile=profile)
+        ret['changes']['new'] = {'routes': route['routes']}
     return ret
 
 
