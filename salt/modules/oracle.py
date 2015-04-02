@@ -203,9 +203,11 @@ class _OracleHelper(object):
         '''
 
 
-    def prepare_scenario(self, src, login=None):
+    def get_env(self):
         '''
-        Generate a template for the Oracle SQL*Plus scenario.
+        Construct environment.
+
+        :return:
         '''
         e = os.environ.get
         scenario = []
@@ -217,7 +219,28 @@ class _OracleHelper(object):
         else:
             raise Exception("Underlying error: environment cannot be constructed.")
 
-        scenario.append("cat - << EOF | {0}/bin/sqlplus -S /nolog".format(e('ORACLE_HOME')))
+        return scenario
+
+
+    def get_tnsping(self, address):
+        '''
+        Create TNS ping env.
+
+        :param address:
+        :return:
+        '''
+        scenario = self.get_env()
+        scenario.append("{0}/bin/tnsping {1}".format(self.ora_home, address))
+
+        return '\n'.join(scenario)
+
+
+    def prepare_scenario(self, src, login=None):
+        '''
+        Generate a template for the Oracle SQL*Plus scenario.
+        '''
+        scenario = self.get_env()
+        scenario.append("cat - << EOF | {0}/bin/sqlplus -S /nolog".format(self.ora_home))
         if not login:
             scenario.append("CONNECT / AS SYSDBA;")
         else:
@@ -639,3 +662,26 @@ def parameters():
             ret[sid].append({name: value})
 
     return ret
+
+
+def ping(sid):
+    '''
+    Perform TNS ping over an Oracle address.
+
+    :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' oracle.ping SID
+    '''
+    out, err = _orahlp().syscall("sudo", _orahlp().get_tnsping(sid),
+                                 None, "-u", _orahlp().ora_uid, "/bin/bash")
+    out = out.strip().split(os.linesep)
+    for line in out:
+        if line.startswith("TNS-"):
+            return {'TNS-error': line}
+
+    return {'TNS': out[-1].startswith("OK ") and out[-1] or 'N/A'}
+
