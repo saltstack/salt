@@ -86,8 +86,6 @@ def auth(username, password):
         log.info('Unable to verify YubiKey `{0}`'.format(e))
         return False
 
-    return False
-
 
 if __name__ == '__main__':
     __opts__ = {'yubico_users': {'damian': {'id': '12345', 'key': 'ABC123'}}}
