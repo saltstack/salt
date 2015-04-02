@@ -7,9 +7,14 @@ Beacon to fire events at failed login of users
     beacons:
       btmp: {}
 '''
+
 # Import python libs
+from __future__ import absolute_import
 import os
 import struct
+
+# Import Salt Libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 __virtualname__ = 'btmp'
 BTMP = '/var/log/btmp'
