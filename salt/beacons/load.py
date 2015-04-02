@@ -11,6 +11,9 @@ import os
 # Import Salt libs
 import salt.utils
 
+# Import Py3 compat
+from salt.ext.six.moves import zip
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'load'
@@ -52,6 +55,8 @@ def beacon(config):
         return ret
     with salt.utils.fopen('/proc/loadavg', 'rb') as fp_:
         avgs = fp_.read().split()[:3]
+        avg_keys = ['1m', '5m', '15m']
+        avg_dict = dict(zip(avg_keys, avgs))
         # Check each entry for threshold
         if float(avgs[0]) < float(config[0]['1m'][0]) or \
         float(avgs[0]) > float(config[0]['1m'][1]) or \
@@ -59,5 +64,5 @@ def beacon(config):
         float(avgs[1]) > float(config[1]['5m'][1]) or \
         float(avgs[2]) < float(config[2]['15m'][0]) or \
         float(avgs[2]) > float(config[2]['15m'][1]):
-            ret.append({'avg': avgs})
+            ret.append(avg_dict)
     return ret
