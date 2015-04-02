@@ -528,6 +528,15 @@ class AsyncReqMessageClient(object):
 
         self.send_timeout_map = {}  # message -> timeout
 
+    def destroy(self):
+        if hasattr(self, 'stream'):
+            self.stream.close()
+            self.socket.close()
+        self.context.term()
+
+    def __del__(self):
+        self.destroy()
+
     def _init_socket(self):
         if hasattr(self, 'stream'):
             self.stream.close()

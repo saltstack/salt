@@ -25,6 +25,8 @@ from salttesting.runtests import RUNTIME_VARS
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
+import integration
+
 # Import Salt libs
 from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
@@ -34,7 +36,7 @@ from unit.transport.pub_test import PubChannelMixin
 
 # TODO: move to a library?
 def get_config_file_path(filename):
-    return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
+    return os.path.join(integration.TMP, 'config', filename)
 
 class BaseZMQReqCase(TestCase):
     '''
@@ -49,11 +51,11 @@ class BaseZMQReqCase(TestCase):
         })
 
         cls.minion_opts = salt.config.minion_config(get_config_file_path('minion'))
-        cls.minion_opts.update(salt.config.client_config(get_config_file_path('minion')))
         cls.minion_opts.update({
             'transport': 'zeromq',
             'auth_timeout': 5,
             'auth_tries': 1,
+            'master_uri': 'tcp://127.0.0.1:{0}'.format(cls.minion_opts['master_port']),
         })
 
         cls.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
@@ -80,7 +82,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     Test all of the clear msg stuff
     '''
     def setUp(self):
-        self.channel = channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
+        self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
 
     @classmethod
     @tornado.gen.coroutine
@@ -93,7 +95,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
 
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
-        self.channel = channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
+        self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
 
     @classmethod
     @tornado.gen.coroutine
@@ -112,7 +114,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         msgs = ['', [], tuple()]
         for msg in msgs:
             with self.assertRaises(salt.exceptions.AuthenticationError):
-                ret = self.channel.send(msg)
+                ret = self.channel.send(msg, timeout=1)
 
 
 class BaseZMQPubCase(AsyncTestCase):
@@ -128,10 +130,10 @@ class BaseZMQPubCase(AsyncTestCase):
         })
 
         cls.minion_opts = salt.config.minion_config(get_config_file_path('minion'))
-        cls.minion_opts.update(salt.config.client_config(get_config_file_path('minion')))
         cls.minion_opts.update({
             'transport': 'zeromq',
             'master_ip': '127.0.0.1',
+            'master_uri': 'tcp://127.0.0.1:{0}'.format(cls.minion_opts['master_port']),
         })
 
         cls.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')

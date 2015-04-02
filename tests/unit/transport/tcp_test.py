@@ -23,6 +23,7 @@ from salttesting import TestCase
 from salttesting.runtests import RUNTIME_VARS
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
+import integration
 
 # Import Salt libs
 from salt import client
@@ -33,7 +34,7 @@ from unit.transport.pub_test import PubChannelMixin
 
 # TODO: move to a library?
 def get_config_file_path(filename):
-    return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
+    return os.path.join(integration.TMP, 'config', filename)
 
 class BaseTCPReqCase(TestCase):
     '''
@@ -48,8 +49,10 @@ class BaseTCPReqCase(TestCase):
         })
 
         cls.minion_opts = salt.config.minion_config(get_config_file_path('minion'))
-        cls.minion_opts.update(salt.config.client_config(get_config_file_path('minion')))
-        cls.minion_opts['transport'] = 'tcp'
+        cls.minion_opts.update({
+            'transport': 'tcp',
+            'master_uri': 'tcp://127.0.0.1:{0}'.format(cls.minion_opts['master_port']),
+        })
 
         cls.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
@@ -76,7 +79,7 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     Test all of the clear msg stuff
     '''
     def setUp(self):
-        self.channel = channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
+        self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
 
     @classmethod
     @tornado.gen.coroutine
@@ -89,7 +92,7 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
 
 class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     def setUp(self):
-        self.channel = channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
+        self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
 
     @classmethod
     @tornado.gen.coroutine
@@ -124,11 +127,11 @@ class BaseTCPPubCase(AsyncTestCase):
         })
 
         cls.minion_opts = salt.config.minion_config(get_config_file_path('minion'))
-        cls.minion_opts.update(salt.config.client_config(get_config_file_path('minion')))
         cls.minion_opts.update({
             'transport': 'tcp',
             'master_ip': '127.0.0.1',
             'auth_timeout': 1,
+            'master_uri': 'tcp://127.0.0.1:{0}'.format(cls.minion_opts['master_port']),
         })
 
         cls.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
