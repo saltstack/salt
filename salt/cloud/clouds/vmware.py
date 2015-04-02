@@ -26,19 +26,19 @@ cloud configuration at
 
     my-vmware-config:
       provider: vmware
-      user: DOMAIN\user
+      user: DOMAIN\\user
       password: verybadpass
       url: vcenter01.domain.com
 
     vmware-vcenter02:
       provider: vmware
-      user: DOMAIN\user
+      user: DOMAIN\\user
       password: verybadpass
       url: vcenter02.domain.com
 
     vmware-vcenter03:
       provider: vmware
-      user: DOMAIN\user
+      user: DOMAIN\\user
       password: verybadpass
       url: vcenter03.domain.com
 '''
@@ -758,7 +758,8 @@ def create(vm_):
           ## Optional arguments
           num_cpus: 4
           memory: 8192
-          datastore: na-001-004
+          datastore: HUGE-DATASTORE-Cluster
+          # If cloning from template, either resourcepool or cluster must be specified
           resourcepool: Resources
           cluster: Prod
           folder: Development
@@ -772,76 +773,92 @@ def create(vm_):
         Enter the name that was specified when the cloud provider config was created.
 
     clonefrom
-        Enter the name of the VM/template to clone from.
+        Enter the name of the VM/template to clone from. 
 
     num_cpus
         Enter the number of vCPUS you want the VM/template to have. If not specified, the current
-        VM/template's vCPU count is used.
+        VM/template\'s vCPU count is used.
 
     memory
         Enter memory (in MB) you want the VM/template to have. If not specified, the current
-        VM/template's memory size is used.
+        VM/template\'s memory size is used.
 
     datastore
         Enter the name of the datastore or the datastore cluster where the virtual machine should
         be located on physical storage. If not specified, the current datastore is used.
-        - If you specify a datastore cluster name, DRS Storage recommendation is automatically
-          applied.
-        - If you specify a datastore name, DRS Storage recommendations is disabled.
+
+        .. note::
+
+            - If you specify a datastore cluster name, DRS Storage recommendation is automatically
+              applied.
+            - If you specify a datastore name, DRS Storage recommendation is disabled.
 
     resourcepool
         Enter the name of the resourcepool to which the new virtual machine should be
-        attached. This determines what compute resources will be available to the clone.
-        - For a clone operation from a virtual machine, it will use the same resourcepool as
-          the original virtual machine unless specified.
-        - For a clone operation from a template to a virtual machine, specifying either this
-          or cluster is required. If both are specified, the resourcepool value will be used.
-        - For a clone operation to a template, this argument is ignored.
+        attached. This determines what compute resources will be available to the clone. 
+
+        .. note::
+
+            - For a clone operation from a virtual machine, it will use the same resourcepool as
+              the original virtual machine unless specified.
+            - For a clone operation from a template to a virtual machine, specifying either this
+              or cluster is required. If both are specified, the resourcepool value will be used.
+            - For a clone operation to a template, this argument is ignored.
 
     cluster
         Enter the name of the cluster whose resource pool the new virtual machine should be
-        attached to.
-        - For a clone operation from a virtual machine, it will use the same clusters resourcepool
-          as the original virtual machine unless specified.
-        - For a clone operation from a template to a virtual machine, specifying either this
-          or resourcepool is required. If both are specified, the resourcepool value will be used.
-        - For a clone operation to a template, this argument is ignored.
+        attached to. 
+
+        .. note::
+
+            - For a clone operation from a virtual machine, it will use the same cluster\'s
+              resourcepool as the original virtual machine unless specified.
+            - For a clone operation from a template to a virtual machine, specifying either
+              this or resourcepool is required. If both are specified, the resourcepool value
+              will be used.
+            - For a clone operation to a template, this argument is ignored.
 
     folder
         Enter the name of the folder that will contain the new virtual machine.
-        - For a clone operation from a virtual machine, the new VM will be added to the same folder
-          that the original VM belongs to unless specified.
-        - For a clone operation from a template to a virtual machine, specifying either this
-          or datacenter is required. If both are specified, the folder value will be used.
+
+        .. note::
+
+            - For a clone operation from a VM/template, the new VM/template will be added to the
+              same folder that the original VM/template belongs to unless specified.
+            - If both folder and datacenter are specified, the folder value will be used.
 
     datacenter
         Enter the name of the datacenter that will contain the new virtual machine.
-        - For a clone operation from a virtual machine, the new VM will be added to the same folder
-          that the original VM belongs to unless specified.
-        - For a clone operation from a template to a virtual machine, specifying either this
-          or folder is required. If both are specified, the folder value will be used.
+
+        .. note::
+
+            - For a clone operation from a VM/template, the new VM/template will be added to the
+              same folder that the original VM/template belongs to unless specified.
+            - If both folder and datacenter are specified, the folder value will be used.
 
     host
-        Enter the name of the target host where the virtual machine should be registered.
+        Enter the name of the target host where the virtual machine should be registered. 
+
         If not specified:
 
-        .. code-block:: text
+        .. note::
 
-            - if resource pool is not specified, current host is used.
-            - if resource pool is specified, and the target pool represents a stand-alone
+            - If resource pool is not specified, current host is used.
+            - If resource pool is specified, and the target pool represents a stand-alone
               host, the host is used.
-            - if resource pool is specified, and the target pool represents a DRS-enabled
+            - If resource pool is specified, and the target pool represents a DRS-enabled
               cluster, a host selected by DRS is used.
-            - if resource pool is specified and the target pool represents a cluster without
+            - If resource pool is specified and the target pool represents a cluster without
               DRS enabled, an InvalidArgument exception be thrown.
 
     template
         Specifies whether the new virtual machine should be marked as a template or not.
-        Default is ``False``.
+        Default is ``template: False``.
 
     power_on
-        Specifies whether the new virtual machine should be powered on or not. Default is
-        ``True``.
+        Specifies whether the new virtual machine should be powered on or not. If ``template: True``
+        is set, this field is ignored. Default is ``power_on: True``.
+
 
     CLI Example:
 
@@ -858,16 +875,6 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['provider'],
         },
-        transport=__opts__['transport']
-    )
-
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
-
-    salt.utils.cloud.fire_event(
-        'event',
-        'requesting instance',
-        'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': vm_},
         transport=__opts__['transport']
     )
 
@@ -906,15 +913,14 @@ def create(vm_):
     )
 
     if 'clonefrom' in vm_:
-        # Clone VM from specified VM
+        # Clone VM/template from specified VM/template
         object_ref = _get_mor_by_property(vim.VirtualMachine, vm_['clonefrom'])
         if object_ref.config.template:
             clone_type = "template"
         else:
             clone_type = "vm"
-        log.debug("Cloning from {0}: {1}\n".format(clone_type, vm_['clonefrom']))
 
-        # Either a cluster, host or a resource pool must be specified when cloning from template.
+        # Either a cluster, or a resource pool must be specified when cloning from template.
         if resourcepool:
             resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
         elif cluster:
@@ -924,19 +930,21 @@ def create(vm_):
             log.error('You must either specify a cluster, a host or a resource pool')
             return False
 
-        # Either a datacenter or a VM folder must be specified
+        # Either a datacenter or a folder can be optionally specified
+        # If not specified, the existing VM/template\'s parent folder is used.
         if folder:
             folder_ref = _get_mor_by_property(vim.Folder, folder)
         elif datacenter:
             datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
             folder_ref = datacenter_ref.vmFolder
         else:
-            log.error('You must either specify a datacenter or a VM folder')
-            return False
+            folder_ref = object_ref.parent
 
         # Create the relocation specs
         reloc_spec = vim.vm.RelocateSpec()
-        reloc_spec.pool = resourcepool_ref if resourcepool or cluster else None
+
+        if resourcepool or cluster:
+            reloc_spec.pool = resourcepool_ref
 
         # Either a datastore/datastore cluster can be optionally specified.
         # If not specified, the current datastore is used.
@@ -980,6 +988,15 @@ def create(vm_):
         )
 
         try:
+            log.info("Creating {0} from {1}({2})\n".format(vm_['name'], clone_type, vm_['clonefrom']))
+            salt.utils.cloud.fire_event(
+                'event',
+                'requesting instance',
+                'salt/cloud/{0}/requesting'.format(vm_['name']),
+                {'kwargs': vm_},
+                transport=__opts__['transport']
+            )
+
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
             while task.info.state != 'success':
@@ -997,20 +1014,20 @@ def create(vm_):
             )
             return False
 
-    else:
-        log.error("Currently only clone from vm/template is supported.")
-        return False
+        salt.utils.cloud.fire_event(
+            'event',
+            'created instance',
+            'salt/cloud/{0}/created'.format(vm_['name']),
+            {
+                'name': vm_['name'],
+                'profile': vm_['profile'],
+                'provider': vm_['provider'],
+            },
+            transport=__opts__['transport']
+        )
 
-    salt.utils.cloud.fire_event(
-        'event',
-        'created instance',
-        'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
-        },
-        transport=__opts__['transport']
-    )
+    else:
+        log.error("clonefrom option hasn\'t been specified. Exiting.")
+        return False
 
     return {vm_name: True}
