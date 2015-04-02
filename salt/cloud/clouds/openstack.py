@@ -599,9 +599,9 @@ def request_instance(vm_=None, call=None):
             kwargs['ex_userdata'] = fp.read()
 
     config_drive = config.get_cloud_config_value(
-        'config_drive', vm_, __opts__, default=False, search_global=False
+        'config_drive', vm_, __opts__, default=None, search_global=False
     )
-    if config_drive:
+    if config_drive is not None:
         kwargs['ex_config_drive'] = config_drive
 
     salt.utils.cloud.fire_event(
