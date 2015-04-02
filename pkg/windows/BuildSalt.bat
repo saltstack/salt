@@ -32,6 +32,8 @@ xcopy /S /E "%PyDir%" "%BinDir%\"
 @ echo -------------------------------------------
 :: Remove all Compiled Python files (.pyc)
 del /S /Q "%BinDir%\*.pyc"
+:: Remove all Compiled HTML Help (.chm)
+del /S /Q "%BinDir%\*.chm"
 
 :: Delete Unused Docs and Modules
 If Exist "%BinDir%\Doc"           rd /S /Q "%BinDir%\Doc"

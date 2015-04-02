@@ -457,6 +457,24 @@ def installed(name,
         them to the ``pip`` library. It's functionality duplication and it's
         more error prone.
 
+
+    .. admonition:: Attention
+
+        Please set ``reload_modules: True`` to have the salt minion
+        import this module after installation.
+
+
+    Example:
+
+    .. code-block:: yaml
+
+        pyopenssl:
+            pip.installed:
+                - name: pyOpenSSL
+                - reload_modules: True
+                - exists_action: i
+
+
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
 

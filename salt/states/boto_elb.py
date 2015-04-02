@@ -645,6 +645,11 @@ def _attributes_present(
         if (cd['enabled'] != _cd['enabled']
                 or cd.get('timeout', 300) != _cd.get('timeout')):
             attrs_to_set.append('connection_draining')
+    if 'connecting_settings' in attributes:
+        cs = attributes['connecting_settings']
+        _cs = _attributes['connecting_settings']
+        if cs['idle_timeout'] != _cs['idle_timeout']:
+            attrs_to_set.append('connecting_settings')
     if 'access_log' in attributes:
         for attr, val in six.iteritems(attributes['access_log']):
             if str(_attributes['access_log'][attr]) != str(val):
