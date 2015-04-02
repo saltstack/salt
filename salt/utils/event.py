@@ -901,6 +901,8 @@ class PollingEventPublisher(object):
             self.epub_sock.close()
         if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
             self.epull_sock.close()
+        if hasattr(self, 'context') and self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()
