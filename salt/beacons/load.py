@@ -31,7 +31,7 @@ def beacon(config):
     and only emit a beacon if any of them are
     exceeded.
 
-    code-block:: yaml
+    .. code-block:: yaml
 
         beacons:
           - load:
