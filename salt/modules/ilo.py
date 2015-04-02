@@ -100,7 +100,7 @@ def set_http_port(port=80):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' ilo.set_http_port 8080
     '''
@@ -586,7 +586,7 @@ def configure_snmp(community, snmp_port=161, snmp_trapport=161):
 
     CLI Example:
 
-    .. code-bash::
+    .. code-block:: bash
 
         salt '*' ilo.configure_snmp [COMMUNITY STRING] [SNMP PORT] [SNMP TRAP PORT]
     '''

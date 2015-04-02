@@ -91,7 +91,7 @@ Syndic and the CLI
 In order for the high-level master to return information from minions that are
 below the syndic(s), the CLI requires a short wait time in order to allow the
 syndic(s) to gather responses from their minions. This value is defined in the
-``syndic_wait` and has a default of five seconds.
+``syndic_wait`` and has a default of five seconds.
 
 While it is possible to run a syndic without a minion installed on the same machine,
 it is recommended, for a faster CLI response time, to do so. Without a minion

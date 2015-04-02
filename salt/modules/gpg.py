@@ -764,7 +764,7 @@ def trust_key(keyid=None,
     trust_level
         The trust level to set for the specified key, must be one
         of the following:
-            expired, unknown, not_trusted, marginally, fully, ultimately
+        expired, unknown, not_trusted, marginally, fully, ultimately
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
@@ -775,9 +775,7 @@ def trust_key(keyid=None,
     .. code-block:: bash
 
         salt '*' gpg.trust_key keyid='3FAD9F1E' trust_level='marginally'
-
         salt '*' gpg.trust_key fingerprint='53C96788253E58416D20BCD352952C84C3252192' trust_level='not_trusted'
-
         salt '*' gpg.trust_key keys=3FAD9F1E trust_level='ultimately' user='username'
 
     '''
@@ -944,7 +942,6 @@ def verify(text=None,
         salt '*' gpg.verify filename='/path/to/important.file'
 
         salt '*' gpg.verify filename='/path/to/important.file' use_pasphrase=True
-
 
     '''
     gpg = _create_gpg(user)

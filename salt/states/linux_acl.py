@@ -15,6 +15,7 @@ Ensure a Linux ACL is present
 Ensure a Linux ACL does not exist
 
   .. code-block:: yaml
+
     root:
       acl.absent:
         - name: /root

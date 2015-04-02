@@ -86,7 +86,7 @@ to specify the location of the config file when starting the Salt Minion on
 Windows in a terminal.
 
 Multiple Targets for pkg.removed, pkg.purged States
---------------------------------------------------
+---------------------------------------------------
 
 Both :mod:`pkg.removed <salt.states.pkg.removed>` and :mod:`pkg.purged
 <salt.states.pkg.purged>` now support the ``pkgs`` argument, which allow for

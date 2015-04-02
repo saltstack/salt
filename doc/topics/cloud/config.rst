@@ -7,7 +7,7 @@ VM profiles can be set in the cloud configuration file. By default this file is
 located at ``/etc/salt/cloud``.
 
 Thread Pool Size
-====================
+================
 
 When salt cloud is operating in parallel mode via the ``-P`` argument, you can
 control the thread pool size by specifying the ``pool_size`` parameter with
@@ -261,35 +261,6 @@ This does not work with the salt-cloud binary.
 Cloud Configurations
 ====================
 
-Rackspace
----------
-
-Rackspace cloud requires two configuration options:
-
-* Using the old format:
-
-.. code-block:: yaml
-
-    RACKSPACE.user: example_user
-    RACKSPACE.apikey: 123984bjjas87034
-
-
-
-* Using the new configuration format:
-
-.. code-block:: yaml
-
-    my-rackspace-config:
-      user: example_user
-      apikey: 123984bjjas87034
-      provider: rackspace
-
-
-**NOTE**: With the new providers configuration syntax you would have ``provider:
-rackspace-config`` instead of ``provider: rackspace`` on a profile
-configuration.
-
-
 Amazon AWS
 ----------
 
@@ -332,38 +303,67 @@ A number of configuration options are required for Amazon AWS:
 ``provider: ec2`` on a profile configuration.
 
 
-Linode
-------
+DigitalOcean
+------------
 
-Linode requires a single API key, but the default root password also needs to
-be set:
+Using Salt for DigitalOcean requires a client_key and an api_key. These can be
+found in the DigitalOcean web interface, in the "My Settings" section, under
+the API Access tab.
 
 * Using the old format:
 
 .. code-block:: yaml
 
-    LINODE.apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
-    LINODE.password: F00barbaz
+    DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
+    DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
 
 
 * Using the new configuration format:
 
 .. code-block:: yaml
 
-    my-linode-config:
-      apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
-      password: F00barbaz
-      ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
-      ssh_key_file: ~/.ssh/id_ed25519
-      provider: linode
+    my-digitalocean-config:
+      provider: digital_ocean
+      personal_access_token: xxx
+      location: New York 1
 
 
 **NOTE**: With the new providers configuration syntax you would have
-``provider: my-linode-config`` instead of ``provider: linode`` on a profile
-configuration.
+``provider: my-digitalocean-config`` instead of ``provider: digital_ocean`` on a
+profile configuration.
 
-The password needs to be 8 characters and contain lowercase, uppercase, and
-numbers.
+
+GoGrid
+------
+
+To use Salt Cloud with GoGrid log into the GoGrid web interface and create an
+API key. Do this by clicking on "My Account" and then going to the API Keys
+tab.
+
+The GOGRID.apikey and the GOGRID.sharedsecret configuration parameters need to
+be set in the configuration file to enable interfacing with GoGrid:
+
+* Using the old format:
+
+.. code-block:: yaml
+
+    GOGRID.apikey: asdff7896asdh789
+    GOGRID.sharedsecret: saltybacon
+
+
+* Using the new configuration format:
+
+.. code-block:: yaml
+
+    my-gogrid-config:
+      apikey: asdff7896asdh789
+      sharedsecret: saltybacon
+      provider: gogrid
+
+
+**NOTE**: With the new providers configuration syntax you would have
+``provider: my-gogrid-config`` instead of ``provider: gogrid`` on a profile
+configuration.
 
 
 Joyent Cloud
@@ -400,37 +400,71 @@ send the provisioning commands up to the freshly created virtual machine.
 configuration.
 
 
-GoGrid
+Linode
 ------
 
-To use Salt Cloud with GoGrid log into the GoGrid web interface and create an
-API key. Do this by clicking on "My Account" and then going to the API Keys
-tab.
-
-The GOGRID.apikey and the GOGRID.sharedsecret configuration parameters need to
-be set in the configuration file to enable interfacing with GoGrid:
+Linode requires a single API key, but the default root password also needs to
+be set:
 
 * Using the old format:
 
 .. code-block:: yaml
 
-    GOGRID.apikey: asdff7896asdh789
-    GOGRID.sharedsecret: saltybacon
+    LINODE.apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
+    LINODE.password: F00barbaz
 
 
 * Using the new configuration format:
 
 .. code-block:: yaml
 
-    my-gogrid-config:
-      apikey: asdff7896asdh789
-      sharedsecret: saltybacon
-      provider: gogrid
+    my-linode-config:
+      apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
+      password: F00barbaz
+      ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
+      ssh_key_file: ~/.ssh/id_ed25519
+      provider: linode
 
 
 **NOTE**: With the new providers configuration syntax you would have
-``provider: my-gogrid-config`` instead of ``provider: gogrid`` on a profile
+``provider: my-linode-config`` instead of ``provider: linode`` on a profile
 configuration.
+
+The password needs to be 8 characters and contain lowercase, uppercase, and
+numbers.
+
+
+LXC
+---
+
+The lxc driver is a new, experimental driver for installing Salt on
+newly provisioned (via saltcloud) lxc containers. It will in turn use saltify
+to install salt and reattach the lxc container as a new lxc minion.
+As soon as we can, we manage baremetal operation over SSH.
+You can also destroy those containers via this driver.
+
+.. code-block:: yaml
+
+    devhost10-lxc:
+      target: devhost10
+      provider: lxc
+
+And in the map file:
+
+.. code-block:: yaml
+
+    devhost10-lxc:
+      provider: devhost10-lxc
+      from_container: ubuntu
+      backing: lvm
+      sudo: True
+      size: 3g
+      ip: 10.0.3.9
+      minion:
+        master: 10.5.0.1
+        master_port: 4506
+      lxc_conf:
+        - lxc.utsname: superlxc
 
 
 OpenStack
@@ -554,36 +588,6 @@ For in-house OpenStack Essex installation, libcloud needs the service_type :
 
 
 
-DigitalOcean
--------------
-
-Using Salt for DigitalOcean requires a client_key and an api_key. These can be
-found in the DigitalOcean web interface, in the "My Settings" section, under
-the API Access tab.
-
-* Using the old format:
-
-.. code-block:: yaml
-
-    DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
-    DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
-
-
-* Using the new configuration format:
-
-.. code-block:: yaml
-
-    my-digitalocean-config:
-      provider: digital_ocean
-      personal_access_token: xxx
-      location: New York 1
-
-
-**NOTE**: With the new providers configuration syntax you would have
-``provider: my-digitalocean-config`` instead of ``provider: digital_ocean`` on a
-profile configuration.
-
-
 Parallels
 ---------
 
@@ -614,8 +618,9 @@ obtained from your cloud provider.
 ``provider: my-parallels-config`` instead of ``provider: parallels`` on a
 profile configuration.
 
+
 Proxmox
----------
+-------
 
 Using Salt with Proxmox requires a user, password, and URL. These can be
 obtained from your cloud provider. Both PAM and PVE users can be used.
@@ -630,37 +635,35 @@ obtained from your cloud provider. Both PAM and PVE users can be used.
       password: xyzzy
       url: your.proxmox.host
 
-lxc
----
 
-The lxc driver is a new, experimental driver for installing Salt on
-newly provisioned (via saltcloud) lxc containers. It will in turn use saltify
-to install salt and reattach the lxc container as a new lxc minion.
-As soon as we can, we manage baremetal operation over SSH.
-You can also destroy those containers via this driver.
+Rackspace
+---------
 
-.. code-block:: yaml
+Rackspace cloud requires two configuration options:
 
-    devhost10-lxc:
-      target: devhost10
-      provider: lxc
-
-And in the map file:
+* Using the old format:
 
 .. code-block:: yaml
 
-    devhost10-lxc:
-      provider: devhost10-lxc
-      from_container: ubuntu
-      backing: lvm
-      sudo: True
-      size: 3g
-      ip: 10.0.3.9
-      minion:
-        master: 10.5.0.1
-        master_port: 4506
-      lxc_conf:
-        - lxc.utsname: superlxc
+    RACKSPACE.user: example_user
+    RACKSPACE.apikey: 123984bjjas87034
+
+
+
+* Using the new configuration format:
+
+.. code-block:: yaml
+
+    my-rackspace-config:
+      user: example_user
+      apikey: 123984bjjas87034
+      provider: rackspace
+
+
+**NOTE**: With the new providers configuration syntax you would have ``provider:
+rackspace-config`` instead of ``provider: rackspace`` on a profile
+configuration.
+
 
 .. _config_saltify:
 
@@ -691,6 +694,36 @@ And in the map file:
         ssh_username: ubuntu
         ssh_keyfile: '/etc/salt/mysshkey.pem'
         sudo: True
+
+
+VMware
+------
+
+Using Salt with VMware requires a user, password, and vCenter URL to be
+set in the cloud configuration at
+``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
+
+* Using the new configuration format:
+
+.. code-block:: yaml
+
+    my-vmware-config:
+      provider: vmware
+      user: DOMAIN\user
+      password: verybadpass
+      url: vcenter01.domain.com
+
+    vmware-vcenter02:
+      provider: vmware
+      user: DOMAIN\user
+      password: verybadpass
+      url: vcenter02.domain.com
+
+    vmware-vcenter03:
+      provider: vmware
+      user: DOMAIN\user
+      password: verybadpass
+      url: vcenter03.domain.com
 
 
 Extending Profiles and Cloud Providers Configuration
