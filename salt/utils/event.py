@@ -279,18 +279,10 @@ class SaltEvent(object):
     def connect_pull(self, timeout=1000):
         '''
         Establish a connection with the event pull socket
-        Set the send timeout of the socket options to timeout (in milliseconds)
+        Set the linger timeout of the socket options to timeout (in milliseconds)
         Default timeout is 1000 ms
-        The linger timeout must be at least as long as this timeout
         '''
         self.push = self.context.socket(zmq.PUSH)
-        try:
-            # bug in 0MQ default send timeout of -1 (infinite) is not infinite
-            self.push.setsockopt(zmq.SNDTIMEO, timeout)
-        except AttributeError:
-            # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
-            #                        CentOS5, which still uses 2.1.9)
-            pass
         self.push.setsockopt(zmq.LINGER, timeout)
         self.push.connect(self.pulluri)
         self.cpush = True
