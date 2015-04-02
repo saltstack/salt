@@ -199,6 +199,7 @@ def _walk(path, value, metrics, timestamp, skip):
                 log.info(msg)
                 raise
 
+
 def _send(saltdata, metric_base, opts):
     '''
     Send the data to carbon
@@ -223,8 +224,6 @@ def _send(saltdata, metric_base, opts):
     timestamp = int(time.time())
 
     handler = _send_picklemetrics if mode == 'pickle' else _send_textmetrics
-
-
     metrics = []
     log.trace('Carbon returning walking data: {0}'.format(saltdata))
     _walk(metric_base, saltdata, metrics, timestamp, skip)
@@ -242,6 +241,7 @@ def _send(saltdata, metric_base, opts):
             log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
 
+
 def event_return(events):
     '''
     Return event data to remote carbon server
@@ -255,8 +255,6 @@ def event_return(events):
         metric_base = event['tag']
         saltdata = event['data'].get('data')
         _send(saltdata, metric_base, opts)
-
-
 
 
 def returner(ret):
