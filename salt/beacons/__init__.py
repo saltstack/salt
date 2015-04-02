@@ -2,7 +2,6 @@
 '''
 This package contains the loader modules for the salt streams system
 '''
-
 # Import Python libs
 from __future__ import absolute_import
 import logging
@@ -26,11 +25,8 @@ class Beacon(object):
     def process(self, config):
         '''
         Process the configured beacons
-
         The config must be a dict and looks like this in yaml
-
         code_block:: yaml
-
             beacons:
                 inotify:
                     - /etc/fstab
@@ -61,7 +57,6 @@ class Beacon(object):
     def _process_interval(self, mod, interval):
         '''
         Process beacons with intervals
-
         Return True if a beacon should be run on this loop
         '''
         log.trace('Processing interval {0} for beacon mod {1}'.format(interval, mod))

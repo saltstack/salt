@@ -1,6 +1,7 @@
 @ echo off
 @ echo Salt Windows Build Script
 @ echo.
+
 :: Define Variables
 @ echo Defining Variables...
 @ echo ---------------------
@@ -48,6 +49,9 @@ If Exist "%BinDir%\Lib\unit-test" rd /S /Q "%BinDir%\Lib\unit-test"
 If Exist "%BinDir%\DLLs\tcl85.dll"    del /S /Q "%BinDir%\DLLs\tcl85.dll"
 If Exist "%BinDir%\DLLs\tclpip85.dll" del /S /Q "%BinDir%\DLLs\tclpip85.dll"
 If Exist "%BinDir%\DLLs\tk85.dll"     del /S /Q "%BinDir%\DLLs\tk85.dll"
+
+:: Delete Unused .lib files
+If Exist "%BinDir%\libs\_tkinter.lib" del /S /Q "%BinDir%\libs\_tkinter.lib"
 
 :: Delete .txt files
 If Exist "%BinDir%\NEWS.txt"   del /q "%BinDir%\NEWS.txt"
