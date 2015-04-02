@@ -183,6 +183,10 @@ def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profi
         ret['result'] = False
         ret['comment'] = 'IAM User {0} does not exist.'.format(user_name)
         return ret
+    if __opts__['test']:
+        ret['comment'] = 'Access keys {0} are set to be deleted.'.format(access_keys)
+        ret['result'] = None
+        return ret
     for k in access_keys:
         if _delete_key(k, user_name, region, key, keyid, profile):
             ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k)])
