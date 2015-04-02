@@ -419,7 +419,10 @@ class AsyncAuth(object):
                 continue
             break
         if not isinstance(creds, dict) or 'aes' not in creds:
-            del AsyncAuth.creds_map[self.__key(self.opts)]
+            try:
+                del AsyncAuth.creds_map[self.__key(self.opts)]
+            except KeyError:
+                pass
             self._authenticate_future.set_exception(
                 SaltClientError('Attempt to authenticate with the salt master failed')
             )
