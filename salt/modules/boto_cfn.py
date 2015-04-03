@@ -66,12 +66,13 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region, key, keyid, profile)
     try:
-        return conn.describe_stacks(name)
+        # Returns an object if stack exists else an exception
+        exists = conn.describe_stacks(name)
+        log.debug('Stack {0} exists.'.format(name))
+        return True
     except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to check if stack exists {0}'.format(name)
-        log.error(msg)
-        return str(e)
+        log.debug('Exists returned an excpetion.\n{0}'.format(str(e)))
+        return False
 
 
 def create(name, template_body=None, template_url=None, parameters=None, notification_arns=None, disable_rollback=None,
@@ -88,23 +89,14 @@ def create(name, template_body=None, template_url=None, parameters=None, notific
         region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    if not exists(name):
-        try:
-            conn.create_stack(name, template_body, template_url, parameters, notification_arns, disable_rollback,
-                              timeout_in_minutes, capabilities, tags, on_failure, stack_policy_body, stack_policy_url)
-        except boto.exception.BotoServerError as e:
-            msg = 'Failed to create stack {0}'.format(name)
-            log.debug(e)
-            log.error(msg)
-            return False
-    if not exists(name):
-        msg = 'Failed to create stack {0}'.format(name)
+    try:
+        return conn.create_stack(name, template_body, template_url, parameters, notification_arns, disable_rollback,
+                                 timeout_in_minutes, capabilities, tags, on_failure, stack_policy_body, stack_policy_url)
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to create stack {0}.'.format(name)
         log.error(msg)
+        log.debug(e)
         return False
-    log.info('Created stack {0}'.format(name))
-    return True
 
 
 def update_stack(name, template_body=None, template_url=None, parameters=None, notification_arns=None,
@@ -112,32 +104,28 @@ def update_stack(name, template_body=None, template_url=None, parameters=None, n
                  use_previous_template=None, stack_policy_during_update_body=None, stack_policy_during_update_url=None,
                  stack_policy_body=None, stack_policy_url=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Create a CFN stack.
+    Update a CFN stack.
 
     .. versionadded:: Beryllium
 
-    CLI example to create a stack::
+    CLI example to update a stack::
 
         salt myminion boto_cfn.update_stack mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
         region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    if exists(name):
-        try:
-            update = conn.update_stack(name, template_body, template_url, parameters, notification_arns,
-                                       disable_rollback, timeout_in_minutes, capabilities, tags, use_previous_template,
-                                       stack_policy_during_update_body, stack_policy_during_update_url,
-                                       stack_policy_body, stack_policy_url)
-            if update:
-                return update
-        except boto.exception.BotoServerError as e:
-            msg = 'Failed to create stack {0}'.format(name)
-            log.debug(e)
-            log.error(msg)
-            return str(e)
-    return False
+    try:
+        update = conn.update_stack(name, template_body, template_url, parameters, notification_arns,
+                                   disable_rollback, timeout_in_minutes, capabilities, tags, use_previous_template,
+                                   stack_policy_during_update_body, stack_policy_during_update_url,
+                                   stack_policy_body, stack_policy_url)
+        log.debug('Updated result is : {0}.'.format(update))
+        return update
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to update stack {0}.'.format(name)
+        log.debug(e)
+        log.error(msg)
+        return str(e)
 
 
 def delete(name, region=None, key=None, keyid=None, profile=None):
@@ -151,14 +139,12 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_cfn.delete mystack region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not exists(name):
-        return False
     try:
         return conn.delete_stack(name)
     except boto.exception.BotoServerError as e:
-        msg = 'Failed to create stack {0}'.format(name)
-        log.debug(e)
+        msg = 'Failed to create stack {0}.'.format(name)
         log.error(msg)
+        log.debug(e)
         return str(e)
 
 
@@ -173,8 +159,6 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_cfn.get_template mystack
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
     try:
         template = conn.get_template(name)
         log.info('Retrieved template for stack {0}'.format(name))
@@ -198,10 +182,11 @@ def validate_template(template_body=None, template_url=None, region=None, key=No
     '''
     conn = _get_conn(region, key, keyid, profile)
     try:
+        # Returns an object if json is validated and an exception if its not
         return conn.validate_template(template_body, template_url)
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Template {0} does not exist'.format(template_body)
+        msg = 'Error while trying to validate template {0}.'.format(template_body)
         log.error(msg)
         return str(e)
 
