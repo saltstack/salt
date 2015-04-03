@@ -134,12 +134,12 @@ class CkMinions(object):
         '''
         Return the minions found by looking via regular expressions
         '''
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
-        reg = re.compile(expr)
-        ret = [fn_ for fn_ in os.listdir('.') if reg.match(fn_)]
-        os.chdir(cwd)
-        return ret
+        try:
+            minions = os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            reg = re.compile(expr)
+            return [m for m in minions if reg.match(m)]
+        except OSError:
+            return []
 
     def _check_cache_minions(self,
                              expr,
