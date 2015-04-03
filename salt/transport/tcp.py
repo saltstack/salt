@@ -46,16 +46,18 @@ log = logging.getLogger(__name__)
 
 import msgpack
 
-def frame_msg(msg, header=None):
+def frame_msg(body, header=None):
     '''
     Frame the given message with our wire protocol
     '''
+    framed_msg = {}
     if header is None:
         header = {}
 
-    header['msgLen'] = len(msg)
-    header_packed = msgpack.dumps(header)
-    return '{0} {1}{2}'.format(len(header_packed), header_packed, msg)
+    framed_msg['head'] = header
+    framed_msg['body'] = body
+    framed_msg_packed = msgpack.dumps(framed_msg)
+    return '{0} {1}'.format(len(framed_msg_packed), framed_msg_packed)
 
 
 def socket_frame_recv(s, recv_size=4096):
@@ -130,7 +132,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             yield self.auth.authenticate()
         self._package_load(self.auth.crypticle.dumps(load))
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
-        ret = self.serial.loads(ret)
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
@@ -149,7 +150,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             data = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)),
                                                   timeout=timeout,
                                                   )
-            data = self.serial.loads(data)
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
             # communication, we do not subscribe to return events, we just
@@ -171,7 +171,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     @tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
         ret = yield self.message_client.send(self._package_load(load), timeout=timeout)
-        raise tornado.gen.Return(self.serial.loads(ret))
+        raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
     def send(self, load, tries=3, timeout=60, callback=None):
@@ -222,7 +222,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
 
         @tornado.gen.coroutine
         def wrap_callback(body):
-            ret = yield self._decode_payload(self.serial.loads(body))
+            ret = yield self._decode_payload(body)
             callback(ret)
         return self.message_client.on_recv(wrap_callback)
 
@@ -335,11 +335,11 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         self.clients.append((stream, address))
         try:
             while True:
-                header_len = yield stream.read_until(' ')
-                header_raw = yield stream.read_bytes(int(header_len.strip()))
-                header = msgpack.loads(header_raw)
-                body_raw = yield stream.read_bytes(int(header['msgLen']))
-                body = msgpack.loads(body_raw)
+                framed_msg_len = yield stream.read_until(' ')
+                framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
+                framed_msg = msgpack.loads(framed_msg_raw)
+                header = framed_msg['head']
+                body = msgpack.loads(framed_msg['body'])
                 self.io_loop.spawn_callback(self.message_handler, stream, header, body)
 
         except tornado.iostream.StreamClosedError:
@@ -425,11 +425,12 @@ class SaltMessageClient(object):
             yield self._connecting_future
         while True:
             try:
-                header_len = yield self._stream.read_until(' ')
-                header_raw = yield self._stream.read_bytes(int(header_len.strip()))
-                header = msgpack.loads(header_raw)
-                body = yield self._stream.read_bytes(int(header['msgLen']))
+                framed_msg_len = yield self._stream.read_until(' ')
+                framed_msg_raw = yield self._stream.read_bytes(int(framed_msg_len.strip()))
+                framed_msg = msgpack.loads(framed_msg_raw)
+                header = framed_msg['head']
                 message_id = header.get('mid')
+                body = msgpack.loads(framed_msg['body'])
 
                 if message_id in self.send_future_map:
                     self.send_future_map.pop(message_id).set_result(body)
