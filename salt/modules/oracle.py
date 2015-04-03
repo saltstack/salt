@@ -139,7 +139,10 @@ class _OracleHelper(object):
         for oratab in self.ORATAB:
             if os.path.exists(oratab):
                 found = True
-                for tabline in filter(None, [line.strip() for line in open(oratab).readlines()]):
+                for tabline in open(oratab).readlines():
+                    tabline = tabline.strip()
+                    if not tabline:
+                        continue
                     sid, home, default_start = tabline.split(":")
                     if sid != '*':  # Ignore NULL SID
                         data[sid] = {
