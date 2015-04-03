@@ -471,11 +471,11 @@ class MultiMinion(MinionBase):
         auth_wait = opts['acceptance_wait_time']
         while True:
             try:
-                minion = Minion(s_opts,
+                minion = Minion(opts,
                                 self.MINION_CONNECT_TIMEOUT,
                                 False,
                                 io_loop=self.io_loop,
-                                loaded_base_name='salt.loader.{0}'.format(master),
+                                loaded_base_name='salt.loader.{0}'.format(opts['master']),
                                 )
                 yield minion.connect_master()
                 minion.tune_in(start=False)
