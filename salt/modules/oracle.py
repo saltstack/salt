@@ -170,7 +170,6 @@ class _OracleHelper(object):
 
         return stdout and stdout or '', stderr and stderr or ''
 
-
     def extract_errors(self, stdout):
         """
         Extract errors from SQL*Plus.
@@ -186,7 +185,6 @@ class _OracleHelper(object):
 
         return '\n'.join(out)
 
-
     def get_orahome(self, sid=None):
         '''
         Find out Oracle home.
@@ -196,13 +194,11 @@ class _OracleHelper(object):
         '''
         return (sid and self.oratab.get(sid, {}) or self.oratab[sorted(self.oratab.keys())[0]]).get('home')
 
-
     def get_owner(self):
         '''
         Find out main UID. Usually it is "oracle", but installations sometimes gets crazy.
         :return: UID
         '''
-
 
     def get_env(self):
         '''
@@ -222,7 +218,6 @@ class _OracleHelper(object):
 
         return scenario
 
-
     def get_tnsping(self, address):
         '''
         Create TNS ping env.
@@ -234,7 +229,6 @@ class _OracleHelper(object):
         scenario.append("{0}/bin/tnsping {1}".format(self.ora_home, address))
 
         return '\n'.join(scenario)
-
 
     def prepare_scenario(self, src, login=None):
         '''
@@ -257,7 +251,6 @@ class _OracleHelper(object):
 
         return '\n'.join(scenario)
 
-
     def run(self, cmd):
         '''
         Run a result via sudo call.
@@ -267,7 +260,6 @@ class _OracleHelper(object):
             raise CommandExecutionError(out['stderr'])
 
         return out['stdout'], self.extract_errors(out['stdout'])
-
 
     def sqlplus_to_table(self, data):
         '''
@@ -334,7 +326,6 @@ class _OracleHelper(object):
             out.append(tuple(_extract(line, field_widths)))
 
         return hdr, tuple(out)
-
 
 
 def _orahlp():
@@ -686,4 +677,3 @@ def ping(sid):
             return {'TNS-error': line}
 
     return {'TNS': out[-1].startswith("OK ") and out[-1] or 'N/A'}
-
