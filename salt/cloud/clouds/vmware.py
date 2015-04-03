@@ -1074,12 +1074,12 @@ def create(vm_):
                 transport=__opts__['transport']
             )
 
-#            task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-#            time_counter = 0
-#            while task.info.state != 'success':
-#                log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
-#                time.sleep(5)
-#                time_counter += 5
+            task = object_ref.Clone(folder_ref, vm_name, clone_spec)
+            time_counter = 0
+            while task.info.state != 'success':
+                log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
+                time.sleep(5)
+                time_counter += 5
         except Exception as exc:
             log.error(
                 'Error creating {0}: {1}'.format(
