@@ -468,7 +468,7 @@ def grains(opts, force_refresh=False):
     for key, fun in six.iteritems(funcs):
         if not key.startswith('core.'):
             continue
-        log.debug('Loading {0} grain'.format(key))
+        log.trace('Loading {0} grain'.format(key))
         ret = fun()
         if not isinstance(ret, dict):
             continue
