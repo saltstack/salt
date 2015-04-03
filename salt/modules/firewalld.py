@@ -279,6 +279,7 @@ def list_all(zone=None):
         salt '*' firewalld.list_all my_zone
     '''
     _zone = {}
+    id_ = ''
 
     if zone:
         cmd = '--zone={0} --list-all'.format(zone)
@@ -429,7 +430,6 @@ def add_port(zone, port):
     return __firewall_cmd('--zone={0} --add-port={1}'.format(zone, port))
 
 
-
 def remove_port(zone, port):
     '''
     Remove a specific port from a zone
@@ -519,7 +519,7 @@ def list_port_fwd(zone):
 
         ret.append(
             {'Source port': src.split('=')[1],
-             'Protocol': proto.split('=')[1], 
+             'Protocol': proto.split('=')[1],
              'Destination port': dest.split('=')[1],
              'Destination address': addr.split('=')[1]}
         )
