@@ -21,7 +21,6 @@ Full list of Salt Cloud modules
     joyent
     libcloud_aws
     linode
-    linodepy
     lxc
     msazure
     nova
