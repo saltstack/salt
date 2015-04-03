@@ -13,5 +13,6 @@ Full list of builtin roster modules
     ansible
     cache
     cloud
+    clustershell
     flat
     scan
