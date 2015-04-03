@@ -254,7 +254,11 @@ def _add_or_expand_disks(disk, vm):
                     )
                     disks_specs_list.append(disk_spec)
 
+    
+
     disks_to_create = list(set(disk.keys()) - set(existing_disks_label))
+    disks_to_create.sort()
+    log.debug("Disks to create: {0}".format(disks_to_create))
     for disk_label in disks_to_create:
         # create the disk
         random_key = random.randint(-2050, -2000)
@@ -1070,12 +1074,12 @@ def create(vm_):
                 transport=__opts__['transport']
             )
 
-            task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-            time_counter = 0
-            while task.info.state != 'success':
-                log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
-                time.sleep(5)
-                time_counter += 5
+#            task = object_ref.Clone(folder_ref, vm_name, clone_spec)
+#            time_counter = 0
+#            while task.info.state != 'success':
+#                log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
+#                time.sleep(5)
+#                time_counter += 5
         except Exception as exc:
             log.error(
                 'Error creating {0}: {1}'.format(
