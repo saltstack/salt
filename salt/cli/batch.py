@@ -26,7 +26,7 @@ class Batch(object):
         self.eauth = eauth if eauth else {}
         self.quiet = quiet
         self.local = salt.client.get_local_client(opts['conf_file'])
-        self.minions = self.__gather_minions()
+        self.minions, self.ping_gen = self.__gather_minions()
 
     def __gather_minions(self):
         '''
@@ -44,14 +44,19 @@ class Batch(object):
         else:
             args.append(self.opts.get('expr_form', 'glob'))
 
-        fret = []
-        for ret in self.local.cmd_iter(*args, **self.eauth):
-            for minion in ret:
-                if not self.quiet:
-                    print_cli('{0} Detected for this batch run'.format(minion))
-                fret.append(minion)
-        # Returns <type 'list'>
-        return sorted(frozenset(fret))
+        ping_gen = self.local.cmd_iter_no_block(*args, **self.eauth)
+        wait_until = time.time() + self.opts['timeout']
+
+        fret = set()
+        for ret in ping_gen:
+            m = next(ret.iterkeys())
+            if m is not None:
+                fret.add(m)
+            if time.time() > wait_until:
+                break
+            if m is None:
+                time.sleep(0.1)
+        return (list(fret), ping_gen)
 
     def get_bnum(self):
         '''
@@ -130,6 +135,14 @@ class Batch(object):
             else:
                 time.sleep(0.02)
             parts = {}
+
+            # see if we found more minions
+            for ping_ret in self.ping_gen:
+                if ping_ret is None:
+                    break
+                if ping_ret not in self.minions:
+                    self.minions.append(ping_ret)
+                    to_run.append(ping_ret)
 
             for queue in iters:
                 try:
