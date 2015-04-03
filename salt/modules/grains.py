@@ -488,9 +488,12 @@ def get_or_set_hash(name,
         val = ''.join([random.SystemRandom().choice(chars) for _ in range(length)])
 
         if ':' in name:
-            name, rest = name.split(':', 1)
+            root, rest = name.split(':', 1)
+            curr = get(root, _infinitedict())
             val = _dict_from_path(rest, val)
-
-        setval(name, val)
+            curr.update(val)
+            setval(root, curr)
+        else:
+            setval(name, val)
 
     return get(name)
