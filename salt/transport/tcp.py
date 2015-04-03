@@ -46,13 +46,17 @@ log = logging.getLogger(__name__)
 
 import msgpack
 
-def frame_msg(body, header=None):
+def frame_msg(body, header=None, raw_body=False):
     '''
     Frame the given message with our wire protocol
     '''
     framed_msg = {}
     if header is None:
         header = {}
+
+    # if the body wasn't already msgpacked-- lets do that.
+    if not raw_body:
+        body = msgpack.dumps(body)
 
     framed_msg['head'] = header
     framed_msg['body'] = body
@@ -121,10 +125,10 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         self.message_client = SaltMessageClient(host, int(port), io_loop=self.io_loop)
 
     def _package_load(self, load):
-        return self.serial.dumps({
+        return {
             'enc': self.crypt,
             'load': load,
-        })
+        }
 
     @tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
@@ -273,18 +277,18 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         try:
             payload = self._decode_payload(payload)
         except Exception:
-            stream.write(frame_msg(self.serial.dumps('bad load'), header=header))
+            stream.write(frame_msg('bad load', header=header))
             raise tornado.gen.Return()
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
-            yield stream.write(frame_msg(self.serial.dumps('payload and load must be a dict'), header=header))
+            yield stream.write(frame_msg('payload and load must be a dict', header=header))
             raise tornado.gen.Return()
 
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
-            yield stream.write(frame_msg(self.serial.dumps(self._auth(payload['load'])), header=header))
+            yield stream.write(frame_msg(self._auth(payload['load']), header=header))
             raise tornado.gen.Return()
 
         # TODO: test
@@ -299,14 +303,14 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
         req_fun = req_opts.get('fun', 'send')
         if req_fun == 'send_clear':
-            stream.write(frame_msg(self.serial.dumps(ret), header=header))
+            stream.write(frame_msg(ret, header=header))
         elif req_fun == 'send':
-            stream.write(frame_msg(self.serial.dumps(self.crypticle.dumps(ret)), header=header))
+            stream.write(frame_msg(self.crypticle.dumps(ret), header=header))
         elif req_fun == 'send_private':
-            stream.write(frame_msg(self.serial.dumps(self._encrypt_private(ret,
-                                                                           req_opts['key'],
-                                                                           req_opts['tgt'],
-                                                                           )), header=header))
+            stream.write(frame_msg(self._encrypt_private(ret,
+                                                         req_opts['key'],
+                                                         req_opts['tgt'],
+                                                         ), header=header))
         else:
             log.error('Unknown req_fun {0}'.format(req_fun))
             # always attempt to return an error to the minion
@@ -554,7 +558,7 @@ class PubServer(tornado.tcpserver.TCPServer):
     def publish_payload(self, package):
         log.trace('TCP PubServer starting to publish payload')
         package = package[0]  # ZMQ (The IPC calling us) ism :/
-        payload = frame_msg(salt.payload.unpackage(package)['payload'])
+        payload = frame_msg(salt.payload.unpackage(package)['payload'], raw_body=True)
         to_remove = []
         for item in self.clients:
             client, address = item
