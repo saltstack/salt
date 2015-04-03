@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
 
 '''
-Support for firewalld
-'''
-from __future__ import absolute_import
+Support for firewalld.
 
-import salt.utils
+.. versionadded:: 2015.2.0
+'''
+
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 import re
+
+# Import Salt Libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -388,7 +393,9 @@ def remove_service(name, zone=None, permanent=True):
 
 def add_masquerade(zone):
     '''
-    Enable masquerade on a zone
+    Enable masquerade on a zone.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -401,7 +408,9 @@ def add_masquerade(zone):
 
 def remove_masquerade(zone):
     '''
-    Remove masquerade on a zone
+    Remove masquerade on a zone.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -414,7 +423,9 @@ def remove_masquerade(zone):
 
 def add_port(zone, port):
     '''
-    Allow specific ports in a zone
+    Allow specific ports in a zone.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -432,7 +443,9 @@ def add_port(zone, port):
 
 def remove_port(zone, port):
     '''
-    Remove a specific port from a zone
+    Remove a specific port from a zone.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -445,7 +458,9 @@ def remove_port(zone, port):
 
 def list_ports(zone):
     '''
-    List all ports in a zone
+    List all ports in a zone.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -458,7 +473,9 @@ def list_ports(zone):
 
 def add_port_fwd(zone, src, dest, proto='tcp', dstaddr=''):
     '''
-    Port forwarding
+    Add port forwarding.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -484,7 +501,9 @@ def add_port_fwd(zone, src, dest, proto='tcp', dstaddr=''):
 
 def remove_port_fwd(zone, src, dest, proto='tcp'):
     '''
-    Remove Port Forwarding
+    Remove Port Forwarding.
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
