@@ -396,8 +396,9 @@ def query(sid, user, password, query):
     '''
     Execute an SQL query.
 
-    :return A table result as a list of lists (on select), execution time on other queries if they were successful,
-    raise an exception if not.
+    :return A table result as a list of lists (on select),
+            execution time on other queries if they were successful,
+            raise an exception if not.
 
     * **sid**: SID of the database
     * **user**: Login user
