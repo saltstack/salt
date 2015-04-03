@@ -9,6 +9,7 @@ Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
 Set "PyDir=C:\Python27"
+Set "Version=%1"
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
@@ -60,7 +61,7 @@ If Exist "%BinDir%\README.txt" del /q "%BinDir%\README.txt"
 
 @ echo Building the installer...
 @ echo -------------------------
-makensis.exe "%InsDir%\Salt-Minion-Setup.nsi"
+makensis.exe /DSaltVersion="%Version%" "%InsDir%\Salt-Minion-Setup.nsi"
 @ echo.
 
 @ echo.
@@ -69,5 +70,7 @@ makensis.exe "%InsDir%\Salt-Minion-Setup.nsi"
 @ echo -------------------
 @ echo Installation file can be found in the following directory:
 @ echo %InsDir%
-pause
+
+done:
+if [%Version%] == [] pause
 cls
