@@ -1,5 +1,5 @@
 '''
-Zeromq transport classes
+RAET transport classes
 '''
 
 from __future__ import absolute_import
