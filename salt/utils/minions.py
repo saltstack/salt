@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import glob
+import fnmatch
 import re
 import logging
 
@@ -117,23 +117,13 @@ class CkMinions(object):
         '''
         Return the minions found by looking via globs
         '''
-        cwd = os.getcwd()
         pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
-
-        # If there is no directory return an empty list
-        if os.path.isdir(pki_dir) is False:
+        try:
+            files = os.listdir(pki_dir)
+            return fnmatch.filter(files, expr)
+        except OSError:
             return []
 
-        os.chdir(pki_dir)
-        ret = set(glob.glob(expr))
-        try:
-            os.chdir(cwd)
-        except OSError as exc:
-            if exc.errno != 13:
-                # If it's not a permission denied, perhaps we're running with
-                # sudo
-                raise
-        return list(ret)
 
     def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -142,10 +132,9 @@ class CkMinions(object):
         if isinstance(expr, string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
-            if fn_ in expr:
-                if fn_ not in ret:
-                    ret.append(fn_)
+        for m in expr:
+            if os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, m)):
+                ret.append(m)
         return ret
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
