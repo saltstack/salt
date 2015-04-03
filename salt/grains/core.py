@@ -1661,7 +1661,7 @@ def _hw_data(osdata):
             'biosreleasedate': __salt__['smbios.get']('bios-release-date'),
             'uuid': __salt__['smbios.get']('system-uuid')
         }
-        grains = {key: val for key, val in grains.items() if val is not None}
+        grains = dict([(key, val) for key, val in grains.items() if val is not None])
         uuid = __salt__['smbios.get']('system-uuid')
         if uuid is not None:
             grains['uuid'] = uuid.lower()
