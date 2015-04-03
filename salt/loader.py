@@ -93,6 +93,7 @@ def _module_dirs(
 def minion_mods(
         opts,
         context=None,
+        utils=None,
         whitelist=None,
         include_errors=False,
         initial_load=False,
@@ -117,12 +118,14 @@ def minion_mods(
     '''
     if context is None:
         context = {}
+    if utils is None:
+        utils = {}
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
                      opts,
                      tag='module',
-                     pack={'__context__': context},
+                     pack={'__context__': context, '__utils__': utils},
                      whitelist=whitelist,
                      loaded_base_name=loaded_base_name)
     ret.pack['__salt__'] = ret

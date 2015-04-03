@@ -19,16 +19,13 @@ import threading
 import traceback
 import multiprocessing
 from random import randint, shuffle
+from stat import S_IMODE
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
-
-from stat import S_IMODE
-
-from stat import S_IMODE
 
 # Import third party libs
 try:
@@ -338,7 +335,9 @@ class SMinion(object):
             self.opts['id'],
             self.opts['environment']
         ).compile_pillar()
-        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
+        self.utils = salt.loader.utils(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
+                                                 include_errors=True)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -505,8 +504,10 @@ class MasterMinion(object):
         '''
         Load all of the modules for the minion
         '''
+        self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(
             self.opts,
+            utils=self.utils,
             whitelist=self.whitelist,
             initial_load=initial_load)
         if self.mk_returners:
@@ -935,11 +936,13 @@ class Minion(MinionBase):
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
+        self.utils = salt.loader.utils(self.opts)
         if self.opts.get('multimaster', False):
             s_opts = copy.deepcopy(self.opts)
-            functions = salt.loader.minion_mods(s_opts, loaded_base_name=self.loaded_base_name, notify=notify)
+            functions = salt.loader.minion_mods(s_opts, utils=self.utils,
+                                                loaded_base_name=self.loaded_base_name, notify=notify)
         else:
-            functions = salt.loader.minion_mods(self.opts, notify=notify)
+            functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=notify)
         returners = salt.loader.returners(self.opts, functions)
         errors = {}
         if '_errors' in functions:
@@ -2702,7 +2705,8 @@ class Matcher(object):
         Match based on the local data store on the minion
         '''
         if self.functions is None:
-            self.functions = salt.loader.minion_mods(self.opts)
+            utils = salt.loader.utils(self.opts)
+            self.functions = salt.loader.minion_mods(self.opts, utils=utils)
         comps = tgt.split(':')
         if len(comps) < 2:
             return False
