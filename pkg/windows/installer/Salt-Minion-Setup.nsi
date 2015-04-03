@@ -234,8 +234,6 @@ FunctionEnd
 
 Function .onInit
 
-MessageBox MB_OK "$INSTDIR"
-
   confFind:
   IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
 
