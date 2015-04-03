@@ -759,10 +759,10 @@ class Minion(MinionBase):
         else:
             opts.update(resolve_dns(opts))
             pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts,
-                                                                             timeout=timeout,
-                                                                             safe=safe,
-                                                                             io_loop=self.io_loop,
-                                                                             )
+                                                                        timeout=timeout,
+                                                                        safe=safe,
+                                                                        io_loop=self.io_loop,
+                                                                        )
             yield pub_channel.connect()
             self.tok = pub_channel.auth.gen_token('salt')
             self.connected = True
@@ -801,7 +801,8 @@ class Minion(MinionBase):
                 event = '{0}{1}{2}'.format(
                         beacon['tag'],
                         salt.utils.event.TAGEND,
-                        serialized_data)
+                        serialized_data,
+                )
                 self.handle_event(event)
                 self.epub_sock.send(event)
 
