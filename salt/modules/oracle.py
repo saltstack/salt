@@ -126,8 +126,8 @@ class _OracleHelper(object):
 
         self.lsnrctl = self.LSNR_CTL.format(self.ora_home)
         if not os.path.exists(self.lsnrctl):
-            raise Exception("Underlying error: %s does not exists or cannot be executed." % self.lsnrctl)
-
+            raise CommandExecutionError(
+                "Underlying error: {0} does not exists or cannot be executed.".format(self.lsnrctl))
 
     def get_oratab(self):
         '''
