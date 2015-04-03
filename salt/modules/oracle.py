@@ -32,8 +32,6 @@ import logging
 import textwrap
 from subprocess import Popen, PIPE, STDOUT
 
-from salt.utils.decorators import depends
-import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 import salt.utils
