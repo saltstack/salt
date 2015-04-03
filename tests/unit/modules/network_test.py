@@ -5,6 +5,8 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import socket
+import os.path
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -24,8 +26,6 @@ ensure_in_syspath('../../')
 import salt.utils
 from salt.modules import network
 from salt.exceptions import CommandExecutionError
-import socket
-import os.path
 
 # Globals
 network.__grains__ = {}
@@ -99,6 +99,7 @@ class NetworkTestCase(TestCase):
                                                MagicMock(return_value='A')}):
                 self.assertEqual(network.dig('host'), 'A')
 
+    @patch('salt.utils.which', MagicMock(return_value=''))
     def test_arp(self):
         '''
         Test for return the arp table from the minion
