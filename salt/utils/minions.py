@@ -92,6 +92,11 @@ def nodegroup_comp(group, nodegroups, skip=None):
 class CkMinions(object):
     '''
     Used to check what minions should respond from a target
+
+    Note: This is a best-effort set of the minions that would match a target.
+    Depending on master configuration (grains caching, etc.) and topology (syndics)
+    the list may be a subset-- but we err on the side of too-many minions in this
+    class.
     '''
     def __init__(self, opts):
         self.opts = opts
