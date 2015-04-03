@@ -58,13 +58,23 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     vmware-centos6.5:
       provider: vmware-vcenter01
       clonefrom: test-vm
+
       ## Optional arguments
       num_cpus: 4
       memory: 8192
+      disk:
+        'Hard disk 2':
+          size: 30
+        'Hard disk 3':
+          size: 20
+        'Hard disk 4':
+          size: 5
       datastore: HUGE-DATASTORE-Cluster
-      # If cloning from template, either resourcepool or cluster must be specified
+
+      # If cloning from template, either resourcepool or cluster MUST be specified!
       resourcepool: Resources
       cluster: Prod
+
       folder: Development
       datacenter: DC1
       host: c4212n-002.domain.com
@@ -85,6 +95,11 @@ num_cpus
 memory
     Enter memory (in MB) you want the VM/template to have. If not specified, the current
     VM/template\'s memory size is used.
+
+disk
+    Enter the disk specification here. If the hard disk doesn\'t exist, it will be created with
+    the provided size. If the hard disk already exists, it will be expanded if the provided size
+    is greater than the current size of the disk.
 
 datastore
     Enter the name of the datastore or the datastore cluster where the virtual machine should

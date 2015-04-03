@@ -48,6 +48,7 @@ from __future__ import absolute_import
 import pprint
 import logging
 import time
+import random
 
 # Import salt libs
 import salt.utils.cloud
@@ -222,6 +223,64 @@ def _get_mor_by_property(obj_type, property_value, property_name='name'):
             return object['object']
 
     return None
+
+
+def _add_or_expand_disks(disk, vm):
+    unit_number = 0
+    existing_disks_label = []
+    disks_specs_list = []
+    for device in vm.config.hardware.device:
+        if hasattr(device.backing, 'fileName'):
+            unit_number += 1
+            # check if scsi controller
+            if unit_number == 7:
+                unit_number += 1
+            existing_disks_label.append(device.deviceInfo.label)
+            if device.deviceInfo.label in disk.keys():
+                size_kb = long(disk[device.deviceInfo.label]['size']) * 1024 * 1024
+                if device.capacityInKB < size_kb:
+                    # expand the disk
+                    disk_spec = vim.vm.device.VirtualDeviceSpec()
+                    disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+                    disk_spec.device = vim.vm.device.VirtualDisk(
+                        key=device.key,
+                        backing=vim.vm.device.VirtualDisk.FlatVer2BackingInfo(
+                            fileName=device.backing.fileName,
+                            diskMode=device.backing.diskMode
+                        ),
+                        controllerKey=device.controllerKey,
+                        unitNumber=device.unitNumber,
+                        capacityInKB=size_kb
+                    )
+                    disks_specs_list.append(disk_spec)
+
+    disks_to_create = list(set(disk.keys()) - set(existing_disks_label))
+    disks_to_create.sort()
+    log.debug("Disks to create: {0}".format(disks_to_create))
+    for disk_label in disks_to_create:
+        # create the disk
+        random_key = random.randint(-2050, -2000)
+        size_kb = long(disk[disk_label]['size']) * 1024 * 1024
+        disk_spec = vim.vm.device.VirtualDeviceSpec()
+        disk_spec.fileOperation = 'create'
+        disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+        disk_spec.device = vim.vm.device.VirtualDisk(
+            key=random_key,
+            deviceInfo=vim.Description(label=disk_label),
+            backing=vim.vm.device.VirtualDisk.FlatVer2BackingInfo(
+                diskMode='persistent'
+            ),
+            controllerKey=1000,
+            unitNumber=unit_number,
+            capacityInKB=size_kb
+        )
+        disks_specs_list.append(disk_spec)
+        unit_number += 1
+        # check if scsi controller
+        if unit_number == 7:
+            unit_number += 1
+
+    return disks_specs_list
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -755,13 +814,23 @@ def create(vm_):
         vmware-centos6.5:
           provider: vmware-vcenter01
           clonefrom: test-vm
+
           ## Optional arguments
           num_cpus: 4
           memory: 8192
+          disk:
+            'Hard disk 2':
+              size: 30
+            'Hard disk 3':
+              size: 20
+            'Hard disk 4':
+              size: 5
           datastore: HUGE-DATASTORE-Cluster
-          # If cloning from template, either resourcepool or cluster must be specified
+
+          # If cloning from template, either resourcepool or cluster MUST be specified!
           resourcepool: Resources
           cluster: Prod
+
           folder: Development
           datacenter: DC1
           host: c4212n-002.domain.com
@@ -782,6 +851,11 @@ def create(vm_):
     memory
         Enter memory (in MB) you want the VM/template to have. If not specified, the current
         VM/template\'s memory size is used.
+
+    disk
+        Enter the disk specification here. If the hard disk doesn\'t exist, it will be created with
+        the provided size. If the hard disk already exists, it will be expanded if the provided size
+        is greater than the current size of the disk.
 
     datastore
         Enter the name of the datastore or the datastore cluster where the virtual machine should
@@ -908,6 +982,9 @@ def create(vm_):
     memory = config.get_cloud_config_value(
         'memory', vm_, __opts__, default=None
     )
+    disk = config.get_cloud_config_value(
+        'disk', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
     )
@@ -950,15 +1027,14 @@ def create(vm_):
         # If not specified, the current datastore is used.
         if datastore:
             datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
-            reloc_spec.datastore = datastore_ref
 
         if host:
             host_ref = _get_mor_by_property(vim.HostSystem, host)
-            reloc_spec.host = host_ref
-
-        log.debug('reloc_spec set to {0}\n'.format(
-            pprint.pformat(reloc_spec))
-        )
+            if host_ref:
+                reloc_spec.host = host_ref
+            else:
+                log.warning("Specified host: {0} does not exist".format(host))
+                log.warning("Using host used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
@@ -969,9 +1045,8 @@ def create(vm_):
         if memory:
             config_spec.memoryMB = memory
 
-        log.debug('config_spec set to {0}\n'.format(
-            pprint.pformat(config_spec))
-        )
+        if disk:
+            config_spec.deviceChange = _add_or_expand_disks(disk, object_ref)
 
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
