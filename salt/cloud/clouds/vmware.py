@@ -1025,11 +1025,6 @@ def create(vm_):
         # If not specified, the current datastore is used.
         if datastore:
             datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
-            if datastore_ref:
-                reloc_spec.datastore = datastore_ref
-            else:
-                log.warning("Specified datastore: {0} does not exist".format(datastore))
-                log.warning("Using default datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
         if host:
             host_ref = _get_mor_by_property(vim.HostSystem, host)
