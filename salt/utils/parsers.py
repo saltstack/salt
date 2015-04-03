@@ -939,6 +939,15 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   'expression:\n"role:production*"')
         )
         group.add_option(
+            '-J', '--pillar-pcre',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'use a pillar value to identify targets, the syntax '
+                  'for the target is the pillar key followed by a pcre'
+                  'regular expression:\n"role:prod.*"')
+        )
+        group.add_option(
             '-S', '--ipcidr',
             default=False,
             action='store_true',

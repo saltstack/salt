@@ -191,6 +191,21 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion', data)
         self.assertIn('sub_minion', data)
 
+    def test_repillar(self):
+        '''
+        test salt pillar PCRE matcher
+        '''
+        data = self.run_salt(
+            '-t 1 --pillar-pcre "monty:^(python|hall)$" test.ping'
+        )
+        data = '\n'.join(data)
+        self.assertIn('minion', data)
+        self.assertNotIn('sub_minion', data)
+        data = self.run_salt('--pillar-pcre "knights:^(Robin|Lancelot)$" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('sub_minion', data)
+        self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+
     def test_ipcidr(self):
         subnets_data = self.run_salt('--out yaml \'*\' network.subnets')
         yaml_data = yaml.load('\n'.join(subnets_data))
