@@ -254,8 +254,6 @@ def _add_or_expand_disks(disk, vm):
                     )
                     disks_specs_list.append(disk_spec)
 
-    
-
     disks_to_create = list(set(disk.keys()) - set(existing_disks_label))
     disks_to_create.sort()
     log.debug("Disks to create: {0}".format(disks_to_create))
