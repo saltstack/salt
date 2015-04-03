@@ -19,16 +19,13 @@ import threading
 import traceback
 import multiprocessing
 from random import randint, shuffle
+from stat import S_IMODE
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
-
-from stat import S_IMODE
-
-from stat import S_IMODE
 
 # Import third party libs
 try:
@@ -339,7 +336,7 @@ class SMinion(object):
             self.opts['environment']
         ).compile_pillar()
         self.utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils, 
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
                                                  include_errors=True)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
