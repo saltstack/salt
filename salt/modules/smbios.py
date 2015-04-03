@@ -156,7 +156,6 @@ def records(rec_type=None, fields=None, clean=True):
         salt '*' smbios.records 14
         salt '*' smbios.records 4 core_count,thread_count,current_speed
     '''
-
     if rec_type is None:
         smbios = _dmi_parse(_dmidecoder(), clean, fields)
     else:
@@ -290,7 +289,7 @@ def _dmi_isclean(key, val):
                 return True
             except ValueError:
                 continue
-        log.debug('DMI {0} value {1} is an invalid UUID'.format(key, val))
+        log.trace('DMI {0} value {1} is an invalid UUID'.format(key, val.replace('\n', ' ')))
         return False
     elif re.match('serial|part|version', key):
         # 'To be filled by O.E.M.
