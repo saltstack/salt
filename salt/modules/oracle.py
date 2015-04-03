@@ -68,7 +68,7 @@ FROM (SELECT tablespace_name, SUM(bytes)/1024/1024 FREE_MB, 0 TOTAL_MB, 0 MAX_MB
     GROUP BY tablespace_name;
     """
     # tablespace sizes
-    tblsp_usage = """
+    tblsp_usage = r"""
 SELECT F.TABLESPACE_NAME,TO_CHAR ((T.TOTAL_SPACE - F.FREE_SPACE),'999,999') "USEDMB",
   TO_CHAR (F.FREE_SPACE, '999,999') "FREEMB",
   TO_CHAR (T.TOTAL_SPACE, '999,999') "TOTALMB",
@@ -96,7 +96,7 @@ GROUP BY TABLESPACE_NAME ) F, (SELECT TABLESPACE_NAME, ROUND (SUM (BYTES/1048576
     db_owners = "SELECT DISTINCT owner FROM dba_segments ORDER BY owner ASC"
 
     # DB parametrization
-    db_params = "SELECT sid, name, value FROM v\$spparameter WHERE isspecified='TRUE'"
+    db_params = r"SELECT sid, name, value FROM v\$spparameter WHERE isspecified='TRUE'"
 
 
 class _OracleHelper(object):
@@ -443,7 +443,7 @@ def version(*args):
         salt '*' oracle.version instances
     '''
 
-    query = "select * from V\${0}".format('instances' in args and "instance" or "version")
+    query = r"select * from V\${0}".format('instances' in args and "instance" or "version")
     out, err = _orahlp().syscall("sudo", _orahlp().prepare_scenario(query),
                                  None, "-u", _orahlp().ora_uid, "/bin/bash")
     ret = dict()
