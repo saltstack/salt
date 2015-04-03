@@ -1,3 +1,5 @@
+.. _salt-cloud-feature-matrix:
+
 ==============
 Feature Matrix
 ==============

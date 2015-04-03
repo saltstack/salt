@@ -1,3 +1,5 @@
+.. _salt-cloud-functions:
+
 ===============
 Cloud Functions
 ===============
@@ -11,3 +13,5 @@ provider, that provider must be specified.
 
     $ salt-cloud -f show_image ec2 image=ami-fd20ad94
 
+Another useful reference for viewing salt-cloud functions is the
+:ref:Salt Cloud Feature Matrix <salt-cloud-feature-matrix>
