@@ -68,6 +68,8 @@ from __future__ import absolute_import
 import sys
 
 # Import salt libs
+import salt.utils
+
 from salt.exceptions import CommandExecutionError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
@@ -157,11 +159,6 @@ def managed(name, **kwargs):
         Toggles whether or not the repo is used for resolving dependencies
         and/or installing packages.
 
-    enabled
-        Enables the repository, even if the repository has been disabled, in
-        order for the respective package requiring the repository can be found
-        and installed.
-
     comps
         On apt-based systems, comps dictate the types of packages to be
         installed from the repository (e.g. main, nonfree, ...).  For
@@ -234,6 +231,14 @@ def managed(name, **kwargs):
     if 'humanname' in kwargs:
         kwargs['name'] = kwargs['humanname']
 
+    if kwargs.pop('enabled', None):
+        kwargs['disabled'] = False
+        salt.utils.warn_until(
+            'Boron',
+            'The `enabled` argument has been deprecated in favor of '
+            '`disabled`.'
+        )
+
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
 
@@ -247,15 +252,6 @@ def managed(name, **kwargs):
         ret['comment'] = \
             'Failed to configure repo {0!r}: {1}'.format(name, exc)
         return ret
-
-    # aptpkg supports "disabled", yumpkg supports "enabled"
-    # lets just provide both to everyone.
-    if 'enabled' in kwargs and 'disabled' not in kwargs:
-        kw_enabled = kwargs['enabled'] in (['true', 'True', 'TRUE', True, 1])
-        kwargs['disabled'] = not kw_enabled
-    if 'disabled' in kwargs and 'enabled' not in kwargs:
-        kw_disabled = kwargs['disabled'] in (['true', 'True', 'TRUE', True, 1])
-        kwargs['enabled'] = not kw_disabled
 
     # this is because of how apt-sources works.  This pushes distro logic
     # out of the state itself and into a module that it makes more sense
