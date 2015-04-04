@@ -323,6 +323,7 @@ def latest(name,
 
                 new_rev = __salt__['git.revision'](cwd=target, user=user)
         except Exception as exc:
+            log.error('Unexpected exception in git state', exc_info=True)
             return _fail(
                 ret,
                 str(exc))
@@ -394,6 +395,7 @@ def latest(name,
                 __salt__['git.revision'](cwd=target, user=user))
 
         except Exception as exc:
+            log.error('Unexpected exception in git state', exc_info=True)
             return _fail(
                 ret,
                 str(exc))
