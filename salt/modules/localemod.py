@@ -128,7 +128,7 @@ def set_locale(locale):
             __salt__['file.touch']('/etc/sysconfig/i18n')
         if __salt__['cmd.retcode']('grep "^LANG=" /etc/sysconfig/i18n') != 0:
             __salt__['file.append']('/etc/sysconfig/i18n',
-                                    '"\nLANG={0}"'.format(locale))
+                                    'LANG="{0}"'.format(locale))
         else:
             __salt__['file.replace'](
                 '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
@@ -139,7 +139,7 @@ def set_locale(locale):
         )
         if __salt__['cmd.retcode']('grep "^LANG=" /etc/default/locale') != 0:
             __salt__['file.append']('/etc/default/locale',
-                                    '\nLANG="{0}"'.format(locale))
+                                    'LANG="{0}"'.format(locale))
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale set {0}'.format(locale)
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
