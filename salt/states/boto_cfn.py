@@ -222,7 +222,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
 def _get_template(template, name):
     # Checks if template is a file in salt defined by salt://.
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    if template is not None  and 'salt://' in template:
+    if template is not None and 'salt://' in template:
         try:
             return __salt__['cp.get_file_str'](template)
         except IOError as e:
@@ -251,3 +251,4 @@ def _get_error(error):
     code = error[0][1].text
     message = error[0][2].text
     return code, message
+
