@@ -69,6 +69,15 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
           size: 20
         'Hard disk 4':
           size: 5
+      network:
+        'Network adapter 1':
+          name: 10.20.30-400-Test
+        'Network adapter 2':
+          name: 10.30.40-500-Dev
+          type: e1000
+        'Network adapter 3':
+          name: 10.40.50-600-Prod
+          type: vmxnet3
       datastore: HUGE-DATASTORE-Cluster
 
       # If cloning from template, either resourcepool or cluster MUST be specified!
@@ -100,6 +109,14 @@ disk
     Enter the disk specification here. If the hard disk doesn\'t exist, it will be created with
     the provided size. If the hard disk already exists, it will be expanded if the provided size
     is greater than the current size of the disk.
+
+network
+    Enter the network adapter specification here. If the network adapter doesn\'t exist, a new
+    network adapter will be created with the specified network name and type. If the network
+    adapter already exists, it will be reconfigured with the network name specified. Currently,
+    only network adapters of type vmxnet, vmxnet2, vmxnet3, e1000 and e1000e can be created. If
+    the network adapter type specified is not one of these, by default a network adapter of type
+    vmxnet3 will be created.
 
 datastore
     Enter the name of the datastore or the datastore cluster where the virtual machine should
