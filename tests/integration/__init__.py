@@ -61,6 +61,7 @@ import salt.utils.process
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
+from salt.exceptions import SaltClientError
 
 try:
     import salt.master
@@ -868,9 +869,14 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
 
-            responses = self.client.cmd(
-                list(expected_connections), 'test.ping', expr_form='list',
-            )
+            try:
+                responses = self.client.cmd(
+                    list(expected_connections), 'test.ping', expr_form='list',
+                )
+            # we'll get this exception if the master process hasn't finished starting yet
+            except SaltClientError:
+                time.sleep(0.1)
+                continue
             for target in responses:
                 if target not in expected_connections:
                     # Someone(minion) else "listening"?
