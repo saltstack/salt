@@ -2,9 +2,12 @@
 Getting Started With VMware vSphere
 ===================================
 
+.. versionadded:: Beryllium
+
+**Author**: Nitin Madhok <nmadhok@clemson.edu>
+
 VMware vSphere is a server virtualization platform for building cloud
 infrastructure.
-
 
 Dependencies
 ============
