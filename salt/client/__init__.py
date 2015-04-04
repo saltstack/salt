@@ -1571,6 +1571,11 @@ class Caller(object):
     ``Caller`` is the same interface used by the :command:`salt-call`
     command-line tool on the Salt Minion.
 
+    .. versionchanged:: Beryllium
+        Added the ``cmd`` method for consistency with the other Salt clients.
+        The existing ``function`` and ``sminion.functions`` interfaces still
+        exist but have been removed from the docs.
+
     Importing and using ``Caller`` must be done on the same machine as a
     Salt Minion and it must be done using the same user that the Salt Minion is
     running as.
@@ -1581,40 +1586,23 @@ class Caller(object):
 
         import salt.client
         caller = salt.client.Caller()
-        caller.function('test.ping')
-
-        # Or call objects directly
-        caller.sminion.functions['cmd.run']('ls -l')
+        caller.cmd('test.ping')
 
     Note, a running master or minion daemon is not required to use this class.
     Running ``salt-call --local`` simply sets :conf_minion:`file_client` to
     ``'local'``. The same can be achieved at the Python level by including that
     setting in a minion config file.
 
-    Instantiate a new Caller() instance using a file system path to the minion
-    config file:
-
-    .. code-block:: python
-
-        caller = salt.client.Caller('/path/to/custom/minion_config')
-        caller.sminion.functions['grains.items']()
-
-    Instantiate a new Caller() instance using a dictionary of the minion
-    config:
-
     .. versionadded:: 2014.7.0
-        Pass the minion config as a dictionary.
+        Pass the minion config as the ``mopts`` dictionary.
 
     .. code-block:: python
 
         import salt.client
         import salt.config
-
-        opts = salt.config.minion_config('/etc/salt/minion')
-        opts['file_client'] = 'local'
-        caller = salt.client.Caller(mopts=opts)
-        caller.sminion.functions['grains.items']()
-
+        __opts__ = salt.config.minion_config('/etc/salt/minion')
+        __opts__['file_client'] = 'local'
+        caller = salt.client.Caller(mopts=__opts__)
     '''
     def __init__(self, c_path=os.path.join(syspaths.CONFIG_DIR, 'minion'),
             mopts=None):
@@ -1623,6 +1611,24 @@ class Caller(object):
         else:
             self.opts = salt.config.minion_config(c_path)
         self.sminion = salt.minion.SMinion(self.opts)
+
+    def cmd(self, fun, *args, **kwargs):
+        '''
+        Call an execution module with the given arguments and keword arguments
+
+        .. versionchanged:: Beryllium
+            Added the ``cmd`` method for consistency with the other Salt clients.
+            The existing ``function`` and ``sminion.functions`` interfaces still
+            exist but have been removed from the docs.
+
+        .. code-block:: python
+
+            caller.cmd('test.arg', 'Foo', 'Bar', baz='Baz')
+
+            caller.cmd('event.send', 'myco/myevent/something',
+                data={'foo': 'Foo'}, with_env=['GIT_COMMIT'], with_grains=True)
+        '''
+        return self.sminion.functions[fun](*args, **kwargs)
 
     def function(self, fun, *args, **kwargs):
         '''
