@@ -283,6 +283,29 @@ def _add_or_expand_disks(disk, vm):
     return disks_specs_list
 
 
+def _change_network_adapter(network, vm):
+    network_specs_list = []
+    for device in vm.config.hardware.device:
+        if hasattr(device.backing, 'network'):
+            if device.deviceInfo.label in network.keys():
+                network_name = network[device.deviceInfo.label]['name']
+                # Only edit the network adapter if network name is different
+                if device.backing.deviceName != network_name:
+                    network_ref = _get_mor_by_property(vim.Network, network_name)
+                    nic = device
+                    nic.backing.deviceName = network_name
+                    nic.backing.network = network_ref
+                    nic.deviceInfo.summary = network_name
+                    nic.connectable.allowGuestControl = True
+                    nic.connectable.startConnected = True
+                    network_spec = vim.vm.device.VirtualDeviceSpec()
+                    network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+                    network_spec.device = nic
+                    network_specs_list.append(network_spec)
+
+    return network_specs_list
+
+
 def get_vcenter_version(kwargs=None, call=None):
     '''
     Show the vCenter Server version with build number.
@@ -985,6 +1008,9 @@ def create(vm_):
     disk = config.get_cloud_config_value(
         'disk', vm_, __opts__, default=None
     )
+    network = config.get_cloud_config_value(
+        'network', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
     )
@@ -1045,8 +1071,13 @@ def create(vm_):
         if memory:
             config_spec.memoryMB = memory
 
-        if disk:
-            config_spec.deviceChange = _add_or_expand_disks(disk, object_ref)
+        if disk or network:
+            devices = []
+            if disk:
+                devices.extend(_add_or_expand_disks(disk, object_ref))
+            if network:
+                devices.extend(_change_network_adapter(network, object_ref))
+            config_spec.deviceChange = devices
 
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
