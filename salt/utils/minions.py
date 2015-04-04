@@ -117,7 +117,6 @@ class CkMinions(object):
         except OSError:
             return []
 
-
     def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via a list
@@ -276,8 +275,10 @@ class CkMinions(object):
                 'Range matcher unavailble (unable to import seco.range, '
                 'module most likely not installed)'
             )
+        if not hasattr(self, '_range'):
+            self._range = seco.range.Range(self.opts['range_server'])
         try:
-            return range_.expand(expr)
+            return self._range.expand(expr)
         except seco.range.RangeException as exc:
             log.error(
                 'Range exception in compound match: {0}'.format(exc)
