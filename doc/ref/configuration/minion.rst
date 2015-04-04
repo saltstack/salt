@@ -234,6 +234,8 @@ Default: ``/var/cache/salt``
 
 The location for minion cache data.
 
+This directory may contain sensitive data and should be protected accordingly.
+
 .. code-block:: yaml
 
     cachedir: /var/cache/salt
