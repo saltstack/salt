@@ -71,7 +71,7 @@ class BaseTCPReqCase(TestCase):
         cls.io_loop.stop()
         cls.server_thread.join()
         cls.process_manager.kill_children()
-        cls.server_channel.close()
+        del cls.server_channel
 
 
 class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
@@ -162,8 +162,7 @@ class BaseTCPPubCase(AsyncTestCase):
         cls.io_loop.stop()
         cls.server_thread.join()
         cls.process_manager.kill_children()
-        cls.req_server_channel.close()
-
+        del cls.req_server_channel
 
 class AsyncPubChannelTest(BaseTCPPubCase, PubChannelMixin):
     '''

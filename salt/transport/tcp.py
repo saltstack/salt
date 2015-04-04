@@ -243,6 +243,9 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
+    def __del__(self):
+        self.close()
+
     def pre_fork(self, process_manager):
         '''
         Pre-fork we need to create the zmq router device
