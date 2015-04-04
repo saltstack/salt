@@ -236,6 +236,48 @@ class FirewalldTestCase(TestCase):
         with patch.object(firewalld, '__firewall_cmd', return_value=ret):
             self.assertEqual(firewalld.list_port_fwd('zone'), exp)
 
+    def test_get_icmp_types(self):
+        '''
+        List all available ICMP types
+        '''
+        ret = 'echo-reply echo-request parameter-problem redirect'
+        exp = ['echo-reply', 'echo-request', 'parameter-problem', 'redirect']
+
+        with patch.object(firewalld, '__firewall_cmd', return_value=ret):
+            self.assertEqual(firewalld.get_icmp_types(), exp)
+
+    def test_block_icmp(self):
+        '''
+        Test ICMP block
+        '''
+        with patch.object(firewalld, '__firewall_cmd', return_value='success'):
+            with patch.object(firewalld, 'get_icmp_types', return_value='echo-reply'):
+                self.assertEqual(firewalld.block_icmp('zone', 'echo-reply'), 'success')
+
+        with patch.object(firewalld, '__firewall_cmd'):
+            self.assertFalse(firewalld.block_icmp('zone', 'echo-reply'))
+
+    def test_allow_icmp(self):
+        '''
+        Test ICMP allow
+        '''
+        with patch.object(firewalld, '__firewall_cmd', return_value='success'):
+            with patch.object(firewalld, 'get_icmp_types', return_value='echo-reply'):
+                self.assertEqual(firewalld.allow_icmp('zone', 'echo-reply'), 'success')
+
+        with patch.object(firewalld, '__firewall_cmd', return_value='success'):
+            self.assertFalse(firewalld.allow_icmp('zone', 'echo-reply'))
+
+    def test_list_icmp_block(self):
+        '''
+        Test ICMP block list
+        '''
+        ret = 'echo-reply echo-request'
+        exp = ['echo-reply', 'echo-request']
+
+        with patch.object(firewalld, '__firewall_cmd', return_value=ret):
+            self.assertEqual(firewalld.list_icmp_block('zone'), exp)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(FirewalldTestCase, needs_daemon=False)

@@ -525,6 +525,8 @@ def list_port_fwd(zone):
     '''
     List port forwarding
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block::
@@ -544,3 +546,79 @@ def list_port_fwd(zone):
         )
 
     return ret
+
+
+def get_icmp_types():
+    '''
+    List all the available ICMP types
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' firewalld.get_icmp_types
+    '''
+    return __firewall_cmd('--get-icmptypes').split()
+
+
+def block_icmp(zone, icmp):
+    '''
+    Block a specific ICMP type on a zone
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' firewalld.block_icmp zone echo-reply
+    '''
+    if icmp not in get_icmp_types():
+        log.error('Invalid ICMP type')
+        return False
+
+    if icmp in list_icmp_block(zone):
+        log.info('ICMP block already exists')
+        return 'success'
+
+    return __firewall_cmd('--zone={0} --add-icmp-block={1}'.format(zone, icmp))
+
+
+def allow_icmp(zone, icmp):
+    '''
+    Allow a specific ICMP type on a zone
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' firewalld.allow_icmp zone echo-reply
+    '''
+    if icmp not in get_icmp_types():
+        log.error('Invalid ICMP type')
+        return False
+
+    if icmp not in list_icmp_block(zone):
+        log.info('ICMP Type is already permitted')
+        return 'success'
+
+    return __firewall_cmd('--zone={0} --remove-icmp-block={1}'.format(zone, icmp))
+
+
+def list_icmp_block(zone):
+    '''
+    List ICMP blocks on a zone
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' firewlld.list_icmp_block zone
+    '''
+    return __firewall_cmd('--zone={0} --list-icmp-blocks'.format(zone)).split()
