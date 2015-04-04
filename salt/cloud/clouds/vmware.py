@@ -290,11 +290,11 @@ def _add_or_edit_disks(disk, vm):
     return disks_specs_list
 
 
-def _edit_existing_network_adapter_helper(network_name, network_adapter):
-    network_ref = _get_mor_by_property(vim.Network, network_name)
-    network_adapter.backing.deviceName = network_name
+def _edit_existing_network_adapter_helper(network_adapter, new_network_name):
+    network_ref = _get_mor_by_property(vim.Network, new_network_name)
+    network_adapter.backing.deviceName = new_network_name
     network_adapter.backing.network = network_ref
-    network_adapter.deviceInfo.summary = network_name
+    network_adapter.deviceInfo.summary = new_network_name
     network_adapter.connectable.allowGuestControl = True
     network_adapter.connectable.startConnected = True
     network_spec = vim.vm.device.VirtualDeviceSpec()
@@ -304,16 +304,65 @@ def _edit_existing_network_adapter_helper(network_name, network_adapter):
     return network_spec
 
 
+def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type):
+    from random import randint
+    random_key = randint(-4099, -4000)
+
+    adapter_type.strip().lower()
+    network_spec = vim.vm.device.VirtualDeviceSpec()
+
+    if adapter_type == "vmxnet":
+        network_spec.device = vim.vm.device.VirtualVmxnet()
+    elif adapter_type == "vmxnet2":
+        network_spec.device = vim.vm.device.VirtualVmxnet2()
+    elif adapter_type == "vmxnet3":
+        network_spec.device = vim.vm.device.VirtualVmxnet3()
+    elif adapter_type == "e1000":
+        network_spec.device = vim.vm.device.VirtualE1000()
+    elif adapter_type == "e1000e":
+        network_spec.device = vim.vm.device.VirtualE1000e()
+    else:
+        # If type not specified or does not match, create adapter of type vmxnet3
+        network_spec.device = vim.vm.device.VirtualVmxnet3()
+        log.warn("Cannot create network adapter of type {0}. Creating default type vmxnet3".format(adapter_type))
+
+    network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+
+    network_spec.device.key = random_key
+    network_spec.device.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
+    network_spec.device.backing.deviceName = network_name
+    network_spec.device.backing.network = _get_mor_by_property(vim.Network, network_name)
+    network_spec.device.deviceInfo = vim.Description()
+    network_spec.device.deviceInfo.label = network_adapter_label
+    network_spec.device.deviceInfo.summary = network_name
+    network_spec.device.wakeOnLanEnabled = True
+    network_spec.device.connectable = vim.vm.device.VirtualDevice.ConnectInfo()
+    network_spec.device.connectable.startConnected = True
+    network_spec.device.connectable.allowGuestControl = True
+
+    return network_spec
+
+
 def _add_or_edit_network_adapters(network, vm):
     network_specs_list = []
+    existing_network_adapters_label = []
     for device in vm.config.hardware.device:
         if hasattr(device.backing, 'network'):
+            existing_network_adapters_label.append(device.deviceInfo.label)
             if device.deviceInfo.label in network.keys():
                 network_name = network[device.deviceInfo.label]['name']
                 # Only edit the network adapter if network name is different
                 if device.backing.deviceName != network_name:
-                    network_spec = _edit_existing_network_adapter_helper(network_name, device)
+                    network_spec = _edit_existing_network_adapter_helper(device, network_name)
                     network_specs_list.append(network_spec)
+
+    network_adapters_to_create = list(set(network.keys()) - set(existing_network_adapters_label))
+    network_adapters_to_create.sort()
+    log.debug("Networks to create: {0}".format(network_adapters_to_create))
+    for network_adapter_label in network_adapters_to_create:
+        # create the network adapter
+        network_spec = _add_new_network_adapter_helper(network_adapter_label, network[network_adapter_label]['name'], network[network_adapter_label]['type'])
+        network_specs_list.append(network_spec)
 
     return network_specs_list
 
@@ -860,6 +909,15 @@ def create(vm_):
               size: 20
             'Hard disk 4':
               size: 5
+          network:
+            'Network adapter 1':
+              name: 10.20.30-400-Test
+            'Network adapter 2':
+              name: 10.30.40-500-Dev
+              type: e1000
+            'Network adapter 3':
+              name: 10.40.50-600-Prod
+              type: vmxnet3
           datastore: HUGE-DATASTORE-Cluster
 
           # If cloning from template, either resourcepool or cluster MUST be specified!
@@ -891,6 +949,14 @@ def create(vm_):
         Enter the disk specification here. If the hard disk doesn\'t exist, it will be created with
         the provided size. If the hard disk already exists, it will be expanded if the provided size
         is greater than the current size of the disk.
+
+    network
+        Enter the network adapter specification here. If the network adapter doesn\'t exist, a new
+        network adapter will be created with the specified network name and type. If the network
+        adapter already exists, it will be reconfigured with the network name specified. Currently,
+        only network adapters of type vmxnet, vmxnet2, vmxnet3, e1000 and e1000e can be created. If
+        the network adapter type specified is not one of these, by default a network adapter of type
+        vmxnet3 will be created.
 
     datastore
         Enter the name of the datastore or the datastore cluster where the virtual machine should
