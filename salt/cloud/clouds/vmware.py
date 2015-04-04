@@ -237,7 +237,7 @@ def _add_or_expand_disks(disk, vm):
                 unit_number += 1
             existing_disks_label.append(device.deviceInfo.label)
             if device.deviceInfo.label in disk.keys():
-                size_kb = long(disk[device.deviceInfo.label]['size']) * 1024 * 1024
+                size_kb = int(disk[device.deviceInfo.label]['size']) * 1024 * 1024
                 if device.capacityInKB < size_kb:
                     # expand the disk
                     disk_spec = vim.vm.device.VirtualDeviceSpec()
@@ -260,7 +260,7 @@ def _add_or_expand_disks(disk, vm):
     for disk_label in disks_to_create:
         # create the disk
         random_key = random.randint(-2050, -2000)
-        size_kb = long(disk[disk_label]['size']) * 1024 * 1024
+        size_kb = int(disk[disk_label]['size']) * 1024 * 1024
         disk_spec = vim.vm.device.VirtualDeviceSpec()
         disk_spec.fileOperation = 'create'
         disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
