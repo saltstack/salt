@@ -234,8 +234,8 @@ class CkMinions(object):
         Return the minions found by looking via pillar
         '''
         return self._check_cache_minions(expr,
-                                         greedy,
                                          delimiter,
+                                         greedy,
                                          'pillar',
                                          exact_match=True)
 
@@ -377,6 +377,7 @@ class CkMinions(object):
                    'R': self._all_minions}
             if pillar_exact:
                 ref['I'] = self._check_pillar_exact_minions
+                ref['J'] = self._check_pillar_exact_minions
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
@@ -522,6 +523,7 @@ class CkMinions(object):
             if expr_form in ('grain',
                              'grain_pcre',
                              'pillar',
+                             'pillar_pcre',
                              'pillar_exact',
                              'compound',
                              'compound_pillar_exact'):
