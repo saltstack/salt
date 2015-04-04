@@ -955,8 +955,8 @@ def create(vm_):
         network adapter will be created with the specified network name and type. If the network
         adapter already exists, it will be reconfigured with the network name specified. Currently,
         only network adapters of type vmxnet, vmxnet2, vmxnet3, e1000 and e1000e can be created. If
-        the network adapter type specified is not one of these, by default a network adapter of type
-        vmxnet3 will be created.
+        the specified network adapter type is not one of these, a network adapter of type vmxnet3
+        will be created by default.
 
     datastore
         Enter the name of the datastore or the datastore cluster where the virtual machine should
