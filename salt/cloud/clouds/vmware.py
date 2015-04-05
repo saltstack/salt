@@ -48,7 +48,6 @@ from __future__ import absolute_import
 import pprint
 import logging
 import time
-import random
 
 # Import salt libs
 import salt.utils.cloud
@@ -225,7 +224,40 @@ def _get_mor_by_property(obj_type, property_value, property_name='name'):
     return None
 
 
-def _add_or_expand_disks(disk, vm):
+def _edit_existing_hard_disk_helper(disk, size_kb):
+    disk.capacityInKB = size_kb
+    disk_spec = vim.vm.device.VirtualDeviceSpec()
+    disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    disk_spec.device = disk
+
+    return disk_spec
+
+
+def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
+    from random import randint
+    random_key = randint(-2099, -2000)
+
+    size_kb = long(size_gb) * 1024 * 1024
+
+    disk_spec = vim.vm.device.VirtualDeviceSpec()
+    disk_spec.fileOperation = 'create'
+    disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+
+    disk_spec.device = vim.vm.device.VirtualDisk()
+    disk_spec.device.key = random_key
+    disk_spec.device.deviceInfo = vim.Description()
+    disk_spec.device.deviceInfo.label = disk_label
+    disk_spec.device.deviceInfo.summary = "{0} GB".format(size_gb)
+    disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
+    disk_spec.device.backing.diskMode = 'persistent'
+    disk_spec.device.controllerKey = 1000
+    disk_spec.device.unitNumber = unit_number
+    disk_spec.device.capacityInKB = size_kb
+
+    return disk_spec
+
+
+def _add_or_edit_disks(disk, vm):
     unit_number = 0
     existing_disks_label = []
     disks_specs_list = []
@@ -240,18 +272,7 @@ def _add_or_expand_disks(disk, vm):
                 size_kb = long(disk[device.deviceInfo.label]['size']) * 1024 * 1024
                 if device.capacityInKB < size_kb:
                     # expand the disk
-                    disk_spec = vim.vm.device.VirtualDeviceSpec()
-                    disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
-                    disk_spec.device = vim.vm.device.VirtualDisk(
-                        key=device.key,
-                        backing=vim.vm.device.VirtualDisk.FlatVer2BackingInfo(
-                            fileName=device.backing.fileName,
-                            diskMode=device.backing.diskMode
-                        ),
-                        controllerKey=device.controllerKey,
-                        unitNumber=device.unitNumber,
-                        capacityInKB=size_kb
-                    )
+                    disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
                     disks_specs_list.append(disk_spec)
 
     disks_to_create = list(set(disk.keys()) - set(existing_disks_label))
@@ -259,21 +280,7 @@ def _add_or_expand_disks(disk, vm):
     log.debug("Disks to create: {0}".format(disks_to_create))
     for disk_label in disks_to_create:
         # create the disk
-        random_key = random.randint(-2050, -2000)
-        size_kb = long(disk[disk_label]['size']) * 1024 * 1024
-        disk_spec = vim.vm.device.VirtualDeviceSpec()
-        disk_spec.fileOperation = 'create'
-        disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
-        disk_spec.device = vim.vm.device.VirtualDisk(
-            key=random_key,
-            deviceInfo=vim.Description(label=disk_label),
-            backing=vim.vm.device.VirtualDisk.FlatVer2BackingInfo(
-                diskMode='persistent'
-            ),
-            controllerKey=1000,
-            unitNumber=unit_number,
-            capacityInKB=size_kb
-        )
+        disk_spec = _add_new_hard_disk_helper(disk_label, disk[disk_label]['size'], unit_number)
         disks_specs_list.append(disk_spec)
         unit_number += 1
         # check if scsi controller
@@ -281,6 +288,83 @@ def _add_or_expand_disks(disk, vm):
             unit_number += 1
 
     return disks_specs_list
+
+
+def _edit_existing_network_adapter_helper(network_adapter, new_network_name):
+    network_ref = _get_mor_by_property(vim.Network, new_network_name)
+    network_adapter.backing.deviceName = new_network_name
+    network_adapter.backing.network = network_ref
+    network_adapter.deviceInfo.summary = new_network_name
+    network_adapter.connectable.allowGuestControl = True
+    network_adapter.connectable.startConnected = True
+    network_spec = vim.vm.device.VirtualDeviceSpec()
+    network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    network_spec.device = network_adapter
+
+    return network_spec
+
+
+def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type):
+    from random import randint
+    random_key = randint(-4099, -4000)
+
+    adapter_type.strip().lower()
+    network_spec = vim.vm.device.VirtualDeviceSpec()
+
+    if adapter_type == "vmxnet":
+        network_spec.device = vim.vm.device.VirtualVmxnet()
+    elif adapter_type == "vmxnet2":
+        network_spec.device = vim.vm.device.VirtualVmxnet2()
+    elif adapter_type == "vmxnet3":
+        network_spec.device = vim.vm.device.VirtualVmxnet3()
+    elif adapter_type == "e1000":
+        network_spec.device = vim.vm.device.VirtualE1000()
+    elif adapter_type == "e1000e":
+        network_spec.device = vim.vm.device.VirtualE1000e()
+    else:
+        # If type not specified or does not match, create adapter of type vmxnet3
+        network_spec.device = vim.vm.device.VirtualVmxnet3()
+        log.warn("Cannot create network adapter of type {0}. Creating default type vmxnet3".format(adapter_type))
+
+    network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+
+    network_spec.device.key = random_key
+    network_spec.device.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
+    network_spec.device.backing.deviceName = network_name
+    network_spec.device.backing.network = _get_mor_by_property(vim.Network, network_name)
+    network_spec.device.deviceInfo = vim.Description()
+    network_spec.device.deviceInfo.label = network_adapter_label
+    network_spec.device.deviceInfo.summary = network_name
+    network_spec.device.wakeOnLanEnabled = True
+    network_spec.device.connectable = vim.vm.device.VirtualDevice.ConnectInfo()
+    network_spec.device.connectable.startConnected = True
+    network_spec.device.connectable.allowGuestControl = True
+
+    return network_spec
+
+
+def _add_or_edit_network_adapters(network, vm):
+    network_specs_list = []
+    existing_network_adapters_label = []
+    for device in vm.config.hardware.device:
+        if hasattr(device.backing, 'network'):
+            existing_network_adapters_label.append(device.deviceInfo.label)
+            if device.deviceInfo.label in network.keys():
+                network_name = network[device.deviceInfo.label]['name']
+                # Only edit the network adapter if network name is different
+                if device.backing.deviceName != network_name:
+                    network_spec = _edit_existing_network_adapter_helper(device, network_name)
+                    network_specs_list.append(network_spec)
+
+    network_adapters_to_create = list(set(network.keys()) - set(existing_network_adapters_label))
+    network_adapters_to_create.sort()
+    log.debug("Networks to create: {0}".format(network_adapters_to_create))
+    for network_adapter_label in network_adapters_to_create:
+        # create the network adapter
+        network_spec = _add_new_network_adapter_helper(network_adapter_label, network[network_adapter_label]['name'], network[network_adapter_label]['type'])
+        network_specs_list.append(network_spec)
+
+    return network_specs_list
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -825,6 +909,15 @@ def create(vm_):
               size: 20
             'Hard disk 4':
               size: 5
+          network:
+            'Network adapter 1':
+              name: 10.20.30-400-Test
+            'Network adapter 2':
+              name: 10.30.40-500-Dev
+              type: e1000
+            'Network adapter 3':
+              name: 10.40.50-600-Prod
+              type: vmxnet3
           datastore: HUGE-DATASTORE-Cluster
 
           # If cloning from template, either resourcepool or cluster MUST be specified!
@@ -856,6 +949,14 @@ def create(vm_):
         Enter the disk specification here. If the hard disk doesn\'t exist, it will be created with
         the provided size. If the hard disk already exists, it will be expanded if the provided size
         is greater than the current size of the disk.
+
+    network
+        Enter the network adapter specification here. If the network adapter doesn\'t exist, a new
+        network adapter will be created with the specified network name and type. If the network
+        adapter already exists, it will be reconfigured with the network name specified. Currently,
+        only network adapters of type vmxnet, vmxnet2, vmxnet3, e1000 and e1000e can be created. If
+        the specified network adapter type is not one of these, a network adapter of type vmxnet3
+        will be created by default.
 
     datastore
         Enter the name of the datastore or the datastore cluster where the virtual machine should
@@ -985,6 +1086,9 @@ def create(vm_):
     disk = config.get_cloud_config_value(
         'disk', vm_, __opts__, default=None
     )
+    network = config.get_cloud_config_value(
+        'network', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
     )
@@ -1045,8 +1149,13 @@ def create(vm_):
         if memory:
             config_spec.memoryMB = memory
 
-        if disk:
-            config_spec.deviceChange = _add_or_expand_disks(disk, object_ref)
+        if disk or network:
+            devices = []
+            if disk:
+                devices.extend(_add_or_edit_disks(disk, object_ref))
+            if network:
+                devices.extend(_add_or_edit_network_adapters(network, object_ref))
+            config_spec.deviceChange = devices
 
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
