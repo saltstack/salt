@@ -548,21 +548,6 @@ def list_port_fwd(zone):
     return ret
 
 
-def get_icmp_types():
-    '''
-    List all the available ICMP types
-
-    .. versionadded:: Beryllium
-
-    CLI Example:
-
-    .. code-block::
-
-        salt '*' firewalld.get_icmp_types
-    '''
-    return __firewall_cmd('--get-icmptypes').split()
-
-
 def block_icmp(zone, icmp):
     '''
     Block a specific ICMP type on a zone
