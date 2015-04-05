@@ -190,6 +190,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['state']
 
     if 'connstate' in kwargs:
+        if '-m state' not in rule:
+            rule += '-m state '
+
         if kwargs['connstate'].startswith('!') or kwargs['connstate'].startswith('not'):
             kwargs['connstate'] = re.sub(bang_not_pat, '', kwargs['connstate'])
             rule += '! '
