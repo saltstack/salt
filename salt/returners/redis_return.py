@@ -98,10 +98,12 @@ def returner(ret):
     Return data to a redis data store
     '''
     serv = _get_serv(ret)
-    serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
-    serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
-    serv.sadd('minions', ret['id'])
-    serv.sadd('jids', ret['jid'])
+    pipe = serv.pipeline()
+    pipe.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
+    pipe.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
+    pipe.sadd('minions', ret['id'])
+    pipe.sadd('jids', ret['jid'])
+    pipe.execute()
 
 
 def save_load(jid, load):
