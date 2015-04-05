@@ -257,39 +257,6 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     return disk_spec
 
 
-def _add_or_edit_disks(disk, vm):
-    unit_number = 0
-    existing_disks_label = []
-    disks_specs_list = []
-    for device in vm.config.hardware.device:
-        if hasattr(device.backing, 'fileName'):
-            unit_number += 1
-            # check if scsi controller
-            if unit_number == 7:
-                unit_number += 1
-            existing_disks_label.append(device.deviceInfo.label)
-            if device.deviceInfo.label in disk.keys():
-                size_kb = long(disk[device.deviceInfo.label]['size']) * 1024 * 1024
-                if device.capacityInKB < size_kb:
-                    # expand the disk
-                    disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
-                    disks_specs_list.append(disk_spec)
-
-    disks_to_create = list(set(disk.keys()) - set(existing_disks_label))
-    disks_to_create.sort()
-    log.debug("Disks to create: {0}".format(disks_to_create))
-    for disk_label in disks_to_create:
-        # create the disk
-        disk_spec = _add_new_hard_disk_helper(disk_label, disk[disk_label]['size'], unit_number)
-        disks_specs_list.append(disk_spec)
-        unit_number += 1
-        # check if scsi controller
-        if unit_number == 7:
-            unit_number += 1
-
-    return disks_specs_list
-
-
 def _edit_existing_network_adapter_helper(network_adapter, new_network_name):
     network_ref = _get_mor_by_property(vim.Network, new_network_name)
     network_adapter.backing.deviceName = new_network_name
@@ -324,7 +291,7 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
         network_spec.device = vim.vm.device.VirtualVmxnet3()
-        log.warn("Cannot create network adapter of type {0}. Creating default type vmxnet3".format(adapter_type))
+        log.warn("Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label))
 
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
 
@@ -343,28 +310,69 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
-def _add_or_edit_network_adapters(network, vm):
-    network_specs_list = []
+def _manage_devices(devices, vm):
+    unit_number = 0
+    device_specs = []
+    existing_disks_label = []
     existing_network_adapters_label = []
+
+    # loop through all the devices the vm/template has
+    # check if the device needs to be created or configured
     for device in vm.config.hardware.device:
-        if hasattr(device.backing, 'network'):
-            existing_network_adapters_label.append(device.deviceInfo.label)
-            if device.deviceInfo.label in network.keys():
-                network_name = network[device.deviceInfo.label]['name']
-                # Only edit the network adapter if network name is different
-                if device.backing.deviceName != network_name:
-                    network_spec = _edit_existing_network_adapter_helper(device, network_name)
-                    network_specs_list.append(network_spec)
+        if hasattr(device.backing, 'fileName'):
+            # this is a hard disk
+            if 'disk' in devices.keys():
+                # there is atleast one disk specified to be created/configured
+                unit_number += 1
+                # check if scsi controller
+                if unit_number == 7:
+                    unit_number += 1
+                existing_disks_label.append(device.deviceInfo.label)
+                if device.deviceInfo.label in devices['disk'].keys():
+                    size_gb = devices['disk'][device.deviceInfo.label]['size']
+                    size_kb = long(size_gb) * 1024 * 1024
+                    if device.capacityInKB < size_kb:
+                        # expand the disk
+                        disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                        device_specs.append(disk_spec)
+        elif hasattr(device.backing, 'network'):
+            # this is a network adapter
+            if 'network' in devices.keys():
+                # there is atleast one network adapter specified to be created/configured
+                existing_network_adapters_label.append(device.deviceInfo.label)
+                if device.deviceInfo.label in devices['network'].keys():
+                    network_name = devices['network'][device.deviceInfo.label]['name']
+                    # Only edit the network adapter if network name is different
+                    if device.backing.deviceName != network_name:
+                        network_spec = _edit_existing_network_adapter_helper(device, network_name)
+                        device_specs.append(network_spec)
 
-    network_adapters_to_create = list(set(network.keys()) - set(existing_network_adapters_label))
-    network_adapters_to_create.sort()
-    log.debug("Networks to create: {0}".format(network_adapters_to_create))
-    for network_adapter_label in network_adapters_to_create:
-        # create the network adapter
-        network_spec = _add_new_network_adapter_helper(network_adapter_label, network[network_adapter_label]['name'], network[network_adapter_label]['type'])
-        network_specs_list.append(network_spec)
+    if 'disk' in devices.keys():
+        disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
+        disks_to_create.sort()
+        log.debug("Disks to create: {0}".format(disks_to_create))
+        for disk_label in disks_to_create:
+            # create the disk
+            size_gb = devices['disk'][disk_label]['size']
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
+            device_specs.append(disk_spec)
+            unit_number += 1
+            # check if scsi controller
+            if unit_number == 7:
+                unit_number += 1
 
-    return network_specs_list
+    if 'network' in devices.keys():
+        network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
+        network_adapters_to_create.sort()
+        log.debug("Networks to create: {0}".format(network_adapters_to_create))
+        for network_adapter_label in network_adapters_to_create:
+            network_name = devices['network'][network_adapter_label]['name']
+            adapter_type = devices['network'][network_adapter_label]['type']
+            # create the network adapter
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type)
+            device_specs.append(network_spec)
+
+    return device_specs
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -1083,11 +1091,8 @@ def create(vm_):
     memory = config.get_cloud_config_value(
         'memory', vm_, __opts__, default=None
     )
-    disk = config.get_cloud_config_value(
-        'disk', vm_, __opts__, default=None
-    )
-    network = config.get_cloud_config_value(
-        'network', vm_, __opts__, default=None
+    devices = config.get_cloud_config_value(
+        'devices', vm_, __opts__, default=None
     )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
@@ -1149,13 +1154,9 @@ def create(vm_):
         if memory:
             config_spec.memoryMB = memory
 
-        if disk or network:
-            devices = []
-            if disk:
-                devices.extend(_add_or_edit_disks(disk, object_ref))
-            if network:
-                devices.extend(_add_or_edit_network_adapters(network, object_ref))
-            config_spec.deviceChange = devices
+        if devices:
+            device_specs = _manage_devices(devices, object_ref)
+            config_spec.deviceChange = device_specs
 
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
@@ -1183,7 +1184,7 @@ def create(vm_):
 
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
-            while task.info.state != 'success':
+            while task.info.state == 'running':
                 log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
                 time.sleep(5)
                 time_counter += 5
