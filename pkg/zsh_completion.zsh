@@ -1,44 +1,54 @@
 #compdef salt salt-call salt-cp
+# The use-cache style is checked in a few places to allow caching minions, modules,
+# or the directory salt is installed in.
+# you can cache those three with:
+# zstyle ':completion:*:salt(|-cp|-call):*' use-cache true
+# or selectively:
+# zstyle ':completion::complete:salt(|-cp|-call):minions:'  use-cache true
+# zstyle ':completion::complete:salt(|-cp|-call):modules:'  use-cache true
+# zstyle ':completion::complete:salt(|-cp|-call):salt_dir:' use-cache true
+
 
 local state line curcontext="$curcontext" salt_dir cachefn
 
 _modules(){
-    local _funcs cachefn
+    local _funcs cachefn expl curcontext=${curcontext%:*}:modules
 
     zstyle -s ":completion:$curcontext:" cache-policy cachefn
     if [[ -z $cachefn ]]; then
-      zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
     fi
 
     if _cache_invalid salt/modules || ! _retrieve_cache salt/modules; then
-      _funcs=( ${(M)${(f)"$(salt-call --local -d 2>/dev/null)"}##[[:alpha:][:digit:]._]##} )
-      _store_cache salt/modules _funcs
+        _funcs=( ${(M)${(f)"$(command salt-call --local -d 2>/dev/null)"}##[[:alnum:]._]##} )
+        _store_cache salt/modules _funcs
     fi
 
-    _multi_parts "$@" . _funcs
+    _wanted modules expl modules _multi_parts "$@" . _funcs
 }
 
 _minions(){
-    local _peons cachefn
+    local _peons cachefn expl curcontext=${curcontext%:*}:minions
 
     zstyle -s ":completion:$curcontext:" cache-policy cachefn
     if [[ -z $cachefn ]]; then
-      zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
     fi
 
     if _cache_invalid salt/minions || ! _retrieve_cache salt/minions; then
-      _peons=( ${${(f)"$(salt-key -l acc 2>/dev/null)"}[2,-1]} )
-      _store_cache salt/minions _peons
+        _peons=( ${(f)"$(command salt-key -l acc 2>/dev/null)"} )
+        _peons[(I)Accepted[[:space:]]Keys:]=()
+        _store_cache salt/minions _peons
     fi
 
-    compadd "$@" -a _peons
+    _wanted minions expl minions compadd "$@" -a _peons
 }
 
 (( $+functions[_salt_caching_policy] )) ||
 _salt_caching_policy() {
-  local -a oldp
-  oldp=( "$1"(Nm+7) )
-  (( $#oldp ))
+    local -a oldp
+    oldp=( "$1"(Nm+7) )
+    (( $#oldp ))
 }
 
 local -a _{target,master,logging,minion}_options _{common,out}_opts
@@ -138,14 +148,17 @@ _salt_comp(){
     esac
 }
 
-zstyle -s ":completion:$curcontext:" cache-policy cachefn
-if [[ -z $cachefn ]]; then
-    zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
-fi
+() {
+    local curcontext=${curcontext%:*}:salt_dir
+    zstyle -s ":completion:$curcontext:" cache-policy cachefn
+    if [[ -z $cachefn ]]; then
+        zstyle ":completion:${curcontext%:*}:salt_dir:" cache-policy _salt_caching_policy
+    fi
 
-if _cache_invalid salt/salt_dir || ! _retrieve_cache salt/salt_dir; then
-    salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
-    _store_cache salt/salt_dir salt_dir
-fi
+    if _cache_invalid salt/salt_dir || ! _retrieve_cache salt/salt_dir; then
+        salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
+        _store_cache salt/salt_dir salt_dir
+    fi
+}
 
 _salt_comp "$@"
