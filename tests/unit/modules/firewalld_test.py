@@ -236,16 +236,6 @@ class FirewalldTestCase(TestCase):
         with patch.object(firewalld, '__firewall_cmd', return_value=ret):
             self.assertEqual(firewalld.list_port_fwd('zone'), exp)
 
-    def test_get_icmp_types(self):
-        '''
-        List all available ICMP types
-        '''
-        ret = 'echo-reply echo-request parameter-problem redirect'
-        exp = ['echo-reply', 'echo-request', 'parameter-problem', 'redirect']
-
-        with patch.object(firewalld, '__firewall_cmd', return_value=ret):
-            self.assertEqual(firewalld.get_icmp_types(), exp)
-
     def test_block_icmp(self):
         '''
         Test ICMP block
