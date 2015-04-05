@@ -110,7 +110,7 @@ _salt_comp(){
     case "$service" in
         salt)
             _arguments -C \
-                "${words[(r)(-G|--grain)]+!}:minions:_minions" \
+                "${words[(r)(-[GN]|--grain(|-regex))]+!}:minions:_minions" \
                 ':modules:_modules' \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
@@ -128,7 +128,7 @@ _salt_comp(){
             ;;
         salt-cp)
             _arguments -C \
-                "${words[(r)(-G|--grain)]+!}:minions:_minions" \
+                "${words[(r)(-[GN]|--grain(|-regex))]+!}:minions:_minions" \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
                 "$_logging_options[@]" \
