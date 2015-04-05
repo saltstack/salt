@@ -251,4 +251,3 @@ def _get_error(error):
     code = error[0][1].text
     message = error[0][2].text
     return code, message
-
