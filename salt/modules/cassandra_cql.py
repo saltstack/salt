@@ -59,7 +59,6 @@ try:
 except ImportError:
     pass
 
-
 def __virtual__():
     '''
     Return virtual name of the module only if the python driver can be loaded.
@@ -122,22 +121,44 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :return:               The session and cluster objects.
     :rtype:                cluster object, session object
     '''
+    # Lazy load the Cassandra cluster and session for this module by creating a
+    # cluster and session when cql_query is called the first time. Get the
+    # Cassandra cluster and session from this module's __context__ after it is
+    # loaded the first time cql_query is called.
+    #
+    # TODO: Call cluster.shutdown() when the module is unloaded on
+    # master/minion shutdown. Currently, Master.shutdown() and Minion.shutdown()
+    # do nothing to allow loaded modules to gracefully handle resources stored
+    # in __context__ (i.e. connection pools). This means that the the connection
+    # pool is orphaned and Salt relies on Cassandra to reclaim connections.
+    # Perhaps if Master/Minion daemons could be enhanced to call an "__unload__"
+    # function, or something similar for each loaded module, connection pools
+    # and the like can be gracefully reclaimed/shutdown.
+    if (__context__
+       and 'cassandra_cql_returner_cluster' in __context__
+       and 'cassandra_cql_returner_session' in __context__):
+       return __context__['cassandra_cql_returner_cluster'], __context__['cassandra_cql_returner_session']
+    else:
+        contact_points = _load_properties(property_name=contact_points, config_option='cluster')
+        contact_points = contact_points if isinstance(contact_points, list) else contact_points.split(',')
+        port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
+        cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
+        cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
 
-    contact_points = _load_properties(property_name=contact_points, config_option='cluster')
-    contact_points = contact_points if isinstance(contact_points, list) else contact_points.split(',')
-    port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
-    cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
-    cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
-
-    try:
-        auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
-        cluster = Cluster(contact_points, port=port, auth_provider=auth_provider)
-        session = cluster.connect()
-        log.debug('Successfully connected to Cassandra cluster at {0}'.format(contact_points))
-        return cluster, session
-    except (ConnectionException, ConnectionShutdown, NoHostAvailable):
-        log.error('Could not connect to Cassandra cluster at {0}'.format(contact_points))
-        raise CommandExecutionError('ERROR: Could not connect to Cassandra cluster.')
+        try:
+            auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
+            cluster = Cluster(contact_points, port=port, auth_provider=auth_provider)
+            session = cluster.connect()
+            # TODO: Call cluster.shutdown() when the module is unloaded on shutdown.
+            __context__['cassandra_cql_returner_cluster'] = cluster
+            __context__['cassandra_cql_returner_session'] = session
+            log.debug('Successfully connected to Cassandra cluster at {0}'.format(contact_points))
+            return cluster, session
+        except TypeError:
+            pass
+        except (ConnectionException, ConnectionShutdown, NoHostAvailable):
+            log.error('Could not connect to Cassandra cluster at {0}'.format(contact_points))
+            raise CommandExecutionError('ERROR: Could not connect to Cassandra cluster.')
 
 
 def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -187,8 +208,6 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
                     value = str(value)
                 values[key] = value
             ret.append(values)
-
-    cluster.shutdown()
 
     return ret
 
