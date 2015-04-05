@@ -64,6 +64,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'check_cmd',
     'fail_hard',
     'onlyif',
+    'unless',
     'order',
     'reload_modules',
     'saltenv',
