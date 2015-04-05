@@ -400,7 +400,7 @@ def db_create(name,
 
 
 def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
-             password=None, tablespace=None, owner=None,
+             password=None, tablespace=None, owner=None, owner_recurse=False,
              runas=None):
     '''
     Change tablespace or/and owner of database.
@@ -414,22 +414,31 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
     if not any((tablespace, owner)):
         return True  # Nothing todo?
 
-    queries = []
-    if owner:
-        queries.append('ALTER DATABASE "{0}" OWNER TO "{1}"'.format(
-            name, owner
-        ))
-    if tablespace:
-        queries.append('ALTER DATABASE "{0}" SET TABLESPACE "{1}"'.format(
-            name, tablespace
-        ))
-    for query in queries:
-        ret = _psql_prepare_and_run(['-c', query],
-                                    user=user, host=host, port=port,
-                                    maintenance_db=maintenance_db,
-                                    password=password, runas=runas)
-        if ret['retcode'] != 0:
-            return False
+    if owner and owner_recurse:
+        ret = owner_to(name, owner,
+                       user=user,
+                       host=host,
+                       port=port,
+                       password=password,
+                       runas=runas)
+    else:
+        queries = []
+        if owner:
+            queries.append('ALTER DATABASE "{0}" OWNER TO "{1}"'.format(
+                name, owner
+            ))
+        if tablespace:
+            queries.append('ALTER DATABASE "{0}" SET TABLESPACE "{1}"'.format(
+                name, tablespace
+            ))
+        for query in queries:
+            ret = _psql_prepare_and_run(['-c', query],
+                                        user=user, host=host, port=port,
+                                        maintenance_db=maintenance_db,
+                                        password=password, runas=runas)
+
+    if ret['retcode'] != 0:
+        return False
 
     return True
 
