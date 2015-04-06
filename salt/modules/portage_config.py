@@ -205,7 +205,9 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                         triplet[0] != path:
                     shutil.rmtree(triplet[0])
 
-def check_accept_keywords(approved, flag):
+
+def _check_accept_keywords(approved, flag):
+    '''check compatibility of accept_keywords'''
     if flag in approved:
         return False
     elif (flag.startswith('~') and flag[1:] in approved) \
@@ -213,7 +215,8 @@ def check_accept_keywords(approved, flag):
         return False
     else:
         return True
-        
+
+
 def _merge_flags(new_flags, old_flags=[], conf='any'):
     '''
     Merges multiple lists of flags removing duplicates and resolving conflicts
@@ -222,7 +225,7 @@ def _merge_flags(new_flags, old_flags=[], conf='any'):
     args = [old_flags, new_flags]
     if conf == 'accept_keywords':
         tmp = new_flags+ \
-	    [i for i in old_flags if check_accept_keywords(new_flags, i)]
+            [i for i in old_flags if _check_accept_keywords(new_flags, i)]
     else:
         tmp = portage.flatten(args)
     flags = {}
