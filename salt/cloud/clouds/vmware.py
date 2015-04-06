@@ -954,6 +954,9 @@ def create(vm_):
     devices = config.get_cloud_config_value(
         'devices', vm_, __opts__, default=None
     )
+    extra_config = config.get_cloud_config_value(
+        'extra_config', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
     )
@@ -1017,6 +1020,11 @@ def create(vm_):
         if devices:
             device_specs = _manage_devices(devices, object_ref)
             config_spec.deviceChange = device_specs
+
+        if extra_config:
+            for key, value in extra_config.iteritems():
+                option = vim.option.OptionValue(key=key, value=value)
+                config_spec.extraConfig.append(option)
 
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
