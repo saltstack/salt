@@ -107,6 +107,28 @@ def installed(name,
 
     pkgs_satisfied = []
     pkgs_to_install = []
+
+    def _pkg_is_installed(pkg, installed_pkgs):
+        '''
+        Helper function to determine if a package is installed
+
+        This performs more complex comparison than just checking
+        keys, such as examining source repos to see if the package
+        was installed by a different name from the same repo
+
+        :pkg str: The package to compare
+        :installed_pkgs: A dictionary produced by npm list --json
+        '''
+        if pkg_name in installed_pkgs:
+            return True
+        # Check to see if we are trying to install from a URI
+        elif '://' in pkg_name:  # TODO Better way?
+            for pkg_details in installed_pkgs.values():
+                pkg_from = pkg_details.get('from', '').split('://')[1]
+                if pkg_name.split('://')[1] == pkg_from:
+                    return True
+        return False
+
     for pkg in pkg_list:
         pkg_name, _, pkg_ver = pkg.partition('@')
         pkg_name = pkg_name.strip()
@@ -114,8 +136,7 @@ def installed(name,
         if force_reinstall is True:
             pkgs_to_install.append(pkg)
             continue
-
-        if pkg_name not in installed_pkgs:
+        if not _pkg_is_installed(pkg, installed_pkgs):
             pkgs_to_install.append(pkg)
             continue
 
