@@ -146,6 +146,7 @@ def __virtual__():
 
     return True
 
+
 def returner(ret):
     '''
     Return data to one of potentially many clustered cassandra nodes
