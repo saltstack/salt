@@ -44,9 +44,10 @@ cloud configuration at
       password: verybadpass
       url: vcenter03.domain.com
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
+from random import randint
 import pprint
 import logging
 import time
@@ -236,7 +237,6 @@ def _edit_existing_hard_disk_helper(disk, size_kb):
 
 
 def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
-    from random import randint
     random_key = randint(-2099, -2000)
 
     size_kb = long(size_gb) * 1024 * 1024
@@ -274,7 +274,6 @@ def _edit_existing_network_adapter_helper(network_adapter, new_network_name):
 
 
 def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type):
-    from random import randint
     random_key = randint(-4099, -4000)
 
     adapter_type.strip().lower()
