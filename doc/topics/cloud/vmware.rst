@@ -95,6 +95,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       host: c4212n-002.domain.com
       template: False
       power_on: True
+      extra_config:
+        guestinfo.SaltMaster: 10.20.30.140
 
 
 provider
@@ -206,3 +208,9 @@ template
 power_on
     Specifies whether the new virtual machine should be powered on or not. If
     ``template: True`` is set, this field is ignored. Default is ``power_on: True``.
+
+extra_config
+    Specifies the additional configuration information for the virtual machine. This
+    describes a set of modifications to the additional options. If the key is already
+    present, it will be reset with the new value provided. Otherwise, a new option is
+    added. Keys with empty values will be removed.
