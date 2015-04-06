@@ -9,6 +9,7 @@ Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
 Set "PyDir=C:\Python27"
+Set "Version=%1"
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
