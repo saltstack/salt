@@ -9,7 +9,6 @@ Set "CurrDir=%cd%"
 Set "BinDir=%cd%\buildenv\bin"
 Set "InsDir=%cd%\installer"
 Set "PyDir=C:\Python27"
-Set "Version=%1"
 
 :: Find the NSIS Installer
 If Exist "C:\Program Files\NSIS\" (
@@ -29,6 +28,14 @@ If Exist "%BinDir%\" rd /S /Q "%BinDir%"
 @echo xcopy /S /E "%PyDir%" "%BinDir%\"
 xcopy /S /E "%PyDir%" "%BinDir%\"
 @ echo.
+
+:: Remove the fixed path in .exe files
+@echo Removing fixed path from .exe files
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-2.7.exe"
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.7.exe"
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.exe"
 
 @ echo Cleaning up unused files and directories...
 @ echo -------------------------------------------
@@ -61,7 +68,7 @@ If Exist "%BinDir%\README.txt" del /q "%BinDir%\README.txt"
 
 @ echo Building the installer...
 @ echo -------------------------
-makensis.exe /DSaltVersion="%Version%" "%InsDir%\Salt-Minion-Setup.nsi"
+makensis.exe "%InsDir%\Salt-Minion-Setup.nsi"
 @ echo.
 
 @ echo.
@@ -70,7 +77,5 @@ makensis.exe /DSaltVersion="%Version%" "%InsDir%\Salt-Minion-Setup.nsi"
 @ echo -------------------
 @ echo Installation file can be found in the following directory:
 @ echo %InsDir%
-
-done:
-if [%Version%] == [] pause
+pause
 cls
