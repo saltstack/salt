@@ -97,6 +97,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       power_on: True
       extra_config:
         guestinfo.SaltMaster: 10.20.30.140
+        guestinfo.Domain: foobar.com
+        randomKey: randomValue
 
 
 provider
