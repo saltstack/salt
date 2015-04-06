@@ -7,6 +7,8 @@ VMware Cloud Module
 
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
+See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
+
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 :depends: pyVmomi Python module
 
@@ -257,39 +259,6 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     return disk_spec
 
 
-def _add_or_edit_disks(disk, vm):
-    unit_number = 0
-    existing_disks_label = []
-    disks_specs_list = []
-    for device in vm.config.hardware.device:
-        if hasattr(device.backing, 'fileName'):
-            unit_number += 1
-            # check if scsi controller
-            if unit_number == 7:
-                unit_number += 1
-            existing_disks_label.append(device.deviceInfo.label)
-            if device.deviceInfo.label in disk.keys():
-                size_kb = long(disk[device.deviceInfo.label]['size']) * 1024 * 1024
-                if device.capacityInKB < size_kb:
-                    # expand the disk
-                    disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
-                    disks_specs_list.append(disk_spec)
-
-    disks_to_create = list(set(disk.keys()) - set(existing_disks_label))
-    disks_to_create.sort()
-    log.debug("Disks to create: {0}".format(disks_to_create))
-    for disk_label in disks_to_create:
-        # create the disk
-        disk_spec = _add_new_hard_disk_helper(disk_label, disk[disk_label]['size'], unit_number)
-        disks_specs_list.append(disk_spec)
-        unit_number += 1
-        # check if scsi controller
-        if unit_number == 7:
-            unit_number += 1
-
-    return disks_specs_list
-
-
 def _edit_existing_network_adapter_helper(network_adapter, new_network_name):
     network_ref = _get_mor_by_property(vim.Network, new_network_name)
     network_adapter.backing.deviceName = new_network_name
@@ -324,7 +293,7 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
         network_spec.device = vim.vm.device.VirtualVmxnet3()
-        log.warn("Cannot create network adapter of type {0}. Creating default type vmxnet3".format(adapter_type))
+        log.warn("Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label))
 
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
 
@@ -343,28 +312,69 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
-def _add_or_edit_network_adapters(network, vm):
-    network_specs_list = []
+def _manage_devices(devices, vm):
+    unit_number = 0
+    device_specs = []
+    existing_disks_label = []
     existing_network_adapters_label = []
+
+    # loop through all the devices the vm/template has
+    # check if the device needs to be created or configured
     for device in vm.config.hardware.device:
-        if hasattr(device.backing, 'network'):
-            existing_network_adapters_label.append(device.deviceInfo.label)
-            if device.deviceInfo.label in network.keys():
-                network_name = network[device.deviceInfo.label]['name']
-                # Only edit the network adapter if network name is different
-                if device.backing.deviceName != network_name:
-                    network_spec = _edit_existing_network_adapter_helper(device, network_name)
-                    network_specs_list.append(network_spec)
+        if hasattr(device.backing, 'fileName'):
+            # this is a hard disk
+            if 'disk' in devices.keys():
+                # there is atleast one disk specified to be created/configured
+                unit_number += 1
+                # check if scsi controller
+                if unit_number == 7:
+                    unit_number += 1
+                existing_disks_label.append(device.deviceInfo.label)
+                if device.deviceInfo.label in devices['disk'].keys():
+                    size_gb = devices['disk'][device.deviceInfo.label]['size']
+                    size_kb = long(size_gb) * 1024 * 1024
+                    if device.capacityInKB < size_kb:
+                        # expand the disk
+                        disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                        device_specs.append(disk_spec)
+        elif hasattr(device.backing, 'network'):
+            # this is a network adapter
+            if 'network' in devices.keys():
+                # there is atleast one network adapter specified to be created/configured
+                existing_network_adapters_label.append(device.deviceInfo.label)
+                if device.deviceInfo.label in devices['network'].keys():
+                    network_name = devices['network'][device.deviceInfo.label]['name']
+                    # Only edit the network adapter if network name is different
+                    if device.backing.deviceName != network_name:
+                        network_spec = _edit_existing_network_adapter_helper(device, network_name)
+                        device_specs.append(network_spec)
 
-    network_adapters_to_create = list(set(network.keys()) - set(existing_network_adapters_label))
-    network_adapters_to_create.sort()
-    log.debug("Networks to create: {0}".format(network_adapters_to_create))
-    for network_adapter_label in network_adapters_to_create:
-        # create the network adapter
-        network_spec = _add_new_network_adapter_helper(network_adapter_label, network[network_adapter_label]['name'], network[network_adapter_label]['type'])
-        network_specs_list.append(network_spec)
+    if 'disk' in devices.keys():
+        disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
+        disks_to_create.sort()
+        log.debug("Disks to create: {0}".format(disks_to_create))
+        for disk_label in disks_to_create:
+            # create the disk
+            size_gb = devices['disk'][disk_label]['size']
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
+            device_specs.append(disk_spec)
+            unit_number += 1
+            # check if scsi controller
+            if unit_number == 7:
+                unit_number += 1
 
-    return network_specs_list
+    if 'network' in devices.keys():
+        network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
+        network_adapters_to_create.sort()
+        log.debug("Networks to create: {0}".format(network_adapters_to_create))
+        for network_adapter_label in network_adapters_to_create:
+            network_name = devices['network'][network_adapter_label]['name']
+            adapter_type = devices['network'][network_adapter_label]['type']
+            # create the network adapter
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type)
+            device_specs.append(network_spec)
+
+    return device_specs
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -891,149 +901,8 @@ def create(vm_):
     '''
     To create a single VM in the VMware environment.
 
-    Create a profile at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/vmware.conf``
-
-    .. code-block:: yaml
-
-        vmware-centos6.5:
-          provider: vmware-vcenter01
-          clonefrom: test-vm
-
-          ## Optional arguments
-          num_cpus: 4
-          memory: 8192
-          disk:
-            'Hard disk 2':
-              size: 30
-            'Hard disk 3':
-              size: 20
-            'Hard disk 4':
-              size: 5
-          network:
-            'Network adapter 1':
-              name: 10.20.30-400-Test
-            'Network adapter 2':
-              name: 10.30.40-500-Dev
-              type: e1000
-            'Network adapter 3':
-              name: 10.40.50-600-Prod
-              type: vmxnet3
-          datastore: HUGE-DATASTORE-Cluster
-
-          # If cloning from template, either resourcepool or cluster MUST be specified!
-          resourcepool: Resources
-          cluster: Prod
-
-          folder: Development
-          datacenter: DC1
-          host: c4212n-002.domain.com
-          template: False
-          power_on: True
-
-
-    provider
-        Enter the name that was specified when the cloud provider config was created.
-
-    clonefrom
-        Enter the name of the VM/template to clone from.
-
-    num_cpus
-        Enter the number of vCPUS you want the VM/template to have. If not specified, the current
-        VM/template\'s vCPU count is used.
-
-    memory
-        Enter memory (in MB) you want the VM/template to have. If not specified, the current
-        VM/template\'s memory size is used.
-
-    disk
-        Enter the disk specification here. If the hard disk doesn\'t exist, it will be created with
-        the provided size. If the hard disk already exists, it will be expanded if the provided size
-        is greater than the current size of the disk.
-
-    network
-        Enter the network adapter specification here. If the network adapter doesn\'t exist, a new
-        network adapter will be created with the specified network name and type. If the network
-        adapter already exists, it will be reconfigured with the network name specified. Currently,
-        only network adapters of type vmxnet, vmxnet2, vmxnet3, e1000 and e1000e can be created. If
-        the specified network adapter type is not one of these, a network adapter of type vmxnet3
-        will be created by default.
-
-    datastore
-        Enter the name of the datastore or the datastore cluster where the virtual machine should
-        be located on physical storage. If not specified, the current datastore is used.
-
-        .. note::
-
-            - If you specify a datastore cluster name, DRS Storage recommendation is automatically
-              applied.
-            - If you specify a datastore name, DRS Storage recommendation is disabled.
-
-    resourcepool
-        Enter the name of the resourcepool to which the new virtual machine should be
-        attached. This determines what compute resources will be available to the clone.
-
-        .. note::
-
-            - For a clone operation from a virtual machine, it will use the same resourcepool as
-              the original virtual machine unless specified.
-            - For a clone operation from a template to a virtual machine, specifying either this
-              or cluster is required. If both are specified, the resourcepool value will be used.
-            - For a clone operation to a template, this argument is ignored.
-
-    cluster
-        Enter the name of the cluster whose resource pool the new virtual machine should be
-        attached to.
-
-        .. note::
-
-            - For a clone operation from a virtual machine, it will use the same cluster\'s
-              resourcepool as the original virtual machine unless specified.
-            - For a clone operation from a template to a virtual machine, specifying either
-              this or resourcepool is required. If both are specified, the resourcepool value
-              will be used.
-            - For a clone operation to a template, this argument is ignored.
-
-    folder
-        Enter the name of the folder that will contain the new virtual machine.
-
-        .. note::
-
-            - For a clone operation from a VM/template, the new VM/template will be added to the
-              same folder that the original VM/template belongs to unless specified.
-            - If both folder and datacenter are specified, the folder value will be used.
-
-    datacenter
-        Enter the name of the datacenter that will contain the new virtual machine.
-
-        .. note::
-
-            - For a clone operation from a VM/template, the new VM/template will be added to the
-              same folder that the original VM/template belongs to unless specified.
-            - If both folder and datacenter are specified, the folder value will be used.
-
-    host
-        Enter the name of the target host where the virtual machine should be registered.
-
-        If not specified:
-
-        .. note::
-
-            - If resource pool is not specified, current host is used.
-            - If resource pool is specified, and the target pool represents a stand-alone
-              host, the host is used.
-            - If resource pool is specified, and the target pool represents a DRS-enabled
-              cluster, a host selected by DRS is used.
-            - If resource pool is specified and the target pool represents a cluster without
-              DRS enabled, an InvalidArgument exception be thrown.
-
-    template
-        Specifies whether the new virtual machine should be marked as a template or not.
-        Default is ``template: False``.
-
-    power_on
-        Specifies whether the new virtual machine should be powered on or not. If ``template: True``
-        is set, this field is ignored. Default is ``power_on: True``.
-
+    Sample profile and arguments that can be specified in it can be found
+    :ref:`here. <vmware-cloud-profile>`
 
     CLI Example:
 
@@ -1083,11 +952,8 @@ def create(vm_):
     memory = config.get_cloud_config_value(
         'memory', vm_, __opts__, default=None
     )
-    disk = config.get_cloud_config_value(
-        'disk', vm_, __opts__, default=None
-    )
-    network = config.get_cloud_config_value(
-        'network', vm_, __opts__, default=None
+    devices = config.get_cloud_config_value(
+        'devices', vm_, __opts__, default=None
     )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
@@ -1149,13 +1015,9 @@ def create(vm_):
         if memory:
             config_spec.memoryMB = memory
 
-        if disk or network:
-            devices = []
-            if disk:
-                devices.extend(_add_or_edit_disks(disk, object_ref))
-            if network:
-                devices.extend(_add_or_edit_network_adapters(network, object_ref))
-            config_spec.deviceChange = devices
+        if devices:
+            device_specs = _manage_devices(devices, object_ref)
+            config_spec.deviceChange = device_specs
 
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
@@ -1183,7 +1045,7 @@ def create(vm_):
 
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
-            while task.info.state != 'success':
+            while task.info.state == 'running':
                 log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
                 time.sleep(5)
                 time_counter += 5
