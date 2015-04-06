@@ -59,6 +59,7 @@ try:
 except ImportError:
     pass
 
+
 def __virtual__():
     '''
     Return virtual name of the module only if the python driver can be loaded.
@@ -135,9 +136,9 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
     # function, or something similar for each loaded module, connection pools
     # and the like can be gracefully reclaimed/shutdown.
     if (__context__
-       and 'cassandra_cql_returner_cluster' in __context__
-       and 'cassandra_cql_returner_session' in __context__):
-       return __context__['cassandra_cql_returner_cluster'], __context__['cassandra_cql_returner_session']
+        and 'cassandra_cql_returner_cluster' in __context__
+        and 'cassandra_cql_returner_session' in __context__):
+        return __context__['cassandra_cql_returner_cluster'], __context__['cassandra_cql_returner_session']
     else:
         contact_points = _load_properties(property_name=contact_points, config_option='cluster')
         contact_points = contact_points if isinstance(contact_points, list) else contact_points.split(',')
