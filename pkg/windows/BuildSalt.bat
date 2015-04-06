@@ -80,5 +80,5 @@ makensis.exe /DSaltVersion="%Version%" "%InsDir%\Salt-Minion-Setup.nsi"
 @ echo %InsDir%
 
 done:
--if [%Version%] == [] pause
+if [%Version%] == [] pause
 cls
