@@ -78,5 +78,7 @@ makensis.exe /DSaltVersion="%Version%" "%InsDir%\Salt-Minion-Setup.nsi"
 @ echo -------------------
 @ echo Installation file can be found in the following directory:
 @ echo %InsDir%
-pause
+
+done:
+-if [%Version%] == [] pause
 cls
