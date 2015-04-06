@@ -81,7 +81,7 @@ Salt Caller
 -----------
 
 .. autoclass:: salt.client.Caller
-    :members: function
+    :members: cmd
 
 RunnerClient
 ------------
