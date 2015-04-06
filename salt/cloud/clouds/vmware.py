@@ -239,7 +239,7 @@ def _edit_existing_hard_disk_helper(disk, size_kb):
 def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     random_key = randint(-2099, -2000)
 
-    size_kb = long(size_gb) * 1024 * 1024
+    size_kb = int(size_gb) * 1024 * 1024
 
     disk_spec = vim.vm.device.VirtualDeviceSpec()
     disk_spec.fileOperation = 'create'
@@ -331,7 +331,7 @@ def _manage_devices(devices, vm):
                 existing_disks_label.append(device.deviceInfo.label)
                 if device.deviceInfo.label in devices['disk'].keys():
                     size_gb = devices['disk'][device.deviceInfo.label]['size']
-                    size_kb = long(size_gb) * 1024 * 1024
+                    size_kb = int(size_gb) * 1024 * 1024
                     if device.capacityInKB < size_kb:
                         # expand the disk
                         disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
