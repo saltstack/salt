@@ -80,7 +80,7 @@ def pillar_pcre(tgt, delimiter=DEFAULT_TARGET_DELIM, delim=None):
     .. code-block:: bash
 
         salt '*' match.pillar_pcre 'cheese:(swiss|american)'
-        salt '*' match.pillar_pcre 'clone_url|https://github\.com/.*\.git' delimiter='|'
+        salt '*' match.pillar_pcre 'clone_url|https://github\\.com/.*\\.git' delimiter='|'
 
     delimiter
         Specify an alternate delimiter to use when traversing a nested dict
