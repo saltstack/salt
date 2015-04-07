@@ -254,7 +254,7 @@ except ImportError:
 HAS_NSENTER = bool(salt.utils.which('nsenter'))
 
 # Set up logging
-log = logging.getLogger(__name__)  # pylint
+log = logging.getLogger(__name__)
 
 # Don't shadow built-in's.
 __func_alias__ = {
