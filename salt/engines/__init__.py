@@ -6,10 +6,13 @@ complex services to be encapsulated within the salt plugin environment
 # Import python libs
 from __future__ import absolute_import
 import multiprocessing
+import logging
 
 # Import salt libs
 import salt
 import salt.loader
+
+log = logging.getLogger(__name__)
 
 
 def start_engines(opts, proc_mgr):
