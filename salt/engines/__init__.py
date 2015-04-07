@@ -6,10 +6,13 @@ complex services to be encapsulated within the salt plugin environment
 # Import python libs
 from __future__ import absolute_import
 import multiprocessing
+import logging
 
 # Import salt libs
 import salt
 import salt.loader
+
+log = logging.getLogger(__name__)
 
 
 def start_engines(opts, proc_mgr):
@@ -70,4 +73,7 @@ class Engine(multiprocessing.Process):
                                           self.funcs,
                                           self.runners)
         kwargs = self.config or {}
-        self.engine[self.fun](**kwargs)
+        try:
+            self.engine[self.fun](**kwargs)
+        except Exception as exc:
+            log.critical('Engine {0} could not be started! Error: {1}'.format(self.engine, exc))
