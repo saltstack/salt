@@ -12,6 +12,7 @@ import logging
 import salt.loader
 import salt.utils
 import salt.state
+import salt.runner
 from salt.utils.doc import strip_rst as _strip_rst
 
 log = logging.getLogger(__name__)
