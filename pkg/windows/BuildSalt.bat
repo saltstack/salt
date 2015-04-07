@@ -30,6 +30,14 @@ If Exist "%BinDir%\" rd /S /Q "%BinDir%"
 xcopy /S /E "%PyDir%" "%BinDir%\"
 @ echo.
 
+:: Remove the fixed path in .exe files
+@echo Removing fixed path from .exe files
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install.exe"
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\easy_install-2.7.exe"
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip.exe"
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.7.exe"
+python "%CurrDir%\portable.py" -f "%BinDir%\Scripts\pip2.exe"
+
 @ echo Cleaning up unused files and directories...
 @ echo -------------------------------------------
 :: Remove all Compiled Python files (.pyc)
