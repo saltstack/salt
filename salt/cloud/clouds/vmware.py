@@ -740,7 +740,6 @@ def show_instance(name, call=None):
             device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
             disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label]
             disk_full_info[device.deviceInfo.label]['descriptor'] = device.backing.fileName
-            disk_full_info[device.deviceInfo.label]['files'] = None
 
     storage_full_info = {}
     storage_full_info['committed'] = vm.summary.storage.committed
