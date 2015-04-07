@@ -155,13 +155,14 @@ class SREQ(object):
     '''
     Create a generic interface to wrap salt zeromq req calls.
     '''
-    def __init__(self, master, id_='', serial='msgpack', linger=0):
+    def __init__(self, master, id_='', serial='msgpack', linger=0, opts=None):
         self.master = master
         self.id_ = id_
         self.serial = Serial(serial)
         self.linger = linger
         self.context = zmq.Context()
         self.poller = zmq.Poller()
+        self.opts = opts
 
     @property
     def socket(self):
@@ -176,6 +177,7 @@ class SREQ(object):
                     zmq.RECONNECT_IVL_MAX, 5000
                 )
 
+            self._set_tcp_keepalive()
             if self.master.startswith('tcp://['):
                 # Hint PF type if bracket enclosed IPv6 address
                 if hasattr(zmq, 'IPV6'):
@@ -187,6 +189,25 @@ class SREQ(object):
                 self._socket.setsockopt(zmq.IDENTITY, self.id_)
             self._socket.connect(self.master)
         return self._socket
+
+    def _set_tcp_keepalive(self):
+        if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
+            if 'tcp_keepalive' in self.opts:
+                self._socket.setsockopt(
+                    zmq.TCP_KEEPALIVE, self.opts['tcp_keepalive']
+                )
+            if 'tcp_keepalive_idle' in self.opts:
+                self._socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_IDLE, self.opts['tcp_keepalive_idle']
+                )
+            if 'tcp_keepalive_cnt' in self.opts:
+                self._socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_CNT, self.opts['tcp_keepalive_cnt']
+                )
+            if 'tcp_keepalive_intvl' in self.opts:
+                self._socket.setsockopt(
+                    zmq.TCP_KEEPALIVE_INTVL, self.opts['tcp_keepalive_intvl']
+                )
 
     def clear_socket(self):
         '''
