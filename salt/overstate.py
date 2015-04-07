@@ -4,7 +4,7 @@ Manage the process of the overstate. The overstate is a means to orchestrate
 the deployment of states over groups of servers.
 
 *********************************************
-WARNING: The overstate system is deprecated! 
+WARNING: The overstate system is deprecated!
 
 This functionality will be retired in the Boron
 release of Salt.
@@ -37,7 +37,7 @@ class OverState(object):
     '''
     Manage sls file calls over multiple systems
     *********************************************
-    WARNING: The overstate system is deprecated! 
+    WARNING: The overstate system is deprecated!
 
     This functionality will be retired in the Boron
     release of Salt.
