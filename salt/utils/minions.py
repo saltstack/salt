@@ -219,13 +219,23 @@ class CkMinions(object):
         '''
         return self._check_cache_minions(expr, delimiter, greedy, 'pillar')
 
+    def _check_pillar_pcre_minions(self, expr, delimiter, greedy):
+        '''
+        Return the minions found by looking via pillar with PCRE
+        '''
+        return self._check_cache_minions(expr,
+                                         delimiter,
+                                         greedy,
+                                         'pillar',
+                                         regex_match=True)
+
     def _check_pillar_exact_minions(self, expr, delimiter, greedy):
         '''
         Return the minions found by looking via pillar
         '''
         return self._check_cache_minions(expr,
-                                         greedy,
                                          delimiter,
+                                         greedy,
                                          'pillar',
                                          exact_match=True)
 
@@ -360,25 +370,27 @@ class CkMinions(object):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
                    'I': self._check_pillar_minions,
+                   'J': self._check_pillar_pcre_minions,
                    'L': self._check_list_minions,
                    'S': self._check_ipcidr_minions,
                    'E': self._check_pcre_minions,
                    'R': self._all_minions}
             if pillar_exact:
                 ref['I'] = self._check_pillar_exact_minions
+                ref['J'] = self._check_pillar_exact_minions
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
             tokens = expr.split()
             for match in tokens:
                 # Try to match tokens from the compound target, first by using
-                # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
+                # the 'G, X, I, J, L, S, E' matcher types, then by hostname glob.
                 if '@' in match and match[1] == '@':
                     comps = match.split('@')
                     matcher = ref.get(comps[0])
 
                     matcher_args = ['@'.join(comps[1:])]
-                    if comps[0] in ('G', 'P', 'I'):
+                    if comps[0] in ('G', 'P', 'I', 'J'):
                         matcher_args.append(delimiter)
                     matcher_args.append(True)
 
@@ -511,6 +523,7 @@ class CkMinions(object):
             if expr_form in ('grain',
                              'grain_pcre',
                              'pillar',
+                             'pillar_pcre',
                              'pillar_exact',
                              'compound',
                              'compound_pillar_exact'):
@@ -532,6 +545,7 @@ class CkMinions(object):
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
+               'J': 'pillar_pcre',
                'L': 'list',
                'S': 'ipcidr',
                'E': 'pcre',
@@ -539,7 +553,8 @@ class CkMinions(object):
         infinite = [
                 'node',
                 'ipcidr',
-                'pillar']
+                'pillar',
+                'pillar_pcre']
         if not self.opts.get('minion_data_cache', False):
             infinite.append('grain')
             infinite.append('grain_pcre')
@@ -612,7 +627,7 @@ class CkMinions(object):
         '''
         if publish_validate:
             v_tgt_type = tgt_type
-            if tgt_type.lower() == 'pillar':
+            if tgt_type.lower() in ('pillar', 'pillar_pcre'):
                 v_tgt_type = 'pillar_exact'
             elif tgt_type.lower() == 'compound':
                 v_tgt_type = 'compound_pillar_exact'
@@ -620,7 +635,8 @@ class CkMinions(object):
             minions = set(self.check_minions(tgt, tgt_type))
             mismatch = bool(minions.difference(v_minions))
             # If the non-exact match gets more minions than the exact match
-            # then pillar globbing is being used, and we have a problem
+            # then pillar globbing or PCRE is being used, and we have a
+            # problem
             if mismatch:
                 return False
         # compound commands will come in a list so treat everything as a list
