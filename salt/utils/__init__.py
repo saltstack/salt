@@ -2499,7 +2499,7 @@ def human_size_to_bytes(human_size):
     '''
     size_exp_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}
     human_size_str = str(human_size)
-    match = re.match('^(\d+)([KMGTP])?$', human_size_str)
+    match = re.match(r'^(\d+)([KMGTP])?$', human_size_str)
     if not match:
         raise ValueError(
             'Size must be all digits, with an optional unit type '

@@ -496,6 +496,7 @@ def _get_docker_py_versioninfo():
         __context__[contextkey] = None
     return __context__[contextkey]
 
+
 # Decorators
 class _api_version(object):
     '''
@@ -1148,7 +1149,6 @@ def _validate_input(action,
                 'entrypoint must be a string or list of strings'
             )
 
-
     def _valid_environment():  # pylint: disable=unused-variable
         '''
         Can be a list of VAR=value strings, a dictionary, or a single env var
@@ -1744,7 +1744,22 @@ def history(name, quiet=False):
 
         .. code-block:: bash
 
-            Need an example here
+            $ salt myminion docker-ng.history nginx:latest quiet=True
+            myminion:
+                - FROM scratch
+                - ADD file:ef063ed0ae9579362871b9f23d2bc0781ef7cd4de6ac822052cf6c9c5a12b1e2 in /
+                - CMD [/bin/bash]
+                - MAINTAINER NGINX Docker Maintainers "docker-maint@nginx.com"
+                - apt-key adv --keyserver pgp.mit.edu --recv-keys 573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62
+                - echo "deb http://nginx.org/packages/mainline/debian/ wheezy nginx" >> /etc/apt/sources.list
+                - ENV NGINX_VERSION=1.7.10-1~wheezy
+                - apt-get update &&     apt-get install -y ca-certificates nginx=${NGINX_VERSION} &&     rm -rf /var/lib/apt/lists/*
+                - ln -sf /dev/stdout /var/log/nginx/access.log
+                - ln -sf /dev/stderr /var/log/nginx/error.log
+                - VOLUME [/var/cache/nginx]
+                - EXPOSE map[80/tcp:{} 443/tcp:{}]
+                - CMD [nginx -g daemon off;]
+                        https://github.com/saltstack/salt/pull/22421
 
 
     **RETURN DATA**
@@ -3971,20 +3986,25 @@ def start(name, validate_ip_addrs=True, **kwargs):
 
     port_bindings
         Bind exposed ports which were exposed using the ``ports`` argument to
-        :py:func:`docker-ng.create <salt.modules.dockerng.create>`. Must be
-        passed as a dictionary, see the `docker-py documentation`_ for
-        examples.
+        :py:func:`docker-ng.create <salt.modules.dockerng.create>`. These
+        should be passed in the same way as the ``--publish`` argument to the
+        ``docker run`` CLI command:
 
-        Example: ``port_bindings="{1111: ('127.0.0.1', 4567)}"``
+        - ``ip:hostPort:containerPort`` - Bind a specific IP and port on the
+          host to a specific port within the container.
+        - ``ip::containerPort`` - Bind a specific IP and an ephemeral port to a
+          specific port within the container.
+        - ``hostPort:containerPort`` - Bind a specific port on all of the
+          host's interfaces to a specific port within the container.
+        - ``containerPort`` - Bind an ephemeral port on all of the host's
+          interfaces to a specific port within the container.
 
-        .. note::
+        Multiple bindings can be separated by commas, or passed as a Python
+        list. The below two examples are equivalent:
 
-            PyYAML does not load ``None`` as ``None``. To use a value of
-            ``None``, it is necessary to use ``null`` instead:
+        Example 1: ``port_bindings="5000:5000,2123/udp:2123,8080"``
 
-            ``port_bindings="{1111: 4567, 2222: null}"``
-
-        .. _`docker-py documentation`: http://docker-py.readthedocs.org/en/stable/port-bindings/
+        Example 2: ``port_bindings="['5000:5000', '2123/udp:2123', '8080']"``
 
     lxc_conf
         Additional LXC configuration parameters to set before starting the
