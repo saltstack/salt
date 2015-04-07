@@ -379,6 +379,8 @@ local job cache on the master.
 ``event_return``
 -----------------
 
+.. versionadded:: 2015.2.0
+
 Default: ``''``
 
 Specify the returner to use to log events. A returner may have installation and
