@@ -185,6 +185,7 @@ class BaseCaller(object):
                 active_level = LOG_LEVELS.get(
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:
+                    trace = traceback.format_exc()
                     sys.stderr.write(trace)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
