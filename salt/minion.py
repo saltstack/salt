@@ -1046,12 +1046,12 @@ class Minion(MinionBase):
         #    return
         if 'user' in data:
             log.info(
-                'User {0[user]} Executing command {0[fun]} with jid '
+                    'User {0[user]} Executing command {0[fun]} with jid '  # pylint: disable=W1307
                 '{0[jid]}'.format(data)
             )
         else:
             log.info(
-                'Executing command {0[fun]} with jid {0[jid]}'.format(data)
+                'Executing command {0[fun]} with jid {0[jid]}'.format(data)  # pylint: disable=W1307
             )
         log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
@@ -2029,14 +2029,14 @@ class Syndic(Minion):
         data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         if 'user' in data:
             log.debug(
-                'User {0[user]} Executing syndic command {0[fun]} with '
+                'User {0[user]} Executing syndic command {0[fun]} with '  # pylint: disable=W1307
                 'jid {0[jid]}'.format(
                     data
                 )
             )
         else:
             log.debug(
-                'Executing syndic command {0[fun]} with jid {0[jid]}'.format(
+                'Executing syndic command {0[fun]} with jid {0[jid]}'.format(  # pylint: disable=W1307
                     data
                 )
             )
