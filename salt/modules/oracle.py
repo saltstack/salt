@@ -301,7 +301,7 @@ class _OracleHelper(object):
             idx += 1
 
         if not field_widths:
-           raise Exception("Unable to find an entry point to parse the output")
+            raise Exception("Unable to find an entry point to parse the output")
         field_widths = [len(elm) for elm in field_widths.split(" ") if elm]
 
         # Add headers
