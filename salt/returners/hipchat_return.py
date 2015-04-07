@@ -275,6 +275,7 @@ def _send_message(room_id,
     else:
         return False
 
+
 def _verify_options(options):
     '''
     Verify Hipchat options and log warnings
@@ -331,6 +332,7 @@ def returner(ret):
                             _options.get('notify'))
     return hipchat
 
+
 def event_return(events):
     '''
     Return event data to hipchat
@@ -342,8 +344,8 @@ def event_return(events):
         # Pre-process messages to apply individualized colors for various
         # event types.
         log.trace('Hipchat returner received event: {0}'.format(event))
-        _send_message(_options_get('room_id'),
-                      message,
+        _send_message(_options.get('room_id'),
+                      event['data'],
                       _options.get('from_name'),
                       _options.get('api_key'),
                       _options.get('api_version'),
