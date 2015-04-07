@@ -152,7 +152,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             # top is a single file module
             tfp.add(base)
             continue
-        for root, dirs, files in os.walk(base):
+        for root, dirs, files in os.walk(base, followlinks=True):
             for name in files:
                 if not name.endswith(('.pyc', '.pyo')):
                     tfp.add(os.path.join(root, name))

@@ -175,14 +175,20 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         rule += '-o {0} '.format(kwargs['of'])
         del kwargs['of']
 
-    if 'proto' in kwargs:
-        if kwargs['proto'].startswith('!') or kwargs['proto'].startswith('not'):
-            kwargs['proto'] = re.sub(bang_not_pat, '', kwargs['proto'])
+    if 'protocol' in kwargs:
+        proto = kwargs['protocol']
+        del kwargs['protocol']
+    elif 'proto' in kwargs:
+        proto = kwargs['proto']
+        del kwargs['proto']
+
+    if proto:
+        if proto.startswith('!') or proto.startswith('not'):
+            proto = re.sub(bang_not_pat, '', proto)
             rule += '! '
 
-        rule += '-p {0} '.format(kwargs['proto'])
+        rule += '-p {0} '.format(proto)
         proto = True
-        del kwargs['proto']
 
     if 'match' in kwargs:
         if not isinstance(kwargs['match'], list):
@@ -200,6 +206,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         del kwargs['state']
 
     if 'connstate' in kwargs:
+        if '-m state' not in rule:
+            rule += '-m state '
+
         if kwargs['connstate'].startswith('!') or kwargs['connstate'].startswith('not'):
             kwargs['connstate'] = re.sub(bang_not_pat, '', kwargs['connstate'])
             rule += '! '
