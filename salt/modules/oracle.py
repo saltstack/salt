@@ -354,9 +354,15 @@ def databases():
 
 
 def status():
-    """
-    Get Oracle listener status.
-    """
+    '''
+    Get Oracle listener online status.
+
+    CLI example:
+
+    .. code-block:: bash
+
+       salt '*' oracle.status
+    '''
     stdout, oraerr = _orahlp().run("sudo -u {0} ORACLE_HOME={1} {2} status"
                                    .format('oracle', _orahlp().ora_home, _orahlp().lsnrctl))
     ret = {}
