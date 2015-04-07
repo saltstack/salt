@@ -152,10 +152,9 @@ class _OracleHelper(object):
                 break
 
         if not found:
-            raise CommandExecutionError('The ORATAB was not found nor in "{0}" neither in "{1}".'.format(*ORATAB))
+            raise CommandExecutionError('The ORATAB was not found nor in "{0}" neither in "{1}".'.format(*self.ORATAB))
 
         return data
-
 
     def syscall(self, command, input=None, env=None, *params):
         '''
