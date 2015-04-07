@@ -205,11 +205,14 @@ def format_log(ret):
                 if all([isinstance(x, dict) for x in six.itervalues(chg)]):
                     if all([('old' in x and 'new' in x)
                             for x in six.itervalues(chg)]):
-                        # This is the return data from a package install
-                        msg = 'Installed Packages:\n'
+                        msg = 'Made the following changes:\n'
                         for pkg in chg:
-                            old = chg[pkg]['old'] or 'absent'
-                            new = chg[pkg]['new'] or 'absent'
+                            old = chg[pkg]['old']
+                            if not old and old not in (False, None):
+                                old = 'absent'
+                            new = chg[pkg]['new']
+                            if not new and new not in (False, None):
+                                new = 'absent'
                             msg += '{0} changed from {1} to ' \
                                    '{2}\n'.format(pkg, old, new)
             if not msg:
