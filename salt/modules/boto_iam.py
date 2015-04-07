@@ -153,7 +153,7 @@ def role_exists(name, region=None, key=None, keyid=None, profile=None):
 
 def describe_role(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Get information for a role
+    Get information for a role.
 
     CLI example::
 
@@ -175,7 +175,7 @@ def describe_role(name, region=None, key=None, keyid=None, profile=None):
 def create_user(user_name, path=None, region=None, key=None, keyid=None,
                 profile=None):
     '''
-    Create a user
+    Create a user.
 
     .. versionadded:: Beryllium
 
@@ -202,7 +202,7 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
 def get_all_access_keys(user_name, marker=None, max_items=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
-    Get all access keys from a user
+    Get all access keys from a user.
 
     .. versionadded:: Beryllium
 
@@ -219,10 +219,30 @@ def get_all_access_keys(user_name, marker=None, max_items=None,
         return str(e)
 
 
+def create_access_key(user_name=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Create access key id for a user. If a username is not defined then
+    a key will be created for the user that is doing the request.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_iam.create_access_key myuser
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        return conn.create_access_key(user_name)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        log.error('Failed to create access key.')
+        return str(e)
+
+
 def delete_access_key(access_key_id, user_name=None, region=None, key=None,
                       keyid=None, profile=None):
     '''
-    Delete access key id from a user
+    Delete access key id from a user.
 
     .. versionadded:: Beryllium
 
@@ -242,7 +262,7 @@ def delete_access_key(access_key_id, user_name=None, region=None, key=None,
 def delete_user(user_name, region=None, key=None, keyid=None,
                 profile=None):
     '''
-    Delete a user
+    Delete a user.
 
     .. versionadded:: Beryllium
 
@@ -265,7 +285,7 @@ def delete_user(user_name, region=None, key=None, keyid=None,
 
 def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Get user information
+    Get user information.
 
     .. versionadded:: Beryllium
 
@@ -289,7 +309,7 @@ def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
 def create_group(group_name, path=None, region=None, key=None, keyid=None,
                  profile=None):
     '''
-    Create a group
+    Create a group.
 
     .. versionadded:: Beryllium
 
@@ -316,7 +336,7 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
 def get_group(group_name, marker=None, max_items=None, region=None, key=None,
               keyid=None, profile=None):
     '''
-    Get group information
+    Get group information.
 
     .. versionadded:: Beryllium
 
@@ -340,7 +360,7 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
 def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
                       profile=None):
     '''
-    Add user to group
+    Add user to group.
 
     .. versionadded:: Beryllium
 
@@ -813,7 +833,7 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
 def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=None,
                        region=None, key=None, keyid=None, profile=None):
     '''
-    Upload a certificate to Amazon
+    Upload a certificate to Amazon.
 
     .. versionadded:: Beryllium
 
@@ -874,7 +894,7 @@ def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile
 
 def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=None):
     '''
-    Deletes a certificate from Amazon
+    Deletes a certificate from Amazon.
 
     .. versionadded:: Beryllium
 
