@@ -178,7 +178,7 @@ class _OracleHelper(object):
             return ""
 
         out = []
-        for line in filter(None, str(stdout).replace("\\n", "\n").split("\n")):
+        for line in [line for line in str(stdout).replace("\\n", "\n").split("\n") if line]:
             if line.lower().startswith("ora-") and not line.find("===") > -1:
                 out += textwrap.wrap(line.strip())
 
