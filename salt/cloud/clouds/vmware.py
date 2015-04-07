@@ -786,7 +786,6 @@ def show_instance(name, call=None):
     return vm_full_info
 
 
-
 def list_folders(kwargs=None, call=None):
     '''
     List all the folders for this VMware environment
