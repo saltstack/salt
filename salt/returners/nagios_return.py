@@ -49,6 +49,9 @@ import requests
 from xml.dom.minidom import parseString
 
 import salt.returners
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six.moves.http_client
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -145,7 +148,7 @@ def _post_data(options=None, xml=None):
         verify=True,
     )
 
-    if hasattr(res, 'status_code') and res.status_code == 200:
+    if hasattr(res, 'status_code') and res.status_code == salt.ext.six.moves.http_client.OK:
         if hasattr(res, '_content'):
             result = parseString(res._content)
             if _getText(result.getElementsByTagName("status")[0].childNodes) == "0":

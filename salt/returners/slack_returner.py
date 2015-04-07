@@ -43,7 +43,7 @@ Hipchat settings may also be configured as::
         profile: slack_profile
         channel: RoomName
 
-To use the HipChat returner, append '--return slack' to the salt command.
+To use the Slack returner, append '--return slack' to the salt command.
 
 .. code-block:: bash
 
@@ -64,9 +64,10 @@ import logging
 # Import 3rd-party libs
 import requests
 from requests.exceptions import ConnectionError
-# pylint: disable=import-error
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
-# pylint: enable=import-error
+import salt.ext.six.moves.http_client
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
 import salt.returners
@@ -181,7 +182,7 @@ def _query(function, api_key=None, method='GET', data=None):
         ret['res'] = False
         return ret
 
-    if result.status_code == 200:
+    if result.status_code == salt.ext.six.moves.http_client.OK:
         result = result.json()
         response = slack_functions.get(function).get('response')
         if 'error' in result:
@@ -190,7 +191,7 @@ def _query(function, api_key=None, method='GET', data=None):
             return ret
         ret['message'] = result.get(response)
         return ret
-    elif result.status_code == 204:
+    elif result.status_code == salt.ext.six.moves.http_client.NO_CONTENT:
         return True
     else:
         log.debug(url)
@@ -210,12 +211,12 @@ def _post_message(channel,
                   from_name,
                   api_key=None):
     '''
-    Send a message to a HipChat room.
+    Send a message to a Slack room.
     :param room_id:     The room id or room name, either will work.
-    :param message:     The message to send to the HipChat room.
+    :param message:     The message to send to the Slack room.
     :param from_name:   Specify who the message is from.
-    :param api_key:     The HipChat api key, if not specified in the configuration.
-    :param api_version: The HipChat api version, if not specified in the configuration.
+    :param api_key:     The Slack api key, if not specified in the configuration.
+    :param api_version: The Slack api version, if not specified in the configuration.
     :param color:       The color for the message, default: yellow.
     :param notify:      Whether to notify the room, default: False.
     :return:            Boolean if message was sent successfully.
