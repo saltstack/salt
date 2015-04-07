@@ -328,7 +328,7 @@ def cache_file(path, saltenv='base', env=None):
     _mk_client()
     if path.startswith('salt://|'):
         # Strip pipe. Windows doesn't allow pipes in filenames
-        path = 'salt://{0}'.format(path[8:])
+        path = u'salt://{0}'.format(path[8:])
     env_splitter = '?saltenv='
     if '?env=' in path:
         salt.utils.warn_until(

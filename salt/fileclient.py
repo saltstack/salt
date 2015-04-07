@@ -64,7 +64,7 @@ class Client(object):
         Make sure that this path is intended for the salt master and trim it
         '''
         if not path.startswith('salt://'):
-            raise MinionError('Unsupported path: {0}'.format(path))
+            raise MinionError(u'Unsupported path: {0}'.format(path))
         return path[7:]
 
     def _file_local_list(self, dest):
