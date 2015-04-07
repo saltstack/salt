@@ -1,10 +1,16 @@
-# utf-8
+# -*- coding: utf-8 -*-
 '''
-A Runner module interface on top of the salt-ssh Python API
+A Runner module interface on top of the salt-ssh Python API.
 
 This allows for programmatic use from salt-api, the Reactor, Orchestrate, etc.
 '''
+
+# Import Python Libs
+from __future__ import absolute_import
+
+# Import Salt Libs
 import salt.client.ssh.client
+
 
 def cmd(
         tgt,
