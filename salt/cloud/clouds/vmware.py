@@ -694,6 +694,99 @@ def avail_images():
     return templates
 
 
+def show_instance(name, call=None):
+    '''
+    List all available details of the specified VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a show_instance vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+        return False
+
+    vm = _get_mor_by_property(vim.VirtualMachine, name)
+
+    device_full_info = {}
+    disk_full_info = {}
+    for device in vm.config.hardware.device:
+        device_full_info[device.deviceInfo.label] = { 
+            'key': device.key,
+            'label': device.deviceInfo.label,
+            'summary': device.deviceInfo.summary,
+            'type': type(device).__name__.rsplit(".", 1)[1],
+            'unitNumber': device.unitNumber
+        }
+        if hasattr(device.backing, 'network'):
+            device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+            device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+
+        if hasattr(device, 'busNumber'):
+            device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
+
+        if hasattr(device, 'device'):
+            device_full_info[device.deviceInfo.label]['devices'] = device.device
+
+        if hasattr(device, 'videoRamSizeInKB'):
+            device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
+
+        if hasattr(device.backing, 'fileName'):
+            device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
+            device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
+            disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label]
+            disk_full_info[device.deviceInfo.label]['descriptor'] = device.backing.fileName
+            disk_full_info[device.deviceInfo.label]['files'] = None
+
+    storage_full_info = {}
+    storage_full_info['committed'] = vm.summary.storage.committed
+    storage_full_info['uncommitted'] = vm.summary.storage.uncommitted
+    storage_full_info['unshared'] = vm.summary.storage.unshared
+    storage_full_info['disks'] = disk_full_info
+
+    file_full_info = {}
+    for file in vm.layoutEx.file:
+        file_full_info[file.key] = { 
+            'key': file.key,
+            'name': file.name,
+            'size': file.size,
+            'type': file.type
+        }   
+
+    for net in vm.guest.net:
+        network_full_info = {
+            'connected': net.connected,
+            'ip_addresses': net.ipAddress,
+            'mac_address': net.macAddress,
+            'network': net.network
+        }
+
+    vm_full_info = { 
+        'devices': device_full_info,
+        'storage': storage_full_info,
+        'files': file_full_info,
+        'guest_full_name': vm.config.guestFullName,
+        'guest_id': vm.config.guestId,
+        'hostname': vm.guest.hostName,
+        'ip_address': vm.guest.ipAddress, 
+        'mac_address': network_full_info['mac_address'],
+        'memory_mb': vm.config.hardware.memoryMB,
+        'name': vm.name,
+        'net': [network_full_info],
+        'num_cpu': vm.config.hardware.numCPU,
+        'path': vm.config.files.vmPathName,
+        'status': vm.summary.runtime.powerState,
+        'tools_status': vm.guest.toolsStatus,
+    }
+
+    return vm_full_info
+
+
+
 def list_folders(kwargs=None, call=None):
     '''
     List all the folders for this VMware environment
