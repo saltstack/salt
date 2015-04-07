@@ -37,6 +37,36 @@ class NetworkTestCase(TestCase):
     '''
     Test cases for salt.modules.network
     '''
+    def test_wol_bad_mac(self):
+        '''
+        tests network.wol with bad mac
+        '''
+        bad_mac = '31337'
+        self.assertRaises(ValueError, network.wol, bad_mac)
+
+    def test_wol_success(self):
+        '''
+        tests network.wol success
+        '''
+        mac = '080027136977'
+        bcast = '255.255.255.255 7'
+
+        class MockSocket(object):
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __call__(self, *args, **kwargs):
+                pass
+
+            def setsockopt(self, *args, **kwargs):
+                pass
+
+            def sendto(self, *args, **kwargs):
+                pass
+
+        with patch('socket.socket', MockSocket):
+            self.assertTrue(network.wol(mac, bcast))
+
     def test_ping(self):
         '''
         Test for Performs a ping to a host
