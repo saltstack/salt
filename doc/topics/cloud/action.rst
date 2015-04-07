@@ -1,3 +1,5 @@
+.. _salt-cloud-actions:
+
 =============
 Cloud Actions
 =============
@@ -30,3 +32,6 @@ The following is a list of actions currently supported by salt-cloud:
         - stop
     joyent:
         - stop
+
+Another useful reference for viewing more salt-cloud actions is the
+:ref:Salt Cloud Feature Matrix <salt-cloud-feature-matrix>

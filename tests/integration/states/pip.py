@@ -434,6 +434,30 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isfile(requirements_file):
                 os.unlink(requirements_file)
 
+    def test_22359_pip_installed_unless_does_not_trigger_warnings(self):
+        # This test case should be moved to a format_call unit test specific to
+        # the state internal keywords
+        venv_dir = venv_dir = os.path.join(
+            integration.TMP, 'pip-installed-unless'
+        )
+        venv_create = self.run_function('virtualenv.create', [venv_dir])
+        if venv_create['retcode'] > 0:
+            self.skipTest(
+                'Failed to create testcase virtual environment: {0}'.format(
+                    venv_create
+                )
+            )
+
+        try:
+            ret = self.run_state(
+                'pip.installed', name='pep8', bin_env=venv_dir, unless='/bin/false'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertNotIn('warnings', next(ret.itervalues()))
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
+
 
 if __name__ == '__main__':
     from integration import run_tests
