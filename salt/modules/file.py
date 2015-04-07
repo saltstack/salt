@@ -1684,8 +1684,13 @@ def patch(originalfile, patchfile, options='', dry_run=False):
             dry_run_opt = ' --dry-run'
     else:
         dry_run_opt = ''
-    cmd = 'patch {0}{1} "{2}" "{3}"'.format(
-        options, dry_run_opt, originalfile, patchfile)
+
+    patchpath = salt.utils.which('patch')
+    if not patchpath:
+        raise CommandExecutionError('patch executable not found. Is the distribution\'s patch package installed?')
+
+    cmd = '{0} {1}{2} "{3}" "{4}"'.format(
+        patchpath, options, dry_run_opt, originalfile, patchfile)
     return __salt__['cmd.run_all'](cmd, python_shell=False)
 
 
