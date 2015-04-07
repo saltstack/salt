@@ -708,14 +708,13 @@ def show_instance(name, call=None):
         raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
         )
-        return False
 
     vm = _get_mor_by_property(vim.VirtualMachine, name)
 
     device_full_info = {}
     disk_full_info = {}
     for device in vm.config.hardware.device:
-        device_full_info[device.deviceInfo.label] = { 
+        device_full_info[device.deviceInfo.label] = {
             'key': device.key,
             'label': device.deviceInfo.label,
             'summary': device.deviceInfo.summary,
@@ -749,12 +748,12 @@ def show_instance(name, call=None):
 
     file_full_info = {}
     for file in vm.layoutEx.file:
-        file_full_info[file.key] = { 
+        file_full_info[file.key] = {
             'key': file.key,
             'name': file.name,
             'size': file.size,
             'type': file.type
-        }   
+        }
 
     for net in vm.guest.net:
         network_full_info = {
@@ -764,14 +763,14 @@ def show_instance(name, call=None):
             'network': net.network
         }
 
-    vm_full_info = { 
+    vm_full_info = {
         'devices': device_full_info,
         'storage': storage_full_info,
         'files': file_full_info,
         'guest_full_name': vm.config.guestFullName,
         'guest_id': vm.config.guestId,
         'hostname': vm.guest.hostName,
-        'ip_address': vm.guest.ipAddress, 
+        'ip_address': vm.guest.ipAddress,
         'mac_address': network_full_info['mac_address'],
         'memory_mb': vm.config.hardware.memoryMB,
         'name': vm.name,
