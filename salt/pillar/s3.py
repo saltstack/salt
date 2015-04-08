@@ -122,7 +122,7 @@ def ext_pillar(minion_id,
     if __opts__['pillar_roots'].get(environment, []) == [pillar_dir]:
         return {}
 
-    metadata = _init(s3_creds, multiple_env, environment, prefix)
+    metadata = _init(s3_creds, bucket, multiple_env, environment, prefix)
 
     if _s3_sync_on_update:
         # sync the buckets to the local cache
@@ -150,13 +150,13 @@ def ext_pillar(minion_id,
     return compiled_pillar
 
 
-def _init(creds, multiple_env, environment, prefix):
+def _init(creds, bucket, multiple_env, environment, prefix):
     '''
     Connect to S3 and download the metadata for each file in all buckets
     specified and cache the data to disk.
     '''
 
-    cache_file = _get_buckets_cache_filename()
+    cache_file = _get_buckets_cache_filename(bucket, prefix)
     exp = time.time() - _s3_cache_expire
 
     # check mtime of the buckets files cache
@@ -196,7 +196,7 @@ def _get_cached_file_name(bucket, saltenv, path):
     return file_path
 
 
-def _get_buckets_cache_filename():
+def _get_buckets_cache_filename(bucket, prefix):
     '''
     Return the filename of the cache for bucket contents.
     Create the path if it does not exist.
@@ -206,7 +206,7 @@ def _get_buckets_cache_filename():
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    return os.path.join(cache_dir, 'buckets_files.cache')
+    return os.path.join(cache_dir, '{}-{}-files.cache'.format(bucket, prefix))
 
 
 def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, prefix):
