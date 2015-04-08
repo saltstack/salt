@@ -16,6 +16,7 @@ import logging
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
+import salt.ext.six as six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt._compat import ElementTree as ET
 
@@ -161,6 +162,7 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
     __context__[cxkey] = conn
     return conn
 
+
 def get_exception(e):
     '''
     Extract the message from a boto exception and return a
@@ -179,7 +181,7 @@ def get_exception(e):
         message = ET.fromstring(body).find('Errors').find('Error').find('Message').text
     except (AttributeError, ET.ParseError):
         message = ''
-    
+
     if message:
         message = '{0} {1}: {2}'.format(status, reason, message)
     else:

@@ -144,6 +144,11 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
         self.assertTrue(conn in salt.utils.boto.__context__.values())
 
     @mock_ec2
+    def test_conn_is_cache_with_profile(self):
+        conn = salt.utils.boto.get_connection(service, profile=conn_parameters)
+        self.assertTrue(conn in salt.utils.boto.__context__.values())
+
+    @mock_ec2
     def test_get_conn_with_no_auth_params_raises_invocation_error(self):
         with patch('boto.{0}.connect_to_region'.format(service),
                    side_effect=boto.exception.NoAuthHandlerFound()):
@@ -183,4 +188,4 @@ class BotoUtilsGetExceptionTestCase(BotoUtilsTestCaseBase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(BotoUtilsGetExceptionTestCase, needs_daemon=False)
+    run_tests(BotoUtilsGetConnTestCase, needs_daemon=False)
