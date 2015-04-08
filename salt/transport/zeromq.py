@@ -322,7 +322,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         log.info('Worker binding to socket {0}'.format(self.w_uri))
         self._socket.connect(self.w_uri)
 
-        salt.transport.mixins.auth.AESReqServerMixin.post_fork(self)
+        salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
 
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=self.io_loop)
         self.stream.on_recv_stream(self.handle_message)

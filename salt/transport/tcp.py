@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 TCP transport classes
 
@@ -21,7 +22,6 @@ import salt.utils.verify
 import salt.utils.event
 import salt.payload
 import salt.exceptions
-import functools
 
 import logging
 
@@ -45,6 +45,7 @@ import tornado.tcpclient
 log = logging.getLogger(__name__)
 
 import msgpack
+
 
 def frame_msg(body, header=None, raw_body=False):
     '''
@@ -178,7 +179,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60, callback=None):
+    def send(self, load, tries=3, timeout=60):
         '''
         Send a request, return a future which will complete when we send the message
         '''
@@ -270,7 +271,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         self.socket.listen(self.backlog)
 
         self.serial = salt.payload.Serial(self.opts)
-        salt.transport.mixins.auth.AESReqServerMixin.post_fork(self)
+        salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
 
     @tornado.gen.coroutine
     def handle_message(self, stream, header, payload):
@@ -322,7 +323,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         raise tornado.gen.Return()
 
 
-class SaltMessageServer(tornado.tcpserver.TCPServer):
+class SaltMessageServer(tornado.tcpserver.TCPServer, object):
     '''
     Raw TCP server which will recieve all of the TCP streams and re-assemble
     messages that are sent through to us
@@ -365,6 +366,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
             client, address = item
             client.close()
             self.clients.remove(item)
+
 
 # TODO: singleton? Something to not re-create the tcp connection so much
 class SaltMessageClient(object):
@@ -545,7 +547,7 @@ class SaltMessageClient(object):
         return future
 
 
-class PubServer(tornado.tcpserver.TCPServer):
+class PubServer(tornado.tcpserver.TCPServer, object):
     '''
     TCP publisher
     '''
