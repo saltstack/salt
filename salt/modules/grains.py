@@ -28,13 +28,6 @@ __proxyenabled__ = ['*']
 # Seed the grains dict so cython will build
 __grains__ = {}
 
-# Change the default outputter to make it more readable
-__outputter__ = {
-    'items': 'grains',
-    'item': 'grains',
-    'setval': 'grains',
-}
-
 # http://stackoverflow.com/a/12414913/127816
 _infinitedict = lambda: collections.defaultdict(_infinitedict)
 
