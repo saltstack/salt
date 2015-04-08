@@ -240,9 +240,9 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
         if not self.created:
             crypticle = salt.crypt.Crypticle(self.opts.value, self.aes.value)
             self.worker = salt.master.FloMWorker(
-                    self.opts.value,
-                    self.key.value,
-                    crypticle)
+                self.opts.value,
+                self.key.value,
+            )
             self.worker.setup()
             self.created = True
             log.info('Started ZMQ worker')
