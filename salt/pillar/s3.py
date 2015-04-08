@@ -116,6 +116,8 @@ def ext_pillar(minion_id,
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(_get_cache_dir(), environment,
                                                bucket))
+    if prefix:
+        pillar_dir = os.path.normpath(os.path.join(pillar_dir, prefix))
 
     if __opts__['pillar_roots'].get(environment, []) == [pillar_dir]:
         return {}
