@@ -100,6 +100,12 @@ def cache_id(service, name, sub_resource=None, resource_id=None,
              profile=None):
     '''
     Cache, invalidate, or retrieve an AWS resource id keyed by name.
+
+    .. code-block:: python
+
+        __utils__['boto.cache_id']('ec2', 'myinstance',
+                                   'i-a1b2c3',
+                                   profile='custom_profile')
     '''
 
     cxkey, _, _, _ = _get_profile(service, region, key,
@@ -123,7 +129,7 @@ def cache_id(service, name, sub_resource=None, resource_id=None,
 
 
 def get_connection(service, module=None, region=None, key=None, keyid=None,
-             profile=None):
+                   profile=None):
     '''
     Return a boto connection for the service.
 
