@@ -391,6 +391,24 @@ def remove_service(name, zone=None, permanent=True):
     return __firewall_cmd(cmd)
 
 
+def get_masquerade(zone):
+    '''
+    Show if masquerading is enabled on a zone
+
+    CLI Example:
+
+    .. code-block::
+
+        salt '*' firewalld.get_masquerade zone
+    '''
+    zone_info = list_all(zone)
+
+    if [zone_info[i]['masquerade'][0] for i in zone_info.keys()] == 'no':
+        return False
+
+    return True
+
+
 def add_masquerade(zone):
     '''
     Enable masquerade on a zone.
@@ -433,9 +451,7 @@ def add_port(zone, port):
 
         salt '*' firewalld.add_port internal 443/tcp
     '''
-    zone_info = list_all(zone)
-
-    if 'no' in [zone_info[i]['masquerade'][0] for i in zone_info.keys()]:
+    if not get_masquerade(zone):
         add_masquerade(zone)
 
     return __firewall_cmd('--zone={0} --add-port={1}'.format(zone, port))
@@ -483,9 +499,7 @@ def add_port_fwd(zone, src, dest, proto='tcp', dstaddr=''):
 
         salt '*' firewalld.add_port_fwd public 80 443 tcp
     '''
-    zone_info = list_all(zone)
-
-    if 'no' in [zone_info[i]['masquerade'][0] for i in zone_info.keys()]:
+    if not get_masquerade(zone):
         add_masquerade(zone)
 
     return __firewall_cmd(
