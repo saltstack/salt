@@ -91,9 +91,6 @@ class MasterACLTestCase(integration.ModuleCase):
                                                        '*': [{'my_minion': ['my_mod.my_func']}],
                                          }
                                  }
-        # make sure to configure the AES key
-        import salt.transport.mixins.auth
-        salt.transport.mixins.auth.AESReqServerMixin().pre_fork(None)
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
 
         # overwrite the _send_pub method so we don't have to serialize MagicMock
