@@ -276,8 +276,9 @@ from StringIO import StringIO
 import logging
 
 # Import salt libs
-from salt.exceptions import SaltRenderError
+import salt.loader
 import salt.utils.templates
+from salt.exceptions import SaltRenderError
 
 
 log = logging.getLogger(__name__)
@@ -293,7 +294,7 @@ def _split_module_dicts():
 
         {{ salt.cmd.run('uptime') }}
     '''
-    if not isinstance(__salt__, dict):
+    if not isinstance(__salt__, (dict, salt.loader.LazyLoader)):
         return __salt__
     mod_dict = dict(__salt__)
     for module_func_name, mod_fun in mod_dict.items():
