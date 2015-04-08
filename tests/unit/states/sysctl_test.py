@@ -24,7 +24,6 @@ from salt.states import sysctl
 
 sysctl.__opts__ = {}
 sysctl.__salt__ = {}
-sysctl.__grains__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -36,7 +35,8 @@ class SysctlTestCase(TestCase):
 
     def test_present(self):
         '''
-        Test to ensure that a grain is set
+        Test to ensure that the named sysctl value is set
+        in memory and persisted to the named configuration file.
         '''
         name = 'net.ipv4.conf.all.rp_filter'
         value = '1'
