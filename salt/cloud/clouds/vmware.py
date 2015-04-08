@@ -737,14 +737,26 @@ def show_instance(name, call=None):
         if hasattr(device.backing, 'fileName'):
             device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
             device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
-            disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label]
-            disk_full_info[device.deviceInfo.label]['descriptor'] = device.backing.fileName
+            disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label].copy()
+            disk_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+            if device.backing.datastore:
+                disk_full_info[device.deviceInfo.label]['datastore'] = {
+                    'name': device.backing.datastore.name,
+                    'host': [host.key.name for host in device.backing.datastore.host],
+                    'summary': {
+                        'capacityInKB': device.backing.datastore.summary.capacity,
+                        'freeSpaceInKB': device.backing.datastore.summary.freeSpace,
+                        'fileSystem': device.backing.datastore.summary.type,
+                        'url': device.backing.datastore.summary.url
+                    }
+                }
 
-    storage_full_info = {}
-    storage_full_info['committed'] = vm.summary.storage.committed
-    storage_full_info['uncommitted'] = vm.summary.storage.uncommitted
-    storage_full_info['unshared'] = vm.summary.storage.unshared
-    storage_full_info['disks'] = disk_full_info
+    storage_full_info = {
+        'committed': vm.summary.storage.committed,
+        'uncommitted': vm.summary.storage.uncommitted,
+        'unshared': vm.summary.storage.unshared,
+        'disks': disk_full_info,
+    }
 
     file_full_info = {}
     for file in vm.layoutEx.file:
