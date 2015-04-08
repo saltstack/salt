@@ -158,7 +158,7 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
                                   'attempting to make boto {0} connection to '
                                   'region "{1}".'.format(service, region))
     except BotoServerError as exc:
-        raise CommandExecutionError(exc.reason)
+        raise get_exception(exc)
     __context__[cxkey] = conn
     return conn
 
