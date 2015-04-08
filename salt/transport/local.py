@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+import logging
+
 from salt.transport.client import ReqChannel
+
+log = logging.getLogger(__name__)
 
 
 class LocalChannel(ReqChannel):
@@ -22,7 +27,7 @@ class LocalChannel(ReqChannel):
                 'data': ''.join(f.readlines()),
                 'dest': load['path'],
             }
-            print 'returning', ret
+            print ('returning', ret)
         else:
             # end of buffer
             ret = {
