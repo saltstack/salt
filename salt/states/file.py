@@ -43,10 +43,9 @@ string will be the contents of the managed file. For example:
 
 .. note::
 
-    When using both the ``defaults`` and ``context`` arguments, note the extra
-    indentation (four spaces instead of the normal two). This is due to an
-    idiosyncrasy of how PyYAML loads nested dictionaries, and is explained in
-    greater detail :ref:`here <nested-dict-indentation>`.
+    The ``defaults`` and ``context`` arguments require extra indentation (four
+    spaces instead of the normal two) in order to create a nested dictionary.
+    :ref:`More information <nested-dict-indentation>`.
 
 If using a template, any user-defined template variables in the file defined in
 ``source`` must be passed in using the ``defaults`` and/or ``context``
