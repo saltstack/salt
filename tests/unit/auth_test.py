@@ -95,6 +95,10 @@ class MasterACLTestCase(integration.ModuleCase):
         import salt.transport.mixins.auth
         salt.transport.mixins.auth.AESReqServerMixin().pre_fork(None)
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
+
+        # overwrite the _send_pub method so we don't have to serialize MagicMock
+        self.clear._send_pub = lambda payload: True
+
         # make sure to return a JID, instead of a mock
         self.clear.mminion.returners = {'.prep_jid': lambda x: 1}
 
