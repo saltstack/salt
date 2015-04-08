@@ -274,7 +274,7 @@ def _get_yum_config():
         try:
             yb = yum.YumBase()
             yb.preconf.init_plugins = False
-            for name,value in yb.conf.iteritems():
+            for name, value in yb.conf.iteritems():
                 conf[name] = value
         except (AttributeError, yum.Errors.ConfigError) as exc:
             raise CommandExecutionError(
@@ -307,7 +307,7 @@ def _get_yum_config():
             for opt in cp.options('main'):
                 if opt in ('reposdir', 'commands', 'excludes'):
                     # these options are expected to be lists
-                    conf[opt] = [ x.strip() for x in cp.get('main', opt).split(',') ]
+                    conf[opt] = [x.strip() for x in cp.get('main', opt).split(',')]
                 else:
                     conf[opt] = cp.get('main', opt)
         else:
@@ -338,7 +338,7 @@ def _normalize_basedir(basedir=None):
 
     # if we are passed a string (for backward compatibility), convert to a list
     if isinstance(basedir, basestring):
-        basedir = [ x.strip() for x in basedir.split(',') ]
+        basedir = [x.strip() for x in basedir.split(',')]
 
     # nothing specified, so use the reposdir option as the default
     if not basedir:
