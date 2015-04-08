@@ -14,6 +14,7 @@ options
           key: ksladfDLKDALSFKSD93q032sdDasdfasdflsadkf
           multiple_env: False
           environment: base
+          prefix: somewhere/overthere
           verify_ssl: True
           service_url: s3.amazonaws.com
 
@@ -32,6 +33,11 @@ The `environment=` defaults to 'base'. It specifies which environment the
 bucket represents when in single environments mode (see mode section below). It
 is ignored if multiple_env is True.
 
+The `prefix=` defaults to ''. It specifies a key prefix to use when searching
+for data in the bucket for the pillar. It works when multiple_env is True or False.
+Essentially it tells ext_pillar to look for your pillar data in a 'subdirectory'
+of your S3 bucket
+
 The `verify_ssl=` parameter defaults to True. It specifies whether to check for
 valid S3 SSL certificates. *NOTE* If you use bucket names with periods, this
 must be set to False else an invalid certificate error will be thrown (issue
@@ -48,14 +54,18 @@ Single environment mode must have this bucket structure:
 
 .. code-block:: text
 
-    s3://<bucket name>/<files>
+    s3://<bucket name>/<prefix>/<files>
 
 Multiple environment mode must have this bucket structure:
 
 .. code-block:: text
 
-    s3://<bucket name>/<environment>/<files>
+    s3://<bucket name>/<prefix>/<environment>/<files>
 
+If you wish to define your pillar data entirely within S3 it's recommended
+that you use the `prefix=` parameter and specify one entry in ext_pillar
+for each environment rather than specifying multiple_env. This is due
+to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 '''
 
 # Import python libs
@@ -95,6 +105,7 @@ def ext_pillar(minion_id,
                verify_ssl,
                multiple_env=False,
                environment='base',
+               prefix='',
                service_url=None):
     '''
     Execute a command and read the output as YAML
@@ -109,7 +120,7 @@ def ext_pillar(minion_id,
     if __opts__['pillar_roots'].get(environment, []) == [pillar_dir]:
         return {}
 
-    metadata = _init(s3_creds, multiple_env, environment)
+    metadata = _init(s3_creds, multiple_env, environment, prefix)
 
     if _s3_sync_on_update:
         # sync the buckets to the local cache
@@ -137,7 +148,7 @@ def ext_pillar(minion_id,
     return compiled_pillar
 
 
-def _init(creds, multiple_env, environment):
+def _init(creds, multiple_env, environment, prefix):
     '''
     Connect to S3 and download the metadata for each file in all buckets
     specified and cache the data to disk.
@@ -152,7 +163,7 @@ def _init(creds, multiple_env, environment):
     else:
         # bucket files cache expired
         return _refresh_buckets_cache_file(creds, cache_file, multiple_env,
-                                           environment)
+                                           environment, prefix)
 
 
 def _get_cache_dir():
@@ -196,7 +207,7 @@ def _get_buckets_cache_filename():
     return os.path.join(cache_dir, 'buckets_files.cache')
 
 
-def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
+def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, prefix):
     '''
     Retrieve the content of all buckets and cache the metadata to the buckets
     cache file
@@ -210,7 +221,8 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment):
             bucket=creds.bucket,
             service_url=creds.service_url,
             verify_ssl=creds.verify_ssl,
-            return_bin=False)
+            return_bin=False,
+            params={'prefix': prefix})
 
     # grab only the files/dirs in the bucket
     def __get_pillar_files_from_s3_meta(s3_meta):
