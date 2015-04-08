@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # for backwards compatibility
 from salt.transport.client import ReqChannel
 
+
 class Channel(ReqChannel):
     @staticmethod
     def factory(opts, **kwargs):
