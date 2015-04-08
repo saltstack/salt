@@ -46,10 +46,148 @@ Cloud Configuration Syntax
 The data specific to interacting with public clouds is set up here.
 
 **ATTENTION**: In Salt-Cloud version 0.8.7, a new cloud provider configuration
-syntax was implemented. This new configuration syntax is the standard cloud
+syntax was implemented. This "new" configuration syntax is the standard cloud
 configuration syntax that is documented here. For information regarding the old
 cloud provider configuration syntax, please see the
 :ref:Salt Cloud Legacy Configuration <salt-cloud-legacy-configuration> documentation.
+
+Cloud provider configuration syntax can live in several places. The first is in
+``/etc/salt/cloud``:
+
+.. code-block:: yaml
+
+    # /etc/salt/cloud
+    providers:
+      my-aws-migrated-config:
+        id: HJGRYCILJLKJYG
+        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+        keyname: test
+        securitygroup: quick-start
+        private_key: /root/test.pem
+        provider: aws
+
+Cloud provider configuration data can also be housed in ``/etc/salt/cloud.providers``
+or any file matching ``/etc/salt/cloud.providers.d/*.conf``. All files in any of these
+locations will be parsed for cloud provider data.
+
+Using the example configuration above:
+
+.. code-block:: yaml
+
+    # /etc/salt/cloud.providers
+    # or could be /etc/salt/cloud.providers.d/*.conf
+    my-aws-config:
+      id: HJGRYCILJLKJYG
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      keyname: test
+      securitygroup: quick-start
+      private_key: /root/test.pem
+      provider: aws
+
+.. note::
+
+    Salt Cloud provider configurations within ``/etc/cloud.provider.d/ should not
+    specify the ``providers`` starting key.
+
+To allow for a more extensible configuration, ``--providers-config``, which defaults to
+``/etc/salt/cloud.providers``, was added to the cli parser.  It allows for the providers'
+configuration to be added on a per-file basis.
+
+It is also possible to have multiple cloud configuration blocks within the same alias block.
+For example:
+
+.. code-block:: yaml
+
+    production-config:
+      - id: HJGRYCILJLKJYG
+        key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+        keyname: test
+        securitygroup: quick-start
+        private_key: /root/test.pem
+        provider: aws
+
+      - user: example_user
+        apikey: 123984bjjas87034
+        provider: rackspace
+
+
+However, using this configuration method requires a change with profile configuration blocks.
+The provider alias needs to have the provider key value appended as in the following example:
+
+.. code-block:: yaml
+
+    rhel_aws_dev:
+      provider: production-config:aws
+      image: ami-e565ba8c
+      size: t1.micro
+
+    rhel_aws_prod:
+      provider: production-config:aws
+      image: ami-e565ba8c
+      size: High-CPU Extra Large Instance
+
+    database_prod:
+      provider: production-config:rackspace
+      image: Ubuntu 12.04 LTS
+      size: 256 server
+
+
+Notice that because of the multiple entries, one has to be explicit about the provider alias and
+name, from the above example, ``production-config: aws``.
+
+This data interactions with the ``salt-cloud`` binary regarding its ``--list-location``,
+``--list-images``, and ``--list-sizes`` which needs a cloud provider as an argument. The argument
+used should be the configured cloud provider alias. If the provider alias has multiple entries,
+``<provider-alias>: <provider-name>`` should be used.
+
+
+Pillar Configuration
+====================
+
+It is possible to configure cloud providers using pillars. This is only used when inside the cloud
+module. You can setup a variable called ``cloud`` that contains your profile and provider to pass
+that information to the cloud servers instead of having to copy the full configuration to every
+minion. In your pillar file, you would use something like this:
+
+.. code-block:: yaml
+
+    cloud:
+      ssh_key_name: saltstack
+      ssh_key_file: /root/.ssh/id_rsa
+      update_cachedir: True
+      diff_cache_events: True
+      change_password: True
+
+      providers:
+        my-nova:
+          identity_url: https://identity.api.rackspacecloud.com/v2.0/
+          compute_region: IAD
+          user: myuser
+          api_key: apikey
+          tenant: 123456
+          provider: nova
+
+        my-openstack:
+          identity_url: https://identity.api.rackspacecloud.com/v2.0/tokens
+          user: user2
+          apikey: apikey2
+          tenant: 654321
+          compute_region: DFW
+          provider: openstack
+          compute_name: cloudServersOpenStack
+
+      profiles:
+        ubuntu-nova:
+          provider: my-nova
+          size: performance1-8
+          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          script_args: git develop
+
+        ubuntu-openstack:
+          provider: my-openstack
+          size: performance1-8
+          image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
+          script_args: git develop
 
 
 Cloud Configurations
