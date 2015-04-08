@@ -89,7 +89,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
       boto_iam.keys_present:
         - name: myusername
         - number: 2
-        - save_dir: /root/
+        - save_dir: /root
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'fdkjsafkljsASSADFalkfjasdf'
@@ -171,6 +171,28 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
 
 
 def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded:: Beryllium
+
+    Ensure the IAM access keys are present.
+
+    name (string) – The name of the new user.
+
+    number (int) - Number of keys that user should have.
+
+    save_dir (string) - The directory that the key/keys will be saved. Keys are saved to a file named according
+    to the username privided.
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    that contains a dict with region, key and keyid.
+    '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
         ret['result'] = False
@@ -204,7 +226,6 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
         return ret
     new_keys = {}
     for i in range(number-len(keys)):
-        i += i
         created = __salt__['boto_iam.create_access_key'](name, region, key, keyid, profile)
         if isinstance(created, str):
             error, message = _get_error(created)
