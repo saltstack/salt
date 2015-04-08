@@ -1402,14 +1402,12 @@ def managed(name,
                 contents,
                 **kwargs
             )
-            if not ret['changes']:
-                ret['result'] = True
-            else:
-                ret['result'] = None
 
             if ret['changes']:
+                ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
             else:
+                ret['result'] = True
                 ret['comment'] = 'The file {0} is in the correct state'.format(name)
 
             return ret
