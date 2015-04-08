@@ -74,8 +74,7 @@ class SysctlTestCase(TestCase):
             '''
             if config_file is None:
                 return {name: '2'}
-            else:
-                return ['']
+            return ['']
 
         def mock_config(config_file=None):
             '''
@@ -83,8 +82,7 @@ class SysctlTestCase(TestCase):
             '''
             if config_file is None:
                 return {'salt': '2'}
-            else:
-                return [name]
+            return [name]
 
         def mock_both(config_file=None):
             '''
@@ -92,8 +90,7 @@ class SysctlTestCase(TestCase):
             '''
             if config_file is None:
                 return {name: value}
-            else:
-                return [name]
+            return [name]
 
         with patch.dict(sysctl.__opts__, {'test': True}):
             mock = MagicMock(return_value=False)
@@ -101,40 +98,36 @@ class SysctlTestCase(TestCase):
                 self.assertDictEqual(sysctl.present(name, value), ret)
 
             with patch.dict(sysctl.__salt__, {'sysctl.show': mock_current}):
-                ret['comment'] = comment1
+                ret.update({'comment': comment1})
                 self.assertDictEqual(sysctl.present(name, value), ret)
 
-                ret['comment'] = comment2
+                ret.update({'comment': comment2})
                 self.assertDictEqual(sysctl.present(name, '2'), ret)
 
             with patch.dict(sysctl.__salt__, {'sysctl.show': mock_config}):
-                ret['comment'] = comt3
+                ret.update({'comment': comt3})
                 self.assertDictEqual(sysctl.present(name, value), ret)
 
             mock = MagicMock(return_value=value)
             with patch.dict(sysctl.__salt__, {'sysctl.show': mock_both,
                                               'sysctl.get': mock}):
-                ret['comment'] = comt4
-                ret['result'] = True
+                ret.update({'comment': comt4, 'result': True})
                 self.assertDictEqual(sysctl.present(name, value), ret)
 
             mock = MagicMock(return_value=[True])
             with patch.dict(sysctl.__salt__, {'sysctl.show': mock}):
-                ret['comment'] = comt5
-                ret['result'] = None
+                ret.update({'comment': comt5, 'result': None})
                 self.assertDictEqual(sysctl.present(name, value), ret)
 
         with patch.dict(sysctl.__opts__, {'test': False}):
             mock = MagicMock(side_effect=CommandExecutionError)
             with patch.dict(sysctl.__salt__, {'sysctl.persist': mock}):
-                ret['comment'] = comt6
-                ret['result'] = False
+                ret.update({'comment': comt6, 'result': False})
                 self.assertDictEqual(sysctl.present(name, value), ret)
 
             mock = MagicMock(return_value='Already set')
             with patch.dict(sysctl.__salt__, {'sysctl.persist': mock}):
-                ret['comment'] = comt7
-                ret['result'] = True
+                ret.update({'comment': comt7, 'result': True})
                 self.assertDictEqual(sysctl.present(name, value), ret)
 
 
