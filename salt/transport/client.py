@@ -4,8 +4,6 @@ Encapsulate the different transports available to Salt.
 
 This includes client side transport, for the ReqServer and the Publisher
 '''
-import time
-
 from salt.utils.async import SyncWrapper
 
 
