@@ -30,10 +30,8 @@ import zmq.eventloop.zmqstream
 
 # tornado imports
 import tornado
-import tornado.tcpserver
 import tornado.gen
 import tornado.concurrent
-import tornado.tcpclient
 
 log = logging.getLogger(__name__)
 
