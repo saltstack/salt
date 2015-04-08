@@ -48,6 +48,7 @@ cloud configuration at
 # Import python libs
 from __future__ import absolute_import
 from random import randint
+from re import match
 import pprint
 import logging
 import time
@@ -316,6 +317,7 @@ def _manage_devices(devices, vm):
     device_specs = []
     existing_disks_label = []
     existing_network_adapters_label = []
+    nics_map = []
 
     # loop through all the devices the vm/template has
     # check if the device needs to be created or configured
@@ -343,10 +345,28 @@ def _manage_devices(devices, vm):
                 existing_network_adapters_label.append(device.deviceInfo.label)
                 if device.deviceInfo.label in devices['network'].keys():
                     network_name = devices['network'][device.deviceInfo.label]['name']
-                    # Only edit the network adapter if network name is different
-                    if device.backing.deviceName != network_name:
-                        network_spec = _edit_existing_network_adapter_helper(device, network_name)
-                        device_specs.append(network_spec)
+                    network_spec = _edit_existing_network_adapter_helper(device, network_name)
+                    device_specs.append(network_spec)
+
+                    adapter_mapping = vim.vm.customization.AdapterMapping()
+                    adapter_mapping.adapter = vim.vm.customization.IPSettings()
+
+                    if 'domain' in devices['network'][device.deviceInfo.label].keys():
+                        domain = devices['network'][device.deviceInfo.label]['domain']
+                        adapter_mapping.adapter.dnsDomain = domain
+                    if 'gateway' in devices['network'][device.deviceInfo.label].keys():
+                        gateway = devices['network'][device.deviceInfo.label]['gateway']
+                        adapter_mapping.adapter.gateway = gateway
+                    if 'ip' in devices['network'][device.deviceInfo.label].keys():
+                        ip = str(devices['network'][device.deviceInfo.label]['ip'])
+                        subnet_mask = str(devices['network'][device.deviceInfo.label]['subnet_mask'])
+                        adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+                        adapter_mapping.adapter.subnetMask = subnet_mask
+                    else:
+                        adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
+                    nics_map.append(adapter_mapping)
+
+                    
 
     if 'disk' in devices.keys():
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
@@ -373,7 +393,47 @@ def _manage_devices(devices, vm):
             network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type)
             device_specs.append(network_spec)
 
-    return device_specs
+            adapter_mapping = vim.vm.customization.AdapterMapping()
+            adapter_mapping.adapter = vim.vm.customization.IPSettings()
+
+            if 'domain' in devices['network'][network_adapter_label].keys():
+                domain = devices['network'][network_adapter_label]['domain']
+                adapter_mapping.adapter.dnsDomain = domain
+            if 'gateway' in devices['network'][network_adapter_label].keys():
+                gateway = devices['network'][network_adapter_label]['gateway']
+                adapter_mapping.adapter.gateway = gateway
+            if 'ip' in devices['network'][network_adapter_label].keys():
+                ip = str(devices['network'][network_adapter_label]['ip'])
+                subnet_mask = str(devices['network'][network_adapter_label]['subnet_mask'])
+                adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+                adapter_mapping.adapter.subnetMask = subnet_mask
+            else:
+                adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
+            nics_map.append(adapter_mapping)
+
+
+    ret = {
+        'device_specs': device_specs,
+        'nics_map': nics_map
+    }
+
+    return ret
+
+
+def _wait_for_ip(vm, max_wait_minute):
+    time_counter = 0
+    max_wait_second = int(max_wait_minute * 60)
+    while time_counter < max_wait_second:
+        log.info("Waiting to get IP information [{0} s]".format(time_counter))
+        for net in vm.guest.net:
+            if net.ipConfig.ipAddress:
+                for current_ip in net.ipConfig.ipAddress:
+                    if match('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                        ip = current_ip.ipAddress
+                        return ip
+        time.sleep(5)
+        time_counter += 5
+    return False
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -783,7 +843,7 @@ def show_instance(name, call=None):
         'guest_id': vm.config.guestId,
         'hostname': vm.guest.hostName,
         'ip_address': vm.guest.ipAddress,
-        'mac_address': network_full_info['mac_address'],
+        'mac_address': network_full_info['mac_address'] if network_full_info['mac_address'] else None,
         'memory_mb': vm.config.hardware.memoryMB,
         'name': vm.name,
         'net': [network_full_info],
@@ -1154,8 +1214,8 @@ def create(vm_):
             config_spec.memoryMB = memory
 
         if devices:
-            device_specs = _manage_devices(devices, object_ref)
-            config_spec.deviceChange = device_specs
+            specs = _manage_devices(devices, object_ref)
+            config_spec.deviceChange = specs['device_specs']
 
         if extra_config:
             for key, value in extra_config.iteritems():
@@ -1168,6 +1228,22 @@ def create(vm_):
             location=reloc_spec,
             config=config_spec
         )
+
+        if specs['nics_map']:
+            if "Windows" not in object_ref.config.guestFullName:
+                global_ip = vim.vm.customization.GlobalIPSettings()
+                if vm_['dns_servers']:
+                    global_ip.dnsServerList = vm_['dns_servers']
+                identity = vim.vm.customization.LinuxPrep()
+                identity.domain = vm_['domain']
+                identity.hostName = vim.vm.customization.FixedName(name=vm_name)
+
+                custom_spec = vim.vm.customization.Specification(
+                    nicSettingMap=specs['nics_map'],
+                    globalIPSettings=global_ip,
+                    identity=identity
+                )
+                clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
@@ -1189,7 +1265,7 @@ def create(vm_):
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
             while task.info.state == 'running':
-                log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
+                log.info("Waiting for clone task to finish [{0} s]".format(time_counter))
                 time.sleep(5)
                 time_counter += 5
         except Exception as exc:
@@ -1215,6 +1291,13 @@ def create(vm_):
             transport=__opts__['transport']
         )
 
+        new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
+        ip = _wait_for_ip(new_vm_ref, 20)
+        if ip:
+            log.debug("IP is: {0}".format(ip))
+            # ssh or smb using ipand install salt
+        else:
+            log.warning("Could not get IP information for {0}".format(vm_name))
     else:
         log.error("clonefrom option hasn\'t been specified. Exiting.")
         return False
