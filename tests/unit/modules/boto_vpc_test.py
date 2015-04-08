@@ -62,7 +62,7 @@ dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': 
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
-boto_vpc.__context__ = {}
+#boto_vpc.__context__ = {}
 
 
 def _has_required_boto():
@@ -95,6 +95,9 @@ def _has_required_moto():
 
 class BotoVpcTestCaseBase(TestCase):
     conn = None
+
+    def setUp(self):
+        boto_vpc.__context__ = {}
 
     def _create_vpc(self, name=None, tags=None):
         '''
@@ -409,9 +412,8 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         tests False VPC not created.
         '''
         with patch('moto.ec2.models.VPCBackend.create_vpc', side_effect=BotoServerError(400, 'Mocked error')):
-            vpc_creation_result = boto_vpc.create(cidr_block, **conn_parameters)
-
-        self.assertFalse(vpc_creation_result)
+            with self.assertRaisesRegexp(CommandExecutionError, 'Mocked error'):
+                vpc_creation_result = boto_vpc.create(cidr_block, **conn_parameters)
 
     @mock_ec2
     def test_that_when_deleting_an_existing_vpc_the_delete_vpc_method_returns_true(self):
@@ -442,10 +444,11 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
         describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
 
-        vpc_properties = dict(cidr_block=six.text_type(cidr_block),
+        vpc_properties = dict(id=vpc.id,
+                              cidr_block=six.text_type(cidr_block),
                               is_default=None,
                               state=u'available',
-                              tags={'Name': 'test', 'test': 'testvalue'},
+                              tags={u'Name': u'test', u'test': u'testvalue'},
                               dhcp_options_id=u'dopt-7a8b9c2d',
                               instance_tenancy=u'default')
 
@@ -463,7 +466,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         self.assertFalse(describe_vpc)
 
     @mock_ec2
-    def test_that_when_describing_vpc_by_id_on_connection_error_it_returns_returns_false(self):
+    def test_that_when_describing_vpc_by_id_on_connection_error_it_raises_execution_error(self):
         '''
         Tests describing parameters failure
         '''
@@ -471,9 +474,10 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
         with patch('moto.ec2.models.VPCBackend.get_all_vpcs',
                    side_effect=BotoServerError(400, 'Mocked error')):
-            describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
-
-        self.assertFalse(describe_vpc)
+            with self.assertRaisesRegexp(CommandExecutionError,
+                                         'Mocked error'):
+                describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
+                self.assertEqual(describe_vpc, True)
 
     @mock_ec2
     def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_raises_a_salt_invocation_error(self):
@@ -481,7 +485,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         Tests describing vpc  without vpc id
         '''
         with self.assertRaisesRegexp(SaltInvocationError,
-                                     'VPC ID needs to be specified.'):
+                                     'A valid vpc id or name needs to be specified.'):
             boto_vpc.describe(vpc_id=None, **conn_parameters)
 
 
@@ -574,9 +578,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc()
 
         with patch('moto.ec2.models.SubnetBackend.create_subnet', side_effect=BotoServerError(400, 'Mocked error')):
-            subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', **conn_parameters)
-
-        self.assertFalse(subnet_creation_result)
+            with self.assertRaisesRegexp(CommandExecutionError, 'Mocked error'):
+                subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', **conn_parameters)
 
     @mock_ec2
     def test_that_when_deleting_an_existing_subnet_the_delete_subnet_method_returns_true(self):
