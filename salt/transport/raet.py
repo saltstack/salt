@@ -1,19 +1,13 @@
+# -*- coding: utf-8 -*-
 '''
 RAET transport classes
 '''
 
 from __future__ import absolute_import
 import time
-import os
-import threading
 
 # Import Salt Libs
-import salt.payload
-import salt.auth
-import salt.crypt
-import salt.utils
 import logging
-from collections import defaultdict
 
 from salt.utils import kinds
 from salt.transport.client import ReqChannel
@@ -40,6 +34,7 @@ jobber_stack = None  # module global that holds raet jobber LaneStack
 jobber_rxMsgs = {}  # dict of deques one for each RAETReqChannel for the jobber
 jobber_estate_name = None  # module global of motivating master estate name
 jobber_yard_name = None  # module global of motivating master yard name
+
 
 class RAETReqChannel(ReqChannel):
     '''
