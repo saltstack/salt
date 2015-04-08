@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Helpers/utils for working with tornado async stuff
 '''
@@ -9,6 +10,7 @@ import tornado.concurrent
 import zmq.eventloop.ioloop
 
 import contextlib
+
 
 @contextlib.contextmanager
 def current_ioloop(io_loop):
@@ -50,7 +52,7 @@ class SyncWrapper(object):
     def __getattribute__(self, key):
         try:
             return object.__getattribute__(self, key)
-        except:
+        except AttributeError:
             pass
         attr = getattr(self.async, key)
         if hasattr(attr, '__call__'):
