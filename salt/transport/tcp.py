@@ -4,8 +4,7 @@ TCP transport classes
 
 
 
-Wire protocol: "len(header) header msg"
-header is a msgpack'd dict which includes (at least) msgLen
+Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 '''
 
