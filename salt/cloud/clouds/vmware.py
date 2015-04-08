@@ -409,7 +409,6 @@ def _manage_devices(devices, vm):
                 adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
             nics_map.append(adapter_mapping)
 
-
     ret = {
         'device_specs': device_specs,
         'nics_map': nics_map
