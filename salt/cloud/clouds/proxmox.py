@@ -413,7 +413,7 @@ def list_nodes(call=None):
         ret[vm_name] = {}
         ret[vm_name]['id'] = str(vm_details['vmid'])
         ret[vm_name]['image'] = str(vm_details['vmid'])
-        ret[vm_name]['size'] = str(vm_details['config']['disk'])
+        ret[vm_name]['size'] = str(vm_details['disk'])
         ret[vm_name]['state'] = str(vm_details['status'])
 
         # Figure out which is which to put it in the right column
