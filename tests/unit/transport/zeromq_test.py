@@ -21,22 +21,20 @@ import salt.exceptions
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.runtests import RUNTIME_VARS
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
 import integration
 
 # Import Salt libs
-from salt import client
-from salt.exceptions import EauthAuthenticationError, SaltInvocationError
-
 from unit.transport.req_test import ReqChannelMixin
 from unit.transport.pub_test import PubChannelMixin
+
 
 # TODO: move to a library?
 def get_config_file_path(filename):
     return os.path.join(integration.TMP, 'config', filename)
+
 
 class BaseZMQReqCase(TestCase):
     '''
@@ -171,14 +169,10 @@ class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     Tests around the publish system
     '''
     def get_new_ioloop(self):
-        return  zmq.eventloop.ioloop.ZMQIOLoop()
+        return zmq.eventloop.ioloop.ZMQIOLoop()
 
 
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ClearReqTestCases, needs_daemon=False)
     run_tests(AESReqTestCases, needs_daemon=False)
-
-
-
-##
