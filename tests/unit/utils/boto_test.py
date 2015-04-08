@@ -17,6 +17,7 @@ import salt.utils.boto
 try:
     import boto
     import boto.exception
+    from boto.exception import BotoServerError
 
     HAS_BOTO = True
 except ImportError:
@@ -66,6 +67,14 @@ error_body = '''
 </Response>
 '''
 
+no_error_body = '''
+<Response>
+    <Errors />
+    <RequestID>request ID</RequestID>
+</Response>
+'''
+
+
 def _has_required_boto():
     '''
     Returns True/False boolean depending on if Boto is installed and correct
@@ -103,9 +112,6 @@ class BotoUtilsTestCaseBase(TestCase):
 
 
 class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
-    def setUp(self):
-        super(BotoUtilsCacheIdTestCase, self).setUp()
-
     def test_set_and_get_with_no_auth_params(self):
         salt.utils.boto.cache_id(service, resource_name, resource_id=resource_id)
         self.assertEqual(salt.utils.boto.cache_id(service, resource_name), resource_id)
@@ -147,11 +153,34 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     @mock_ec2
     def test_get_conn_error_raises_command_execution_error(self):
         with patch('boto.{0}.connect_to_region'.format(service),
-                   side_effect=boto.exception.BotoServerError(400, 'Mocked error', body=error_body)):
+                   side_effect=BotoServerError(400, 'Mocked error', body=error_body)):
             with self.assertRaises(CommandExecutionError):
                 salt.utils.boto.get_connection(service)
 
 
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoUtilsGetExceptionTestCase(BotoUtilsTestCaseBase):
+    def test_get_exception_type_and_message(self):
+        e = BotoServerError('400', 'Mocked error', body=error_body)
+        r = salt.utils.boto.get_exception(e)
+        self.assertTrue(isinstance(r, CommandExecutionError))
+        self.assertEqual(r.message, '400 Mocked error: Error message')
+
+    def test_get_exception_message_with_no_body(self):
+        e = BotoServerError('400', 'Mocked error')
+        r = salt.utils.boto.get_exception(e)
+        self.assertTrue(isinstance(r, CommandExecutionError))
+        self.assertEqual(r.message, '400 Mocked error')
+
+    def test_get_exception_message_with_no_error_in_body(self):
+        e = BotoServerError('400', 'Mocked error', body=no_error_body)
+        r = salt.utils.boto.get_exception(e)
+        self.assertTrue(isinstance(r, CommandExecutionError))
+        self.assertEqual(r.message, '400 Mocked error')
+
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(BotoUtilsGetConnTestCase, needs_daemon=False)
+    run_tests(BotoUtilsGetExceptionTestCase, needs_daemon=False)

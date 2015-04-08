@@ -160,3 +160,30 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
         raise CommandExecutionError(exc.reason)
     __context__[cxkey] = conn
     return conn
+
+def get_exception(e):
+    '''
+    Extract the message from a boto exception and return a
+    CommandExecutionError with the original reason and message.
+
+    .. code-block:: python
+
+        raise __utils__['boto.get_exception'](e)
+    '''
+
+    status = e.status or ''
+    reason = e.reason or ''
+    body = e.body or ''
+
+    try:
+        message = ET.fromstring(body).find('Errors').find('Error').find('Message').text
+    except (AttributeError, ET.ParseError):
+        message = ''
+    
+
+    if message:
+        message = '{0} {1}: {2}'.format(status, reason, message)
+    else:
+        message = '{0} {1}'.format(status, reason)
+
+    return CommandExecutionError(message)
