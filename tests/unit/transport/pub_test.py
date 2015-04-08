@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
 import salt.transport.client
+
 
 class PubChannelMixin(object):
     def test_basic(self):
         self.pub = None
+
         def handle_pub(ret):
             self.pub = ret
             self.stop()
