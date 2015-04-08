@@ -9,16 +9,14 @@ import re
 import sys
 import copy
 import time
-import errno
 import types
 import signal
 import fnmatch
-import hashlib
 import logging
 import threading
 import traceback
 import multiprocessing
-from random import randint, shuffle
+from random import shuffle
 from stat import S_IMODE
 
 # Import Salt Libs
@@ -85,9 +83,12 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.exceptions import (
-    AuthenticationError, CommandExecutionError, CommandNotFoundError,
-    SaltInvocationError, SaltReqTimeoutError, SaltClientError,
-    SaltSystemExit, SaltSyndicMasterError
+    CommandExecutionError,
+    CommandNotFoundError,
+    SaltInvocationError,
+    SaltReqTimeoutError,
+    SaltClientError,
+    SaltSystemExit
 )
 
 
@@ -1434,7 +1435,7 @@ class Minion(MinionBase):
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
                         del self.pub_channel
-                        self._connect_master_future = self.connect_master(self.opts, timeout, safe, io_loop=self.io_loop)
+                        self._connect_master_future = self.connect_master()
                         self.block_until_connected()  # TODO: remove
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
@@ -1555,6 +1556,7 @@ class Minion(MinionBase):
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
         self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
+
         def handle_beacons():
             # Process Beacons
             try:
@@ -1826,6 +1828,7 @@ class Syndic(Minion):
         if hasattr(self, 'forward_events'):
             self.forward_events.stop()
 
+
 # TODO: consolidate syndic classes together?
 # need a way of knowing if the syndic connection is busted
 class MultiSyndic(MinionBase):
@@ -1905,7 +1908,7 @@ class MultiSyndic(MinionBase):
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
             except KeyboardInterrupt:
                 raise
-            except:
+            except:  # pylint: disable=W0702
                 log.critical('Unexpected error while connecting to {0}'.format(opts['master']), exc_info=True)
 
         raise tornado.gen.Return(syndic)
