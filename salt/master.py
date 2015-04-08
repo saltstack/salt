@@ -6,17 +6,12 @@ involves preparing the three listeners and the workers needed by the master.
 
 # Import python libs
 from __future__ import absolute_import
-from pprint import pformat
 import os
 import re
 import sys
 import time
 import errno
-import ctypes
-import shutil
 import logging
-import hashlib
-import binascii
 import tempfile
 import multiprocessing
 
@@ -67,7 +62,6 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
-from salt.utils.cache import CacheCli
 
 try:
     import resource
@@ -593,6 +587,7 @@ class ReqServer(object):
                                                    ),
                                              )
         self.process_manager.run()
+
     def run(self):
         '''
         Start up the ReqServer
@@ -2099,7 +2094,6 @@ class FloMWorker(MWorker):
         self.clear_funcs = salt.master.ClearFuncs(
                 self.opts,
                 self.key,
-                self.mkey,
                 )
         self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.context = zmq.Context(1)
