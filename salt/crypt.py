@@ -870,7 +870,7 @@ class SAuth(AsyncAuth):
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
-        super(SAuth, self).__init__(opts, io_loop=lo_loop)
+        super(SAuth, self).__init__(opts, io_loop=io_loop)
         pass
 
     # an init for the singleton instance to call
