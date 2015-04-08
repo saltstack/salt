@@ -83,6 +83,16 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     delete server certificate:
       boto_iam.server_cert_absent:
         - name: mycert
+
+. code-block:: yaml
+    create keys for user:
+      boto_iam.keys_present:
+        - name: myusername
+        - number: 2
+        - save_dir: /root/
+        - region: eu-west-1
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'fdkjsafkljsASSADFalkfjasdf'
 '''
 
 # Import Python Libs
@@ -204,12 +214,12 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
         log.debug('Created is : {0}'.format(created))
         response = 'create_access_key_response'
         result = 'create_access_key_result'
-        new_keys['key-%s' % i] = created[response][result]['access_key']['access_key_id']
-        new_keys['key_id-%s' % i] = created[response][result]['access_key']['secret_access_key']
+        new_keys['key-{0}'.format(i)] = created[response][result]['access_key']['access_key_id']
+        new_keys['key_id-{0}'.format(i)] = created[response][result]['access_key']['secret_access_key']
     try:
-        with salt.utils.fopen('%s/%s' % (save_dir, name), 'a') as _wrf:
+        with salt.utils.fopen('{0}/{1}'.format(save_dir, name), 'a') as _wrf:
             for key_id, access_key in new_keys.items():
-                _wrf.write('%s\n%s\n' % (key_id, access_key))
+                _wrf.write('{0}\n{1}\n'.format(key_id, access_key))
         ret['comment'] = 'Keys have been written to file {0}/{1}.'.format(save_dir, name)
         ret['result'] = True
         ret['changes'] = new_keys
