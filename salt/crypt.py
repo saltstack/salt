@@ -839,6 +839,7 @@ class AsyncAuth(object):
                 return self.extract_aes(payload, master_pub=False)
 
 
+# TODO: remove, we should just return a sync wrapper of AsyncAuth
 class SAuth(AsyncAuth):
     '''
     Set up an object to maintain authentication with the salt master
@@ -846,7 +847,7 @@ class SAuth(AsyncAuth):
     # This class is only a singleton per minion/master pair
     instances = weakref.WeakValueDictionary()
 
-    def __new__(cls, opts):
+    def __new__(cls, opts, io_loop=None):
         '''
         Only create one instance of SAuth per __key()
         '''
@@ -861,18 +862,18 @@ class SAuth(AsyncAuth):
         return SAuth.instances[key]
 
     @classmethod
-    def __key(cls, opts):
+    def __key(cls, opts, io_loop=None):
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
                 opts['master_uri'],  # master ID
                 )
 
     # has to remain empty for singletons, since __init__ will *always* be called
-    def __init__(self, opts):
+    def __init__(self, opts, io_loop=None):
         pass
 
     # an init for the singleton instance to call
-    def __singleton_init__(self, opts):
+    def __singleton_init__(self, opts, io_loop=None):
         '''
         Init an Auth instance
 
@@ -906,7 +907,7 @@ class SAuth(AsyncAuth):
             self.authenticate()
         return self._crypticle
 
-    def authenticate(self):
+    def authenticate(self, _=None):  # TODO: remove unused var
         '''
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -1056,6 +1057,7 @@ class SAuth(AsyncAuth):
             )
         )
         sys.exit(42)
+
 
 class Crypticle(object):
     '''
