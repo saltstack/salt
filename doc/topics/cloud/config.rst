@@ -45,12 +45,6 @@ Cloud Configuration Syntax
 
 The data specific to interacting with public clouds is set up here.
 
-**ATTENTION**: In Salt-Cloud version 0.8.7, a new cloud provider configuration
-syntax was implemented. This "new" configuration syntax is the standard cloud
-configuration syntax that is documented here. For information regarding the old
-cloud provider configuration syntax, please see the
-:ref:Salt Cloud Legacy Configuration <salt-cloud-legacy-configuration> documentation.
-
 Cloud provider configuration syntax can live in several places. The first is in
 ``/etc/salt/cloud``:
 
