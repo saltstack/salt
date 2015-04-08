@@ -2081,10 +2081,9 @@ class FloMWorker(MWorker):
     '''
     def __init__(self,
                  opts,
-                 mkey,
                  key,
                  ):
-        MWorker.__init__(self, opts, mkey, key)
+        MWorker.__init__(self, opts, key)
 
     def setup(self):
         '''
