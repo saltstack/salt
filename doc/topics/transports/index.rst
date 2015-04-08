@@ -22,8 +22,8 @@ Req Channel
 The req channel is how the minions send data to the master. This interface is
 primarily used for fetching files and returning job returns. The req channels
 have two basic interfaces when talking to the master. ``send`` is the basic
-method that gaurantees the message is encrypted at least so that only minions
-attached to the same master can read it-- but no gaurantee of minion-master
+method that guarantees the message is encrypted at least so that only minions
+attached to the same master can read it-- but no guarantee of minion-master
 confidentiality, wheras the ``crypted_transfer_decode_dictentry`` method does
 guarantee minion-master confidentiality.
 
