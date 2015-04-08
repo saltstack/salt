@@ -67,6 +67,19 @@ For example:
 
 .. _docs-modules:
 
+Serial Commas
+-------------
+
+According to Wikipedia: In English punctuation, a serial comma or series comma
+(also called Oxford comma and Harvard comma) is a comma placed immediately
+before the coordinating conjunction (usually and, or, or nor) in a series of
+three or more terms. For example, a list of three countries might be punctuated
+either as "France, Italy, and Spain" (with the serial comma), or as "France,
+Italy and Spain" (without the serial comma)."
+
+When writing a list that includes three or more items, the serial comma should
+always be used.
+
 Documenting modules
 ===================
 
@@ -277,7 +290,7 @@ Settings
 --------
 
 Individual settings in the Salt Master or Salt Minion configuration files are
-cross-referenced using two custom roles, ``conf_master`` and ``conf_minion``.
+cross-referenced using two custom roles, ``conf_master``, and ``conf_minion``.
 
 .. code-block:: restructuredtext
 

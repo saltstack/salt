@@ -71,6 +71,7 @@ execution functions, grains, pillar, etc. They are:
         return config
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

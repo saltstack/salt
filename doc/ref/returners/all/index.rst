@@ -11,11 +11,15 @@ Full list of builtin returner modules
     :template: autosummary.rst.tmpl
 
     carbon_return
+    cassandra_cql_return
     cassandra_return
     couchbase_return
     couchdb_return
+    django_return
     elasticsearch_return
     etcd_return
+    hipchat_return
+    kafka_return
     local
     local_cache
     memcache_return
@@ -23,10 +27,16 @@ Full list of builtin returner modules
     mongo_return
     multi_returner
     mysql
+    nagios_return
     odbc
     postgres
+    postgres_local_cache
+    pushover_returner
     redis_return
     sentry_return
+    slack_returner
+    sms_return
     smtp_return
     sqlite3_return
     syslog_return
+    xmpp_return

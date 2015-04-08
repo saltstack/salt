@@ -321,5 +321,3 @@ packages. It will also return errors in the same manner as `file_list`.
                   'kernel': ['/boot/.vmlinuz-2.6.32-279.el6.x86_64.hmac',
                              '/boot/System.map-2.6.32-279.el6.x86_64',
                              '...SNIP...']}}
-
-

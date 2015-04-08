@@ -5,19 +5,21 @@ Release notes
 See the :doc:`version numbers</topics/releases/version_numbers>` page for more
 information about the version numbering scheme.
 
-.. releasestree::
-    :maxdepth: 1
+Latest Stable Release
+=====================
 
-    2014.1.7
+|current_release_doc|
 
-Archive
-=======
+Previous Releases
+=================
 
 .. releasestree::
     :maxdepth: 1
     :glob:
 
-    [0-9]*
+    2014.7.*
+    2014.1.*
+    0.*
 
 .. seealso:: :doc:`Legacy salt-cloud release docs <../cloud/releases/index>`
 

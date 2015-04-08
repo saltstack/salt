@@ -192,7 +192,7 @@ will be used.
 Attaching Volumes
 -----------------
 Unattached volumes may be attached to an instance. The following values are
-required: name or instance_id, volume_id and device.
+required: name or instance_id, volume_id, and device.
 
 .. code-block:: bash
 
@@ -201,7 +201,7 @@ required: name or instance_id, volume_id and device.
 
 Show a Volume
 -------------
-The details about an existing volume may be retreived.
+The details about an existing volume may be retrieved.
 
 .. code-block:: bash
 
@@ -261,4 +261,3 @@ This function removes the key pair from Amazon.
 .. code-block:: bash
 
     salt-cloud -f delete_keypair ec2 keyname=mykeypair
-

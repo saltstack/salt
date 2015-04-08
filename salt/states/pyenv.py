@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Managing python installations with pyenv
-======================================
+========================================
 
 This module is used to install and manage python installations with pyenv.
 Different versions of python can be installed, and uninstalled. pyenv will
@@ -44,12 +44,10 @@ This is how a state configuration could look like:
         - require:
           - pkg: pyenv-deps
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
-
-# Import salt libs
-import salt.utils
 
 
 def _check_pyenv(ret, user=None):
@@ -99,7 +97,7 @@ def _check_and_install_python(ret, python, default=False, user=None):
     return ret
 
 
-def installed(name, default=False, runas=None, user=None):
+def installed(name, default=False, user=None):
     '''
     Verify that the specified python is installed with pyenv. pyenv is
     installed if necessary.
@@ -110,11 +108,6 @@ def installed(name, default=False, runas=None, user=None):
     default : False
         Whether to make this python the default.
 
-    runas: None
-        The user to run pyenv as.
-
-        .. deprecated:: 0.17.0
-
     user: None
         The user to run pyenv as.
 
@@ -123,18 +116,6 @@ def installed(name, default=False, runas=None, user=None):
     .. versionadded:: 0.16.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if name.startswith('python-'):
         name = re.sub(r'^python-', '', name)
@@ -179,18 +160,13 @@ def _check_and_uninstall_python(ret, python, user=None):
     return ret
 
 
-def absent(name, runas=None, user=None):
+def absent(name, user=None):
     '''
     Verify that the specified python is not installed with pyenv. pyenv
     is installed if necessary.
 
     name
         The version of python to uninstall
-
-    runas: None
-        The user to run pyenv as.
-
-        .. deprecated:: 0.17.0
 
     user: None
         The user to run pyenv as.
@@ -200,30 +176,6 @@ def absent(name, runas=None, user=None):
     .. versionadded:: 0.16.0
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-
-    salt.utils.warn_until(
-        'Hydrogen',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 0.17.0',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     if name.startswith('python-'):
         name = re.sub(r'^python-', '', name)

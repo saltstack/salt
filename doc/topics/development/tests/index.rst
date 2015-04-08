@@ -8,8 +8,8 @@ the lines below, depending on the relevant Python version:
 
 .. code-block:: bash
 
-    pip install -r dev_requirements_python26.txt
-    pip install -r dev_requirements_python27.txt
+    pip install -r requirements/dev_python26.txt
+    pip install -r requirements/dev_python27.txt
 
 .. note::
 
@@ -41,8 +41,26 @@ specific groups of tests or individual tests:
 
 * Run unit tests only: ``./tests/runtests.py --unit-tests``
 * Run unit and integration tests for states: ``./tests/runtests.py --state``
-* Run integration tests for an individual module: ``./tests/runtests.py -n integration.modules.virt -vv``
-* Run unit tests for an individual module: ``./tests/runtests.py -n unit.modules.virt_test -vv``
+* Run integration tests for an individual module: ``./tests/runtests.py -n integration.modules.virt``
+* Run unit tests for an individual module: ``./tests/runtests.py -n unit.modules.virt_test``
+* Run an individual test by using the class and test name (this example is for the ``test_default_kvm_profile`` test in the ``integration.module.virt``): ``./tests/runtests.py -n ingtegration.module.virt.VirtTest.test_default_kvm_profile``
+
+
+Running Unit Tests Without Integration Test Daemons
+===================================================
+
+Since the unit tests do not require a master or minion to execute, it is often useful to be able to
+run unit tests individually, or as a whole group, without having to start up the integration testing
+daemons. Starting up the master, minion, and syndic daemons takes a lot of time before the tests can
+even start running and is unnecessary to run unit tests. To run unit tests without invoking the
+integration test daemons, simple remove the ``/tests`` portion of the ``runtests.py`` command:
+
+.. code-block:: bash
+
+    ./runtests.py --unit
+
+All of the other options to run individual tests, entire classes of tests, or entire test modules still
+apply.
 
 
 Running Destructive Integration Tests
@@ -84,8 +102,8 @@ provided in ``tests/integration/files/conf/cloud.providers.d/``. In order to run
 the cloud provider tests, valid credentials, which differ per provider, must be
 supplied. Each credential item that must be supplied is indicated by an empty
 string value and should be edited by the user before running the tests. For
-example, Digital Ocean requires a client key and an api key to operate. Therefore,
-the default cloud provider configuration file for Digital Ocean looks like this:
+example, DigitalOcean requires a client key and an api key to operate. Therefore,
+the default cloud provider configuration file for DigitalOcean looks like this:
 
 .. code-block:: yaml
 
@@ -196,27 +214,30 @@ open source and can be found here: :blob:`tests/jenkins.py`
 Writing Tests
 =============
 
-Salt uses a test platform to verify functionality of components in a simple
-way. Two testing systems exist to enable testing salt functions in somewhat
-real environments. The two subsystems available are integration tests and
-unit tests.
+The salt testing infrastructure is divided into two classes of tests,
+integration tests and unit tests.  These terms may be defined differently in
+other contexts, but for salt they are defined this way:
 
-Salt uses the python standard library unittest2 system for testing.
+- Unit Test: Tests which validate isolated code blocks and do not require
+  external interfaces such as ``salt-call`` or any of the salt daemons.
+
+- Integration Test: Tests which validate externally accessible features.
+
+Salt testing uses unittest2 from the python standard library and MagicMock.
 
 Naming Conventions
 ==================
 
-Any function in either integration test files or unit test files that is
-doing the actual testing, such as functions containing assertions, must
-start with ``test_``:
+Any function in either integration test files or unit test files that is doing
+the actual testing, such as functions containing assertions, must start with
+``test_``:
 
 .. code-block:: python
 
     def test_user_present(self):
 
-When functions in test files are not prepended with ``test_``,
-the function acts as a normal, helper function and is not run as a test
-by the test suite.
+When functions in test files are not prepended with ``test_``, the function
+acts as a normal, helper function and is not run as a test by the test suite.
 
 Integration Tests
 =================
@@ -224,10 +245,10 @@ Integration Tests
 The integration tests start up a number of salt daemons to test functionality
 in a live environment. These daemons include 2 salt masters, 1 syndic, and 2
 minions. This allows the syndic interface to be tested and master/minion
-communication to be verified. All of the integration tests are executed as
-live salt commands sent through the started daemons.
+communication to be verified. All of the integration tests are executed as live
+salt commands sent through the started daemons.
 
-Integration tests are particularly good at testing modules, states and shell
+Integration tests are particularly good at testing modules, states, and shell
 commands.
 
 * :doc:`Writing integration tests <integration>`
@@ -235,8 +256,18 @@ commands.
 Unit Tests
 ==========
 
-Direct unit tests are also available. These tests are good for testing internal
-functions.
+Unit tests are good for ensuring consistent results for functions that do not
+require more than a few mocks.
+
+Mocking all external dependencies for unit tests is encouraged but not required
+as sometimes the isolation provided by completely mocking the external
+dependencies is not worth the effort of mocking those dependencies.
+
+Overly detailed mocking can also result in decreased test readability and
+brittleness as the tests are more likely to fail when the code or its
+dependencies legitimately change.  In these cases, it is better to add
+dependencies to the test runner dependency state,
+https://github.com/saltstack/salt-jenkins/blob/master/git/salt.sls.
 
 * :doc:`Writing unit tests <unit>`
 

@@ -2,8 +2,8 @@
 Salt Virt
 =========
 
-The Salt Virt cloud controller capability was initial added to Salt in version
-0.14.0 as an alpha technology.
+The Salt Virt cloud controller capability was initially added to Salt in
+version 0.14.0 as an alpha technology.
 
 The initial Salt Virt system supports core cloud operations:
 
@@ -62,4 +62,3 @@ Deploy from Network or Disk
 .. toctree::
     disk
     nic
-

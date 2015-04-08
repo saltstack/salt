@@ -2,6 +2,7 @@
 '''
 Support for LVS (Linux Virtual Server)
 '''
+from __future__ import absolute_import
 
 # Import python libs
 
@@ -109,7 +110,7 @@ def add_service(protocol=None, service_address=None, scheduler='wlc'):
                               _build_cmd(protocol=protocol,
                                          service_address=service_address,
                                          scheduler=scheduler))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:
@@ -144,7 +145,7 @@ def edit_service(protocol=None, service_address=None, scheduler=None):
                               _build_cmd(protocol=protocol,
                                          service_address=service_address,
                                          scheduler=scheduler))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:
@@ -176,7 +177,7 @@ def delete_service(protocol=None, service_address=None):
     cmd = '{0} -D {1}'.format(__detect_os(),
                               _build_cmd(protocol=protocol,
                                          service_address=service_address))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:
@@ -221,7 +222,7 @@ def add_server(protocol=None, service_address=None, server_address=None, packet_
                                          packet_forward_method=packet_forward_method,
                                          weight=weight,
                                          **kwargs))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:
@@ -266,7 +267,7 @@ def edit_server(protocol=None, service_address=None, server_address=None, packet
                                          packet_forward_method=packet_forward_method,
                                          weight=weight,
                                          **kwargs))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:
@@ -302,7 +303,7 @@ def delete_server(protocol=None, service_address=None, server_address=None):
                               _build_cmd(protocol=protocol,
                                          service_address=service_address,
                                          server_address=server_address))
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:
@@ -326,7 +327,7 @@ def clear():
 
     cmd = '{0} -C'.format(__detect_os())
 
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:
@@ -350,7 +351,7 @@ def get_rules():
 
     cmd = '{0} -S -n'.format(__detect_os())
 
-    ret = __salt__['cmd.run'](cmd)
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -372,7 +373,7 @@ def list_(protocol=None, service_address=None):
                                              service_address=service_address))
     else:
         cmd = '{0} -L -n'.format(__detect_os())
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:
@@ -402,7 +403,7 @@ def zero(protocol=None, service_address=None):
         )
     else:
         cmd = '{0} -Z'.format(__detect_os())
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     # A non-zero return code means fail
     if out['retcode']:

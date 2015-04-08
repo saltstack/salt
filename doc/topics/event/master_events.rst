@@ -1,3 +1,5 @@
+.. _event-master_events:
+
 ==================
 Salt Master Events
 ==================
@@ -17,11 +19,25 @@ Authentication events
         ``reject``.
     :var pub: The minion public key.
 
+Start events
+============
+
 .. salt:event:: salt/minion/<MID>/start
 
     Fired every time a minion connects to the Salt master.
 
     :var id: The minion ID.
+
+Key events
+==========
+
+.. salt:event:: salt/key
+
+    Fired when accepting and rejecting minions keys on the Salt master.
+
+    :var id: The minion ID.
+    :var act: The new status of the minion key: ``accept``, ``pend``,
+        ``reject``.
 
 Job events
 ==========
@@ -54,12 +70,16 @@ Job events
     :var fun: The function the minion ran. E.g., ``test.ping``.
     :var return: The data returned from the execution module.
 
+.. _event-master_presence:
+
 Presence events
 ===============
 
 .. salt:event:: salt/presence/present
 
-    Fired on a set schedule.
+    Events fired on a regular interval about currently connected, newly
+    connected, or recently disconnected minions. Requires the
+    :conf_master:`presence_events` setting to be enabled.
 
     :var present: A list of minions that are currently connected to the Salt
         master.
@@ -75,6 +95,15 @@ Presence events
 
 Cloud Events
 ============
+
+Unlike other Master events, ``salt-cloud`` events are not fired on behalf of a
+Salt Minion. Instead, ``salt-cloud`` events are fired on behalf of a VM. This
+is because the minion-to-be may not yet exist to fire events to or also may have
+been destroyed.
+
+This behavior is reflected by the ``name`` variable in the event data for
+``salt-cloud`` events as compared to the ``id`` variable for Salt
+Minion-triggered events.
 
 .. salt:event:: salt/cloud/<VM NAME>/creating
 
@@ -105,7 +134,7 @@ Cloud Events
 
     :var event: description of the event.
     :var location: the location of the VM being requested.
-    :var kwargs: options available as the VM is being requested: 
+    :var kwargs: options available as the VM is being requested:
         ``Action``, ``ImageId``, ``InstanceType``, ``KeyName``, ``MaxCount``,
         ``MinCount``, ``SecurityGroup.1``
 

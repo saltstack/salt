@@ -1,3 +1,0 @@
--r dev_requirements_python27.txt
-
-unittest2

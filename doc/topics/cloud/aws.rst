@@ -41,15 +41,21 @@ parameters are discussed in more detail below.
       # Specify whether to use public or private IP for deploy script.
       #
       # Valid options are:
-      #     private_ips - The salt-master is also hosted with EC2
-      #     public_ips - The salt-master is hosted outside of EC2
+      #     private_ips - The salt-cloud command is run inside the EC2
+      #     public_ips - The salt-cloud command is run outside of EC2
       #
       ssh_interface: public_ips
 
+      # Optionally configure the Windows credential validation number of
+      # retries and delay between retries.  This defaults to 10 retries
+      # with a one second delay betwee retries
+      win_deploy_auth_retries: 10
+      win_deploy_auth_retry_delay: 1
+      
       # Set the EC2 access credentials (see below)
       #
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      id: 'use-instance-role-credentials'
+      key: 'use-instance-role-credentials'
 
       # Make sure this key is owned by root with permissions 0400.
       #
@@ -58,6 +64,7 @@ parameters are discussed in more detail below.
       securitygroup: default
 
       # Optionally configure default region
+      # Use salt-cloud --list-locations <provider> to obtain valid regions
       #
       location: ap-southeast-1
       availability_zone: ap-southeast-1b
@@ -94,10 +101,16 @@ parameters are discussed in more detail below.
       #
       ssh_interface: private_ips
 
+      # Optionally configure the Windows credential validation number of
+      # retries and delay between retries.  This defaults to 10 retries
+      # with a one second delay betwee retries
+      win_deploy_auth_retries: 10
+      win_deploy_auth_retry_delay: 1
+      
       # Set the EC2 access credentials (see below)
       #
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      id: 'use-instance-role-credentials'
+      key: 'use-instance-role-credentials'
 
       # Make sure this key is owned by root with permissions 0400.
       #
@@ -138,6 +151,35 @@ https://portal.aws.amazon.com/gp/aws/securityCredentials
 Both are located in the Access Credentials area of the page, under the Access
 Keys tab. The ``id`` setting is labeled Access Key ID, and the ``key`` setting
 is labeled Secret Access Key.
+
+Note: if either ``id`` or ``key`` is set to 'use-instance-role-credentials' it is
+assumed that Salt is running on an AWS instance, and the instance role
+credentials will be retrieved and used.  Since both the ``id`` and ``key`` are
+required parameters for the AWS ec2 provider, it is recommended to set both
+to 'use-instance-role-credentials' for this functionality.
+
+A "static" and "permanent" Access Key ID and Secret Key can be specified,
+but this is not recommended.  Instance role keys are rotated on a regular
+basis, and are the recommended method of specifying AWS credentials.
+
+Windows Deploy Timeouts
+=======================
+For Windows instances, it may take longer than normal for the instance to be
+ready.  In these circumstances, the provider configuration can be configured
+with a ``win_deploy_auth_retries`` and/or a ``win_deploy_auth_retry_delay``
+setting, which default to 10 retries and a one second delay between retries.
+These retries and timeouts relate to validating the Administrator password
+once AWS provides the credentials via the AWS API.
+
+
+Windows Deploy Timeouts
+=======================
+For Windows instances, it may take longer than normal for the instance to be
+ready.  In these circumstances, the provider configuration can be configured
+with a ``win_deploy_auth_retries`` and/or a ``win_deploy_auth_retry_delay``
+setting, which default to 10 retries and a one second delay between retries.
+These retries and timeouts relate to validating the Administrator password
+once AWS provides the credentials via the AWS API.
 
 
 Key Pairs
@@ -209,13 +251,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
     base_ec2_private:
       provider: my-ec2-southeast-private-ips
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2-user
 
     base_ec2_public:
       provider: my-ec2-southeast-public-ips
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t1.micro
       ssh_username: ec2-user
 
     base_ec2_db:
@@ -432,6 +474,8 @@ its size to 100G by using the following configuration.
       block_device_mappings:
         - DeviceName: /dev/sda
           Ebs.VolumeSize: 100
+          Ebs.VolumeType: gp2
+          Ebs.SnapshotId: dummy0
 
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an
@@ -794,7 +838,7 @@ will be used.
 Attaching Volumes
 -----------------
 Unattached volumes may be attached to an instance. The following values are
-required; name or instance_id, volume_id and device.
+required; name or instance_id, volume_id, and device.
 
 .. code-block:: bash
 
@@ -887,6 +931,8 @@ image should be created. Then, edit your cloud.profiles file like so:-
 Specifying interface properties
 -------------------------------
 
+.. versionadded:: 2014.7.0
+
 Launching into a VPC allows you to specify more complex configurations for
 the network interfaces of your virtual machines, for example:-
 
@@ -906,6 +952,11 @@ the network interfaces of your virtual machines, for example:-
           SubnetId: subnet-XXXXXXXX
           SecurityGroupId:
             - sg-XXXXXXXX
+          
+          # Uncomment this line if you would like to set an explicit private
+          # IP address for the ec2 instance
+          #
+          # PrivateIpAddress: 192.168.1.66
 
           # Uncomment this to associate an existing Elastic IP Address with
           # this network interface:
@@ -921,7 +972,7 @@ the network interfaces of your virtual machines, for example:-
           # interface (will be associated with the primary private ip address
           # of the interface
           #
-          # allocation_new_eip: True
+          # allocate_new_eip: True
 
           # Uncomment this instead to allocate a new Elastic IP Address to
           # both the primary private ip address and each of the secondary ones

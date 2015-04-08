@@ -9,8 +9,7 @@ only addition/deletion of licenses is supported.
 .. code-block:: yaml
 
     key:
-      powerpath:
-        - license_present
+      powerpath.license_present: []
 '''
 
 

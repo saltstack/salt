@@ -14,6 +14,7 @@ Full list of Salt Cloud modules
     botocore_aws
     cloudstack
     digital_ocean
+    digital_ocean_v2
     ec2
     gce
     gogrid
@@ -27,8 +28,10 @@ Full list of Salt Cloud modules
     openstack
     parallels
     proxmox
+    pyrax
     rackspace
     saltify
     softlayer
     softlayer_hw
+    vmware
     vsphere

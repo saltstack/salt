@@ -2,6 +2,7 @@
 '''
 Manage Windows Package Repository
 '''
+from __future__ import absolute_import
 
 # Python Libs
 import os

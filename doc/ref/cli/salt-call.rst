@@ -12,7 +12,7 @@ Synopsis
 Description
 ===========
 
-The salt-call command is used to run module functions locally on a minion 
+The salt-call command is used to run module functions locally on a minion
 instead of executing them from the master.
 
 Options
@@ -38,9 +38,9 @@ Options
 
 .. option:: --master=MASTER
 
-    Specify the master to use. The minion must be authenticated with the 
-    master. If this option is omitted, the master options from the minion 
-    config will be used. If multi masters are set up the first listed master 
+    Specify the master to use. The minion must be authenticated with the
+    master. If this option is omitted, the master options from the minion
+    config will be used. If multi masters are set up the first listed master
     that responds will be used.
 
 .. option:: --return RETURNER

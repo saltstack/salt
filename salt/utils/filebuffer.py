@@ -8,6 +8,7 @@
 
     This utility allows parsing a file in chunks.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

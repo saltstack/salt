@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Support for haproxy
+
+.. versionadded:: 2014.7.0
 '''
 
 from __future__ import generators
+from __future__ import absolute_import
 
 # Import python libs
 import stat
@@ -42,7 +45,7 @@ def _get_conn(socket='/var/run/haproxy.sock'):
     return ha_conn
 
 
-def list_servers(backend, socket='/var/run/haproxy.sock'):
+def list_servers(backend, socket='/var/run/haproxy.sock', objectify=False):
     '''
     List servers in haproxy backend.
 
@@ -58,7 +61,7 @@ def list_servers(backend, socket='/var/run/haproxy.sock'):
     '''
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.listServers(backend=backend)
-    return ha_conn.sendCmd(ha_cmd)
+    return ha_conn.sendCmd(ha_cmd, objectify=objectify)
 
 
 def enable_server(name, backend, socket='/var/run/haproxy.sock'):
@@ -81,7 +84,7 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.enableServer(server=name, backend=backend)
     ha_conn.sendCmd(ha_cmd)
-    return list_servers(backend)
+    return list_servers(backend, socket=socket)
 
 
 def disable_server(name, backend, socket='/var/run/haproxy.sock'):
@@ -104,7 +107,7 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.disableServer(server=name, backend=backend)
     ha_conn.sendCmd(ha_cmd)
-    return list_servers(backend)
+    return list_servers(backend, socket=socket)
 
 
 def get_weight(name, backend, socket='/var/run/haproxy.sock'):

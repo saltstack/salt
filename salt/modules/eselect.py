@@ -2,9 +2,14 @@
 '''
 Support for eselect, Gentoo's configuration and management tool.
 '''
+from __future__ import absolute_import
+
+import logging
 
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -16,20 +21,35 @@ def __virtual__():
     return False
 
 
-def exec_action(module, action, parameter='', state_only=False):
+def exec_action(module, action, module_parameter=None, action_parameter=None, state_only=False):
     '''
     Execute an arbitrary action on a module.
 
-    CLI Example:
+    module
+        name of the module to be executed
+
+    action
+        name of the module's action to be run
+
+    module_parameter
+        additional params passed to the defined module
+
+    action_parameter
+        additional params passed to the defined action
+
+    state_only
+        don't return any output but only the success/failure of the operation
+
+    CLI Example (updating the ``php`` implementation used for ``apache2``):
 
     .. code-block:: bash
 
-        salt '*' eselect.exec_action <module name> <action> [parameter]
+        salt '*' eselect.exec_action php update action_parameter='apache2'
     '''
     out = __salt__['cmd.run'](
-        'eselect --brief --colour=no {0} {1} {2}'.format(
-            module, action, parameter
-        )
+        'eselect --brief --colour=no {0} {1} {2} {3}'.format(
+            module, module_parameter or '', action, action_parameter or ''),
+        python_shell=False
     )
     out = out.strip().split('\n')
 
@@ -39,12 +59,18 @@ def exec_action(module, action, parameter='', state_only=False):
     if state_only:
         return True
 
+    if len(out) < 1:
+        return False
+
+    if len(out) == 1 and not out[0].strip():
+        return False
+
     return out
 
 
 def get_modules():
     '''
-    Get available modules list.
+    List available ``eselect`` modules.
 
     CLI Example:
 
@@ -52,44 +78,118 @@ def get_modules():
 
         salt '*' eselect.get_modules
     '''
-    return exec_action('modules', 'list')
+    modules = []
+    module_list = exec_action('modules', 'list', action_parameter='--only-names')
+    if not module_list:
+        return None
+
+    for module in module_list:
+        if module not in ['help', 'usage', 'version']:
+            modules.append(module)
+    return modules
 
 
 def get_target_list(module):
     '''
-    Get available target for the given module.
+    List available targets for the given module.
+
+    module
+        name of the module to be queried for its targets
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' eselect.get_target_list <module name>
+        salt '*' eselect.get_target_list kernel
     '''
-    return exec_action(module, 'list')
+    exec_output = exec_action(module, 'list')
+    if not exec_output:
+        return None
+
+    target_list = []
+    if isinstance(exec_output, list):
+        for item in exec_output:
+            target_list.append(item.split(None, 1)[0])
+        return target_list
+
+    return None
 
 
-def get_current_target(module):
+def get_current_target(module, module_parameter=None, action_parameter=None):
     '''
     Get the currently selected target for the given module.
 
-    CLI Example:
+    module
+        name of the module to be queried for its current target
+
+    module_parameter
+        additional params passed to the defined module
+
+    action_parameter
+        additional params passed to the 'show' action
+
+    CLI Example (current target of system-wide ``java-vm``):
 
     .. code-block:: bash
 
-        salt '*' eselect.get_current_target <module name>
+        salt '*' eselect.get_current_target java-vm action_parameter='system'
+
+    CLI Example (current target of ``kernel`` symlink):
+
+    .. code-block:: bash
+
+        salt '*' eselect.get_current_target kernel
     '''
-    return exec_action(module, 'show')[0]
+    result = exec_action(module, 'show', module_parameter=module_parameter, action_parameter=action_parameter)[0]
+    if not result:
+        return None
+
+    if result == '(unset)':
+        return None
+
+    return result
 
 
-def set_target(module, target):
+def set_target(module, target, module_parameter=None, action_parameter=None):
     '''
     Set the target for the given module.
     Target can be specified by index or name.
 
-    CLI Example:
+    module
+        name of the module for which a target should be set
+
+    target
+        name of the target to be set for this module
+
+    module_parameter
+        additional params passed to the defined module
+
+    action_parameter
+        additional params passed to the defined action
+
+    CLI Example (setting target of system-wide ``java-vm``):
 
     .. code-block:: bash
 
-        salt '*' eselect.set_target <module name> <target>
+        salt '*' eselect.set_target java-vm icedtea-bin-7 action_parameter='system'
+
+    CLI Example (setting target of ``kernel`` symlink):
+
+    .. code-block:: bash
+
+        salt '*' eselect.set_target kernel linux-3.17.5-gentoo
     '''
-    return exec_action(module, 'set', target, state_only=True)
+    if action_parameter:
+        action_parameter = '{0} {1}'.format(action_parameter, target)
+    else:
+        action_parameter = target
+
+    # get list of available modules
+    if module not in get_modules():
+        log.error('Module {0} not available'.format(module))
+        return False
+
+    exec_result = exec_action(module, 'set', module_parameter=module_parameter, action_parameter=action_parameter, state_only=True)
+    if exec_result:
+        return exec_result
+    return False

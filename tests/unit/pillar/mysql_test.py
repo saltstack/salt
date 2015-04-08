@@ -1,24 +1,34 @@
 # -*- coding: utf-8 -*-
 
-# Import Salt Testing libs
-from salttesting import TestCase
+# Import python libs
+from __future__ import absolute_import
 
+# Import Salt Testing libs
+from salttesting import TestCase, skipIf
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../')
+
+# Import Salt Libs
 from salt.pillar import mysql
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
 
     def test_001_extract_queries_legacy(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         args, kwargs = [], {'mysql_query': 'SELECT blah'}
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}]
+            [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}]
         ], qbuffer)
 
     def test_002_extract_queries_list(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         args, kwargs = [
             'SELECT blah',
             'SELECT blah2',
@@ -32,19 +42,28 @@ class MysqlPillarTestCase(TestCase):
         ], {}
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah2', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah4', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah5', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah6', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah7', 'depth': 0, 'as_list': True, 'with_lists': None}],
-            [None, {'query': 'SELECT blah8', 'depth': 0, 'as_list': False, 'with_lists': [1]}],
-            [None, {'query': 'SELECT blah9', 'depth': 0, 'as_list': False, 'with_lists': [1, 2]}]
+            [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah2', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah4', 'depth': 2, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah5', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah6', 'depth': 2, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah7', 'depth': 0, 'as_list': True,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah8', 'depth': 0, 'as_list': False,
+                    'with_lists': [1], 'ignore_null': False}],
+            [None, {'query': 'SELECT blah9', 'depth': 0, 'as_list': False,
+                    'with_lists': [1, 2], 'ignore_null': False}]
         ], qbuffer)
 
     def test_003_extract_queries_kwarg(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         args, kwargs = [], {
             '1': 'SELECT blah',
             '2': 'SELECT blah2',
@@ -56,17 +75,24 @@ class MysqlPillarTestCase(TestCase):
         }
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            ['1', {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            ['2', {'query': 'SELECT blah2', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            ['3', {'query': 'SELECT blah3', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            ['4', {'query': 'SELECT blah4', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            ['5', {'query': 'SELECT blah5', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            ['6', {'query': 'SELECT blah6', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            ['7', {'query': 'SELECT blah7', 'depth': 0, 'as_list': True, 'with_lists': None}]
+            ['1', {'query': 'SELECT blah', 'depth': 0, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['2', {'query': 'SELECT blah2', 'depth': 0, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['3', {'query': 'SELECT blah3', 'depth': 0, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['4', {'query': 'SELECT blah4', 'depth': 2, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['5', {'query': 'SELECT blah5', 'depth': 0, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['6', {'query': 'SELECT blah6', 'depth': 2, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['7', {'query': 'SELECT blah7', 'depth': 0, 'as_list': True,
+                   'with_lists': None, 'ignore_null': False}]
         ], qbuffer)
 
     def test_004_extract_queries_mixed(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         args, kwargs = [
             'SELECT blah1',
             ('SELECT blah2', 2),
@@ -79,18 +105,25 @@ class MysqlPillarTestCase(TestCase):
         }
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            [None, {'query': 'SELECT blahm', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah1', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah2', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': True, 'with_lists': None}],
-            ['1', {'query': 'SELECT blah1', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            ['2', {'query': 'SELECT blah2', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            ['3', {'query': 'SELECT blah3', 'depth': 0, 'as_list': True, 'with_lists': None}]
+            [None, {'query': 'SELECT blahm', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah1', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah2', 'depth': 2, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': True,
+                    'with_lists': None, 'ignore_null': False}],
+            ['1', {'query': 'SELECT blah1', 'depth': 0, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['2', {'query': 'SELECT blah2', 'depth': 2, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['3', {'query': 'SELECT blah3', 'depth': 0, 'as_list': True,
+                   'with_lists': None, 'ignore_null': False}]
         ], qbuffer)
 
     def test_005_extract_queries_bogus_list(self):
         # This test is specifically checking that empty queries are dropped
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         args, kwargs = [
             'SELECT blah',
             '',
@@ -108,19 +141,27 @@ class MysqlPillarTestCase(TestCase):
         ], {}
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah2', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah4', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah5', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah6', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah7', 'depth': 2, 'as_list': False, 'with_lists': None}],
-            [None, {'query': 'SELECT blah8', 'depth': 0, 'as_list': True, 'with_lists': None}]
+            [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah2', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah3', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah4', 'depth': 2, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah5', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah6', 'depth': 0, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah7', 'depth': 2, 'as_list': False,
+                    'with_lists': None, 'ignore_null': False}],
+            [None, {'query': 'SELECT blah8', 'depth': 0, 'as_list': True,
+                    'with_lists': None, 'ignore_null': False}]
         ], qbuffer)
 
     def test_006_extract_queries_bogus_kwargs(self):
         # this test is cut down as most of the path matches test_*_bogus_list
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         args, kwargs = [], {
             '1': 'SELECT blah',
             '2': '',
@@ -128,19 +169,21 @@ class MysqlPillarTestCase(TestCase):
         }
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            ['1', {'query': 'SELECT blah', 'depth': 0, 'as_list': False, 'with_lists': None}],
-            ['3', {'query': 'SELECT blah2', 'depth': 0, 'as_list': False, 'with_lists': None}]
+            ['1', {'query': 'SELECT blah', 'depth': 0, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}],
+            ['3', {'query': 'SELECT blah2', 'depth': 0, 'as_list': False,
+                   'with_lists': None, 'ignore_null': False}]
         ], qbuffer)
 
     def test_011_enter_root(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.enter_root("test")
         self.assertEqual(return_data.result["test"], return_data.focus)
         return_data.enter_root(None)
         self.assertEqual(return_data.result, return_data.focus)
 
     def test_021_process_fields(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b'], 0)
         self.assertEqual(return_data.num_fields, 2)
         self.assertEqual(return_data.depth, 1)
@@ -164,7 +207,7 @@ class MysqlPillarTestCase(TestCase):
         self.assertEqual(return_data.depth, 3)
 
     def test_111_process_results_legacy(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b'], 0)
         return_data.with_lists = []
         return_data.process_results([[1, 2]])
@@ -174,7 +217,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_112_process_results_legacy_multiple(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b'], 0)
         return_data.with_lists = []
         return_data.process_results([[1, 2], [3, 4], [5, 6]])
@@ -184,7 +227,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_121_process_results_depth_0(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 0)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -195,7 +238,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_122_process_results_depth_1(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 1)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -206,7 +249,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_123_process_results_depth_2(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 2)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -217,7 +260,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_124_process_results_depth_3(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 3)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -228,7 +271,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_125_process_results_depth_4(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 4)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -239,7 +282,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_131_process_results_overwrite_legacy_multiple(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b'], 0)
         return_data.with_lists = []
         return_data.process_results([[1, 2], [3, 4], [1, 6]])
@@ -249,7 +292,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_132_process_results_merge_depth_0(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 0)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -260,7 +303,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_133_process_results_overwrite_depth_0(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 0)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -271,7 +314,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_134_process_results_deepmerge_depth_0(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 0)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -282,7 +325,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_135_process_results_overwrite_depth_1(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 1)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -293,7 +336,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_136_process_results_merge_depth_2(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 2)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -304,7 +347,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_137_process_results_overwrite_depth_2(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 2)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -315,7 +358,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_201_process_results_complexity_multiresults(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 2)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -327,7 +370,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_202_process_results_complexity_as_list(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 2)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -340,7 +383,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_203_process_results_complexity_as_list_deeper(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.process_fields(['a', 'b', 'c', 'd'], 0)
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -353,7 +396,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_204_process_results_complexity_as_list_mismatch_depth(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = True
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -368,7 +411,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_205_process_results_complexity_as_list_mismatch_depth_reversed(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = True
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -384,7 +427,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_206_process_results_complexity_as_list_mismatch_depth_weird_order(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = True
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -402,7 +445,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_207_process_results_complexity_collision_mismatch_depth(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = False
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -417,7 +460,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_208_process_results_complexity_collision_mismatch_depth_reversed(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = False
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -433,7 +476,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_209_process_results_complexity_collision_mismatch_depth_weird_order(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = False
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -451,7 +494,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_20A_process_results_complexity_as_list_vary(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = True
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -468,7 +511,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_207_process_results_complexity_roots_collision(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = False
         return_data.with_lists = []
         return_data.enter_root(None)
@@ -482,7 +525,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_301_process_results_with_lists(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = False
         return_data.with_lists = [1, 3]
         return_data.enter_root(None)
@@ -507,7 +550,7 @@ class MysqlPillarTestCase(TestCase):
         )
 
     def test_302_process_results_with_lists_consecutive(self):
-        return_data = mysql.merger()
+        return_data = mysql.Merger()
         return_data.as_list = False
         return_data.with_lists = [1, 2, 3]
         return_data.enter_root(None)

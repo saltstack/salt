@@ -64,7 +64,6 @@ Matches can be grouped together with parentheses to explicitly declare precedenc
     salt -C '( ms-1 or G@id:ms-3 ) and G@id:ms-3' test.ping
 
 .. note::
-    
+
     Be certain to note that spaces are required between the parentheses and targets. Failing to obey this
     rule may result in incorrect targeting!
-

@@ -20,7 +20,7 @@ environments.
 
 .. note::
 
-    Environments in Salt are very flexible, this section defines how the top
+    Environments in Salt are very flexible. This section defines how the top
     file can be used to define what states from what environments are to be
     used for specific minions.
 
@@ -156,7 +156,7 @@ A clean and recommended setup for multiple environments would look like this:
       prod:
         - /srv/salt/prod
 
-Then only place state trees in the dev, qa and prod environments, leaving
+Then only place state trees in the dev, qa, and prod environments, leaving
 the base environment open for generic file transfers. Then the top.sls file
 would look something like this:
 
@@ -224,7 +224,7 @@ of matches you can perform:
             - match: compound
             - nagios.server
 
-In this example ``top.sls``, all minions get the ldap-client, networking and
+In this example ``top.sls``, all minions get the ldap-client, networking, and
 salt.minion states. Any minion with an id matching the ``salt-master*`` glob
 will get the salt.master state. Any minion with ids matching the regular
 expression ``^(memcache|web).(qa|prod).loc$`` will get the nagios.mon.web and
@@ -238,6 +238,13 @@ state.
 
 How Top Files Are Compiled
 ==========================
+
+.. warning::
+
+    There is currently a known issue with the topfile compilation. The below
+    may not be completely valid until
+    https://github.com/saltstack/salt/issues/12483#issuecomment-64181598
+    is closed.
 
 As mentioned earlier, the top files in the different environments are compiled
 into a single set of data. The way in which this is done follows a few rules,
@@ -358,4 +365,3 @@ are set as in the :ref:`above multi-environment example
 .. note::
     When in doubt, the simplest way to configure your states is with a single
     top.sls in the ``base`` environment.
-

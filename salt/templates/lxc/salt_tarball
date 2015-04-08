@@ -23,13 +23,25 @@ lxc_network_link="br0"
 default_path="/var/lib/lxc"
 
 deploy_tar() {
-    if [ -f ${path}/config ]
+    if [ -f "${path}/config" ]
     then
-        cp ${path}/config ${path}/_orig_config
+        cp "${path}/config" "${path}/_orig_config"
     fi
-    tar xvf ${imgtar} -C ${path}
-    sed -i '/lxc.rootfs/d' ${path}/config
-    echo "lxc.rootfs = ${path}/rootfs" >> ${path}/config
+    tar xvf ${imgtar} -C "${path}"
+
+    # Set utsname
+    sed -i '/lxc.utsname/d' "${path}/config"
+    echo "lxc.utsname = ${name}" >> "${path}/config"
+
+    # Set rootfs
+    sed -i '/lxc.rootfs/d' "${path}/config"
+    echo "lxc.rootfs = ${path}/rootfs" >> "${path}/config"
+
+    # Set proper hostname in /etc/hostname if present
+    if [ -f "${path}/rootfs/etc/hostname" ]
+    then
+        echo ${name} >"${path}/rootfs/etc/hostname"
+    fi
 }
 
 usage() {

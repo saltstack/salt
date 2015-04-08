@@ -69,7 +69,7 @@ Example of a ``cmd`` state calling a python function::
 #    - and a state function is a function declaration.
 
 
-#TODOs:
+# TODOs:
 #
 #  - support exclude declarations
 #
@@ -84,16 +84,19 @@ Example of a ``cmd`` state calling a python function::
 #
 
 # Import python libs
+from __future__ import absolute_import
 from uuid import uuid4 as _uuid
 
 # Import salt libs
 from salt.utils.odict import OrderedDict
 from salt.utils import warn_until
 from salt.state import HighState
-from salt._compat import string_types
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
-REQUISITES = set('require watch prereq use require_in watch_in prereq_in use_in onchanges onfail'.split())
+REQUISITES = set('listen require watch prereq use listen_in require_in watch_in prereq_in use_in onchanges onfail'.split())
 
 
 class PyDslError(Exception):
@@ -177,7 +180,7 @@ class Sls(object):
                 slsmods.append(None)
             else:
                 for arg in highstate[state_id]['stateconf']:
-                    if isinstance(arg, dict) and iter(arg).next() == 'slsmod':
+                    if isinstance(arg, dict) and next(iter(arg)) == 'slsmod':
                         slsmods.append(arg['slsmod'])
                         break
 
@@ -247,21 +250,21 @@ class Sls(object):
         return highstate
 
     def load_highstate(self, highstate):
-        for sid, decl in highstate.iteritems():
+        for sid, decl in six.iteritems(highstate):
             s = self.state(sid)
-            for modname, args in decl.iteritems():
+            for modname, args in six.iteritems(decl):
                 if '.' in modname:
                     modname, funcname = modname.rsplit('.', 1)
                 else:
-                    funcname = (
-                        x for x in args if isinstance(x, string_types)
-                    ).next()
+                    funcname = next((
+                        x for x in args if isinstance(x, six.string_types)
+                    ))
                     args.remove(funcname)
                 mod = getattr(s, modname)
                 named_args = {}
                 for x in args:
                     if isinstance(x, dict):
-                        k, v = x.iteritems().next()
+                        k, v = next(six.iteritems(x))
                         named_args[k] = v
                 mod(funcname, **named_args)
 
@@ -324,7 +327,7 @@ class StateDeclaration(object):
                 )
             )
 
-        result = sorted(result.iteritems(), key=lambda t: t[1]['__run_num__'])
+        result = sorted(six.iteritems(result), key=lambda t: t[1]['__run_num__'])
         if check:
             for k, v in result:
                 if not v['result']:
@@ -378,7 +381,7 @@ def _generate_requsite_method(t):
     def req(self, *args, **kws):
         for mod in args:
             self.reference(t, mod, None)
-        for mod_ref in kws.iteritems():
+        for mod_ref in six.iteritems(kws):
             self.reference(t, *mod_ref)
         return self
     return req
@@ -433,7 +436,7 @@ class StateFunction(object):
 
             args[0] = dict(name=args[0])
 
-        for k, v in kws.iteritems():
+        for k, v in six.iteritems(kws):
             args.append({k: v})
 
         self.args.extend(args)

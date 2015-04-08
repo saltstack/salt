@@ -5,9 +5,11 @@ Configuration disposable regularly scheduled tasks for at.
 
 The at state can be add disposable regularly scheduled tasks for your system.
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+from salt.ext.six.moves import map
 
 # Tested on OpenBSD 5.0
 BSD = ('OpenBSD', 'FreeBSD')
@@ -20,7 +22,7 @@ def __virtual__():
     return 'at.at' in __salt__
 
 
-def present(name, timespec, tag=None, runas=None, user=None, job=None):
+def present(name, timespec, tag=None, user=None, job=None):
     '''
     Add a job to queue.
 
@@ -33,11 +35,6 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
     tag
         Make a tag for the job.
 
-    runas
-        Users run the job.
-
-        .. deprecated:: 2014.1.4
-
     user
         The user to run the at job
 
@@ -48,7 +45,7 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
         rose:
           at.present:
             - job: 'echo "I love saltstack" > love'
-            - timespec: '9:9 11/09/13'
+            - timespec: '9:09 11/09/13'
             - tag: love
             - user: jam
 
@@ -60,30 +57,6 @@ def present(name, timespec, tag=None, runas=None, user=None, job=None):
            'result': True,
            'comment': 'job {0} is add and will run on {1}'.format(name,
                                                                   timespec)}
-
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4. Support will be removed in {version}.',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
 
     binary = salt.utils.which('at')
 
@@ -189,9 +162,9 @@ def absent(name, jobid=None, **kwargs):
     #    return ret
 
     if kwargs:
-        opts = map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])
+        opts = list(list(map(str, [j['job'] for j in __salt__['at.jobcheck'](**kwargs)['jobs']])))
     else:
-        opts = map(str, [j['job'] for j in __salt__['at.atq']()['jobs']])
+        opts = list(list(map(str, [j['job'] for j in __salt__['at.atq']()['jobs']])))
 
     if not opts:
         ret['result'] = False
@@ -201,7 +174,7 @@ def absent(name, jobid=None, **kwargs):
     __salt__['cmd.run']('{0} -d {1}'.format(binary, ' '.join(opts)))
     fail = []
     for i in opts:
-        if i in map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]):
+        if i in list(list(map(str, [j['job'] for j in __salt__['at.atq']()['jobs']]))):
             fail.append(i)
 
     if fail:

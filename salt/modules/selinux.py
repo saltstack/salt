@@ -12,13 +12,16 @@ Execute calls on selinux
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-from salt._compat import string_types
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -70,14 +73,14 @@ def getenforce():
 
         salt '*' selinux.getenforce
     '''
-    enforce = os.path.join(selinux_fs_path(), 'enforce')
     try:
+        enforce = os.path.join(selinux_fs_path(), 'enforce')
         with salt.utils.fopen(enforce, 'r') as _fp:
             if _fp.readline().strip() == '0':
                 return 'Permissive'
             else:
                 return 'Enforcing'
-    except (IOError, OSError) as exc:
+    except (IOError, OSError, AttributeError) as exc:
         msg = 'Could not read SELinux enforce file: {0}'
         raise CommandExecutionError(msg.format(str(exc)))
 
@@ -92,7 +95,7 @@ def setenforce(mode):
 
         salt '*' selinux.setenforce enforcing
     '''
-    if isinstance(mode, string_types):
+    if isinstance(mode, six.string_types):
         if mode.lower() == 'enforcing':
             mode = '1'
         elif mode.lower() == 'permissive':
@@ -143,7 +146,7 @@ def setsebool(boolean, value, persist=False):
         cmd = 'setsebool -P {0} {1}'.format(boolean, value)
     else:
         cmd = 'setsebool {0} {1}'.format(boolean, value)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def setsebools(pairs, persist=False):
@@ -162,9 +165,9 @@ def setsebools(pairs, persist=False):
         cmd = 'setsebool -P '
     else:
         cmd = 'setsebool '
-    for boolean, value in pairs.items():
+    for boolean, value in six.iteritems(pairs):
         cmd = '{0} {1}={2}'.format(cmd, boolean, value)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def list_sebool():

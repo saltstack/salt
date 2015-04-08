@@ -27,6 +27,7 @@ There are a few things to keep in mind:
   gpg public key matching the address the mail is sent to. If left unset, no
   encryption will be used.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

@@ -2,6 +2,7 @@
 '''
 Module for managing NFS version 3.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging

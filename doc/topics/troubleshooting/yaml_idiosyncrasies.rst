@@ -33,8 +33,8 @@ fact that the data is uniform and not deeply nested.
 
 .. _nested-dict-indentation:
 
-Nested Dicts (key=value)
-------------------------
+Nested Dictionaries
+-------------------
 
 When :ref:`dicts <python2:typesmapping>` are nested within other data
 structures (particularly lists), the indentation logic sometimes changes.
@@ -61,8 +61,8 @@ Notice that while the indentation is two spaces per level, for the values under
 the ``context`` and ``defaults`` options there is a four-space indent. If only
 two spaces are used to indent, then those keys will be considered part of the
 same dictionary that contains the ``context`` key, and so the data will not be
-loaded correctly.  If using a double indent is not desirable, then a deeply-nested dict
-can be declared with curly braces:
+loaded correctly. If using a double indent is not desirable, then a
+deeply-nested dict can be declared with curly braces:
 
 .. code-block:: yaml
 
@@ -311,3 +311,32 @@ strings to force YAML to serialize them as strings:
     datetime.datetime(2014, 1, 20, 14, 23, 23)
     >>> yaml.safe_load('"2014-01-20 14:23:23"')
     '2014-01-20 14:23:23'
+
+Additionally, numbers formatted like ``XXXX-XX-XX`` will also be converted (or
+YAML will attempt to convert them, and error out if it doesn't think the date
+is a real one).  Thus, for example, if a minion were to have an ID of
+``4017-16-20`` the minion would not start because YAML would complain that the
+date was out of range.  The workaround is the same, surround the offending
+string with quotes:
+
+.. code-block:: python
+
+    >>> import yaml
+    >>> yaml.safe_load('4017-16-20')
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+      File "/usr/local/lib/python2.7/site-packages/yaml/__init__.py", line 93, in safe_load
+        return load(stream, SafeLoader)
+      File "/usr/local/lib/python2.7/site-packages/yaml/__init__.py", line 71, in load
+        return loader.get_single_data()
+      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 39, in get_single_data
+        return self.construct_document(node)
+      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 43, in construct_document
+        data = self.construct_object(node)
+      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 88, in construct_object
+        data = constructor(self, node)
+      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 312, in construct_yaml_timestamp
+        return datetime.date(year, month, day)
+    ValueError: month must be in 1..12
+    >>> yaml.safe_load('"4017-16-20"')
+    '4017-16-20'

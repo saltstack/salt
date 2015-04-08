@@ -2,6 +2,7 @@
 '''
 A few checks to make sure the environment is sane
 '''
+from __future__ import absolute_import
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -10,6 +11,7 @@ import os
 import re
 import sys
 import stat
+import errno
 import socket
 import logging
 
@@ -22,6 +24,7 @@ else:
 # Import salt libs
 from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
+import salt.defaults.exitcodes
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -156,12 +159,15 @@ def verify_files(files, user):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(os.EX_NOUSER)
+        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
-            if not os.path.isdir(dirname):
+            try:
                 os.makedirs(dirname)
+            except OSError as err:
+                if err.errno != errno.EEXIST:
+                    raise
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
@@ -197,7 +203,7 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
-        sys.exit(os.EX_NOUSER)
+        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
     for dir_ in dirs:
         if not dir_:
             continue
@@ -386,7 +392,7 @@ def check_max_open_files(opts):
         mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
 
     accepted_keys_dir = os.path.join(opts.get('pki_dir'), 'minions')
-    accepted_count = sum(1 for _ in os.listdir(accepted_keys_dir))
+    accepted_count = len(os.listdir(accepted_keys_dir))
 
     log.debug(
         'This salt-master instance has accepted {0} minion keys.'.format(
@@ -461,3 +467,24 @@ def valid_id(opts, id_):
         return bool(clean_path(opts['pki_dir'], id_))
     except (AttributeError, KeyError) as e:
         return False
+
+
+def safe_py_code(code):
+    '''
+    Check a string to see if it has any potentially unsafe routines which
+    could be executed via python, this routine is used to improve the
+    safety of modules suct as virtualenv
+    '''
+    bads = (
+            'import',
+            ';',
+            'subprocess',
+            'eval',
+            'open',
+            'file',
+            'exec',
+            'input')
+    for bad in bads:
+        if code.count(bad):
+            return False
+    return True

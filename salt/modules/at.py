@@ -5,11 +5,17 @@ Wrapper module for at(1)
 Also, a 'tag' feature has been added to more
 easily tag jobs.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import time
 import datetime
+
+# Import 3rd-party libs
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map
+# pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
 import salt.utils
@@ -155,14 +161,14 @@ def atrm(*args):
 
     if args[0] == 'all':
         if len(args) > 1:
-            opts = map(str, [j['job'] for j in atq(args[1])['jobs']])
+            opts = list(list(map(str, [j['job'] for j in atq(args[1])['jobs']])))
             ret = {'jobs': {'removed': opts, 'tag': args[1]}}
         else:
-            opts = map(str, [j['job'] for j in atq()['jobs']])
+            opts = list(list(map(str, [j['job'] for j in atq()['jobs']])))
             ret = {'jobs': {'removed': opts, 'tag': None}}
     else:
-        opts = map(str, [i['job'] for i in atq()['jobs']
-            if i['job'] in args])
+        opts = list(list(map(str, [i['job'] for i in atq()['jobs']
+            if i['job'] in args])))
         ret = {'jobs': {'removed': opts, 'tag': None}}
 
     # Shim to produce output similar to what __virtual__() should do
@@ -199,23 +205,16 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     if not binary:
         return '\'at.at\' is not available.'
 
-    if __grains__['os_family'] == 'RedHat':
-        echo_cmd = 'echo -e'
-    else:
-        echo_cmd = 'echo'
-
     if 'tag' in kwargs:
-        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(kwargs['tag'],
-            ' '.join(args[1:]), binary, args[0], echo_cmd)
+        stdin = '### SALT: {0}\n{1}'.format(kwargs['tag'], ' '.join(args[1:]))
     else:
-        cmd = '{3} "{1}" | {2} {0}'.format(args[0], ' '.join(args[1:]),
-            binary, echo_cmd)
+        stdin = ' '.join(args[1:])
+    cmd = [binary, args[0]]
 
-    # Can't use _cmd here since we need to prepend 'echo_cmd'
     if 'runas' in kwargs:
-        output = __salt__['cmd.run']('{0}'.format(cmd), runas=kwargs['runas'])
+        output = __salt__['cmd.run'](cmd, stdin=stdin, python_shell=False, runas=kwargs['runas'])
     else:
-        output = __salt__['cmd.run']('{0}'.format(cmd))
+        output = __salt__['cmd.run'](cmd, stdin=stdin, python_shell=False)
 
     if output is None:
         return '\'at.at\' is not available.'

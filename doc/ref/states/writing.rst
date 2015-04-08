@@ -17,14 +17,13 @@ illustrate:
 .. code-block:: yaml
 
     /etc/salt/master: # maps to "name"
-      file: # maps to State module filename e.g. https://github.com/saltstack/salt/tree/develop/salt/states/file.py
-        - managed # maps to the managed function in the file State module
+      file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/develop/salt/states/file.py
         - user: root # one of many options passed to the manage function
         - group: root
         - mode: 644
         - source: salt://salt/master
 
-Therefore this SLS data can be directly linked to a module, function and
+Therefore this SLS data can be directly linked to a module, function, and
 arguments passed to that function.
 
 This does issue the burden, that function names, state names and function
@@ -101,8 +100,8 @@ A State Module must return a dict containing the following keys/values:
 Test State
 ==========
 
-All states should check for and support ``test`` being passed in the options. 
-This will return data about what changes would occur if the state were actually 
+All states should check for and support ``test`` being passed in the options.
+This will return data about what changes would occur if the state were actually
 run. An example of such a check could look like this:
 
 .. code-block:: python
@@ -220,7 +219,7 @@ Example state module
 
     import salt.exceptions
 
-    def enforce_custom_thing(name, foo, baz=True):
+    def enforce_custom_thing(name, foo, bar=True):
         '''
         Enforce the state of a custom thing
 
@@ -239,9 +238,9 @@ Example state module
 
         # Start with basic error-checking. Do all the passed parameters make sense
         # and agree with each-other?
-        if baz == True and foo.startswith('Foo'):
+        if bar == True and foo.startswith('Foo'):
             raise salt.exceptions.SaltInvocationError(
-                'Argument "foo" cannot start with "Foo" if argument "baz" is True.')
+                'Argument "foo" cannot start with "Foo" if argument "bar" is True.')
 
         # Check the current state of the system. Does anything need to change?
         current_state = __salt__['my_custom_module.current_state'](name)

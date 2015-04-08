@@ -89,7 +89,7 @@ command:
                 Architecture:
                     x86_64
                 Description:
-                    
+
                 ImageId:
                     centos5u8_64_20G_aliaegis_20131231.vhd
                 ImageName:
@@ -142,7 +142,7 @@ command:
                 RegionId:
                     cn-qingdao
 
-Security Group can be obtained using the ``-f list_securitygroup`` option 
+Security Group can be obtained using the ``-f list_securitygroup`` option
 for the ``salt-cloud`` command:
 
 .. code-block:: bash

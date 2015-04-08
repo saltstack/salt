@@ -9,6 +9,12 @@ things:
 - Use salt-call commands on a system without connectivity to a master
 - Masterless States, run states entirely from files local to the minion
 
+.. note::
+
+    When running Salt in masterless mode, do not run the salt-minion daemon.
+    Otherwise, it will attempt to connect to a master and fail. The salt-call
+    command stands on its own and does not need the salt-minion daemon.
+
 Telling Salt Call to Run Masterless
 ===================================
 

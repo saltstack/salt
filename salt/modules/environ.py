@@ -3,13 +3,14 @@
 Support for getting and setting the environment variables
 of the current salt process.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import logging
 
-# Import salt libs
-from salt._compat import string_types
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ def setval(key, val, false_unsets=False):
         salt '*' environ.setval foo bar
         salt '*' environ.setval baz val=False false_unsets=True
     '''
-    if not isinstance(key, string_types):
+    if not isinstance(key, six.string_types):
         log.debug(
             '{0}: "key" argument is not a string type: {1!r}'
             .format(__name__, key)
@@ -67,7 +68,7 @@ def setval(key, val, false_unsets=False):
                 return False
         else:
             val = ''
-    if isinstance(val, string_types):
+    if isinstance(val, six.string_types):
         try:
             os.environ[key] = val
             return os.environ[key]
@@ -135,11 +136,11 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False):
         return False
     if clear_all is True:
         # Unset any keys not defined in 'environ' dict supplied by user
-        to_unset = [key for key in os.environ.keys() if key not in environ]
+        to_unset = [key for key in os.environ if key not in environ]
         for key in to_unset:
             ret[key] = setval(key, False, false_unsets)
-    for key, val in environ.items():
-        if isinstance(val, string_types):
+    for key, val in six.iteritems(environ):
+        if isinstance(val, six.string_types):
             ret[key] = setval(key, val)
         elif val is False:
             ret[key] = setval(key, val, false_unsets)
@@ -179,7 +180,7 @@ def get(key, default=''):
         salt '*' environ.get foo
         salt '*' environ.get baz default=False
     '''
-    if not isinstance(key, string_types):
+    if not isinstance(key, six.string_types):
         log.debug(
             '{0}: "key" argument is not a string type: {1!r}'
             .format(__name__, key)
@@ -207,7 +208,7 @@ def has_value(key, value=None):
 
         salt '*' environ.has_value foo
     '''
-    if not isinstance(key, string_types):
+    if not isinstance(key, six.string_types):
         log.debug(
             '{0}: "key" argument is not a string type: {1!r}'
             .format(__name__, key)
@@ -247,7 +248,7 @@ def item(keys, default=''):
     '''
     ret = {}
     key_list = []
-    if isinstance(keys, string_types):
+    if isinstance(keys, six.string_types):
         key_list.append(keys)
     elif isinstance(keys, list):
         key_list = keys

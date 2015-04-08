@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Configuration of the alternatives system
-========================================
 
 Control the alternatives system
 
@@ -159,7 +158,6 @@ def auto(name):
            'changes': {}}
 
     display = __salt__['alternatives.display'](name)
-    isinstalled = False
     line = display.splitlines()[0]
     if line.endswith(' auto mode'):
         ret['comment'] = '{0} already in auto mode'.format(name)

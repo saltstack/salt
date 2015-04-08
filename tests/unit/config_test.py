@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import shutil
@@ -28,7 +29,7 @@ import salt.utils
 import salt.utils.network
 import integration
 from salt import config as sconfig
-from salt.cloud.exceptions import SaltCloudConfigError
+from salt.exceptions import SaltCloudConfigError
 
 # Import Third-Party Libs
 import yaml
@@ -159,7 +160,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
@@ -201,7 +202,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MINION_CONFIG'] = env_fpath
@@ -255,7 +256,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_MASTER_CONFIG'] = env_fpath
@@ -284,7 +285,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             )
 
             # Now, let's populate an extra configuration file under minion.d
-            # Notice that above we've set blah as False and bellow as True.
+            # Notice that above we've set blah as False and below as True.
             # Since the minion.d files are loaded after the main configuration
             # file so overrides can happen, the final value of blah should be
             # True.
@@ -319,7 +320,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             )
 
             # Now, let's populate an extra configuration file under master.d
-            # Notice that above we've set blah as False and bellow as True.
+            # Notice that above we've set blah as False and below as True.
             # Since the master.d files are loaded after the main configuration
             # file so overrides can happen, the final value of blah should be
             # True.
@@ -355,7 +356,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertEqual(syndic_opts['master_ip'], '127.0.0.1')
         self.assertEqual(syndic_opts['master'], 'localhost')
         self.assertEqual(syndic_opts['sock_dir'], os.path.join(root_dir, 'minion_sock'))
-        self.assertEqual(syndic_opts['cachedir'], os.path.join(root_dir, 'cachedir'))
+        self.assertEqual(syndic_opts['cachedir'], os.path.join(root_dir, 'cache'))
         self.assertEqual(syndic_opts['log_file'], os.path.join(root_dir, 'osyndic.log'))
         self.assertEqual(syndic_opts['pidfile'], os.path.join(root_dir, 'osyndic.pid'))
         # Show that the options of localclient that repub to local master
@@ -871,7 +872,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
             # Let's set the environment variable, yet, since the configuration
-            # file path is not the default one, ie, the user has passed an
+            # file path is not the default one, i.e., the user has passed an
             # alternative configuration file form the CLI parser, the
             # environment variable will be ignored.
             os.environ['SALT_CLOUD_CONFIG'] = env_fpath
@@ -923,7 +924,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         config = sconfig.cloud_config(self.get_config_file_path('cloud'))
         self.assertIn('ec2-config', config['providers'])
-        self.assertIn('Ubuntu-13.04-AMD64', config['profiles'])
+        self.assertIn('ec2-test', config['profiles'])
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 

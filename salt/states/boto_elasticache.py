@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Elasticache
-==================
 
 .. versionadded:: 2014.7.0
 
@@ -89,9 +88,9 @@ def __virtual__():
 
 def present(
         name,
-        engine,
-        cache_node_type,
-        num_cache_nodes=1,
+        engine=None,
+        cache_node_type=None,
+        num_cache_nodes=None,
         preferred_availability_zone=None,
         port=None,
         cache_parameter_group_name=None,
@@ -103,7 +102,7 @@ def present(
         engine_version=None,
         notification_topic_arn=None,
         preferred_maintenance_window=None,
-        wait=True,
+        wait=None,
         region=None,
         key=None,
         keyid=None,
@@ -156,7 +155,7 @@ def present(
         to the cache cluster during the maintenance window. A value of True
         allows these upgrades to occur; False disables automatic upgrades.
 
-    security_groups_ids
+    security_group_ids
         One or more VPC security groups associated with the cache cluster. Use
         this parameter only when you are creating a cluster in a VPC.
 
@@ -178,7 +177,7 @@ def present(
 
     wait
         Boolean. Wait for confirmation from boto that the cluster is in the
-        creating state.
+        available state.
 
     region
         Region to connect to.
@@ -193,17 +192,31 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if cache_security_group_names and cache_subnet_group_name:
+        _subnet_group = __salt__['boto_elasticache.get_cache_subnet_group'](
+            cache_subnet_group_name, region, key, keyid, profile
+        )
+        vpc_id = _subnet_group['vpc_id']
+        if not security_group_ids:
+            security_group_ids = []
+        _security_group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
+            cache_security_group_names, vpc_id, region, key, keyid, profile
+        )
+        security_group_ids.extend(_security_group_ids)
+        cache_security_group_names = None
     config = __salt__['boto_elasticache.get_config'](name, region, key, keyid,
                                                      profile)
     if config is None:
         msg = 'Failed to retrieve cache cluster info from AWS.'
         ret['comment'] = msg
+        ret['result'] = None
         return ret
     elif not config:
         if __opts__['test']:
             msg = 'Cache cluster {0} is set to be created.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_elasticache.create'](
             name=name, num_cache_nodes=num_cache_nodes,
@@ -220,7 +233,6 @@ def present(
             auto_minor_version_upgrade=auto_minor_version_upgrade,
             wait=wait, region=region, key=key, keyid=keyid, profile=profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             config = __salt__['boto_elasticache.get_config'](name, region, key,
                                                              keyid, profile)
@@ -265,7 +277,7 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_elasticache.exists'](name, region, key, keyid,
                                                      profile)
@@ -274,11 +286,11 @@ def absent(
         if __opts__['test']:
             ret['comment'] = 'Cache cluster {0} is set to be removed.'.format(
                 name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_elasticache.delete'](name, wait, region, key,
                                                       keyid, profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
         else:
@@ -286,5 +298,75 @@ def absent(
             ret['comment'] = 'Failed to delete {0} cache cluster.'.format(name)
     else:
         ret['comment'] = '{0} does not exist in {1}.'.format(name, region)
+
+    return ret
+
+
+def creategroup(name, primary_cluster_id, replication_group_description,
+                wait=None,
+                region=None,
+                key=None,
+                keyid=None,
+                profile=None):
+
+    '''
+    Ensure the a replication group is create.
+
+    name
+        Name of replication group
+
+    wait
+        Waits for the group to be available
+
+    primary_cluster_id
+        Name of the master cache node
+
+    replication_group_description
+        Description for the group
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    is_present = __salt__['boto_elasticache.group_exists'](name, region, key, keyid,
+                                                                 profile)
+    if not is_present:
+        if __opts__['test']:
+            ret['comment'] = 'Replication {0} is set to be created.'.format(
+                name)
+            ret['result'] = None
+        created = __salt__['boto_elasticache.create_replication_group'](name,
+                                                                        primary_cluster_id,
+                                                                        replication_group_description,
+                                                                        wait,
+                                                                        region,
+                                                                        key,
+                                                                        keyid,
+                                                                        profile
+                                                                        )
+
+        if created:
+            config = __salt__['boto_elasticache.describe_replication_group'](name, region, key,
+                                                             keyid, profile)
+            ret['changes']['old'] = None
+            ret['changes']['new'] = config
+            ret['result'] = True
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} replication group.'.format(name)
+    else:
+        ret['comment'] = '{0} replication group exists .'.format(name)
+        ret['result'] = True
 
     return ret

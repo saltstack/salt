@@ -4,7 +4,7 @@ Salt Cloud 0.6.0 Release Notes
 
 The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
 has been developed to ease the automation and integration of Salt with public
-cloud providers by allowing cloud vms to be cleanly defined, created and
+cloud providers by allowing cloud vms to be cleanly defined, created, and
 automatically hooked back into a Salt Master.
 
 While Salt Cloud is primarily made to build cloud vms to tie into a Salt Mater,

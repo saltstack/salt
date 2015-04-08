@@ -4,6 +4,7 @@
 
 Provides access to randomness generators.
 '''
+from __future__ import absolute_import
 # Import python libs
 import hashlib
 
@@ -19,6 +20,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
+    # Certain versions of hashlib do not contain
+    # the necessary functions
+    if not hasattr(hashlib, 'algorithms'):
+        return False
     return __virtualname__
 
 

@@ -11,6 +11,7 @@ for the generation and signing of certificates for systems running libvirt:
     libvirt_keys:
       libvirt.keys
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

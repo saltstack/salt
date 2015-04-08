@@ -33,10 +33,12 @@ Connection module for Amazon SQS
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
 import json
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 
 def __virtual__():
@@ -158,7 +160,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
         ret = False
     if isinstance(attributes, string_types):
         attributes = json.loads(attributes)
-    for attr, val in attributes.iteritems():
+    for attr, val in six.iteritems(attributes):
         attr_set = queue_obj.set_attribute(attr, val)
         if not attr_set:
             msg = 'Failed to set attribute {0} = {1} on queue {2}'

@@ -1,5 +1,5 @@
-DEVICE="{{name}}"
-{% if addr %}HWADDR="{{addr}}"
+{% if "range" not in name %}DEVICE="{{name}}"
+{%endif%}{% if addr %}HWADDR="{{addr}}"
 {%endif%}{% if userctl %}USERCTL="{{userctl}}"
 {%endif%}{% if master %}MASTER="{{master}}"
 {%endif%}{% if slave %}SLAVE="{{slave}}"
@@ -9,8 +9,13 @@ DEVICE="{{name}}"
 {%endif%}{% if onboot %}ONBOOT="{{onboot}}"
 {%endif%}{% if onparent %}ONPARENT={{onparent}}
 {%endif%}{% if ipaddr %}IPADDR="{{ipaddr}}"
+{%endif%}{% if ipaddr_start %}IPADDR_START="{{ipaddr_start}}"
+{%endif%}{% if ipaddr_end %}IPADDR_END="{{ipaddr_end}}"
+{%endif%}{% if clonenum_start %}CLONENUM_START="{{clonenum_start}}"
 {%endif%}{% if netmask %}NETMASK="{{netmask}}"
 {%endif%}{% if gateway %}GATEWAY="{{gateway}}"
+{%endif%}{% if arpcheck %}ARPCHECK="{{arpcheck}}"
+{%endif%}{% if mtu %}MTU="{{mtu}}"
 {%endif%}{% if enable_ipv6 %}IPV6INIT="yes"
 {% if ipv6_autoconf %}IPV6_AUTOCONF="{{ipv6_autoconf}}"
 {%endif%}{% if ipv6addr %}IPV6ADDR="{{ipv6addr}}"
@@ -19,11 +24,13 @@ DEVICE="{{name}}"
 {%endif%}{% if peerdns %}PEERDNS="{{peerdns}}"
 {%endif%}{% if defroute %}DEFROUTE="{{defroute}}"
 {%endif%}{% if bridge %}BRIDGE="{{bridge}}"
-{%endif%}{% if delay %}DELAY="{{delay}}"
-{%endif%}{%if bonding %}BONDING_OPTS="{%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}"
+{%endif%}{% if stp %}STP="{{stp}}"
+{%endif%}{% if delay or delay == 0 %}DELAY="{{delay}}"
+{%endif%}{% if bonding %}BONDING_OPTS="{%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}"
+{%endif%}{% if my_inner_ipaddr %}MY_INNER_IPADDR={{my_inner_ipaddr}}
+{%endif%}{% if my_outer_ipaddr %}MY_OUTER_IPADDR={{my_outer_ipaddr}}
 {%endif%}{% if ethtool %}ETHTOOL_OPTS="{%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}"
 {%endif%}{% if domain %}DOMAIN="{{ domain|join(' ') }}"
 {% endif %}{% for server in dns -%}
 DNS{{loop.index}}="{{server}}"
 {% endfor -%}
-

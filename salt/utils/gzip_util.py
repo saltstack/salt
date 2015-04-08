@@ -5,9 +5,13 @@
     Helper module for handling gzip consistently between 2.7+ and 2.6-
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 import gzip
-import StringIO
+
+# Import 3rd-party libs
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 
 class GzipFile(gzip.GzipFile):
@@ -47,7 +51,7 @@ def compress(data, compresslevel=9):
     '''
     Returns the data compressed at gzip level compression.
     '''
-    buf = StringIO.StringIO()
+    buf = StringIO()
     with open_fileobj(buf, 'wb', compresslevel) as ogz:
         ogz.write(data)
     compressed = buf.getvalue()
@@ -55,7 +59,7 @@ def compress(data, compresslevel=9):
 
 
 def uncompress(data):
-    buf = StringIO.StringIO(data)
+    buf = StringIO(data)
     with open_fileobj(buf, 'rb') as igz:
         unc = igz.read()
         return unc

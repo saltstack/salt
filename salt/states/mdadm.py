@@ -19,10 +19,14 @@ A state module for creating or destroying software RAID devices.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -85,32 +89,64 @@ def present(name,
         ret['comment'] = 'Raid {0} already present'.format(name)
         return ret
 
-    # If running with test use the test_mode with create
+    # Decide whether to create or assemble
+    can_assemble = {}
+    for dev in devices:
+        # mdadm -E exits with 0 iff all devices given are part of an array
+        cmd = 'mdadm -E {0}'.format(dev)
+        can_assemble[dev] = __salt__['cmd.retcode'](cmd) == 0
+
+    if True in six.itervalues(can_assemble) and False in six.itervalues(can_assemble):
+        in_raid = sorted([x[0] for x in six.iteritems(can_assemble) if x[1]])
+        not_in_raid = sorted([x[0] for x in six.iteritems(can_assemble) if not x[1]])
+        ret['comment'] = 'Devices are a mix of RAID constituents ({0}) and '\
+            'non-RAID-constituents({1}).'.format(in_raid, not_in_raid)
+        ret['result'] = False
+        return ret
+    elif next(six.itervalues(can_assemble)):
+        do_assemble = True
+        verb = 'assembled'
+    else:
+        do_assemble = False
+        verb = 'created'
+
+    # If running with test use the test_mode with create or assemble
     if __opts__['test']:
-        res = __salt__['raid.create'](name,
-                                      level,
-                                      devices,
-                                      test_mode=True,
-                                      **kwargs)
-        ret['comment'] = 'Raid will be created with: {0}'.format(res)
+        if do_assemble:
+            res = __salt__['raid.assemble'](name,
+                                            devices,
+                                            test_mode=True,
+                                            **kwargs)
+        else:
+            res = __salt__['raid.create'](name,
+                                          level,
+                                          devices,
+                                          test_mode=True,
+                                          **kwargs)
+        ret['comment'] = 'Raid will be {0} with: {1}'.format(verb, res)
         ret['result'] = None
         return ret
 
-    # Attempt to create the array
-    __salt__['raid.create'](name,
-                            level,
-                            devices,
-                            **kwargs)
+    # Attempt to create or assemble the array
+    if do_assemble:
+        __salt__['raid.assemble'](name,
+                                  devices,
+                                  **kwargs)
+    else:
+        __salt__['raid.create'](name,
+                                level,
+                                devices,
+                                **kwargs)
 
     raids = __salt__['raid.list']()
     changes = raids.get(name)
     if changes:
-        ret['comment'] = 'Raid {0} created.'.format(name)
+        ret['comment'] = 'Raid {0} {1}.'.format(name, verb)
         ret['changes'] = changes
         # Saving config
         __salt__['raid.save_config']()
     else:
-        ret['comment'] = 'Raid {0} failed to be created.'.format(name)
+        ret['comment'] = 'Raid {0} failed to be {1}.'.format(name, verb)
         ret['result'] = False
 
     return ret

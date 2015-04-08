@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
-
 '''
 Tests for the Git state
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 import socket
+import subprocess
+import tempfile
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -60,7 +63,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://youSpelledGithubWrong.com/saltstack/salt-test-repo.git',
+                name='https://youSpelledGitHubWrong.com/saltstack/salt-test-repo.git',
                 rev='develop',
                 target=name,
                 submodules=True
@@ -156,8 +159,10 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.mkdir(name)
         try:
             fname = os.path.join(name, 'stoptheprocess')
-            with file(fname, 'a'):
-                pass
+
+            with salt.utils.fopen(fname, 'a') as fh_:
+                fh_.write('')
+
             ret = self.run_state(
                 'git.present',
                 name=name,
@@ -185,6 +190,26 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(os.path.isfile(os.path.join(name, 'HEAD')))
         finally:
             shutil.rmtree(name, ignore_errors=True)
+
+    @skip_if_binaries_missing('git')
+    def test_config_set_value_with_space_character(self):
+        '''
+        git.config
+        '''
+        name = tempfile.mkdtemp(dir=integration.TMP)
+        self.addCleanup(shutil.rmtree, name, ignore_errors=True)
+        subprocess.check_call(['git', 'init', '--quiet', name])
+
+        config_key = 'user.name'
+        config_value = 'foo bar'
+
+        ret = self.run_state(
+            'git.config',
+            name=config_key,
+            value=config_value,
+            repo=name,
+            is_global=False)
+        self.assertSaltTrueReturn(ret)
 
 
 if __name__ == '__main__':

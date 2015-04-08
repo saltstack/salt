@@ -14,6 +14,7 @@ Databases can be set as either absent or present.
     frank:
       mysql_database.present
 '''
+from __future__ import absolute_import
 
 import sys
 

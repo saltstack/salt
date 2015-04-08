@@ -58,6 +58,7 @@ key with all minions but override its value for a specific minion::
     etcdctl set /salt-private/special_minion_id/mykey my_other_value
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -82,7 +83,9 @@ def __virtual__():
     return __virtualname__ if HAS_LIBS else False
 
 
-def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               conf):
     '''
     Check etcd for all data
     '''

@@ -187,7 +187,7 @@ sure it is really available.
 
 Here is an example proxytype used to interface to Juniper Networks devices that run
 the Junos operating system.  Note the additional library requirements--most of the
-"hard part" of talking to these devices is handled by the jnpr.junos, jnpr.junos.utils
+"hard part" of talking to these devices is handled by the jnpr.junos, jnpr.junos.utils,
 and jnpr.junos.cfg modules.
 
 
@@ -250,7 +250,7 @@ you are interested in.  Here's an example:
 The __proxyenabled__ directive
 ------------------------------
 
-Salt states and execution modules, by and large, cannot "automatically" work
+Salt states and execution modules, by, and large, cannot "automatically" work
 with proxied devices.  Execution modules like ``pkg`` or ``sqlite3`` have no
 meaning on a network switch or a housecat.  For a state/execution module to be
 available to a proxy-minion, the ``__proxyenabled__`` variable must be defined

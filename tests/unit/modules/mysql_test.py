@@ -7,6 +7,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -236,7 +239,7 @@ class MySQLTestCase(TestCase):
 
     @skipIf(True, 'MySQL module claims this function is not ready for production')
     def test_free_slave(self):
-        self.assertTrue(False)
+        pass
 
     def test_query(self):
         self._test_call(mysql.query, 'SELECT * FROM testdb', 'testdb', 'SELECT * FROM testdb')

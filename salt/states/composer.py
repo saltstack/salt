@@ -37,10 +37,10 @@ the location of composer in the state.
         - php: /usr/local/bin/php
         - no_dev: true
 '''
+from __future__ import absolute_import
 
 # Import salt libs
-import salt.utils
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
+from salt.exceptions import SaltException
 
 
 def __virtual__():
@@ -53,7 +53,6 @@ def __virtual__():
 def installed(name,
               composer=None,
               php=None,
-              runas=None,
               user=None,
               prefer_source=None,
               prefer_dist=None,
@@ -61,10 +60,11 @@ def installed(name,
               no_plugins=None,
               optimize=None,
               no_dev=None,
-              composer_home='/root'):
+              quiet=False,
+              composer_home='/root',
+              always_check=True):
     '''
-    Verify that composer has installed the latest packages give a
-    ``composer.json`` and ``composer.lock`` file in a directory.
+    Verify that the correct versions of composer dependencies are present.
 
     dir
         Directory location of the composer.json file.
@@ -78,10 +78,132 @@ def installed(name,
         Location of the php executable to use with composer.
         (i.e. /usr/bin/php)
 
-    runas
+    user
         Which system user to run composer as.
 
-        .. deprecated:: 2014.1.4
+        .. versionadded:: 2014.1.4
+
+    prefer_source
+        --prefer-source option of composer.
+
+    prefer_dist
+        --prefer-dist option of composer.
+
+    no_scripts
+        --no-scripts option of composer.
+
+    no_plugins
+        --no-plugins option of composer.
+
+    optimize
+        --optimize-autoloader option of composer. Recommended for production.
+
+    no_dev
+        --no-dev option for composer. Recommended for production.
+
+    quiet
+        --quiet option for composer. Whether or not to return output from composer.
+
+    composer_home
+        $COMPOSER_HOME environment variable
+
+    always_check
+        If True, _always_ run `composer install` in the directory.  This is the
+        default behavior.  If False, only run `composer install` if there is no
+        vendor directory present.
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    did_install = __salt__['composer.did_composer_install'](name)
+
+    # Check if composer.lock exists, if so we already ran `composer install`
+    # and we don't need to do it again
+    if always_check is False and did_install:
+        ret['result'] = True
+        ret['comment'] = 'Composer already installed this directory'
+        return ret
+
+    # The state of the system does need to be changed. Check if we're running
+    # in ``test=true`` mode.
+    if __opts__['test'] is True:
+
+        if did_install is True:
+            install_status = ""
+        else:
+            install_status = "not "
+
+        ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
+        ret['changes'] = {
+            'old': 'composer install has {0}been run in {1}'.format(install_status, name),
+            'new': 'composer install will be run in {0}'.format(name)
+        }
+        ret['result'] = None
+        return ret
+
+    try:
+        call = __salt__['composer.install'](
+            name,
+            composer=composer,
+            php=php,
+            runas=user,
+            prefer_source=prefer_source,
+            prefer_dist=prefer_dist,
+            no_scripts=no_scripts,
+            no_plugins=no_plugins,
+            optimize=optimize,
+            no_dev=no_dev,
+            quiet=quiet,
+            composer_home=composer_home
+        )
+    except (SaltException) as err:
+        ret['result'] = False
+        ret['comment'] = 'Error executing composer in \'{0!r}\': {1!r}'.format(name, err)
+        return ret
+
+    # If composer retcode != 0 then an exception was thrown and we dealt with it.
+    # Any other case is success, regardless of what composer decides to output.
+
+    ret['result'] = True
+
+    if quiet is True:
+        ret['comment'] = 'Composer install completed successfully, output silenced by quiet flag'
+    else:
+        ret['comment'] = 'Composer install completed successfully'
+        ret['changes'] = {
+            'stderr': call['stderr'],
+            'stdout': call['stdout']
+        }
+
+    return ret
+
+
+def update(name,
+           composer=None,
+           php=None,
+           user=None,
+           prefer_source=None,
+           prefer_dist=None,
+           no_scripts=None,
+           no_plugins=None,
+           optimize=None,
+           no_dev=None,
+           quiet=False,
+           composer_home='/root'):
+    '''
+    Composer update the directory to ensure we have the latest versions
+    of all project dependencies.
+
+    dir
+        Directory location of the composer.json file.
+
+    composer
+        Location of the composer.phar file. If not set composer will
+        just execute "composer" as if it is installed globally.
+        (i.e. /path/to/composer.phar)
+
+    php
+        Location of the php executable to use with composer.
+        (i.e. /usr/bin/php)
 
     user
         Which system user to run composer as.
@@ -114,32 +236,26 @@ def installed(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4.',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
+    # Check if composer.lock exists, if so we already ran `composer install`
+    is_installed = __salt__['composer.did_composer_install'](name)
+    if is_installed:
+        old_status = "composer install has not yet been run in {0}".format(name)
+    else:
+        old_status = "composer install has been run in {0}".format(name)
+
+    # The state of the system does need to be changed. Check if we're running
+    # in ``test=true`` mode.
+    if __opts__['test'] is True:
+        ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
+        ret['changes'] = {
+            'old': old_status,
+            'new': 'composer install/update will be run in {0}'.format(name)
+        }
+        ret['result'] = None
+        return ret
 
     try:
-        call = __salt__['composer.install'](
+        call = __salt__['composer.update'](
             name,
             composer=composer,
             php=php,
@@ -150,22 +266,26 @@ def installed(name,
             no_plugins=no_plugins,
             optimize=optimize,
             no_dev=no_dev,
-            quiet=False,
+            quiet=quiet,
             composer_home=composer_home
         )
-    except (CommandNotFoundError, CommandExecutionError) as err:
+    except (SaltException) as err:
         ret['result'] = False
         ret['comment'] = 'Error executing composer in \'{0!r}\': {1!r}'.format(name, err)
         return ret
 
-    if call or isinstance(call, list) or isinstance(call, dict):
-        ret['result'] = True
-        if call.find('Nothing to install or update') < 0:
-            ret['changes']['stdout'] = call
+    # If composer retcode != 0 then an exception was thrown and we dealt with it.
+    # Any other case is success, regardless of what composer decides to output.
 
-        ret['comment'] = 'Composer ran, nothing changed in {0!r}'.format(name)
+    ret['result'] = True
+
+    if quiet is True:
+        ret['comment'] = 'Composer update completed successfully, output silenced by quiet flag'
     else:
-        ret['result'] = False
-        ret['comment'] = 'Could not run composer'
+        ret['comment'] = 'Composer update completed successfully'
+        ret['changes'] = {
+            'stderr': call['stderr'],
+            'stdout': call['stdout']
+        }
 
     return ret

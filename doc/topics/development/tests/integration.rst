@@ -118,7 +118,7 @@ Now the workhorse method ``run_function`` can be used to test a module:
 
 .. code-block:: python
 
-    
+
     import os
     import integration
 
@@ -258,7 +258,7 @@ once the related tests have completed. For example, if a new user is created to
 test a module, the same user should be removed after the test is completed to
 maintain system integrity.
 
-To write a destructive test, import and use the destructiveTest decorator for
+To write a destructive test, import, and use the destructiveTest decorator for
 the test method:
 
 .. code-block:: python
@@ -380,7 +380,7 @@ preceded with the ``@expensiveTest`` decorator. The expensive test decorator is
 necessary because it signals to the test suite that the
 ``--cloud-provider-tests`` flag is required to run the cloud provider tests.
 
-To write a cloud provider test, import and use the expensiveTest decorator for
+To write a cloud provider test, import, and use the expensiveTest decorator for
 the test function:
 
 .. code-block:: python

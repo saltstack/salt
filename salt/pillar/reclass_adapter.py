@@ -46,16 +46,24 @@ either let the master know via the ``PYTHONPATH`` environment variable, or by
 setting the configuration option, like in the example above.
 '''
 
+
 # This file cannot be called reclass.py, because then the module import would
 # not work. Thanks to the __virtual__ function, however, the plugin still
 # responds to the name 'reclass'.
 
+# Import python libs
+from __future__ import absolute_import
+
+# Import salt libs
 from salt.exceptions import SaltInvocationError
 from salt.utils.reclass import (
     prepend_reclass_source_path,
     filter_out_source_path_option,
     set_inventory_base_uri_default
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'reclass'
@@ -71,11 +79,11 @@ def __virtual__(retry=False):
             return False
 
         for pillar in __opts__.get('ext_pillar', []):
-            if 'reclass' not in pillar.keys():
+            if 'reclass' not in pillar:
                 continue
 
             # each pillar entry is a single-key hash of name -> options
-            opts = pillar.values()[0]
+            opts = next(six.itervalues(pillar))
             prepend_reclass_source_path(opts)
             break
 
@@ -107,19 +115,19 @@ def ext_pillar(minion_id, pillar, **kwargs):
         return reclass_ext_pillar(minion_id, pillar, **kwargs)
 
     except TypeError as e:
-        if 'unexpected keyword argument' in e.message:
-            arg = e.message.split()[-1]
+        if 'unexpected keyword argument' in str(e):
+            arg = str(e).split()[-1]
             raise SaltInvocationError('ext_pillar.reclass: unexpected option: '
                                       + arg)
         else:
             raise
 
     except KeyError as e:
-        if 'id' in e.message:
+        if 'id' in str(e):
             raise SaltInvocationError('ext_pillar.reclass: __opts__ does not '
                                       'define minion ID')
         else:
             raise
 
     except ReclassException as e:
-        raise SaltInvocationError('ext_pillar.reclass: {0}'.format(e.message))
+        raise SaltInvocationError('ext_pillar.reclass: {0}'.format(str(e)))

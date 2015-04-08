@@ -20,6 +20,7 @@ at ``/etc/salt/cloud.providers`` or
       provider: opennebula
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -31,7 +32,7 @@ import logging
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
@@ -41,7 +42,7 @@ from salt.cloud.exceptions import (
 
 # Attempt to import xmlrpclib and lxml
 try:
-    import xmlrpclib
+    import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
     from lxml import etree
     HAS_XMLLIBS = True
 except ImportError:
@@ -78,7 +79,7 @@ def _get_xml_rpc():
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__
     )
-    server = xmlrpclib.ServerProxy(xml_rpc)
+    server = salt.ext.six.moves.xmlrpc_client.ServerProxy(xml_rpc)
 
     return server, user, password
 
@@ -335,10 +336,10 @@ def create(vm_):
             'The following exception was thrown when trying to '
             'run the initial deployment: {1}'.format(
                 vm_['name'],
-                exc.message
+                str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -368,7 +369,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'

@@ -26,6 +26,8 @@ in the minion's config file::
 It's also possible to specify key, keyid and region via a profile, either
 as a passed in dict, or as a string to pull from pillars or minion config:
 
+.. code-block:: yaml
+
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -99,12 +101,105 @@ as a passed in dict, or as a string to pull from pillars or minion config:
         - name: myasg
         # If instances exist, we must force the deletion of the asg.
         - force: True
+
+It's possible to specify cloudwatch alarms that will be setup along with the
+ASG. Note the alarm name will be the name attribute defined, plus the ASG
+resource name.
+
+.. code-block:: yaml
+
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
+        - alarms:
+            CPU:
+              name: 'ASG CPU **MANAGED BY SALT**'
+              attributes:
+                metric: CPUUtilization
+                namespace: AWS/EC2
+                statistic: Average
+                comparison: '>='
+                threshold: 65.0
+                period: 60
+                evaluation_periods: 30
+                unit: null
+                description: 'ASG CPU'
+                alarm_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+                insufficient_data_actions: []
+                ok_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+
+You can also use alarms from pillars, and override values from the pillar
+alarms by setting overrides on the resource. Note that 'boto_asg_alarms'
+will be used as a default value for all resources, if defined and can be
+used to ensure alarms are always set for an ASG resource.
+
+Setting the alarms in a pillar:
+
+.. code-block:: yaml
+
+    my_asg_alarm:
+      CPU:
+        name: 'ASG CPU **MANAGED BY SALT**'
+        attributes:
+          metric: CPUUtilization
+          namespace: AWS/EC2
+          statistic: Average
+          comparison: '>='
+          threshold: 65.0
+          period: 60
+          evaluation_periods: 30
+          unit: null
+          description: 'ASG CPU'
+          alarm_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+          insufficient_data_actions: []
+          ok_actions: [ 'arn:aws:sns:us-east-1:12345:myalarm' ]
+
+Overriding the alarm values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myasg exists:
+      boto_asg.present:
+        - name: myasg
+        - launch_config_name: mylc
+        - availability_zones:
+          - us-east-1a
+          - us-east-1b
+        - min_size: 1
+        - max_size: 1
+        - desired_capacity: 1
+        - load_balancers:
+          - myelb
+        - profile: myprofile
+        - alarms_from_pillar: my_asg_alarm
+        # override CPU:attributes:threshold
+        - alarms:
+            CPU:
+              attributes:
+                threshold: 50.0
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import hashlib
 import logging
-import re
+
+# Import Salt libs
+import salt.utils.dictupdate as dictupdate
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -134,10 +229,17 @@ def present(
         termination_policies=None,
         suspended_processes=None,
         scaling_policies=None,
+        scaling_policies_from_pillar="boto_asg_scaling_policies",
+        alarms=None,
+        alarms_from_pillar='boto_asg_alarms',
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        notification_arn=None,
+        notification_arn_from_pillar="boto_asg_notification_arn",
+        notification_types=None,
+        notification_types_from_pillar="boto_asg_notification_types"):
     '''
     Ensure the autoscale group exists.
 
@@ -212,6 +314,20 @@ def present(
         List of scaling policies.  Each policy is a dict of key-values described by
         http://boto.readthedocs.org/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
 
+    scaling_policies_from_pillar:
+        name of pillar dict that contains scaling policy settings.   Scaling policies defined for
+        this specific state will override those from pillar.
+
+    alarms:
+        a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ASG.
+        All attributes should be specified except for dimension which will be
+        automatically set to this ASG.
+        See the boto_cloudwatch_alarm state for information about these attributes.
+
+    alarms_from_pillar:
+        name of pillar dict that contains alarm settings.   Alarms defined for this specific
+        state will override those from pillar.
+
     region
         The region to connect to.
 
@@ -224,8 +340,28 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    notification_arn
+        The aws arn that notifications will be sent to
+
+    notification_arn_from_pillar
+        name of the pillar dict that contains notifcation_arn settings.  A notification_arn
+        defined for this specific state will override the one from pillar.
+
+    notification_types
+        A list of event names that will trigger a notification.  The list of valid
+        notification types is:
+            "autoscaling:EC2_INSTANCE_LAUNCH",
+            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+            "autoscaling:EC2_INSTANCE_TERMINATE",
+            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR",
+            "autoscaling:TEST_NOTIFICATION"
+
+    notification_types_from_pillar
+        name of the pillar dict that contains notifcation_types settings.  Notification_types
+        defined for this specific state will override those from the pillar.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if vpc_zone_identifier:
         vpc_id = __salt__['boto_vpc.get_subnet_association'](vpc_zone_identifier, region, key, keyid, profile)
         log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
@@ -237,10 +373,10 @@ def present(
     # if launch_config is defined, manage the launch config first.
     # hash the launch_config dict to create a unique name suffix and then
     # ensure it is present
-    if launch_config and not __opts__['test']:
-        launch_config_name = launch_config_name + "-" + hashlib.md5(str(launch_config)).hexdigest()
+    if launch_config:
+        launch_config_name = launch_config_name + '-' + hashlib.md5(str(launch_config)).hexdigest()
         args = {
-            'name':  launch_config_name,
+            'name': launch_config_name,
             'region': region,
             'key': key,
             'keyid': keyid,
@@ -259,16 +395,21 @@ def present(
             # to group ids
             if sg_index:
                 log.debug('security group associations found in launch config')
-                launch_config[sg_index]['security_groups'] = _convert_to_group_ids(launch_config[sg_index]['security_groups'], vpc_id, region, key, keyid, profile)
+                _group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
+                    launch_config[sg_index]['security_groups'], vpc_id, region,
+                    key, keyid, profile
+                )
+                launch_config[sg_index]['security_groups'] = _group_ids
 
-        for d in launch_config:
-            args.update(d)
-        lc_ret = __salt__["state.single"]('boto_lc.present', **args)
-        lc_ret = lc_ret.values()[0]
-        if lc_ret["result"] is True:
-            if "launch_config" not in ret["changes"]:
-                ret["changes"]["launch_config"] = {}
-            ret["changes"]["launch_config"] = lc_ret["changes"]
+        for cfg in launch_config:
+            args.update(cfg)
+        if not __opts__['test']:
+            lc_ret = __salt__['state.single']('boto_lc.present', **args)
+            lc_ret = next(six.itervalues(lc_ret))
+            if lc_ret['result'] is True and lc_ret['changes']:
+                if 'launch_config' not in ret['changes']:
+                    ret['changes']['launch_config'] = {}
+                ret['changes']['launch_config'] = lc_ret['changes']
 
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
@@ -278,7 +419,18 @@ def present(
         if __opts__['test']:
             msg = 'Autoscale group set to be created.'
             ret['comment'] = msg
+            ret['result'] = None
             return ret
+        notification_arn, notification_types = _determine_notification_info(
+            notification_arn,
+            notification_arn_from_pillar,
+            notification_types,
+            notification_types_from_pillar
+        )
+        scaling_policies = _determine_scaling_policies(
+            scaling_policies,
+            scaling_policies_from_pillar
+        )
         created = __salt__['boto_asg.create'](name, launch_config_name,
                                               availability_zones, min_size,
                                               max_size, desired_capacity,
@@ -290,9 +442,9 @@ def present(
                                               termination_policies,
                                               suspended_processes,
                                               scaling_policies, region,
+                                              notification_arn, notification_types,
                                               key, keyid, profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
                                                   profile)
@@ -306,8 +458,8 @@ def present(
         # time, we should remove them from the dict.
         if scaling_policies:
             for policy in scaling_policies:
-                if "min_adjustment_step" not in policy:
-                    policy["min_adjustment_step"] = None
+                if 'min_adjustment_step' not in policy:
+                    policy['min_adjustment_step'] = None
         config = {
             'launch_config_name': launch_config_name,
             'availability_zones': availability_zones,
@@ -321,16 +473,16 @@ def present(
             'tags': tags,
             'termination_policies': termination_policies,
             'suspended_processes': suspended_processes,
-            "scaling_policies": scaling_policies,
+            'scaling_policies': scaling_policies,
         }
         if suspended_processes is None:
-            config["suspended_processes"] = []
+            config['suspended_processes'] = []
         # ensure that we delete scaling_policies if none are specified
         if scaling_policies is None:
-            config["scaling_policies"] = []
-        # note: do not loop using "key, value" - this can modify the value of
+            config['scaling_policies'] = []
+        # note: do not loop using 'key, value' - this can modify the value of
         # the aws access key
-        for asg_property, value in config.iteritems():
+        for asg_property, value in six.iteritems(config):
             # Only modify values being specified; introspection is difficult
             # otherwise since it's hard to track default values, which will
             # always be returned from AWS.
@@ -339,35 +491,49 @@ def present(
             if asg_property in asg:
                 _value = asg[asg_property]
                 if not _recursive_compare(value, _value):
+                    log_msg = '{0} asg_property differs from {1}'
+                    log.debug(log_msg.format(value, _value))
                     need_update = True
                     break
         if need_update:
             if __opts__['test']:
                 msg = 'Autoscale group set to be updated.'
                 ret['comment'] = msg
+                ret['result'] = None
                 return ret
-            updated = __salt__['boto_asg.update'](name, launch_config_name,
-                                                  availability_zones, min_size,
-                                                  max_size, desired_capacity,
-                                                  load_balancers,
-                                                  default_cooldown,
-                                                  health_check_type,
-                                                  health_check_period,
-                                                  placement_group,
-                                                  vpc_zone_identifier, tags,
-                                                  termination_policies,
-                                                  suspended_processes,
-                                                  scaling_policies, region,
-                                                  key, keyid, profile)
-            if asg["launch_config_name"] != launch_config_name:
+            # add in alarms
+            notification_arn, notification_types = _determine_notification_info(
+                notification_arn,
+                notification_arn_from_pillar,
+                notification_types,
+                notification_types_from_pillar
+            )
+            scaling_policies = _determine_scaling_policies(
+                scaling_policies,
+                scaling_policies_from_pillar
+            )
+            updated, msg = __salt__['boto_asg.update'](name, launch_config_name,
+                                                       availability_zones, min_size,
+                                                       max_size, desired_capacity,
+                                                       load_balancers,
+                                                       default_cooldown,
+                                                       health_check_type,
+                                                       health_check_period,
+                                                       placement_group,
+                                                       vpc_zone_identifier, tags,
+                                                       termination_policies,
+                                                       suspended_processes,
+                                                       scaling_policies, region,
+                                                       notification_arn, notification_types,
+                                                       key, keyid, profile)
+            if asg['launch_config_name'] != launch_config_name:
                 # delete the old launch_config_name
-                deleted = __salt__['boto_asg.delete_launch_configuration'](asg["launch_config_name"], region, key, keyid, profile)
+                deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'], region, key, keyid, profile)
                 if deleted:
-                    if "launch_config" not in ret["changes"]:
-                        ret["changes"]["launch_config"] = {}
-                    ret["changes"]["launch_config"]["deleted"] = asg["launch_config_name"]
+                    if 'launch_config' not in ret['changes']:
+                        ret['changes']['launch_config'] = {}
+                    ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
             if updated:
-                ret['result'] = True
                 ret['changes']['old'] = asg
                 asg = __salt__['boto_asg.get_config'](name, region, key, keyid,
                                                       profile)
@@ -375,36 +541,79 @@ def present(
                 ret['comment'] = 'Updated autoscale group.'
             else:
                 ret['result'] = False
-                ret['comment'] = 'Failed to update autoscale group.'
+                ret['comment'] = msg
         else:
             ret['comment'] = 'Autoscale group present.'
+    # add in alarms
+    _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     return ret
 
 
-def _convert_to_group_ids(groups, vpc_id, region, key, keyid, profile):
-    '''
-    given a list of security groups _convert_to_group_ids will convert all
-    list items in the given list to security group ids
-    '''
-    log.debug('security group contents {0} pre-conversion'.format(groups))
-    group_ids = []
-    for group in groups:
-        if re.match('sg-.*', group):
-            log.debug('group {0} is a group id. get_group_id not called.'
-                      .format(group))
-            group_ids.append(group)
-        else:
-            log.debug('calling boto_secgroup.get_group_id for'
-                      ' group name {0}'.format(group))
-            group_id = __salt__['boto_secgroup.get_group_id'](group, vpc_id, region, key, keyid, profile)
-            log.debug('group name {0} has group id {1}'.format(group, group_id))
-            group_ids.append(str(group_id))
-    log.debug('security group contents {0} post-conversion'.format(group_ids))
-    return group_ids
+def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
+    '''helper method for present.  ensure that scaling_policies are set'''
+    pillar_scaling_policies = __salt__['config.option'](scaling_policies_from_pillar, {})
+    if not scaling_policies and len(pillar_scaling_policies) > 0:
+        scaling_policies = pillar_scaling_policies
+    return scaling_policies
+
+
+def _determine_notification_info(
+    notification_arn,
+    notification_arn_from_pillar,
+    notification_types,
+    notification_types_from_pillar):
+    '''helper method for present.  ensure that notification_configs are set'''
+    pillar_arn_list = __salt__['config.option'](notification_arn_from_pillar, {})
+    pillar_arn = None
+    if len(pillar_arn_list) > 0:
+        pillar_arn = pillar_arn_list[0]
+    pillar_notification_types = __salt__['config.option'](notification_types_from_pillar, {})
+    arn = notification_arn if notification_arn else pillar_arn
+    types = notification_types if notification_types else pillar_notification_types
+    return (arn, types)
+
+
+def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile):
+    '''helper method for present.  ensure that cloudwatch_alarms are set'''
+    # load data from alarms_from_pillar
+    tmp = __salt__['config.option'](alarms_from_pillar, {})
+    # merge with data from alarms
+    if alarms:
+        tmp = dictupdate.update(tmp, alarms)
+    # set alarms, using boto_cloudwatch_alarm.present
+    merged_return_value = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    for _, info in six.iteritems(tmp):
+        # add asg to name and description
+        info['name'] = name + ' ' + info['name']
+        info['attributes']['description'] = name + ' ' + info['attributes']['description']
+        # add dimension attribute
+        info['attributes']['dimensions'] = {'AutoScalingGroupName': [name]}
+        # set alarm
+        kwargs = {
+            'name': info['name'],
+            'attributes': info['attributes'],
+            'region': region,
+            'key': key,
+            'keyid': keyid,
+            'profile': profile,
+        }
+        ret = __salt__['state.single']('boto_cloudwatch_alarm.present', **kwargs)
+        results = next(six.itervalues(ret))
+        if not results['result']:
+            merged_return_value['result'] = False
+        if results.get('changes', {}) != {}:
+            merged_return_value['changes'][info['name']] = results['changes']
+        if 'comment' in results:
+            merged_return_value['comment'] += results['comment']
+    return merged_return_value
 
 
 def _recursive_compare(v1, v2):
-    "return v1 == v2.  compares list, dict, OrderedDict, recursively"
+    '''
+    return v1 == v2.  compares list, dict, OrderedDict, recursively
+    '''
     if isinstance(v1, list):
         if len(v1) != len(v2):
             return False
@@ -417,9 +626,9 @@ def _recursive_compare(v1, v2):
     elif isinstance(v1, dict):
         v1 = dict(v1)
         v2 = dict(v2)
-        if sorted(v1.keys()) != sorted(v2.keys()):
+        if sorted(v1) != sorted(v2):
             return False
-        for k in v1.keys():
+        for k in v1:
             if not _recursive_compare(v1[k], v2[k]):
                 return False
         return True
@@ -456,20 +665,19 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     asg = __salt__['boto_asg.get_config'](name, region, key, keyid, profile)
     if asg is None:
         ret['result'] = False
         ret['comment'] = 'Failed to check autoscale group existence.'
     elif asg:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'Autoscale group set to be deleted.'
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted autoscale group.'

@@ -17,6 +17,8 @@ from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
 
 from salt.utils.serializers import DeserializationError, SerializationError
+import salt.ext.six as six
+from salt.utils.odict import OrderedDict
 
 __all__ = ['deserialize', 'serialize', 'available']
 
@@ -63,7 +65,7 @@ def serialize(obj, **options):
     :param options: options given to lower yaml module.
     """
 
-    options.setdefault('Dumper', BaseDumper)
+    options.setdefault('Dumper', Dumper)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -100,10 +102,10 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 Dumper.add_multi_representer(str, Dumper.represent_str)
-Dumper.add_multi_representer(unicode, Dumper.represent_unicode)
+Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
-Dumper.add_multi_representer(long, Dumper.represent_long)
+Dumper.add_multi_representer(int, Dumper.represent_long)
 Dumper.add_multi_representer(float, Dumper.represent_float)
 Dumper.add_multi_representer(list, Dumper.represent_list)
 Dumper.add_multi_representer(tuple, Dumper.represent_list)
@@ -112,3 +114,4 @@ Dumper.add_multi_representer(set, Dumper.represent_set)
 Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
 Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
+Dumper.add_multi_representer(OrderedDict, Dumper.represent_dict)

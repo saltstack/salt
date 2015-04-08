@@ -2,6 +2,7 @@
 '''
 Module for running arbitrary tests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
@@ -15,8 +16,21 @@ import random
 import salt
 import salt.version
 import salt.loader
+import salt.ext.six as six
+from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'true_': 'true',
+    'false_': 'false'
+}
+
+
+@depends('non_existantmodulename')
+def missing_func():
+    return 'foo'
 
 
 def echo(text):
@@ -91,12 +105,12 @@ def version():
 
         salt '*' test.version
     '''
-    return salt.__version__
+    return salt.version.__version__
 
 
 def versions_information():
     '''
-    Returns versions of components used by salt as a dict
+    Report the versions of dependent and system software
 
     CLI Example:
 
@@ -104,7 +118,7 @@ def versions_information():
 
         salt '*' test.versions_information
     '''
-    return dict(salt.version.versions_information())
+    return salt.version.versions_information()
 
 
 def versions_report():
@@ -118,6 +132,9 @@ def versions_report():
         salt '*' test.versions_report
     '''
     return '\n'.join(salt.version.versions_report())
+
+
+versions = versions_report
 
 
 def conf_test():
@@ -212,7 +229,7 @@ def arg_type(*args, **kwargs):
         ret['args'].append(str(type(argument)))
 
     # all the kwargs
-    for key, val in kwargs.iteritems():
+    for key, val in six.iteritems(kwargs):
         ret['kwargs'][key] = str(type(val))
 
     return ret
@@ -236,8 +253,8 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to the passed number, and the
-    timeit took to compute in seconds. Used for performance tests
+    Return a Fibonacci sequence up to but not including the passed number,
+    and the time it took to compute in seconds. Used for performance tests.
 
     CLI Example:
 
@@ -360,8 +377,7 @@ def not_loaded():
     '''
     prov = providers()
     ret = set()
-    loader = salt.loader._create_loader(__opts__, 'modules', 'module')
-    for mod_dir in loader.module_dirs:
+    for mod_dir in salt.loader._module_dirs(__opts__, 'modules', 'module'):
         if not os.path.isabs(mod_dir):
             continue
         if not os.path.isdir(mod_dir):
@@ -393,38 +409,6 @@ def opts_pkg():
     return ret
 
 
-def tty(device, echo=None):
-    '''
-    Echo a string to a specific tty
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' test.tty tty0 'This is a test'
-        salt '*' test.tty pts3 'This is a test'
-    '''
-    if device.startswith('tty'):
-        teletype = '/dev/{0}'.format(device)
-    elif device.startswith('pts'):
-        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
-    else:
-        return {'Error': 'The specified device is not a valid TTY'}
-
-    cmd = 'echo {0} > {1}'.format(echo, teletype)
-    ret = __salt__['cmd.run_all'](cmd)
-    if ret['retcode'] == 0:
-        return {
-            'Success': 'Message was successfully echoed to {0}'.format(teletype)
-        }
-    else:
-        return {
-            'Error': 'Echoing to {0} returned error code {1}'.format(
-                teletype,
-                ret['retcode'])
-        }
-
-
 def rand_str(size=9999999999):
     '''
     Return a random string
@@ -436,7 +420,7 @@ def rand_str(size=9999999999):
         salt '*' test.rand_str
     '''
     hasher = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    return hasher(str(random.randint(0, size))).hexdigest()
+    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
 
 
 def exception(message='Test Exception'):
@@ -465,3 +449,80 @@ def stack():
         salt '*' test.stack
     '''
     return ''.join(traceback.format_stack())
+
+
+def tty(*args, **kwargs):  # pylint: disable=W0613
+    '''
+    Deprecated! Moved to cmdmod.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.tty tty0 'This is a test'
+        salt '*' test.tty pts3 'This is a test'
+    '''
+    return 'ERROR: This function has been moved to cmd.tty'
+
+
+def try_(module, return_try_exception=False, **kwargs):
+    '''
+    Try to run a module command. On an exception return None.
+    If `return_try_exception` is set True return the exception.
+    This can be helpfull in templates where running a module might fail as expected.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        <pre>
+        {% for i in range(0,230) %}
+            {{ salt['test.try'](module='ipmi.get_users', bmc_host='172.2.2.'+i)|yaml(False) }}
+        {% endfor %}
+        </pre>
+    '''
+    try:
+        return __salt__[module](**kwargs)
+    except Exception as e:
+        if return_try_exception:
+            return e
+    return None
+
+
+def assertion(assertion):
+    '''
+    Assert the given argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.assert False
+    '''
+    assert assertion
+
+
+def true_():
+    '''
+    Always return True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.true
+    '''
+    return True
+
+
+def false_():
+    '''
+    Always return False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.false
+    '''
+    return False

@@ -3,6 +3,7 @@
 Support for Gentoolkit
 
 '''
+from __future__ import absolute_import
 
 import os
 
@@ -46,7 +47,7 @@ def revdep_rebuild(lib=None):
     cmd = 'revdep-rebuild -i --quiet --no-progress'
     if lib is not None:
         cmd += ' --library={0}'.format(lib)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def _pretty_size(size):
@@ -286,6 +287,6 @@ def glsa_check_list(glsa_list):
         cmd += glsa_list
 
     ret = dict()
-    out = __salt__['cmd.run'](cmd).split('\n')
+    out = __salt__['cmd.run'](cmd, python_shell=False).split('\n')
     ret = _glsa_list_process_output(out)
     return ret

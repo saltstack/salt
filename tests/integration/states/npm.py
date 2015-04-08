@@ -4,6 +4,8 @@
     tests.integration.states.npm
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -27,6 +29,15 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('npm.installed', name='pm2')
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='pm2')
+        self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    def test_npm_installed_pkgs(self):
+        '''
+        Basic test to determine if NPM module successfully installs multiple
+        packages.
+        '''
+        ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
         self.assertSaltTrueReturn(ret)
 
 

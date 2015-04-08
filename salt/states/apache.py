@@ -39,9 +39,13 @@ the above word between angle brackets (<>).
 '''
 
 from __future__ import with_statement, print_function
+from __future__ import absolute_import
 
 # Import python libs
 import os.path
+
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -57,7 +61,7 @@ def configfile(name, config):
     configs = __salt__['apache.config'](name, config, edit=False)
     current_configs = ''
     if os.path.exists(name):
-        with open(name) as config_file:
+        with salt.utils.fopen(name) as config_file:
             current_configs = config_file.read()
 
     if configs == current_configs.strip():
@@ -66,11 +70,15 @@ def configfile(name, config):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Configuration will update.'
+        ret['changes'] = {
+            'old': current_configs,
+            'new': configs
+        }
         ret['result'] = None
         return ret
 
     try:
-        with open(name, 'w') as config_file:
+        with salt.utils.fopen(name, 'w') as config_file:
             print(configs, file=config_file)
         ret['changes'] = {
             'old': current_configs,

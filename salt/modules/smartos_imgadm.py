@@ -2,6 +2,7 @@
 '''
 Module for running imgadm command on SmartOS
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -144,7 +145,7 @@ def show(uuid=None):
         return ret
     imgadm = _check_imgadm()
     cmd = '{0} show {1}'.format(imgadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
@@ -169,7 +170,7 @@ def get(uuid=None):
         return ret
     imgadm = _check_imgadm()
     cmd = '{0} get {1}'.format(imgadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
@@ -194,7 +195,7 @@ def import_image(uuid=None):
         return ret
     imgadm = _check_imgadm()
     cmd = '{0} import {1}'.format(imgadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
@@ -219,7 +220,7 @@ def delete(uuid=None):
         return ret
     imgadm = _check_imgadm()
     cmd = '{0} delete {1}'.format(imgadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
     retcode = res['retcode']
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)

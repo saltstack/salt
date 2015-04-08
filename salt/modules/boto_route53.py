@@ -33,6 +33,7 @@ Connection module for Amazon Route53
 
 :depends: boto
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import logging
@@ -49,7 +50,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -110,7 +111,8 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
 
 
 def add_record(name, value, zone, record_type, identifier=None, ttl=None,
-               region=None, key=None, keyid=None, profile=None):
+               region=None, key=None, keyid=None, profile=None,
+               wait_for_sync=True):
     '''
     Add a record to a zone.
 
@@ -129,13 +131,13 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
     _type = record_type.upper()
     if _type == 'A':
         status = _zone.add_a(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     elif _type == 'CNAME':
         status = _zone.add_cname(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     elif _type == 'MX':
         status = _zone.add_mx(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     else:
         msg = '{0} is an unsupported resource type.'.format(_type)
         log.error(msg)
@@ -144,7 +146,8 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
-                  region=None, key=None, keyid=None, profile=None):
+                  region=None, key=None, keyid=None, profile=None,
+                  wait_for_sync=True):
     '''
     Modify a record in a zone.
 
@@ -163,13 +166,13 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
     _type = record_type.upper()
     if _type == 'A':
         status = _zone.update_a(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     elif _type == 'CNAME':
         status = _zone.update_cname(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     elif _type == 'MX':
         status = _zone.update_mx(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     else:
         msg = '{0} is an unsupported resource type.'.format(_type)
         log.error(msg)
@@ -178,7 +181,8 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
 
 
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
-                  region=None, key=None, keyid=None, profile=None):
+                  region=None, key=None, keyid=None, profile=None,
+                  wait_for_sync=True):
     '''
     Modify a record in a zone.
 
@@ -197,13 +201,13 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
     _type = record_type.upper()
     if _type == 'A':
         status = _zone.delete_a(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     elif _type == 'CNAME':
         status = _zone.delete_cname(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     elif _type == 'MX':
         status = _zone.delete_mx(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
     else:
         msg = '{0} is an unsupported resource type.'.format(_type)
         log.error(msg)
@@ -211,8 +215,10 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
     return False
 
 
-def _wait_for_sync(status, conn):
-    retry = 10
+def _wait_for_sync(status, conn, wait_for_sync):
+    if not wait_for_sync:
+        return True
+    retry = 30
     i = 0
     while i < retry:
         log.info('Getting route53 status (attempt {0})'.format(i + 1))

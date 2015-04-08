@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 
+# Import Python Libs
+from __future__ import absolute_import
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import (
     ensure_in_syspath,
     requires_network
@@ -9,6 +14,16 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+
+GIT_PYTHON = '0.3.2'
+HAS_GIT_PYTHON = False
+
+try:
+    import git
+    if LooseVersion(git.__version__) >= LooseVersion(GIT_PYTHON):
+        HAS_GIT_PYTHON = True
+except ImportError:
+    pass
 
 
 class PillarModuleTest(integration.ModuleCase):
@@ -29,6 +44,8 @@ class PillarModuleTest(integration.ModuleCase):
             self.assertEqual(pillar['class'], 'other')
 
     @requires_network()
+    @skipIf(HAS_GIT_PYTHON is False,
+            'GitPython must be installed and >= version {0}'.format(GIT_PYTHON))
     def test_two_ext_pillar_sources_override(self):
         '''
         https://github.com/saltstack/salt/issues/12647
@@ -40,6 +57,8 @@ class PillarModuleTest(integration.ModuleCase):
         )
 
     @requires_network()
+    @skipIf(HAS_GIT_PYTHON is False,
+            'GitPython must be installed and >= version {0}'.format(GIT_PYTHON))
     def test_two_ext_pillar_sources(self):
         '''
         https://github.com/saltstack/salt/issues/12647
@@ -94,6 +113,20 @@ class PillarModuleTest(integration.ModuleCase):
         repo = git.Repo(rp_location)
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
+
+    def test_ext_pillar_env_mapping(self):
+        import os
+        from salt.pillar import git_pillar
+        import git
+
+        repo_url = 'https://github.com/saltstack/pillar1.git'
+        pillar = self.run_function('pillar.data')
+
+        for branch, env in [('dev', 'testing')]:
+            repo = git_pillar.GitPillar(branch, repo_url, self.master_opts)
+
+            self.assertIn(repo.working_dir,
+                    pillar['test_ext_pillar_opts']['pillar_roots'][env])
 
 if __name__ == '__main__':
     from integration import run_tests

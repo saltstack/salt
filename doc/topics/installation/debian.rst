@@ -2,8 +2,8 @@
 Debian Installation
 ===================
 
-Currently the latest packages for Debian Old Stable, Stable and
-Unstable (Squeeze, Wheezy and Sid) are published in our
+Currently the latest packages for Debian Old Stable, Stable, and
+Unstable (Squeeze, Wheezy, and Sid) are published in our
 (saltstack.com) Debian repository.
 
 Configure Apt
@@ -65,9 +65,9 @@ You will need to import the key used for signing.
 
     wget -q -O- "http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key" | apt-key add -
 
-.. note:: 
- 
-    You can optionally verify the key integrity with ``sha512sum`` using the 
+.. note::
+
+    You can optionally verify the key integrity with ``sha512sum`` using the
     public key signature shown here. E.g:
 
     .. code-block:: bash
@@ -85,13 +85,13 @@ Update the package database
 Install packages
 ----------------
 
-Install the Salt master, minion, or syndic from the repository with the apt-get 
-command. These examples each install one daemon, but more than one package name 
+Install the Salt master, minion, or syndic from the repository with the apt-get
+command. These examples each install one daemon, but more than one package name
 may be given at a time:
 
 .. code-block:: bash
 
-    apt-get install salt-master 
+    apt-get install salt-master
 
 .. code-block:: bash
 

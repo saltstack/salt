@@ -37,6 +37,7 @@ Inspired by the S3 and Nova modules
 
         salt '*' swift.get mycontainer myfile /tmp/file profile=openstack1
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -182,7 +183,7 @@ def put(cont, path=None, local_file=None, profile=None):
     '''
     swift_conn = _auth(profile)
 
-    if path is not None:
+    if path is None:
         return swift_conn.put_container(cont)
     elif local_file is not None:
         return swift_conn.put_object(cont, path, local_file)

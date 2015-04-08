@@ -7,6 +7,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import pwd
 import shutil
@@ -67,9 +68,9 @@ class PipModuleTest(integration.ModuleCase):
         # Create a requirements file that depends on another one.
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
-        with open(req1_filename, 'wb') as f:
+        with salt.utils.fopen(req1_filename, 'wb') as f:
             f.write('-r requirements2.txt')
-        with open(req2_filename, 'wb') as f:
+        with salt.utils.fopen(req2_filename, 'wb') as f:
             f.write('pep8')
 
         this_user = pwd.getpwuid(os.getuid())[0]

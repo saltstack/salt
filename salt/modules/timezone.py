@@ -2,10 +2,10 @@
 '''
 Module for managing timezone on POSIX-like systems.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
-import hashlib
 import logging
 import re
 
@@ -52,16 +52,15 @@ def get_zone():
         cmd = 'grep ZONE /etc/sysconfig/clock | grep -vE "^#"'
     elif 'Debian' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'r') as ofh:
-            return ofh.read()
+            return ofh.read().strip()
     elif 'Gentoo' in __grains__['os_family']:
         with salt.utils.fopen('/etc/timezone', 'r') as ofh:
-            return ofh.read()
-    elif 'FreeBSD' in __grains__['os_family']:
-        return ('FreeBSD does not store a human-readable timezone. Please'
-                'consider using timezone.get_zonecode or timezone.zonecompare')
+            return ofh.read().strip()
+    elif __grains__['os_family'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        return os.readlink('/etc/localtime').lstrip('/usr/share/zoneinfo/')
     elif 'Solaris' in __grains__['os_family']:
         cmd = 'grep "TZ=" /etc/TIMEZONE'
-    out = __salt__['cmd.run'](cmd).split('=')
+    out = __salt__['cmd.run'](cmd, python_shell=True).split('=')
     ret = out[1].replace('"', '')
     return ret
 
@@ -164,17 +163,15 @@ def zone_compare(timezone):
     if not os.path.exists(tzfile):
         return 'Error: {0} does not exist.'.format(tzfile)
 
-    hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
+    hash_type = __opts__.get('hash_type', 'md5')
 
     try:
-        with salt.utils.fopen(zonepath, 'r') as fp_:
-            usrzone = hash_type(fp_.read()).hexdigest()
+        usrzone = salt.utils.get_hash(zonepath, hash_type)
     except IOError as exc:
         raise SaltInvocationError('Invalid timezone {0!r}'.format(timezone))
 
     try:
-        with salt.utils.fopen(tzfile, 'r') as fp_:
-            etczone = hash_type(fp_.read()).hexdigest()
+        etczone = salt.utils.get_hash(tzfile, hash_type)
     except IOError as exc:
         raise CommandExecutionError(
             'Problem reading timezone file {0}: {1}'
@@ -220,7 +217,8 @@ def get_hwclock():
     elif 'Debian' in __grains__['os_family']:
         #Original way to look up hwclock on Debian-based systems
         cmd = 'grep "UTC=" /etc/default/rcS | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd, ignore_retcode=True).split('=')
+        out = __salt__['cmd.run'](
+                cmd, ignore_retcode=True, python_shell=True).split('=')
         if len(out) > 1:
             if out[1] == 'yes':
                 return 'UTC'
@@ -232,7 +230,7 @@ def get_hwclock():
             return __salt__['cmd.run'](cmd)
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'grep "^clock=" /etc/conf.d/hwclock | grep -vE "^#"'
-        out = __salt__['cmd.run'](cmd).split('=')
+        out = __salt__['cmd.run'](cmd, python_shell=True).split('=')
         return out[1].replace('"', '')
     elif 'Solaris' in __grains__['os_family']:
         if os.path.isfile('/etc/rtc_config'):

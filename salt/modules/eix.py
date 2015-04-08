@@ -2,6 +2,7 @@
 '''
 Support for Eix
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils

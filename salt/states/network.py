@@ -38,6 +38,44 @@ all interfaces are ignored unless specified.
           - 8.8.8.8
           - 8.8.4.4
 
+    eth0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - mtu: 9000
+
+    bond0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - mtu: 9000
+
+    eth1.0-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - vlan: True
+        - mtu: 9000
+
+    bond0.1-range0:
+      network.managed:
+        - type: eth
+        - ipaddr_start: 192.168.1.1
+        - ipaddr_end: 192.168.1.10
+        - clonenum_start: 10
+        - vlan: True
+        - mtu: 9000
+
+    .. note::
+        add support of ranged interfaces (vlan, bond and eth) for redhat system,
+        Important:type must be eth.
+
     routes:
       network.routes:
         - name: eth0
@@ -53,11 +91,13 @@ all interfaces are ignored unless specified.
 
     eth2:
       network.managed:
+        - enabled: True
         - type: slave
         - master: bond0
 
     eth3:
       network.managed:
+        - enabled: True
         - type: slave
         - master: bond0
 
@@ -73,18 +113,17 @@ all interfaces are ignored unless specified.
         - type: bond
         - ipaddr: 10.1.0.1
         - netmask: 255.255.255.0
+        - mode: active-backup
+        - proto: static
         - dns:
           - 8.8.8.8
           - 8.8.4.4
         - ipv6:
         - enabled: False
-        - use_in:
-          - network: eth2
-          - network: eth3
+        - slaves: eth2 eth3
         - require:
           - network: eth2
           - network: eth3
-        - mode: 802.3ad
         - miimon: 100
         - arp_interval: 250
         - downdelay: 200
@@ -148,18 +187,41 @@ all interfaces are ignored unless specified.
         - proto: dhcp
         - bridge: br0
         - delay: 0
+        - ports: eth4
         - bypassfirewall: True
         - use:
           - network: eth4
         - require:
           - network: eth4
+
+    system:
+        network.system:
+          - enabled: True
+          - hostname: server1.example.com
+          - gateway: 192.168.0.1
+          - gatewaydev: eth0
+          - nozeroconf: True
+          - nisdomain: example.com
+          - require_reboot: True
+          - apply_hostname: True
+
+    .. note::
+        Apply changes to hostname immediately.
+
+    .. versionadded:: 2015.2.0
+
+.. note::
+
+    When managing bridged interfaces on a Debian or Ubuntu based system, the
+    ports argument is required.  Red Hat systems will ignore the argument.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import difflib
 import salt.utils
 import salt.utils.network
-from salt.loader import _create_loader
+import salt.loader
 
 # Set up logging
 import logging
@@ -197,7 +259,6 @@ def managed(name, type, enabled=True, **kwargs):
     # to enhance the user experience. This does not look like
     # it will cause a problem. Just giving a heads up in case
     # it does create a problem.
-
     ret = {
         'name': name,
         'changes': {},
@@ -206,6 +267,9 @@ def managed(name, type, enabled=True, **kwargs):
     }
     if 'test' not in kwargs:
         kwargs['test'] = __opts__.get('test', False)
+
+    # set ranged status
+    apply_ranged_setting = False
 
     # Build interface
     try:
@@ -219,24 +283,30 @@ def managed(name, type, enabled=True, **kwargs):
                 ret['comment'] = 'Interface {0} is set to be ' \
                                  'added.'.format(name)
             elif old != new:
-                diff = difflib.unified_diff(old, new)
+                diff = difflib.unified_diff(old, new, lineterm='')
                 ret['result'] = None
                 ret['comment'] = 'Interface {0} is set to be ' \
-                                 'updated.'.format(name)
-                ret['changes']['interface'] = ''.join(diff)
+                                 'updated:\n{1}'.format(name, '\n'.join(diff))
         else:
             if not old and new:
                 ret['comment'] = 'Interface {0} ' \
                                  'added.'.format(name)
                 ret['changes']['interface'] = 'Added network interface.'
+                apply_ranged_setting = True
             elif old != new:
-                diff = difflib.unified_diff(old, new)
+                diff = difflib.unified_diff(old, new, lineterm='')
                 ret['comment'] = 'Interface {0} ' \
                                  'updated.'.format(name)
-                ret['changes']['interface'] = ''.join(diff)
+                ret['changes']['interface'] = '\n'.join(diff)
+                apply_ranged_setting = True
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = error.message
+        ret['comment'] = str(error)
+        return ret
+
+    # Debian based system can have a type of source
+    # in the interfaces file, we don't ifup or ifdown it
+    if type == 'source':
         return ret
 
     # Setup up bond modprobe script if required
@@ -245,41 +315,64 @@ def managed(name, type, enabled=True, **kwargs):
             old = __salt__['ip.get_bond'](name)
             new = __salt__['ip.build_bond'](name, **kwargs)
             if kwargs['test']:
-                if old == new:
-                    pass
                 if not old and new:
                     ret['result'] = None
                     ret['comment'] = 'Bond interface {0} is set to be ' \
                                      'added.'.format(name)
                 elif old != new:
-                    diff = difflib.unified_diff(old, new)
+                    diff = difflib.unified_diff(old, new, lineterm='')
                     ret['result'] = None
                     ret['comment'] = 'Bond interface {0} is set to be ' \
-                                     'updated.'.format(name)
-                    ret['changes']['bond'] = ''.join(diff)
+                                     'updated:\n{1}'.format(name, '\n'.join(diff))
             else:
                 if not old and new:
                     ret['comment'] = 'Bond interface {0} ' \
                                      'added.'.format(name)
                     ret['changes']['bond'] = 'Added bond {0}.'.format(name)
+                    apply_ranged_setting = True
                 elif old != new:
-                    diff = difflib.unified_diff(old, new)
+                    diff = difflib.unified_diff(old, new, lineterm='')
                     ret['comment'] = 'Bond interface {0} ' \
                                      'updated.'.format(name)
-                    ret['changes']['bond'] = ''.join(diff)
+                    ret['changes']['bond'] = '\n'.join(diff)
+                    apply_ranged_setting = True
         except AttributeError as error:
             #TODO Add a way of reversing the interface changes.
             ret['result'] = False
-            ret['comment'] = error.message
+            ret['comment'] = str(error)
             return ret
 
     if kwargs['test']:
         return ret
 
+    # For Redhat/Centos ranged network
+    if "range" in name:
+        if apply_ranged_setting:
+            try:
+                ret['result'] = __salt__['service.restart']('network')
+                ret['comment'] = "network restarted for change of ranged interfaces"
+                return ret
+            except Exception as error:
+                ret['result'] = False
+                ret['comment'] = str(error)
+                return ret
+        ret['result'] = True
+        ret['comment'] = "no change, passing it"
+        return ret
+
     # Bring up/shutdown interface
     try:
         # Get Interface current status
-        interface_status = salt.utils.network.interfaces()[name].get('up')
+        interfaces = salt.utils.network.interfaces()
+        interface_status = False
+        if name in interfaces:
+            interface_status = interfaces[name].get('up')
+        else:
+            for iface in interfaces:
+                if 'secondary' in interfaces[iface]:
+                    for second in interfaces[iface]['secondary']:
+                        if second.get('label', '') == 'name':
+                            interface_status = True
         if enabled:
             if interface_status:
                 if ret['changes']:
@@ -297,11 +390,11 @@ def managed(name, type, enabled=True, **kwargs):
                 ret['changes']['status'] = 'Interface {0} down'.format(name)
     except Exception as error:
         ret['result'] = False
-        ret['comment'] = error.message
+        ret['comment'] = str(error)
         return ret
 
-    load = _create_loader(__opts__, 'grains', 'grain', ext_dirs=False)
-    grains_info = load.gen_grains()
+    # TODO: create saltutil.refresh_grains that fires events to the minion daemon
+    grains_info = salt.loader.grains(__opts__, True)
     __grains__.update(grains_info)
     __salt__['saltutil.refresh_modules']()
     return ret
@@ -339,23 +432,23 @@ def routes(name, **kwargs):
                 ret['comment'] = 'Interface {0} routes are set to be added.'.format(name)
                 return ret
             elif old != new:
-                diff = difflib.unified_diff(old, new)
+                diff = difflib.unified_diff(old, new, lineterm='')
                 ret['result'] = None
-                ret['comment'] = 'Interface {0} routes are set to be updated.'.format(name)
-                ret['changes']['network_routes'] = ''.join(diff)
+                ret['comment'] = 'Interface {0} routes are set to be ' \
+                                 'updated:\n{1}'.format(name, '\n'.join(diff))
                 return ret
         if not old and new:
             apply_routes = True
             ret['comment'] = 'Interface {0} routes added.'.format(name)
             ret['changes']['network_routes'] = 'Added interface {0} routes.'.format(name)
         elif old != new:
-            diff = difflib.unified_diff(old, new)
+            diff = difflib.unified_diff(old, new, lineterm='')
             apply_routes = True
             ret['comment'] = 'Interface {0} routes updated.'.format(name)
-            ret['changes']['network_routes'] = ''.join(diff)
+            ret['changes']['network_routes'] = '\n'.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = error.message
+        ret['comment'] = str(error)
         return ret
 
     # Apply interface routes
@@ -364,7 +457,7 @@ def routes(name, **kwargs):
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
-            ret['comment'] = error.message
+            ret['comment'] = str(error)
             return ret
 
     return ret
@@ -401,21 +494,21 @@ def system(name, **kwargs):
                 ret['comment'] = 'Global network settings are set to be added.'
                 return ret
             elif old != new:
-                diff = difflib.unified_diff(old, new)
+                diff = difflib.unified_diff(old, new, lineterm='')
                 ret['result'] = None
-                ret['comment'] = 'Global network settings are set to be updated.'
-                ret['changes']['network_settings'] = ''.join(diff)
+                ret['comment'] = 'Global network settings are set to be ' \
+                                 'updated:\n{0}'.format('\n'.join(diff))
                 return ret
         if not old and new:
             apply_net_settings = True
             ret['changes']['network_settings'] = 'Added global network settings.'
         elif old != new:
-            diff = difflib.unified_diff(old, new)
+            diff = difflib.unified_diff(old, new, lineterm='')
             apply_net_settings = True
-            ret['changes']['network_settings'] = ''.join(diff)
+            ret['changes']['network_settings'] = '\n'.join(diff)
     except AttributeError as error:
         ret['result'] = False
-        ret['comment'] = error.message
+        ret['comment'] = str(error)
         return ret
 
     # Apply global network settings
@@ -424,7 +517,7 @@ def system(name, **kwargs):
             __salt__['ip.apply_network_settings'](**kwargs)
         except AttributeError as error:
             ret['result'] = False
-            ret['comment'] = error.message
+            ret['comment'] = str(error)
             return ret
 
     return ret

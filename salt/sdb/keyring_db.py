@@ -44,6 +44,7 @@ https://pypi.python.org/pypi/keyring
 
 .. versionadded:: 2014.1.4
 '''
+from __future__ import absolute_import
 
 # import python libs
 import logging

@@ -11,7 +11,7 @@ def __virtual__():
     return 'win_dns_client' if 'win_dns_client.add_dns' in __salt__ else False
 
 
-def dns_exists(name, servers=None, interface='Local Area Connection'):
+def dns_exists(name, servers=None, interface='Local Area Connection', replace=False):
     '''
     Configure the DNS server list in the specified interface
 
@@ -21,14 +21,21 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
 
         config_dns_servers:
           win_dns_client.dns_exists:
+            - replace: True #remove any servers not in the "servers" list, default is False
             - servers:
               - 8.8.8.8
               - 8.8.8.9
     '''
     ret = {'name': name,
            'result': True,
-           'changes': {},
+           'changes': {'Servers Reordered': [], 'Servers Added': [], 'Servers Removed': []},
            'comment': ''}
+
+    if __opts__['test']:
+        ret['comment'] = 'DNS Servers are set to be updated'
+        ret['result'] = None
+    else:
+        ret['comment'] = 'DNS Servers have been updated'
 
     # Validate syntax
     if not isinstance(servers, list):
@@ -40,26 +47,47 @@ def dns_exists(name, servers=None, interface='Local Area Connection'):
     configured_list = __salt__['win_dns_client.get_dns_servers'](interface)
     if configured_list == servers:
         ret['comment'] = '{0} are already configured'.format(servers)
-        return ret
-    else:
-        ret['changes'] = {'configure servers': servers}
-
-    if __opts__['test']:
-        ret['result'] = None
+        ret['changes'] = {}
+        ret['result'] = True
         return ret
 
     # add the DNS servers
     for i, server in enumerate(servers):
-        if not __salt__['win_dns_client.add_dns'](server, interface, i + 1):
-            ret['comment'] = (
-                    'Failed to add {0} as DNS server number {1}'
-                    ).format(server, i + 1)
-            ret['result'] = False
-            if i > 0:
-                ret['changes'] = {'configure servers': servers[:i]}
+        if __opts__['test']:
+            if server in configured_list:
+                if configured_list[i] != server:
+                    ret['changes']['Servers Reordered'].append(server)
             else:
+                ret['changes']['Servers Added'].append(server)
+        else:
+            if not __salt__['win_dns_client.add_dns'](server, interface, i + 1):
+                ret['comment'] = (
+                        'Failed to add {0} as DNS server number {1}'
+                        ).format(server, i + 1)
+                ret['result'] = False
                 ret['changes'] = {}
-            return ret
+                return ret
+            else:
+                if server in configured_list:
+                    if configured_list[i] != server:
+                        ret['changes']['Servers Reordered'].append(server)
+                else:
+                    ret['changes']['Servers Added'].append(server)
+
+    # remove dns servers that weren't in our list
+    if replace:
+        for i, server in enumerate(configured_list):
+            if server not in servers:
+                if __opts__['test']:
+                    ret['changes']['Servers Removed'].append(server)
+                else:
+                    if not __salt__['win_dns_client.rm_dns'](server, interface):
+                        ret['comment'] = (
+                                'Failed to remove {0} from DNS server list').format(server)
+                        ret['result'] = False
+                        return ret
+                    else:
+                        ret['changes']['Servers Removed'].append(server)
 
     return ret
 

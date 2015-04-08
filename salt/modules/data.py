@@ -3,6 +3,7 @@
 Manage a local persistent data structure that can hold any arbitrary data
 specific to the minion
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -146,4 +147,5 @@ def cas(key, value, old_value):
         return False
 
     store[key] = value
+    dump(store)
     return True

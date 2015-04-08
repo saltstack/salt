@@ -3,7 +3,10 @@
 Syslog-ng usage
 ===============
 
-The syslog\_ng state modul is to generate syslog-ng
+Overview
+--------
+
+Syslog\_ng state module is for generating syslog-ng
 configurations. You can do the following things:
 
 -  generate syslog-ng configuration from YAML,
@@ -16,130 +19,199 @@ configuration, get the version and other information about syslog-ng.
 Configuration
 -------------
 
-The following configuration is an example, how a complete syslog-ng
-state configuration looks like:
+Users can create syslog-ng configuration statements with the
+:py:func:`syslog_ng.config <salt.states.syslog_ng.config>` function. It requires
+a `name` and a `config` parameter. The `name` parameter determines the name of
+the generated statement and the `config` parameter holds a parsed YAML structure.
+
+A statement can be declared in the following forms (both are equivalent):
+
+.. code-block:: yaml
+
+  source.s_localhost:
+    syslog_ng.config:
+      - config:
+          - tcp:
+            - ip: "127.0.0.1"
+            - port: 1233
+
+.. code-block:: yaml
+
+  s_localhost:
+    syslog_ng.config:
+      - config:
+          source:
+            - tcp:
+              - ip: "127.0.0.1"
+              - port: 1233
+
+The first one is called short form, because it needs less typing. Users can use lists
+and dictionaries to specify their configuration. The format is quite self describing and
+there are more examples [at the end](#examples) of this document.
+
+Quotation
+---------
+
+The quotation can be tricky sometimes but here are some rules to follow:
+ * when a string meant to be ``"string"`` in the generated configuration, it should be like ``'"string"'`` in the YAML document
+ * similarly, users should write ``"'string'"`` to get ``'string'`` in the generated configuration
+
+Full example
+------------
+
+The following configuration is an example, how a complete syslog-ng configuration looks like:
 
 .. code-block:: yaml
 
     # Set the location of the configuration file
-    "/home/tibi/install/syslog-ng/etc/syslog-ng.conf":
-      syslog_ng.set_config_file
+    set_location:
+      module.run:
+        - name: syslog_ng.set_config_file
+        - m_name: "/home/tibi/install/syslog-ng/etc/syslog-ng.conf"
 
-    # The syslog-ng and syslog-ng-ctl binaries are here. You needn't use 
+    # The syslog-ng and syslog-ng-ctl binaries are here. You needn't use
     # this method if these binaries can be found in a directory in your PATH.
-    "/home/tibi/install/syslog-ng/sbin":
-      syslog_ng.set_binary_path
+    set_bin_path:
+      module.run:
+        - name: syslog_ng.set_binary_path
+        - m_name: "/home/tibi/install/syslog-ng/sbin"
 
     # Writes the first lines into the config file, also erases its previous
     # content
-    "3.6":
-      syslog_ng.write_version
+    write_version:
+      module.run:
+        - name: syslog_ng.write_version
+        - m_name: "3.6"
+
+    # There is a shorter form to set the above variables
+    set_variables:
+      module.run:
+        - name: syslog_ng.set_parameters
+        - version: "3.6"
+        - binary_path: "/home/tibi/install/syslog-ng/sbin"
+        - config_file: "/home/tibi/install/syslog-ng/etc/syslog-ng.conf"
+
 
     # Some global options
-    global_options:
+    options.global_options:
       syslog_ng.config:
         - config:
-            options:
-              - time_reap: 30
-              - mark_freq: 10
-              - keep_hostname: "yes"
+            - time_reap: 30
+            - mark_freq: 10
+            - keep_hostname: "yes"
 
-    s_localhost:
+    source.s_localhost:
       syslog_ng.config:
         - config:
-            source:
-              - tcp:
-                - ip: "127.0.0.1"
-                - port: 1233
+            - tcp:
+              - ip: "127.0.0.1"
+              - port: 1233
 
-    d_log_server:
+    destination.d_log_server:
       syslog_ng.config:
         - config:
-            destination:
-              - tcp:
-                - "127.0.0.1"
-                - port: 1234
+            - tcp:
+              - "127.0.0.1"
+              - port: 1234
 
-    l_log_to_central_server:
+    log.l_log_to_central_server:
       syslog_ng.config:
         - config:
-            log:
-              - source: s_localhost
-              - destination: d_log_server
+            - source: s_localhost
+            - destination: d_log_server
 
     some_comment:
-      syslog_ng.write_config:
+      module.run:
+        - name: syslog_ng.write_config
         - config: |
             # Multi line
             # comment
 
-    auto_start_or_reload:
-      {% set pids = salt["ps.pgrep"]("syslog-ng") %}
-      {% if pids == None or pids|length == 0 %}
-      syslog_ng.started:
-        - user: tibi
-      {% else %}
-      syslog_ng.reloaded
-      {% endif %}
+    # An other mode to use comments or existing configuration snippets
+    config.other_comment_form:
+      syslog_ng.config:
+        - config: |
+            # Multi line
+            # comment
 
-    #auto_stop:
-    #  syslog_ng.stopped
 
-The ``3.6``, ``s_devlog``, ``d_log_server``, etc. are identifiers. The
-second lines in each block are functions and their first parameter is
-their id. The ``- config`` is the second named parameter of the
-``syslog_ng.config`` function. This function can generate the syslog-ng
-configuration from YAML. If the statement (source, destination, parser,
+
+The :py:func:`syslog_ng.reloaded <salt.states.syslog_ng.reloaded>` function can generate syslog-ng configuration from YAML. If the statement (source, destination, parser,
 etc.) has a name, this function uses the id as the name, otherwise (log
 statement) it's purpose is like a mandatory comment.
-
-You can use ``set_binary_path`` to set the directory which contains the
-syslog-ng and syslog-ng-ctl binaries. If this directory is in your PATH,
-you dont't need to use this function.
-
-Under ``auto_start_or_reload`` you can see a Jinja template. If
-syslog-ng isn't running it will start it, otherwise reload it. It uses
-the process name ``syslog-ng`` to determine its running state. I suggest
-that you use ``service`` state if it's available on your system.
 
 After execution this example the syslog\_ng state will generate this
 file:
 
 .. code-block:: text
 
-    #Generated by Salt on 2014-06-19 16:53:11
-    @version: 3.6
+  #Generated by Salt on 2014-08-18 00:11:11
+  @version: 3.6
 
-    options {
-       time_reap(30);
-       mark_freq(10);
-       keep_hostname(yes);
-    };
+  options {
+      time_reap(
+          30
+      );
+      mark_freq(
+          10
+      );
+      keep_hostname(
+          yes
+      );
+  };
 
-    source s_localhost {
-       tcp(
-             ip("127.0.0.1"),
-             port(1233)
-       );
-    };
 
-    destination d_log_server {
-       tcp(
-             "127.0.0.1",
-             port(1234)
-       );
-    };
+  source s_localhost {
+      tcp(
+          ip(
+              127.0.0.1
+          ),
+          port(
+              1233
+          )
+      );
+  };
 
-    log {
-       source(s_localhost);
-       destination(d_log_server);
-    };
 
-    # Multi line
-    # comment
+  destination d_log_server {
+      tcp(
+          127.0.0.1,
+          port(
+              1234
+          )
+      );
+  };
+
+
+  log {
+      source(
+          s_localhost
+      );
+      destination(
+          d_log_server
+      );
+  };
+
+
+  # Multi line
+  # comment
+
+
+  # Multi line
+  # comment
+
 
 Users can include arbitrary texts in the generated configuration with
-using the ``write_config`` function.
+using the ``config`` statement (see the example above).
+
+Syslog_ng module functions
+--------------------------
+
+You can use :py:func:`syslog_ng.set_binary_path <salt.modules.syslog_ng.set_binary_path>`
+to set the directory which contains the
+syslog-ng and syslog-ng-ctl binaries. If this directory is in your PATH,
+you don't need to use this function. There is also a  :py:func:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_config_file>`
+function to set the location of the configuration file.
 
 Examples
 --------
@@ -165,7 +237,7 @@ Simple source
         - config:
             source:
               - file:
-                - file: "/var/log/apache/access.log"
+                - file: ''"/var/log/apache/access.log"''
                 - follow_freq : 1
                 - flags:
                   - no-parse
@@ -180,11 +252,25 @@ OR
         - config:
             source:
                 - file:
-                  - "/var/log/apache/access.log"
+                  - ''"/var/log/apache/access.log"''
                   - follow_freq : 1
                   - flags:
                     - no-parse
                     - validate-utf8
+
+OR
+
+.. code-block:: yaml
+
+    source.s_tail:
+      syslog_ng.config:
+        - config:
+            - file:
+              - ''"/var/log/apache/access.log"''
+              - follow_freq : 1
+              - flags:
+                - no-parse
+                - validate-utf8
 
 Complex source
 ~~~~~~~~~~~~~~
@@ -228,7 +314,7 @@ Filter
         - config:
             filter:
               - match:
-                - "@json:"
+                - ''"@json:"''
 
 Template
 ~~~~~~~~
@@ -251,7 +337,7 @@ Template
         -config:
             template:
               - template:
-                - "$ISODATE $HOST $MSG\n"
+                - '"$ISODATE $HOST $MSG\n"'
               - template_escape:
                 - "no"
 
@@ -274,8 +360,8 @@ Rewrite
         - config:
             rewrite:
               - set:
-                - "${.json.message}"
-                - value : "$MESSAGE"
+                - '"${.json.message}"'
+                - value : '"$MESSAGE"'
 
 Global options
 ~~~~~~~~~~~~~~
@@ -353,7 +439,7 @@ Log
                   - rewrite: r_set_message_to_MESSAGE
                   - destination:
                     - file:
-                      - "/tmp/json-input.log"
+                      - '"/tmp/json-input.log"'
                       - template: t_gsoc2014
                   - flags: final
                 - channel:
@@ -366,4 +452,3 @@ Log
                 - file:
                   - "/tmp/all.log"
                   - template: t_gsoc2014
-

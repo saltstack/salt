@@ -4,12 +4,12 @@ Interact with virtual machine images via libguestfs
 
 :depends:   - libguestfs
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
 import tempfile
 import hashlib
-import random
 
 # Import Salt libs
 import salt.utils
@@ -49,7 +49,7 @@ def mount(location, access='rw'):
         if os.listdir(root):
             # Stuf is in there, don't use it
             hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-            rand = hash_type(str(random.randint(1, 1000000))).hexdigest()
+            rand = hash_type(os.urandom(32)).hexdigest()
             root = os.path.join(
                 tempfile.gettempdir(),
                 'guest',
@@ -58,5 +58,5 @@ def mount(location, access='rw'):
         else:
             break
     cmd = 'guestmount -i -a {0} --{1} {2}'.format(location, access, root)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return root

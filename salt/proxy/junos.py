@@ -5,6 +5,7 @@ Interface with a Junos device via proxy-minion.
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 
 # Import 3rd-party libs
 import jnpr.junos

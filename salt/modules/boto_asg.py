@@ -35,17 +35,20 @@ Connection module for Amazon Autoscale Groups
 '''
 
 # Import Python libs
+from __future__ import absolute_import
 import logging
 import json
-import yaml
 import email.mime.multipart
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
+import yaml
+import salt.ext.six as six
 try:
     import boto
     import boto.ec2
+    import boto.ec2.instance
     import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
     logging.getLogger('boto').setLevel(logging.CRITICAL)
@@ -53,7 +56,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
+# Import Salt libs
 import salt.utils.odict as odict
 
 
@@ -78,8 +81,13 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     if not conn:
         return False
     try:
-        conn.get_all_groups(names=[name])
-        return True
+        _conn = conn.get_all_groups(names=[name])
+        if _conn:
+            return True
+        else:
+            msg = 'The autoscale group does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return False
     except boto.exception.BotoServerError as e:
         log.debug(e)
         return False
@@ -120,6 +128,11 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     _tag['propagate_at_launch'] = tag.propagate_at_launch
                     _tags.append(_tag)
                 ret['tags'] = _tags
+            # Boto accepts a string or list as input for vpc_zone_identifier,
+            # but always returns a comma separated list. We require lists in
+            # states.
+            elif attr == 'vpc_zone_identifier':
+                ret[attr] = getattr(asg, attr).split(',')
             # convert SuspendedProcess objects to names
             elif attr == 'suspended_processes':
                 suspended_processes = getattr(asg, attr)
@@ -150,8 +163,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
-           scaling_policies=None, region=None, key=None, keyid=None,
-           profile=None):
+           scaling_policies=None, region=None,
+           notification_arn=None, notification_types=None,
+           key=None, keyid=None, profile=None):
     '''
     Create an autoscale group.
 
@@ -162,13 +176,13 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if isinstance(availability_zones, string_types):
+    if isinstance(availability_zones, six.string_types):
         availability_zones = json.loads(availability_zones)
-    if isinstance(load_balancers, string_types):
+    if isinstance(load_balancers, six.string_types):
         load_balancers = json.loads(load_balancers)
-    if isinstance(vpc_zone_identifier, string_types):
+    if isinstance(vpc_zone_identifier, six.string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
-    if isinstance(tags, string_types):
+    if isinstance(tags, six.string_types):
         tags = json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
@@ -188,9 +202,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
             _tags.append(_tag)
-    if isinstance(termination_policies, string_types):
+    if isinstance(termination_policies, six.string_types):
         termination_policies = json.loads(termination_policies)
-    if isinstance(suspended_processes, string_types):
+    if isinstance(suspended_processes, six.string_types):
         suspended_processes = json.loads(suspended_processes)
     try:
         _asg = autoscale.AutoScalingGroup(
@@ -208,6 +222,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_auto_scaling_group(_asg)
         # create scaling policies
         _create_scaling_policies(conn, name, scaling_policies)
+        # create notifications
+        if notification_arn and notification_types:
+            conn.put_notification_configuration(_asg, notification_arn, notification_types)
         log.info('Created ASG {0}'.format(name))
         return True
     except boto.exception.BotoServerError as e:
@@ -223,8 +240,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
            scaling_policies=None,
-           region=None, key=None, keyid=None,
-           profile=None):
+           notification_arn=None, notification_types=None,
+           region=None, key=None, keyid=None, profile=None):
     '''
     Update an autoscale group.
 
@@ -235,14 +252,14 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
 
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
-        return False
-    if isinstance(availability_zones, string_types):
+        return False, "failed to connect to AWS"
+    if isinstance(availability_zones, six.string_types):
         availability_zones = json.loads(availability_zones)
-    if isinstance(load_balancers, string_types):
+    if isinstance(load_balancers, six.string_types):
         load_balancers = json.loads(load_balancers)
-    if isinstance(vpc_zone_identifier, string_types):
+    if isinstance(vpc_zone_identifier, six.string_types):
         vpc_zone_identifier = json.loads(vpc_zone_identifier)
-    if isinstance(tags, string_types):
+    if isinstance(tags, six.string_types):
         tags = json.loads(tags)
     # Make a list of tag objects from the dict.
     _tags = []
@@ -252,19 +269,19 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
                 key = tag.get('key')
             except KeyError:
                 log.error('Tag missing key.')
-                return False
+                return False, "Tag {0} missing key".format(tag)
             try:
                 value = tag.get('value')
             except KeyError:
                 log.error('Tag missing value.')
-                return False
+                return False, "Tag {0} missing value".format(tag)
             propagate_at_launch = tag.get('propagate_at_launch', False)
             _tag = autoscale.Tag(key=key, value=value, resource_id=name,
                                  propagate_at_launch=propagate_at_launch)
             _tags.append(_tag)
-    if isinstance(termination_policies, string_types):
+    if isinstance(termination_policies, six.string_types):
         termination_policies = json.loads(termination_policies)
-    if isinstance(suspended_processes, string_types):
+    if isinstance(suspended_processes, six.string_types):
         suspended_processes = json.loads(suspended_processes)
     try:
         _asg = autoscale.AutoScalingGroup(
@@ -279,6 +296,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             placement_group=placement_group, tags=_tags,
             vpc_zone_identifier=vpc_zone_identifier,
             termination_policies=termination_policies)
+        if notification_arn and notification_types:
+            conn.put_notification_configuration(_asg, notification_arn, notification_types)
         _asg.update()
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.
@@ -292,17 +311,17 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         if suspended_processes is not None and len(suspended_processes) > 0:
             _asg.suspend_processes(suspended_processes)
         log.info('Updated ASG {0}'.format(name))
-        #### scaling policies
+        # ### scaling policies
         # delete all policies, then recreate them
         for policy in conn.get_all_policies(as_group=name):
             conn.delete_policy(policy.name, autoscale_group=name)
         _create_scaling_policies(conn, name, scaling_policies)
-        return True
+        return True, ''
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to update ASG {0}'.format(name)
         log.error(msg)
-        return False
+        return False, str(e)
 
 
 def _create_scaling_policies(conn, as_name, scaling_policies):
@@ -353,19 +372,27 @@ def get_cloud_init_mime(cloud_init):
 
         salt myminion boto.get_cloud_init_mime <cloud init>
     '''
-    if isinstance(cloud_init, string_types):
+    if isinstance(cloud_init, six.string_types):
         cloud_init = json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
     if 'scripts' in cloud_init:
-        for script_name, script in cloud_init['scripts'].iteritems():
+        for script_name, script in six.iteritems(cloud_init['scripts']):
             _script = email.mime.text.MIMEText(script, 'x-shellscript')
             _cloud_init.attach(_script)
     if 'cloud-config' in cloud_init:
         cloud_config = cloud_init['cloud-config']
-        _cloud_config = email.mime.text.MIMEText(yaml.dump(cloud_config),
+        _cloud_config = email.mime.text.MIMEText(_safe_dump(cloud_config),
                                                  'cloud-config')
         _cloud_init.attach(_cloud_config)
     return _cloud_init.as_string()
+
+
+def _safe_dump(data):
+    def ordered_dict_presenter(dumper, data):
+        return dumper.represent_dict(six.iteritems(data))
+    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
+                         Dumper=yaml.dumper.SafeDumper)
+    return yaml.safe_dump(data, default_flow_style=False)
 
 
 def launch_configuration_exists(name, region=None, key=None, keyid=None,
@@ -380,10 +407,16 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    lc = conn.get_all_launch_configurations(names=[name])
-    if lc:
-        return True
-    else:
+    try:
+        lc = conn.get_all_launch_configurations(names=[name])
+        if lc:
+            return True
+        else:
+            msg = 'The launch configuration does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return False
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
         return False
 
 
@@ -409,18 +442,18 @@ def create_launch_configuration(name, image_id, key_name=None,
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
-    if isinstance(security_groups, string_types):
+    if isinstance(security_groups, six.string_types):
         security_groups = json.loads(security_groups)
-    if isinstance(block_device_mappings, string_types):
+    if isinstance(block_device_mappings, six.string_types):
         block_device_mappings = json.loads(block_device_mappings)
     _bdms = []
     if block_device_mappings:
         # Boto requires objects for the mappings and the devices.
         _block_device_map = blockdevicemapping.BlockDeviceMapping()
         for block_device_dict in block_device_mappings:
-            for block_device, attributes in block_device_dict.iteritems():
+            for block_device, attributes in six.iteritems(block_device_dict):
                 _block_device = blockdevicemapping.EBSBlockDeviceType()
-                for attribute, value in attributes.iteritems():
+                for attribute, value in six.iteritems(attributes):
                     setattr(_block_device, attribute, value)
                 _block_device_map[block_device] = _block_device
         _bdms = [_block_device_map]
@@ -494,7 +527,7 @@ def _get_conn(region, key, keyid, profile):
     Get a boto connection to autoscale.
     '''
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -521,3 +554,71 @@ def _get_conn(region, key, keyid, profile):
                   ' make boto autoscale connection.')
         return None
     return conn
+
+
+def _get_ec2_conn(region, key, keyid, profile):
+    '''
+    Get a boto connection to ec2.   Needed for get_instances
+    '''
+    if profile:
+        if isinstance(profile, six.string_types):
+            _profile = __salt__['config.option'](profile)
+        elif isinstance(profile, dict):
+            _profile = profile
+        key = _profile.get('key', None)
+        keyid = _profile.get('keyid', None)
+        region = _profile.get('region', None)
+
+    if not region and __salt__['config.option']('secgroup.region'):
+        region = __salt__['config.option']('secgroup.region')
+
+    if not region:
+        region = 'us-east-1'
+
+    if not key and __salt__['config.option']('secgroup.key'):
+        key = __salt__['config.option']('secgroup.key')
+    if not keyid and __salt__['config.option']('secgroup.keyid'):
+        keyid = __salt__['config.option']('secgroup.keyid')
+
+    try:
+        conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
+                                          aws_secret_access_key=key)
+    except boto.exception.NoAuthHandlerFound:
+        log.error('No authentication credentials found when attempting to'
+                  ' make ec2 connection for security groups.')
+        return None
+    return conn
+
+
+def get_instances(name, lifecycle_state="InService", health_status="Healthy", attribute="private_ip_address", region=None, key=None, keyid=None, profile=None):
+    """return attribute of all instances in the named autoscale group.
+
+    CLI example::
+
+        salt-call boto_asg.get_instances my_autoscale_group_name
+
+    """
+    conn = _get_conn(region, key, keyid, profile)
+    ec2_conn = _get_ec2_conn(region, key, keyid, profile)
+    if not conn or not ec2_conn:
+        return False
+    try:
+        asgs = conn.get_all_groups(names=[name])
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+    if len(asgs) != 1:
+        log.debug("name '{0}' returns multiple ASGs: {1}".format(name, [asg.name for asg in asgs]))
+        return False
+    asg = asgs[0]
+    instance_ids = []
+    # match lifecycle_state and health_status
+    for i in asg.instances:
+        if lifecycle_state is not None and i.lifecycle_state != lifecycle_state:
+            continue
+        if health_status is not None and i.health_status != health_status:
+            continue
+        instance_ids.append(i.instance_id)
+    # get full instance info, so that we can return the attribute
+    instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
+    return [getattr(instance, attribute).encode("ascii") for instance in instances]

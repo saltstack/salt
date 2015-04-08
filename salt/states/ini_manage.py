@@ -3,7 +3,7 @@
 Manage ini files
 ================
 
-:maintainer: <ageeleshwar.kandavelu@csscorp.com>
+:maintainer: <akilesh1597@gmail.com>
 :maturity: new
 :depends: re
 :platform: all
@@ -28,8 +28,7 @@ def options_present(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini_manage:
-            - options_present
+          ini.options_present:
             - sections:
                 test:
                   testkey: 'testval'
@@ -58,8 +57,10 @@ def options_present(name, sections=None):
             current_value = __salt__['ini.get_option'](name,
                                                        section,
                                                        key)
-            if current_value == sections[section][key]:
+            # Test if the change is necessary
+            if current_value == str(sections[section][key]):
                 continue
+
             ret['changes'] = __salt__['ini.set_option'](name,
                                                         sections)
             if 'error' in ret['changes']:
@@ -77,8 +78,7 @@ def options_absent(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini_manage:
-            - options_absent
+          ini.options_present:
             - sections:
                 test:
                   - testkey
@@ -122,8 +122,7 @@ def sections_present(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini_manage:
-            - sections_present
+          ini.sections_present:
             - sections:
                 test:
                   testkey: testval
@@ -168,8 +167,7 @@ def sections_absent(name, sections=None):
     .. code-block:: yaml
 
         /home/saltminion/api-paste.ini:
-          ini_manage:
-            - sections_absent
+          ini.sections_absent:
             - sections:
                 - test
                 - test1
@@ -206,8 +204,8 @@ class _DictDiffer(object):
     def __init__(self, current_dict, past_dict):
         self.current_dict = current_dict
         self.past_dict = past_dict
-        self.set_current = set(current_dict.keys())
-        self.set_past = set(past_dict.keys())
+        self.set_current = set(current_dict)
+        self.set_past = set(past_dict)
         self.intersect = self.set_current.intersection(self.set_past)
 
     def added(self):

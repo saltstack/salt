@@ -12,6 +12,7 @@ Example:
           - user: rabbit
           - host: rabbit.example.com
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -29,7 +30,7 @@ def __virtual__():
     return salt.utils.which('rabbitmqctl') is not None
 
 
-def joined(name, host, user='rabbit', ram_node=None, runas=None):
+def joined(name, host, user='rabbit', ram_node=None, runas='root'):
     '''
     Ensure the current node joined to a cluster with node user@host
 

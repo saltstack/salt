@@ -8,13 +8,32 @@ Salt-cp can be used to distribute configuration files
 
 # Import python libs
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import pprint
 
 # Import salt libs
 import salt.client
-from salt.utils import print_cli
+from salt.utils import parsers, print_cli
+
+
+class SaltCPCli(parsers.SaltCPOptionParser):
+    '''
+    Run the salt-cp command line client
+    '''
+
+    def run(self):
+        '''
+        Execute salt-cp
+        '''
+        self.parse_args()
+
+        # Setup file logging!
+        self.setup_logfile_logger()
+
+        cp_ = SaltCP(self.config)
+        cp_.run()
 
 
 class SaltCP(object):

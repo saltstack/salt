@@ -195,4 +195,3 @@ Miscellaneous
   :mod:`extfs.tune <salt.modules.extfs.tune>` (:issue:`6462`)
 - Fixed a regression with the :mod:`module.run <salt.states.module.run>` state
   where the ``m_name`` and ``m_fun`` arguments were being ignored (:issue:`6464`)
-

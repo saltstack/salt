@@ -23,11 +23,14 @@ This module requires the ``augeas`` Python module.
     For affected Debian/Ubuntu hosts, installing ``libpython2.7`` has been
     known to resolve the issue.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import re
 import logging
+from salt.ext.six.moves import zip
+import salt.ext.six as six
 
 # Make sure augeas python interface is installed
 HAS_AUGEAS = False
@@ -117,7 +120,7 @@ def execute(context=None, lens=None, commands=()):
         aug.load()
 
     for command in commands:
-        # first part up to space is always the command name (ie: set, move)
+        # first part up to space is always the command name (i.e.: set, move)
         cmd, arg = command.split(' ', 1)
         if cmd not in method_map:
             ret['error'] = 'Command {0} is not supported (yet)'.format(cmd)
@@ -242,8 +245,8 @@ def setvalue(*args):
     aug = _Augeas()
     ret = {'retval': False}
 
-    tuples = filter(lambda x: not str(x).startswith('prefix='), args)
-    prefix = filter(lambda x: str(x).startswith('prefix='), args)
+    tuples = [x for x in args if not str(x).startswith('prefix=')]
+    prefix = [x for x in args if str(x).startswith('prefix=')]
     if prefix:
         if len(prefix) > 1:
             raise SaltInvocationError(
@@ -356,7 +359,7 @@ def ls(path):  # pylint: disable=C0103
     matches = _match(match_path)
     ret = {}
 
-    for key, value in matches.iteritems():
+    for key, value in six.iteritems(matches):
         name = _lstrip_word(key, path)
         if _match(key + '/*'):
             ret[name + '/'] = value  # has sub nodes, e.g. directory

@@ -84,7 +84,7 @@ can be defined in environment variables now.
 New Modules
 -----------
 
-Quite a few new modules, states, returners and runners have been made.
+Quite a few new modules, states, returners, and runners have been made.
 
 New Minion Modules
 ``````````````````

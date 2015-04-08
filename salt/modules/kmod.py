@@ -2,13 +2,17 @@
 '''
 Module to manage Linux kernel modules
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
 import re
+import logging
 
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -46,13 +50,6 @@ def _rm_mods(pre_mods, post_mods):
     return pre - post
 
 
-def _union_module(a, b):
-    '''
-    Return union of two list where duplicated items are only once
-    '''
-    return list(set(a) | set(b))
-
-
 def _get_modules_conf():
     '''
     Return location of modules config file.
@@ -84,10 +81,11 @@ def _set_persistent_module(mod):
     if not os.path.exists(conf):
         __salt__['file.touch'](conf)
     mod_name = _strip_module_name(mod)
-    if not mod_name or mod_name in mod_list(True) or mod_name not in available():
+    if not mod_name or mod_name in mod_list(True) or mod_name \
+            not in available():
         return set()
     escape_mod = re.escape(mod)
-    ## If module is commented only uncomment it
+    # If module is commented only uncomment it
     if __salt__['file.contains_regex_multiline'](conf,
                                                  '^#[\t ]*{0}[\t ]*$'.format(
                                                      escape_mod)):
@@ -190,12 +188,15 @@ def mod_list(only_persist=False):
     if only_persist:
         conf = _get_modules_conf()
         if os.path.exists(conf):
-            with salt.utils.fopen(conf, 'r') as modules_file:
-                for line in modules_file:
-                    line = line.strip()
-                    mod_name = _strip_module_name(line)
-                    if not line.startswith('#') and mod_name:
-                        mods.add(mod_name)
+            try:
+                with salt.utils.fopen(conf, 'r') as modules_file:
+                    for line in modules_file:
+                        line = line.strip()
+                        mod_name = _strip_module_name(line)
+                        if not line.startswith('#') and mod_name:
+                            mods.add(mod_name)
+            except IOError:
+                log.error('kmod module could not open modules file at {0}'.format(conf))
     else:
         for mod in lsmod():
             mods.add(mod['module'])
@@ -219,7 +220,8 @@ def load(mod, persist=False):
         salt '*' kmod.load kvm
     '''
     pre_mods = lsmod()
-    response = __salt__['cmd.run_all']('modprobe {0}'.format(mod))
+    response = __salt__['cmd.run_all']('modprobe {0}'.format(mod),
+                                       python_shell=False)
     if response['retcode'] == 0:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
@@ -265,7 +267,7 @@ def remove(mod, persist=False, comment=True):
         salt '*' kmod.remove kvm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('modprobe -r {0}'.format(mod))
+    __salt__['cmd.run_all']('rmmod {0}'.format(mod), python_shell=False)
     post_mods = lsmod()
     mods = _rm_mods(pre_mods, post_mods)
     persist_mods = set()

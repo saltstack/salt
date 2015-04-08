@@ -64,9 +64,9 @@ the salt-bootstrap script, such as updating to specific git tags.
 Post-Deploy Commands
 ====================
 
-Once a minion has been deployed, it has the option to run a salt command.  
-Normally, this would be the state.highstate command, which would finish 
-provisioning the VM. Another common option is state.sls, or for just testing, 
+Once a minion has been deployed, it has the option to run a salt command.
+Normally, this would be the state.highstate command, which would finish
+provisioning the VM. Another common option is state.sls, or for just testing,
 test.ping. This is configured in the main cloud config file:
 
 .. code-block:: yaml
@@ -74,8 +74,8 @@ test.ping. This is configured in the main cloud config file:
     start_action: state.highstate
 
 
-This is currently considered to be experimental functionality, and may not work 
-well with all providers. If you experience problems with Salt Cloud hanging 
+This is currently considered to be experimental functionality, and may not work
+well with all providers. If you experience problems with Salt Cloud hanging
 after Salt is deployed, consider using Startup States instead:
 
 http://docs.saltstack.com/ref/states/startup.html
@@ -84,8 +84,8 @@ http://docs.saltstack.com/ref/states/startup.html
 Skipping the Deploy Script
 ==========================
 
-For whatever reason, you may want to skip the deploy script altogether. This 
-results in a VM being spun up much faster, with absolutely no configuration.  
+For whatever reason, you may want to skip the deploy script altogether. This
+results in a VM being spun up much faster, with absolutely no configuration.
 This can be set from the command line:
 
 .. code-block:: bash
@@ -116,7 +116,7 @@ Or even on the VM's profile settings:
     ubuntu_aws:
       provider: aws
       image: ami-7e2da54e
-      size: Micro Instance
+      size: t1.micro
       deploy: False
 
 
@@ -129,7 +129,7 @@ In the profile, you may also set the script option to ``None``:
     script: None
 
 
-This is the slowest option, since it still uploads the None deploy script and 
+This is the slowest option, since it still uploads the None deploy script and
 executes it.
 
 
@@ -176,7 +176,7 @@ to pass arguments to the deploy script:
     aws-amazon:
         provider: aws
         image: ami-1624987f
-        size: Micro Instance
+        size: t1.micro
         ssh_username: ec2-user
         script: bootstrap-salt
         script_args: -c /tmp/

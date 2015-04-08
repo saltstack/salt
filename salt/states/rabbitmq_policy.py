@@ -15,8 +15,9 @@ Example:
         rabbitmq_policy.present:
             - name: HA
             - pattern: '.*'
-            - definition: '{"ha-mode": "all"}'
+            - definition: '{"ha-mode":"all"}'
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -67,7 +68,7 @@ def present(name,
             updates.append('Pattern')
         if policy.get('definition') != definition:
             updates.append('Definition')
-        if policy.get('priority') != priority:
+        if int(policy.get('priority')) != priority:
             updates.append('Priority')
 
     if policy and not updates:

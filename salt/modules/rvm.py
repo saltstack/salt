@@ -2,11 +2,16 @@
 '''
 Manage ruby installations and gemsets with RVM, the Ruby Version Manager.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import os
 import logging
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +27,10 @@ __opts__ = {
 
 def _get_rvm_location(runas=None):
     if runas:
-        rvmpath = '~{0}/.rvm/bin/rvm'.format(runas)
-        return os.path.expanduser(rvmpath)
+        runas_home = os.path.expanduser('~{0}'.format(runas))
+        rvmpath = '{0}/.rvm/bin/rvm'.format(runas_home)
+        if os.path.exists(rvmpath):
+            return rvmpath
     return '/usr/local/rvm/bin/rvm'
 
 
@@ -33,9 +40,9 @@ def _rvm(command, arguments=None, runas=None, cwd=None):
     if not is_installed(runas):
         return False
 
-    cmd = [_get_rvm_location(runas), command]
+    cmd = [_get_rvm_location(runas), _cmd_quote(command)]
     if arguments:
-        cmd.append(arguments)
+        cmd.extend([_cmd_quote(arg) for arg in arguments.split()])
 
     ret = __salt__['cmd.run_all'](' '.join(cmd), runas=runas, cwd=cwd)
 
@@ -45,8 +52,8 @@ def _rvm(command, arguments=None, runas=None, cwd=None):
 
 
 def _rvm_do(ruby, command, runas=None, cwd=None):
-    return _rvm('{ruby} do {command}'.
-                format(ruby=ruby or 'default', command=command),
+    return _rvm('{ruby}'.format(ruby=ruby or 'default'),
+                arguments='do {command}'.format(command=command),
                 runas=runas, cwd=cwd)
 
 
@@ -80,7 +87,8 @@ def install(runas=None):
         # the RVM installer automatically does a multi-user install when it is
         # invoked with root privileges
         'curl -Ls {installer} | bash -s stable'.format(installer=installer),
-        runas=runas
+        runas=runas,
+        python_shell=True
     )
     if ret['retcode'] > 0:
         log.debug(
@@ -112,8 +120,8 @@ def install_ruby(ruby, runas=None):
     #   libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev autoconf libc6-dev
     #   libncurses5-dev automake libtool bison subversion ruby
     if runas and runas != 'root':
-        _rvm('autolibs disable', ruby, runas=runas)
-        return _rvm('install --disable-binary', ruby, runas=runas)
+        _rvm('autolibs', 'disable {ruby}'.format(ruby=ruby), runas=runas)
+        return _rvm('install', '--disable-binary {ruby}'.format(ruby=ruby), runas=runas)
     else:
         return _rvm('install', ruby, runas=runas)
 

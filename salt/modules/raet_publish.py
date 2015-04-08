@@ -2,6 +2,7 @@
 '''
 Publish a command from a minion to a target
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
@@ -20,6 +21,20 @@ __virtualname__ = 'publish'
 
 def __virtual__():
     return __virtualname__ if __opts__.get('transport', '') == 'raet' else False
+
+
+def _parse_args(arg):
+    '''
+    yamlify `arg` and ensure it's outermost datatype is a list
+    '''
+    yaml_args = salt.utils.args.yamlify_arg(arg)
+
+    if yaml_args is None:
+        return []
+    elif not isinstance(yaml_args, list):
+        return [yaml_args]
+    else:
+        return yaml_args
 
 
 def _publish(
@@ -53,9 +68,7 @@ def _publish(
         log.info('Function name is \'publish.publish\'. Returning {}')
         return {}
 
-    arg = [salt.utils.args.yamlify_arg(arg)]
-    if len(arg) == 1 and arg[0] is None:
-        arg = []
+    arg = _parse_args(arg)
 
     load = {'cmd': 'minion_pub',
             'fun': fun,
@@ -67,20 +80,19 @@ def _publish(
             'form': form,
             'id': __opts__['id']}
 
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     try:
-        peer_data = sreq.send(load)
+        peer_data = channel.send(load)
     except SaltReqTimeoutError:
         return '{0!r} publish timed out'.format(fun)
     if not peer_data:
         return {}
     # CLI args are passed as strings, re-cast to keep time.sleep happy
     time.sleep(float(timeout))
-    sreq = salt.transport.Channel.factory(__opts__)
     load = {'cmd': 'pub_ret',
             'id': __opts__['id'],
             'jid': str(peer_data['jid'])}
-    ret = sreq.send(load)
+    ret = channel.send(load)
     if form == 'clean':
         cret = {}
         for host in ret:
@@ -191,9 +203,7 @@ def runner(fun, arg=None, timeout=5):
 
         salt publish.runner manage.down
     '''
-    arg = [salt.utils.args.yamlify_arg(arg)]
-    if len(arg) == 1 and arg[0] is None:
-        arg = []
+    arg = _parse_args(arg)
 
     load = {'cmd': 'minion_runner',
             'fun': fun,
@@ -201,8 +211,8 @@ def runner(fun, arg=None, timeout=5):
             'tmo': timeout,
             'id': __opts__['id']}
 
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     try:
-        return sreq.send(load)
+        return channel.send(load)
     except SaltReqTimeoutError:
         return '{0!r} runner publish timed out'.format(fun)

@@ -4,6 +4,7 @@ Support for Alternatives system
 
 :codeauthor: Radek Rada <radek.rada@gmail.com>
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os

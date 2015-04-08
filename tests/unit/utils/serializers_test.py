@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -128,7 +131,7 @@ class TestSerializers(TestCase):
         assert obj == final_obj
 
         # BLAAM! yml_src is not valid !
-        final_obj = yaml.deserialize(yml_src)
+        final_obj = OrderedDict(yaml.deserialize(yml_src))
         assert obj != final_obj
 
     @skipIf(not yamlex.available, SKIP_MESSAGE % 'sls')

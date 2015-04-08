@@ -2,6 +2,7 @@
 '''
 The networking module for RHEL/Fedora based distros
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -17,6 +18,7 @@ import jinja2.exceptions
 import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -68,6 +70,7 @@ _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
     'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
+    'ipip', 'ib',
 ]
 
 
@@ -148,13 +151,6 @@ def _parse_ethtool_opts(opts, iface):
             config.update({'duplex': opts['duplex']})
         else:
             _raise_error_iface(iface, 'duplex', valid)
-
-    if 'mtu' in opts:
-        try:
-            int(opts['mtu'])
-            config.update({'mtu': opts['mtu']})
-        except Exception:
-            _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'speed' in opts:
         valid = ['10', '100', '1000', '10000']
@@ -562,6 +558,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['dns'] = opts['dns']
         result['peerdns'] = 'yes'
 
+    if 'mtu' in opts:
+        try:
+            result['mtu'] = int(opts['mtu'])
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
+
     if iface_type not in ['bridge']:
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
@@ -575,7 +577,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if bonding:
             result['bonding'] = bonding
 
-    if iface_type not in ['bond', 'vlan', 'bridge']:
+    if iface_type not in ['bond', 'vlan', 'bridge', 'ipip']:
         if 'addr' in opts:
             if salt.utils.validate.net.mac(opts['addr']):
                 result['addr'] = opts['addr']
@@ -612,6 +614,16 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if 'bridge' in opts:
             result['bridge'] = opts['bridge']
 
+    if iface_type == 'ipip':
+        result['devtype'] = 'IPIP'
+        for opt in ['my_inner_ipaddr', 'my_outer_ipaddr']:
+            if opt not in opts:
+                _raise_error_iface(iface, opts[opt], ['1.2.3.4'])
+            else:
+                result[opt] = opts[opt]
+    if iface_type == 'ib':
+        result['devtype'] = 'InfiniBand'
+
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
             result[opt] = opts[opt]
@@ -620,6 +632,13 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if opt in opts:
             result[opt] = opts[opt]
 
+    if 'mtu' in opts:
+        try:
+            int(opts['mtu'])
+            result['mtu'] = opts['mtu']
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
+
     if 'ipv6_autoconf' in opts:
         result['ipv6_autoconf'] = opts['ipv6_autoconf']
 
@@ -627,7 +646,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['enable_ipv6'] = opts['enable_ipv6']
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onparent', 'peerdns', 'slave', 'vlan', 'defroute']:
+    for opt in ['onparent', 'peerdns', 'slave', 'vlan', 'defroute', 'stp']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
@@ -660,6 +679,29 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     else:
         result['userctl'] = 'no'
 
+    # This vlan is in opts, and should be only used in range interface
+    # will affect jinja template for interface generating
+    if 'vlan' in opts:
+        if opts['vlan'] in _CONFIG_TRUE:
+            result['vlan'] = 'yes'
+        elif opts['vlan'] in _CONFIG_FALSE:
+            result['vlan'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['vlan'], valid)
+
+    if 'arpcheck' in opts:
+        if opts['arpcheck'] in _CONFIG_FALSE:
+            result['arpcheck'] = 'no'
+
+    if 'ipaddr_start' in opts:
+        result['ipaddr_start'] = opts['ipaddr_start']
+
+    if 'ipaddr_end' in opts:
+        result['ipaddr_end'] = opts['ipaddr_end']
+
+    if 'clonenum_start' in opts:
+        result['clonenum_start'] = opts['clonenum_start']
+
     return result
 
 
@@ -669,7 +711,7 @@ def _parse_routes(iface, opts):
     the route settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
     result = {}
     if 'routes' not in opts:
         _raise_error_routes(iface, 'routes', 'List of routes')
@@ -686,8 +728,8 @@ def _parse_network_settings(opts, current):
     the global network settings file.
     '''
     # Normalize keys
-    opts = dict((k.lower(), v) for (k, v) in opts.iteritems())
-    current = dict((k.lower(), v) for (k, v) in current.iteritems())
+    opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
+    current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
     result = {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
@@ -802,7 +844,7 @@ def _read_temp(data):
     tout = StringIO.StringIO()
     tout.write(data)
     tout.seek(0)
-    output = tout.readlines()
+    output = tout.read().splitlines()  # Discard newlines
     tout.close()
     return output
 
@@ -831,12 +873,14 @@ def build_bond(iface, **settings):
     path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
         __salt__['cmd.run'](
-            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            python_shell=False
         )
         __salt__['cmd.run'](
-            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            python_shell=False
         )
-        __salt__['cmd.run']('cat {0} >> /etc/modprobe.conf'.format(path))
+        __salt__['file.append']('/etc/modprobe.conf', path)
     __salt__['kmod.load']('bonding')
 
     if settings['test']:
@@ -879,7 +923,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))
@@ -1032,14 +1076,31 @@ def apply_network_settings(**settings):
     if 'require_reboot' not in settings:
         settings['require_reboot'] = False
 
+    if 'apply_hostname' not in settings:
+        settings['apply_hostname'] = False
+
+    hostname_res = True
+    if settings['apply_hostname'] in _CONFIG_TRUE:
+        if 'hostname' in settings:
+            hostname_res = __salt__['network.mod_hostname'](settings['hostname'])
+        else:
+            log.warning(
+                'The network state sls is trying to apply hostname '
+                'changes but no hostname is defined.'
+            )
+            hostname_res = False
+
+    res = True
     if settings['require_reboot'] in _CONFIG_TRUE:
         log.warning(
             'The network state sls is requiring a reboot of the system to '
             'properly apply network configuration.'
         )
-        return True
+        res = True
     else:
-        return __salt__['service.restart']('network')
+        res = __salt__['service.restart']('network')
+
+    return hostname_res and res
 
 
 def build_network_settings(**settings):

@@ -53,6 +53,7 @@ MOCK_MODULES = [
     'yaml.nodes',
     'yaml.scanner',
     'zmq',
+    'zmq.eventloop',
 
     # third-party libs for cloud modules
     'libcloud',
@@ -90,8 +91,6 @@ MOCK_MODULES = [
     # modules, renderers, states, returners, et al
     'django',
     'libvirt',
-    'mako',
-    'mako.template',
     'MySQLdb',
     'MySQLdb.cursors',
     'psutil',
@@ -110,6 +109,9 @@ MOCK_MODULES = [
 
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
+
+# Define a fake version attribute for libcloud so docs build as supposed
+sys.modules['libcloud'].__version__ = '0.0.0'
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
@@ -145,11 +147,13 @@ intersphinx_mapping = {
 # -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2014 SaltStack, Inc.'
+copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.1.7'
+release = '2014.7.2'
+
+needs_sphinx = '1.3'
 
 spelling_lang = 'en_US'
 language = 'en'
@@ -186,18 +190,19 @@ autosummary_generate = True
 
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
+.. |current_release_doc| replace:: :doc:`/topics/releases/{release}`
 .. |saltrepo| replace:: https://github.com/saltstack/salt
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-"""
+""".format(release=release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
     'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
-    'formula': ('https://github.com/saltstack-formulas/%s', ''),
+    'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 
 
@@ -210,11 +215,11 @@ gettext_compact = False
 ### HTML options
 html_theme = 'saltstack'
 html_theme_path = ['_themes']
-html_title = None
+html_title = u''
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
-html_logo = None # specfied in the theme layout.html
+html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
@@ -268,8 +273,13 @@ html_show_sphinx = True
 html_show_copyright = True
 
 ### Latex options
+
 latex_documents = [
-  ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
+  ('contents','Salt-All.tex','Salt All-In-One Documentation','SaltStack, Inc.','manual'),
+  ('contents-1','Salt-1.tex','Salt 1/4 Documentation','SaltStack, Inc.','manual'),
+  ('contents-2','Salt-2.tex','Salt 2/4 Documentation', 'SaltStack, Inc.','manual'),
+  ('contents-3','Salt-3.tex','Salt 3/4 Documentation','SaltStack, Inc.','manual'),
+  ('contents-4','Salt-4.tex','Salt 4/4 Documentation','SaltStack, Inc.','manual'),
 ]
 
 latex_logo = '_static/salt-logo.pdf'
@@ -339,6 +349,7 @@ man_pages = [
     ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
     ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
     ('ref/cli/salt-api', 'salt-api', 'salt-api Command', authors, 1),
+    ('ref/cli/salt-unity', 'salt-unity', 'salt-unity Command', authors, 1),
 ]
 
 
