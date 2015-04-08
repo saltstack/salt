@@ -366,8 +366,6 @@ def _manage_devices(devices, vm):
                         adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
                     nics_map.append(adapter_mapping)
 
-                    
-
     if 'disk' in devices.keys():
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
         disks_to_create.sort()
