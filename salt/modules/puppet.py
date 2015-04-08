@@ -169,7 +169,6 @@ def run(*args, **kwargs):
     return __salt__['cmd.run_all'](repr(puppet), python_shell=False)
 
 
-
 def noop(*args, **kwargs):
     '''
     Execute a puppet noop run and return a dict with the stderr, stdout,
