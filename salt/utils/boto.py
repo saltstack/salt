@@ -180,7 +180,6 @@ def get_exception(e):
     except (AttributeError, ET.ParseError):
         message = ''
     
-
     if message:
         message = '{0} {1}: {2}'.format(status, reason, message)
     else:
