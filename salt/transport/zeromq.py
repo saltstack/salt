@@ -1,13 +1,11 @@
+# -*- coding: utf-8 -*-
 '''
 Zeromq transport classes
 '''
 
 import os
-import threading
 import errno
 import hashlib
-import ctypes
-import multiprocessing
 
 from random import randint
 
@@ -19,13 +17,12 @@ import salt.utils.verify
 import salt.utils.event
 import salt.payload
 import logging
-from collections import defaultdict
 
 
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
-from salt.exceptions import SaltReqTimeoutError, SaltClientError
+from salt.exceptions import SaltReqTimeoutError
 
 import zmq
 import zmq.eventloop.ioloop
@@ -123,7 +120,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60, callback=None):
+    def send(self, load, tries=3, timeout=60):
         '''
         Send a request, return a future which will complete when we send the message
         '''
@@ -255,6 +252,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         '''
         if callback is None:
             return self.stream.on_recv(None)
+
         @tornado.gen.coroutine
         def wrap_callback(messages):
             payload = yield self._decode_messages(messages)
@@ -539,8 +537,8 @@ class AsyncReqMessageClient(object):
 
     def _init_socket(self):
         if hasattr(self, 'stream'):
-            self.stream.close()
-            self.socket.close()
+            self.stream.close()  # pylint: disable=E0203
+            self.socket.close()  # pylint: disable=E0203
             del self.stream
             del self.socket
 
@@ -587,6 +585,7 @@ class AsyncReqMessageClient(object):
         while len(self.send_queue) > 0:
             message = self.send_queue.pop(0)
             future = self.send_future_map[message]
+
             # send
             def mark_future(msg):
                 if not future.done():
@@ -596,7 +595,7 @@ class AsyncReqMessageClient(object):
 
             try:
                 ret = yield future
-            except:
+            except:  # pylint: disable=W0702
                 self._init_socket()  # re-init the zmq socket (no other way in zmq)
                 continue
             self.remove_message_timeout(message)
