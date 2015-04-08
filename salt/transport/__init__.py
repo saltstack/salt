@@ -4,11 +4,9 @@ Encapsulate the different transports available to Salt.  Currently this is only 
 '''
 from __future__ import absolute_import
 
+
 # for backwards compatibility
-from salt.transport.client import ReqChannel
-
-
-class Channel(ReqChannel):
+class Channel(object):
     @staticmethod
     def factory(opts, **kwargs):
         # Default to ZeroMQ for now
@@ -27,4 +25,5 @@ class Channel(ReqChannel):
             return salt.transport.raet.RAETReqChannel(opts, **kwargs)
         # TODO: deprecation warning, should use
         # salt.transport.channel.Channel.factory()
+        from salt.transport.client import ReqChannel
         return ReqChannel.factory(opts, **kwargs)
