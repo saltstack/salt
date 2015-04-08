@@ -1,8 +1,9 @@
-import multiprocessing
 import ctypes
 import logging
 import os
 import hashlib
+import shutil
+import binascii
 
 import tornado.gen
 
@@ -13,9 +14,11 @@ import salt.crypt
 import salt.payload
 import salt.master
 import salt.utils.event
+from salt.utils.cache import CacheCli
 
 
 log = logging.getLogger(__name__)
+
 
 # TODO: rename
 class AESPubClientMixin(object):
@@ -23,7 +26,7 @@ class AESPubClientMixin(object):
         if payload.get('sig') and self.opts.get('sign_pub_messages'):
             # Verify that the signature is valid
             master_pubkey_path = os.path.join(self.opts['pki_dir'], 'minion_master.pub')
-            if not salt.crypt.verify_signature(master_pubkey_path, load, payload.get('sig')):
+            if not salt.crypt.verify_signature(master_pubkey_path, payload['load'], payload.get('sig')):
                 raise salt.crypt.AuthenticationError('Message signature failed to validate.')
 
     @tornado.gen.coroutine
@@ -38,6 +41,7 @@ class AESPubClientMixin(object):
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
 
         raise tornado.gen.Return(payload)
+
 
 # TODO: rename?
 class AESReqServerMixin(object):
