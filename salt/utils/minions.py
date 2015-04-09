@@ -69,31 +69,39 @@ def get_minion_data(minion, opts):
     return minion if minion else None, None, None
 
 
-def nodegroup_comp(group, nodegroups, skip=None):
+def nodegroup_comp(nodegroup, nodegroups, skip=None):
     '''
-    Take the nodegroup and the nodegroups and fill in nodegroup refs
+    Recursively expand ``nodegroup`` from ``nodegroups``; ignore nodegroups in ``skip``
     '''
-    k = 1
+
     if skip is None:
-        skip = set([group])
-        k = 0
-    if group not in nodegroups:
+        skip = set()
+    elif nodegroup in skip:
+        log.error('Failed nodegroup expansion: illegal nested nodegroup "{0}"'.format(nodegroup))
         return ''
-    gstr = nodegroups[group]
-    ret = ''
-    for comp in gstr.split(','):
-        if not comp.startswith('N@'):
-            ret += '{0} or '.format(comp)
-            continue
-        ngroup = comp[2:]
-        if ngroup in skip:
-            continue
-        skip.add(ngroup)
-        ret += nodegroup_comp(ngroup, nodegroups, skip)
-    if k == 1:
-        return ret
-    else:
-        return ret[:-3]
+
+    skip.add(nodegroup)
+
+    if nodegroup not in nodegroups:
+        log.error('Failed nodegroup expansion: unknown nodegroup "{0}"'.format(nodegroup))
+        return ''
+
+    nglookup = nodegroups[nodegroup]
+
+    ret = []
+    opers = ['and', 'or', 'not', '(', ')']
+    tokens = nglookup.split()
+    for match in tokens:
+        if match in opers:
+            ret.append(match)
+        elif len(match) >= 3 and match[:2] == 'N@':
+            ret.append(nodegroup_comp(match[2:], nodegroups, skip=skip))
+        else:
+            ret.append(match)
+
+    expanded = '( {0} )'.format(' '.join(ret)) if ret else ''
+    log.debug('nodegroup_comp("{0}") => {1}'.format(nodegroup, expanded))
+    return expanded
 
 
 class CkMinions(object):
