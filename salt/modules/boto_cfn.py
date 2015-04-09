@@ -80,20 +80,22 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     return True
 
 
-def create(name, template_url=None, region=None, key=None, keyid=None, profile=None):
+def create(name, template_url=None, region=None, key=None, keyid=None, profile=None, parameters={}, capabilities=None):
     '''
     Create a CFN stack.
 
     CLI example to create a stack::
 
         salt myminion boto_cfn.create mystack template_url='https://s3.amazonaws.com/bucket/template.cft' region=us-east-1
+        salt myminion boto_cfn.create mystack template_url='https://s3.amazonaws.com/bucket/template.cft' region=us-east-1
+                        capabilities=['CAPABILITY_IAM'] parameters={'DBUSER':'dba','DBPassword':'fdsafdsafds'}
     '''
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
         return False
     if not exists(name):
         try:
-            conn.create_stack(name, template_url=template_url)
+            conn.create_stack(name, template_url=template_url, parameters=parameters.items(), capabilities=capabilities)
         except boto.exception.BotoServerError as e:
             msg = 'Failed to create stack {0}'.format(name)
             log.error(msg)
@@ -165,6 +167,7 @@ def _get_conn(region, key, keyid, profile):
         region = __salt__['config.option']('cfn.region')
 
     if not region:
+        log.trace("Using the default region us-east-1.  If this is incorrect pass or set the region option")
         region = 'us-east-1'
 
     if not key and __salt__['config.option']('cfn.key'):
@@ -173,10 +176,8 @@ def _get_conn(region, key, keyid, profile):
         keyid = __salt__['config.option']('cfn.keyid')
 
     try:
-        conn = boto.cloudformation.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
+        conn = boto.cloudformation.connect_to_region(region, aws_access_key_id=keyid, aws_secret_access_key=key)
     except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto cfn connection.')
+        log.error('No authentication credentials granted access to a cloudformation connection.')
         return None
     return conn
