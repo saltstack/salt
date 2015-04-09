@@ -42,7 +42,7 @@ class NetapiClientTest(TestCase):
         # Remove all the volatile values before doing the compare.
         self.assertIn('jid', ret)
         ret.pop('jid', None)
-        self.assertEqual(ret, {'minions': ['minion', 'sub_minion']})
+        self.assertEqual(set(ret['minions']), set(['minion', 'sub_minion']))
 
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
