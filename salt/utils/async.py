@@ -72,3 +72,10 @@ class SyncWrapper(object):
         self.io_loop.add_future(future, lambda future: self.io_loop.stop())
         self.io_loop.start()
         return future.result()
+
+    def __del__(self):
+        '''
+        On deletion of the async wrapper, make sure to clean up the async stuff
+        '''
+        self.io_loop.close()
+        del self.async
