@@ -206,7 +206,7 @@ def _get_buckets_cache_filename(bucket, prefix):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    return os.path.join(cache_dir, '{}-{}-files.cache'.format(bucket, prefix))
+    return os.path.join(cache_dir, '{0}-{1}-files.cache'.format(bucket, prefix))
 
 
 def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, prefix):
