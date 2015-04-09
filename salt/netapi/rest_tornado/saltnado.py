@@ -30,6 +30,7 @@ add the following to the Salt master config file.
         ssl_key: /etc/pki/api/certs/server.key
         debug: False
         disable_ssl: False
+        webhook_disable_auth: False
 
 
 .. _rest_tornado-auth:
@@ -1563,7 +1564,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
                       revision: {{ revision }}
             {% endif %}
         '''
-        if not self._verify_auth():
+        disable_auth = self.application.mod_opts.get('webhook_disable_auth')
+        if not disable_auth and self._verify_auth():
             self.redirect('/login')
             return
 
