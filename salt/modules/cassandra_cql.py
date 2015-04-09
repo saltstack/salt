@@ -232,9 +232,9 @@ def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.version
+        salt 'minion1' cassandra_cql.version
 
-        salt 'minion1' cassandra.version contact_points=minion1
+        salt 'minion1' cassandra_cql.version contact_points=minion1
     '''
     query = '''select release_version
                  from system.local
@@ -271,9 +271,9 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.info
+        salt 'minion1' cassandra_cql.info
 
-        salt 'minion1' cassandra.info contact_points=minion1
+        salt 'minion1' cassandra_cql.info contact_points=minion1
     '''
 
     query = '''select cluster_name,
@@ -321,9 +321,9 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.list_keyspaces
+        salt 'minion1' cassandra_cql.list_keyspaces
 
-        salt 'minion1' cassandra.list_keyspaces contact_points=minion1 port=9000
+        salt 'minion1' cassandra_cql.list_keyspaces contact_points=minion1 port=9000
     '''
     query = '''select keyspace_name
                  from system.schema_keyspaces;'''
@@ -346,7 +346,7 @@ def list_column_families(keyspace=None, contact_points=None, port=None, cql_user
     '''
     List column families in a Cassandra cluster for all keyspaces or just the provided one.
 
-    :param keyspace        The keyspace to provide the column families for, optional.
+    :param keyspace:       The keyspace to provide the column families for, optional.
     :type  keyspace:       str
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
     :type  contact_points: str | list[str]
@@ -363,11 +363,11 @@ def list_column_families(keyspace=None, contact_points=None, port=None, cql_user
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.list_column_families
+        salt 'minion1' cassandra_cql.list_column_families
 
-        salt 'minion1' cassandra.list_column_families contact_points=minion1
+        salt 'minion1' cassandra_cql.list_column_families contact_points=minion1
 
-        salt 'minion1' cassandra.list_column_families keyspace=system
+        salt 'minion1' cassandra_cql.list_column_families keyspace=system
     '''
     where_clause = "where keyspace_name = '{0}'".format(keyspace) if keyspace else ""
 
@@ -410,9 +410,9 @@ def keyspace_exists(keyspace, contact_points=None, port=None, cql_user=None, cql
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.keyspace_exists keyspace=system
+        salt 'minion1' cassandra_cql.keyspace_exists keyspace=system
 
-        salt 'minion1' cassandra.list_keyspaces keyspace=system contact_points=minion1
+        salt 'minion1' cassandra_cql.list_keyspaces keyspace=system contact_points=minion1
     '''
     # Only project the keyspace_name to make the query efficien.
     # Like an echo
@@ -459,9 +459,9 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.create_keyspace keyspace=newkeyspace
+        salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace
 
-        salt 'minion1' cassandra.create_keyspace keyspace=newkeyspace replication_strategy=NetworkTopologyStrategy \
+        salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace replication_strategy=NetworkTopologyStrategy \
         replication_datacenters='{"datacenter_1": 3, "datacenter_2": 2}'
     '''
     existing_keyspace = keyspace_exists(keyspace, contact_points, port)
@@ -502,7 +502,7 @@ def drop_keyspace(keyspace, contact_points=None, port=None, cql_user=None, cql_p
     '''
     Drop a keyspace if it exists in a Cassandra cluster.
 
-    :param keyspace        The keyspace to drop.
+    :param keyspace:       The keyspace to drop.
     :type  keyspace:       str
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
     :type  contact_points: str | list[str]
@@ -519,9 +519,9 @@ def drop_keyspace(keyspace, contact_points=None, port=None, cql_user=None, cql_p
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.drop_keyspace keyspace=test
+        salt 'minion1' cassandra_cql.drop_keyspace keyspace=test
 
-        salt 'minion1' cassandra.drop_keyspace keyspace=test contact_points=minion1
+        salt 'minion1' cassandra_cql.drop_keyspace keyspace=test contact_points=minion1
     '''
     existing_keyspace = keyspace_exists(keyspace, contact_points, port)
     if existing_keyspace:
@@ -555,9 +555,9 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.list_users
+        salt 'minion1' cassandra_cql.list_users
 
-        salt 'minion1' cassandra.list_users contact_points=minion1
+        salt 'minion1' cassandra_cql.list_users contact_points=minion1
     '''
     query = "list users;"
 
@@ -598,11 +598,11 @@ def create_user(username, password, superuser=False, contact_points=None, port=N
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.create_user username=joe password=secret
+        salt 'minion1' cassandra_cql.create_user username=joe password=secret
 
-        salt 'minion1' cassandra.create_user username=joe password=secret superuser=True
+        salt 'minion1' cassandra_cql.create_user username=joe password=secret superuser=True
 
-        salt 'minion1' cassandra.create_user username=joe password=secret superuser=True contact_points=minion1
+        salt 'minion1' cassandra_cql.create_user username=joe password=secret superuser=True contact_points=minion1
     '''
     superuser_cql = 'superuser' if superuser else 'nosuperuser'
     query = '''create user if not exists {0} with password '{1}' {2};'''.format(username, password, superuser_cql)
@@ -647,11 +647,11 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
     :rtype:                dict
 
     .. code-block:: bash
-        salt 'minion1' cassandra.list_permissions
+        salt 'minion1' cassandra_cql.list_permissions
 
-        salt 'minion1' cassandra.list_permissions username=joe resource=test_keyspace permission=select
+        salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_keyspace permission=select
 
-        salt 'minion1' cassandra.list_permissions username=joe resource=test_table resource_type=table \
+        salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_table resource_type=table \
         permission=select contact_points=minion1
     '''
     keyspace_cql = "{0} {1}".format(resource_type, resource) if resource else "all keyspaces"
@@ -702,11 +702,11 @@ def grant_permission(username, resource=None, resource_type='keyspace', permissi
     :rtype:
 
     .. code-block:: bash
-        salt 'minion1' cassandra.grant_permission
+        salt 'minion1' cassandra_cql.grant_permission
 
-        salt 'minion1' cassandra.grant_permission username=joe resource=test_keyspace permission=select
+        salt 'minion1' cassandra_cql.grant_permission username=joe resource=test_keyspace permission=select
 
-        salt 'minion1' cassandra.grant_permission username=joe resource=test_table resource_type=table \
+        salt 'minion1' cassandra_cql.grant_permission username=joe resource=test_table resource_type=table \
         permission=select contact_points=minion1
     '''
     permission_cql = "grant {0}".format(permission) if permission else "grant all permissions"
