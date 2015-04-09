@@ -255,7 +255,7 @@ def A(host, nameserver=None):
             addresses = [sock[4][0] for sock in socket.getaddrinfo(host, None, socket.AF_INET, 0, socket.SOCK_RAW)]
             return addresses
         except socket.gaierror:
-            return 'Unabled to resolve {0}'.format(host)
+            return 'Unable to resolve {0}'.format(host)
 
     return 'This function requires dig, which is not currently available'
 
@@ -280,7 +280,7 @@ def AAAA(host, nameserver=None):
             addresses = [sock[4][0] for sock in socket.getaddrinfo(host, None, socket.AF_INET6, 0, socket.SOCK_RAW)]
             return addresses
         except socket.gaierror:
-            return 'Unabled to resolve {0}'.format(host)
+            return 'Unable to resolve {0}'.format(host)
 
     return 'This function requires dig, which is not currently available'
 
