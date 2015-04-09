@@ -124,6 +124,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
         self.message_client = SaltMessageClient(host, int(port), io_loop=self.io_loop)
 
+    def __del__(self):
+        self.message_client.destroy()
+
     def _package_load(self, load):
         return {
             'enc': self.crypt,
@@ -199,6 +202,10 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
 
         self.io_loop = kwargs['io_loop'] or tornado.ioloop.IOLoop.current()
         self.connected = False
+
+    def __del__(self):
+        if hasattr(self, 'message_client'):
+            self.message_client.destroy()
 
     @tornado.gen.coroutine
     def connect(self):
@@ -392,6 +399,14 @@ class SaltMessageClient(object):
         self.io_loop.spawn_callback(self._stream_return)
 
         self._on_recv = None
+
+    # TODO: timeout inflight sessions
+    def destroy(self):
+        if hasattr(self, '_stream'):
+            self._stream.close()
+
+    def __del__(self):
+        self.destroy()
 
     def connect(self, callback=None):
         '''
