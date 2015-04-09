@@ -194,7 +194,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         # TODO: verify pub function? Maybe look at how we test the publisher
         self.assertEqual(len(response_obj['return']), 1)
         self.assertIn('jid', response_obj['return'][0])
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
+        self.assertEqual(set(response_obj['return'][0]['minions']), set(['minion', 'sub_minion']))
 
     def test_multi_local_async_post(self):
         low = [{'client': 'local_async',
@@ -217,8 +217,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(len(response_obj['return']), 2)
         self.assertIn('jid', response_obj['return'][0])
         self.assertIn('jid', response_obj['return'][1])
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
-        self.assertEqual(response_obj['return'][1]['minions'], ['minion', 'sub_minion'])
+        self.assertEqual(set(response_obj['return'][0]['minions']), set(['minion', 'sub_minion']))
+        self.assertEqual(set(response_obj['return'][1]['minions']), set(['minion', 'sub_minion']))
 
     def test_multi_local_async_post_multitoken(self):
         low = [{'client': 'local_async',
@@ -249,8 +249,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         self.assertIn('jid', response_obj['return'][0])  # the first 2 are regular returns
         self.assertIn('jid', response_obj['return'][1])
         self.assertIn('Failed to authenticate', response_obj['return'][2])  # bad auth
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
-        self.assertEqual(response_obj['return'][1]['minions'], ['minion', 'sub_minion'])
+        self.assertEqual(set(response_obj['return'][0]['minions']), set(['minion', 'sub_minion']))
+        self.assertEqual(set(response_obj['return'][1]['minions']), set(['minion', 'sub_minion']))
 
     def test_simple_local_async_post_no_tgt(self):
         low = [{'client': 'local_async',
@@ -280,7 +280,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               request_timeout=10,
                               )
         response_obj = json.loads(response.body)
-        self.assertEqual(response_obj['return'], [['minion', 'sub_minion']])
+        self.assertEqual(len(response_obj['return']), 1)
+        self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
 
 
 @skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
@@ -343,7 +344,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         # TODO: verify pub function? Maybe look at how we test the publisher
         self.assertEqual(len(response_obj['return']), 1)
         self.assertIn('jid', response_obj['return'][0])
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
+        self.assertEqual(set(response_obj['return'][0]['minions']), set(['minion', 'sub_minion']))
 
     def test_post_with_client(self):
         # get a token for this test
@@ -363,7 +364,7 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
         # TODO: verify pub function? Maybe look at how we test the publisher
         self.assertEqual(len(response_obj['return']), 1)
         self.assertIn('jid', response_obj['return'][0])
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
+        self.assertEqual(set(response_obj['return'][0]['minions']), set(['minion', 'sub_minion']))
 
     def test_post_with_incorrect_client(self):
         '''
