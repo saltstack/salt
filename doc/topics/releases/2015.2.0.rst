@@ -78,6 +78,19 @@ execute in. This made adding modules and python libraries difficult. The new
 installer sets up a more flexible python environment making it easy to manage
 the python install and add python modules.
 
+Instead of frozen packages, a full python implementation resides in the bin
+directory (``C:\salt\bin``). By executing pip or easy_install from within the
+Scripts directory (``C:\salt\bin\Scripts``) you can install any additional
+python modules you may need for your custom environment.
+
+The .exe's that once resided at the root of the salt directory (``C:\salt``)
+have been replaced by .bat files and should function the same way as the .exe's
+in previous versions.
+
+The new Windows Installer will not replace the minion config file and key if
+they already exist on the target system. Only the salt program files will be
+replaced. ``C:\salt\conf`` and ``C:\salt\var`` will remain unchanged.
+
 Removed Requests Dependency
 ===========================
 
