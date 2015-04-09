@@ -266,6 +266,8 @@ def AAAA(host, nameserver=None):
 
     Always returns a list.
 
+    .. versionadded:: 2014.7.5
+
     CLI Example:
 
     .. code-block:: bash
