@@ -1565,7 +1565,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):
             {% endif %}
         '''
         disable_auth = self.application.mod_opts.get('webhook_disable_auth')
-        if not disable_auth and self._verify_auth():
+        if not disable_auth and not self._verify_auth():
             self.redirect('/login')
             return
 
