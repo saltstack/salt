@@ -63,6 +63,13 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                                                     io_loop=self._io_loop,
                                                     )
 
+    def __del__(self):
+        '''
+        Since the message_client creates sockets and assigns them to the IOLoop we have to
+        specifically destroy them, since we aren't the only ones with references to the FDs
+        '''
+        self.message_client.destroy()
+
     @property
     def master_uri(self):
         return self.opts['master_uri']
@@ -127,13 +134,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         else:
             ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
         raise tornado.gen.Return(ret)
-
-    def __del__(self):
-        '''
-        Since the message_client creates sockets and assigns them to the IOLoop we have to
-        specifically destroy them, since we aren't the only ones with references to the FDs
-        '''
-        self.message_client.destroy()
 
 
 class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
@@ -210,6 +210,16 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
+
+    def destroy(self):
+        if hasattr(self, '_stream'):
+            self._stream.close()
+        if hasattr(self, '_socket'):
+            self._socket.close()
+        self.context.term()
+
+    def __del__(self):
+        self.destroy()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
