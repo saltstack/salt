@@ -49,24 +49,19 @@ def usage():
         drive_bitmask >>= 1
     for drive in drives:
         try:
-            (sectorspercluster,
-             bytespersector,
-             freeclusters,
-             totalclusters) = win32api.GetDiskFreeSpace(
+            (available_bytes,
+             total_bytes,
+             total_free_bytes) = win32api.GetDiskFreeSpaceEx(
                  '{0}:\\'.format(drive)
-             )
-            totalsize = sectorspercluster * bytespersector * totalclusters
-            available_space = (
-                sectorspercluster * bytespersector * freeclusters
             )
-            used = totalsize - available_space
-            capacity = int(used / float(totalsize) * 100)
+            used = total_bytes - total_free_bytes
+            capacity = used / float(total_bytes) * 100
             ret['{0}:\\'.format(drive)] = {
                 'filesystem': '{0}:\\'.format(drive),
-                '1K-blocks': totalsize,
-                'used': used,
-                'available': available_space,
-                'capacity': '{0}%'.format(capacity),
+                '1K-blocks': total_bytes / 1024,
+                'used': used / 1024,
+                'available': total_free_bytes / 1024,
+                'capacity': '{0:.0f}%'.format(capacity),
             }
         except Exception:
             ret['{0}:\\'.format(drive)] = {
