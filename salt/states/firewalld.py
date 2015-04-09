@@ -75,12 +75,13 @@ def present(name,
                        'services': []}}
 
     if name not in __salt__['firewalld.get_zones']():
-        log.info('Creating {0} zone'.format(name))
-        __salt__['firewalld.new_zone'](name)
-
-        ret['changes'][name] = '`{0}` zone has been successfully created'
+        if __opts__['test']:
+            ret['comment'][name] = '`{0}` will be created'.format(name)
+        else:
+            __salt__['firewalld.new_zone'](name)
+            ret['changes'][name] = '`{0}` zone has been successfully created'
     else:
-        ret['comment'][name] = '`{0}` zone exists'.format(name)
+        ret['comment'][name] = '`{0}` zone already exists'.format(name)
 
     if block_icmp:
         _valid_icmp_types = __salt__['firewalld.get_icmp_types']()
@@ -93,10 +94,15 @@ def present(name,
                         '`{0}` already exists'.format(icmp_type)
                     )
                 else:
-                    __salt__['firewalld.block_icmp'](name, icmp_type)
-                    ret['changes']['icmp_blocks'].append(
-                        '`{0}` has been blocked'.format(icmp_type)
-                    )
+                    if __opts__['test']:
+                        ret['comment']['icmp_blocks'].append(
+                            '`{0}` will be blocked'.format(icmp_type)
+                        )
+                    else:
+                        __salt__['firewalld.block_icmp'](name, icmp_type)
+                        ret['changes']['icmp_blocks'].append(
+                            '`{0}` has been blocked'.format(icmp_type)
+                        )
             else:
                 log.error('{0} is an invalid ICMP type'.format(icmp_type))
 
@@ -104,15 +110,21 @@ def present(name,
         if __salt__['firewalld.default_zone']() == name:
             ret['comment']['default'] = '`{0}` is already the default zone'.format(name)
         else:
-            __salt__['firewalld.set_default_zone'](name)
-            ret['changes']['default'] = '`{0}` has been set to the default zone'.format(name)
+            if __opts__['test']:
+                ret['comment']['default'] = '`{0}` wll be set to the default zone'.format(name)
+            else:
+                __salt__['firewalld.set_default_zone'](name)
+                ret['changes']['default'] = '`{0}` has been set to the default zone'.format(name)
 
     if masquerade:
         if __salt__['firewalld.get_masquerade'](name):
             ret['comment']['masquerade'] = 'masquerading is already enabed'
         else:
-            ret['changes']['masquerade'] = 'masquerading successfully set'
-            __salt__['firewalld.add_masquerade'](name)
+            if __opts__['test']:
+                ret['comment']['masquerade'] = 'masquerading will be enabled'
+            else:
+                __salt__['firewalld.add_masquerade'](name)
+                ret['changes']['masquerade'] = 'masquerading successfully set'
 
     if ports:
         _current_ports = __salt__['firewalld.list_ports'](name)
@@ -123,10 +135,15 @@ def present(name,
                     '`{0}` already exists'.format(port)
                 )
             else:
-                __salt__['firewalld.add_port'](name, port)
-                ret['changes']['ports'].append(
-                    '`{0}` has been added to the firewall'.format(port)
-                )
+                if __opts__['test']:
+                    ret['comment']['ports'].append(
+                        '{0} will be added'.format(port)
+                    )
+                else:
+                    __salt__['firewalld.add_port'](name, port)
+                    ret['changes']['ports'].append(
+                        '`{0}` has been added to the firewall'.format(port)
+                    )
 
     if port_fwd:
         _current_port_fwd = __salt__['firewalld.list_port_fwd'](name)
@@ -150,26 +167,35 @@ def present(name,
                     '`{0}` port forwarding already exists'.format(port)
                 )
             else:
-                __salt__['firewalld.add_port_fwd'](
-                    name, src, dest, protocol, dstaddr
-                )
-
-                ret['changes']['port_fwd'].append(
-                    '`{0}` port forwarding has been added'.format(port)
-                )
+                if __opts__['test']:
+                    ret['comment']['port_fwd'].append(
+                        '`{0}` port will be added'.format(port)
+                    )
+                else:
+                    __salt__['firewalld.add_port_fwd'](
+                        name, src, dest, protocol, dstaddr
+                    )
+                    ret['changes']['port_fwd'].append(
+                        '`{0}` port forwarding has been added'.format(port)
+                    )
 
     if services:
         _current_services = __salt__['firewalld.list_services'](name)
 
         for service in services:
             if service in _current_services:
-                log.info('Service Already Exists')
                 ret['comment']['services'].append(
                     '`{0}` service already exists'.format(service)
                 )
             else:
-                ret['changes']['services'].append(
-                    '`{0}` has been successfully added'.format(service)
-                )
+                if __opts__['test']:
+                    ret['comment']['services'].append(
+                        '`{0}` service will be added'.format(service)
+                    )
+                else:
+                    __salt__['firewalld.new_service'](service)
+                    ret['changes']['services'].append(
+                        '`{0}` has been successfully added'.format(service)
+                    )
 
     return ret
