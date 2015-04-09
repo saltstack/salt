@@ -217,11 +217,13 @@ def _check_accept_keywords(approved, flag):
         return True
 
 
-def _merge_flags(new_flags, old_flags=[], conf='any'):
+def _merge_flags(new_flags, old_flags=None, conf='any'):
     '''
     Merges multiple lists of flags removing duplicates and resolving conflicts
     giving priority to lasts lists.
     '''
+    if not old_flags:
+        old_flags = []
     args = [old_flags, new_flags]
     if conf == 'accept_keywords':
         tmp = new_flags+ \
