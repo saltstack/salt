@@ -41,7 +41,7 @@ class Mockgnupg(object):
     '''
     __version__ = '1.3.1'
     fingerprint = u'F321F'
-    counts = '0'
+    counts = {}
     imported = True
     results = [{'ok': '1', 'fingerprint': u'F321F'}]
     data = True
@@ -319,7 +319,7 @@ class GpgTestCase(TestCase):
         '''
         Tests if it import a key from text or file.
         '''
-        ret = {'message': 'Successfully imported key(s).', 'res': True}
+        ret = {'message': 'Unable to import key.', 'res': False}
 
         mock_conf = MagicMock(return_value='')
         mock_user = MagicMock(return_value={'home': 'salt'})
