@@ -213,10 +213,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
     def destroy(self):
         if hasattr(self, '_stream'):
-            self._stream.close()
             # TODO: Optionally call stream.close() on newer pyzmq? Its broken on some
             self._stream.io_loop.remove_handler(self._stream.socket)
-            self._stream.socket.close()
+            self._stream.socket.close(0)
         self.context.term()
 
     def __del__(self):
