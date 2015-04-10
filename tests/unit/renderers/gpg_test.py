@@ -16,8 +16,7 @@ ensure_in_syspath('../../')
 import salt.loader
 import salt.config
 import salt.utils
-from integration import TMP
-from tests.integration import ModuleCase
+from integration import TMP, ModuleCase
 
 import copy
 
