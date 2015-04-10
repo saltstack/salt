@@ -94,8 +94,8 @@ from salt.exceptions import (
 
 # TODO: cleanup
 import zmq.eventloop.ioloop
-import tornado.gen
-import tornado.ioloop
+import tornado.gen  # pylint: disable=F0401
+import tornado.ioloop  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 

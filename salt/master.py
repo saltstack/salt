@@ -24,7 +24,7 @@ from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 import zmq.eventloop.ioloop
-import tornado.gen
+import tornado.gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
