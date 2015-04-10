@@ -89,7 +89,7 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         else:
             os.environ['ASYNC_TEST_TIMEOUT'] = self.async_timeout_prev
 
-    def get_app(self, urls):
+    def build_tornado_app(self, urls):
         application = tornado.web.Application(urls, debug=True)
 
         application.auth = self.auth
@@ -97,7 +97,6 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         application.mod_opts = self.mod_opts
 
         return application
-
 
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
@@ -120,8 +119,8 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                     ret_dict[attr] = getattr(self, attr)
 
                 self.write(self.serialize(ret_dict))
-
-        return super(TestBaseSaltAPIHandler, self).get_app([('/', StubHandler)])
+        urls = [('/', StubHandler)]
+        return super(TestBaseSaltAPIHandler, self).get_tornado_app(urls)
 
     def test_content_type(self):
         '''
@@ -245,7 +244,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
 
     def get_app(self):
         urls = [('/login', saltnado.SaltAuthHandler)]
-        return super(TestSaltAuthHandler, self).get_app(urls)
+        return self.build_tornado_app(urls)
 
     def test_get(self):
         '''
