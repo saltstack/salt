@@ -192,9 +192,12 @@ def _get_serv(ret=None, commit=False):
         # An empty ssl_options dictionary passed to MySQLdb.connect will
         # effectively connect w/o SSL.
         ssl_options = {}
-        if _options.get('ssl_ca'): ssl_options['ca'] = _options.get('ssl_ca')
-        if _options.get('ssl_cert'): ssl_options['cert'] = _options.get('ssl_cert')
-        if _options.get('ssl_key'): ssl_options['key'] = _options.get('ssl_key')
+        if _options.get('ssl_ca'):
+            ssl_options['ca'] = _options.get('ssl_ca')
+        if _options.get('ssl_cert'):
+            ssl_options['cert'] = _options.get('ssl_cert')
+        if _options.get('ssl_key'):
+            ssl_options['key'] = _options.get('ssl_key')
         conn = MySQLdb.connect(host=_options.get('host'),
                                user=_options.get('user'),
                                passwd=_options.get('pass'),
