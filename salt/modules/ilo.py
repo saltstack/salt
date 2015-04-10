@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Make sure hponcfg tool is accessiable
+    Make sure hponcfg tool is accessible
     '''
     if salt.utils.which('hponcfg'):
         return True
