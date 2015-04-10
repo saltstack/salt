@@ -154,6 +154,7 @@ from __future__ import absolute_import
 import datetime
 import os
 import re
+import copy
 
 # Import Salt Libs
 import salt.exceptions
@@ -378,7 +379,7 @@ def certificate_managed(name,
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
-            current_comp = current.copy()
+            current_comp = copy.deepcopy(current)
             if 'serial_number' not in kwargs:
                 current_comp.pop('Serial Number')
                 try:
@@ -408,7 +409,7 @@ def certificate_managed(name,
     new = __salt__['x509.create_certificate'](testrun=True, **kwargs)
 
     if isinstance(new, dict):
-        new_comp = new.copy()
+        new_comp = copy.deepcopy(new)
         new.pop('Issuer Public Key')
         if 'serial_number' not in kwargs:
             new_comp.pop('Serial Number')
