@@ -277,34 +277,40 @@ def _send_message(room_id,
         return False
 
 
+def _verify_options(options):
+    '''
+    Verify Hipchat options and log warnings
+
+    Returns True if all options can be verified,
+    otherwise False
+    '''
+    if not options.get('room_id'):
+        log.error('hipchat.room_id not defined in salt config')
+        return False
+
+    if not options.get('from_name'):
+        log.error('hipchat.from_name not defined in salt config')
+        return False
+
+    if not options.get('api_key'):
+        log.error('hipchat.api_key not defined in salt config')
+        return False
+
+    if not options.get('api_version'):
+        log.error('hipchat.api_version not defined in salt config')
+        return False
+
+    return True
+
+
 def returner(ret):
     '''
-    Send an hipchat message with the data
+    Send an hipchat message with the return data from a job
     '''
 
     _options = _get_options(ret)
 
-    room_id = _options.get('room_id')
-    from_name = _options.get('from_name')
-    api_key = _options.get('api_key')
-    api_version = _options.get('api_version')
-    color = _options.get('color')
-    notify = _options.get('notify')
-
-    if not room_id:
-        log.error('hipchat.room_id not defined in salt config')
-        return
-
-    if not from_name:
-        log.error('hipchat.from_name not defined in salt config')
-        return
-
-    if not api_key:
-        log.error('hipchat.api_key not defined in salt config')
-        return
-
-    if not api_version:
-        log.error('hipchat.api_version not defined in salt config')
+    if not _verify_options(_options):
         return
 
     message = ('id: {0}\r\n'
@@ -318,11 +324,31 @@ def returner(ret):
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
 
-    hipchat = _send_message(room_id,
+    hipchat = _send_message(_options.get('room_id'),
                             message,
-                            from_name,
-                            api_key,
-                            api_version,
-                            color,
-                            notify)
+                            _options.get('from_name'),
+                            _options.get('api_key'),
+                            _options.get('api_version'),
+                            _options.get('color'),
+                            _options.get('notify'))
     return hipchat
+
+
+def event_return(events):
+    '''
+    Return event data to hipchat
+    '''
+    _options = _get_options()
+
+    for event in events:
+        # TODO:
+        # Pre-process messages to apply individualized colors for various
+        # event types.
+        log.trace('Hipchat returner received event: {0}'.format(event))
+        _send_message(_options.get('room_id'),
+                      event['data'],
+                      _options.get('from_name'),
+                      _options.get('api_key'),
+                      _options.get('api_version'),
+                      _options.get('color'),
+                      _options.get('notify'))
