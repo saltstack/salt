@@ -1866,7 +1866,7 @@ class State(object):
             else:
                 # determine what the requisite failures where, and return
                 # a nice error message
-                comment_dict = {}
+                failed_requisites = set()
                 # look at all requisite types for a failure
                 for req_type, req_lows in reqs.iteritems():
                     for req_low in req_lows:
@@ -1881,13 +1881,18 @@ class State(object):
                             # use SLS.ID for the key-- so its easier to find
                             key = '{sls}.{_id}'.format(sls=req_low['__sls__'],
                                                        _id=req_low['__id__'])
-                            comment_dict[key] = req_ret['comment']
+                            failed_requisites.add(key)
 
-                running[tag] = {'changes': {},
-                                'result': False,
-                                'comment': 'One or more requisite failed: {0}'.format(comment_dict),
-                                '__run_num__': self.__run_num,
-                                '__sls__': low['__sls__']}
+                _cmt = 'One or more requisite failed: {0}'.format(
+                    ', '.join(str(i) for i in failed_requisites)
+                )
+                running[tag] = {
+                    'changes': {},
+                    'result': False,
+                    'comment': _cmt,
+                    '__run_num__': self.__run_num,
+                    '__sls__': low['__sls__']
+                }
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
