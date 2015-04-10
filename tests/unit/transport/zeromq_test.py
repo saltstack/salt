@@ -177,7 +177,6 @@ class BaseZMQPubCase(AsyncTestCase):
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
 
 
-
 class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     '''
     Tests around the publish system
