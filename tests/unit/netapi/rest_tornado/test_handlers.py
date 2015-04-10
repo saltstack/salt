@@ -120,7 +120,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
 
                 self.write(self.serialize(ret_dict))
         urls = [('/', StubHandler)]
-        return super(TestBaseSaltAPIHandler, self).get_tornado_app(urls)
+        return self.build_tornado_app(urls)
 
     def test_content_type(self):
         '''
