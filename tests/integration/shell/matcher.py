@@ -65,6 +65,29 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
 
+    def test_nodegroup(self):
+        '''
+        test salt nodegroup matcher
+        '''
+        def minion_in_target(minion, lines):
+            return sum([line == '{0}:'.format(minion) for line in lines])
+
+        data = self.run_salt('-N min test.ping')
+        self.assertTrue(minion_in_target('minion', data))
+        self.assertFalse(minion_in_target('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt('-N sub_min test.ping')
+        self.assertFalse(minion_in_target('minion', data))
+        self.assertTrue(minion_in_target('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt('-N mins test.ping')
+        self.assertTrue(minion_in_target('minion', data))
+        self.assertTrue(minion_in_target('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt('-N unknown_nodegroup test.ping')
+        self.assertFalse(minion_in_target('minion', data))
+        self.assertFalse(minion_in_target('sub_minion', data))
+
     def test_glob(self):
         '''
         test salt glob matcher
