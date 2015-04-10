@@ -1964,6 +1964,17 @@ def describe_subnets(subnet_ids=None, vpc_id=None, cidr=None, region=None, key=N
         return False
 
 
+def _key_iter(key, keys, item):
+    elements_list = []
+    for r_item in getattr(item, key):
+        element = {}
+        for r_key in keys:
+            if hasattr(r_item, r_key):
+                element[r_key] = getattr(r_item, r_key)
+        elements_list.append(element)
+    return elements_list
+
+
 def describe_route_table(route_table_id=None, route_table_name=None, tags=None, region=None, key=None, keyid=None,
                          profile=None):
     '''
@@ -2002,21 +2013,18 @@ def describe_route_table(route_table_id=None, route_table_name=None, tags=None, 
             return False
 
         route_table = {}
-        keys = ['id', 'vpc_id', 'tags', 'routes']
+        keys = ['id', 'vpc_id', 'tags', 'routes', 'associations']
         route_keys = ['destination_cidr_block', 'gateway_id', 'instance_id', 'interface_id']
+        assoc_keys = ['id', 'main', 'route_table_id', 'subnet_id']
         for item in route_tables:
             routes_list = []
             for key in keys:
                 if hasattr(item, key):
                     route_table[key] = getattr(item, key)
                     if key == 'routes':
-                        for r_item in item.routes:
-                            route = {}
-                            for r_key in route_keys:
-                                if hasattr(r_item, r_key):
-                                    route[r_key] = getattr(r_item, r_key)
-                            routes_list.append(route)
-                        route_table[key] = routes_list
+                        route_table[key] = _key_iter(key, route_keys, item)
+                    if key == 'associations':
+                        route_table[key] = _key_iter(key, assoc_keys, item)
         return route_table
 
     except boto.exception.BotoServerError as exc:
