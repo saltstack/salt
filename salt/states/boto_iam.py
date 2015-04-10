@@ -101,10 +101,11 @@ import logging
 import json
 import os
 import xml.etree.cElementTree as xml
-import salt.utils
 
 # Import Salt Libs
+import salt.utils
 import salt.utils.odict as odict
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
