@@ -6,7 +6,7 @@ expected to return
 
 # Import python libs
 import os
-import glob
+import fnmatch
 import re
 import logging
 
@@ -92,6 +92,11 @@ def nodegroup_comp(group, nodegroups, skip=None):
 class CkMinions(object):
     '''
     Used to check what minions should respond from a target
+
+    Note: This is a best-effort set of the minions that would match a target.
+    Depending on master configuration (grains caching, etc.) and topology (syndics)
+    the list may be a subset-- but we err on the side of too-many minions in this
+    class.
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -105,23 +110,12 @@ class CkMinions(object):
         '''
         Return the minions found by looking via globs
         '''
-        cwd = os.getcwd()
         pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
-
-        # If there is no directory return an empty list
-        if os.path.isdir(pki_dir) is False:
-            return []
-
-        os.chdir(pki_dir)
-        ret = set(glob.glob(expr))
         try:
-            os.chdir(cwd)
-        except OSError as exc:
-            if exc.errno != 13:
-                # If it's not a permission denied, perhaps we're running with
-                # sudo
-                raise
-        return list(ret)
+            files = os.listdir(pki_dir)
+            return fnmatch.filter(files, expr)
+        except OSError:
+            return []
 
     def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -130,22 +124,21 @@ class CkMinions(object):
         if isinstance(expr, string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
-            if fn_ in expr:
-                if fn_ not in ret:
-                    ret.append(fn_)
+        for m in expr:
+            if os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, m)):
+                ret.append(m)
         return ret
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via regular expressions
         '''
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
-        reg = re.compile(expr)
-        ret = [fn_ for fn_ in os.listdir('.') if reg.match(fn_)]
-        os.chdir(cwd)
-        return ret
+        try:
+            minions = os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            reg = re.compile(expr)
+            return [m for m in minions if reg.match(m)]
+        except OSError:
+            return []
 
     def _check_cache_minions(self,
                              expr,
@@ -282,45 +275,21 @@ class CkMinions(object):
                 'Range matcher unavailble (unable to import seco.range, '
                 'module most likely not installed)'
             )
-        cache_enabled = self.opts.get('minion_data_cache', False)
-        if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+        if not hasattr(self, '_range'):
+            self._range = seco.range.Range(self.opts['range_server'])
+        try:
+            return self._range.expand(expr)
+        except seco.range.RangeException as exc:
+            log.error(
+                'Range exception in compound match: {0}'.format(exc)
             )
-        elif cache_enabled:
-            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
-        else:
-            return list()
-
-        if cache_enabled:
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not greedy and id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    if not greedy and id_ in minions:
-                        minions.remove(id_)
-                    continue
-                grains = self.serial.load(
-                    salt.utils.fopen(datap, 'rb')
-                ).get('grains')
-
-                range_ = seco.range.Range(self.opts['range_server'])
-                try:
-                    if grains.get('fqdn', '') not in range_.expand(expr) and id_ in minions:
-                        minions.remove(id_)
-                except seco.range.RangeException as exc:
-                    log.debug(
-                        'Range exception in compound match: {0}'.format(exc)
-                    )
-                    try:
-                        minions.remove(id_)
-                    except KeyError:
-                        pass
-        return list(minions)
+            cache_enabled = self.opts.get('minion_data_cache', False)
+            if greedy:
+                return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            elif cache_enabled:
+                return os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+            else:
+                return list()
 
     def _check_compound_pillar_exact_minions(self, expr, greedy):
         '''

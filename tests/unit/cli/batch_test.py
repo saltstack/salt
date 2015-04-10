@@ -21,7 +21,7 @@ class BatchTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = {'batch': '', 'conf_file': {}, 'tgt': '', 'transport': ''}
+        opts = {'batch': '', 'conf_file': {}, 'tgt': '', 'transport': '', 'timeout': 5}
         mock_client = MagicMock()
         with patch('salt.client.get_local_client', MagicMock(return_value=mock_client)):
             with patch('salt.client.LocalClient.cmd_iter', MagicMock(return_value=[])):
@@ -33,7 +33,7 @@ class BatchTestCase(TestCase):
         '''
         Tests passing batch value as a number
         '''
-        self.batch.opts = {'batch': '2'}
+        self.batch.opts = {'batch': '2', 'timeout': 5}
         self.batch.minions = ['foo', 'bar']
         self.assertEqual(Batch.get_bnum(self.batch), 2)
 
@@ -41,7 +41,7 @@ class BatchTestCase(TestCase):
         '''
         Tests passing batch value as percentage
         '''
-        self.batch.opts = {'batch': '50%'}
+        self.batch.opts = {'batch': '50%', 'timeout': 5}
         self.batch.minions = ['foo']
         self.assertEqual(Batch.get_bnum(self.batch), 1)
 
@@ -49,7 +49,7 @@ class BatchTestCase(TestCase):
         '''
         Tests passing batch value as percentage over 100%
         '''
-        self.batch.opts = {'batch': '160%'}
+        self.batch.opts = {'batch': '160%', 'timeout': 5}
         self.batch.minions = ['foo', 'bar', 'baz']
         self.assertEqual(Batch.get_bnum(self.batch), 4)
 
