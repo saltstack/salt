@@ -349,7 +349,6 @@ def _manage_devices(devices, vm):
                     device_specs.append(network_spec)
 
                     adapter_mapping = vim.vm.customization.AdapterMapping()
-                    adapter_mapping.macAddress = device.macAddress
                     adapter_mapping.adapter = vim.vm.customization.IPSettings()
 
                     if 'domain' in devices['network'][device.deviceInfo.label].keys():
@@ -1216,6 +1215,9 @@ def create(vm_):
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
+    deploy = config.get_cloud_config_value(
+        'deploy', vm_, __opts__, search_global=False, default=True
+    )
 
     if 'clonefrom' in vm_:
         # Clone VM/template from specified VM/template
@@ -1342,17 +1344,20 @@ def create(vm_):
         new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
 
         # If it a template or if it does not need to be powered on, or if deploy is False then do not wait for ip
-        if not template and power and vm_['deploy']:
+        if not template and power:
             ip = _wait_for_ip(new_vm_ref, 20)
             if ip:
                 log.debug("IP is: {0}".format(ip))
                 # ssh or smb using ip and install salt
-                vm_['key_filename'] = key_filename
-                vm_['ssh_host'] = ip
+                if deploy:
+                    vm_['key_filename'] = key_filename
+                    vm_['ssh_host'] = ip
 
-                salt.utils.cloud.bootstrap(vm_, __opts__)
+                    salt.utils.cloud.bootstrap(vm_, __opts__)
             else:
                 log.warning("Could not get IP information for {0}".format(vm_name))
+
+        data = show_instance(vm_name, call='action')
 
         salt.utils.cloud.fire_event(
             'event',
@@ -1369,4 +1374,4 @@ def create(vm_):
         log.error("clonefrom option hasn\'t been specified. Exiting.")
         return False
 
-    return {vm_name: True}
+    return {vm_name: data}
