@@ -393,7 +393,8 @@ def mod_watch(name,
               sig=None,
               reload=False,
               full_restart=False,
-              force=False):
+              force=False,
+              **kwargs):
     '''
     The service watcher, called to invoke the watch command.
 
