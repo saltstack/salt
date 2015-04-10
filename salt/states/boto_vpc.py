@@ -45,7 +45,40 @@ config:
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    Ensure subnet exists:
+        boto_vpc.subnet_present:
+            - name: mysubnet
+            - vpc_id: vpc-123456
+            - cidr_block: 10.0.0.0/16
+            - region: us-east-1
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    Ensure internet gateway exists:
+        boto_vpc.internet_gateway_present:
+            - name: myigw
+            - vpc_name: myvpc
+            - region: us-east-1
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    Ensure route table exists:
+        boto_vpc.route_table_present:
+            - name: my_route_table
+            - vpc_id: vpc-123456
+            - routes:
+              - destination_cidr_block: 0.0.0.0/0
+                instance_id: i-123456
+                interface_id: eni-123456
+            - subnets:
+              - name: subnet1
+              - name: subnet2
+            - region: us-east-1
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+import salt.utils.dictupdate as dictupdate
 
 
 def __virtual__():
@@ -487,7 +520,7 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, subnets=N
             return ret
     _ret = _routes_present(route_table_name=name, routes=routes, tags=tags, region=region, key=key,
                            keyid=keyid, profile=profile)
-    ret['changes'] = _ret['changes']
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
@@ -495,7 +528,7 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, subnets=N
             return ret
     _ret = _subnets_present(route_table_name=name, subnets=subnets, tags=tags, region=region, key=key,
                             keyid=keyid, profile=profile)
-    ret['changes'] = _ret['changes']
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
@@ -525,7 +558,6 @@ def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=Non
             ret['result'] = False
             ret['comment'] = 'Failed to create route table {0}.'.format(name)
             return ret
-
         ret['changes']['old'] = {'route_table': None}
         ret['changes']['new'] = {'route_table': created}
         ret['comment'] = 'Route table {0} created.'.format(name)
