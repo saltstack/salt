@@ -1391,7 +1391,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not True. Salt Comment:\n{comment}'.format(
-                        **(six.itervalues(ret)[0])
+                        **(next(six.itervalues(ret)))
                     )
                 )
             except (AttributeError, IndexError):
@@ -1409,7 +1409,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not False. Salt Comment:\n{comment}'.format(
-                        **(six.itervalues(ret)[0])
+                        **(next(six.itervalues(ret)))
                     )
                 )
             except (AttributeError, IndexError):
@@ -1425,7 +1425,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not None. Salt Comment:\n{comment}'.format(
-                        **(six.itervalues(ret)[0])
+                        **(next(six.itervalues(ret)))
                     )
                 )
             except (AttributeError, IndexError):
