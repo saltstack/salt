@@ -83,6 +83,16 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     delete server certificate:
       boto_iam.server_cert_absent:
         - name: mycert
+
+. code-block:: yaml
+    create keys for user:
+      boto_iam.keys_present:
+        - name: myusername
+        - number: 2
+        - save_dir: /root
+        - region: eu-west-1
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'fdkjsafkljsASSADFalkfjasdf'
 '''
 
 # Import Python Libs
@@ -90,6 +100,8 @@ from __future__ import absolute_import
 import logging
 import json
 import os
+import xml.etree.cElementTree as xml
+import salt.utils
 
 # Import Salt Libs
 import salt.utils.odict as odict
@@ -156,6 +168,87 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
     ret['comment'] = 'IAM user {0} could not be deleted.\n {1}'.format(name, deleted)
     ret['result'] = False
     return ret
+
+
+def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded:: Beryllium
+
+    Ensure the IAM access keys are present.
+
+    name (string) – The name of the new user.
+
+    number (int) - Number of keys that user should have.
+
+    save_dir (string) - The directory that the key/keys will be saved. Keys are saved to a file named according
+    to the username privided.
+
+    region (string) - Region to connect to.
+
+    key (string) - Secret key to be used.
+
+    keyid (string) - Access key to be used.
+
+    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
+        ret['result'] = False
+        ret['comment'] = 'IAM User {0} does not exist.'.format(name)
+        return ret
+    if not isinstance(number, int):
+        ret['comment'] = 'The number of keys must be an integer.'
+        ret['result'] = False
+        return ret
+    if not os.path.isdir(save_dir):
+        ret['comment'] = 'The directory {0} does not exist.'.format(save_dir)
+        ret['result'] = False
+        return ret
+    keys = __salt__['boto_iam.get_all_access_keys'](user_name=name, region=region, key=key,
+                                                    keyid=keyid, profile=profile)
+    if isinstance(keys, str):
+        log.debug('keys are : false {0}'.format(keys))
+        error, message = _get_error(keys)
+        ret['comment'] = 'Could not get keys.\n{0}\n{1}'.format(error, message)
+        ret['result'] = False
+        return ret
+    keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
+    log.debug('Keys are : {0}.'.format(keys))
+    if len(keys) >= number:
+        ret['comment'] = 'The number of keys exist for user {0}'.format(name)
+        ret['result'] = True
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Access key is set to be created for {0}.'.format(name)
+        ret['result'] = None
+        return ret
+    new_keys = {}
+    for i in range(number-len(keys)):
+        created = __salt__['boto_iam.create_access_key'](name, region, key, keyid, profile)
+        if isinstance(created, str):
+            error, message = _get_error(created)
+            ret['comment'] = 'Could not create keys.\n{0}\n{1}'.format(error, message)
+            ret['result'] = False
+            return ret
+        log.debug('Created is : {0}'.format(created))
+        response = 'create_access_key_response'
+        result = 'create_access_key_result'
+        new_keys['key-{0}'.format(i)] = created[response][result]['access_key']['access_key_id']
+        new_keys['key_id-{0}'.format(i)] = created[response][result]['access_key']['secret_access_key']
+    try:
+        with salt.utils.fopen('{0}/{1}'.format(save_dir, name), 'a') as _wrf:
+            for key_id, access_key in new_keys.items():
+                _wrf.write('{0}\n{1}\n'.format(key_id, access_key))
+        ret['comment'] = 'Keys have been written to file {0}/{1}.'.format(save_dir, name)
+        ret['result'] = True
+        ret['changes'] = new_keys
+        return ret
+    except IOError:
+        ret['comment'] = 'Could not write to file {0}/{1}.'.format(save_dir, name)
+        ret['result'] = False
+        return ret
 
 
 def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profile=None):
@@ -570,3 +663,12 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
     ret['result'] = False
     ret['comment'] = 'Certificate {0} failed to be created.'.format(name)
     return ret
+
+
+def _get_error(error):
+    # Converts boto exception to string that can be used to output error.
+    error = '\n'.join(error.split('\n')[1:])
+    error = xml.fromstring(error)
+    code = error[0][1].text
+    message = error[0][2].text
+    return code, message
