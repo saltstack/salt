@@ -153,6 +153,7 @@ This state creates a private key then requests a certificate signed by ca accord
 from __future__ import absolute_import
 import datetime
 import os
+import re
 
 # Import Salt Libs
 import salt.exceptions
