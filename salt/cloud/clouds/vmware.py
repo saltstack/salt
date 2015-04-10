@@ -425,7 +425,7 @@ def _wait_for_ip(vm, max_wait_minute):
         for net in vm.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if match('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                    if match('^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
                         ip = current_ip.ipAddress
                         return ip
         time.sleep(5)
