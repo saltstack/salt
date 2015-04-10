@@ -30,3 +30,6 @@ class PubChannelMixin(object):
         self.server_channel.publish(load)
         with self.assertRaises(self.failureException):
             self.wait(timeout=0.5)
+
+        # close our pub_channel, to pass our FD checks
+        del self.pub_channel

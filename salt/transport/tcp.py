@@ -399,9 +399,11 @@ class SaltMessageClient(object):
         self.io_loop.spawn_callback(self._stream_return)
 
         self._on_recv = None
+        self._closing = False
 
     # TODO: timeout inflight sessions
     def destroy(self):
+        self._closing = True
         if hasattr(self, '_stream'):
             self._stream.close()
 
@@ -434,6 +436,9 @@ class SaltMessageClient(object):
         Try to connect for the rest of time!
         '''
         while True:
+            if self._closing:
+                self.destroy()
+                break
             try:
                 self._stream = yield self._tcp_client.connect(self.host, self.port)
                 self._connecting_future.set_result(True)
