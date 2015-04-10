@@ -36,10 +36,9 @@ except ImportError:
 @skipIf(StrictVersion(zmq.__version__) < StrictVersion('14.0.1'), 'PyZMQ must be >= 14.0.1 to run these tests.')
 class TestSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
-        application = tornado.web.Application([('/', saltnado.SaltAPIHandler)], debug=True)
+        urls = [('/', saltnado.SaltAPIHandler)]
 
-        application.auth = self.auth
-        application.opts = self.opts
+        application = super(TestSaltAPIHandler, self).get_app(urls)
 
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
@@ -286,13 +285,10 @@ class TestSaltAPIHandler(SaltnadoTestCase):
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestMinionSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
-        application = tornado.web.Application([(r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
-                                               (r"/minions", saltnado.MinionSaltAPIHandler),
-                                               ], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-
+        urls = [(r"/minions/(.*)", saltnado.MinionSaltAPIHandler),
+                (r"/minions", saltnado.MinionSaltAPIHandler),
+                ]
+        application = super(TestMinionSaltAPIHandler, self).get_app(urls)
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
@@ -379,13 +375,10 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestJobsSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
-        application = tornado.web.Application([(r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
-                                               (r"/jobs", saltnado.JobsSaltAPIHandler),
-                                               ], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-
+        urls = [(r"/jobs/(.*)", saltnado.JobsSaltAPIHandler),
+                (r"/jobs", saltnado.JobsSaltAPIHandler), 
+                ]
+        application = super(TestJobsSaltAPIHandler, self).get_app(urls)
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
@@ -432,12 +425,9 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestRunSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
-        application = tornado.web.Application([("/run", saltnado.RunSaltAPIHandler),
-                                               ], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-
+        urls = [("/run", saltnado.RunSaltAPIHandler), 
+                ]
+        application = super(TestRunSaltAPIHandler, self).get_app(urls)
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
@@ -460,13 +450,11 @@ class TestRunSaltAPIHandler(SaltnadoTestCase):
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestEventsSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
-        application = tornado.web.Application([(r"/events", saltnado.EventsSaltAPIHandler),
-                                               ], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-
+        urls = [(r"/events", saltnado.EventsSaltAPIHandler), 
+                ]
+        application = super(TestEventsSaltAPIHandler, self).get_app(urls)
         application.event_listener = saltnado.EventListener({}, self.opts)
+
         # store a reference, for magic later!
         self.application = application
         self.events_to_fire = 0
@@ -506,12 +494,13 @@ class TestEventsSaltAPIHandler(SaltnadoTestCase):
 @skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 class TestWebhookSaltAPIHandler(SaltnadoTestCase):
-    def get_app(self):
-        application = tornado.web.Application([(r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
-                                               ], debug=True)
 
-        application.auth = self.auth
-        application.opts = self.opts
+    def get_app(self):
+
+        urls = [(r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
+                ]
+
+        application = super(TestWebhookSaltAPIHandler, self).get_app(urls)
 
         self.application = application
 
