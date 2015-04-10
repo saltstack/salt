@@ -936,7 +936,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         public key in this certificate. Note that this is not the exact same hashing method used by
         OpenSSL when using the hash value.
 
-        ``authorityKeyIdentifier`` only supports the value ``keyid,issuer:always``. This value will
+        ``authorityKeyIdentifier`` Use values acceptable to the openssl CLI tools. This will
         automatically populate ``authorityKeyIdentifier`` with the ``subjectKeyIdentifier`` of
         ``signing_cert``. If this is a self-signed cert these values will be the same.
 
@@ -1145,9 +1145,6 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
         issuer = None
         if extname == 'authorityKeyIdentifier':
-            if not extval == 'keyid,issuer:always':
-                raise salt.exceptions.SaltInvocationError(
-                    'authorityKeyIdentifier must be keyid,issuer:always')
             issuer = signing_cert
 
         ext = _new_extension(name=extname, value=extval, critical=critical, issuer=issuer)

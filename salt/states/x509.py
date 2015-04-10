@@ -380,6 +380,12 @@ def certificate_managed(name,
             current_comp = current.copy()
             if 'serial_number' not in kwargs:
                 current_comp.pop('Serial Number')
+                try:
+                    current_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
+                        re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
+                            current_comp['X509v3 Extensions']['authorityKeyIdentifier']))
+                except KeyError:
+                    pass
             current_comp.pop('Not Before')
             current_comp.pop('MD5 Finger Print')
             current_comp.pop('SHA1 Finger Print')
@@ -405,6 +411,12 @@ def certificate_managed(name,
         new.pop('Issuer Public Key')
         if 'serial_number' not in kwargs:
             new_comp.pop('Serial Number')
+            try:
+                new_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
+                    re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
+                        new_comp['X509v3 Extensions']['authorityKeyIdentifier']))
+            except KeyError:
+                pass
         new_comp.pop('Not Before')
         new_comp.pop('Not After')
         new_comp.pop('MD5 Finger Print')
