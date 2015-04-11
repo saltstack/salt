@@ -73,7 +73,7 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
-        class StubHandler(saltnado.BaseSaltAPIHandler):
+        class StubHandler(saltnado.BaseSaltAPIHandler):  # pylint: disable=W0223
             def get(self):
                 return self.echo_stuff()
 
