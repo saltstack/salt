@@ -34,18 +34,15 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         out = self.run_call('-l quiet test.fib 3')
 
         expect = ['local:',
-                  '    |_',
-                  '      - 0',
-                  '      - 1',
-                  '      - 1',
-                  '      - 2']
+                  '    - 2',
+                  '    - 3.09944152832e-06',]
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):
         out = self.run_call('-l quiet --out txt test.fib 3')
 
         expect = [
-            'local: ([0, 1, 1, 2]'
+            'local: (2,'
         ]
 
         self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
