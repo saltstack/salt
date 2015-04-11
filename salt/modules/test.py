@@ -267,10 +267,15 @@ def fib(num):
     start = time.time()
     if num < 2:
         return num, time.time() - start
-    num1, _ = fib(num-1)
-    num2, _ = fib(num-2)
-    totaltime = time.time() - start
-    return num1 + num2, totaltime
+    return _fib(num-1) + _fib(num-2), time.time() - start
+
+def _fib(num):
+    '''
+    Helper method for test.fib, doesn't calculate the time.
+    '''
+    if num < 2:
+        return num
+    return _fib(num-1), _fib(num-2)
 
 
 def collatz(start):
