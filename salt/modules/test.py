@@ -275,7 +275,7 @@ def _fib(num):
     '''
     if num < 2:
         return num
-    return _fib(num-1), _fib(num-2)
+    return _fib(num-1) + _fib(num-2)
 
 
 def collatz(start):
