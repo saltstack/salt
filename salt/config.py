@@ -30,6 +30,7 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
+import salt.utils.sdb
 
 from salt.ext.six import string_types, text_type
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module

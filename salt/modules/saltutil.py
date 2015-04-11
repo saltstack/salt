@@ -153,7 +153,7 @@ def _sync(form, saltenv=None):
                 break
             for emptydir in emptydirs:
                 touched = True
-                os.rmdir(emptydir)
+                shutil.rmtree(emptydir, ignore_errors=True)
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
