@@ -2451,7 +2451,7 @@ def create(image,
 
         .. warning::
 
-            If the container is started with with ``network_mode=host``, the
+            If the container is started with ``network_mode=host``, the
             hostname will be overridden by the hostname of the Minion.
 
     domainname
