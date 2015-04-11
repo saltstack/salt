@@ -48,6 +48,7 @@ Full list of builtin state modules
     debconfmod
     disk
     dockerio
+    dockerng
     drac
     environ
     eselect
