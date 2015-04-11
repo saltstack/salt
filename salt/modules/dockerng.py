@@ -397,7 +397,7 @@ VALID_RUNTIME_OPTS = {
         'path': 'HostConfig:Binds',
     },
     'port_bindings': {
-        'path': 'NetworkSettings:Ports',
+        'path': 'HostConfig:PortBindings',
     },
     'lxc_conf': {
         'validator': 'dict',
@@ -593,8 +593,10 @@ def _clear_context():
     # Can't use 'for key in __context__' or six.iterkeys(__context__) because
     # an exception will be raised if the size of the dict is modified during
     # iteration.
-    keep_context = ('docker.client', 'docker.exec_driver',
-                    'docker.docker_version', 'docker.docker_py_version')
+    keep_context = (
+        'docker.client', 'docker.exec_driver', 'docker-ng._pull_status',
+        'docker.docker_version', 'docker.docker_py_version'
+    )
     for key in __context__.keys():
         try:
             if key.startswith('docker.') and key not in keep_context:
@@ -725,6 +727,15 @@ def _get_top_level_images(imagedata, subset=None):
             'Invalid image data passed to _get_top_level_images(). Please '
             'report this issue. Full image data: {0}'.format(imagedata)
         )
+
+
+def _prep_pull():
+    '''
+    Populate __context__ with the current (pre-pull) image IDs (see the
+    docstring for _pull_status for more information).
+    '''
+    __context__['docker-ng._pull_status'] = \
+        [x[:12] for x in images(all=True)]
 
 
 def _size_fmt(num):
@@ -869,21 +880,62 @@ def _import_status(data, item, repo_name, repo_tag):
 
 def _pull_status(data, item):
     '''
-    Process a status update from a docker pull, updating the data structure
+    Process a status update from a docker pull, updating the data structure.
+
+    For containers created with older versions of Docker, there is no
+    distinction in the status updates between layers that were already present
+    (and thus not necessary to download), and those which were actually
+    downloaded. Because of this, any function that needs to invoke this
+    function needs to pre-fetch the image IDs by running _prep_pull() in any
+    function that calls _pull_status(). It is important to grab this
+    information before anything is pulled so we aren't looking at the state of
+    the images post-pull.
+
+    We can't rely on the way that __context__ is utilized by the images()
+    function, because by design we clear the relevant context variables once
+    we've made changes to allow the next call to images() to pick up any
+    changes that were made.
     '''
-    status = item['status']
-    if status == 'Already exists':
-        # Layer already exists
+    def _already_exists(id_):
+        '''
+        Layer already exists
+        '''
         already_pulled = data.setdefault('Layers', {}).setdefault(
             'Already_Pulled', [])
-        already_pulled.append(item['id'])
-    elif status == 'Pull complete':
-        # Pulled a new layer
+        if id_ not in already_pulled:
+            already_pulled.append(id_)
+
+    def _new_layer(id_):
+        '''
+        Pulled a new layer
+        '''
         pulled = data.setdefault('Layers', {}).setdefault(
             'Pulled', [])
-        pulled.append(item['id'])
+        if id_ not in pulled:
+            pulled.append(id_)
+
+    if 'docker-ng._pull_status' not in __context__:
+        log.warning(
+            '_pull_status context variable was not populated, information on '
+            'downloaded layers may be inaccurate. Please report this to the '
+            'SaltStack development team, and if possible include the image '
+            '(and tag) that was being pulled.'
+        )
+        __context__['docker-ng._pull_status'] = NOTSET
+    status = item['status']
+    if status == 'Already exists':
+        _already_exists(item['id'])
+    elif status in 'Pull complete':
+        _new_layer(item['id'])
     elif status.startswith('Status: '):
         data['Status'] = status[8:]
+    elif status == 'Download complete':
+        if __context__['docker-ng._pull_status'] is not NOTSET:
+            id_ = item['id']
+            if id_ in __context__['docker-ng._pull_status']:
+                _already_exists(id_)
+            else:
+                _new_layer(id_)
 
 
 def _push_status(data, item):
@@ -931,8 +983,7 @@ def _error_detail(data, item):
 
 def _validate_input(action,
                     kwargs,
-                    validate_ip_addrs=True,
-                    rename_kwargs=True):
+                    validate_ip_addrs=True):
     '''
     Perform validation on kwargs. Checks each key in kwargs against the
     VALID_CONTAINER_OPTS dict and if the value is None, looks for a local
@@ -1090,12 +1141,16 @@ def _validate_input(action,
             return
         if isinstance(kwargs['ports'], six.integer_types):
             kwargs['ports'] = str(kwargs['ports'])
-        try:
-            _valid_stringlist('ports')
-        except SaltInvocationError:
-            raise SaltInvocationError(
-                'ports must be a comma-separated list or Python list'
-            )
+        elif isinstance(kwargs['ports'], list):
+            new_ports = [str(x) for x in kwargs['ports']]
+            kwargs['ports'] = new_ports
+        else:
+            try:
+                _valid_stringlist('ports')
+            except SaltInvocationError:
+                raise SaltInvocationError(
+                    'ports must be a comma-separated list or Python list'
+                )
         new_ports = []
         for item in kwargs['ports']:
             # Have to run str() here again in case the ports were passed in a
@@ -1242,7 +1297,7 @@ def _validate_input(action,
             bind_parts = bind.split(':')
             num_bind_parts = len(bind_parts)
             if num_bind_parts == 2:
-                host_path, container_path = num_bind_parts
+                host_path, container_path = bind_parts
                 read_only = False
             elif num_bind_parts == 3:
                 host_path, container_path, read_only = bind_parts
@@ -1397,7 +1452,7 @@ def _validate_input(action,
                 container_port = port_num + '/' + lc_protocol
             else:
                 raise SaltInvocationError(err)
-            new_port_bindings.setdefault(port_num, []).append(bind_val)
+            new_port_bindings.setdefault(container_port, []).append(bind_val)
         kwargs['port_bindings'] = new_port_bindings
 
     def _valid_volumes_from():  # pylint: disable=unused-variable
@@ -1456,7 +1511,7 @@ def _validate_input(action,
                     'must be an integer'.format(count)
                 )
             count = int(count)
-            if pol_name == 'always' and 'count' != 0:
+            if pol_name == 'always' and count != 0:
                 log.warning(
                     'Using \'always\' restart_policy. Retry count will '
                     'be ignored.'
@@ -1467,7 +1522,7 @@ def _validate_input(action,
 
     def _valid_extra_hosts():  # pylint: disable=unused-variable
         '''
-        Must be a dict (host-to-ip mapping)
+        Must be a list of host:ip mappings
         '''
         if kwargs.get('extra_hosts') is None:
             # No need to validate
@@ -1511,7 +1566,7 @@ def _validate_input(action,
         '''
         if kwargs.get('pid_mode') not in (None, 'host'):
             raise SaltInvocationError(
-                'pid_mode must be either None or \'host\''
+                'pid_mode can only be \'host\', if set'
             )
 
     # And now, the actual logic to perform the validation
@@ -1608,17 +1663,6 @@ def _validate_input(action,
                 __context__.pop(key)
         except AttributeError:
             pass
-
-    if rename_kwargs:
-        # Add any unpassed kwargs with default values, and rename some of the
-        # kwargs whose names in the create/start functions differ from their
-        # counterparts in the docker-py functions. Can't use iterators here
-        # because we're going to be modifying the dict.
-        for key in list(six.iterkeys(valid_opts)):
-            if key in kwargs:
-                val = valid_opts[key]
-                if 'api_name' in val:
-                    kwargs[val['api_name']] = kwargs.pop(key)
 
 
 # Functions for information gathering
@@ -2436,9 +2480,9 @@ def create(image,
 
         Example: ``memory=512M``, ``memory=1073741824``
 
-    memory_swap : 0
+    memory_swap : -1
         Total memory limit (memory plus swap). Set to ``-1`` to disable swap. A
-        value of ``0`` (the default) means no swap limit.
+        value of ``0`` means no swap limit.
 
         Example: ``memory_swap=1G``, ``memory_swap=2147483648``
 
@@ -2528,14 +2572,28 @@ def create(image,
     except Exception:
         pull(image, client_timeout=client_timeout)
 
-    create_kwargs = salt.utils.clean_kwargs(**kwargs)
+    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
     if create_kwargs.get('hostname') is None \
             and create_kwargs.get('name') is not None:
         create_kwargs['hostname'] = create_kwargs['name']
 
-    _validate_input('create', create_kwargs)
-    log.debug('create_kwargs: {0}'.format(create_kwargs))
+    if create_kwargs.pop('validate_input', False):
+        _validate_input('create', create_kwargs)
 
+    # Rename the kwargs whose names differ from their counterparts in the
+    # docker.client.Client class member functions. Can't use iterators here
+    # because we're going to be modifying the dict.
+    for key in list(six.iterkeys(VALID_CREATE_OPTS)):
+        if key in create_kwargs:
+            val = VALID_CREATE_OPTS[key]
+            if 'api_name' in val:
+                create_kwargs[val['api_name']] = create_kwargs.pop(key)
+
+    log.debug(
+        'docker-ng.create is using the following kwargs to create '
+        'container \'{0}\' from image \'{1}\': {2}'
+        .format(name, image, create_kwargs)
+    )
     time_started = time.time()
     response = _client_wrapper('create_container',
                                name=name,
@@ -3002,6 +3060,8 @@ def build(path=None,
         salt myminion docker-ng.build /path/to/docker/build/dir image=myimage:dev
         salt myminion docker-ng.build https://github.com/myuser/myrepo.git image=myimage:latest
     '''
+    _prep_pull()
+
     image = ':'.join(_get_repo_tag(image))
     time_started = time.time()
     response = _client_wrapper('build',
@@ -3427,6 +3487,8 @@ def pull(image,
         salt myminion docker-ng.pull centos
         salt myminion docker-ng.pull centos:6
     '''
+    _prep_pull()
+
     repo_name, repo_tag = _get_repo_tag(image)
     kwargs = {'tag': repo_tag,
               'stream': True,
@@ -3580,8 +3642,8 @@ def rmi(name, force=False, prune=True):
 
     A dictionary will be returned, containing the following two keys:
 
+    - ``Layers`` - A list of the IDs of image layers that were removed
     - ``Tags`` - A list of the tags that were removed
-    - ``Images`` - A list of the IDs of image layers that were removed
 
 
     CLI Examples:
@@ -3620,7 +3682,7 @@ def rmi(name, force=False, prune=True):
                 'Error {0}: {1}'.format(exc.response.status_code,
                                         exc.explanation)
             )
-    return {'Images': [x for x in pre_images if x not in images(all=True)],
+    return {'Layers': [x for x in pre_images if x not in images(all=True)],
             'Tags': [x for x in pre_tags if x not in list_tags()]}
 
 
@@ -4008,9 +4070,15 @@ def start(name, validate_ip_addrs=True, **kwargs):
         Multiple bindings can be separated by commas, or passed as a Python
         list. The below two examples are equivalent:
 
-        Example 1: ``port_bindings="5000:5000,2123/udp:2123,8080"``
+        Example 1: ``port_bindings="5000:5000,2123:2123/udp,8080"``
 
-        Example 2: ``port_bindings="['5000:5000', '2123/udp:2123', '8080']"``
+        Example 2: ``port_bindings="['5000:5000', '2123:2123/udp', '8080']"``
+
+        .. note::
+
+            When configuring bindings for UDP ports, the protocol must be
+            passed in the ``containerPort`` value, as seen in the examples
+            above.
 
     lxc_conf
         Additional LXC configuration parameters to set before starting the
@@ -4085,21 +4153,15 @@ def start(name, validate_ip_addrs=True, **kwargs):
             represent ``None``.
 
     restart_policy
-        Set a restart policy for the container. Can be passed either as a
-        string in the format ``policy[:retry_count]`` (where ``policy`` is one
-        of ``always`` or ``on-failure``, and ``retry_count`` is an optional
-        limit to the number of retries), or as a Python dictionary in the
-        format specified by the `docker-py API specification`_. Requires Docker
-        1.2.0 or newer.
+        Set a restart policy for the container. Must be passed as a string in
+        the format ``policy[:retry_count]`` where ``policy`` is one of
+        ``always`` or ``on-failure``, and ``retry_count`` is an optional limit
+        to the number of retries. The retry count is ignored when using the
+        ``always`` restart policy.
 
         Example 1: ``restart_policy=on-failure:5``
 
         Example 2: ``restart_policy=always``
-
-        Example 3: ``restart_policy="{Name: on-failure, MaximumRetryCount:
-        5}"``
-
-        .. _`docker-py API specification`: http://docker-py.readthedocs.org/en/stable/api/
 
     cap_add
         List of capabilities to add within the container. Can be passed as a
@@ -4156,11 +4218,25 @@ def start(name, validate_ip_addrs=True, **kwargs):
                 'comment': ('Container \'{0}\' is paused, cannot start'
                             .format(name))}
 
-    runtime_kwargs = salt.utils.clean_kwargs(**kwargs)
-    _validate_input('runtime',
-                    runtime_kwargs,
-                    validate_ip_addrs=validate_ip_addrs)
-    log.debug('runtime_kwargs: {0}'.format(runtime_kwargs))
+    runtime_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    if runtime_kwargs.pop('validate_input', False):
+        _validate_input('runtime',
+                        runtime_kwargs,
+                        validate_ip_addrs=validate_ip_addrs)
+
+    # Rename the kwargs whose names differ from their counterparts in the
+    # docker.client.Client class member functions. Can't use iterators here
+    # because we're going to be modifying the dict.
+    for key in list(six.iterkeys(VALID_RUNTIME_OPTS)):
+        if key in runtime_kwargs:
+            val = VALID_RUNTIME_OPTS[key]
+            if 'api_name' in val:
+                runtime_kwargs[val['api_name']] = runtime_kwargs.pop(key)
+
+    log.debug(
+        'docker-ng.start is using the following kwargs to start container '
+        '\'{0}\': {1}'.format(name, runtime_kwargs)
+    )
     return _change_state(name, 'start', 'running', **runtime_kwargs)
 
 
