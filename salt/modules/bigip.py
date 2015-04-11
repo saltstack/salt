@@ -1,9 +1,10 @@
 '''
+An execution module which can manipulate an f5 bigip via iControl REST
+
     :maintainer:    Anthony Hawkins <anthonyhawkins917@gmail.com.com>
     :maturity:      develop
     :depends:       requests
     :platform:      all
-    :version        0.1
 '''
 
 # Import python libs
@@ -11,7 +12,6 @@ import requests
 import requests.exceptions
 import json
 import logging as logger
-
 
 # Import salt libs
 import salt.utils
@@ -85,7 +85,12 @@ def _build_list(option_value, item_kind):
         if option_value == 'none':
             return items
 
-        values = option_value.split(',')
+        #was a list already passed in?
+        if not isinstance(option_value, list):
+            values = option_value.split(',')
+        else:
+            values = option_value
+
         for value in values:
             # sometimes the bigip just likes a plain ol list of items
             if item_kind is None:
@@ -128,16 +133,16 @@ def _set_value(value):
     '''
 
     #parse out dictionary if detected
-    if ':' in value:
-        dict = {}
+    if ':' in value and not isinstance(value, dict):
+        options = {}
         #split out pairs
         key_pairs = value.split(',')
         for key_pair in key_pairs:
             k = key_pair.split(':')[0]
             v = key_pair.split(':')[1]
-            dict[k] = v
+            options[k] = v
 
-        return dict
+        return options
     else:
         return value
 
