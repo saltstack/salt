@@ -38,7 +38,7 @@ from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
-class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
+class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):  # pylint: disable=W0223
     '''
     Mixin to hold some shared things
     '''
