@@ -269,6 +269,7 @@ def fib(num):
         return num, time.time() - start
     return _fib(num-1) + _fib(num-2), time.time() - start
 
+
 def _fib(num):
     '''
     Helper method for test.fib, doesn't calculate the time.
