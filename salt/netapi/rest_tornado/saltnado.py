@@ -367,16 +367,6 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ('application/x-yaml', yaml.safe_dump),
     )
 
-    def min_syndic_wait_done(self):
-        '''
-        Ensure that the request has been open for a minimum of syndic_wait time
-        '''
-        if not self.application.opts['order_masters']:
-            return True
-        elif time.time() > self.start + self.application.opts['syndic_wait']:
-            return True
-        return False
-
     def _verify_client(self, client):
         '''
         Verify that the client is in fact one we have
