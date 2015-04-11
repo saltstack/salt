@@ -40,6 +40,7 @@ Docker_. docker-py can easily be installed using :py:func:`pip.install
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 .. _Docker: https://www.docker.com/
 
+.. _docker-authentication:
 
 Authentication
 --------------
@@ -1331,7 +1332,7 @@ def _validate_input(action,
         '''
         Must be a list of colon-delimited mappings
         '''
-        if kwargs.get('links') is None or isinstance(kwargs['links'], dict):
+        if kwargs.get('links') is None:
             # No need to validate
             return
         err = 'Invalid format for links. See documentaion for proper usage.'
@@ -2448,10 +2449,15 @@ def create(image,
 
         Example: ``hostname=web1``
 
+        .. warning::
+
+            If the container is started with with ``network_mode=host``, the
+            hostname will be overridden by the hostname of the Minion.
+
     domainname
         Domain name of the container
 
-        Example: ``hostname=domain.tld``
+        Example: ``domainname=domain.tld``
 
     interactive : False
         Leave stdin open
@@ -2503,8 +2509,8 @@ def create(image,
         Example: ``working_dir=/var/log/nginx``
 
     entrypoint
-        Either a string (e.g. ``"mycmd --arg1 --arg2"``) or a Python list (e.g.
-        ``"['mycmd', '--arg1', '--arg2']"``)
+        Entrypoint for the container. Either a string (e.g. ``"mycmd --arg1
+        --arg2"``) or a Python list (e.g.  ``"['mycmd', '--arg1', '--arg2']"``)
 
         Example: ``entrypoint="cat access.log"``
 
@@ -2535,7 +2541,9 @@ def create(image,
         Example: ``cpu_shares=0.5``, ``cpu_shares=1``
 
     cpuset
-        CPUs on which which to allow execution ('0-3' or '0,1')
+        CPUs on which which to allow execution, specified as a string
+        containing a range (e.g. ``0-3``) or a comma-separated list of CPUs
+        (e.g. ``0,1``).
 
         Example: ``cpuset="0-3"``, ``cpuset="0,1"``
 
@@ -3005,7 +3013,7 @@ def build(path=None,
     Builds a docker image from a Dockerfile or a URL
 
     path
-        Path to directory on the Minion containing the Dockerfile
+        Path to directory on the Minion containing a Dockerfile
 
     image
         Image to be built, in ``repo:tag`` notation. If just the repository
@@ -4039,12 +4047,12 @@ def start(name, validate_ip_addrs=True, **kwargs):
         validation will be performed. To disable, set this to ``False``
 
     binds
-        Volumes to bind mount. Each bind mount should be passed in the format
-        ``<host_path>:<container_path>:<read_only>``, where ``<read_only>`` is
-        one of ``rw`` (for read-write access) or ``ro`` (for read-only access).
-        Optionally, the read-only information can be left off the end and the
-        bind mount will be assumed to be read-write. Examples 2 and 3 below are
-        equivalent.
+        Files/directories to bind mount. Each bind mount should be passed in
+        the format ``<host_path>:<container_path>:<read_only>``, where
+        ``<read_only>`` is one of ``rw`` (for read-write access) or ``ro`` (for
+        read-only access).  Optionally, the read-only information can be left
+        off the end and the bind mount will be assumed to be read-write.
+        Examples 2 and 3 below are equivalent.
 
         Example 1: ``binds=/srv/www:/var/www:ro``
 
@@ -4088,9 +4096,9 @@ def start(name, validate_ip_addrs=True, **kwargs):
 
         .. note::
 
-            These configuration parameters will only have the desired effect if
-            the container is using the LXC execution driver, which has not been
-            the default for some time.
+            These LXC configuration parameters will only have the desired
+            effect if the container is using the LXC execution driver, which
+            has not been the default for some time.
 
     publish_all_ports : False
         Allocates a random host port for each port exposed using the ``ports``
@@ -4101,12 +4109,16 @@ def start(name, validate_ip_addrs=True, **kwargs):
     links
         Link this container to another. Links should be specified in the format
         ``<container_name_or_id>:<link_alias>``. Multiple links can be passed,
-        as a comma separated list.
+        ether as a comma separated list or a Python list.
 
-        Example: ``links=mycontainer:myalias``, ``links=web1:link1,web2:link2``
+        Example 1: ``links=mycontainer:myalias``,
+        ``links=web1:link1,web2:link2``
+
+        Example 2: ``links="['mycontainer:myalias']"``
+        ``links="['web1:link1', 'web2:link2']"``
 
     dns
-        List of DNS nameservers. Can be passed as a comma-separated string or a
+        List of DNS nameservers. Can be passed as a comma-separated list or a
         Python list.
 
         Example: ``dns=8.8.8.8,8.8.4.4`` or ``dns="[8.8.8.8, 8.8.4.4]"``
@@ -4116,7 +4128,7 @@ def start(name, validate_ip_addrs=True, **kwargs):
             To skip IP address validation, use ``validate_ip_addrs=False``
 
     dns_search
-        List of DNS search domains. Can be passed as a comma-separated string
+        List of DNS search domains. Can be passed as a comma-separated list
         or a Python list.
 
         Example: ``dns_search=foo1.domain.tld,foo2.domain.tld`` or
@@ -4124,7 +4136,7 @@ def start(name, validate_ip_addrs=True, **kwargs):
 
     volumes_from
         Container names or IDs from which the container will get volumes. Can
-        be passed as a comma-separated string or a Python list.
+        be passed as a comma-separated list or a Python list.
 
         Example: ``volumes_from=foo``, ``volumes_from=foo,bar``,
         ``volumes_from="[foo, bar]"``
@@ -4147,11 +4159,6 @@ def start(name, validate_ip_addrs=True, **kwargs):
 
         Example: ``network_mode=null``, ``network_mode=container:web1``
 
-        .. note::
-
-            As with the ``port_bindings`` argument, ``null`` must be used to
-            represent ``None``.
-
     restart_policy
         Set a restart policy for the container. Must be passed as a string in
         the format ``policy[:retry_count]`` where ``policy`` is one of
@@ -4165,7 +4172,7 @@ def start(name, validate_ip_addrs=True, **kwargs):
 
     cap_add
         List of capabilities to add within the container. Can be passed as a
-        comma-separated string or a Python list. Requires Docker 1.2.0 or
+        comma-separated list or a Python list. Requires Docker 1.2.0 or
         newer.
 
         Example: ``cap_add=SYS_ADMIN,MKNOD``, ``cap_add="[SYS_ADMIN, MKNOD]"``
@@ -4179,8 +4186,9 @@ def start(name, validate_ip_addrs=True, **kwargs):
         ``cap_drop="[SYS_ADMIN, MKNOD]"``
 
     extra_hosts
-        Comma-separated list of additional hosts to add to the container's
-        /etc/hosts file. Requires Docker 1.3.0 or newer.
+        Additional hosts to add to the container's /etc/hosts file. Can be
+        passed as a comma-separated list or a Python list. Requires Docker
+        1.3.0 or newer.
 
         Example: ``extra_hosts=web1:10.9.8.7,web2:10.9.8.8``
 
