@@ -264,6 +264,7 @@ def fib(num):
 
         salt '*' test.fib 3
     '''
+    num = int(num)
     start = time.time()
     if num < 2:
         return num, time.time() - start
