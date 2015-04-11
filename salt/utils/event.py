@@ -613,8 +613,8 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     res[name]['__sls__'] = fn_
 
                 react.update(res)
-            except Exception:
-                log.error('Failed to render "{0}"'.format(fn_))
+            except Exception as e:
+                log.error('Failed to render "{0}"\n{1}'.format(fn_, e))
         return react
 
     def list_reactors(self, tag):
