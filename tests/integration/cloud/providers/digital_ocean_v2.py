@@ -84,11 +84,11 @@ class DigitalOceanTest(integration.ShellCase):
         '''
         Tests the return of running the --list-images command for digital ocean
         '''
-        _image_list =  self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
+        image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
 
         self.assertIn(
             '6372321',
-            [i.strip() for i in _image_list]
+            [i.strip() for i in image_list]
         )
 
     def test_list_locations(self):
