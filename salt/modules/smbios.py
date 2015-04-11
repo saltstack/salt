@@ -38,7 +38,7 @@ def __virtual__():
     Only work when dmidecode is installed.
     '''
     if DMIDECODER is None:
-        log.debug('SMBIOS: dmidecode nor smbios found!')
+        log.debug('SMBIOS: neither dmidecode nor smbios found!')
         return False
     else:
         return True
