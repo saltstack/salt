@@ -22,16 +22,9 @@ import salt.exceptions
 log = logger.getLogger(__name__)
 
 # Setup Virtual Function
-#try:
-#    import bigip
-#    HAS_BIG_IP = True
-#except:
-#    HAS_BIG_IP = False
+def __virtual__():
+    return 'bigip'
 
-#def __virtual__():
-#    if HAS_BIG_IP is True:
-#        return 'icontrol'
-#    return False
 
 BIG_IP_URL_BASE = 'https://{}/mgmt/tm'
 
