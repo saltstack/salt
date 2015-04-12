@@ -936,13 +936,24 @@ def list_folders(kwargs=None, call=None):
 
 def list_snapshots(kwargs=None, call=None):
     '''
-    List all snapshots for all VMs and templates in this VMware environment
+    List snapshots either for all VMs and templates or for a specific VM/template
+    in this VMware environment
+
+    To list snapshots for all VMs and templates:
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f list_snapshots my-vmware-config
+
+    To list snapshots for a specific VM/template:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_snapshots my-vmware-config name="vmname"
     '''
     if call != 'function':
         log.error(
@@ -951,7 +962,6 @@ def list_snapshots(kwargs=None, call=None):
         return False
 
     ret = {}
-    snapshot = {}
     vm_properties = [
         "name",
         "rootSnapshot",
@@ -962,7 +972,10 @@ def list_snapshots(kwargs=None, call=None):
 
     for vm in vm_list:
         if vm["rootSnapshot"]:
-            ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
+            if kwargs and 'name' in kwargs and vm["name"] == kwargs['name']:
+                return {vm["name"]: _get_snapshots(vm["snapshot"].rootSnapshotList)}
+            else:
+                ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
     return ret
 
 
