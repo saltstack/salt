@@ -48,6 +48,7 @@ cloud configuration at
 # Import python libs
 from __future__ import absolute_import
 from random import randint
+from re import match
 import pprint
 import logging
 import time
@@ -316,6 +317,7 @@ def _manage_devices(devices, vm):
     device_specs = []
     existing_disks_label = []
     existing_network_adapters_label = []
+    nics_map = []
 
     # loop through all the devices the vm/template has
     # check if the device needs to be created or configured
@@ -343,10 +345,26 @@ def _manage_devices(devices, vm):
                 existing_network_adapters_label.append(device.deviceInfo.label)
                 if device.deviceInfo.label in devices['network'].keys():
                     network_name = devices['network'][device.deviceInfo.label]['name']
-                    # Only edit the network adapter if network name is different
-                    if device.backing.deviceName != network_name:
-                        network_spec = _edit_existing_network_adapter_helper(device, network_name)
-                        device_specs.append(network_spec)
+                    network_spec = _edit_existing_network_adapter_helper(device, network_name)
+                    device_specs.append(network_spec)
+
+                    adapter_mapping = vim.vm.customization.AdapterMapping()
+                    adapter_mapping.adapter = vim.vm.customization.IPSettings()
+
+                    if 'domain' in devices['network'][device.deviceInfo.label].keys():
+                        domain = devices['network'][device.deviceInfo.label]['domain']
+                        adapter_mapping.adapter.dnsDomain = domain
+                    if 'gateway' in devices['network'][device.deviceInfo.label].keys():
+                        gateway = devices['network'][device.deviceInfo.label]['gateway']
+                        adapter_mapping.adapter.gateway = gateway
+                    if 'ip' in devices['network'][device.deviceInfo.label].keys():
+                        ip = str(devices['network'][device.deviceInfo.label]['ip'])
+                        subnet_mask = str(devices['network'][device.deviceInfo.label]['subnet_mask'])
+                        adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+                        adapter_mapping.adapter.subnetMask = subnet_mask
+                    else:
+                        adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
+                    nics_map.append(adapter_mapping)
 
     if 'disk' in devices.keys():
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
@@ -373,7 +391,123 @@ def _manage_devices(devices, vm):
             network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type)
             device_specs.append(network_spec)
 
-    return device_specs
+            adapter_mapping = vim.vm.customization.AdapterMapping()
+            adapter_mapping.adapter = vim.vm.customization.IPSettings()
+
+            if 'domain' in devices['network'][network_adapter_label].keys():
+                domain = devices['network'][network_adapter_label]['domain']
+                adapter_mapping.adapter.dnsDomain = domain
+            if 'gateway' in devices['network'][network_adapter_label].keys():
+                gateway = devices['network'][network_adapter_label]['gateway']
+                adapter_mapping.adapter.gateway = gateway
+            if 'ip' in devices['network'][network_adapter_label].keys():
+                ip = str(devices['network'][network_adapter_label]['ip'])
+                subnet_mask = str(devices['network'][network_adapter_label]['subnet_mask'])
+                adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+                adapter_mapping.adapter.subnetMask = subnet_mask
+            else:
+                adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
+            nics_map.append(adapter_mapping)
+
+    ret = {
+        'device_specs': device_specs,
+        'nics_map': nics_map
+    }
+
+    return ret
+
+
+def _wait_for_ip(vm, max_wait_minute):
+    time_counter = 0
+    max_wait_second = int(max_wait_minute * 60)
+    while time_counter < max_wait_second:
+        log.info("Waiting to get IP information [{0} s]".format(time_counter))
+        for net in vm.guest.net:
+            if net.ipConfig.ipAddress:
+                for current_ip in net.ipConfig.ipAddress:
+                    if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                        ip = current_ip.ipAddress
+                        return ip
+        time.sleep(5)
+        time_counter += 5
+    return False
+
+
+def _format_instance_info(vm):
+    device_full_info = {}
+    disk_full_info = {}
+    for device in vm["config.hardware.device"]:
+        device_full_info[device.deviceInfo.label] = {
+            'key': device.key,
+            'label': device.deviceInfo.label,
+            'summary': device.deviceInfo.summary,
+            'type': type(device).__name__.rsplit(".", 1)[1],
+            'unitNumber': device.unitNumber
+        }
+
+        if hasattr(device.backing, 'network'):
+            device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+            device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+
+        if hasattr(device, 'busNumber'):
+            device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
+
+        if hasattr(device, 'device'):
+            device_full_info[device.deviceInfo.label]['devices'] = device.device
+
+        if hasattr(device, 'videoRamSizeInKB'):
+            device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
+
+        if isinstance(device, vim.vm.device.VirtualDisk):
+            device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
+            device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
+            disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label].copy()
+            disk_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+
+    storage_full_info = {
+        'committed': vm["summary.storage.committed"],
+        'uncommitted': vm["summary.storage.uncommitted"],
+        'unshared': vm["summary.storage.unshared"],
+        'disks': disk_full_info,
+    }
+
+    file_full_info = {}
+    for file in vm["layoutEx.file"]:
+        file_full_info[file.key] = {
+            'key': file.key,
+            'name': file.name,
+            'size': file.size,
+            'type': file.type
+        }
+
+    network_full_info = {}
+    for net in vm["guest.net"]:
+        network_full_info = {
+            'connected': net.connected,
+            'ip_addresses': net.ipAddress,
+            'mac_address': net.macAddress,
+            'network': net.network
+        }
+
+    vm_full_info = {
+        'devices': device_full_info,
+        'storage': storage_full_info,
+        'files': file_full_info,
+        'guest_full_name': vm["config.guestFullName"],
+        'guest_id': vm["config.guestId"],
+        'hostname': vm["object"].guest.hostName,
+        'ip_address': vm["object"].guest.ipAddress,
+        'mac_address': network_full_info["mac_address"] if "mac_address" in network_full_info else None,
+        'memory_mb': vm["config.hardware.memoryMB"],
+        'name': vm['name'],
+        'net': [network_full_info],
+        'num_cpu': vm["config.hardware.numCPU"],
+        'path': vm["config.files.vmPathName"],
+        'status': vm["summary.runtime.powerState"],
+        'tools_status': vm["guest.toolsStatus"],
+    }
+
+    return vm_full_info
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -660,6 +794,84 @@ def list_nodes(kwargs=None, call=None):
     return ret
 
 
+def list_nodes_full(kwargs=None, call=None):
+    '''
+    Return a list of all VMs and templates that are on the provider, with full details
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_full my-vmware-config
+    '''
+
+    ret = {}
+    vm_properties = [
+        "config.hardware.device",
+        "summary.storage.committed",
+        "summary.storage.uncommitted",
+        "summary.storage.unshared",
+        "layoutEx.file",
+        "config.guestFullName",
+        "config.guestId",
+        "guest.net",
+        "config.hardware.memoryMB",
+        "name",
+        "config.hardware.numCPU",
+        "config.files.vmPathName",
+        "summary.runtime.powerState",
+        "guest.toolsStatus"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        vm_full_info = _format_instance_info(vm)
+        ret[vm_full_info['name']] = vm_full_info
+
+    return ret
+
+
+def show_instance(name, call=None):
+    '''
+    List all available details of the specified VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a show_instance vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    vm_properties = [
+        "config.hardware.device",
+        "summary.storage.committed",
+        "summary.storage.uncommitted",
+        "summary.storage.unshared",
+        "layoutEx.file",
+        "config.guestFullName",
+        "config.guestId",
+        "guest.net",
+        "config.hardware.memoryMB",
+        "name",
+        "config.hardware.numCPU",
+        "config.files.vmPathName",
+        "summary.runtime.powerState",
+        "guest.toolsStatus"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm['name'] == name:
+            vm_full_info = _format_instance_info(vm)
+    return vm_full_info
+
+
 def avail_images():
     '''
     Return a list of all the templates present in this VMware environment with basic
@@ -692,96 +904,6 @@ def avail_images():
                 'ram': vm["config.hardware.memoryMB"]
             }
     return templates
-
-
-def show_instance(name, call=None):
-    '''
-    List all available details of the specified VM
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a show_instance vmname
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The show_instance action must be called with -a or --action.'
-        )
-
-    vm = _get_mor_by_property(vim.VirtualMachine, name)
-
-    device_full_info = {}
-    disk_full_info = {}
-    for device in vm.config.hardware.device:
-        device_full_info[device.deviceInfo.label] = {
-            'key': device.key,
-            'label': device.deviceInfo.label,
-            'summary': device.deviceInfo.summary,
-            'type': type(device).__name__.rsplit(".", 1)[1],
-            'unitNumber': device.unitNumber
-        }
-        if hasattr(device.backing, 'network'):
-            device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
-            device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
-
-        if hasattr(device, 'busNumber'):
-            device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
-
-        if hasattr(device, 'device'):
-            device_full_info[device.deviceInfo.label]['devices'] = device.device
-
-        if hasattr(device, 'videoRamSizeInKB'):
-            device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
-
-        if hasattr(device.backing, 'fileName'):
-            device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
-            device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
-            disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label]
-            disk_full_info[device.deviceInfo.label]['descriptor'] = device.backing.fileName
-
-    storage_full_info = {}
-    storage_full_info['committed'] = vm.summary.storage.committed
-    storage_full_info['uncommitted'] = vm.summary.storage.uncommitted
-    storage_full_info['unshared'] = vm.summary.storage.unshared
-    storage_full_info['disks'] = disk_full_info
-
-    file_full_info = {}
-    for file in vm.layoutEx.file:
-        file_full_info[file.key] = {
-            'key': file.key,
-            'name': file.name,
-            'size': file.size,
-            'type': file.type
-        }
-
-    for net in vm.guest.net:
-        network_full_info = {
-            'connected': net.connected,
-            'ip_addresses': net.ipAddress,
-            'mac_address': net.macAddress,
-            'network': net.network
-        }
-
-    vm_full_info = {
-        'devices': device_full_info,
-        'storage': storage_full_info,
-        'files': file_full_info,
-        'guest_full_name': vm.config.guestFullName,
-        'guest_id': vm.config.guestId,
-        'hostname': vm.guest.hostName,
-        'ip_address': vm.guest.ipAddress,
-        'mac_address': network_full_info['mac_address'],
-        'memory_mb': vm.config.hardware.memoryMB,
-        'name': vm.name,
-        'net': [network_full_info],
-        'num_cpu': vm.config.hardware.numCPU,
-        'path': vm.config.files.vmPathName,
-        'status': vm.summary.runtime.powerState,
-        'tools_status': vm.guest.toolsStatus,
-    }
-
-    return vm_full_info
 
 
 def list_folders(kwargs=None, call=None):
@@ -977,6 +1099,12 @@ def destroy(name, call=None):
         salt-cloud --destroy vmname
         salt-cloud -a destroy vmname
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
@@ -1017,7 +1145,7 @@ def destroy(name, call=None):
     )
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
-    return 'True'
+    return True
 
 
 def create(vm_):
@@ -1084,6 +1212,12 @@ def create(vm_):
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
     )
+    key_filename = config.get_cloud_config_value(
+        'private_key', vm_, __opts__, search_global=False, default=None
+    )
+    deploy = config.get_cloud_config_value(
+        'deploy', vm_, __opts__, search_global=False, default=True
+    )
 
     if 'clonefrom' in vm_:
         # Clone VM/template from specified VM/template
@@ -1142,8 +1276,8 @@ def create(vm_):
             config_spec.memoryMB = memory
 
         if devices:
-            device_specs = _manage_devices(devices, object_ref)
-            config_spec.deviceChange = device_specs
+            specs = _manage_devices(devices, object_ref)
+            config_spec.deviceChange = specs['device_specs']
 
         if extra_config:
             for key, value in extra_config.iteritems():
@@ -1156,6 +1290,22 @@ def create(vm_):
             location=reloc_spec,
             config=config_spec
         )
+
+        if specs['nics_map']:
+            if "Windows" not in object_ref.config.guestFullName:
+                global_ip = vim.vm.customization.GlobalIPSettings()
+                if vm_['dns_servers']:
+                    global_ip.dnsServerList = vm_['dns_servers']
+                identity = vim.vm.customization.LinuxPrep()
+                identity.domain = vm_['domain']
+                identity.hostName = vim.vm.customization.FixedName(name=vm_name)
+
+                custom_spec = vim.vm.customization.Specification(
+                    nicSettingMap=specs['nics_map'],
+                    globalIPSettings=global_ip,
+                    identity=identity
+                )
+                clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
@@ -1177,7 +1327,7 @@ def create(vm_):
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
             while task.info.state == 'running':
-                log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
+                log.info("Waiting for clone task to finish [{0} s]".format(time_counter))
                 time.sleep(5)
                 time_counter += 5
         except Exception as exc:
@@ -1191,6 +1341,24 @@ def create(vm_):
             )
             return False
 
+        new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
+
+        # If it a template or if it does not need to be powered on, or if deploy is False then do not wait for ip
+        if not template and power:
+            ip = _wait_for_ip(new_vm_ref, 20)
+            if ip:
+                log.debug("IP is: {0}".format(ip))
+                # ssh or smb using ip and install salt
+                if deploy:
+                    vm_['key_filename'] = key_filename
+                    vm_['ssh_host'] = ip
+
+                    salt.utils.cloud.bootstrap(vm_, __opts__)
+            else:
+                log.warning("Could not get IP information for {0}".format(vm_name))
+
+        data = show_instance(vm_name, call='action')
+
         salt.utils.cloud.fire_event(
             'event',
             'created instance',
@@ -1202,9 +1370,8 @@ def create(vm_):
             },
             transport=__opts__['transport']
         )
-
     else:
         log.error("clonefrom option hasn\'t been specified. Exiting.")
         return False
 
-    return {vm_name: True}
+    return {vm_name: data}
