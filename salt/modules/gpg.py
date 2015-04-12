@@ -426,9 +426,12 @@ def delete_key(keyid=None,
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
         the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
+<<<<<<< HEAD
 
     gnupghome
         Specify the location where GPG related files are stored.
+=======
+>>>>>>> salt/2015.2
 
     CLI Example:
 

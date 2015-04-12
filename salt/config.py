@@ -36,6 +36,7 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
+import salt.utils.sdb
 
 log = logging.getLogger(__name__)
 

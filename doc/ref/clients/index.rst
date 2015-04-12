@@ -100,3 +100,9 @@ CloudClient
 
 .. autoclass:: salt.cloud.CloudClient
     :members:
+
+SSHClient
+---------
+
+.. autoclass:: salt.client.ssh.client.SSHClient
+    :members: cmd, cmd_iter

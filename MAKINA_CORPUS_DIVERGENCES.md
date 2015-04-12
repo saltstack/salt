@@ -10,3 +10,5 @@ DIVERGENCES TO KEEP AT ALL COSTS:
         - https://github.com/saltstack/salt/pull/20918
 
 - zcbuildout mod & states in makina-states/salt_fork
+
+- iptables needs sync, currently this is the one from salt/develop, but 2015.2 is divergent

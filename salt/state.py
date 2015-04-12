@@ -70,6 +70,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'check_cmd',
     'fail_hard',
     'onlyif',
+    'unless',
     'order',
     'prereq',
     'prereq_in',
@@ -2520,7 +2521,6 @@ class BaseHighState(object):
         '''
         Render a state file and retrieve all of the include states
         '''
-        err = ''
         errors = []
         if not local:
             state_data = self.client.get_state(sls, saltenv)
@@ -2535,7 +2535,8 @@ class BaseHighState(object):
         if not fn_:
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
-                'available on the salt master'.format(sls, saltenv)
+                'available on the salt master or through a configured '
+                'fileserver'.format(sls, saltenv)
             )
         state = None
         try:

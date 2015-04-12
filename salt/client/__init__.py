@@ -502,6 +502,7 @@ class LocalClient(object):
             * ``grain`` - Match based on a grain comparison
             * ``grain_pcre`` - Grain comparison with a regex
             * ``pillar`` - Pillar data comparison
+            * ``pillar_pcre`` - Pillar data comparison with a regex
             * ``nodegroup`` - Match on nodegroup
             * ``range`` - Use a Range server for matching
             * ``compound`` - Pass a compound match string

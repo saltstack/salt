@@ -148,8 +148,13 @@ Function MsiQueryProductState
 
 FunctionEnd
 
-Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+!ifdef SaltVersion
+    Name "${PRODUCT_NAME} ${SaltVersion}"
+    OutFile "Salt-Minion-${SaltVersion}-${CPUARCH}-Setup.exe"
+!else
+    Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+    OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+!endif
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
@@ -229,7 +234,16 @@ FunctionEnd
 
 Function .onInit
 
+  confFind:
   IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
+
+  confNotFound:
+    ${If} $INSTDIR == "c:\salt\bin\Scripts"
+      StrCpy $INSTDIR "C:\salt"
+      goto confFind
+    ${Else}
+      goto confReallyNotFound
+    ${EndIf}
 
   confFound:
     FileOpen $0 "$INSTDIR\conf\minion" r
@@ -256,7 +270,7 @@ Function .onInit
     EndOfFile:
       FileClose $0
 
-  confNotFound:
+  confReallyNotFound:
     Push $R0
     Push $R1
     Push $R2
