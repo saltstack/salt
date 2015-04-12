@@ -510,6 +510,23 @@ def _format_instance_info(vm):
     return vm_full_info
 
 
+def _get_snapshots(snapshot_list, parent_snapshot_path=""):
+    snapshots = {}
+    for snapshot in snapshot_list:
+        snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
+        snapshots[snapshot_path] = {
+            'name': snapshot.name,
+            'description': snapshot.description,
+            'created': str(snapshot.createTime).split('.')[0],
+            'state': snapshot.state,
+            'path': snapshot_path,
+        }
+        # Check if child snapshots exist
+        if snapshot.childSnapshotList:
+            snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+    return snapshots
+
+
 def get_vcenter_version(kwargs=None, call=None):
     '''
     Show the vCenter Server version with build number.
@@ -915,6 +932,38 @@ def list_folders(kwargs=None, call=None):
         folders.append(folder["name"])
 
     return {'Folders': folders}
+
+
+def list_snapshots(kwargs=None, call=None):
+    '''
+    List all snapshots for all VMs and templates in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_snapshots my-vmware-config
+    '''
+    if call != 'function':
+        log.error(
+            'The list_snapshots function must be called with -f or --function.'
+        )
+        return False
+
+    ret = {}
+    snapshot = {}
+    vm_properties = [
+        "name",
+        "rootSnapshot",
+        "snapshot"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["rootSnapshot"]:
+            ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
+    return ret
 
 
 def start(name, call=None):
