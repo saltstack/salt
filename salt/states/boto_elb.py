@@ -234,7 +234,8 @@ def present(
         A list of availability zones for this ELB.
 
     listeners
-        A list of listener lists; example:
+        A list of listener lists; example::
+
             [
                 ['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'],
                 ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']
@@ -344,7 +345,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     Add instance/s to load balancer
 
-    .. versionsadded:: Beryllium
+    .. versionadded:: Beryllium
 
     .. code-block:: yaml
 
@@ -645,6 +646,11 @@ def _attributes_present(
         if (cd['enabled'] != _cd['enabled']
                 or cd.get('timeout', 300) != _cd.get('timeout')):
             attrs_to_set.append('connection_draining')
+    if 'connecting_settings' in attributes:
+        cs = attributes['connecting_settings']
+        _cs = _attributes['connecting_settings']
+        if cs['idle_timeout'] != _cs['idle_timeout']:
+            attrs_to_set.append('connecting_settings')
     if 'access_log' in attributes:
         for attr, val in six.iteritems(attributes['access_log']):
             if str(_attributes['access_log'][attr]) != str(val):

@@ -1024,6 +1024,7 @@ def running(name,
         remove_status = __salt__['docker.remove_container'](name)
         if not remove_status['status']:
             return _invalid(comment='Failed to remove outdated container {0!r}'.format(name))
+        already_exists = False
         # now it's clear, the name is available for the new container
 
     # parse input data

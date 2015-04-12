@@ -2381,6 +2381,13 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
                  'ask for approval'
         )
         auth_group.add_option(
+            '--user',
+            dest='ssh_user',
+            default='root',
+            help='Set the default user to attempt to use when '
+                 'authenticating'
+        )
+        auth_group.add_option(
             '--passwd',
             dest='ssh_passwd',
             default='',

@@ -10,4 +10,6 @@ Full list of builtin engine modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    logstash
+    sqs_events
     test

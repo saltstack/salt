@@ -756,7 +756,12 @@ class EventReturn(multiprocessing.Process):
                     self.opts['event_return']
                 )
                 if event_return in self.minion.returners:
-                    self.minion.returners[event_return](event_queue)
+                    try:
+                        self.minion.returners[event_return](event_queue)
+                    except Exception as exc:
+                        log.error('Could not store event {0}. '
+                                  'Returner raised exception: {1}'.format(
+                                      event, exc))
                     event_queue = []
                 else:
                     log.error(

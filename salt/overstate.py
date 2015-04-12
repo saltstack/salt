@@ -2,6 +2,15 @@
 '''
 Manage the process of the overstate. The overstate is a means to orchestrate
 the deployment of states over groups of servers.
+
+*********************************************
+WARNING: The overstate system is deprecated!
+
+This functionality will be retired in the Boron
+release of Salt.
+
+Please migrate to state.orchestrate
+**********************************************
 '''
 from __future__ import absolute_import
 
@@ -27,6 +36,14 @@ import salt.ext.six as six
 class OverState(object):
     '''
     Manage sls file calls over multiple systems
+    *********************************************
+    WARNING: The overstate system is deprecated!
+
+    This functionality will be retired in the Boron
+    release of Salt.
+
+    Please migrate to state.orchestrate
+    **********************************************
     '''
     def __init__(self, opts, saltenv='base', overstate=None, env=None):
         if env is not None:

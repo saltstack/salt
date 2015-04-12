@@ -47,7 +47,6 @@ def update_config(file_name, yaml_contents):
     Update master config with
     ``yaml_contents``.
 
-
     Writes ``yaml_contents`` to a file named
     ``file_name.conf`` under the folder
     specified by ``default_include``.
@@ -56,17 +55,18 @@ def update_config(file_name, yaml_contents):
     http://docs.saltstack.com/en/latest/ref/configuration/master.html#include-configuration
     for more information.
 
+    Example low data::
 
-    Example low data
-    data = {
-        'username': 'salt',
-        'password': 'salt',
-        'fun': 'config.update_config',
-        'file_name': 'gui',
-        'yaml_contents': {'id': 1},
-        'client': 'wheel',
-        'eauth': 'pam',
-    }
+        data = {
+            'username': 'salt',
+            'password': 'salt',
+            'fun': 'config.update_config',
+            'file_name': 'gui',
+            'yaml_contents': {'id': 1},
+            'client': 'wheel',
+            'eauth': 'pam',
+        }
+
     '''
     file_name = '{0}{1}'.format(file_name, '.conf')
     dir_path = os.path.join(__opts__['config_dir'],

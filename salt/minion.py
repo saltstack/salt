@@ -19,16 +19,13 @@ import threading
 import traceback
 import multiprocessing
 from random import randint, shuffle
+from stat import S_IMODE
 
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=no-name-in-module,redefined-builtin
-
-from stat import S_IMODE
-
-from stat import S_IMODE
 
 # Import third party libs
 try:
@@ -338,7 +335,9 @@ class SMinion(object):
             self.opts['id'],
             self.opts['environment']
         ).compile_pillar()
-        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
+        self.utils = salt.loader.utils(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
+                                                 include_errors=True)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -505,8 +504,10 @@ class MasterMinion(object):
         '''
         Load all of the modules for the minion
         '''
+        self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(
             self.opts,
+            utils=self.utils,
             whitelist=self.whitelist,
             initial_load=initial_load)
         if self.mk_returners:
@@ -935,11 +936,13 @@ class Minion(MinionBase):
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
+        self.utils = salt.loader.utils(self.opts)
         if self.opts.get('multimaster', False):
             s_opts = copy.deepcopy(self.opts)
-            functions = salt.loader.minion_mods(s_opts, loaded_base_name=self.loaded_base_name, notify=notify)
+            functions = salt.loader.minion_mods(s_opts, utils=self.utils,
+                                                loaded_base_name=self.loaded_base_name, notify=notify)
         else:
-            functions = salt.loader.minion_mods(self.opts, notify=notify)
+            functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=notify)
         returners = salt.loader.returners(self.opts, functions)
         errors = {}
         if '_errors' in functions:
@@ -1043,12 +1046,12 @@ class Minion(MinionBase):
         #    return
         if 'user' in data:
             log.info(
-                'User {0[user]} Executing command {0[fun]} with jid '
+                    'User {0[user]} Executing command {0[fun]} with jid '  # pylint: disable=W1307
                 '{0[jid]}'.format(data)
             )
         else:
             log.info(
-                'Executing command {0[fun]} with jid {0[jid]}'.format(data)
+                'Executing command {0[fun]} with jid {0[jid]}'.format(data)  # pylint: disable=W1307
             )
         log.debug('Command details {0}'.format(data))
         self._handle_decoded_payload(data)
@@ -1197,8 +1200,7 @@ class Minion(MinionBase):
                 )
                 ret['out'] = 'nested'
             except TypeError as exc:
-                msg = ('TypeError encountered executing {0}: {1}. See '
-                       'debug log for more info.').format(function_name, exc)
+                msg = 'Passed invalid arguments: {0}\n{1}'.format(exc, func.__doc__)
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = msg
                 ret['out'] = 'nested'
@@ -2026,14 +2028,14 @@ class Syndic(Minion):
         data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         if 'user' in data:
             log.debug(
-                'User {0[user]} Executing syndic command {0[fun]} with '
+                'User {0[user]} Executing syndic command {0[fun]} with '  # pylint: disable=W1307
                 'jid {0[jid]}'.format(
                     data
                 )
             )
         else:
             log.debug(
-                'Executing syndic command {0[fun]} with jid {0[jid]}'.format(
+                'Executing syndic command {0[fun]} with jid {0[jid]}'.format(  # pylint: disable=W1307
                     data
                 )
             )
@@ -2702,7 +2704,8 @@ class Matcher(object):
         Match based on the local data store on the minion
         '''
         if self.functions is None:
-            self.functions = salt.loader.minion_mods(self.opts)
+            utils = salt.loader.utils(self.opts)
+            self.functions = salt.loader.minion_mods(self.opts, utils=utils)
         comps = tgt.split(':')
         if len(comps) < 2:
             return False

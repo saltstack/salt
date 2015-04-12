@@ -31,6 +31,7 @@ Full list of builtin execution modules
     boto_cfn
     boto_cloudwatch
     boto_dynamodb
+    boto_ec2
     boto_elasticache
     boto_elb
     boto_iam
@@ -47,6 +48,7 @@ Full list of builtin execution modules
     btrfs
     cabal
     cassandra
+    cassandra_cql
     chef
     chocolatey
     cloud
@@ -64,6 +66,7 @@ Full list of builtin execution modules
     data
     ddns
     deb_apache
+    deb_postgres
     debconfmod
     debian_ip
     debian_service
@@ -164,6 +167,7 @@ Full list of builtin execution modules
     mysql
     nacl
     nagios
+    nagios_rpc
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -182,6 +186,7 @@ Full list of builtin execution modules
     openbsdservice
     openstack_config
     oracle
+    osquery
     osxdesktop
     pacman
     pagerduty
@@ -202,6 +207,7 @@ Full list of builtin execution modules
     ps
     publish
     puppet
+    pushover_notify
     pw_group
     pw_user
     pyenv
@@ -241,6 +247,7 @@ Full list of builtin execution modules
     slack_notify
     smartos_imgadm
     smartos_vmadm
+    smbios
     smf
     smtp
     softwareupdate
@@ -273,6 +280,7 @@ Full list of builtin execution modules
     tuned
     twilio_notify
     upstart
+    uptime
     useradd
     uwsgi
     varnish
@@ -300,6 +308,7 @@ Full list of builtin execution modules
     win_timezone
     win_update
     win_useradd
+    x509
     xapi
     xfs
     xmpp

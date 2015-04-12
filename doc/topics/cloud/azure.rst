@@ -394,7 +394,7 @@ Update details concerning a storage account. Any of the options available in
     salt-cloud -f update_storage my-azure name=my-storage label=my-storage
 
 delete_storage
-------------
+--------------
 Delete a specific storage account.
 
 .. code-block:: bash
@@ -597,7 +597,7 @@ List management certificates associated with the account.
     salt-cloud -f list_management_certificates my-azure
 
 show_management_certificate
-------------------------
+---------------------------
 Show the data for a specific management certificate associated with the account.
 The ``name``, ``thumbprint``, and ``thumbalgorithm`` can be obtained from
 ``list_management_certificates``. Can also be called with
@@ -609,7 +609,7 @@ The ``name``, ``thumbprint``, and ``thumbalgorithm`` can be obtained from
         thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
 
 add_management_certificate
------------------------
+--------------------------
 Management certificates must have a key length of at least 2048 bits and should
 reside in the Personal certificate store. When the certificate is installed on
 the client, it should contain the private key of the certificate. To upload to
@@ -1192,7 +1192,8 @@ include
 ```````
 Optional. Specifies one or more datasets to include in the
 response. To specify more than one of these options on the URI,
-you must separate each option with a comma. Valid values are:
+you must separate each option with a comma. Valid values are::
+
     snapshots:
         Specifies that snapshots should be included in the
         enumeration. Snapshots are listed from oldest to newest in

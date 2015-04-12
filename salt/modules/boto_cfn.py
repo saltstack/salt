@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Connection module for Amazon Cloud Formation
+    Connection module for Amazon Cloud Formation
 
-:configuration: This module accepts explicit AWS credentials but can also utilize
+    .. versionadded:: Beryllium
+
+    :configuration: This module accepts explicit AWS credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at::
@@ -18,16 +20,6 @@ Connection module for Amazon Cloud Formation
     A region may also be specified in the configuration::
 
         cfn.region: us-east-1
-
-    If a region is not specified, the default is us-east-1.
-
-    It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
-
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
 
 :depends: boto
 '''
@@ -66,86 +58,137 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a stack exists.
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_cfn.exists mystack region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
     try:
-        stack = conn.describe_stacks(name)
+        # Returns an object if stack exists else an exception
+        exists = conn.describe_stacks(name)
+        log.debug('Stack {0} exists.'.format(name))
+        return True
     except boto.exception.BotoServerError as e:
+        log.debug('Exists returned an excpetion.\n{0}'.format(str(e)))
         return False
-    return True
 
 
-def create(name, template_url=None, region=None, key=None, keyid=None, profile=None):
+def create(name, template_body=None, template_url=None, parameters=None, notification_arns=None, disable_rollback=None,
+           timeout_in_minutes=None, capabilities=None, tags=None, on_failure=None, stack_policy_body=None,
+           stack_policy_url=None, region=None, key=None, keyid=None, profile=None):
     '''
     Create a CFN stack.
 
+    .. versionadded:: Beryllium
+
     CLI example to create a stack::
 
-        salt myminion boto_cfn.create mystack template_url='https://s3.amazonaws.com/bucket/template.cft' region=us-east-1
+        salt myminion boto_cfn.create mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
+        region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    if not exists(name):
-        try:
-            conn.create_stack(name, template_url=template_url)
-        except boto.exception.BotoServerError as e:
-            msg = 'Failed to create stack {0}'.format(name)
-            log.error(msg)
-            return False
-    if not exists(name):
-        msg = 'Failed to create stack {0}'.format(name)
+    try:
+        return conn.create_stack(name, template_body, template_url, parameters, notification_arns, disable_rollback,
+                                 timeout_in_minutes, capabilities, tags, on_failure, stack_policy_body, stack_policy_url)
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to create stack {0}.'.format(name)
         log.error(msg)
+        log.debug(e)
         return False
-    log.info('Created stack {0}'.format(name))
-    return True
+
+
+def update_stack(name, template_body=None, template_url=None, parameters=None, notification_arns=None,
+                 disable_rollback=False, timeout_in_minutes=None, capabilities=None, tags=None,
+                 use_previous_template=None, stack_policy_during_update_body=None, stack_policy_during_update_url=None,
+                 stack_policy_body=None, stack_policy_url=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Update a CFN stack.
+
+    .. versionadded:: Beryllium
+
+    CLI example to update a stack::
+
+        salt myminion boto_cfn.update_stack mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
+        region=us-east-1
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        update = conn.update_stack(name, template_body, template_url, parameters, notification_arns,
+                                   disable_rollback, timeout_in_minutes, capabilities, tags, use_previous_template,
+                                   stack_policy_during_update_body, stack_policy_during_update_url,
+                                   stack_policy_body, stack_policy_url)
+        log.debug('Updated result is : {0}.'.format(update))
+        return update
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to update stack {0}.'.format(name)
+        log.debug(e)
+        log.error(msg)
+        return str(e)
 
 
 def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a CFN stack.
 
+    .. versionadded:: Beryllium
+
     CLI example to delete a stack::
 
         salt myminion boto_cfn.delete mystack region=us-east-1
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    if not exists(name):
-        return False
-    deleted_stack = conn.delete_stack(name)
-    if not deleted_stack:
-        msg = 'Failed to delete stack {0}'.format(name)
+    try:
+        return conn.delete_stack(name)
+    except boto.exception.BotoServerError as e:
+        msg = 'Failed to create stack {0}.'.format(name)
         log.error(msg)
-        return False
-    return True
+        log.debug(e)
+        return str(e)
 
 
 def get_template(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if attributes are set on a CFN stack.
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_cfn.get_template mystack
     '''
     conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return {}
     try:
         template = conn.get_template(name)
+        log.info('Retrieved template for stack {0}'.format(name))
+        return template
     except boto.exception.BotoServerError as e:
+        log.debug(e)
         msg = 'Template {0} does not exist'.format(name)
         log.error(msg)
-        return {}
-    log.info('Retrieved template for stack {0}'.format(name))
-    return template
+        return str(e)
+
+
+def validate_template(template_body=None, template_url=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Validate cloudformation template
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_cfn.validate_template mystack-template
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        # Returns an object if json is validated and an exception if its not
+        return conn.validate_template(template_body, template_url)
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Error while trying to validate template {0}.'.format(template_body)
+        log.error(msg)
+        return str(e)
 
 
 def _get_conn(region, key, keyid, profile):
@@ -160,7 +203,6 @@ def _get_conn(region, key, keyid, profile):
         key = _profile.get('key', None)
         keyid = _profile.get('keyid', None)
         region = _profile.get('region', None)
-
     if not region and __salt__['config.option']('cfn.region'):
         region = __salt__['config.option']('cfn.region')
 
@@ -174,7 +216,7 @@ def _get_conn(region, key, keyid, profile):
 
     try:
         conn = boto.cloudformation.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
+                                                     aws_secret_access_key=key)
     except boto.exception.NoAuthHandlerFound:
         log.error('No authentication credentials found when attempting to'
                   ' make boto cfn connection.')

@@ -234,6 +234,8 @@ Default: :file:`/var/cache/salt`
 The location used to store cache information, particularly the job information
 for executed salt commands.
 
+This directory may contain sensitive data and should be protected accordingly.
+
 .. code-block:: yaml
 
     cachedir: /var/cache/salt
@@ -373,6 +375,25 @@ local job cache on the master.
 .. code-block:: yaml
 
     ext_job_cache: redis
+
+.. conf_master:: event_return
+
+``event_return``
+-----------------
+
+Default: ``''``
+
+Specify the returner to use to log events. A returner may have installation and
+configuration requirements. Read the returner's documentation.
+
+.. note:: 
+
+   Not all returners support event returns. Verify that a returner has an 
+   ``event_return()`` function before configuring this option with a returner.
+
+.. code-block:: yaml
+
+    event_return: cassandra_cql
 
 .. conf_master:: master_job_cache
 

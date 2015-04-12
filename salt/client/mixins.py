@@ -5,6 +5,7 @@ A collection of mixins useful for the various *Client interfaces
 
 # Import Python libs
 from __future__ import absolute_import, print_function
+import copy
 import logging
 import weakref
 import traceback
@@ -72,8 +73,11 @@ class ClientFuncsDict(collections.MutableMapping):
                    'kwargs': kwargs,
                    }
             pub_data = {}
+            # Copy kwargs so we can iterate over and pop the pub data
+            _kwargs = copy.deepcopy(kwargs)
+
             # pull out pub_data if you have it
-            for kwargs_key, kwargs_value in six.iteritems(kwargs):
+            for kwargs_key, kwargs_value in six.iteritems(_kwargs):
                 if kwargs_key.startswith('__pub_'):
                     pub_data[kwargs_key] = kwargs.pop(kwargs_key)
 

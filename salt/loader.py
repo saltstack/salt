@@ -93,6 +93,7 @@ def _module_dirs(
 def minion_mods(
         opts,
         context=None,
+        utils=None,
         whitelist=None,
         include_errors=False,
         initial_load=False,
@@ -117,12 +118,14 @@ def minion_mods(
     '''
     if context is None:
         context = {}
+    if utils is None:
+        utils = {}
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
                      opts,
                      tag='module',
-                     pack={'__context__': context},
+                     pack={'__context__': context, '__utils__': utils},
                      whitelist=whitelist,
                      loaded_base_name=loaded_base_name)
     ret.pack['__salt__'] = ret
@@ -133,8 +136,7 @@ def minion_mods(
     return ret
 
 
-# TODO: fix this silly unused positional argument
-def raw_mod(opts, _, functions, mod='modules'):
+def raw_mod(opts, name, functions, mod='modules'):
     '''
     Returns a single module loaded raw and bypassing the __virtual__ function
 
@@ -147,11 +149,17 @@ def raw_mod(opts, _, functions, mod='modules'):
         testmod = salt.loader.raw_mod(__opts__, 'test', None)
         testmod['test.ping']()
     '''
-    return LazyLoader(_module_dirs(opts, mod, 'rawmodule'),
-                      opts,
-                      tag='rawmodule',
-                      virtual_enable=False,
-                      pack={'__salt__': functions})
+    loader = LazyLoader(_module_dirs(opts, mod, 'rawmodule'),
+                        opts,
+                        tag='rawmodule',
+                        virtual_enable=False,
+                        pack={'__salt__': functions})
+    # if we don't have the module, return an empty dict
+    if name not in loader.file_mapping:
+        return {}
+
+    loader._load_module(name)  # load a single module (the one passed in)
+    return dict(loader._dict)  # return a copy of *just* the funcs for `name`
 
 
 def engines(opts, functions, runners):
@@ -463,6 +471,7 @@ def grains(opts, force_refresh=False):
     for key, fun in six.iteritems(funcs):
         if not key.startswith('core.'):
             continue
+        log.trace('Loading {0} grain'.format(key))
         ret = fun()
         if not isinstance(ret, dict):
             continue

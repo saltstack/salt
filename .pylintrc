@@ -78,6 +78,7 @@ disable=W0142,
   I0011,
   I0012,
   W1202
+  E8402
 #  E8121,
 #  E8122,
 #  E8123,
@@ -91,6 +92,7 @@ disable=W0142,
 #
 # W0142 (star-args)
 # E812* All PEP8 E12*
+# E8402 module level import not at top of file
 # E8501 PEP8 line too long
 # C0330 (bad-continuation)
 # I0011 (locally-disabling)

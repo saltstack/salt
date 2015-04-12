@@ -163,7 +163,7 @@ def search_keys(text, keyserver=None, user=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     CLI Example:
 
@@ -207,7 +207,7 @@ def list_keys(user=None, gnupghome=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     gnupghome
         Specify the location where GPG related files are stored.
@@ -252,7 +252,7 @@ def list_secret_keys(user=None, gnupghome=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     gnupghome
         Specify the location where GPG related files are stored.
@@ -346,7 +346,7 @@ def create_key(key_type='RSA',
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     gnupghome
         Specify the location where GPG related files are stored.
@@ -425,7 +425,7 @@ def delete_key(keyid=None,
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     gnupghome
         Specify the location where GPG related files are stored.
@@ -494,7 +494,7 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     gnupghome
         Specify the location where GPG related files are stored.
@@ -550,7 +550,7 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     gnupghome
         Specify the location where GPG related files are stored.
@@ -604,7 +604,7 @@ def import_key(user=None,
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     text
         The text containing to import.
@@ -674,7 +674,7 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     gnupghome
         Specify the location where GPG related files are stored.
@@ -710,7 +710,7 @@ def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     CLI Example:
 
@@ -764,20 +764,18 @@ def trust_key(keyid=None,
     trust_level
         The trust level to set for the specified key, must be one
         of the following:
-            expired, unknown, not_trusted, marginally, fully, ultimately
+        expired, unknown, not_trusted, marginally, fully, ultimately
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' gpg.trust_key keyid='3FAD9F1E' trust_level='marginally'
-
         salt '*' gpg.trust_key fingerprint='53C96788253E58416D20BCD352952C84C3252192' trust_level='not_trusted'
-
         salt '*' gpg.trust_key keys=3FAD9F1E trust_level='ultimately' user='username'
 
     '''
@@ -819,7 +817,12 @@ def trust_key(keyid=None,
     cmd = 'echo {0}:{1} | {2} --import-ownertrust'.format(fingerprint,
                                                           NUM_TRUST_DICT[trust_level],
                                                           _check_gpg())
-    res = __salt__['cmd.run_all'](cmd, runas=user)
+    _user = user
+    if user == 'salt':
+        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        cmd = '{0} --homedir {1}'.format(cmd, homeDir)
+        _user = 'root'
+    res = __salt__['cmd.run_all'](cmd, runas=_user)
 
     if not res['retcode'] == 0:
         ret['res'] = False
@@ -853,7 +856,7 @@ def sign(user=None,
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     keyid
         The keyid of the key to set the trust level for, defaults to
@@ -930,7 +933,7 @@ def verify(text=None,
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     gnupghome
         Specify the location where GPG related files are stored.
@@ -944,7 +947,6 @@ def verify(text=None,
         salt '*' gpg.verify filename='/path/to/important.file'
 
         salt '*' gpg.verify filename='/path/to/important.file' use_pasphrase=True
-
 
     '''
     gpg = _create_gpg(user)
@@ -983,7 +985,7 @@ def encrypt(user=None,
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     recipients
         The fingerprints for those recipient whom the data is being encrypted for.
@@ -1074,7 +1076,7 @@ def decrypt(user=None,
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     text
         The encrypted text to decrypt.
