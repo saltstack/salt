@@ -7,6 +7,7 @@ import yaml
 import os
 
 # Import Salt Testing Libs
+from salttesting.mock import MagicMock, patch
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../..')
@@ -19,6 +20,7 @@ try:
 except ImportError:
     HAS_TORNADO = False
 import salt.auth
+import salt.client.netapi
 
 
 # Import 3rd-party libs
@@ -63,10 +65,6 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         return self.get_config('master', from_scratch=True)
 
     @property
-    def mod_opts(self):
-        return self.get_config('minion', from_scratch=True)
-
-    @property
     def auth(self):
         if not hasattr(self, '__auth'):
             self.__auth = salt.auth.LoadAuth(self.opts)
@@ -94,7 +92,7 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
 
         application.auth = self.auth
         application.opts = self.opts
-        application.mod_opts = self.mod_opts
+        application.mod_opts = {}
 
         return application
 

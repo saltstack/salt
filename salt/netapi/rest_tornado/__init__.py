@@ -26,6 +26,7 @@ except (ImportError, TypeError) as err:
     logger.error('ImportError! {0}'.format(str(err)))
 
 import salt.auth
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -43,7 +44,7 @@ def start():
     '''
     try:
         from . import saltnado
-    except ImportError:
+    except ImportError as err:
         logger.error('ImportError! {0}'.format(str(err)))
         return None
 
@@ -63,6 +64,26 @@ def start():
         (r"/events", saltnado.EventsSaltAPIHandler),
         (r"/hook(/.*)?", saltnado.WebhookSaltAPIHandler),
     ]
+
+    # Look for extended urls in options
+    extension_urls = mod_opts.get("extension_urls", {})
+    for path, handler_dict in six.iteritems(extension_urls):
+        class_name = handler_dict.get("class")
+        module_path = handler_dict.get("module")
+        if not class_name or not module_path:
+            continue
+        try:
+            module = __import__(module_path, fromlist=module_path.split("."))
+        except ImportError as err:
+            logger.error("ImportError! {0}".format(str(err)))
+            return None
+
+        handler = getattr(module, class_name, None)
+        if handler is None:
+            logger.error("ImportError! Could not import {0} from {1}".format(
+                class_name, module_path))
+            return None
+        paths.append((path, handler))
 
     # if you have enabled websockets, add them!
     if mod_opts.get('websockets', False):
