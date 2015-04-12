@@ -233,7 +233,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         not_return_counter = 0
         not_return_minions = []
         for each_minion in ret:
-            if ret[each_minion] == "Minion did not return":
+            minion_ret = ret[each_minion].get('ret')
+            if (
+                    isinstance(minion_ret, (str, unicode))
+                    and minion_ret.startswith("Minion did not return")
+            ):
                 not_return_counter += 1
                 not_return_minions.append(each_minion)
             else:
