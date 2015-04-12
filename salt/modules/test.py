@@ -253,8 +253,10 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to but not including the passed number,
-    and the time it took to compute in seconds. Used for performance tests.
+    Return the num-th Fibonacci number, and the time it took to compute in
+    seconds. Used for performance tests.
+
+    This function is designed to have terrible performance.
 
     CLI Example:
 
@@ -264,12 +266,18 @@ def fib(num):
     '''
     num = int(num)
     start = time.time()
-    fib_a, fib_b = 0, 1
-    ret = [0]
-    while fib_b < num:
-        ret.append(fib_b)
-        fib_a, fib_b = fib_b, fib_a + fib_b
-    return ret, time.time() - start
+    if num < 2:
+        return num, time.time() - start
+    return _fib(num-1) + _fib(num-2), time.time() - start
+
+
+def _fib(num):
+    '''
+    Helper method for test.fib, doesn't calculate the time.
+    '''
+    if num < 2:
+        return num
+    return _fib(num-1) + _fib(num-2)
 
 
 def collatz(start):
