@@ -7,14 +7,14 @@ import salttesting.mock as mock
 
 logger = logging.getLogger(__name__)
 
+
 class StubHandler(object):
-    pass
+    """
+    Stub Handler to test the import module below
+    """
 
 
-class TestNetapiStartup(SaltnadoTestCase):
-
-    def get_app(self):
-        return self.build_tornado_app([])
+class TestNetapiStartup(object):
 
     @mock.patch("tornado.web.Application")
     @mock.patch("tornado.httpserver.HTTPServer")
@@ -40,5 +40,6 @@ class TestNetapiStartup(SaltnadoTestCase):
         paths = app_args[0]
         added_url = paths[-1]
         self.assertEqual(added_url[0], "/foo")
+        self.assertEqual(added_url[1], StubHandler)
         self.assertTrue(mock_http_server.called)
         self.assertTrue(mock_ioloop.called)
