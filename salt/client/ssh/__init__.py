@@ -429,7 +429,6 @@ class SSH(object):
             if len(running) >= self.opts.get('ssh_max_procs', 25) or len(self.targets) >= len(running):
                 time.sleep(0.1)
 
-
     def run_iter(self, mine=False):
         '''
         Execute and yield returns as they come in, do not print to the display
