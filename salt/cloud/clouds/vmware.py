@@ -548,9 +548,7 @@ def list_datacenters(kwargs=None, call=None):
         return False
 
     datacenters = []
-    datacenter_properties = [
-                                "name"
-                            ]
+    datacenter_properties = ["name"]
 
     datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
 
@@ -577,9 +575,7 @@ def list_clusters(kwargs=None, call=None):
         return False
 
     clusters = []
-    cluster_properties = [
-                             "name"
-                         ]
+    cluster_properties = ["name"]
 
     cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
 
@@ -606,9 +602,7 @@ def list_datastore_clusters(kwargs=None, call=None):
         return False
 
     datastore_clusters = []
-    datastore_cluster_properties = [
-                                       "name"
-                                   ]
+    datastore_cluster_properties = ["name"]
 
     datastore_cluster_list = _get_mors_with_properties(vim.StoragePod, datastore_cluster_properties)
 
@@ -635,9 +629,7 @@ def list_datastores(kwargs=None, call=None):
         return False
 
     datastores = []
-    datastore_properties = [
-                               "name"
-                           ]
+    datastore_properties = ["name"]
 
     datastore_list = _get_mors_with_properties(vim.Datastore, datastore_properties)
 
@@ -664,9 +656,7 @@ def list_hosts(kwargs=None, call=None):
         return False
 
     hosts = []
-    host_properties = [
-                          "name"
-                      ]
+    host_properties = ["name"]
 
     host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
 
@@ -693,9 +683,7 @@ def list_resourcepools(kwargs=None, call=None):
         return False
 
     resource_pools = []
-    resource_pool_properties = [
-                                   "name"
-                               ]
+    resource_pool_properties = ["name"]
 
     resource_pool_list = _get_mors_with_properties(vim.ResourcePool, resource_pool_properties)
 
@@ -722,9 +710,7 @@ def list_networks(kwargs=None, call=None):
         return False
 
     networks = []
-    network_properties = [
-                             "name"
-                         ]
+    network_properties = ["name"]
 
     network_list = _get_mors_with_properties(vim.Network, network_properties)
 
@@ -747,9 +733,7 @@ def list_nodes_min(kwargs=None, call=None):
     '''
 
     ret = {}
-    vm_properties = [
-                        "name"
-                    ]
+    vm_properties = ["name"]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -772,12 +756,12 @@ def list_nodes(kwargs=None, call=None):
 
     ret = {}
     vm_properties = [
-                        "name",
-                        "guest.ipAddress",
-                        "config.guestFullName",
-                        "config.hardware.numCPU",
-                        "config.hardware.memoryMB"
-                    ]
+        "name",
+        "guest.ipAddress",
+        "config.guestFullName",
+        "config.hardware.numCPU",
+        "config.hardware.memoryMB"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -886,12 +870,12 @@ def avail_images():
 
     templates = {}
     vm_properties = [
-                        "name",
-                        "config.template",
-                        "config.guestFullName",
-                        "config.hardware.numCPU",
-                        "config.hardware.memoryMB"
-                    ]
+        "name",
+        "config.template",
+        "config.guestFullName",
+        "config.hardware.numCPU",
+        "config.hardware.memoryMB"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -923,9 +907,7 @@ def list_folders(kwargs=None, call=None):
         return False
 
     folders = []
-    folder_properties = [
-                            "name"
-                        ]
+    folder_properties = ["name"]
 
     folder_list = _get_mors_with_properties(vim.Folder, folder_properties)
 
@@ -951,9 +933,9 @@ def start(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -988,9 +970,9 @@ def stop(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1025,9 +1007,9 @@ def suspend(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1066,9 +1048,9 @@ def reset(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1114,9 +1096,9 @@ def destroy(name, call=None):
     )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
