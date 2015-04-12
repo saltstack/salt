@@ -4,7 +4,7 @@ An execution module which can manipulate an f5 bigip via iControl REST
     :maintainer:    Anthony Hawkins <anthonyhawkins917@gmail.com.com>
     :maturity:      develop
     :depends:       requests
-    :platform:      all
+    :platform:      F5 BIGIP 11.6 iControl REST
 '''
 
 # Import python libs
@@ -128,12 +128,35 @@ def _determine_toggles(payload, toggles):
 
 def _set_value(value):
     '''
-    A function to detect if user is trying to pass a dictionary.  parse it and return a
-    dictionary or a string
+    A function to detect if user is trying to pass a dictionary or list.  parse it and return a
+    dictionary list or a string
     '''
 
+    #dont continue if bool
+    if isinstance(value, bool) or isinstance(value, dict) or isinstance(value, list):
+        return value
+
+    #check if json
+    if value.startswith('j{') and value.endswith('}j'):
+
+        value = value.replace('j{', '{')
+        value = value.replace('}j', '}')
+
+        try:
+            return json.loads(value)
+        except Exception:
+            raise salt.exceptions.CommandExecutionError
+
+    #detect list of dictionaries
+    if '|' in value and '\|' not in value:
+        values = value.split('|')
+        items = []
+        for value in values:
+            items.append(_set_value(value))
+        return items
+
     #parse out dictionary if detected
-    if ':' in value and not isinstance(value, dict):
+    if ':' in value and '\:' not in value:
         options = {}
         #split out pairs
         key_pairs = value.split(',')
@@ -141,9 +164,26 @@ def _set_value(value):
             k = key_pair.split(':')[0]
             v = key_pair.split(':')[1]
             options[k] = v
-
         return options
+
+    #try making a list
+    elif ',' in value and '\,' not in value:
+        value_items = value.split(',')
+        return value_items
+
+    #just return a string
     else:
+
+        #remove escape chars if added
+        if '\|' in value:
+            value = value.replace('\|', '|')
+
+        if '\:' in value:
+            value = value.replace('\:', ':')
+
+        if '\,' in value:
+            value = value.replace('\,', ',')
+
         return value
 
 
@@ -209,7 +249,6 @@ def create_node(hostname, username, password, name, address):
 
 
 def modify_node(hostname, username, password, name,
-                app_service=None,
                 connection_limit=None,
                 description=None,
                 dynamic_ratio=None,
@@ -217,6 +256,7 @@ def modify_node(hostname, username, password, name,
                 monitor=None,
                 rate_limit=None,
                 ratio=None,
+                session=None,
                 state=None):
     '''
     A function to connect to a bigip device and modify an existing node.
@@ -227,25 +267,19 @@ def modify_node(hostname, username, password, name,
         password:             The iControl REST password
         name:                 The name of the node to modify
 
-        app_service:          [[string] | none ]     The application service that the object belongs to.
-        connection_limit:     [integer]  Specifies the maximum number of connections allowed for the node or node address.
-        description:          [string]   User defined description.
-        dynamic_ratio:        [integer]  Sets the dynamic ratio number for the node. Used for dynamic ratio load balancing. The ratio weights
-                              are based on continuous monitoring of the servers and are therefore continually changing. Dynamic Ratio
-                              load balancing may currently be implemented on RealNetworks RealServer platforms, on Windows platforms
-                              equipped with Windows Management Instrumentation (WMI), or on a server equipped with either the UC
-                              Davis SNMP agent or Windows 2000 Server SNMP agent.
-        logging:              [enabled | disabled]   Specifies whether the node's monitor(s) actions will be logged. Logs are stored in /var/log/monitors/
-        monitor:              [[name] | none]    Specifies the name of the monitor or monitor rule that you want to associate with the node.
-        rate_limit:           [integer]  Specifies the maximum number of connections per second allowed for a node or node address. The default
-                              value is 'disabled'.
-        ratio:                [integer]  Specifies the fixed ratio value used for a node during ratio load balancing.
-        session:              [user-enabled | user-disabled] Enables or disables the node for new sessions. The default value is user-enabled.
-        state:                [user-down | user-up ] Marks the node up or down. The default value is user-up.
+
+        connection_limit:     [integer]
+        description:          [string]
+        dynamic_ratio:        [integer]
+        logging:              [enabled | disabled]
+        monitor:              [[name] | none | default]
+        rate_limit:           [integer]
+        ratio:                [integer]
+        session:              [user-enabled | user-disabled]
+        state:                [user-down | user-up ]
     '''
 
     params = {
-        'app-service': app_service,
         'connection-limit': connection_limit,
         'description': description,
         'dynamic-ratio': dynamic_ratio,
@@ -253,7 +287,8 @@ def modify_node(hostname, username, password, name,
         'monitor': monitor,
         'rate-limit': rate_limit,
         'ratio': ratio,
-        'state': state
+        'session': session,
+        'state': state,
     }
 
 
@@ -311,7 +346,7 @@ def list_pool(hostname, username, password, name=None):
         hostname:                   The host/address of the bigip device
         username:                   The iControl REST username
         password:                   The iControl REST password
-        name:                       The name of the pool to list. If no name is specified than all
+        name:                       The name of the pool to list. If no name is specified then all
                                     pools will be listed.
 
     CLI Example:
@@ -338,7 +373,6 @@ def list_pool(hostname, username, password, name=None):
 def create_pool(hostname, username, password, name, members=None,
                 allow_nat=None,
                 allow_snat=None,
-                app_service=None,
                 description=None,
                 gateway_failsafe_device=None,
                 ignore_persisted_weight=None,
@@ -353,8 +387,8 @@ def create_pool(hostname, username, password, name, members=None,
                 min_up_members_checking=None,
                 monitor=None,
                 profiles=None,
+                queue_depth_limit=None,
                 queue_on_connection_limit=None,
-                queue_on_depth_limit=None,
                 queue_time_limit=None,
                 reselect_tries=None,
                 service_down_action=None,
@@ -372,10 +406,9 @@ def create_pool(hostname, username, password, name, members=None,
 
         allow_nat:                  [yes | no]
         allow_snat:                 [yes | no]
-        app_service:                [[string] | none]
         description:                [string]
         gateway_failsafe_device:    [string]
-        ignore_persisted_weight:    [yes | no]
+        ignore_persisted_weight:    [enabled | disabled]
         ip_tos_to_client:           [pass-through | [integer]]
         ip_tos_to_server:           [pass-through | [integer]]
         link_qos_to_client:         [pass-through | [integer]]
@@ -398,8 +431,8 @@ def create_pool(hostname, username, password, name, members=None,
         min_up_members_checking:    [enabled | disabled]
         monitor:                    [name]
         profiles:                   [none | profile_name]
-        queue_on_connection_limit:  [enabled | disabled]
         queue_depth_limit:          [integer]
+        queue_on_connection_limit:  [enabled | disabled]
         queue_time_limit:           [integer]
         reselect_tries:             [integer]
         service_down_action:        [drop | none | reselect | reset]
@@ -413,9 +446,9 @@ def create_pool(hostname, username, password, name, members=None,
 
 
     params = {
-        'app-service': app_service,
         'description': description,
         'gateway-failsafe-device': gateway_failsafe_device,
+        'ignore-persisted-weight': ignore_persisted_weight,
         'ip-tos-to-client': ip_tos_to_client,
         'ip-tos-to-server': ip_tos_to_server,
         'link-qos-to-client': link_qos_to_client,
@@ -423,12 +456,12 @@ def create_pool(hostname, username, password, name, members=None,
         'load-balancing-mode': load_balancing_mode,
         'min-active-members': min_active_members,
         'min-up-members': min_up_members,
-        'min-up_members-action': min_up_members_action,
+        'min-up-members-action': min_up_members_action,
         'min-up-members-checking': min_up_members_checking,
         'monitor': monitor,
         'profiles': profiles,
         'queue-on-connection-limit': queue_on_connection_limit,
-        'queue-on-depth-limit': queue_on_depth_limit,
+        'queue-depth-limit': queue_depth_limit,
         'queue-time-limit': queue_time_limit,
         'reselect-tries': reselect_tries,
         'service-down-action': service_down_action,
@@ -439,8 +472,7 @@ def create_pool(hostname, username, password, name, members=None,
     # confusing the end user
     toggles = {
         'allow-nat': {'type': 'yes_no', 'value': allow_nat},
-        'allow-snat': {'type': 'yes_no', 'value': allow_snat},
-        'ignore_persisted_weight': {'type': 'yes_no', 'value': ignore_persisted_weight}
+        'allow-snat': {'type': 'yes_no', 'value': allow_snat}
     }
 
     #build payload
@@ -469,7 +501,6 @@ def create_pool(hostname, username, password, name, members=None,
 def modify_pool(hostname, username, password, name,
                 allow_nat=None,
                 allow_snat=None,
-                app_service=None,
                 description=None,
                 gateway_failsafe_device=None,
                 ignore_persisted_weight=None,
@@ -484,8 +515,8 @@ def modify_pool(hostname, username, password, name,
                 min_up_members_checking=None,
                 monitor=None,
                 profiles=None,
+                queue_depth_limit=None,
                 queue_on_connection_limit=None,
-                queue_on_depth_limit=None,
                 queue_time_limit=None,
                 reselect_tries=None,
                 service_down_action=None,
@@ -501,7 +532,6 @@ def modify_pool(hostname, username, password, name,
 
         allow_nat:                  [yes | no]
         allow_snat:                 [yes | no]
-        app_service:                [[string] | none]
         description:                [string]
         gateway_failsafe_device:    [string]
         ignore_persisted_weight:    [yes | no]
@@ -540,9 +570,9 @@ def modify_pool(hostname, username, password, name,
     '''
 
     params = {
-        'app-service': app_service,
         'description': description,
         'gateway-failsafe-device': gateway_failsafe_device,
+        'ignore-persisted-weight': ignore_persisted_weight,
         'ip-tos-to-client': ip_tos_to_client,
         'ip-tos-to-server': ip_tos_to_server,
         'link-qos-to-client': link_qos_to_client,
@@ -555,7 +585,7 @@ def modify_pool(hostname, username, password, name,
         'monitor': monitor,
         'profiles': profiles,
         'queue-on-connection-limit': queue_on_connection_limit,
-        'queue-on-depth-limit': queue_on_depth_limit,
+        'queue-depth-limit': queue_depth_limit,
         'queue-time-limit': queue_time_limit,
         'reselect-tries': reselect_tries,
         'service-down-action': service_down_action,
@@ -566,8 +596,7 @@ def modify_pool(hostname, username, password, name,
     # confusing the end user
     toggles = {
         'allow-nat': {'type': 'yes_no', 'value': allow_nat},
-        'allow-snat': {'type': 'yes_no', 'value': allow_snat},
-        'ignore_persisted_weight': {'type': 'yes_no', 'value': ignore_persisted_weight}
+        'allow-snat': {'type': 'yes_no', 'value': allow_snat}
     }
 
     #build payload
@@ -597,7 +626,7 @@ def delete_pool(hostname, username, password, name):
         hostname:                   The host/address of the bigip device
         username:                   The iControl REST username
         password:                   The iControl REST password
-        name: The name of the pool which will be deleted.
+        name:                       The name of the pool which will be deleted
 
     CLI Example:
 
@@ -665,7 +694,7 @@ def add_pool_member(hostname, username, password, name, member):
         username:                   The iControl REST username
         password:                   The iControl REST password
         name:                       The name of the pool to modify
-        member:                     The name of the member to add.
+        member:                     The name of the member to add
                                     i.e. 10.1.1.2:80
     CLI Example:
         salt '*' bigip.add_pool_members bigip admin admin my-pool 10.2.2.1:80
@@ -686,8 +715,6 @@ def add_pool_member(hostname, username, password, name, member):
 
 
 def modify_pool_member(hostname, username, password, name, member,
-                        address=None,
-                        app_service=None,
                         connection_limit=None,
                         description=None,
                         dynamic_ratio=None,
@@ -708,11 +735,9 @@ def modify_pool_member(hostname, username, password, name, member,
         username:                   The iControl REST username
         password:                   The iControl REST password
         name:                       The name of the pool to modify
-        member:                     The name of the member to add.
+        member:                     The name of the member to modify
                                     i.e. 10.1.1.2:80
 
-        address:                    [ip address]
-        app_service:                [[string] | none]
         connection_limit:           [integer]
         description:                [string]
         dynamic_ratio:              [integer]
@@ -731,8 +756,6 @@ def modify_pool_member(hostname, username, password, name, member,
     '''
 
     params = {
-        'address': address,
-        'app-service': app_service,
         'connection-limit': connection_limit,
         'description': description,
         'dynamic-ratio': dynamic_ratio,
@@ -920,17 +943,17 @@ def create_virtual(hostname, username, password, name, destination,
 
     CLI Examples:
 
-        salt '*' bigip.create_virtual bigip admin admin my-virtual-3 26.2.2.5:80 \
-        pool=my-http-pool-http profiles=http,tcp
+        salt '*' bigip.create_virtual bigip admin admin my-virtual-3 26.2.2.5:80 \ \n
+        pool=my-http-pool-http profiles=http,tcp \n
 
-        salt '*' bigip.create_virtual bigip admin admin my-virtual-3 43.2.2.5:80 \
-        pool=test-http-pool-http profiles=http,websecurity persist=cookie,hash \
-        policies=asm_auto_l7_policy__http-virtual \
-        rules=_sys_APM_ExchangeSupport_helper,_sys_https_redirect \
-        related_rules=_sys_APM_activesync,_sys_APM_ExchangeSupport_helper \
-        source_address_translation=snat:my-snat-pool \
-        translate_address=enabled translate_port=enabled \
-        traffic_classes=my-class,other-class \
+        salt '*' bigip.create_virtual bigip admin admin my-virtual-3 43.2.2.5:80 \ \n
+        pool=test-http-pool-http profiles=http,websecurity persist=cookie,hash \ \n
+        policies=asm_auto_l7_policy__http-virtual \ \n
+        rules=_sys_APM_ExchangeSupport_helper,_sys_https_redirect \ \n
+        related_rules=_sys_APM_activesync,_sys_APM_ExchangeSupport_helper \ \n
+        source_address_translation=snat:my-snat-pool \ \n
+        translate_address=enabled translate_port=enabled \ \n
+        traffic_classes=my-class,other-class \ \n
         vlans=enabled:external,internal
 
     '''
@@ -1010,7 +1033,11 @@ def create_virtual(hostname, username, password, name, destination,
 
     #handle source-address-translation
     if source_address_translation is not None:
-        if source_address_translation == 'none':
+
+        #check to see if this is already a dictionary first
+        if isinstance(source_address_translation, dict):
+            payload['source-address-translation'] = source_address_translation
+        elif source_address_translation == 'none':
             payload['source-address-translation'] = {'pool': 'none', 'type': 'none'}
         elif source_address_translation == 'automap':
             payload['source-address-translation'] = {'pool': 'none', 'type': 'automap'}
@@ -1026,7 +1053,17 @@ def create_virtual(hostname, username, password, name, destination,
 
     #handle vlans
     if vlans is not None:
-        if vlans == 'none':
+        #ceck to see if vlans is a dictionary (used when state makes use of function)
+        if isinstance(vlans, dict):
+            try:
+                payload['vlans'] = vlans['vlan_ids']
+                if vlans['enabled']:
+                    payload['vlans-enabled'] = True
+                elif vlans['disabled']:
+                    payload['vlans-disabled'] = True
+            except Exception:
+                return 'Error: Unable to Parse vlans dictionary: \n\tvlans={}'.format(vlans)
+        elif vlans == 'none':
             payload['vlans'] = 'none'
         elif vlans == 'default':
             payload['vlans'] = 'default'
@@ -1278,13 +1315,13 @@ def modify_virtual(hostname, username, password, name,
 
 def delete_virtual(hostname, username, password, name):
     '''
-    A function to connect to a bigip device and delete a specific pool.
+    A function to connect to a bigip device and delete a specific virtual.
 
     Parameters:
         hostname:                   The host/address of the bigip device
         username:                   The iControl REST username
         password:                   The iControl REST password
-        name:                       The name of the pool to delete
+        name:                       The name of the virtual to delete
 
     CLI Example:
 
@@ -1496,7 +1533,7 @@ def list_profile(hostname, username, password, type, name=None, ):
 
     return _load_response(response)
 
-def create_profile(hostname, username, password, type, name, **kwargs):
+def create_profile(hostname, username, password, profile_type, name, **kwargs):
     '''
     A function to connect to a bigip device and create a profile.
 
@@ -1504,7 +1541,7 @@ def create_profile(hostname, username, password, type, name, **kwargs):
         hostname:                   The host/address of the bigip device
         username:                   The iControl REST username
         password:                   The iControl REST password
-        type:                       The type of profile to create
+        profile_type:               The type of profile to create
         name:                       The name of the profile to create
 
 
@@ -1513,14 +1550,34 @@ def create_profile(hostname, username, password, type, name, **kwargs):
                                     options for each monitor type. Typically,
                                     tmsh arg names are used.
 
-        CLI Example:
+        Creating Complex Args:      Profiles can get pretty complicated in terms of the amount of
+                                    possible config options. Use the following shorthand to create
+                                    complex arguments such as lists, dictionaries, and lists of
+                                    dictionaries. An option is also provided to pass raw json as well.
+
+                                    lists [i,i,i]:
+                                        param='item1,item2,item3'
+
+                                    Dictionary [k:v,k:v,k,v]:
+                                        param='key-1:val-1,key-2:val2,key-3:va-3'
+
+                                    List of Dictionaries [k:v,k:v|k:v,k:v|k:v,k:v]:
+                                       param='key-1:val-1,key-2:val-2|key-1:val-1,key-2:val-2|key-1:val-1,key-2:val-2'
+
+                                    JSON: 'j{ ... }j':
+                                       cert-key-chain='j{ "default": { "cert": "default.crt", "chain": "default.crt", "key": "default.key" } }j'
+
+                                    Escaping Delimiters:
+                                        Use  \, or \: or \|  to escape characters which shouldn't be treated as delimiters
+                                        i.e. ciphers='DEFAULT\:!SSLv3'
+
+        CLI Examples:
 
             salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http'
-            salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http' \
+            salt '*' bigip.create_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http' \ \n
             enforcement=maxHeaderCount:3200,maxRequests:10
 
     '''
-
 
     #build session
     bigip_session = _build_session(username, password)
@@ -1529,31 +1586,36 @@ def create_profile(hostname, username, password, type, name, **kwargs):
     payload = {}
     payload['name'] = name
 
+
     #there's a ton of different profiles and a ton of options for each type of profile.
     #this logic relies that the end user knows which options are meant for which profile types
     for key, value in kwargs.iteritems():
         if not key.startswith('__'):
-            if key not in ['hostname', 'username', 'password', 'type']:
+            if key not in ['hostname', 'username', 'password', 'profile_type']:
                 key = key.replace('_', '-')
-                payload[key] = _set_value(value)
+
+                try:
+                    payload[key] = _set_value(value)
+                except salt.exceptions.CommandExecutionError:
+                    return 'Error: Unable to Parse JSON data for parameter: {}\n{}'.format(key, value)
 
     #post to REST
     try:
-        response = bigip_session.post(BIG_IP_URL_BASE.format(hostname)+'/ltm/profile/{}'.format(type), data=json.dumps(payload))
+        response = bigip_session.post(BIG_IP_URL_BASE.format(hostname)+'/ltm/profile/{}'.format(profile_type), data=json.dumps(payload))
     except requests.exceptions.ConnectionError, e:
         return 'Error: Unable to connect to the bigip device: {}\n{}'.format(hostname, e)
 
     return _load_response(response)
 
-def modify_profile(hostname, username, password, type, name, **kwargs):
+def modify_profile(hostname, username, password, profile_type, name, **kwargs):
     '''
-    A function to connect to a bigip device and modify an existing profile.
+    A function to connect to a bigip device and create a profile.
 
     Parameters:
         hostname:                   The host/address of the bigip device
         username:                   The iControl REST username
         password:                   The iControl REST password
-        type:                       The type of profile to modify
+        profile_type:               The type of profile to modify
         name:                       The name of the profile to modify
 
 
@@ -1562,32 +1624,60 @@ def modify_profile(hostname, username, password, type, name, **kwargs):
                                     options for each monitor type. Typically,
                                     tmsh arg names are used.
 
-        CLI Example:
+        Creating Complex Args:      Profiles can get pretty complicated in terms of the amount of
+                                    possible config options. Use the following shorthand to create
+                                    complex arguments such as lists, dictionaries, and lists of
+                                    dictionaries. An option is also provided to pass raw json as well.
 
-            salt '*' bigip.modify_profile bigip admin admin http my-http-profile serverAgentName=f5-bigip
-            salt '*' bigip.modify_profile bigip admin admin http my-http-profile \
+                                    lists [i,i,i]:
+                                        param='item1,item2,item3'
+
+                                    Dictionary [k:v,k:v,k,v]:
+                                        param='key-1:val-1,key-2:val2,key-3:va-3'
+
+                                    List of Dictionaries [k:v,k:v|k:v,k:v|k:v,k:v]:
+                                       param='key-1:val-1,key-2:val-2|key-1:val-1,key-2:val-2|key-1:val-1,key-2:val-2'
+
+                                    JSON: 'j{ ... }j':
+                                       cert-key-chain='j{ "default": { "cert": "default.crt", "chain": "default.crt", "key": "default.key" } }j'
+
+                                    Escaping Delimiters:
+                                        Use  \, or \: or \|  to escape characters which shouldn't be treated as delimiters
+                                        i.e. ciphers='DEFAULT\:!SSLv3'
+
+        CLI Examples:
+
+            salt '*' bigip.modify_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http'
+            salt '*' bigip.modify_profile bigip admin admin http my-http-profile defaultsFrom='/Common/http' \ \n
             enforcement=maxHeaderCount:3200,maxRequests:10
 
+            salt '*' bigip.modify_profile bigip admin admin client-ssl my-client-ssl-1 retainCertificate=false \ \n
+            ciphers='DEFAULT\:!SSLv3' cert_key_chain='j{ "default": { "cert": "default.crt", "chain": "default.crt", "key": "default.key" } }j'
     '''
-
 
     #build session
     bigip_session = _build_session(username, password)
 
     #construct the payload
     payload = {}
+    payload['name'] = name
+
 
     #there's a ton of different profiles and a ton of options for each type of profile.
     #this logic relies that the end user knows which options are meant for which profile types
     for key, value in kwargs.iteritems():
         if not key.startswith('__'):
-            if key not in ['hostname', 'username', 'password', 'type']:
+            if key not in ['hostname', 'username', 'password', 'profile_type']:
                 key = key.replace('_', '-')
-                payload[key] = _set_value(value)
 
-    #post to REST
+                try:
+                    payload[key] = _set_value(value)
+                except salt.exceptions.CommandExecutionError:
+                    return 'Error: Unable to Parse JSON data for parameter: {}\n{}'.format(key, value)
+
+    #put to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(hostname)+'/ltm/profile/{}/{}'.format(type, name), data=json.dumps(payload))
+        response = bigip_session.put(BIG_IP_URL_BASE.format(hostname)+'/ltm/profile/{}/{}'.format(profile_type, name), data=json.dumps(payload))
     except requests.exceptions.ConnectionError, e:
         return 'Error: Unable to connect to the bigip device: {}\n{}'.format(hostname, e)
 
