@@ -673,12 +673,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  virtual_enable=True,
                  ):  # pylint: disable=W0231
         super(LazyLoader, self).__init__()  # init the lazy loader
+        self.tag = tag
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
         if opts is None:
             opts = {}
-        self.tag = tag
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
 
@@ -813,6 +813,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.grains = opts['grains']
         else:
             self.grains = {}
+        if self.tag not in ['grains'] and not self.grains:
+            self.grains.update(grains(opts))
         if 'pillar' in opts:
             self.pillar = opts['pillar']
         else:
