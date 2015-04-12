@@ -817,7 +817,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.grains = {}
         if self.tag not in ['grains'] and not self.grains:
             if not _grains:
-                import pdb;pdb.set_trace()  ## Breakpoint ##
+                # memoize cache the grains, not to reload each run
                 _grains.update(grains(opts))
             self.grains.update(copy.deepcopy(_grains))
         if 'pillar' in opts:
