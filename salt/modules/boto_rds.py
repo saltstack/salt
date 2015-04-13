@@ -356,9 +356,7 @@ def create_parameter_group(name, db_parameter_group_family, description,
         return False
 
 
-def create_subnet_group(name, db_subnet_group_description, subnet_ids,
-                        tags=None, region=None, key=None, keyid=None,
-                        profile=None):
+def create_subnet_group(name, description, subnet_ids, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Create an RDS subnet group
 
@@ -374,9 +372,8 @@ def create_subnet_group(name, db_subnet_group_description, subnet_ids,
                                                 profile):
         return True
     try:
-        rds = conn.create_db_subnet_group(name, db_subnet_group_description,
-                                          subnet_ids, tags)
-        if rds:
+        rds = conn.create_db_subnet_group(name, description, subnet_ids, tags)
+        if not rds:
             msg = 'Failed to create RDS subnet group {0}'.format(name)
             log.error(msg)
             return False

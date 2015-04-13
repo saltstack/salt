@@ -259,22 +259,19 @@ def _rds_present(name, allocated_storage, storage_type, db_instance_class,
     return ret
 
 
-def create_replica(name, source, db_instance_class=None,
-                   availability_zone=None, port=None,
-                   auto_minor_version_upgrade=None, iops=None,
-                   option_group_name=None,
-                   publicly_accessible=None,
-                   tags=None, region=None, key=None, keyid=None,
-                   profile=None):
+def replica_present(name, source, db_instance_class=None, availability_zone=None, port=None,
+                    auto_minor_version_upgrade=None, iops=None, option_group_name=None,
+                    publicly_accessible=None, tags=None, region=None, key=None, keyid=None,
+                    profile=None):
     '''
-    Create RDS replica
+    Ensure RDS replica exists.
 
     .. code-block:: yaml
 
-    Ensure myrds replica RDS exists:
-        boto_rds.create_replica:
-            - name: myreplica
-            - source: mydb
+        Ensure myrds replica RDS exists:
+            boto_rds.create_replica:
+                - name: myreplica
+                - source: mydb
     '''
     ret = {'name': name,
            'result': None,
@@ -308,6 +305,66 @@ def create_replica(name, source, db_instance_class=None,
     return ret
 
 
+def subnet_group_present(name, subnet_ids, description, tags=None, region=None,
+                         key=None, keyid=None, profile=None):
+    '''
+    Ensure DB subnet group exists.
+
+    .. versionadded:: Beryllium
+
+    name
+        The name for the DB subnet group. This value is stored as a lowercase string.
+
+    subnet_ids
+        The EC2 Subnet IDs for the DB subnet group.
+
+    description
+        Subnet group description.
+
+    tags
+        A list of tags.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
+                                                      keyid=keyid, profile=profile)
+    if not exists:
+        if __opts__['test']:
+            ret['comment'] = 'Subnet group {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        created = __salt__['boto_rds.create_subnet_group'](name=name, subnet_ids=subnet_ids,
+                                                           description=description, tags=tags, region=region,
+                                                           key=key, keyid=keyid, profile=profile)
+        if not created:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} subnet group.'.format(name)
+            return ret
+        ret['changes']['old'] = None
+        ret['changes']['new'] = name
+        ret['comment'] = 'Subnet {0} created.'.format(name)
+        return ret
+    ret['comment'] = 'Subnet present.'
+    return ret
+
+
 def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
            tags=None, region=None, key=None, keyid=None, profile=None):
     ret = {'name': name,
@@ -334,7 +391,36 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         ret['result'] = False
         ret['comment'] = 'Failed to delete {0} RDS.'.format(name)
         return ret
-    ret['changes']['old'] = {'rds': name}
-    ret['changes']['new'] = {'rds': None}
+    ret['changes']['old'] = name
+    ret['changes']['new'] = None
     ret['comment'] = 'RDS {0} deleted.'.format(name)
+    return ret
+
+
+def subnet_group_absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
+                                                      keyid=keyid, profile=profile)
+    if not exists:
+        ret['result'] = True
+        ret['comment'] = '{0} RDS subnet group does not exist.'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'RDS subnet group {0} is set to be removed.'.format(name)
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_rds.delete_subnet_group'](name, region, key, keyid, profile)
+    if not deleted:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete {0} RDS subnet group.'.format(name)
+        return ret
+    ret['changes']['old'] = name
+    ret['changes']['new'] = None
+    ret['comment'] = 'RDS subnet group {0} deleted.'.format(name)
     return ret
