@@ -1663,14 +1663,15 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
+                        if req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                found = True
+                                reqs[r_state].append(chunk)
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
-                                found = True
-                                reqs[r_state].append(chunk)
-                        elif req_key == 'sls':
-                            # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
                                 found = True
                                 reqs[r_state].append(chunk)
                     if not found:
@@ -1772,6 +1773,14 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
+                        if req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                if requisite == 'prereq':
+                                    chunk['__prereq__'] = True
+                                reqs.append(chunk)
+                                found = True
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
@@ -1779,13 +1788,6 @@ class State(object):
                                     chunk['__prereq__'] = True
                                 elif requisite == 'prerequired':
                                     chunk['__prerequired__'] = True
-                                reqs.append(chunk)
-                                found = True
-                        elif req_key == 'sls':
-                            # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
-                                if requisite == 'prereq':
-                                    chunk['__prereq__'] = True
                                 reqs.append(chunk)
                                 found = True
                     if not found:
