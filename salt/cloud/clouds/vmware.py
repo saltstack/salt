@@ -510,6 +510,23 @@ def _format_instance_info(vm):
     return vm_full_info
 
 
+def _get_snapshots(snapshot_list, parent_snapshot_path=""):
+    snapshots = {}
+    for snapshot in snapshot_list:
+        snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
+        snapshots[snapshot_path] = {
+            'name': snapshot.name,
+            'description': snapshot.description,
+            'created': str(snapshot.createTime).split('.')[0],
+            'state': snapshot.state,
+            'path': snapshot_path,
+        }
+        # Check if child snapshots exist
+        if snapshot.childSnapshotList:
+            snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+    return snapshots
+
+
 def get_vcenter_version(kwargs=None, call=None):
     '''
     Show the vCenter Server version with build number.
@@ -548,9 +565,7 @@ def list_datacenters(kwargs=None, call=None):
         return False
 
     datacenters = []
-    datacenter_properties = [
-                                "name"
-                            ]
+    datacenter_properties = ["name"]
 
     datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
 
@@ -577,9 +592,7 @@ def list_clusters(kwargs=None, call=None):
         return False
 
     clusters = []
-    cluster_properties = [
-                             "name"
-                         ]
+    cluster_properties = ["name"]
 
     cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
 
@@ -606,9 +619,7 @@ def list_datastore_clusters(kwargs=None, call=None):
         return False
 
     datastore_clusters = []
-    datastore_cluster_properties = [
-                                       "name"
-                                   ]
+    datastore_cluster_properties = ["name"]
 
     datastore_cluster_list = _get_mors_with_properties(vim.StoragePod, datastore_cluster_properties)
 
@@ -635,9 +646,7 @@ def list_datastores(kwargs=None, call=None):
         return False
 
     datastores = []
-    datastore_properties = [
-                               "name"
-                           ]
+    datastore_properties = ["name"]
 
     datastore_list = _get_mors_with_properties(vim.Datastore, datastore_properties)
 
@@ -664,9 +673,7 @@ def list_hosts(kwargs=None, call=None):
         return False
 
     hosts = []
-    host_properties = [
-                          "name"
-                      ]
+    host_properties = ["name"]
 
     host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
 
@@ -693,9 +700,7 @@ def list_resourcepools(kwargs=None, call=None):
         return False
 
     resource_pools = []
-    resource_pool_properties = [
-                                   "name"
-                               ]
+    resource_pool_properties = ["name"]
 
     resource_pool_list = _get_mors_with_properties(vim.ResourcePool, resource_pool_properties)
 
@@ -722,9 +727,7 @@ def list_networks(kwargs=None, call=None):
         return False
 
     networks = []
-    network_properties = [
-                             "name"
-                         ]
+    network_properties = ["name"]
 
     network_list = _get_mors_with_properties(vim.Network, network_properties)
 
@@ -747,9 +750,7 @@ def list_nodes_min(kwargs=None, call=None):
     '''
 
     ret = {}
-    vm_properties = [
-                        "name"
-                    ]
+    vm_properties = ["name"]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -772,12 +773,12 @@ def list_nodes(kwargs=None, call=None):
 
     ret = {}
     vm_properties = [
-                        "name",
-                        "guest.ipAddress",
-                        "config.guestFullName",
-                        "config.hardware.numCPU",
-                        "config.hardware.memoryMB"
-                    ]
+        "name",
+        "guest.ipAddress",
+        "config.guestFullName",
+        "config.hardware.numCPU",
+        "config.hardware.memoryMB"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -886,12 +887,12 @@ def avail_images():
 
     templates = {}
     vm_properties = [
-                        "name",
-                        "config.template",
-                        "config.guestFullName",
-                        "config.hardware.numCPU",
-                        "config.hardware.memoryMB"
-                    ]
+        "name",
+        "config.template",
+        "config.guestFullName",
+        "config.hardware.numCPU",
+        "config.hardware.memoryMB"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -923,9 +924,7 @@ def list_folders(kwargs=None, call=None):
         return False
 
     folders = []
-    folder_properties = [
-                            "name"
-                        ]
+    folder_properties = ["name"]
 
     folder_list = _get_mors_with_properties(vim.Folder, folder_properties)
 
@@ -933,6 +932,51 @@ def list_folders(kwargs=None, call=None):
         folders.append(folder["name"])
 
     return {'Folders': folders}
+
+
+def list_snapshots(kwargs=None, call=None):
+    '''
+    List snapshots either for all VMs and templates or for a specific VM/template
+    in this VMware environment
+
+    To list snapshots for all VMs and templates:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_snapshots my-vmware-config
+
+    To list snapshots for a specific VM/template:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_snapshots my-vmware-config name="vmname"
+    '''
+    if call != 'function':
+        log.error(
+            'The list_snapshots function must be called with -f or --function.'
+        )
+        return False
+
+    ret = {}
+    vm_properties = [
+        "name",
+        "rootSnapshot",
+        "snapshot"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["rootSnapshot"]:
+            if kwargs and 'name' in kwargs and vm["name"] == kwargs['name']:
+                return {vm["name"]: _get_snapshots(vm["snapshot"].rootSnapshotList)}
+            else:
+                ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
+    return ret
 
 
 def start(name, call=None):
@@ -951,9 +995,9 @@ def start(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -988,9 +1032,9 @@ def stop(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1025,9 +1069,9 @@ def suspend(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1066,9 +1110,9 @@ def reset(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1114,9 +1158,9 @@ def destroy(name, call=None):
     )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 

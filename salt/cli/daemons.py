@@ -113,7 +113,8 @@ class Master(parsers.MasterOptionParser):
         self.setup_logfile_logger()
         logger.info('Setting up the Salt Master')
 
-        if self.config['transport'].lower() == 'zeromq':
+        # TODO: AIO core is separate from transport
+        if self.config['transport'].lower() in ('zeromq', 'tcp'):
             if not verify_socket(self.config['interface'],
                                  self.config['publish_port'],
                                  self.config['ret_port']):
@@ -224,7 +225,8 @@ class Minion(parsers.MinionOptionParser):
             )
         )
         migrations.migrate_paths(self.config)
-        if self.config['transport'].lower() == 'zeromq':
+        # TODO: AIO core is separate from transport
+        if self.config['transport'].lower() in ('zeromq', 'tcp'):
             # Late import so logging works correctly
             import salt.minion
             # If the minion key has not been accepted, then Salt enters a loop
