@@ -382,7 +382,7 @@ def create_subnet_group(name, db_subnet_group_description, subnet_ids,
     try:
         rds = conn.create_db_subnet_group(name, db_subnet_group_description,
                                           subnet_ids, tags)
-        if rds:
+        if not rds:
             msg = 'Failed to create RDS subnet group {0}'.format(name)
             log.error(msg)
             return False
