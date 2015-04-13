@@ -34,7 +34,7 @@ Connection module for Amazon VPC
 :depends: boto
 
 '''
-# keep linter from choking on _get_conn and _cache_id
+# keep lint from choking on _get_conn and _cache_id
 #pylint disable=F821
 
 # Import Python libs

@@ -220,7 +220,7 @@ def get_exception(e):
     return CommandExecutionError(message)
 
 
-def assign_funcs(module, service):
+def assign_funcs(modname, service, module=None):
     '''
     Assign _get_conn and _cache_id functions to the named module.
 
@@ -228,6 +228,6 @@ def assign_funcs(module, service):
 
         _utils__['boto.assign_partials'](__name__, 'ec2')
     '''
-    mod = sys.modules[module]
-    setattr(mod, '_get_conn', get_connection_func(service))
+    mod = sys.modules[modname]
+    setattr(mod, '_get_conn', get_connection_func(service, module=module))
     setattr(mod, '_cache_id', cache_id_func(service))
