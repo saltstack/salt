@@ -39,7 +39,6 @@ Connection module for Amazon VPC
 from __future__ import absolute_import
 import hashlib
 import logging
-import sys
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
@@ -76,9 +75,7 @@ def __virtual__():
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
     else:
-        mod = sys.modules[__name__]
-        setattr(mod, '_get_conn', __utils__['boto.get_connection_func']('vpc'))
-        setattr(mod, '_cache_id', __utils__['boto.cache_id_func']('vpc'))
+        __utils__['boto.assign_funcs'](__name__, 'vpc')
         return True
 
 

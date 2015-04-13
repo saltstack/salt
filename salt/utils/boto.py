@@ -13,6 +13,7 @@ therefore, must be accessed via the loader or from the __utils__ dict.
 from __future__ import absolute_import
 import hashlib
 import logging
+import sys
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from functools import partial
 
@@ -217,3 +218,16 @@ def get_exception(e):
         message = '{0} {1}'.format(status, reason)
 
     return CommandExecutionError(message)
+
+
+def assign_funcs(module, service):
+    '''
+    Assign _get_conn and _cache_id functions to the named module.
+
+    .. code-block:: python
+
+        _utils__['boto.assign_partials'](__name__, 'ec2')
+    '''
+    mod = sys.modules[module]
+    setattr(mod, '_get_conn', get_connection_func(service))
+    setattr(mod, '_cache_id', cache_id_func(service))
