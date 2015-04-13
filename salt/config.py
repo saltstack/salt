@@ -1926,12 +1926,13 @@ def get_id(opts, minion_id=False):
                 return name, False
         except (IOError, OSError):
             pass
-
-    log.debug('Guessing ID. The id can be explicitly in set {0}'
-              .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
+    if '__role' in opts and opts.get('__role') == 'minion':
+        log.debug('Guessing ID. The id can be explicitly in set {0}'
+                  .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     newid = salt.utils.network.generate_minion_id()
-    log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
+    if '__role' in opts and opts.get('__role') == 'minion':
+        log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
     if minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
     is_ipv4 = newid.count('.') == 3 and not any(c.isalpha() for c in newid)
@@ -1957,7 +1958,7 @@ def apply_minion_config(overrides=None,
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if opts['id'] is None:
+    if opts['id'] is None and not minion_id:
         opts['id'], using_ip_for_id = get_id(
                 opts,
                 minion_id=minion_id)
