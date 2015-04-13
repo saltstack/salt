@@ -1046,14 +1046,16 @@ def os_data():
                     with open(init_bin, 'rb') as fp_:
                         buf = True
                         edge = ''
+                        buf = fp_.read(buf_size).lower()
                         while buf:
-                            buf = edge + fp_.read(buf_size).lower()
+                            buf = edge + buf
                             for item in supported_inits:
                                 if item in buf:
                                     grains['init'] = item
                                     buf = ''
                                     break
                             edge = buf[-edge_len:]
+                            buf = fp_.read(buf_size).lower()
                 except (IOError, OSError) as exc:
                     log.error(
                         'Unable to read from init_bin ({0}): {1}'
