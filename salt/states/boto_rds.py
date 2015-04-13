@@ -391,7 +391,38 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         ret['result'] = False
         ret['comment'] = 'Failed to delete {0} RDS.'.format(name)
         return ret
-    ret['changes']['old'] = {'rds': name}
-    ret['changes']['new'] = {'rds': None}
+    ret['changes']['old'] = name
+    ret['changes']['new'] = None
     ret['comment'] = 'RDS {0} deleted.'.format(name)
+    return ret
+
+
+def subnet_group_absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
+                                                      keyid=keyid, profile=profile)
+    if not exists:
+        ret['result'] = True
+        ret['comment'] = '{0} RDS subnet group does not exist.'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'RDS subnet group {0} is set to be removed.'.format(name)
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_rds.delete_subnet_group'](name, skip_final_snapshot,
+                                                       final_db_snapshot_identifier,
+                                                       region, key, keyid, profile)
+    if not deleted:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete {0} RDS subnet group.'.format(name)
+        return ret
+    ret['changes']['old'] = name
+    ret['changes']['new'] = None
+    ret['comment'] = 'RDS subnet group {0} deleted.'.format(name)
     return ret
