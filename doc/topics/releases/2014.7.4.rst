@@ -138,3 +138,8 @@ Known issues:
   if modules or pillars are refreshed at the same time that one
   or more masters are down. This can be worked around by setting
   'auth_timeout' and 'auth_tries' down to shorter periods.
+
+- There are known issues with batch mode operating on the incorrect number of minions.
+  This bug can be patched with the change in `Pull Request #22464`_.
+
+.. _Pull Request #22464: https://github.com/saltstack/salt/pull/22464
