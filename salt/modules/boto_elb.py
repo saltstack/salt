@@ -70,7 +70,6 @@ except ImportError:
 # Import Salt libs
 from salt.ext.six import string_types
 import salt.utils.odict as odict
-from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
@@ -114,10 +113,8 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    except CommandExecutionError:
-        return []
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         lb = conn.get_all_load_balancers(load_balancer_names=[name])
         lb = lb[0]
@@ -417,10 +414,8 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elb.get_attributes myelb
     '''
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    except CommandExecutionError:
-        return {}
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         lbattrs = conn.get_all_lb_attributes(name)
         ret = odict.OrderedDict()
@@ -525,10 +520,8 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elb.get_health_check myelb
     '''
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    except CommandExecutionError:
-        return {}
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         lb = conn.get_all_load_balancers(load_balancer_names=[name])
         lb = lb[0]
@@ -670,10 +663,7 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
         salt myminion boto_elb.get_instance_health myelb
         salt myminion boto_elb.get_instance_health myelb region=us-east-1 instances="[instance_id,instance_id]"
     '''
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    except CommandExecutionError:
-        return []
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         instance_states = conn.describe_instance_health(name, instances)
