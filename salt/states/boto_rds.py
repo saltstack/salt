@@ -351,9 +351,8 @@ def subnet_group_present(name, subnet_ids, description, tags=None, region=None,
             ret['result'] = None
             return ret
         created = __salt__['boto_rds.create_subnet_group'](name=name, subnet_ids=subnet_ids,
-                                                           db_subnet_group_description=description,
-                                                           tags=tags, region=region, key=key, keyid=keyid,
-                                                           profile=profile)
+                                                           description=description, tags=tags, region=region,
+                                                           key=key, keyid=keyid, profile=profile)
         if not created:
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} subnet group.'.format(name)

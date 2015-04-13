@@ -361,9 +361,7 @@ def create_parameter_group(name, db_parameter_group_family, description,
         return False
 
 
-def create_subnet_group(name, db_subnet_group_description, subnet_ids,
-                        tags=None, region=None, key=None, keyid=None,
-                        profile=None):
+def create_subnet_group(name, description, subnet_ids, tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Create an RDS subnet group
 
