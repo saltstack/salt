@@ -22,7 +22,7 @@ def __virtual__():
     return True
 
 
-def mkfs(device, fs_type, **kwargs):
+def mkfs(device, fstype, **kwargs):
     '''
     Create a file system on the specified device
 
@@ -30,7 +30,7 @@ def mkfs(device, fs_type, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' extfs.mkfs /dev/sda1 fs_type=ext4 opts='acl,noexec'
+        salt '*' extfs.mkfs /dev/sda1 fstype=ext4 opts='acl,noexec'
 
     Valid options are:
 
@@ -57,7 +57,7 @@ def mkfs(device, fs_type, **kwargs):
     * **opts**: mount options (comma separated)
     * **revision**: set the filesystem revision (default 1)
     * **super**: write superblock and group descriptors only
-    * **fs_type**: set the filesystem type (REQUIRED)
+    * **fstype**: set the filesystem type (REQUIRED)
     * **usage_type**: how the filesystem is going to be used
     * **uuid**: set the UUID for the file system
 
@@ -97,7 +97,7 @@ def mkfs(device, fs_type, **kwargs):
                 opts += '-{0} '.format(opt)
             else:
                 opts += '-{0} {1} '.format(opt, kwargs[key])
-    cmd = 'mke2fs -F -t {0} {1}{2}'.format(fs_type, opts, device)
+    cmd = 'mke2fs -F -t {0} {1}{2}'.format(fstype, opts, device)
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     ret = []
     for line in out:

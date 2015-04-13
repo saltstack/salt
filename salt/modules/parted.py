@@ -397,12 +397,12 @@ def system_types():
     return ret
 
 
-def mkfs(device, fs_type):
+def mkfs(device, fstype):
     '''
-    partition.mkfs device fs_type
+    partition.mkfs device fstype
 
-    Makes a file system <fs_type> on partition <device>, destroying all data
-        that resides on that partition. <fs_type> must be one of "ext2",
+    Makes a file system <fstype> on partition <device>, destroying all data
+        that resides on that partition. <fstype> must be one of "ext2",
         "fat32", "fat16", "linux-swap" or "reiserfs" (if libreiserfs is
         installed)
 
@@ -414,11 +414,11 @@ def mkfs(device, fs_type):
     '''
     _validate_device(device)
 
-    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+    if fstype not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
-        raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
+        raise CommandExecutionError('Invalid fstype passed to partition.mkfs')
 
-    mkfs_cmd = 'mkfs.{0}'.format(fs_type)
+    mkfs_cmd = 'mkfs.{0}'.format(fstype)
     if not salt.utils.which(mkfs_cmd):
         return 'Error: {0} is unavailable.'
     cmd = '{0} {1}'.format(mkfs_cmd, device)
@@ -453,11 +453,11 @@ def mklabel(device, label_type):
     return out
 
 
-def mkpart(device, part_type, fs_type=None, start=None, end=None):
+def mkpart(device, part_type, fstype=None, start=None, end=None):
     '''
-    partition.mkpart device part_type fs_type start end
+    partition.mkpart device part_type fstype start end
 
-    Make a part_type partition for filesystem fs_type, beginning at start and
+    Make a part_type partition for filesystem fstype, beginning at start and
         ending at end (by default in megabytes).  part_type should be one of
         "primary", "logical", or "extended".
 
@@ -465,7 +465,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
 
     .. code-block:: bash
 
-        salt '*' partition.mkpart /dev/sda primary fs_type=fat32 start=0 end=639
+        salt '*' partition.mkpart /dev/sda primary fstype=fat32 start=0 end=639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
     _validate_device(device)
@@ -480,18 +480,18 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'Invalid part_type passed to partition.mkpart'
         )
 
-    if fs_type and fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+    if fstype and fstype not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
-            'Invalid fs_type passed to partition.mkpart'
+            'Invalid fstype passed to partition.mkpart'
         )
 
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
-    if fs_type:
+    if fstype:
         cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
-            device, part_type, fs_type, start, end
+            device, part_type, fstype, start, end
         )
     else:
         cmd = 'parted -m -s -- {0} mkpart {1} {2} {3}'.format(
@@ -502,13 +502,13 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
     return out
 
 
-def mkpartfs(device, part_type, fs_type, start, end):
+def mkpartfs(device, part_type, fstype, start, end):
     '''
-    partition.mkpartfs device part_type fs_type start end
+    partition.mkpartfs device part_type fstype start end
 
-    Make a <part_type> partition with a new filesystem of <fs_type>, beginning
+    Make a <part_type> partition with a new filesystem of <fstype>, beginning
         at <start> and ending at <end> (by default in megabytes).  <part_type>
-        should be one of "primary", "logical", or "extended". <fs_type> must be
+        should be one of "primary", "logical", or "extended". <fstype> must be
         one of "ext2", "fat32", "fat16", "linux-swap" or "reiserfs" (if
         libreiserfs is installed)
 
@@ -525,17 +525,17 @@ def mkpartfs(device, part_type, fs_type, start, end):
             'Invalid part_type passed to partition.mkpartfs'
         )
 
-    if fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
+    if fstype not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
                            'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
         raise CommandExecutionError(
-            'Invalid fs_type passed to partition.mkpartfs'
+            'Invalid fstype passed to partition.mkpartfs'
         )
 
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
     cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
-        device, part_type, fs_type, start, end
+        device, part_type, fstype, start, end
     )
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
