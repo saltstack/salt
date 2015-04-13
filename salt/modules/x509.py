@@ -902,7 +902,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     signing_cert:
         A certificate matching the private key that will be used to sign this certificate. This is used
         to populate the issuer values in the resulting certificate. Do not include this value for
-        self-signed certificateds.
+        self-signed certificates.
 
     public_key:
         The public key to be included in this certificate. This can be sourced from a public key,
@@ -1129,7 +1129,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     cert.set_issuer(signing_cert.get_subject())
 
     for extname, extlongname in EXT_NAME_MAPPINGS.iteritems():
-        if extname not in kwargs or extlongname not in kwargs or extname not in csrexts or extlongname not in csrexts:
+        if (extname in kwargs or extlongname in kwargs or extname in csrexts or extlongname in csrexts) is False:
             continue
 
         # Use explicitly set values first, fall back to CSR values.

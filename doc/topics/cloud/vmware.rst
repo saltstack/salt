@@ -78,12 +78,26 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         network:
           Network adapter 1:
             name: 10.20.30-400-Test
+            ip: 10.20.30.123
+            gateway: [10.20.30.110]
+            subnet_mask: 255.255.255.128
+            domain: mycompany.com
           Network adapter 2:
             name: 10.30.40-500-Dev-DHCP
             type: e1000
           Network adapter 3:
             name: 10.40.50-600-Prod
             type: vmxnet3
+            ip: 10.40.50.123
+            gateway: [10.40.50.110]
+            subnet_mask: 255.255.255.128
+            domain: mycompany.com
+
+      domain: mycompany.com
+      dns_servers:
+        - 123.127.255.240
+        - 123.127.255.241
+        - 123.127.255.242
 
       # If cloning from template, either resourcepool or cluster MUST be specified!
       resourcepool: Resources
@@ -99,8 +113,18 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         mem.hotadd: 'yes'
         guestinfo.saltMaster: 10.20.30.140
         guestinfo.domain: foobar.com
-        contactGroup: 'Core Infrastructure' 
-        randomKey: randomValue
+
+      deploy: True
+      private_key: /root/.ssh/mykey.pem
+      ssh_username: cloud-user
+      password: veryVeryBadPassword
+      minion:
+        master: 123.127.193.105
+
+      file_map:
+        /path/to/local/custom/script: /path/to/remote/script
+        /path/to/local/file: /path/to/remote/file
+        /srv/salt/yum/epel.repo: /etc/yum.repos.d/epel.repo
 
 
 provider
@@ -128,12 +152,43 @@ devices
 
     network
         Enter the network adapter specification here. If the network adapter doesn\'t
-        exist, a new network adapter will be created with the specified network name
-        and type. If the network adapter already exists, it will be reconfigured with
-        the network name specified. Currently, only network adapters of type vmxnet,
-        vmxnet2, vmxnet3, e1000 and e1000e can be created. If the specified network
-        adapter type is not one of these, a network adapter of type vmxnet3 will be
-        created by default.
+        exist, a new network adapter will be created with the specified network name,
+        type and other configuration. If the network adapter already exists, it will
+        be reconfigured with the specifications. Currently, only network adapters of
+        type vmxnet, vmxnet2, vmxnet3, e1000 and e1000e can be created. If the
+        specified network adapter type is not one of these, a network adapter of type
+        vmxnet3 will be created by default. The following additional options can be
+        specified per network adapter (See example above):
+
+        name
+            Enter the network name you want the network adapter to be mapped to.
+
+        type
+            Enter the network adapter type you wante to create. Currently supported
+            types are vmxnet, vmxnet2, vmxnet3, e1000 and e1000e. If no type is
+            specified, by default vmxnet3 will be used.
+
+        ip
+            Enter the static IP you want the network adapter to be mapped to. If the
+            network specified is DHCP enabled, you do not have to specify this.
+
+        gateway
+            Enter the gateway for the network as a list. If the network specified
+            is DHCP enabled, you do not have to specify this.
+
+        subnet_mask
+            Enter the subnet mask for the network. If the network specified is DHCP
+            enabled, you do not have to specify this.
+
+        domain
+            Enter the domain to be used with the network adapter. If the network
+            specified is DHCP enabled, you do not have to specify this.
+
+domain
+    Enter the global domain name to be used for DNS.
+
+dns_servers
+    Enter the list of DNS servers to use in order of priority.
 
 resourcepool
     Enter the name of the resourcepool to which the new virtual machine should be
@@ -218,3 +273,28 @@ extra_config
     describes a set of modifications to the additional options. If the key is already
     present, it will be reset with the new value provided. Otherwise, a new option is
     added. Keys with empty values will be removed.
+
+deploy
+    Specifies if salt should be installed on the newly created VM. Default is ``True``
+    so salt will be installed using the bootstrap script. If ``template: True`` or
+    ``power_on: False`` is set, this field is ignored and salt will not be installed.
+
+private_key
+    Specify the path to the private key to use to be able to ssh to the VM.
+
+ssh_username
+    Specify the username to use in order to ssh to the VM. Default is ``root``
+
+password
+    Specify a password to use in order to ssh to the VM. If ``private_key`` is
+    specified, you do not need to specify this.
+
+minion
+    Specify custom minion configuration you want the salt minion to have. A good example
+    would be to specify the ``master`` as the IP/DNS name of the master.
+
+file_map
+    Specify file/files you want to copy to the VM before the bootstrap script is run
+    and salt is installed. A good example of using this would be if you need to put
+    custom repo files on the server in case your server will be in a private network
+    and cannot reach external networks.

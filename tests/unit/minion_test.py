@@ -14,6 +14,7 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 # Import salt libs
 from salt import minion
+from salt.utils import event
 from salt.exceptions import SaltSystemExit
 import salt.syspaths
 
@@ -44,9 +45,8 @@ class MinionTestCase(TestCase):
             'extension_modules': ''
         }
         with patch.dict(__opts__, opts):
-            testminion = minion.MinionBase(__opts__)
             try:
-                testminion._prepare_minion_event_system()
+                event_publisher = event.AsyncEventPublisher(__opts__, lambda x: True)
                 result = True
             except SaltSystemExit:
                 result = False

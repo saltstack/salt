@@ -176,12 +176,12 @@ Setting up a Windows build environment
 
     .. code-block:: bash
 
-        git clone git://github.com/saltstack/salt.git
+        git clone https://github.com/saltstack/salt.git
 
 4.  Install the latest point release of `Python 2.7`_ for the architecture you
     wish to target
 
-5.  Add C:\\Python27 and C:\\Python27\\Scripts to your system path
+5.  Add ``C:\\Python27`` and ``C:\\Python27\\Scripts`` to your system path
 
 6.  Download and run the Setuptools bootstrap - `ez_setup.py`_
 
@@ -286,7 +286,7 @@ Setting up a Windows build environment
 
     .. code-block:: bash
 
-            python setup.py bdist_esky
+        python setup.py bdist_esky
 
 A zip file has been created in the ``dist/`` folder, containing a frozen copy
 of Python and the dependency libraries, along with Windows executables for each

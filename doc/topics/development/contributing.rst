@@ -70,7 +70,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. note::
 
         If your change fixes a bug or implements a feature already filed in the
-        `issue tracker<GitHub issue tracker_>`_, be sure to reference the issue
+        `issue tracker<GitHub issue tracker>`_, be sure to reference the issue
         number in the commit message body.
 
     .. code-block:: bash
@@ -88,7 +88,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
 
     If you get stuck `there are many introductory Git resources on
-    help.github.com <Git resources>`_.
+    help.github.com<Git resources>`_.
 
 #.  Push your locally-committed changes to your GitHub fork,
 
@@ -351,6 +351,6 @@ And ``upstream`` is the name of the remote pointing to the main Salt repo.
 .. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
 .. _`GitHub issue tracker`: https://github.com/saltstack/salt/issues
 .. _`Fork saltstack/salt`: https://github.com/saltstack/salt/fork
-.. _`Git resources`: https://help.github.com/articles/what-are-other-good-resources-for-learning-git-and-github
+.. _'Git resources`: https://help.github.com/articles/good-resources-for-learning-git-and-github/
 .. _`Closing issues via commit message`: https://help.github.com/articles/closing-issues-via-commit-messages
 .. _`git format-patch`: https://www.kernel.org/pub/software/scm/git/docs/git-format-patch.html

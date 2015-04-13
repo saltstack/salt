@@ -219,10 +219,9 @@ def get_all_access_keys(user_name, marker=None, max_items=None,
         return str(e)
 
 
-def create_access_key(user_name=None, region=None, key=None, keyid=None, profile=None):
+def create_access_key(user_name, region=None, key=None, keyid=None, profile=None):
     '''
-    Create access key id for a user. If a username is not defined then
-    a key will be created for the user that is doing the request.
+    Create access key id for a user.
 
     .. versionadded:: Beryllium
 
