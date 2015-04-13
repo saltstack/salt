@@ -313,6 +313,61 @@ def get_group_host(name, region=None, key=None, keyid=None, profile=None):
     return host
 
 
+def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check to see if an ElastiCache subnet group exists.
+
+    CLI example::
+
+        salt myminion boto_elasticache.subnet_group_exists my-param-group \
+                region=us-east-1
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        ec = conn.describe_cache_subnet_groups(cache_subnet_group_name=name)
+        if not ec:
+            msg = ('ElastiCache subnet group does not exist in region {0}'.format(region))
+            log.debug(msg)
+            return False
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return False
+
+
+def create_subnet_group(name, description, subnet_ids, tags=None, region=None,
+                        key=None, keyid=None, profile=None):
+    '''
+    Create an ElastiCache subnet group
+
+    CLI example to create an ElastiCache subnet group::
+
+        salt myminion boto_elasticache.create_subnet_group my-subnet-group \
+            "group description" '[subnet-12345678, subnet-87654321]' \
+            region=us-east-1
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    if subnet_group_exists(name, tags, region, key, keyid, profile):
+        return True
+    try:
+        ec = conn.create_cache_subnet_group(name, description, subnet_ids)
+        if not ec:
+            msg = 'Failed to create ElastiCache subnet group {0}'.format(name)
+            log.error(msg)
+            return False
+        log.info('Created ElastiCache subnet group {0}'.format(name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create ElastiCache subnet group {0}'.format(name)
+        log.error(msg)
+        return False
+
+
 def get_cache_subnet_group(name, region=None, key=None, keyid=None,
                            profile=None):
     '''
@@ -357,6 +412,30 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None,
         else:
             ret[key] = val
     return ret
+
+
+def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete an ElastiCache subnet group.
+
+    CLI example::
+
+        salt myminion boto_elasticache.delete_subnet_group my-subnet-group \
+                region=us-east-1
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        conn.delete_cache_subnet_group(name)
+        msg = 'Deleted ElastiCache subnet group {0}.'.format(name)
+        log.info(msg)
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete ElastiCache subnet group {0}'.format(name)
+        log.error(msg)
+        return False
 
 
 def create(name, num_cache_nodes=None, engine=None, cache_node_type=None,
