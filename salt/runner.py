@@ -170,4 +170,7 @@ class Runner(RunnerClient):
                     salt.output.display_output(ret, 'nested', self.opts)
                 return ret
             log.debug('Runner return: {0}'.format(ret))
-            return ret
+            if not ret:
+                raise salt.exceptions.SaltClientError
+            else:
+                return ret
