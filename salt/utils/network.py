@@ -412,6 +412,7 @@ def cidr_to_ipv4_netmask(cidr_bits):
             cidr_bits = 0
     return netmask
 
+
 def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
     '''
     Returns an IPv4 netmask from the integer representation of that mask.
