@@ -358,13 +358,13 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
     authentication itself is a global setting for the channel and is
     enabled/disabled via the serial/modem configuration parameters.
 
-    :param ipmi_msg: User IPMI Messaginge:
+    :param ipmi_msg: User IPMI Messaging:
     (used to enable/disable whether
     this user's name and password information will be used for IPMI
     Messaging. In this case, 'IPMI Messaging' refers to the ability to
     execute generic IPMI commands that are not associated with a
     particular payload type. For example, if IPMI Messaging is disabled for
-    a user, but that user is enabled for activatallow_authing the SOL
+    a user, but that user is enabled for ??? the SOL
     payload type, then IPMI commands associated with SOL and session
     management, such as Get SOL Configuration Parameters and Close Session
     are available, but generic IPMI commands such as Get SEL Time are
