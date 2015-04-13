@@ -229,7 +229,7 @@ def managed(name, **kwargs):
     if 'humanname' in kwargs:
         kwargs['name'] = kwargs['humanname']
 
-    if not 'disabled' in kwargs:
+    if 'disabled' not in kwargs:
         kwargs['disabled'] = False
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
