@@ -28,6 +28,9 @@ Connection module for Amazon IAM
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint disable=F821
+
 from __future__ import absolute_import
 
 # Import Python libs
@@ -59,6 +62,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'iam')
     return True
 
 
@@ -71,9 +75,8 @@ def instance_profile_exists(name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.instance_profile_exists myiprofile
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         # Boto weirdly returns an exception here if an instance profile doesn't
         # exist.
@@ -92,9 +95,8 @@ def create_instance_profile(name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.create_instance_profile myiprofile
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if instance_profile_exists(name, region, key, keyid, profile):
         return True
     try:
@@ -119,9 +121,8 @@ def delete_instance_profile(name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.delete_instance_profile myiprofile
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not instance_profile_exists(name, region, key, keyid, profile):
         return True
     try:
@@ -143,7 +144,7 @@ def role_exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_iam.role_exists myirole
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.get_role(name)
         return True
@@ -159,7 +160,7 @@ def describe_role(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_iam.describe_role myirole
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.get_role(name)
         if not info:
@@ -187,7 +188,7 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
         path = '/'
     if get_user(user_name, region, key, keyid, profile):
         return True
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.create_user(user_name, path)
         log.info('Created user : {0}.'.format(user_name))
@@ -210,7 +211,7 @@ def get_all_access_keys(user_name, marker=None, max_items=None,
 
         salt myminion boto_iam.get_all_access_keys myuser
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         return conn.get_all_access_keys(user_name, marker, max_items)
     except boto.exception.BotoServerError as e:
@@ -229,7 +230,7 @@ def create_access_key(user_name, region=None, key=None, keyid=None, profile=None
 
         salt myminion boto_iam.create_access_key myuser
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         return conn.create_access_key(user_name)
     except boto.exception.BotoServerError as e:
@@ -249,7 +250,7 @@ def delete_access_key(access_key_id, user_name=None, region=None, key=None,
 
         salt myminion boto_iam.delete_access_key myuser
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         return conn.delete_access_key(access_key_id, user_name)
     except boto.exception.BotoServerError as e:
@@ -271,7 +272,7 @@ def delete_user(user_name, region=None, key=None, keyid=None,
     '''
     if not get_user(user_name, region, key, keyid, profile):
         return True
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.delete_user(user_name)
         log.info('Deleted user : {0} .'.format(user_name))
@@ -292,7 +293,7 @@ def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_iam.get_user myuser
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.get_user(user_name)
         if not info:
@@ -320,7 +321,7 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
         path = '/'
     if get_group(group_name, region, key, keyid, profile):
         return True
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.create_group(group_name, path)
         log.info('Created group : {0}.'.format(group_name))
@@ -343,7 +344,7 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
 
         salt myminion boto_iam.get_group mygroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.get_group(group_name, marker, max_items)
         if not info:
@@ -379,7 +380,7 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         msg = 'Username : {0} or group {1} do not exist.'
         log.error(msg.format(user_name, group_name))
         return False
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.add_user_to_group(group_name, user_name)
         if not info:
@@ -405,7 +406,7 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
     '''
     group = get_group(group_name, region, key, keyid, profile)
     if group:
-        conn = _get_conn(region, key, keyid, profile)
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         try:
             created = conn.put_group_policy(group_name, policy_name,
                                             policy_json)
@@ -434,7 +435,7 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
 
         salt myminion boto_iam.get_group_policy mygroup policyname
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.get_group_policy(group_name, policy_name)
         log.debug('info for group policy is : {0}'.format(info))
@@ -468,7 +469,7 @@ def create_login_profile(user_name, password, region=None, key=None,
         msg = 'Username {0} does not exist'
         log.error(msg.format(user_name))
         return False
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.create_login_profile(user_name, password)
         log.info('Created profile for user {0}.'.format(user_name))
@@ -501,7 +502,7 @@ def update_account_password_policy(allow_users_to_change_password=None,
 
         salt myminion boto_iam.update_account_password_policy True
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.update_account_password_policy(allow_users_to_change_password,
                                             hard_expiry, max_password_age,
@@ -529,7 +530,7 @@ def get_account_policy(region=None, key=None, keyid=None, profile=None):
 
     salt myminion boto_iam.get_account_policy
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.get_account_password_policy()
         return info.get_account_password_policy_response.get_account_password_policy_result.password_policy
@@ -549,9 +550,8 @@ def create_role(name, policy_document=None, path=None, region=None, key=None,
 
         salt myminion boto_iam.create_role myrole
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if role_exists(name, region, key, keyid, profile):
         return True
     try:
@@ -574,9 +574,8 @@ def delete_role(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_iam.delete_role myirole
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not role_exists(name, region, key, keyid, profile):
         return True
     try:
@@ -598,9 +597,8 @@ def profile_associated(role_name, profile_name, region, key, keyid, profile):
 
         salt myminion boto_iam.profile_associated myirole myiprofile
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     # The IAM module of boto doesn't return objects. Instead you need to grab
     # values through its properties. Sigh.
     try:
@@ -626,9 +624,8 @@ def associate_profile_to_role(profile_name, role_name, region=None, key=None,
 
         salt myminion boto_iam.associate_profile_to_role myirole myiprofile
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not role_exists(role_name, region, key, keyid, profile):
         log.error('IAM role {0} does not exist.'.format(role_name))
         return False
@@ -660,9 +657,8 @@ def disassociate_profile_from_role(profile_name, role_name, region=None,
 
         salt myminion boto_iam.disassociate_profile_from_role myirole myiprofile
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not role_exists(role_name, region, key, keyid, profile):
         log.error('IAM role {0} does not exist.'.format(role_name))
         return False
@@ -694,9 +690,8 @@ def list_role_policies(role_name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.list_role_policies myirole
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         response = conn.list_role_policies(role_name)
         _list = response.list_role_policies_response.list_role_policies_result
@@ -715,9 +710,8 @@ def get_role_policy(role_name, policy_name, region=None, key=None,
 
         salt myminion boto_iam.get_role_policy myirole mypolicy
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         _policy = conn.get_role_policy(role_name, policy_name)
         # I _hate_ you for not giving me an object boto.
@@ -739,9 +733,8 @@ def create_role_policy(role_name, policy_name, policy, region=None, key=None,
 
         salt myminion boto_iam.create_role_policy myirole mypolicy '{"MyPolicy": "Statement": [{"Action": ["sqs:*"], "Effect": "Allow", "Resource": ["arn:aws:sqs:*:*:*"], "Sid": "MyPolicySqs1"}]}'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     _policy = get_role_policy(role_name, policy_name, region, key, keyid, profile)
     mode = 'create'
     if _policy:
@@ -775,9 +768,8 @@ def delete_role_policy(role_name, policy_name, region=None, key=None,
 
         salt myminion boto_iam.delete_role_policy myirole mypolicy
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     _policy = get_role_policy(role_name, policy_name, region, key, keyid, profile)
     if not _policy:
         return True
@@ -803,7 +795,7 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
     '''
     cache_key = 'boto_iam.account_id'
     if cache_key not in __context__:
-        conn = _get_conn(region, key, keyid, profile)
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         try:
             ret = conn.get_user()
             # The get_user call returns an user ARN:
@@ -856,7 +848,7 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
     exists = get_server_certificate(cert_name, region, key, keyid, profile)
     if exists:
         return True
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.upload_server_cert(cert_name, cert_body, private_key, cert_chain)
         log.info('Created certificate {0}.'.format(cert_name))
@@ -878,7 +870,7 @@ def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile
 
         salt myminion boto_iam.get_server_certificate mycert_name
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.get_server_certificate(cert_name)
         if not info:
@@ -901,7 +893,7 @@ def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=Non
 
         salt myminion boto_iam.delete_server_cert mycert_name
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         return conn.delete_server_cert(cert_name)
     except boto.exception.BotoServerError as e:
@@ -909,37 +901,3 @@ def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=Non
         msg = 'Failed to delete certificate {0}.'
         log.error(msg.format(cert_name))
         return False
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to IAM.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('iam.region'):
-        region = __salt__['config.option']('iam.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('iam.key'):
-        key = __salt__['config.option']('iam.key')
-    if not keyid and __salt__['config.option']('iam.keyid'):
-        keyid = __salt__['config.option']('iam.keyid')
-
-    try:
-        conn = boto.iam.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto iam connection.')
-        return None
-    return conn
