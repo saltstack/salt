@@ -56,8 +56,6 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt._compat import string_types
-
 
 def __virtual__():
     '''
