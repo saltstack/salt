@@ -176,7 +176,7 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
                                   'attempting to make boto {0} connection to '
                                   'region "{1}".'.format(service, region))
     except BotoServerError as exc:
-        raise get_exception(exc)
+        raise BotoExecutionError(exc)
     __context__[cxkey] = conn
     return conn
 
@@ -193,31 +193,25 @@ def get_connection_func(service, module=None):
     return partial(get_connection, service, module=module)
 
 
-def get_exception(e):
-    '''
-    Extract the message from a boto exception and return a
-    CommandExecutionError with the original reason and message.
+class BotoExecutionError(CommandExecutionError):
+    def __init__(self, boto_exception):
+        self.status = boto_exception.status
+        self.reason = boto_exception.reason
 
-    .. code-block:: python
+        try:
+            body = boto_exception.body or ''
+            self.error = ET.fromstring(body).find('Errors').find('Error').find('Message').text
+        except (AttributeError, ET.ParseError):
+            self.error = None
 
-        raise __utils__['boto.get_exception'](e)
-    '''
+        status = self.status or ''
+        reason = self.reason or ''
+        error = self.error or ''
 
-    status = e.status or ''
-    reason = e.reason or ''
-    body = e.body or ''
-
-    try:
-        message = ET.fromstring(body).find('Errors').find('Error').find('Message').text
-    except (AttributeError, ET.ParseError):
-        message = ''
-
-    if message:
-        message = '{0} {1}: {2}'.format(status, reason, message)
-    else:
-        message = '{0} {1}'.format(status, reason)
-
-    return CommandExecutionError(message)
+        if error:
+            self.message = '{0} {1}: {2}'.format(status, reason, error)
+        else:
+            self.message = '{0} {1}'.format(status, reason)
 
 
 def assign_funcs(modname, service, module=None):
