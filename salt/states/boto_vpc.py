@@ -665,7 +665,7 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
             if subnet['id'] == assoc['subnet_id']:
                 route_subnets.append({'id': assoc['id'], 'subnet_id': assoc['subnet_id'], 'name': subnet['tags']['Name']})
     # Build list of subnets to be associated
-    to_create = filter(lambda x: not any(set(dict(x).items()) & set(dict(f).items()) for f in route_subnets), subnets)
+    to_create = filter(lambda x: not any(set(dict(x).items()) & set(dict(f).items()) for f in route_subnets), subnets)  # pylint: disable=W0141
     # Update list of subnets to be associated (add subnet_id if missing)
     for item in to_create:
         if item['subnet_id'] is None:
@@ -673,7 +673,7 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
                 if subnet['tags']['Name'] == item['name']:
                     item['subnet_id'] = subnet['id']
     # Build list of subnets to be disassociated
-    to_delete = filter(lambda x: not any(set(x.items()) & set(dict(f).items()) for f in subnets), route_subnets)
+    to_delete = filter(lambda x: not any(set(x.items()) & set(dict(f).items()) for f in subnets), route_subnets)  # pylint: disable=W0141
     if to_create or to_delete:
         if __opts__['test']:
             msg = 'Subnet associations for route table {0} set to be modified.'.format(route_table_name)
