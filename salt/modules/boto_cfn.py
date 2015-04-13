@@ -23,6 +23,9 @@
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint disable=F821
+
 from __future__ import absolute_import
 
 # Import Python libs
@@ -42,8 +45,6 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
-
 
 def __virtual__():
     '''
@@ -51,6 +52,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'cfn', module='cloudformation')
     return True
 
 
@@ -64,7 +66,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_cfn.exists mystack region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         # Returns an object if stack exists else an exception
         exists = conn.describe_stacks(name)
@@ -88,7 +91,8 @@ def create(name, template_body=None, template_url=None, parameters=None, notific
         salt myminion boto_cfn.create mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
         region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         return conn.create_stack(name, template_body, template_url, parameters, notification_arns, disable_rollback,
                                  timeout_in_minutes, capabilities, tags, on_failure, stack_policy_body, stack_policy_url)
@@ -113,7 +117,8 @@ def update_stack(name, template_body=None, template_url=None, parameters=None, n
         salt myminion boto_cfn.update_stack mystack template_url='https://s3.amazonaws.com/bucket/template.cft' \
         region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         update = conn.update_stack(name, template_body, template_url, parameters, notification_arns,
                                    disable_rollback, timeout_in_minutes, capabilities, tags, use_previous_template,
@@ -138,7 +143,8 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_cfn.delete mystack region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         return conn.delete_stack(name)
     except boto.exception.BotoServerError as e:
@@ -158,7 +164,8 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_cfn.get_template mystack
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         template = conn.get_template(name)
         log.info('Retrieved template for stack {0}'.format(name))
@@ -180,7 +187,8 @@ def validate_template(template_body=None, template_url=None, region=None, key=No
 
         salt myminion boto_cfn.validate_template mystack-template
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         # Returns an object if json is validated and an exception if its not
         return conn.validate_template(template_body, template_url)
@@ -189,36 +197,3 @@ def validate_template(template_body=None, template_url=None, region=None, key=No
         msg = 'Error while trying to validate template {0}.'.format(template_body)
         log.error(msg)
         return str(e)
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to CFN.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-    if not region and __salt__['config.option']('cfn.region'):
-        region = __salt__['config.option']('cfn.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('cfn.key'):
-        key = __salt__['config.option']('cfn.key')
-    if not keyid and __salt__['config.option']('cfn.keyid'):
-        keyid = __salt__['config.option']('cfn.keyid')
-
-    try:
-        conn = boto.cloudformation.connect_to_region(region, aws_access_key_id=keyid,
-                                                     aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto cfn connection.')
-        return None
-    return conn
