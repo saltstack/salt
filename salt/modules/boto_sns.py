@@ -31,6 +31,9 @@ Connection module for Amazon SNS
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint disable=F821
+
 from __future__ import absolute_import
 
 import logging
@@ -39,14 +42,14 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=import-error
     import boto
     import boto.sns
+    # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-from salt.ext.six import string_types
 
 
 def __virtual__():
@@ -55,6 +58,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'sns')
     return True
 
 
@@ -72,7 +76,7 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
     except KeyError:
         pass
 
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     __context__[cache_key] = {}
     # TODO: support >100 SNS topics (via NextToken)
     topics = conn.get_all_topics()
@@ -106,7 +110,7 @@ def create(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sns.create mytopic region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.create_topic(name)
     log.info('Created SNS topic {0}'.format(name))
     _invalidate_cache()
@@ -121,7 +125,7 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sns.delete mytopic region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.delete_topic(get_arn(name, region, key, keyid, profile))
     log.info('Deleted SNS topic {0}'.format(name))
     _invalidate_cache()
@@ -142,7 +146,7 @@ def get_all_subscriptions_by_topic(name, region=None, key=None, keyid=None, prof
     except KeyError:
         pass
 
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     ret = conn.get_all_subscriptions_by_topic(get_arn(name, region, key, keyid, profile))
     __context__[cache_key] = ret['ListSubscriptionsByTopicResponse']['ListSubscriptionsByTopicResult']['Subscriptions']
     return __context__[cache_key]
@@ -156,7 +160,7 @@ def subscribe(topic, protocol, endpoint, region=None, key=None, keyid=None, prof
 
         salt myminion boto_sns.subscribe mytopic https https://www.example.com/sns-endpoint region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.subscribe(get_arn(topic, region, key, keyid, profile), protocol, endpoint)
     log.info('Subscribe {0} {1} to {2} topic'.format(protocol, endpoint, topic))
     try:
@@ -192,32 +196,6 @@ def _get_region(region=None, profile=None):
     if not region:
         region = 'us-east-1'
     return region
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to SNS.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    region = _get_region(region)
-
-    if not key and __salt__['config.option']('sns.key'):
-        key = __salt__['config.option']('sns.key')
-    if not keyid and __salt__['config.option']('sns.keyid'):
-        keyid = __salt__['config.option']('sns.keyid')
-
-    conn = boto.sns.connect_to_region(region,
-                                      aws_access_key_id=keyid,
-                                      aws_secret_access_key=key)
-    return conn
 
 
 def _subscriptions_cache_key(name):
