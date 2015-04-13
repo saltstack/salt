@@ -139,7 +139,7 @@ def _create_resource(resource, name, tags, region, key, keyid,
     Create a VPC resource. Returns the resource id if created, or False
     if not created.
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         create_resource = getattr(conn, 'create_' + resource)
@@ -184,7 +184,7 @@ def _delete_resource(resource, name, resource_id, region,
     '''
     Delete a VPC resource. Returns True if succesful, otherwise False.
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         delete_resource = getattr(conn, 'delete_' + resource)
@@ -279,7 +279,7 @@ def get_resource_id(resource, name, region=None,
     if _id:
         return _id
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         f = getattr(conn, 'get_all_{0}s'.format(resource))
@@ -327,7 +327,7 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
         salt myminion boto_vpc.get_subnet_association ['subnet-61b47516','subnet-2cb9785b']
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         # subnet_ids=subnets can accept either a string or a list
         subnets = conn.get_all_subnets(subnet_ids=subnets)
@@ -411,7 +411,7 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None,
             log.debug('id retrieved from cache: {0}'.format(vpc_id))
             return vpc_id
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     vpcs_id = _find_vpc(name=name, cidr=cidr, tags=tags, conn=conn)
     if vpcs_id:
@@ -445,7 +445,7 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
         salt myminion boto_vpc.exists myvpc
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     vpcs = _find_vpc(vpc_id=vpc_id, name=name, cidr=cidr, tags=tags, conn=conn)
     if vpcs:
@@ -475,7 +475,7 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None,
 
     '''
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
@@ -512,7 +512,7 @@ def delete(vpc_id=None, name=None, tags=None, region=None, key=None, keyid=None,
 
     '''
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not vpc_id and not name:
         raise SaltInvocationError("Either VPC ID or name needs to be specified.")
@@ -634,7 +634,7 @@ def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
 
     '''
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if subnet_name:
         ids = _find_subnets(subnet_name=subnet_name, conn=conn)
@@ -683,7 +683,7 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
                     'use subnet_name instead.')
         subnet_name = name
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not any((subnet_id, subnet_name, cidr, tags, zones)):
         raise SaltInvocationError('At least one of the following must be '
@@ -741,7 +741,7 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
 
     '''
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     if not vpc_id:
@@ -783,7 +783,7 @@ def delete_internet_gateway(internet_gateway_id=None,
 
     '''
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if internet_gateway_name:
         internet_gateway_id = get_resource_id('internet_gateway',
@@ -829,7 +829,7 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn, customer_g
 
     '''
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         customer_gateway = conn.create_customer_gateway(vpn_connection_type, ip_address, bgp_asn)
@@ -862,7 +862,7 @@ def delete_customer_gateway(customer_gateway_id, region=None, key=None, keyid=No
 
     '''
 
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         if conn.delete_customer_gateway(customer_gateway_id):
@@ -891,7 +891,7 @@ def customer_gateway_exists(customer_gateway_id, region=None, key=None, keyid=No
         salt myminion boto_vpc.customer_gateway_exists 'cgw-b6a247df'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         if conn.get_all_customer_gateways(customer_gateway_ids=[customer_gateway_id]):
@@ -922,7 +922,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
         salt myminion boto_vpc.create_dhcp_options domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         dhcp_options = _create_dhcp_options(conn, domain_name=domain_name, domain_name_servers=domain_name_servers,
@@ -956,7 +956,7 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None
         salt myminion boto_vpc.associate_dhcp_options_to_vpc 'dhcp-a0bl34pp' 'vpc-6b1fe402'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         if conn.associate_dhcp_options(dhcp_options_id, vpc_id):
             log.info('DHCP options with id {0} were associated with VPC {1}'.format(dhcp_options_id, vpc_id))
@@ -985,7 +985,7 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
         salt myminion boto_vpc.associate_new_dhcp_options_to_vpc 'vpc-6b1fe402' domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         dhcp_options = _create_dhcp_options(conn, domain_name=domain_name, domain_name_servers=domain_name_servers,
                                             ntp_servers=ntp_servers, netbios_name_servers=netbios_name_servers,
@@ -1011,7 +1011,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
         salt myminion boto_vpc.dhcp_options_exists dhcp_options_id='dhcp-a0bl34pp'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not dhcp_options_id and not name and not tags:
         raise SaltInvocationError('At least one of the following must be specified: dhcp options id, name or tags.')
@@ -1057,7 +1057,7 @@ def create_network_acl(vpc_id, network_acl_name=None, tags=None, region=None, ke
         salt myminion boto_vpc.create_network_acl 'vpc-6b1fe402'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         network_acl = conn.create_network_acl(vpc_id)
@@ -1087,7 +1087,7 @@ def delete_network_acl(network_acl_id, region=None, key=None, keyid=None, profil
         salt myminion boto_vpc.delete_network_acl 'acl-5fb85d36'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         if conn.delete_network_acl(network_acl_id):
@@ -1113,7 +1113,7 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
 
         salt myminion boto_vpc.network_acl_exists network_acl_id='acl-5fb85d36'
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not network_acl_id and not name and not tags:
         raise SaltInvocationError('At least one of the following must be specified: network ACL id, name or tags.')
@@ -1157,7 +1157,7 @@ def associate_network_acl_to_subnet(network_acl_id, subnet_id, region=None, key=
         salt myminion boto_vpc.associate_network_acl_to_subnet 'acl-5fb85d36' 'subnet-6a1fe403'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         association_id = conn.associate_network_acl(network_acl_id, subnet_id)
         if association_id:
@@ -1186,7 +1186,7 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
 
         salt myminion boto_vpc.associate_new_network_acl_to_subnet 'vpc-6b1fe402' 'subnet-6a1fe403'
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         network_acl = conn.create_network_acl(vpc_id)
         if network_acl:
@@ -1221,7 +1221,7 @@ def disassociate_network_acl(subnet_id, vpc_id=None, region=None, key=None, keyi
         salt myminion boto_vpc.disassociate_network_acl 'subnet-6a1fe403'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         return conn.disassociate_network_acl(subnet_id, vpc_id=vpc_id)
@@ -1243,7 +1243,7 @@ def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
         salt myminion boto_vpc.create_network_acl_entry 'acl-5fb85d36' '32767' '-1' 'deny' '0.0.0.0/0'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         network_acl_entry = conn.create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
@@ -1274,7 +1274,7 @@ def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action
         salt myminion boto_vpc.replace_network_acl_entry 'acl-5fb85d36' '32767' '-1' 'deny' '0.0.0.0/0'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         network_acl_entry = conn.replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
@@ -1304,7 +1304,7 @@ def delete_network_acl_entry(network_acl_id, rule_number, egress=None, region=No
         salt myminion boto_vpc.delete_network_acl_entry 'acl-5fb85d36' '32767'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         network_acl_entry = conn.delete_network_acl_entry(network_acl_id, rule_number, egress=egress)
@@ -1383,7 +1383,7 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
         salt myminion boto_vpc.route_table_exists route_table_id='rtb-1f382e7d'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not route_table_id and not name and not tags:
         raise SaltInvocationError('At least one of the following must be specified: route table id, name or tags.')
@@ -1428,7 +1428,7 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
         salt myminion boto_vpc.route_exists destination_cidr_block='10.0.0.0/20' gateway_id='local' route_table_name='test'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not any((route_table_name, route_table_id)):
         raise SaltInvocationError('At least on of the following must be specified: route table name or route table id.')
@@ -1491,7 +1491,7 @@ def associate_route_table(route_table_id, subnet_id, region=None, key=None, keyi
         salt myminion boto_vpc.associate_route_table 'rtb-1f382e7d' 'subnet-6a1fe403'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         association_id = conn.associate_route_table(route_table_id, subnet_id)
@@ -1517,7 +1517,7 @@ def disassociate_route_table(association_id, region=None, key=None, keyid=None, 
         salt myminion boto_vpc.disassociate_route_table 'rtbassoc-d8ccddba'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         if conn.disassociate_route_table(association_id):
@@ -1544,7 +1544,7 @@ def replace_route_table_association(association_id, route_table_id, region=None,
         salt myminion boto_vpc.replace_route_table_association 'rtbassoc-d8ccddba' 'rtb-1f382e7d'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         association_id = conn.replace_route_table_association_with_assoc(association_id, route_table_id)
@@ -1568,7 +1568,7 @@ def create_route(route_table_id, destination_cidr_block, gateway_id=None, instan
         salt myminion boto_vpc.create_route 'rtb-1f382e7d' '10.0.0.0/16'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         if conn.create_route(route_table_id=route_table_id, destination_cidr_block=destination_cidr_block,
@@ -1597,7 +1597,7 @@ def delete_route(route_table_id, destination_cidr_block, region=None, key=None, 
         salt myminion boto_vpc.delete_route 'rtb-1f382e7d' '10.0.0.0/16'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         if conn.delete_route(route_table_id, destination_cidr_block):
@@ -1626,7 +1626,7 @@ def replace_route(route_table_id, destination_cidr_block, gateway_id=None, insta
         salt myminion boto_vpc.replace_route 'rtb-1f382e7d' '10.0.0.0/16'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         if conn.replace_route(route_table_id, destination_cidr_block, gateway_id=gateway_id, instance_id=instance_id,
@@ -1656,7 +1656,7 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_vpc.describe vpc_id=vpc-123456
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     _ret = dict(cidr_block=None,
                 is_default=None,
                 state=None,
@@ -1698,7 +1698,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
         salt myminion boto_vpc.describe_vpcs
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     items = ('id',
              'cidr_block',
              'is_default',
@@ -1749,7 +1749,7 @@ def describe_subnet(subnet_id=None, region=None, key=None, keyid=None, profile=N
         salt myminion boto_vpc.describe_subnet subnet_id=subnet-123456
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     _ret = dict(cidr_block=None,
                 availability_zone=None,
                 state=None,
@@ -1805,7 +1805,7 @@ def describe_subnets(subnet_ids=None, vpc_id=None, cidr=None, region=None, key=N
         salt myminion boto_vpc.describe_subnets cidr=10.0.0.0/21
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         filter_parameters = {'filters': {}}
@@ -1850,7 +1850,7 @@ def describe_route_table(route_table_id=None, route_table_name=None, tags=None, 
         salt myminion boto_vpc.describe_route_table route_table_id='rtb-1f382e7d'
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not route_table_id and not route_table_name and not tags:
         raise SaltInvocationError('At least on of the following must be specified: route table id, route table name or tags.')
