@@ -433,6 +433,26 @@ def _wait_for_ip(vm, max_wait_minute):
     return False
 
 
+def _wait_for_task(task, task_type, sleep_seconds=1, log_level='debug'):
+    time_counter = 0
+    while task.info.state == 'running':
+        message = "Waiting for {0} task to finish [{1} s]".format(task_type, time_counter)
+        if log_level='info':
+            log.info(message)
+        else:
+            log.debug(message)
+        time.sleep(int(sleep_seconds))
+        time_counter += int(sleep_seconds)
+    if task.info.state == 'success':
+        message = "Successfully completed {0} task in {1} seconds".format(task_type, time_counter)
+        if log_level='info':
+            log.info(message)
+        else:
+            log.debug(message)
+    else:
+        raise task.info.error
+
+
 def _format_instance_info(vm):
     device_full_info = {}
     disk_full_info = {}
@@ -1171,14 +1191,12 @@ def destroy(name, call=None):
                 try:
                     log.info('Powering Off VM {0}'.format(name))
                     task = vm["object"].PowerOff()
-                    while task.info.state != 'success':
-                        log.debug("Waiting for Power off task to finish")
+                    _wait_for_task(task, "power off")
                 except Exception as exc:
                     log.error('Could not destroy VM {0}: {1}'.format(name, exc))
                     return 'failed to destroy'
             task = vm["object"].Destroy_Task()
-            while task.info.state != 'success':
-                log.debug("Waiting for destroy task to finish")
+            _wait_for_task(task, "destroy")
 
     salt.utils.cloud.fire_event(
         'event',
@@ -1369,11 +1387,7 @@ def create(vm_):
             )
 
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-            time_counter = 0
-            while task.info.state == 'running':
-                log.info("Waiting for clone task to finish [{0} s]".format(time_counter))
-                time.sleep(5)
-                time_counter += 5
+            _wait_for_task(task, "clone", 5, 'info')
         except Exception as exc:
             log.error(
                 'Error creating {0}: {1}'.format(
