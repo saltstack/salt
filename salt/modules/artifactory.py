@@ -10,6 +10,7 @@ import os
 import xml.etree.ElementTree as ET
 from urllib2 import HTTPError
 import logging
+import salt.ext.six.moves.http_client
 
 # Import Salt libs
 import salt.utils
@@ -358,9 +359,9 @@ def __download(request_url):
 
 
 def __get_error_comment(http_error, request_url):
-    if http_error.code == 404:
+    if http_error.code == salt.ext.six.moves.http_client.NOT_FOUND:
         comment = 'HTTP Error 404. Request URL: ' + request_url
-    elif http_error.code == 409:
+    elif http_error.code == salt.ext.six.moves.http_client.CONFLICT:
         comment = 'HTTP Error 409: Conflict. Requested URL: {0}. \n' \
                   'This error may be caused by reading snapshot artifact from non-snapshot repository.'.format(request_url)
     else:
