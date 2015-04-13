@@ -181,7 +181,7 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
     return conn
 
 
-def get_connection_func(service):
+def get_connection_func(service, module=None):
     '''
     Returns a partial `get_connection` function for the provided service.
 
@@ -190,7 +190,7 @@ def get_connection_func(service):
         get_conn = __utils__['boto.get_connection_func']('ec2')
         conn = get_conn()
     '''
-    return partial(get_connection, service)
+    return partial(get_connection, service, module=module)
 
 
 def get_exception(e):
