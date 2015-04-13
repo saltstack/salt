@@ -217,6 +217,9 @@ def mounted(name,
                     'auto',
                     'users',
                     'bind',
+                    'nonempty',
+                    'transform_symlinks',
+                    'port',
                 ]
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
@@ -224,6 +227,7 @@ def mounted(name,
                     'comment',
                     'password',
                     'retry',
+                    'port',
                 ]
                 # Some filesystems have options which should not force a remount.
                 mount_ignore_fs_keys = {
