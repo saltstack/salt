@@ -131,6 +131,11 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
         salt.utils.boto.cache_id(service, resource_name, resource_id=resource_id, invalidate=True)
         self.assertEqual(salt.utils.boto.cache_id(service, resource_name), None)
 
+    def test_partial(self):
+        cache_id = salt.utils.boto.cache_id_func(service)
+        cache_id(resource_name, resource_id=resource_id)
+        self.assertEqual(cache_id(resource_name), resource_id)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -163,6 +168,12 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
                    side_effect=BotoServerError(400, 'Mocked error', body=error_body)):
             with self.assertRaises(CommandExecutionError):
                 salt.utils.boto.get_connection(service)
+
+    @mock_ec2
+    def test_partial(self):
+        get_conn = salt.utils.boto.get_connection_func(service)
+        conn = get_conn(**conn_parameters)
+        self.assertTrue(conn in salt.utils.boto.__context__.values())
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
