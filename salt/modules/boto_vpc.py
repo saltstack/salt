@@ -283,8 +283,6 @@ def get_resource_id(resource, name, region=None,
         return _id
 
     conn = _get_conn(region=region, key=key, keyid=keyid)
-    if not conn:
-        return None
 
     try:
         f = getattr(conn, 'get_all_{0}s'.format(resource))
@@ -417,8 +415,6 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None,
             return vpc_id
 
     conn = _get_conn(region=region, key=key, keyid=keyid)
-    if not conn:
-        return None
 
     vpcs_id = _find_vpc(name=name, cidr=cidr, tags=tags, conn=conn)
     if vpcs_id:
