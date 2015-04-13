@@ -507,7 +507,10 @@ class SSH(object):
             }
 
         # save load to the master job cache
-        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        try:
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        except Exception as exc:
+            log.error('Could not save load with returner {0}: {1}'.format(self.opts['master_job_cache'], exc))
 
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)
