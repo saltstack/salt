@@ -2,7 +2,7 @@
 '''
 Manage Elasticache
 ==================
-
+replication_group_description
 .. versionadded:: 2014.7.0
 
 Create, destroy and update Elasticache clusters. Be aware that this interacts
@@ -370,7 +370,7 @@ def creategroup(name, primary_cluster_id, replication_group_description, wait=No
         Name of the master cache node
 
     replication_group_description
-        Description for the group 
+        Description for the group
 
     region
         Region to connect to.
@@ -386,7 +386,6 @@ def creategroup(name, primary_cluster_id, replication_group_description, wait=No
         that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    
     is_present = __salt__['boto_elasticache.group_exists'](name, region, key, keyid,
                                                                  profile)
     if not is_present:
@@ -397,7 +396,6 @@ def creategroup(name, primary_cluster_id, replication_group_description, wait=No
         created = __salt__['boto_elasticache.create_replication_group'](name, primary_cluster_id,
                                                                         replication_group_description,
                                                                         wait, region, key, keyid, profile)
-        
         if created:
             config = __salt__['boto_elasticache.describe_replication_group'](name, region, key, keyid, profile)
             ret['changes']['old'] = None
